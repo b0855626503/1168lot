@@ -1,0 +1,26 @@
+{
+    "name": "gametech/auto",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Boat",
+            "email": "b0855626503@gmail.com"
+        }
+    ],
+    "require": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Gametech\\Auto\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Gametech\\Auto\\Providers\\AutoServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev"
+}

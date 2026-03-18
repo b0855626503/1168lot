@@ -1,0 +1,1341 @@
+<?php
+
+namespace Gametech\API\Http\ControllersFree;
+
+
+use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
+use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
+use Gametech\Member\Models\MemberProxy;
+use Gametech\Member\Repositories\MemberRepository;
+use Gametech\Payment\Repositories\BankPaymentRepository;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use MongoDB\BSON\UTCDateTime;
+
+class FuntaController extends AppBaseController
+{
+    protected $_config;
+
+    protected $repository;
+
+    protected $memberRepository;
+
+    protected $gameUserRepository;
+
+    protected $request;
+
+    protected $member;
+
+    protected $balances;
+
+    protected $game;
+
+    public function __construct(
+        BankPaymentRepository $repository,
+        MemberRepository      $memberRepo,
+        GameUserRepository    $gameUserRepo,
+        Request               $request
+    )
+    {
+        $this->_config = request('_config');
+
+        $this->middleware('api');
+
+        $this->repository = $repository;
+
+        $this->memberRepository = $memberRepo;
+
+        $this->gameUserRepository = $gameUserRepo;
+
+        $this->request = $request;
+
+        if (isset($this->request['sessionToken'])) {
+            $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('session_id', $this->request['sessionToken'])->where('enable', 'Y')->first();
+        } else {
+
+            $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('enable', 'Y')->first();
+        }
+
+//        $this->member->balance_free = $this->member->balance_free;
+
+        $this->balances = 'balance_free';
+
+        $this->game = 'FUNTA';
+    }
+
+
+    public function getBalance(Request $request)
+    {
+        $session = $request->all();
+
+        if ($this->member) {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 0,
+                'currency' => "THB",
+                'productId' => $session['productId'],
+                'username' => $this->member->user_name,
+                'balance' => (float)$this->member->balance_free,
+                'timestampMillis' => now()->getTimestampMs()
+            ];
+
+
+            $session_in['input'] = $session;
+            $session_in['output'] = $param;
+            $session_in['company'] = $this->game;
+            $session_in['game_user'] = $this->member->user_name;
+            $session_in['method'] = 'getbalance';
+            $session_in['response'] = 'in';
+            $session_in['amount'] = 0;
+            $session_in['con_1'] = null;
+            $session_in['con_2'] = null;
+            $session_in['con_3'] = null;
+            $session_in['con_4'] = null;
+            $session_in['before_balance'] = $this->member->balance_free;
+            $session_in['after_balance'] = $this->member->balance_free;
+            $session_in['date_create'] = now()->toDateTimeString();
+            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+            GameLogProxy::create($session_in);
+
+        } else {
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+        }
+
+//        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
+//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+//        file_put_contents($path, print_r($session, true), FILE_APPEND);
+//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+
+        return $param;
+    }
+
+    public function transferOut(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'bet')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->first();
+
+            if ($data) {
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20002,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['betAmount'];
+                }
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'bet';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+
+                foreach ($session['txns'] as $item) {
+
+
+                    $checkDup = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'betsub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['status'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if ($checkDup) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+                    }
+
+                    $checkCancel = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'refundsub')
+                        ->whereNotNull('con_1')
+
+//                        ->where('amount', $item['betAmount'])
+//                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->whereNotNull('con_3')
+//                        ->where('con_3', $item['txnId'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if ($checkCancel) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        break;
+
+                    }
+
+                    $balance = ($this->member->balance_free - $item['betAmount']);
+                    if ($balance < 0) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 10002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+                    }
+
+                    $this->member->decrement($this->balances, abs($item['betAmount']));
+
+                    $param = [
+                        'id' => $session['id'],
+                        'statusCode' => 0,
+                        'currency' => "THB",
+                        'productId' => $session['productId'],
+                        'username' => $this->member->user_name,
+                        'balanceBefore' => (float)$oldbalance,
+                        'balanceAfter' => (float)$this->member->balance_free,
+                        'timestampMillis' => now()->getTimestampMs()
+                    ];
+
+                    $session_in['input'] = $item;
+                    $session_in['output'] = $param;
+                    $session_in['company'] = $this->game;
+                    $session_in['game_user'] = $this->member->user_name;
+                    $session_in['method'] = 'betsub';
+                    $session_in['response'] = 'in';
+                    $session_in['amount'] = $item['betAmount'];
+                    $session_in['con_1'] = $item['id'];
+                    $session_in['con_2'] = $item['roundId'];
+                    $session_in['con_3'] = $item['status'];
+                    $session_in['con_4'] = null;
+                    $session_in['before_balance'] = $oldbalance;
+                    $session_in['after_balance'] = $this->member->balance_free;
+                    $session_in['date_create'] = now()->toDateTimeString();
+                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    GameLogProxy::create($session_in);
+
+                }
+
+            }
+
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+
+        return $param;
+    }
+
+    public function transferIn(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'payout')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->latest('created_at')
+                ->first();
+
+            if ($data) {
+
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20002,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['payoutAmount'];
+                }
+
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'payout';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+                foreach ($session['txns'] as $item) {
+
+                    $checkDup = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'paysub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['txnId'])
+//                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if ($checkDup) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+                    }
+
+                    $checkBet = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'betsub')
+                        ->whereNotNull('con_1')
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', 'OPEN')
+                        ->latest('created_at')
+                        ->first();
+
+                    if (!$checkBet) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20001,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+                    }
+
+                    if (!is_null($checkBet['con_4'])) {
+
+                        if (Str::contains($checkBet['con_4'], 'cancel')) {
+
+                            $param = [
+                                'id' => $session['id'],
+                                'statusCode' => 20003,
+                                'timestampMillis' => now()->getTimestampMs(),
+                                'balance' => (float)$this->member->balance_free,
+                                'productId' => $session['productId']
+                            ];
+                            break;
+
+                        }
+
+                    }
+
+
+                    $amount = ($this->member->balance_free + $item['payoutAmount']);
+
+                    $this->member->increment($this->balances, abs($item['payoutAmount']));
+//                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
+//                    $member = MemberProxy::where('user_name', $session['username'])->first();
+
+                    $param = [
+                        'id' => $session['id'],
+                        'statusCode' => 0,
+                        'currency' => "THB",
+                        'productId' => $session['productId'],
+                        'username' => $this->member->user_name,
+                        'balanceBefore' => (float)$oldbalance,
+                        'balanceAfter' => (float)$this->member->balance_free,
+                        'timestampMillis' => now()->getTimestampMs()
+                    ];
+
+
+                    $session_in['input'] = $item;
+                    $session_in['output'] = $param;
+                    $session_in['company'] = $this->game;
+                    $session_in['game_user'] = $this->member->user_name;
+                    $session_in['method'] = 'paysub';
+                    $session_in['response'] = 'in';
+                    $session_in['amount'] = $item['payoutAmount'];
+                    $session_in['con_1'] = $item['id'];
+                    $session_in['con_2'] = $item['roundId'];
+                    $session_in['con_3'] = $item['txnId'];
+                    $session_in['con_4'] = null;
+                    $session_in['before_balance'] = $oldbalance;
+                    $session_in['after_balance'] = $this->member->balance_free;
+                    $session_in['date_create'] = now()->toDateTimeString();
+                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    $id = GameLogProxy::create($session_in)->id;
+
+                    $checkBet->con_4 = 'settle_' . $id;
+                    $checkBet->save();
+
+
+                }
+
+            }
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+
+        return $param;
+    }
+
+    public function cancelBets(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'cancel')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->latest('created_at')
+                ->first();
+
+            if ($data) {
+
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20002,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['betAmount'];
+                }
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'cancel';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+
+                foreach ($session['txns'] as $item) {
+
+                    $checkDup = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'refundsub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['status'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if ($checkDup) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+                    }
+
+
+                    $checkData = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'betsub')
+                        ->whereNotNull('con_1')
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', 'OPEN')
+                        ->latest('created_at')
+                        ->first();
+
+                    if (!$checkData) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        $session_in['input'] = $item;
+                        $session_in['output'] = $param;
+                        $session_in['company'] = $this->game;
+                        $session_in['game_user'] = $this->member->user_name;
+                        $session_in['method'] = 'refundsub';
+                        $session_in['response'] = 'in';
+                        $session_in['amount'] = $item['betAmount'];
+                        $session_in['con_1'] = $item['id'];
+                        $session_in['con_2'] = $item['roundId'];
+                        $session_in['con_3'] = $item['status'];
+                        $session_in['con_4'] = null;
+                        $session_in['before_balance'] = $oldbalance;
+                        $session_in['after_balance'] = $this->member->balance_free;
+                        $session_in['date_create'] = now()->toDateTimeString();
+                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        GameLogProxy::create($session_in);
+
+                    } else {
+
+                        if (!is_null($checkData['con_4'])) {
+
+                            $param = [
+                                'id' => $session['id'],
+                                'statusCode' => 20004,
+                                'timestampMillis' => now()->getTimestampMs(),
+                                'balance' => (float)$this->member->balance_free,
+                                'productId' => $session['productId']
+                            ];
+                            break;
+
+                        }
+
+
+                        $this->member->increment($this->balances, $checkData['amount']);
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        $session_in['input'] = $item;
+                        $session_in['output'] = $param;
+                        $session_in['company'] = $this->game;
+                        $session_in['game_user'] = $this->member->user_name;
+                        $session_in['method'] = 'refundsub';
+                        $session_in['response'] = 'in';
+                        $session_in['amount'] = $item['betAmount'];
+                        $session_in['con_1'] = $item['id'];
+                        $session_in['con_2'] = $item['roundId'];
+                        $session_in['con_3'] = $item['status'];
+                        $session_in['con_4'] = null;
+                        $session_in['before_balance'] = $oldbalance;
+                        $session_in['after_balance'] = $this->member->balance_free;
+                        $session_in['date_create'] = now()->toDateTimeString();
+                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        $id = GameLogProxy::create($session_in)->id;
+
+                        $checkData->con_4 = 'cancel_' . $id;
+                        $checkData->save();
+                    }
+
+                }
+            }
+
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+
+        return $param;
+    }
+
+    public function unsettleBets(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'unsettle')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->latest('created_at')
+                ->first();
+
+            if ($data) {
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20002,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['payoutAmount'];
+                }
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'unsettle';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+                foreach ($session['txns'] as $item) {
+
+                    $checkDup = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'unsettlesub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['txnId'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if ($checkDup) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+
+                        break;
+                    }
+
+
+                    if ($item['betAmount'] > 0) {
+
+                        $this->member->decrement($this->balances, $item['betAmount']);
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        $session_in['input'] = $item;
+                        $session_in['output'] = $param;
+                        $session_in['company'] = $this->game;
+                        $session_in['game_user'] = $this->member->user_name;
+                        $session_in['method'] = 'betsub';
+                        $session_in['response'] = 'in';
+                        $session_in['amount'] = $item['betAmount'];
+                        $session_in['con_1'] = $item['id'];
+                        $session_in['con_2'] = $item['roundId'];
+                        $session_in['con_3'] = 'OPEN';
+                        $session_in['con_4'] = null;
+                        $session_in['before_balance'] = $oldbalance;
+                        $session_in['after_balance'] = $this->member->balance_free;
+                        $session_in['date_create'] = now()->toDateTimeString();
+                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        GameLogProxy::create($session_in);
+
+                        continue;
+
+                    }
+
+                    $checkData = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'paysub')
+                        ->whereNotNull('con_1')
+                        ->whereNotNull('con_3')
+//                        ->where('amount', $item['payoutAmount'])
+//                            ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+//                            ->where('con_3', $item['txnId'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+                    if (!$checkData) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+
+                        break;
+
+                    }
+
+                    $balance = ($this->member->balance_free - $item['payoutAmount']);
+
+                    if ($balance < 0) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 10002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+
+                        break;
+
+                    }
+
+                    $this->member->decrement($this->balances, $item['payoutAmount']);
+
+
+                    $param = [
+                        'id' => $session['id'],
+                        'statusCode' => 0,
+                        'currency' => "THB",
+                        'productId' => $session['productId'],
+                        'username' => $this->member->user_name,
+                        'balanceBefore' => (float)$oldbalance,
+                        'balanceAfter' => (float)$this->member->balance_free,
+                        'timestampMillis' => now()->getTimestampMs()
+                    ];
+
+                    $session_in['input'] = $item;
+                    $session_in['output'] = $param;
+                    $session_in['company'] = $this->game;
+                    $session_in['game_user'] = $this->member->user_name;
+                    $session_in['method'] = 'unsettlesub';
+                    $session_in['response'] = 'in';
+                    $session_in['amount'] = $item['payoutAmount'];
+                    $session_in['con_1'] = $item['id'];
+                    $session_in['con_2'] = $item['roundId'];
+                    $session_in['con_3'] = $item['txnId'];
+                    $session_in['con_4'] = null;
+                    $session_in['before_balance'] = $oldbalance;
+                    $session_in['after_balance'] = $this->member->balance_free;
+                    $session_in['date_create'] = now()->toDateTimeString();
+                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    $id = GameLogProxy::create($session_in)->id;
+
+                    $checkData->con_4 = 'unsettle_' . $id;
+                    $checkData->save();
+
+                    GameLogProxy::where('con_4', 'settle_' . $checkData['_id'])
+                        ->where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->update(['con_4' => null]);
+
+
+                }
+
+            }
+
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+
+        return $param;
+    }
+
+    public function adjustBets(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'adjust')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->latest('created_at')
+                ->first();
+
+            if ($data) {
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20001,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['betAmount'];
+                }
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'adjust';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+                foreach ($session['txns'] as $item) {
+
+                    $checkDup = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'ajsub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['txnId'])
+                        ->whereNull('con_4')
+                        ->latest('created_at')
+                        ->first();
+
+
+                    if ($checkDup) {
+
+                        if ($item['betAmount'] > $this->member->balance_free) {
+
+
+                            $param = [
+                                'id' => $session['id'],
+                                'statusCode' => 10002,
+                                'timestampMillis' => now()->getTimestampMs(),
+                                'balance' => (float)$this->member->balance_free,
+                                'productId' => $session['productId']
+                            ];
+                            break;
+
+                        }
+
+                        if ($item['betAmount'] < $checkDup['amount']) {
+
+                            $amount = $checkDup['amount'] - $item['betAmount'];
+
+
+                            $this->member->increment($this->balances, $amount);
+
+
+                        } else if ($item['betAmount'] > $checkDup['amount']) {
+
+                            $amount = $item['betAmount'] - $checkDup['amount'];
+
+                            $balance = $this->member->balance_free - $amount;
+
+                            if ($balance < 0) {
+                                $param = [
+                                    'id' => $session['id'],
+                                    'statusCode' => 10002,
+                                    'timestampMillis' => now()->getTimestampMs(),
+                                    'balance' => (float)$this->member->balance_free,
+                                    'productId' => $session['productId']
+                                ];
+                                break;
+                            }
+
+                            $this->member->decrement($this->balances, $amount);
+                        }
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        $session_in['input'] = $item;
+                        $session_in['output'] = $param;
+                        $session_in['company'] = $this->game;
+                        $session_in['game_user'] = $this->member->user_name;
+                        $session_in['method'] = 'ajsub';
+                        $session_in['response'] = 'in';
+                        $session_in['amount'] = $item['betAmount'];
+                        $session_in['con_1'] = $item['id'];
+                        $session_in['con_2'] = $item['roundId'];
+                        $session_in['con_3'] = $item['txnId'];
+                        $session_in['con_4'] = null;
+                        $session_in['before_balance'] = $oldbalance;
+                        $session_in['after_balance'] = $this->member->balance_free;
+                        $session_in['date_create'] = now()->toDateTimeString();
+                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        GameLogProxy::create($session_in);
+
+                    } else {
+
+                        $checkData = GameLogProxy::where('company', $this->game)
+                            ->where('response', 'in')
+                            ->where('game_user', $this->member->user_name)
+                            ->where('method', 'betsub')
+                            ->where('con_1', $item['id'])
+                            ->where('con_2', $item['roundId'])
+                            ->where('con_3', 'OPEN')
+                            ->whereNull('con_4')
+                            ->latest('created_at')
+                            ->first();
+
+                        if (!$checkData) {
+
+                            $param = [
+                                'id' => $session['id'],
+                                'statusCode' => 20001,
+                                'timestampMillis' => now()->getTimestampMs(),
+                                'balance' => (float)$this->member->balance_free,
+                                'productId' => $session['productId']
+                            ];
+                            break;
+
+                        }
+
+                        if ($item['betAmount'] < $checkData['amount']) {
+
+                            $amount = $checkData['amount'] - $item['betAmount'];
+
+                            $this->member->increment($this->balances, $amount);
+
+
+                        } else if ($item['betAmount'] > $checkData['amount']) {
+
+                            $amount = $item['betAmount'] - $checkData['amount'];
+
+                            if ($amount > $this->member->balance_free) {
+                                $param = [
+                                    'id' => $session['id'],
+                                    'statusCode' => 10002,
+                                    'timestampMillis' => now()->getTimestampMs(),
+                                    'balance' => (float)$this->member->balance_free,
+                                    'productId' => $session['productId']
+                                ];
+                                break;
+                            }
+
+                            $this->member->decrement($this->balances, $amount);
+
+                        }
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 0,
+                            'currency' => "THB",
+                            'productId' => $session['productId'],
+                            'username' => $this->member->user_name,
+                            'balanceBefore' => (float)$oldbalance,
+                            'balanceAfter' => (float)$this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs()
+                        ];
+
+                        $session_in['input'] = $item;
+                        $session_in['output'] = $param;
+                        $session_in['company'] = $this->game;
+                        $session_in['game_user'] = $this->member->user_name;
+                        $session_in['method'] = 'ajsub';
+                        $session_in['response'] = 'in';
+                        $session_in['amount'] = $item['betAmount'];
+                        $session_in['con_1'] = $item['id'];
+                        $session_in['con_2'] = $item['roundId'];
+                        $session_in['con_3'] = $item['txnId'];
+                        $session_in['con_4'] = null;
+                        $session_in['before_balance'] = $oldbalance;
+                        $session_in['after_balance'] = $this->member->balance_free;
+                        $session_in['date_create'] = now()->toDateTimeString();
+                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        GameLogProxy::create($session_in);
+
+                    }
+                }
+            }
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+
+        return $param;
+    }
+
+    public function winRewards(Request $request)
+    {
+        $param = [];
+        $amount = 0;
+        $session = $request->all();
+
+
+        if ($this->member) {
+
+            $oldbalance = $this->member->balance_free;
+
+            $data = GameLogProxy::where('company', $this->game)
+                ->where('response', 'in')
+                ->where('game_user', $this->member->user_name)
+                ->where('method', 'win')
+                ->where('con_1', $session['id'])
+                ->where('con_2', $session['productId'])
+                ->whereNull('con_3')
+                ->whereNull('con_4')
+                ->latest('created_at')
+                ->first();
+
+            if ($data) {
+
+
+                $param = [
+                    'id' => $session['id'],
+                    'statusCode' => 20002,
+                    'timestampMillis' => now()->getTimestampMs(),
+                    'balance' => (float)$this->member->balance_free,
+                    'productId' => $session['productId']
+                ];
+
+            } else {
+
+                foreach ($session['txns'] as $item) {
+                    $amount += $item['payoutAmount'];
+                }
+
+
+                $session_in['input'] = $session;
+                $session_in['output'] = $param;
+                $session_in['company'] = $this->game;
+                $session_in['game_user'] = $this->member->user_name;
+                $session_in['method'] = 'win';
+                $session_in['response'] = 'in';
+                $session_in['amount'] = $amount;
+                $session_in['con_1'] = $session['id'];
+                $session_in['con_2'] = $session['productId'];
+                $session_in['con_3'] = null;
+                $session_in['con_4'] = null;
+                $session_in['before_balance'] = $oldbalance;
+                $session_in['after_balance'] = $this->member->balance_free;
+                $session_in['date_create'] = now()->toDateTimeString();
+                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                GameLogProxy::create($session_in);
+
+                foreach ($session['txns'] as $item) {
+//                    $amount += $item['payoutAmount'];
+
+
+                    $datasub = GameLogProxy::where('company', $this->game)
+                        ->where('response', 'in')
+                        ->where('game_user', $this->member->user_name)
+                        ->where('method', 'winsub')
+                        ->where('con_1', $item['id'])
+                        ->where('con_2', $item['roundId'])
+                        ->where('con_3', $item['txnId'])
+                        ->whereNull('con_4')
+                        ->first();
+
+                    if ($datasub) {
+
+                        $param = [
+                            'id' => $session['id'],
+                            'statusCode' => 20002,
+                            'timestampMillis' => now()->getTimestampMs(),
+                            'balance' => (float)$this->member->balance_free,
+                            'productId' => $session['productId']
+                        ];
+                        break;
+
+
+                    } else {
+
+
+                        $datasubs = GameLogProxy::where('company', $this->game)
+                            ->where('response', 'in')
+                            ->where('game_user', $this->member->user_name)
+                            ->where('method', 'unsettlesub')
+                            ->where('con_1', $item['id'])
+                            ->where('con_2', $item['roundId'])
+                            ->where('con_3', $item['txnId'])
+                            ->where('con_4', 'complete')
+                            ->latest('created_at')
+                            ->first();
+
+                        if ($datasubs) {
+
+                            $datasubss = GameLogProxy::where('company', $this->game)
+                                ->where('response', 'in')
+                                ->where('game_user', $this->member->user_name)
+                                ->where('method', 'paysub')
+                                ->where('con_1', $item['id'])
+                                ->where('con_2', $item['roundId'])
+                                ->where('con_3', $item['txnId'])
+                                ->whereNull('con_4')
+                                ->latest('created_at')
+                                ->first();
+
+                            if ($datasubss) {
+
+                                $this->member->increment($this->balances, $item['payoutAmount']);
+
+                                $param = [
+                                    'id' => $session['id'],
+                                    'statusCode' => 0,
+                                    'currency' => "THB",
+                                    'productId' => $session['productId'],
+                                    'username' => $this->member->user_name,
+                                    'balanceBefore' => (float)$oldbalance,
+                                    'balanceAfter' => (float)$this->member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs()
+                                ];
+
+                                $session_in['input'] = $item;
+                                $session_in['output'] = $param;
+                                $session_in['company'] = $this->game;
+                                $session_in['game_user'] = $this->member->user_name;
+                                $session_in['method'] = 'winsub';
+                                $session_in['response'] = 'in';
+                                $session_in['amount'] = $item['payoutAmount'];
+                                $session_in['con_1'] = $item['id'];
+                                $session_in['con_2'] = $item['roundId'];
+                                $session_in['con_3'] = $item['txnId'];
+                                $session_in['con_4'] = null;
+                                $session_in['before_balance'] = $oldbalance;
+                                $session_in['after_balance'] = $this->member->balance_free;
+                                $session_in['date_create'] = now()->toDateTimeString();
+                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                                GameLogProxy::create($session_in);
+                            }
+
+                        } else {
+
+                            $this->member->increment($this->balances, $item['payoutAmount']);
+
+                            $param = [
+                                'id' => $session['id'],
+                                'statusCode' => 0,
+                                'currency' => "THB",
+                                'productId' => $session['productId'],
+                                'username' => $this->member->user_name,
+                                'balanceBefore' => (float)$oldbalance,
+                                'balanceAfter' => (float)$this->member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs()
+                            ];
+
+
+                            $session_in['input'] = $item;
+                            $session_in['output'] = $param;
+                            $session_in['company'] = $this->game;
+                            $session_in['game_user'] = $this->member->user_name;
+                            $session_in['method'] = 'winsub';
+                            $session_in['response'] = 'in';
+                            $session_in['amount'] = $item['payoutAmount'];
+                            $session_in['con_1'] = $item['id'];
+                            $session_in['con_2'] = $item['roundId'];
+                            $session_in['con_3'] = $item['txnId'];
+                            $session_in['con_4'] = null;
+                            $session_in['before_balance'] = $oldbalance;
+                            $session_in['after_balance'] = $this->member->balance_free;
+                            $session_in['date_create'] = now()->toDateTimeString();
+                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                            GameLogProxy::create($session_in);
+
+                        }
+
+
+                    }
+
+                } // loop
+
+            }
+
+
+        } else {
+
+            $param = [
+                'id' => $session['id'],
+                'statusCode' => 10001,
+                'timestampMillis' => now()->getTimestampMs(),
+                'balance' => 0,
+                'productId' => $session['productId']
+            ];
+
+        }
+
+        return $param;
+    }
+
+}

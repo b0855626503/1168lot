@@ -1,0 +1,460 @@
+@extends('admin::layouts.master')
+
+{{-- page title --}}
+@section('title','Dashboard')
+
+@push('styles')
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+@endpush
+
+@section('content')
+    <!--suppress ALL -->
+    <section class="content text-xs">
+
+
+        @isset($metrics)
+
+            <div class="row">
+
+                @foreach($metrics->all() as $metric)
+
+                    @include('admin::module.jobs.addedit', [
+                        'metric' => $metric,
+                    ])
+
+                @endforeach
+
+            </div>
+
+        @endisset
+
+        <div class="px-6 py-4 mb-6 pl-4 bg-white rounded-md shadow-md">
+
+            <h2 class="mb-4 text-2xl font-bold text-blue-900">
+                Filter
+            </h2>
+
+            <form action="" method="get">
+
+                <div class="flex items-center my-2 -mx-2">
+
+                    <div class="px-2 w-1/4">
+                        <label for="filter_show" class="block mb-1 text-xs uppercase font-semibold text-gray-600">
+                            Show jobs
+                        </label>
+                        <select name="type" id="filter_show"
+                                class="w-full p-2 bg-gray-200 border-2 border-gray-300 rounded">
+                            <option @if($filters['type'] === 'all') selected @endif value="all">All</option>
+                            <option @if($filters['type'] === 'running') selected @endif value="running">Running</option>
+                            <option @if($filters['type'] === 'failed') selected @endif value="failed">Failed</option>
+                            <option @if($filters['type'] === 'succeeded') selected @endif value="succeeded">Succeeded
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="px-2 w-1/4">
+                        <label for="filter_queues" class="block mb-1 text-xs uppercase font-semibold text-gray-600">
+                            Queues
+                        </label>
+                        <select name="queue" id="filter_queues"
+                                class="w-full p-2 bg-gray-200 border-2 border-gray-300 rounded">
+                            <option value="all">All</option>
+                            @foreach($queues as $queue)
+                                <option @if($filters['queue'] === $queue) selected @endif value="{{ $queue }}">
+                                    {{ $queue }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="mt-4">
+
+                    <button type="submit"
+                            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-medium uppercase tracking-wider text-white rounded">
+                        Filter
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        <div class="overflow-x-auto shadow-lg">
+
+            <table class="w-full rounded whitespace-no-wrap">
+
+                <thead class="bg-gray-200">
+
+                <tr>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Status
+                    </th>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Job
+                    </th>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Details
+                    </th>
+
+                    @if(config('queue-monitor.ui.show_custom_data'))
+                        <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                            Custom Data
+                        </th>
+                    @endif
+
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Progress
+                    </th>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Duration
+                    </th>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Started
+                    </th>
+                    <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                        Error
+                    </th>
+
+                    @if(config('queue-monitor.ui.allow_deletion'))
+                        <th class="px-4 py-3 font-medium text-left text-xs text-gray-600 uppercase border-b border-gray-200">
+                            Action
+                        </th>
+                    @endif
+                </tr>
+
+                </thead>
+
+                <tbody class="bg-white">
+
+                @forelse($jobs as $job)
+
+                    <tr class="font-sm leading-relaxed">
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                            @if(!$job->isFinished())
+
+                                <div
+                                    class="inline-flex flex-1 px-2 text-xs font-medium leading-5 rounded-full bg-blue-200 text-blue-800">
+                                    Running
+                                </div>
+
+                            @elseif($job->hasSucceeded())
+
+                                <div
+                                    class="inline-flex flex-1 px-2 text-xs font-medium leading-5 rounded-full bg-green-200 text-green-800">
+                                    Success
+                                </div>
+
+                            @else
+
+                                <div
+                                    class="inline-flex flex-1 px-2 text-xs font-medium leading-5 rounded-full bg-red-200 text-red-800">
+                                    Failed
+                                </div>
+
+                            @endif
+
+                        </td>
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 font-medium border-b border-gray-200">
+
+                            {{ $job->getBaseName() }}
+
+                            <span class="ml-1 text-xs text-gray-600">
+                                #{{ $job->job_id }}
+                            </span>
+
+                        </td>
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                            <div class="text-xs">
+                                <span class="text-gray-600 font-medium">Queue:</span>
+                                <span class="font-semibold">{{ $job->queue }}</span>
+                            </div>
+
+                            <div class="text-xs">
+                                <span class="text-gray-600 font-medium">Attempt:</span>
+                                <span class="font-semibold">{{ $job->attempt }}</span>
+                            </div>
+
+                        </td>
+
+                        @if(config('queue-monitor.ui.show_custom_data'))
+
+                            <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                                    <textarea rows="4"
+                                              class="w-64 text-xs p-1 border rounded"
+                                              readonly>{{ json_encode($job->getData(), JSON_PRETTY_PRINT) }}
+                                    </textarea>
+
+                            </td>
+
+                        @endif
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                            @if($job->progress !== null)
+
+                                <div class="w-32">
+
+                                    <div class="flex items-stretch h-3 rounded-full bg-gray-300 overflow-hidden">
+                                        <div class="h-full bg-green-500" style="width: {{ $job->progress }}%"></div>
+                                    </div>
+
+                                    <div class="flex justify-center mt-1 text-xs text-gray-800 font-semibold">
+                                        {{ $job->progress }}%
+                                    </div>
+
+                                </div>
+
+                            @else
+                                -
+                            @endif
+
+                        </td>
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+                            {{ $job->getElapsedInterval()->format('%H:%I:%S') }}
+                        </td>
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+                            {{ $job->started_at->diffForHumans() }}
+                        </td>
+
+                        <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                            @if($job->hasFailed() && $job->exception_message !== null)
+
+                                <textarea rows="4" class="w-64 text-xs p-1 border rounded"
+                                          readonly>{{ $job->exception_message }}</textarea>
+
+                            @else
+                                -
+                            @endif
+
+                        </td>
+
+                        @if(config('queue-monitor.ui.allow_deletion'))
+
+                            <td class="p-4 text-gray-800 text-sm leading-5 border-b border-gray-200">
+
+                                <form action="{{ route('queue-monitor::destroy', [$job]) }}" method="post">
+
+                                    @csrf
+                                    @method('delete')
+
+                                    <button
+                                        class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-800 text-xs font-medium uppercase tracking-wider text-white rounded">
+                                        Delete
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        @endif
+
+                    </tr>
+
+                @empty
+
+                    <tr>
+
+                        <td colspan="100" class="">
+
+                            <div class="my-6">
+
+                                <div class="text-center">
+
+                                    <div class="text-gray-500 text-lg">
+                                        No Jobs
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                @endforelse
+
+                </tbody>
+
+                <tfoot class="bg-white">
+
+                <tr>
+
+                    <td colspan="100" class="px-6 py-4 text-gray-700 font-sm border-t-2 border-gray-200">
+
+                        <div class="flex justify-between">
+
+                            <div>
+                                Showing
+                                @if($jobs->total() > 0)
+                                    <span class="font-medium">{{ $jobs->firstItem() }}</span> to
+                                    <span class="font-medium">{{ $jobs->lastItem() }}</span> of
+                                @endif
+                                <span class="font-medium">{{ $jobs->total() }}</span> result
+                            </div>
+
+                            <div>
+
+                                <a class="py-2 px-4 mx-1 text-xs font-medium @if(!$jobs->onFirstPage()) bg-gray-200 hover:bg-gray-300 cursor-pointer @else text-gray-600 bg-gray-100 cursor-not-allowed @endif rounded"
+                                   @if(!$jobs->onFirstPage()) href="{{ $jobs->previousPageUrl() }}" @endif>
+                                    Previous
+                                </a>
+
+                                <a class="py-2 px-4 mx-1 text-xs font-medium @if($jobs->hasMorePages()) bg-gray-200 hover:bg-gray-300 cursor-pointer @else text-gray-600 bg-gray-100 cursor-not-allowed @endif rounded"
+                                   @if($jobs->hasMorePages()) href="{{ $jobs->url($jobs->currentPage() + 1) }}" @endif>
+                                    Next
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                </tfoot>
+
+            </table>
+
+        </div>
+
+        @if(config('queue-monitor.ui.allow_purge'))
+
+            <div class="mt-12">
+
+                <form action="{{ route('queue-monitor::purge') }}" method="post">
+
+                    @csrf
+                    @method('delete')
+
+                    <button
+                        class="px-3 py-1 bg-red-200 hover:bg-red-300 text-red-800 text-xs font-medium uppercase tracking-wider text-white rounded">
+                        Delete all entries
+                    </button>
+
+                </form>
+
+            </div>
+
+        @endif
+
+    </section>
+@endsection
+
+@push('scripts')
+
+    <script type="module">
+
+        import to from "./js/toPromise.js";
+
+        window.app = new Vue({
+            data: function () {
+                return {
+                    loopcnts: 0,
+                    announce: '',
+                    pushmenu: '',
+                    toast: '',
+                    withdraw_cnt: 0,
+                    played: false
+                }
+            },
+            created() {
+                this.autoCnt(false);
+            },
+            watch: {
+                withdraw_cnt: function (event) {
+                    if (event > 0) {
+                        this.ToastPlay();
+                    }
+                }
+            },
+            methods: {
+
+                autoCnt(draw) {
+                    const self = this;
+                    this.toast = new Toasty({
+                        classname: "toast",
+                        transition: "fade",
+                        insertBefore: true,
+                        duration: 1000,
+                        enableSounds: true,
+                        autoClose: true,
+                        progressBar: true,
+                        sounds: {
+                            info: "sound/alert.mp3",
+                            success: "sound/alert.mp3",
+                            warning: "vendor/toasty/dist/sounds/warning/1.mp3",
+                            error: "storage/sound/alert.mp3",
+                        }
+                    });
+                    this.loadCnt();
+
+                    setInterval(function () {
+                        self.loadCnt();
+                        self.loopcnts++;
+                        // self.$refs.deposit.loadData();
+                    }, 50000);
+
+                },
+
+                runMarquee() {
+                    this.announce = $('#announce');
+                    this.announce.marquee({
+                        duration: 20000,
+                        startVisible: false
+                    });
+                },
+                ToastPlay() {
+
+                    this.toast.error('<span class="text-danger">มีการถอนรายการใหม่</span>');
+                },
+                async loadCnt() {
+                    let err, response;
+                    [err, response] = await to(axios.get("{{ url('loadcnt') }}"));
+                    if (err) {
+                        return 0;
+                    }
+
+                    document.getElementById('badge_bank_in').textContent = response.data.bank_in_today + ' / ' + response.data.bank_in;
+                    document.getElementById('badge_bank_out').textContent = response.data.bank_out;
+                    document.getElementById('badge_withdraw').textContent = response.data.withdraw;
+                    document.getElementById('badge_withdraw_free').textContent = response.data.withdraw_free;
+                    document.getElementById('badge_confirm_wallet').textContent = response.data.payment_waiting;
+                    document.getElementById('badge_member_confirm').textContent = response.data.member_confirm;
+                    if (this.loopcnts == 0) {
+                        document.getElementById('announce').textContent = response.data.announce;
+                        this.runMarquee();
+                    } else {
+                        if (response.data.announce_new == 'Y') {
+                            this.announce.on('finished', (event) => {
+                                document.getElementById('announce').textContent = response.data.announce;
+                                this.announce.trigger('destroy');
+                                this.announce.off('finished');
+                                this.runMarquee();
+                            });
+
+                        }
+                    }
+
+                    this.withdraw_cnt = response.data.withdraw;
+
+                }
+            }
+        });
+
+    </script>
+@endpush
+

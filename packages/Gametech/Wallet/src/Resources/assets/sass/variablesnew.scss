@@ -1,0 +1,200 @@
+.img100 > p img {
+    width: 100% !important;
+}
+
+
+.login_btn {
+    background-color: $btnlogin !important;
+    color: $text-base !important;
+}
+
+.btn-icon {
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    // background: linear-gradient(45deg, $bg-primary 10%, $bg-secondary 90%) !important;
+    padding: 3px;
+    border-radius: 5px;
+}
+
+body {
+    font-family: $font-family-base !important;
+    background: linear-gradient(45deg, $bg-primary 10%, $bg-secondary 90%) !important;
+}
+
+.btn-theme {
+    color: $btn-theme !important;
+    background-color: #f8f9fa !important;
+    border-color: #f8f9fa !important;
+}
+
+h1,
+h2,
+button {
+    font-family: $font-family-base !important;
+
+}
+
+.bg-theme {
+
+    // background: linear-gradient(45deg, #04619F 10%, #000000 90%) !important;
+
+    background-size: 100%;
+    background-repeat: no-repeat;
+
+
+}
+
+.list-img {
+    width: 40px !important;
+    height: 40px !important;
+}
+
+
+.nav-top {
+    background: $bg-header !important;
+    // border-bottom: 1px solid #dee2e6 !important;
+}
+
+.nav-footer {
+    background: $bg-footer !important;
+}
+
+
+.text-color-fixed {
+    color: $text-highlight !important;
+}
+
+.rc-anchor .rc-anchor-normal {
+    width: 250px !important;
+}
+
+.form-style-1 {
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.form-style-1 .form-control {
+    // background: rgba(0, 0, 0, 0.2);
+    // border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #000
+}
+
+.form-style-1 .form-control-mute {
+    background: none !important;
+    color: #fff;
+}
+
+.form-style-1 .input-group-text {
+    // background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2)
+}
+
+.form-style-1 .input-group-text {
+    color: #fff;
+}
+
+
+.form-control:disabled,
+.form-control[readonly] {
+    background: rgba(0, 0, 0, 0.1);
+    opacity: 1;
+    color: #f8f8f8;
+}
+
+form .input-group-text {
+    width: 40px;
+    text-align: center;
+    clear: both;
+    justify-content: center;
+}
+
+
+.card-trans {
+    border-radius: 1em;
+    background: #0000005c !important;
+    box-shadow: 2px 2px 5px 1px rgba(0, 0, 0, 0.4) !important;
+    // text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.68) !important;
+}
+
+.content-heading {
+    color: #ccc;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+
+.slider {
+    border-right: 0px !important;
+    //  background-color: rgba(#000, 0) !important;
+    text-align: center
+}
+
+.exchange {
+    background: $bg-footer !important;
+
+}
+
+// .owl-item.active.center > div:after {
+
+//   .slider {
+//     border-right: 0px !important;
+//     background-color: #000 !important;
+
+//     //  background-color: rgba(#000, 0) !important;
+//       text-align: center
+
+//  }
+// }
+// .owl-item > div:after {
+
+// }
+.text-main {
+    color: $text-base;
+}
+
+
+.owl-carousel.owl-drag .owl-item.center {
+    border: 1px solid #ccc !important;
+    border-radius: 1em !important;
+    padding: 5px !important;
+    background-color: rgba(#ccc, 0.2) !important;
+
+
+    // transform: scale(1.1)
+}
+
+.owl-carousel .owl-item img {
+    display: block !important;
+
+}
+
+
+.fix-img {
+    min-height: 100px !important;
+    min-width: 100px !important;
+}
+
+
+a.active {
+    color: $active-color !important;
+}
+
+a.active i,
+a.active p {
+    color: $active-color !important;
+}
+
+.modal-container {
+    margin-top: 25% !important;
+}
+
+.text-top {
+    font-size: 1rem;
+}
+
+.text-sub {
+    font-size: .9rem;
+
+}

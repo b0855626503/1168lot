@@ -1,0 +1,30 @@
+{
+    "name": "gametech/admin",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Boat",
+            "email": "b0855626503@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.2.5",
+        "konekt/concord": "^1.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gametech\\Admin\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Gametech\\Admin\\Providers\\AdminServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev",
+    "description": ""
+}

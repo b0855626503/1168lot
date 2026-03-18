@@ -1,0 +1,393 @@
+<?php
+
+namespace Gametech\Game\Repositories\Games;
+
+use Gametech\Core\Eloquent\Repository;
+use Illuminate\Container\Container as App;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+
+class StarRepository extends Repository
+{
+    protected $responses;
+
+    protected $method;
+
+    protected $debug;
+
+    protected $url;
+
+    protected $agent;
+
+    protected $agentPass;
+
+    protected $passkey;
+
+    protected $secretkey;
+
+    protected $login;
+
+    protected $auth;
+
+    public function __construct($method, $debug, App $app)
+    {
+        $game = 'star';
+
+        $this->method = $method;
+
+        $this->debug = $debug;
+
+        $this->url = config($this->method . '.' . $game . '.apiurl');
+
+        $this->agent = config($this->method . '.' . $game . '.agent');
+
+        $this->agentPass = config($this->method . '.' . $game . '.agent_pass');
+
+        $this->login = config($this->method . '.' . $game . '.login');
+
+        $this->auth = config($this->method . '.' . $game . '.auth');
+
+        $this->passkey = config($this->method . '.' . $game . '.passkey');
+
+        $this->secretkey = config($this->method . '.' . $game . '.secretkey');
+
+        $this->responses = [];
+
+        parent::__construct($app);
+    }
+
+    public function GameCurl($param, $action)
+    {
+
+        $response = rescue(function () use ($param, $action) {
+
+            $url = $this->url . "api.php?action=" . $action;
+
+            return Http::timeout(15)->withHeaders([
+                'access-key' => $this->secretkey
+            ])->post($url, $param);
+
+
+        }, function ($e) {
+
+            return false;
+
+        }, true);
+
+        if ($this->debug) {
+            $this->Debug($response);
+        }
+
+        $result = $response->json();
+        $result['msg'] = ($result['msg'] ?? 'พบปัญหาบางประการ');
+
+        if($response->failed() || $response->clientError() || $response->serverError()){
+            $result['success'] = false;
+            return $result;
+        }
+
+
+        if ($response->successful()) {
+            if ($result['status'] == true) {
+                $result['success'] = true;
+            }else{
+                $result['success'] = false;
+            }
+        }else{
+            $result['success'] = false;
+        }
+
+        return $result;
+
+    }
+
+    public function Debug($response, $custom = false)
+    {
+
+        if (!$custom) {
+            $return['body'] = $response->body();
+            $return['json'] = $response->json();
+            $return['successful'] = $response->successful();
+            $return['failed'] = $response->failed();
+            $return['clientError'] = $response->clientError();
+            $return['serverError'] = $response->serverError();
+        } else {
+            $return['body'] = json_encode($response);
+            $return['json'] = $response;
+            $return['successful'] = 1;
+            $return['failed'] = 1;
+            $return['clientError'] = 1;
+            $return['serverError'] = 1;
+        }
+
+        $this->responses[] = $return;
+
+
+    }
+
+    public function addGameAccount($data): array
+    {
+        $result = $this->newUser();
+        if ($result['success'] == true) {
+            $account = $result['account'];
+            $result = $this->addUser($account, $data);
+        }
+
+        return $result;
+    }
+
+    public function newUser(): array
+    {
+        $return['success'] = false;
+        if ($this->method === 'game') {
+            $free = 'N';
+        } else {
+            $free = 'Y';
+        }
+
+        $response = DB::table('users_star')
+            ->where('use_account', 'N')
+            ->where('enable', 'Y')
+            ->where('code', '<>', 0)
+            ->where('freecredit', $free)
+            ->select('user_name')
+            ->inRandomOrder();
+
+
+        if ($response->exists()) {
+            $return['success'] = true;
+            $return['account'] = $response->first()->user_name;
+
+        } else {
+            $return['success'] = false;
+            $return['msg'] = 'ไม่สามารถลงทะเบียนรหัสเกมได้ เนื่องจาก ID เกมหมด โปรดแจ้ง Staff';
+        }
+
+//        if ($this->debug) {
+//            return ['debug' => $this->responses, 'success' => true, 'account' => ''];
+//        }
+
+        return $return;
+    }
+
+    public function addUser($username, $data): array
+    {
+        $return['success'] = false;
+
+
+        $param = [
+            'ag_username' => $this->agent,
+            'ag_password' => $this->agentPass,
+            'member_username' => $username
+        ];
+
+//        dd($param);
+
+        $response = $this->GameCurl($param, 'createmember');
+//        dd($response);
+
+        if ($response['success'] === true) {
+
+            DB::table('users_star')
+                ->where('user_name', $username)
+                ->update(['date_join' => now()->toDateString(), 'ip' => request()->ip(), 'use_account' => 'Y', 'user_update' => 'SYSTEM']);
+
+            $return['msg'] = 'Complete';
+            $return['success'] = true;
+            $return['user_name'] = $response['data']['username'];
+            $return['user_pass'] = $response['data']['password'];
+
+        } else {
+
+            DB::table('users_star')
+                ->where('user_name', $username)
+                ->update(['use_account' => 'Y']);
+
+            $return['msg'] = $response['msg'];
+            $return['success'] = false;
+
+        }
+
+
+        if ($this->debug) {
+            return ['debug' => $this->responses, 'success' => true];
+        }
+        return $return;
+    }
+
+    public function changePass($data): array
+    {
+        $return['success'] = false;
+
+        $param = [
+            'ag_username' => $this->agent,
+            'ag_password' => $this->agentPass,
+            'member_username' => $data['user_name'],
+            'member_newpassword' => $data['user_pass']
+        ];
+
+        $response = $this->GameCurl($param, 'changepassword');
+
+        if ($response['success'] === true) {
+            $return['success'] = true;
+            $return['msg'] = 'เปลี่ยนรหัสผ่านเกม เรียบร้อย';
+
+        } else {
+            $return['msg'] = $response['msg'];
+            $return['success'] = false;
+        }
+
+
+        if ($this->debug) {
+            return ['debug' => $this->responses, 'success' => true];
+        }
+
+        return $return;
+    }
+
+    public function viewBalance($username): array
+    {
+        $return['success'] = false;
+        $return['score'] = 0;
+
+
+        $param = [
+            'ag_username' => $this->agent,
+            'ag_password' => $this->agentPass,
+            'member_username' => $username
+        ];
+
+        $response = $this->GameCurl($param, 'getcredit');
+
+        if ($response['success'] === true) {
+
+            $return['msg'] = 'Complete';
+            $return['success'] = true;
+            $return['connect'] = true;
+            $return['score'] = $response['data']['credit_balance'] / 10;
+
+
+        } else {
+            $return['msg'] = $response['msg'];
+            $return['connect'] = false;
+            $return['success'] = false;
+        }
+
+
+        if ($this->debug) {
+            return ['debug' => $this->responses, 'success' => true];
+        }
+        return $return;
+    }
+
+    public function deposit($username, $amount): array
+    {
+        $return['success'] = false;
+
+        $score = $amount;
+
+        if ($score < 0) {
+            $return['msg'] = "เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง";
+            if ($this->debug) {
+                $this->Debug($return, true);
+            }
+        } elseif (empty($username)) {
+            $return['msg'] = "เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก";
+            if ($this->debug) {
+                $this->Debug($return, true);
+            }
+        } else {
+            $transID = "DP" . date('YmdHis') . rand(100, 999);
+
+            $param = [
+                'ag_username' => $this->agent,
+                'ag_password' => $this->agentPass,
+                'member_username' => $username,
+                'amount' => $score
+            ];
+
+            $response = $this->GameCurl($param, 'addcredit');
+
+            if ($response['success'] === true) {
+
+                $return['success'] = true;
+                $return['ref_id'] = $transID;
+                $return['after'] = $response['data']['after_balance'] / 10;
+                $return['before'] = $response['data']['before_balance'] / 10;
+            } else {
+                $return['msg'] = 'ยอดเงินฝาก ขั้นต่ำ 100 บาท หรือ ยอดดังนี้ (100,200,500,1000,1500) เท่านั้น';
+                $return['success'] = false;
+            }
+
+
+        }
+
+        if ($this->debug) {
+            return ['debug' => $this->responses, 'success' => true];
+        }
+
+        return $return;
+    }
+
+    public function withdraw($username, $amount): array
+    {
+        $return['success'] = false;
+
+
+        $score = $amount;
+
+        if ($score < 1) {
+            $return['msg'] = "เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง";
+            if ($this->debug) {
+                $this->Debug($return, true);
+            }
+        } elseif (empty($username)) {
+            $return['msg'] = "เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก";
+            if ($this->debug) {
+                $this->Debug($return, true);
+            }
+        } else {
+            $score = $score * 10;
+            $transID = "WD" . date('YmdHis') . rand(100, 999);
+
+            $param = [
+                'ag_username' => $this->agent,
+                'ag_password' => $this->agentPass,
+                'member_username' => $username,
+                'amount' => $score
+            ];
+
+            $response = $this->GameCurl($param, 'delcredit');
+
+
+            if ($response['success'] === true) {
+                $return['success'] = true;
+                $return['ref_id'] = $transID;
+                $return['after'] = $response['data']['after_balance'] / 10;
+                $return['before'] = $response['data']['before_balance'] / 10;
+            } else {
+                $return['msg'] = 'ยอดเงินถอน ที่สามารถแจ้งถอนได้ มียอดเงิน 100,200,500,1000,1500 เท่านั้น';
+                $return['success'] = false;
+            }
+
+
+        }
+
+        if ($this->debug) {
+            return ['debug' => $this->responses, 'success' => true];
+        }
+
+        return $return;
+    }
+
+
+    /**
+     * Specify Model class name
+     *
+     * @return mixed
+     */
+    function model(): string
+    {
+        return 'Gametech\Game\Contracts\User';
+    }
+}

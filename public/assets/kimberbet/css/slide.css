@@ -1,0 +1,26 @@
+#pageSlide .swiper-slide {
+    width: auto;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+#pageSlide .swiper-slide img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+#pageSlide .swiper-container {
+    width: 100%;
+    height: auto;
+}
+
+#pageSlide .swiper-pagination,
+#pageSlide .swiper-button-next,
+#pageSlide .swiper-button-prev {
+    z-index: 10;
+}

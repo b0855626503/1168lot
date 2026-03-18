@@ -1,0 +1,110 @@
+// Variables
+@import 'variables';
+
+// Bootstrap
+//@import '../build/scss/adminlte';
+//@import '~admin-lte/build/scss/AdminLTE';
+
+@import 'node_modules/bootstrap/scss/bootstrap.scss';
+@import '~admin-lte/build/scss/adminlte';
+@import "~datatables.net-responsive-bs4/css/responsive.bootstrap4.css";
+@import "~datatables.net-bs4/css/dataTables.bootstrap4.css";
+@import "~datatables.net-buttons-bs4/css/buttons.bootstrap4.css";
+@import '~sweetalert2/src/sweetalert2.scss';
+//@import '~egalink-toasty.js/dist/toasty.css';
+@import 'node_modules/bootstrap-vue/src/index.scss';
+@import "button.css";
+@import "badge.css";
+
+
+
+table.dataTable>tbody>tr.child ul.dtr-details {
+    display: inline-block;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+
+table.dataTable>tbody>tr.child ul.dtr-details>li {
+    border-bottom: 1px solid #efefef;
+    padding: 0.5em 0;
+    text-align: justify !important;
+}
+
+table.dataTable>tbody>tr.child span.dtr-title {
+    display: inline-block;
+    min-width: 75px;
+    font-weight: bold;
+    width: 50%;
+    text-align: right !important;
+    padding-right: 1em;
+}
+
+table.dataTable>tbody>tr.child span.dtr-data {
+    width: 50%;
+    padding-left: 1em;
+}
+
+table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control:before, table.dataTable.dtr-inline.collapsed>tbody>tr>th.dtr-control:before {
+
+    margin-top: 0px !important;
+}
+//
+//td.details-control {
+//    background: url('../../assets/admin/images/details_open.png') no-repeat center center;
+//    cursor: pointer;
+//}
+//tr.shown td.details-control {
+//    background: url('../../assets/admin/images/details_close.png') no-repeat center center;
+//}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+//.text-xs {
+//    font-size: 0.800rem !important;
+//}
+
+.text-xs .btn {
+    font-size: 0.75rem !important;
+}
+
+.modal-backdrop {
+    z-index:inherit !important;
+}
+
+.text-long {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 150px;
+}
+
+.announce {
+    overflow: hidden;
+}
+
+//.table-responsive,
+//.dataTables_scrollBody {
+//    overflow: visible !important;
+//}
+//
+//.table-responsive-disabled .dataTables_scrollBody {
+//    overflow: hidden !important;
+//}
+
+.dropdown-menu {
+    z-index: 2000;
+}
+
+.text-sm .nav-compact .nav-link>.right, .text-sm .nav-compact .nav-link>p>.right {
+    top: auto !important;
+}
+
+.nav-sidebar>.nav-item {
+    margin-bottom: 0;
+    padding: 0 0 0.5rem;
+}

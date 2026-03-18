@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class DashboardSummaryDaily extends Model
+{
+    protected $table = 'dashboard_summary_daily';
+
+    protected $fillable = [
+        'summary_date',
+        'web_code',
+        'register_total',
+        'register_direct',
+        'register_referral',
+        'register_campaign',
+        'deposit_total_amount',
+        'deposit_total_count',
+        'deposit_total_users',
+        'deposit_success_amount',
+        'deposit_success_count',
+        'deposit_success_users',
+        'deposit_pending_amount',
+        'deposit_pending_count',
+        'deposit_pending_users',
+        'deposit_reject_amount',
+        'deposit_reject_count',
+        'deposit_reject_users',
+        'deposit_deleted_amount',
+        'deposit_deleted_count',
+        'deposit_deleted_users',
+        'withdraw_total_amount',
+        'withdraw_total_count',
+        'withdraw_total_users',
+        'withdraw_pending_amount',
+        'withdraw_pending_count',
+        'bonus_deposit_amount',
+        'bonus_deposit_count',
+        'bonus_activity_amount',
+        'bonus_activity_count',
+        'bonus_manual_amount',
+        'bonus_manual_count',
+        'bonus_total_amount',
+        'bonus_total_count',
+        'net_amount',
+        'register_deposit_count',
+        'register_referral_deposit_count',
+        'first_deposit_count',
+        'repeat_deposit_count',
+        'register_confirmed_count',
+        'staff_add_amount',
+        'staff_reduce_amount',
+        'staff_adjust_count',
+        'last_synced_at',
+        'metric_version',
+    ];
+
+    protected $casts = [
+        'summary_date' => 'date:Y-m-d',
+        'last_synced_at' => 'datetime:Y-m-d H:i:s',
+        'deposit_total_amount' => 'decimal:2',
+        'deposit_success_amount' => 'decimal:2',
+        'deposit_pending_amount' => 'decimal:2',
+        'deposit_reject_amount' => 'decimal:2',
+        'deposit_deleted_amount' => 'decimal:2',
+        'withdraw_total_amount' => 'decimal:2',
+        'withdraw_pending_amount' => 'decimal:2',
+        'bonus_deposit_amount' => 'decimal:2',
+        'bonus_activity_amount' => 'decimal:2',
+        'bonus_manual_amount' => 'decimal:2',
+        'bonus_total_amount' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'staff_add_amount' => 'decimal:2',
+        'staff_reduce_amount' => 'decimal:2',
+    ];
+}

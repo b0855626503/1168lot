@@ -1,0 +1,101 @@
+@extends('wallet::layouts.master')
+
+{{-- page title --}}
+@section('title','')
+
+
+
+@section('content')
+
+    <div class="p-1">
+        <div class="headsecion">
+            <img src="/images/icon/withdraw.png"> {{ __('app.home.withdraw') }}
+        </div>
+        <div class="ctpersonal">
+            <form method="POST" action="{{ route('customer.withdraw.store') }}"
+                  @submit.prevent="onSubmit">
+                @csrf
+            <div class="inboxmain">
+                <table>
+                    <tbody><tr>
+                        <td class="py-3" style="width:50px">
+                           <span class="circlered">
+                            <img src="{{ Storage::url('bank_img/'.$profile->bank->filepic) }}">
+                           </span>
+                        </td>
+                        <td class="py-3">
+                            {{ (!is_null($profile->bank) ? $profile->bank->name_th : '') }}<br>
+                            <span class="commentbox">{{ $profile->acc_no }}</span>
+                        </td>
+                    </tr>
+                    </tbody></table>
+                <table>
+                    <tbody>
+                    <tr>
+                        <td class="py-3" style="width:50%">
+                            {{ __('app.home.withdraw_credit') }}
+                        </td>
+                        <td class="py-3 text-right" style="font-weight: 300; font-size: 20px;">
+                            {{ number_format($profile->balance,2) }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="py-3" style="width:50%">
+                            {{ __('app.home.withdraw_turn') }}
+                        </td>
+                        <td class="py-3 text-right" style="font-weight: 300; font-size: 20px;">
+                            {{ number_format($turnpro,2) }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="py-3" style="width:50%">
+                            ถอนได้สูงสุด
+                        </td>
+                        <td class="py-3 text-right" style="font-weight: 300; font-size: 20px;">
+                            {{ number_format($limit,2) }}
+                        </td>
+                    </tr>
+                    <tr style="border:none">
+                        <td class="pt-3 pb-1" style="width:50%">
+                            {{ __('app.home.withdraw_amount') }}
+                        </td>
+                        <td class="pt-3 pb-1 text-right">
+                            ({{ __('app.home.withdraw_baht') }})
+                        </td>
+                    </tr>
+                    </tbody></table>
+                <table>
+                    <tbody><tr>
+                        <td class="pb-2">
+                            $
+                        </td>
+                        <td class="pb-2">
+                            <input required  step="1"
+                                   {{ ($pro === true ? 'readonly' : '') }}
+                                   min="1"
+                                   :class="[errors.has('amount') ? 'is-invalid' : '']"
+                                   class="inputmain" type="number" placeholder="กรุณากรอกจำนวนเงิน"
+                                   id="amount" name="amount"
+                                   data-vv-as="&quot;Amount&quot;"
+                                   autocomplete="off"
+                                   value="{{$profile->balance}}">
+                        </td>
+                    </tr>
+                    </tbody></table>
+                <br>
+                <p class="text-center text-warning">
+                    {{ __('app.home.withdraw_min') }} {{ $config->minwithdraw }}
+                    {{ __('app.home.withdraw_baht') }}</p>
+                <button class="moneyBtn"> {{ __('app.home.withdraw') }} </button>
+            </div>
+            </form>
+        </div>
+
+    </div>
+
+@endsection
+
+
+
+
+

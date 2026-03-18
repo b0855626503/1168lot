@@ -1,0 +1,246 @@
+
+.badge {
+    font-size: 11px !important;
+    font-weight: 300;
+    text-align: center;
+    background-color: #cccccc;
+    height: 18px;
+    padding: 3px 6px 3px 6px;
+    -webkit-border-radius: 12px !important;
+    -webkit-background-clip: padding-box !important;
+    -moz-border-radius: 12px !important;
+    -moz-background-clip: padding !important;
+    border-radius: 12px !important;
+    background-clip: padding-box !important;
+    -webkit-text-shadow: none !important;
+    text-shadow: none !important;
+    vertical-align: middle;
+}
+.badge.badge-square {
+    -webkit-border-radius: 2px !important;
+    -webkit-background-clip: padding-box !important;
+    -moz-border-radius: 2px !important;
+    -moz-background-clip: padding !important;
+    border-radius: 2px !important;
+    background-clip: padding-box !important;
+}
+.badge.badge-empty {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    vertical-align: baseline;
+}
+.badge-default,
+.label-default {
+    background-color: #cccccc !important;
+}
+.badge-default.graded,
+.label-default.graded {
+    background: linear-gradient(to right, #cccccc, #e5e5e5) !important;
+}
+.badge-blue,
+.label-blue {
+    background-color: #5db2ff !important;
+}
+.badge-blue.graded,
+.label-blue.graded {
+    background: linear-gradient(to right, #5db2ff, #80c1fb) !important;
+}
+.label-info,
+.badge-info {
+    background-color: #57b5e3;
+    background-image: none !important;
+}
+.label-info.graded,
+.badge-info.graded {
+    background: linear-gradient(to right, #57b5e3, #c4e6f6) !important;
+}
+.label-sky,
+.badge-sky {
+    background-color: #11a9cc;
+    background-image: none !important;
+}
+.label-sky.graded,
+.badge-sky.graded {
+    background: linear-gradient(to right, #11a9cc, #c4e6f6) !important;
+}
+.badge-primary,
+.label-primary {
+    background-color: #4374e0 !important;
+}
+.badge-primary.graded,
+.label-primary.graded {
+    background: linear-gradient(to right, #4374e0, #aec9fa) !important;
+}
+.label-azure,
+.badge-azure {
+    background-color: #2dc3e8;
+    background-image: none !important;
+}
+.label-azure.graded,
+.badge-azure.graded {
+    background: linear-gradient(to right, #2dc3e8, #5edfff) !important;
+}
+.label-blueberry,
+.badge-blueberry {
+    background-color: #6f85bf;
+    background-image: none !important;
+}
+.label-blueberry.graded,
+.badge-blueberry.graded {
+    background: linear-gradient(to right, #6f85bf, #ced5e9) !important;
+}
+.label-palegreen,
+.badge-palegreen {
+    background-color: #a0d468;
+    background-image: none !important;
+}
+.label-palegreen.graded,
+.badge-palegreen.graded {
+    background: linear-gradient(to right, #a0d468, #c5e9b6) !important;
+}
+.label-success,
+.badge-success {
+    background-color: #53a93f;
+    background-image: none !important;
+}
+.label-success.graded,
+.badge-success.graded {
+    background: linear-gradient(to right, #53a93f, #b0e0a4) !important;
+}
+.label-green,
+.badge-green {
+    background-color: #8cc474;
+    background-image: none !important;
+}
+.label-green.graded,
+.badge-green.graded {
+    background: linear-gradient(to right, #8cc474, #a0d468) !important;
+}
+.label-lightyellow,
+.badge-lightyellow {
+    background-color: #f6d52e;
+    background-image: none !important;
+}
+.label-lightyellow.graded,
+.badge-lightyellow.graded {
+    background: linear-gradient(to right, #f6d52e, #f8e26d) !important;
+}
+.label-yellow,
+.badge-yellow {
+    background-color: #ffce55;
+    background-image: none !important;
+}
+.label-yellow.graded,
+.badge-yellow.graded {
+    background: linear-gradient(to right, #ffce55, #f6d52e) !important;
+}
+.label-warning,
+.badge-warning {
+    background-color: #f4b400;
+    background-image: none !important;
+}
+.label-warning.graded,
+.badge-warning.graded {
+    background: linear-gradient(to right, #f4b400, #f8df95) !important;
+}
+.label-gold,
+.badge-gold {
+    background-color: #f9b256;
+    background-image: none !important;
+}
+.label-gold.graded,
+.badge-gold.graded {
+    background: linear-gradient(to right, #f9b256, #fece90) !important;
+}
+.label-orange,
+.badge-orange {
+    background-color: #fb6e52;
+    background-image: none !important;
+}
+.label-orange.graded,
+.badge-orange.graded {
+    background: linear-gradient(to right, #fb6e52, #fb9f8d) !important;
+}
+.label-lightred,
+.badge-lightred {
+    background-color: #e46f61;
+    background-image: none !important;
+}
+.label-lightred.graded,
+.badge-lightred.graded {
+    background: linear-gradient(to right, #e46f61, #f88f83) !important;
+}
+.label-darkorange,
+.badge-darkorange {
+    background-color: #ed4e2a;
+    background-image: none !important;
+}
+.label-darkorange.graded,
+.badge-darkorange.graded {
+    background: linear-gradient(to right, #ed4e2a, #f5a998) !important;
+}
+.label-red,
+.badge-red {
+    background-color: #df5138;
+    background-image: none !important;
+}
+.label-red.graded,
+.badge-red.graded {
+    background: linear-gradient(to right, #df5138, #f5836f) !important;
+}
+.label-pink,
+.badge-pink {
+    background-color: #e75b8d;
+    background-image: none !important;
+}
+.label-pink.graded,
+.badge-pink.graded {
+    background: linear-gradient(to right, #e75b8d, #f299b9) !important;
+}
+.label-darkpink,
+.badge-darkpink {
+    background-color: #cc324b;
+    background-image: none !important;
+}
+.label-darkpink.graded,
+.badge-darkpink.graded {
+    background: linear-gradient(to right, #cc324b, #fb6880) !important;
+}
+.label-danger,
+.badge-danger {
+    background-color: #d73d32;
+    background-image: none !important;
+}
+.label-danger.graded,
+.badge-danger.graded {
+    background: linear-gradient(to right, #d73d32, #f7b5b0) !important;
+}
+.label-magenta,
+.badge-magenta {
+    background-color: #bc5679;
+    background-image: none !important;
+}
+.label-magenta.graded,
+.badge-magenta.graded {
+    background: linear-gradient(to right, #bc5679, #e9abc0) !important;
+}
+.label-purple,
+.badge-purple {
+    background-color: #7e3794;
+    background-image: none !important;
+}
+.label-purple.graded,
+.badge-purple.graded {
+    background: linear-gradient(to right, #7e3794, #daafe8) !important;
+}
+.label-maroon,
+.badge-maroon {
+    background-color: #981b48;
+    background-image: none !important;
+}
+.label-maroon.graded,
+.badge-maroon.graded {
+    background: linear-gradient(to right, #981b48, #eab6c9) !important;
+}

@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- พื้นหลังเหรียญ -->
+  <circle cx="256" cy="256" r="240" stroke="black" stroke-width="16" fill="white"></circle>
+
+  <!-- ข้อความ BONUS -->
+  <text x="50%" y="275" text-anchor="middle" font-size="80" fill="black" font-family="Arial, sans-serif" font-weight="bold">
+    BONUS
+  </text>
+
+  <!-- ดาวบน -->
+  <polygon points="256,80 266,110 298,110 272,130 282,160 256,140 230,160 240,130 214,110 246,110" fill="black"></polygon>
+
+  <!-- ดาวซ้ายล่าง -->
+  <polygon points="140,360 150,390 182,390 156,410 166,440 140,420 114,440 124,410 98,390 130,390" fill="black"></polygon>
+
+  <!-- ดาวขวาล่าง -->
+  <polygon points="372,360 382,390 414,390 388,410 398,440 372,420 346,440 356,410 330,390 362,390" fill="black"></polygon>
+
+  <!-- วงขอบ -->
+  <circle cx="256" cy="256" r="240" stroke="black" stroke-width="16" fill="none"></circle>
+  <circle cx="256" cy="256" r="200" stroke="black" stroke-width="4" fill="none"></circle>
+</svg>

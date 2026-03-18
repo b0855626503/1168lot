@@ -1,0 +1,25 @@
+{
+  "name": "winwheel",
+  "version": "1.0.1",
+  "description": "Winwheel.js is a feature packed JavaScript library that allows you to easily create spinning Prize Wheels on HTML5 canvas using highly configurable JavaScript classes.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zarocknz/javascript-winwheel.git"
+  },
+  "keywords": [
+    "spin",
+    "wheel",
+    "win",
+    "rotate"
+  ],
+  "author": "zarocknz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zarocknz/javascript-winwheel/issues"
+  },
+  "homepage": "https://github.com/zarocknz/javascript-winwheel#readme"
+}

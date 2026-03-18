@@ -1,0 +1,3 @@
+var member_game={template:`
+        <div class="w-100 d-flex justify-content-center">loading...</div>
+    `,data(){return{list:{data:[]},recList:[],obj:{},}},methods:{},computed:{},watch:{selected_ip(val){this.cmd='';},'filter.group'(val){console.log('chchc',val);}},beforeRouteEnter(to,from,next){Vue.nextTick(function(){next();});},beforeRouteLeave(to,from,next){console.log('leave',from);next();},mounted(){},created(){},};

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 460 460" width="460" height="460">
+    <rect width="460" height="460" fill="transparent"/>
+    <g fill="black">
+        <!-- Left side of the game controller -->
+        <path d="M110,120 L110,180 L170,180 L170,120 L110,120 Z"/>
+        <path d="M90,150 L130,150 L130,130 L90,130 L90,150 Z"/>
+        <path d="M150,150 L190,150 L190,130 L150,130 L150,150 Z"/>
+        <!-- Right side of the game controller -->
+        <path d="M290,120 L290,180 L350,180 L350,120 L290,120 Z"/>
+        <path d="M270,150 L310,150 L310,130 L270,130 L270,150 Z"/>
+        <path d="M330,150 L370,150 L370,130 L330,130 L330,150 Z"/>
+        <!-- D-pad -->
+        <circle cx="230" cy="200" r="30" fill="black"/>
+        <path d="M230,185 L230,215 L200,215 L200,185 L230,185 Z"/>
+        <path d="M230,185 L230,215 L260,215 L260,185 L230,185 Z"/>
+    </g>
+</svg>

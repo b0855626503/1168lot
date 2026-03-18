@@ -1,0 +1,120 @@
+@section('css')
+    @include('admin::layouts.datatables_css')
+@endsection
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendor/daterangepicker/daterangepicker.css') }}">
+@endpush
+
+{!! $dataTable->table(['width' => '100%', 'class' => 'table table-striped table-sm']) !!}
+<hr>
+<table width="100%" class="table table-bordered" id="customfooter" style="font-size: medium">
+    <tbody></tbody>
+</table>
+
+@push('scripts')
+    <script src="{{ asset('vendor/daterangepicker/daterangepicker.js') }}"></script>
+    <script>
+        $(document).ready(function () {
+            $('#search_lastlogin_date').daterangepicker({
+                showDropdowns: true,
+                timePicker: true,
+                timePicker24Hour: true,
+                timePickerSeconds: true,
+                autoApply: true,
+                startDate: moment().startOf('day'),
+                endDate: moment().endOf('day'),
+                locale: {
+                    format: 'DD/MM/YYYY HH:mm:ss'
+                },
+                ranges: {
+                    'วันนี้': [moment().startOf('day'), moment().endOf('day')],
+                    'เมื่อวาน': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+                    '7 วันที่ผ่านมา': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                    '30 วันที่ผ่านมา': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
+                    'เดือนนี้': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                    'เดือนที่ผ่านมา': [moment().subtract(1, 'month').startOf('month').startOf('day'), moment().subtract(1, 'month').endOf('month').endOf('day')]
+                }
+            });
+
+            $('#search_regis_date,#search_lasttopup_date').daterangepicker({
+                showDropdowns: true,
+                timePicker: true,
+                timePicker24Hour: true,
+                timePickerSeconds: true,
+                autoApply: true,
+                autoUpdateInput: false,
+                locale: {
+                    format: 'DD/MM/YYYY HH:mm:ss'
+                },
+                ranges: {
+                    'วันนี้': [moment().startOf('day'), moment().endOf('day')],
+                    'เมื่อวาน': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+                    '7 วันที่ผ่านมา': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                    '30 วันที่ผ่านมา': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
+                    'เดือนนี้': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                    'เดือนที่ผ่านมา': [moment().subtract(1, 'month').startOf('month').startOf('day'), moment().subtract(1, 'month').endOf('month').endOf('day')]
+                }
+            });
+
+            $('#start_lastlogin_date').val(moment().startOf('day').format('YYYY-MM-DD HH:mm:ss'));
+            $('#end_lastlogin_date').val(moment().endOf('day').format('YYYY-MM-DD HH:mm:ss'));
+
+            $('#search_regis_date').on('apply.daterangepicker', function (ev, picker) {
+                var start = picker.startDate.format('YYYY-MM-DD HH:mm:ss');
+                var end = picker.endDate.format('YYYY-MM-DD HH:mm:ss');
+                $('#start_regis_date').val(start);
+                $('#end_regis_date').val(end);
+            });
+            $('#search_lastlogin_date').on('apply.daterangepicker', function (ev, picker) {
+                var start = picker.startDate.format('YYYY-MM-DD HH:mm:ss');
+                var end = picker.endDate.format('YYYY-MM-DD HH:mm:ss');
+                $('#start_lastlogin_date').val(start);
+                $('#end_lastlogin_date').val(end);
+            });
+            $('#search_lasttopup_date').on('apply.daterangepicker', function (ev, picker) {
+                var start = picker.startDate.format('YYYY-MM-DD HH:mm:ss');
+                var end = picker.endDate.format('YYYY-MM-DD HH:mm:ss');
+                $('#start_lasttopup_date').val(start);
+                $('#end_lasttopup_date').val(end);
+            });
+
+
+            $("#frmsearch").submit(function () {
+                window.LaravelDataTables["dataTableBuilder"].draw(true);
+            });
+
+            $('body').addClass('sidebar-collapse');
+        });
+
+    </script>
+    @include('admin::layouts.datatables_js')
+    {!! $dataTable->scripts() !!}
+
+    {{--    <script>--}}
+    {{--        $(function() {--}}
+
+
+    {{--            var table =  window.LaravelDataTables["dataTableBuilder"];--}}
+    {{--            window.LaravelDataTables["dataTableBuilder"].on('draw', function () {--}}
+    {{--                $("#customfooter tbody").html('');--}}
+
+    {{--                let html = '<tr>';--}}
+    {{--                html += '<th style="text-align:right;width:80%;color:blue">รวมยอดโยกเข้าเกม (ทั้งหมด)</th><th style="text-align:right;color:blue;">'+table.ajax.json().in_all+'</th>';--}}
+    {{--                html += '</tr>';--}}
+    {{--                html += '<tr>';--}}
+    {{--                html += '<th style="text-align:right;width:80%;color:blue">รวมยอดโยกเข้าเกม (สำเร็จ)</th><th style="text-align:right;color:blue;">'+table.ajax.json().in_yes+'</th>';--}}
+    {{--                html += '</tr>';--}}
+    {{--                html += '<tr>';--}}
+    {{--                html += '<th style="text-align:right;width:80%;color:blue">รวมยอดโยกเข้าเกม (ไม่สำเร็จ)</th><th style="text-align:right;color:blue;">'+table.ajax.json().in_no+'</th>';--}}
+    {{--                html += '</tr>';--}}
+
+
+    {{--                $("#customfooter tbody").append(html);--}}
+
+
+    {{--            });--}}
+
+
+    {{--        });--}}
+    {{--    </script>--}}
+@endpush

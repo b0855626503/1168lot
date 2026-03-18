@@ -1,0 +1,106 @@
+<?php
+
+namespace Gametech\LineOA\Events;
+
+use Gametech\LineOA\Models\LineConversation;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class LineOAChatConversationUpdated implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    /**
+     * ใช้เป็น key ง่าย ๆ ฝั่ง JS
+     */
+    public int $conversation_id;
+
+    /**
+     * payload ของห้อง (shape ให้ match กับ list จาก index/show)
+     */
+    public array $conversation;
+
+    public function __construct(LineConversation $conversation)
+    {
+        // ให้ชัวร์ว่ามี relation ที่ต้องใช้เหมือน index/show
+        $conversation->loadMissing(['contact.member', 'account']);
+
+        \Log::channel('line_oa')->info('[LineOA] LineOAChatConversationUpdated::__construct', [
+            'conversation_id' => $conversation->id,
+            'status'          => $conversation->status,
+            'line_account_id' => $conversation->line_account_id,
+            'line_contact_id' => $conversation->line_contact_id,
+        ]);
+
+        $this->conversation_id = (int) $conversation->id;
+
+        // ทำ shape ให้เหมือน ChatController@index / show
+        $this->conversation = [
+            'id'              => $conversation->id,
+
+            // ✅ สำคัญ: top-level ids (หลายหน้าจะ filter/route จาก 2 ตัวนี้)
+            'line_account_id' => (int) $conversation->line_account_id,
+            'line_contact_id' => (int) $conversation->line_contact_id,
+
+            'status'          => $conversation->status,
+
+            // ✅ กัน mismatch: เก็บทั้ง last_message (เดิม) และ last_message_preview (มาตรฐาน)
+            'last_message'         => $conversation->last_message_preview,
+            'last_message_preview' => $conversation->last_message_preview,
+
+            'last_message_at' => optional($conversation->last_message_at)->toIso8601String(),
+            'unread_count'    => (int) $conversation->unread_count,
+            'is_registering'  => (bool) $conversation->is_registering,
+
+            // ฟิลด์ assignment (ใช้ใน tab “ที่ฉันรับเรื่อง”)
+            'assigned_employee_id'   => $conversation->assigned_employee_id,
+            'assigned_employee_name' => $conversation->assigned_employee_name,
+            'assigned_at'            => optional($conversation->assigned_at)->toIso8601String(),
+
+            'locked_by_employee_id'   => $conversation->locked_by_employee_id,
+            'locked_by_employee_name' => $conversation->locked_by_employee_name,
+            'locked_at'               => optional($conversation->locked_at)->toIso8601String(),
+
+            'closed_by_employee_id'   => $conversation->closed_by_employee_id,
+            'closed_by_employee_name' => $conversation->closed_by_employee_name,
+            'closed_at'               => optional($conversation->closed_at)->toIso8601String(),
+
+            'is_pinned'               => (bool) $conversation->is_pinned,
+
+            // OA – ต้องมี line_account.name เพื่อขึ้น [GT] / [B2] ที่ list ซ้าย
+            'line_account' => [
+                'id'   => $conversation->account?->id,
+                'name' => $conversation->account?->name,
+            ],
+
+            // contact (ดึง structure ให้ครบ เหมือน show())
+            'contact' => [
+                'id'             => $conversation->contact?->id,
+                'display_name'   => $conversation->contact?->display_name,
+                'line_user_id'   => $conversation->contact?->line_user_id,
+                'member_id'      => $conversation->contact?->member_id,
+                'member_username'=> $conversation->contact?->member_username,
+                'member_mobile'  => $conversation->contact?->member_mobile,
+                'picture_url'    => $conversation->contact?->picture_url,
+                'blocked_at'     => optional($conversation->contact?->blocked_at)->toDateTimeString(),
+
+                'member_name'       => $conversation->contact?->member?->name,
+                'member_bank_name'  => $conversation->contact?->member?->bank?->name_th,
+                'member_acc_no'     => $conversation->contact?->member?->acc_no,
+            ],
+        ];
+    }
+
+    public function broadcastOn(): Channel
+    {
+        return new Channel(config('app.name') . '_events');
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'LineOAChatConversationUpdated';
+    }
+}

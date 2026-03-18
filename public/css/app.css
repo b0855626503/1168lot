@@ -1,0 +1,79 @@
+/*#region Button Sizes*/
+
+.btn-xs {
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.btn-xs > .fa,
+.btn-xs > .fas,
+.btn-xs > .typcn,
+.btn-xs > .glyphicon,
+.btn-xs > [class*=wi-] {
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.btn-xs > .fa.right,
+.btn-xs > .fas.right,
+.btn-xs > .typcn.right,
+.btn-xs > .glyphicon.right,
+.btn-xs > [class*=wi-].right {
+  margin-right: 0;
+  margin-left: 2px;
+}
+
+.btn-xs.icon-only {
+  width: 24px;
+  height: 24px;
+  padding: 0px 6px;
+}
+
+.btn-xs.icon-only > .fa,
+.btn-xs.icon-only > .fas,
+.btn-xs.icon-only > .typcn,
+.btn-xs.icon-only > .glyphicon,
+.btn-xs.icon-only > [class*=wi-] {
+  font-size: 12px;
+  line-height: 7px;
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 4px 9px;
+  line-height: 1.39;
+}
+
+.btn-sm > .fa,
+.btn-sm > .fas,
+.btn-sm > .typcn,
+.btn-sm > .glyphicon,
+.btn-sm > [class*=wi-] {
+  font-size: 13px;
+  margin-right: 3px;
+}
+
+.btn-sm > .fa.right,
+.btn-sm > .fas.right,
+.btn-sm > .typcn.right,
+.btn-sm > .glyphicon.right,
+.btn-sm > [class*=wi-].right {
+  margin-right: 0;
+  margin-left: 3px;
+}
+
+.btn-sm.icon-only {
+  width: 31px;
+  height: 30px;
+  padding: 3px !important;
+}
+
+.btn-sm.icon-only > .fa,
+.btn-sm.icon-only > .fas,
+.btn-sm.icon-only > .typcn,
+.btn-sm.icon-only > .glyphicon,
+.btn-sm.icon-only > [class*=wi-] {
+  font-size: 20px;
+  line-height: 21px;
+}
+

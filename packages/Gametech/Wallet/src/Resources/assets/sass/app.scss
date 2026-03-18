@@ -1,0 +1,98 @@
+// Define variable defaults
+$body-bg: #000;
+$body-color: #111;
+
+@import 'node_modules/bootstrap/scss/bootstrap';
+@import 'node_modules/bootstrap-vue/src/index.scss';
+@import "style_black";
+//@import '~@sweetalert2/themes/bootstrap-4/bootstrap-4';
+
+#spinwheel {
+    background: url(/assets/images/spin_img/wheel_bg.png) 0 50% no-repeat;
+    background-size: cover !important;
+}
+
+.card-trans {
+    border-radius: 1em;
+    background: rgba(0,0,0,.3607843137254902) !important;
+    box-shadow: 2px 2px 5px 1px rgba(0,0,0,.4) !important;
+}
+.card {
+    box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+    margin-bottom: 1rem;
+}
+.main-menu {
+    justify-content: center;
+    text-align: center;
+}
+.main-menu-item {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.transfer-slide-img {
+    margin-bottom: 5px;
+    border: 1px solid rgba(255, 255, 255, .3);
+}
+
+.transfer-slide-balance {
+    color: white;
+}
+
+.owl-carousel.owl-drag .owl-item.center {
+    border: 1px solid #ccc !important;
+    border-radius: 1em !important;
+    padding: 10px !important;
+    background-color: rgba(204, 204, 204, 0) !important;
+}
+
+.h-90 {
+    height: 90px !important;
+}
+
+.w-90 {
+    width: 90px !important;
+}
+
+.btn-trans {
+    color: rgba(255, 255, 255, .8);
+    background-color: rgba(0, 0, 0, .2);
+    border-color: rgba(0, 0, 0, .2);
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+.btn-trans-light:hover {
+    color: rgba(255,255,255,.6);
+    background-color: rgba(255,255,255,.1);
+    border-color: rgba(255,255,255,.1);
+}
+
+.btn-trans-light {
+    color: rgba(255,255,255,.4);
+    background-color: rgba(255,255,255,.2);
+    border-color: rgba(255,255,255,.2);
+}
+
+.img-fix-size {
+    width: 110px;
+    height: 100px;
+}
+
+.headsecion2 {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 30px;
+    font-weight: 400;
+    background: linear-gradient(180deg,#ffe29b 20%,#e8da9b 50%,#b38c2c 80%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.headsecion2 img {
+    width: 150px;
+    height: auto;
+    margin-top: -6px;
+}

@@ -1,0 +1,5 @@
+<svg width="40" height="40" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+	<circle cx="100" cy="100" r="95" stroke="black" stroke-width="10"/>
+	<circle cx="100" cy="100" r="70" stroke="black" stroke-width="10"/>
+	<text x="100" y="115" text-anchor="middle" font-size="40" font-family="Arial, sans-serif" fill="black">COIN</text>
+</svg>

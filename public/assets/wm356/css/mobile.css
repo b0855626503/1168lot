@@ -1,0 +1,161 @@
+/* ====== Compact A2H Topbar (one-row) ====== */
+:root{
+    --a2h-header-h: 60px;               /* ความสูง header */
+    --a2h-bg: rgba(15,15,15,.75);       /* พื้นหลังบาร์ */
+    --a2h-accent: #f6d56b;              /* สีหลักปุ่ม (ปรับเป็นโทนแบรนด์ได้) */
+    --a2h-accent-2: #eab543;
+    --a2h-text: #fff;
+}
+
+.a2h-topbar{
+    position: sticky;
+    top: var(--a2h-header-h,60px);
+    z-index: 2147483000;
+
+    background: var(--a2h-bg);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+    border-radius: 12px;
+
+    max-width: 1200px;
+    width: calc(100% - 24px);
+
+    /* ซ่อน = ไม่กินที่ */
+    margin: 0 auto 0;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+            max-height .22s ease,
+            opacity .16s ease,
+            visibility .16s ease,
+            margin-top .22s ease,
+            border-width .16s ease,
+            box-shadow .16s ease;
+    color: var(--a2h-text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+}
+
+.a2h-topbar.-show{
+    /* สูงพอให้ทุกอย่างอยู่แถวเดียว */
+    max-height: 56px;
+    opacity: 1;
+    visibility: visible;
+
+    margin-top: 8px;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,.22);
+}
+
+.a2h-topbar__inner{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+}
+
+/* ปุ่ม X มือถือ */
+.a2h-close-mobile{
+    display: none;
+    background: transparent;
+    border: 0;
+    color: var(--a2h-text);
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.a2h-close-mobile:hover{ background: rgba(255,255,255,.12); }
+
+/* ไอคอนซ้าย (เล็ก กระทัดรัด) */
+.a2h-topbar__icon{
+    width: 14px; height: 14px; flex: 0 0 14px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--a2h-accent), var(--a2h-accent-2));
+    box-shadow: 0 0 0 2px rgba(0,0,0,.12) inset;
+}
+
+/* ข้อความ: ให้ “ยืดได้-หดได้” ไม่ดันปุ่มตก */
+.a2h-topbar__text{
+    font-size: 13px; line-height: 1.25;
+    flex: 1 1 auto;
+    min-width: 0;                             /* สำคัญ: อนุญาตให้หด */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+
+/* กลุ่มปุ่มอยู่ขวาเสมอ และไม่ถูกบีบหาย */
+.a2h-topbar__actions{
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ปุ่ม */
+.a2h-btn{
+    border: 0;
+    border-radius: 999px;
+    height: 32px;
+    padding: 0 12px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow:
+            0 1px 0 rgba(255,255,255,.06) inset,
+            0 6px 14px rgba(0,0,0,.2);
+}
+.a2h-btn:focus-visible{ outline: 2px solid rgba(255,255,255,.6); outline-offset: 2px; }
+
+/* ปุ่มติดตั้ง = โทนทองแบรนด์ */
+.a2h-btn.-install{
+    color: #201600;
+    background: linear-gradient(180deg, var(--a2h-accent), var(--a2h-accent-2));
+    border: 1px solid rgba(0,0,0,.08);
+}
+.a2h-btn.-install .a2h-icon{ width: 16px; height: 16px; display: inline-block; line-height: 0; }
+
+/* ปุ่มภายหลัง – เดสก์ท็อปเท่านั้น */
+.a2h-btn.-later{
+    color: var(--a2h-text);
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.18);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+/* hint iOS (ซ่อนค่าเริ่มต้น) */
+.a2h-ios-hint{ display: none; font-size: 12px; opacity: .9; }
+
+/* ===== มือถือ (≤ 560px): แถวเดียว กระชับ ปุ่มไม่หาย ===== */
+@media (max-width: 560px){
+    .a2h-close-mobile{ display: inline-flex; }
+    .a2h-btn.-later{ display: none !important; }   /* ไม่ต้องมีปุ่มภายหลัง */
+    .a2h-topbar__icon{ width: 14px; height: 14px; flex-basis: 14px; }
+    .a2h-topbar__text{ font-size: 13px; }
+    .a2h-btn.-install{ padding: 0 12px; height: 32px; }
+    .a2h-topbar.-show{ max-height: 56px; }         /* คุมให้ต่ำ ไม่กลายเป็นแผง */
+}
+
+/* จอจิ๋วมาก (≤ 380px): ขยับ spacing เล็กน้อย */
+@media (max-width: 380px){
+    .a2h-topbar__inner{ gap: 8px; padding: 8px 8px; }
+    .a2h-topbar__text{ font-size: 12.5px; }
+}
+
+/* ลด transparency preferences */
+@media (prefers-reduced-transparency: reduce){
+    .a2h-topbar{ background: rgba(20,20,20,.95); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* กัน DOM ถูกแสดงโดยบังเอิญ */
+.a2h-topbar[hidden]{ display: none !important; }

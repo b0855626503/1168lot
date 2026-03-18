@@ -1,0 +1,304 @@
+.btn {
+    cursor: pointer;
+    vertical-align: middle;
+    margin: 0;
+    position: relative;
+    display: inline-block;
+    color: #ffffff;
+    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    -webkit-transition: all 0.15s ease;
+    -moz-transition: all 0.15s ease;
+    -o-transition: all 0.15s ease;
+    transition: all 0.15s ease;
+    -webkit-border-radius: 2px;
+    -webkit-background-clip: padding-box;
+    -moz-border-radius: 2px;
+    -moz-background-clip: padding;
+    border-radius: 2px;
+    background-clip: padding-box;
+    font-size: 13px;
+    /*#region Link Button*/
+    /*#endregion Link Button*/
+    /*#region Shiny Button*/
+    /*#endregion Shiny Button*/
+    /*#region Circle Button*/
+    /*#endregion Circle Button*/
+    /*#region Labeled Button*/
+    /*#endregion Labeled Button*/
+    /*#region Icon Button*/
+    /*#endregion Icon Button*/
+}
+.btn:hover,
+.btn:focus {
+    color: #ffffff;
+}
+.btn.btn-link {
+    border: none !important;
+    background: transparent none !important;
+    color: #08c !important;
+    -webkit-text-shadow: none !important;
+    text-shadow: none !important;
+    padding: 4px 12px !important;
+    line-height: 20px !important;
+    -webkit-box-shadow: none !important;
+    -moz-box-shadow: none !important;
+    box-shadow: none !important;
+}
+.btn.btn-link:hover {
+    background: none !important;
+    -webkit-text-shadow: none !important;
+    text-shadow: none !important;
+}
+.btn.btn-link.active {
+    background: none !important;
+    text-decoration: underline;
+    color: #009ceb !important;
+}
+.btn.btn-link.active:after {
+    display: none;
+}
+.btn.btn-link.disabled,
+.btn.btn-link[disabled] {
+    background: 0;
+    opacity: .65;
+    filter: alpha(opacity=65);
+}
+.btn.btn-link.disabled:hover,
+.btn.btn-link[disabled]:hover {
+    background: none !important;
+    text-decoration: none !important;
+}
+.btn.shiny {
+    -webkit-box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.1);
+    -moz-box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.1);
+    -webkit-border-radius: 3px;
+    -webkit-background-clip: padding-box;
+    -moz-border-radius: 3px;
+    -moz-background-clip: padding;
+    border-radius: 3px;
+    background-clip: padding-box;
+}
+.btn.shiny:hover {
+    zoom: 1;
+    filter: alpha(opacity=90);
+    -webkit-opacity: 0.9;
+    -moz-opacity: 0.9;
+    opacity: 0.9;
+}
+.btn.shiny.active,
+.btn.shiny:focus {
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+.btn.shiny.dropdown-toggle {
+    border-left-width: 0 !important;
+}
+.btn.btn-circle {
+    -webkit-border-radius: 50%;
+    -webkit-background-clip: padding-box;
+    -moz-border-radius: 50%;
+    -moz-background-clip: padding;
+    border-radius: 50%;
+    background-clip: padding-box;
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    padding: 11px 12px;
+}
+.btn.btn-circle > .fa,
+.btn.btn-circle .typcn,
+.btn.btn-circle .glyphicon,
+.btn.btn-circle > [class*="wi-"] {
+    font-size: 20px;
+    margin: 0 auto;
+    line-height: 34px;
+}
+.btn.btn-circle.btn-xs {
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    padding: 6px 0;
+}
+.btn.btn-circle.btn-xs > .fa,
+.btn.btn-circle.btn-xs .typcn,
+.btn.btn-circle.btn-xs .glyphicon,
+.btn.btn-circle.btn-xs > [class*="wi-"] {
+    font-size: 12px;
+    line-height: 14px;
+}
+.btn.btn-circle.btn-sm {
+    width: 50px;
+    height: 50px;
+    padding: 10px 15px;
+}
+.btn.btn-circle.btn-sm > .fa,
+.btn.btn-circle.btn-sm .typcn,
+.btn.btn-circle.btn-sm .glyphicon,
+.btn.btn-circle.btn-sm > [class*="wi-"] {
+    font-size: 18px;
+    line-height: 26px;
+    border-radius: 50%;
+}
+.btn.btn-circle.btn-lg {
+    width: 70px;
+    height: 70px;
+    padding: 10px;
+}
+.btn.btn-circle.btn-lg > .fa,
+.btn.btn-circle.btn-lg .typcn,
+.btn.btn-circle.btn-lg .glyphicon,
+.btn.btn-circle.btn-lg > [class*="wi-"] {
+    font-size: 28px;
+    line-height: 46px;
+}
+.btn.btn-labeled {
+    position: relative;
+    padding-left: 0;
+}
+.btn.btn-labeled.btn-block .btn-label {
+    margin-right: 0;
+}
+.btn.btn-labeled .btn-label {
+    display: block;
+    float: left;
+    margin: -7px 12px -9px -2px;
+    padding: 8px 10px 8px 11px;
+    position: relative;
+    background: rgba(0, 0, 0, 0.06);
+    line-height: 15px;
+    border-bottom-left-radius: 3px;
+    border-top-left-radius: 3px;
+}
+.btn.btn-labeled .btn-label > .fa,
+.btn.btn-labeled .btn-label .typcn,
+.btn.btn-labeled .btn-label .glyphicon,
+.btn.btn-labeled .btn-label > [class*="wi-"] {
+    margin-right: 0;
+}
+.btn.icon-only {
+    width: 36px;
+    height: 34px;
+    padding: 5px 3px;
+}
+.btn.icon-only > .fa,
+.btn.icon-only .typcn,
+.btn.icon-only .glyphicon,
+.btn.icon-only > [class*="wi-"] {
+    margin: 0;
+    vertical-align: middle;
+    text-align: center;
+    padding: 0;
+    font-size: 22px;
+    line-height: 22px;
+}
+.btn > .fa,
+.btn .typcn,
+.btn .glyphicon,
+.btn > [class*="wi-"] {
+    display: inline;
+    margin-right: 4px;
+    font-size: 14px;
+}
+.btn > .fa.right,
+.btn .typcn.right,
+.btn .glyphicon.right,
+.btn > [class*="wi-"].right {
+    margin-right: 0;
+    margin-left: 4px;
+}
+/*#region Button Sizes*/
+.btn-xs {
+    font-size: 11px;
+    padding: 2px 7px;
+}
+.btn-xs > .fa,
+.btn-xs > .typcn,
+.btn-xs > .glyphicon,
+.btn-xs > [class*="wi-"] {
+    font-size: 12px;
+    margin-right: 2px;
+}
+.btn-xs > .fa.right,
+.btn-xs > .typcn.right,
+.btn-xs > .glyphicon.right,
+.btn-xs > [class*="wi-"].right {
+    margin-right: 0;
+    margin-left: 2px;
+}
+.btn-xs.icon-only {
+    width: 24px;
+    height: 24px;
+    padding: 2px 6px;
+}
+.btn-xs.icon-only > .fa,
+.btn-xs.icon-only > .typcn,
+.btn-xs.icon-only > .glyphicon,
+.btn-xs.icon-only > [class*="wi-"] {
+    font-size: 12px;
+    line-height: 7px;
+}
+.btn-sm {
+    font-size: 12px;
+    padding: 4px 9px;
+    line-height: 1.39;
+}
+.btn-sm > .fa,
+.btn-sm > .typcn,
+.btn-sm > .glyphicon,
+.btn-sm > [class*="wi-"] {
+    font-size: 13px;
+    margin-right: 3px;
+}
+.btn-sm > .fa.right,
+.btn-sm > .typcn.right,
+.btn-sm > .glyphicon.right,
+.btn-sm > [class*="wi-"].right {
+    margin-right: 0;
+    margin-left: 3px;
+}
+.btn-sm.icon-only {
+    width: 31px;
+    height: 30px;
+    padding: 3px !important;
+}
+.btn-sm.icon-only > .fa,
+.btn-sm.icon-only > .typcn,
+.btn-sm.icon-only > .glyphicon,
+.btn-sm.icon-only > [class*="wi-"] {
+    font-size: 20px;
+    line-height: 21px;
+}
+.btn-lg {
+    line-height: 1.35;
+    padding: 9px 18px;
+    font-size: 14px;
+}
+.btn-lg.icon-only {
+    width: 40px;
+    height: 38px;
+    padding: 6px !important;
+}
+.btn-lg.icon-only > .fa,
+.btn-lg.icon-only > .typcn,
+.btn-lg.icon-only > .glyphicon,
+.btn-lg.icon-only > [class*="wi-"] {
+    font-size: 24px;
+    line-height: 26px;
+}
+.btn-lg > .fa,
+.btn-lg > .typcn,
+.btn-lg > .glyphicon,
+.btn-lg > [class*="wi-"] {
+    font-size: 16px;
+    margin-right: 6px;
+}
+.btn-lg > .fa.right,
+.btn-lg > .typcn.right,
+.btn-lg > .glyphicon.right,
+.btn-lg > [class*="wi-"].right {
+    margin-right: 0;
+    margin-left: 6px;
+}
+/*#endregion Button Sizes*/

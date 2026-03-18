@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>HTML 5 Boilerplate</title>
+</head>
+<body>
+<form id="form" method="POST" action="{{ config('app.pompay_url_payment') }}">
+    <input name="clientId" type="hidden" value="{{ $pompay['clientId'] }}" readonly/>
+    <input name="transactionId" type="text" value="{{ $pompay['transactionId'] }}" readonly/>
+    <input name="custName" type="text" value="{{ $pompay['custName'] }}" readonly/>
+    <input name="custSecondaryName" type="text" value="{{ $pompay['custSecondaryName'] }}" readonly/>
+    <input name="custBank" type="text" value="{{ $pompay['custBank'] }}" readonly/>
+    <input name="custMobile" type="text" value="{{ $pompay['custMobile'] }}" readonly/>
+    <input name="custEmail" type="text" value="{{ $pompay['custEmail'] }}" readonly/>
+    <input name="amount" type="number" value="{{ $pompay['amount'] }}" readonly/>
+    <input name="returnUrl" type="text" value="{{ $pompay['returnUrl'] }}" readonly/>
+    <input name="callbackUrl" type="text" value="{{ $pompay['callbackUrl'] }}" readonly/>
+    <input name="paymentMethod" type="text" value="{{ $pompay['paymentMethod'] }}" readonly/>
+    <input name="bankAcc" type="text" value="{{ $pompay['bankAcc'] }}" readonly/>
+    <input name="hashVal" type="hidden" value="{{ $pompay['hashVal'] }}" readonly/>
+    <button type="submit">Deposit</button>
+</form>
+<script>
+    function closethisasap() {
+        document.forms["form"].submit();
+    }
+</script>
+</body>
+</html>
+

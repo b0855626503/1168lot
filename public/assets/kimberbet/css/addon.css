@@ -1,0 +1,216 @@
+@media (max-width: 576px) {
+    .-modal-deposit .topup-tabs-nav,
+    .-modal-deposit .nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+    .-modal-deposit .nav .nav-item { display: inline-block; }
+}
+
+/* ========= ปุ่มอัปโหลด QR: ขอบทองเด่นที่สุด ========= */
+.btn-qr-gold {
+    --gold-1: #f7d27d;
+    --gold-2: #d7b358;
+    --gold-3: #b8902f;
+    --gold-glow: rgba(215, 179, 88, .55);
+
+    position: relative;
+    border: 2px solid transparent; /* ใช้ background-clip ทำกรอบทอง */
+    border-radius: 999px;
+    padding: .8rem 1.1rem;
+    font-weight: 800;
+    letter-spacing: .3px;
+    text-transform: none;
+    color: #111; /* อ่านชัดบนพื้นทอง */
+    background: linear-gradient(135deg, rgba(247, 210, 125, .12), rgba(183, 146, 50, .08)) padding-box,
+    linear-gradient(135deg, var(--gold-1), var(--gold-2)) border-box;
+    box-shadow: 0 0 0 1px rgba(215, 179, 88, .45),
+    0 8px 24px var(--gold-glow),
+    inset 0 1px 0 rgba(255, 255, 255, .18);
+    backdrop-filter: saturate(120%);
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.btn-qr-gold:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(215, 179, 88, .6),
+    0 10px 28px rgba(215, 179, 88, .65),
+    inset 0 1px 0 rgba(255, 255, 255, .22);
+    filter: brightness(1.02);
+}
+
+.btn-qr-gold:active {
+    transform: translateY(0) scale(.98);
+    box-shadow: 0 0 0 1px rgba(215, 179, 88, .7),
+    0 6px 18px rgba(215, 179, 88, .55) inset;
+}
+
+.btn-qr-gold:focus,
+.btn-qr-gold:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .06),
+    0 0 0 5px rgba(215, 179, 88, .75),
+    0 10px 26px rgba(215, 179, 88, .55);
+}
+
+
+/* บนพื้นมืดให้ตัดขอบคมขึ้นเล็กน้อย */
+.bg-dark-2 .btn-qr-gold {
+    box-shadow: 0 0 0 1px rgba(215, 179, 88, .55),
+    0 8px 24px rgba(215, 179, 88, .45),
+    inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+
+/* ---------- shared close button ---------- */
+.gt-cred-close{
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border: 2px solid #cfd4da;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 22px;
+    line-height: 28px;
+    color: #6c757d;
+    cursor: pointer;
+    z-index: 2;
+}
+.gt-cred-close:hover{ color:#212529; border-color:#adb5bd; }
+
+/* ---------- credential modal ---------- */
+.gt-cred-modal{
+    border-radius: 10px;
+    background: #fff;
+    position: relative;
+    padding: 18px 18px 22px;
+}
+.gt-cred-body{ padding: 18px 10px 6px; }
+.gt-cred-logo{ margin-bottom: 14px; }
+.gt-cred-logo img{ max-height: 44px; max-width: 160px; }
+.gt-cred-title{ font-weight: 600; margin-bottom: 14px; color: #212529; }
+
+.gt-cred-loading{
+    padding: 18px 0 8px;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.gt-cred-table{ max-width: 420px; margin: 0 auto; }
+.gt-cred-row{
+    display: grid;
+    grid-template-columns: 120px 1fr 86px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+}
+.gt-cred-label{ text-align: left; color: #6c757d; font-size: 14px; }
+.gt-cred-value{
+    text-align: left;
+    color: #212529;
+    font-weight: 600;
+    font-size: 14px;
+    word-break: break-all;
+}
+.gt-cred-copy{
+    border: 0;
+    background: transparent;
+    color: #0d6efd;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0;
+    cursor: pointer;
+}
+.gt-cred-copy:disabled{ opacity: .5; cursor: not-allowed; }
+.gt-cred-copy:hover{ text-decoration: underline; }
+
+.gt-cred-actions{
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.gt-cred-btn{
+    min-width: 120px;
+    border-radius: 6px;
+    font-weight: 700;
+    padding: 8px 14px;
+}
+.gt-cred-btn.disabled{ pointer-events: none; opacity: .55; }
+
+.gt-cred-ios{ background: #198754; color: #fff; }
+.gt-cred-android{ background: #0d6efd; color: #fff; }
+
+/* NEW: change password button (ให้เด่นแบบ action เพิ่ม) */
+.gt-cred-change{ background: #6c757d; color: #fff; }
+
+.gt-cred-hint{
+    margin-top: 12px;
+    color: #198754;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ---------- change password modal (เหมือนภาพ) ---------- */
+.gt-chg-modal{
+    border-radius: 10px;
+    background: #fff;
+    position: relative;
+    padding: 18px 18px 22px;
+}
+.gt-chg-body{ padding: 18px 18px 6px; }
+
+.gt-chg-title{
+    font-weight: 700;
+    color: #495057;
+    margin: 6px auto 18px;
+    max-width: 420px;
+}
+
+.gt-chg-label{
+    font-weight: 700;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.gt-chg-input{
+    max-width: 520px;
+    margin: 0 auto;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-weight: 600;
+}
+
+.gt-chg-actions{
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.gt-chg-ok{
+    background: #0d6efd;
+    color: #fff;
+    border-radius: 6px;
+    font-weight: 800;
+    min-width: 110px;
+    padding: 10px 14px;
+}
+.gt-chg-cancel{
+    background: #dc3545;
+    color: #fff;
+    border-radius: 6px;
+    font-weight: 800;
+    min-width: 110px;
+    padding: 10px 14px;
+}
+
+.gt-chg-hint{
+    margin-top: 12px;
+    color: #198754;
+    font-weight: 700;
+    font-size: 13px;
+}
