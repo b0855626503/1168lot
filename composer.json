@@ -105,12 +105,12 @@
             "Gametech\\Wallet\\": "packages/Gametech/Wallet/src",
             "Gametech\\LogAdmin\\": "packages/Gametech/LogAdmin/src",
             "Gametech\\LogUser\\": "packages/Gametech/LogUser/src",
-            "Gametech\\TelegramBot\\": "packages/Gametech/TelegramBot/src",
             "Gametech\\Marketing\\": "packages/Gametech/Marketing/src",
             "Gametech\\CenterOA\\": "packages/Gametech/CenterOA/src",
             "Gametech\\LineOA\\": "packages/Gametech/LineOA/src",
             "Gametech\\Reward\\": "packages/Gametech/Reward/src",
-            "Gametech\\Sms\\": "packages/Gametech/Sms/src"
+            "Gametech\\Sms\\": "packages/Gametech/Sms/src",
+            "Gametech\\Lotto\\": "packages/Gametech/Lotto/src"
         },
         "files": [
             "packages/Gametech/Core/src/Http/helpers.php",
@@ -127,6 +127,10 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts": {
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"php artisan websocket:start\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

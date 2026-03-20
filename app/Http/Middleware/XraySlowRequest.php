@@ -25,6 +25,7 @@ class XraySlowRequest
             'expose_header'    => (bool) config('xray.expose_header', false),
             'health_paths'     => (array) config('xray.ignore_paths', ['/health', '/__ping', '/__static_ping']),
             'top_sql'          => (int)  config('xray.top_sql', 3),
+            'top_repeated_sql' => (int)  config('xray.top_repeated_sql', 5),
         ];
 
         // ปิดทิ้งเร็ว ๆ ถ้าไม่เปิดใช้งาน และไม่มี override
@@ -115,6 +116,10 @@ class XraySlowRequest
                         ];
                     })->values()->all();
 
+                $repeatedSql = $this->summarizeRepeatedQueries($queries, $cfg['top_repeated_sql']);
+                $repeatedSqlCount = (int) array_sum(array_column($repeatedSql, 'duplicate_count'));
+                $repeatedSqlMs = (int) round(array_sum(array_column($repeatedSql, 'total_ms')));
+
                 $route   = optional($request->route())->getName();
                 $action  = optional($request->route())->getActionName();
 
@@ -122,6 +127,9 @@ class XraySlowRequest
                     'req_id'    => $reqId,
                     'total_ms'  => $total,
                     'sql_ms'    => $sqlMs,   'sql_count'   => $sqlCnt,  'top_sql' => $topSql,
+                    'repeated_sql_count' => $repeatedSqlCount,
+                    'repeated_sql_ms'    => $repeatedSqlMs,
+                    'top_repeated_sql'   => $repeatedSql,
                     'redis_ms'  => $redisMs, 'redis_count' => $redisCnt,
                     'http_ms'   => $httpMs,  'http_count'  => $httpCnt, 'http'    => $httpList,
                     'app_ms'    => $appMs,
@@ -158,5 +166,66 @@ class XraySlowRequest
             }
         }
         return false;
+    }
+
+    /**
+     * สรุป SQL ที่ถูกยิงซ้ำใน request เดียว (fingerprint ตาม SQL text)
+     *
+     * @param array<int, array<string, mixed>> $queries
+     * @return array<int, array<string, int|string>>
+     */
+    private function summarizeRepeatedQueries(array $queries, int $top): array
+    {
+        $bucket = [];
+
+        foreach ($queries as $query) {
+            $rawSql = (string) ($query['query'] ?? $query['sql'] ?? '');
+            if ($rawSql === '') {
+                continue;
+            }
+
+            $sql = trim((string) preg_replace('/\s+/', ' ', $rawSql));
+            $ms = (float) ($query['time'] ?? 0);
+            $fingerprint = md5($sql);
+
+            if (! isset($bucket[$fingerprint])) {
+                $bucket[$fingerprint] = [
+                    'sql' => $sql,
+                    'count' => 0,
+                    'total_ms' => 0.0,
+                    'max_ms' => 0.0,
+                ];
+            }
+
+            $bucket[$fingerprint]['count']++;
+            $bucket[$fingerprint]['total_ms'] += $ms;
+            $bucket[$fingerprint]['max_ms'] = max($bucket[$fingerprint]['max_ms'], $ms);
+        }
+
+        return collect($bucket)
+            ->filter(fn ($item) => (int) ($item['count'] ?? 0) > 1)
+            ->sort(function ($a, $b) {
+                $aTotal = (float) ($a['total_ms'] ?? 0);
+                $bTotal = (float) ($b['total_ms'] ?? 0);
+                if ($aTotal === $bTotal) {
+                    return (int) ($b['count'] ?? 0) <=> (int) ($a['count'] ?? 0);
+                }
+
+                return $bTotal <=> $aTotal;
+            })
+            ->take(max(1, $top))
+            ->map(function ($item) {
+                $count = (int) ($item['count'] ?? 0);
+
+                return [
+                    'count' => $count,
+                    'duplicate_count' => max(0, $count - 1),
+                    'total_ms' => (int) round((float) ($item['total_ms'] ?? 0)),
+                    'max_ms' => (int) round((float) ($item['max_ms'] ?? 0)),
+                    'sql' => Str::limit((string) ($item['sql'] ?? ''), 500),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

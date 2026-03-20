@@ -2,6 +2,7 @@
 
 namespace Gametech\Core;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,77 @@ class Tree
      * @var string
      */
     public $currentRoute;
+
+    /**
+     * path ปัจจุบันอยู่ใต้ path ของ item นี้หรือไม่
+     */
+    protected function isPathMatch(?string $itemPath): bool
+    {
+        if (! is_string($itemPath) || $itemPath === '') {
+            return false;
+        }
+
+        if ($this->current === $itemPath) {
+            return true;
+        }
+
+        if ($itemPath === '/') {
+            return $this->current === '/';
+        }
+
+        return str_starts_with($this->current, rtrim($itemPath, '/') . '/');
+    }
+
+    /**
+     * แปลง url ของ item ให้เป็น path ที่ใช้เทียบได้จริง
+     */
+    protected function itemPath(array $item): ?string
+    {
+        $url = (string) ($item['url'] ?? '');
+
+        if ($url === '' || $url === '#' || str_starts_with($url, 'javascript:')) {
+            return null;
+        }
+
+        return parse_url($url, PHP_URL_PATH) ?: '/';
+    }
+
+    /**
+     * current key อยู่ใต้ key ของ item นี้หรือไม่
+     */
+    protected function isCurrentKeyWithin(array $item): bool
+    {
+        $itemKey = (string) ($item['key'] ?? '');
+        $currentKey = (string) ($this->currentKey ?? '');
+
+        if ($itemKey === '' || $currentKey === '') {
+            return false;
+        }
+
+        return $currentKey === $itemKey || str_starts_with($currentKey, $itemKey . '.');
+    }
+
+    /**
+     * item นี้ หรือ item ลูกของมัน คือ route ปัจจุบันหรือไม่
+     */
+    protected function isCurrentItem(array $item, bool $includeDescendants = true): bool
+    {
+        if ($this->isCurrentKeyWithin($item) || $this->isPathMatch($this->itemPath($item))) {
+            return true;
+        }
+
+        if (! $includeDescendants) {
+            return false;
+        }
+
+        foreach ((array) ($item['children'] ?? []) as $child) {
+            if (is_array($child) && $this->isCurrentItem($child, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * Create a new instance.
@@ -138,10 +210,9 @@ class Tree
             }
 
             // เทียบเฉพาะ path
-            $currentPath = $this->current; // path จาก __construct()
-            $itemPath    = parse_url($item['url'], PHP_URL_PATH) ?: '/';
+            $itemPath    = $this->itemPath($item) ?: '/';
 
-            if ($currentPath === $itemPath) {
+            if ($this->isPathMatch($itemPath)) {
                 $this->currentKey   = $item['key'] ?? null;
                 $this->currentName  = $item['name'] ?? null;
                 $this->currentRoute = $item['key'] ?? null;
@@ -162,7 +233,7 @@ class Tree
 
         // แปลง key เป็น path ของ children แล้ว set ลงโครงสร้าง
         $children = str_replace('.', '.children.', $item['key']);
-        core()->array_set($this->items, $children, $item);
+        Arr::set($this->items, $children, $item);
     }
 
     /**
@@ -170,11 +241,11 @@ class Tree
      */
     public function getActive(array $item)
     {
-        $itemPath = parse_url($item['url'] ?? '#', PHP_URL_PATH) ?: '/';
-
-        if ($this->current === $itemPath || (string)$this->currentKey === (string)($item['key'] ?? '')) {
+        if ($this->isCurrentItem($item, true)) {
             return 'active';
         }
+
+        return null;
     }
 
     /**
@@ -182,11 +253,11 @@ class Tree
      */
     public function getActives(array $item)
     {
-        $itemPath = parse_url($item['url'] ?? '#', PHP_URL_PATH) ?: '/';
-
-        if ($this->current === $itemPath || (string)$this->currentKey === (string)($item['key'] ?? '')) {
+        if ($this->isCurrentItem($item, true) && count((array) ($item['children'] ?? [])) > 0) {
             return 'menu-open';
         }
+
+        return null;
     }
 
     /**
@@ -199,5 +270,7 @@ class Tree
         if ($route === $name) {
             return 'active';
         }
+
+        return null;
     }
 }

@@ -1,0 +1,148 @@
+<?php
+
+return [
+	[
+		'key' => 'lotto',
+		'name' => 'Lotto',
+		'route' => 'admin.lotto.groups.index',
+		'sort' => 87,
+	],
+	[
+		'key' => 'lotto.groups',
+		'name' => 'กลุ่มหวย',
+		'route' => 'admin.lotto.groups.index',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.groups.create',
+		'name' => 'เพิ่มกลุ่มหวย',
+		'route' => 'admin.lotto.groups.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.groups.update',
+		'name' => 'แก้ไขกลุ่มหวย',
+		'route' => 'admin.lotto.groups.update',
+		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.markets',
+		'name' => 'รายการหวย',
+		'route' => 'admin.lotto.markets.index',
+		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.markets.create',
+		'name' => 'เพิ่มรายการหวย',
+		'route' => 'admin.lotto.markets.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.markets.update',
+		'name' => 'แก้ไขรายการหวย',
+		'route' => 'admin.lotto.markets.update',
+		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.rate_plans',
+		'name' => 'อัตราจ่าย',
+		'route' => 'admin.lotto.rate_plans.index',
+		'sort' => 3,
+	],
+	[
+		'key' => 'lotto.rate_plans.create',
+		'name' => 'เพิ่มอัตราจ่าย',
+		'route' => 'admin.lotto.rate_plans.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.rate_plans.update',
+		'name' => 'แก้ไขอัตราจ่าย',
+		'route' => 'admin.lotto.rate_plans.update',
+		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.default_settings',
+		'name' => 'ค่าพื้นฐานหวย',
+		'route' => 'admin.lotto.default_settings.index',
+		'sort' => 4,
+	],
+	[
+		'key' => 'lotto.member_permissions',
+		'name' => 'สิทธิ์การเล่น',
+		'route' => 'admin.lotto.member_permissions.index',
+		'sort' => 5,
+	],
+	[
+		'key' => 'lotto.member_rate_plans',
+		'name' => 'อัตราจ่ายสมาชิก',
+		'route' => 'admin.lotto.member_rate_plans.index',
+		'sort' => 6,
+	],
+	[
+		'key' => 'lotto.draws',
+		'name' => 'งวดหวย',
+		'route' => 'admin.lotto.draws.index',
+		'sort' => 7,
+	],
+	[
+		'key' => 'lotto.draws.create',
+		'name' => 'เพิ่มงวดหวย',
+		'route' => 'admin.lotto.draws.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.draws.update',
+		'name' => 'แก้ไขงวดหวย',
+		'route' => 'admin.lotto.draws.update',
+		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.draws.open',
+		'name' => 'เปิดรับงวดหวย',
+		'route' => 'admin.lotto.draws.open',
+		'sort' => 3,
+	],
+	[
+		'key' => 'lotto.draws.close',
+		'name' => 'ปิดรับงวดหวย',
+		'route' => 'admin.lotto.draws.close',
+		'sort' => 4,
+	],
+	[
+		'key' => 'lotto.draws.settle',
+		'name' => 'ประกาศผลงวดหวย',
+		'route' => 'admin.lotto.draws.settle',
+		'sort' => 5,
+	],
+	[
+		'key' => 'lotto.number_blocks',
+		'name' => 'เลขอั้น',
+		'route' => 'admin.lotto.number_blocks.index',
+		'sort' => 8,
+	],
+	[
+		'key' => 'lotto.tickets',
+		'name' => 'รายการแทง',
+		'route' => 'admin.lotto.tickets.index',
+		'sort' => 9,
+	],
+	[
+		'key' => 'lotto.tickets.loaddata',
+		'name' => 'ดูรายละเอียดโพย',
+		'route' => 'admin.lotto.tickets.loaddata',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.exposure_report',
+		'name' => 'รายงาน Exposure',
+		'route' => 'admin.lotto.reports.exposure',
+		'sort' => 10,
+	],
+	[
+		'key' => 'lotto.revenue_report',
+		'name' => 'รายงานรายได้',
+		'route' => 'admin.lotto.reports.revenue',
+		'sort' => 11,
+	],
+];

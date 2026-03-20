@@ -110,7 +110,6 @@ class AdminServiceProvider extends ServiceProvider
     {
         $menuComposer = function ($view) {
             static $menuTree = null; // cache ต่อรีเควสต์
-            static $aclKeys  = null; // cache ต่อรีเควสต์
 
             if ($menuTree) {
                 $view->with('menu', $menuTree);
@@ -129,17 +128,29 @@ class AdminServiceProvider extends ServiceProvider
             $permissionType     = $user->role->permission_type ?? 'all';
             $allowedPermissions = (array) ($user->role->permissions ?? []);
 
-            // ดึง key ใน ACL แบบปลอดภัย (สตริงเท่านั้น)
-            if ($aclKeys === null) {
-                $aclKeys = collect((array) config('acl', []))
-                    ->pluck('key')
-                    ->filter(fn($v) => is_string($v) && $v !== '')
-                    ->unique()
-                    ->values()
-                    ->all();
+            $menu = (array) config('menu.admin', []);
+            $menuCount = count($menu);
+            $routeByKey = [];
+            foreach ($menu as $menuItem) {
+                $menuKey = (string) ($menuItem['key'] ?? '');
+                $menuRoute = (string) ($menuItem['route'] ?? '');
+                if ($menuKey !== '' && $menuRoute !== '') {
+                    $routeByKey[$menuKey] = $menuRoute;
+                }
             }
 
-            $menu = (array) config('menu.admin');
+            $nextAllowedByParent = [];
+            if ($permissionType != 'all' && count($allowedPermissions) > 1) {
+                $max = count($allowedPermissions) - 1;
+                for ($i = 0; $i < $max; $i++) {
+                    $current = (string) ($allowedPermissions[$i] ?? '');
+                    $next = (string) ($allowedPermissions[$i + 1] ?? '');
+
+                    if (substr_count($current, '.') == 1 && substr_count($next, '.') == 2) {
+                        $nextAllowedByParent[$current] = $next;
+                    }
+                }
+            }
 
 //            dump($menu);
 
@@ -148,20 +159,16 @@ class AdminServiceProvider extends ServiceProvider
                     continue;
                 }
 
-                if ($index + 1 < count(config('menu.admin')) && $permissionType != 'all') {
-                    $permission = config('menu.admin')[$index + 1];
+                if ($index + 1 < $menuCount && $permissionType != 'all') {
+                    $nextMenuItem = $menu[$index + 1] ?? null;
+                    $nextMenuKey = (string) ($nextMenuItem['key'] ?? '');
+                    $itemKey = (string) ($item['key'] ?? '');
 
-                    if (substr_count($permission['key'], '.') == 2 && substr_count($item['key'], '.') == 1) {
-                        foreach ($allowedPermissions as $key => $value) {
-                            if ($item['key'] == $value) {
-                                $neededItem = $allowedPermissions[$key + 1];
+                    if (substr_count($nextMenuKey, '.') == 2 && substr_count($itemKey, '.') == 1) {
+                        $neededItem = $nextAllowedByParent[$itemKey] ?? null;
 
-                                foreach (config('menu.admin') as $key1 => $findMatced) {
-                                    if ($findMatced['key'] == $neededItem) {
-                                        $item['route'] = $findMatced['route'];
-                                    }
-                                }
-                            }
+                        if ($neededItem && isset($routeByKey[$neededItem])) {
+                            $item['route'] = $routeByKey[$neededItem];
                         }
                     }
                 }
@@ -170,6 +177,8 @@ class AdminServiceProvider extends ServiceProvider
             }
 
             $tree->items = core()->sortItems($tree->items);
+
+            $menuTree = $tree;
 
             $view->with('menu', $tree);
 

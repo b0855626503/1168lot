@@ -35,10 +35,10 @@ class AppServiceProvider extends ServiceProvider
 
         // บังคับ https เฉพาะ web context เท่านั้น (กันชน CLI และ API)
         if (! $this->app->runningInConsole() && ! $this->isApiContext()) {
-            if (config('app.force_https', true)) {
-                URL::forceScheme('https');
-                $this->app['request']->server->set('HTTPS', true);
-            }
+//            if (config('app.force_https', true)) {
+//                URL::forceScheme('https');
+//                $this->app['request']->server->set('HTTPS', true);
+//            }
         }
 
         if (app()->environment('local')) {
@@ -75,7 +75,6 @@ class AppServiceProvider extends ServiceProvider
         // รอให้ service providers อื่น ๆ บูตเสร็จก่อนค่อยผูก view composers
         if (! $this->app->runningInConsole()) {
             $this->app->booted(function () {
-                $core = $this->safeCore();
                 $this->composeFrontViews();   // lazy-resolve core ภายใน
                 $this->composeAdminViews();   // lazy-resolve core ภายใน
             });
@@ -165,16 +164,13 @@ class AppServiceProvider extends ServiceProvider
                     return;
                 }
 
-                // ลด I/O ในหนึ่งรอบ render
-                static $bag;
-                if (! $bag) {
+                $bag = $this->rememberRequestValue('front_view_bag', function () use ($core) {
                     try {
                         $config    = $core->getConfigData();
                         $contacts  = $core->getContact();
                         $notice    = $core->getNoticeData();
                         $noticeNew = $core->getNoticeNewData();
                         $userdata  = $core->getProfile();
-//                        $banks     = $core->getBankTopupCounts();
                         $menus     = $core->getGameType();
                         $refill = '';
                         $single = null;
@@ -185,26 +181,20 @@ class AppServiceProvider extends ServiceProvider
                             $single = $core->getGame();
                         }
 
-//                        $bankList = is_iterable($banks) ? collect($banks) : collect();
-//                        $tw       = $banks['tw'];
-//                        $bank     = $banks['bank'];
-//                        $payment     = $banks['payment'];
-//                        $slip     = $banks['slip'];
-
-                        $bag = compact('config','contacts','notice','noticeNew','userdata','refill','single','menus');
+                        return compact('config', 'contacts', 'notice', 'noticeNew', 'userdata', 'refill', 'single', 'menus');
                     } catch (\Throwable $e) {
-                        $bag = [
-                            'config'     => null,
-                            'contacts'   => [],
-                            'notice'     => [],
-                            'noticeNew'  => [],
-                            'userdata'   => null,
-                            'menus'       => [],
-                            'refill'     => '',
-                            'single'     => null,
+                        return [
+                            'config'    => null,
+                            'contacts'  => [],
+                            'notice'    => [],
+                            'noticeNew' => [],
+                            'userdata'  => null,
+                            'menus'     => [],
+                            'refill'    => '',
+                            'single'    => null,
                         ];
                     }
-                }
+                });
 //                dd($bag['userdata']);
 
                 $view->with('config',     $bag['config']);
@@ -231,11 +221,44 @@ class AppServiceProvider extends ServiceProvider
     private function composeAdminViews(): void
     {
         view()->composer(['admin::layouts.*', 'admin::module.*', 'admin::auth.login', 'admin::2fa.*'], function ($view) {
-            $config = null;
-            if ($core = $this->safeCore()) {
-                try { $config = $core->getConfigData(); } catch (\Throwable $e) { $config = null; }
-            }
+            $config = $this->rememberRequestValue('admin_view_config', function () {
+                if ($core = $this->safeCore()) {
+                    try {
+                        return $core->getConfigData();
+                    } catch (\Throwable $e) {
+                        return null;
+                    }
+                }
+
+                return null;
+            });
+
             $view->with('config', $config);
         });
+    }
+
+    /**
+     * เก็บ cache เฉพาะ request เพื่อเลี่ยง static state ค้างข้าม request (เช่นบน Octane)
+     *
+     * @param  callable():mixed  $resolver
+     * @return mixed
+     */
+    private function rememberRequestValue(string $key, callable $resolver)
+    {
+        if ($this->app->bound('request')) {
+            $request = $this->app['request'];
+            $cacheKey = '_app_provider_cache.' . $key;
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $value = $resolver();
+            $request->attributes->set($cacheKey, $value);
+
+            return $value;
+        }
+
+        return $resolver();
     }
 }

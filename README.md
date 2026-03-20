@@ -76,3 +76,19 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Developer Workflow (PHPStorm + WSL)
+
+For this codebase setup and day-to-day check/search/edit flow, use:
+
+- `docs/DEV_WORKFLOW_PHPSTORM_WSL.md`
+- `docs/LOTTO_SYSTEM_HANDOVER_TH.md`
+
+Quick start:
+
+```bash
+cd /home/boat/Projects/1168lot
+php artisan optimize:clear
+php artisan route:list | grep lotto
+php artisan test --filter=Lotto
+```

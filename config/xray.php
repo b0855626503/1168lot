@@ -11,4 +11,5 @@ return [
     'expose_header'      => env('XRAY_EXPOSE_HEADER', false),
     'ignore_paths'       => ['/health', '/__ping', '/__static_ping'],
     'top_sql'            => 3,
+    'top_repeated_sql'   => 5,
 ];

@@ -1,0 +1,19 @@
+# Dependencies
+vendor/
+public/vendor/
+
+# Runtime / cache
+storage/
+bootstrap/cache/
+
+# Frontend build outputs
+public/js/
+public/css/
+public/mix-manifest.json
+
+# VCS / IDE noise
+.git/
+.idea/
+
+# Node modules (if present)
+node_modules/
