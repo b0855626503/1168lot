@@ -667,7 +667,7 @@ class AutoTransferController extends AppBaseController
 
     public function withdraw_callback(Request $request)
     {
-        $config  = core()->getConfigData();
+        $config  = $this->getCoreConfig();
         $payload = (array) $request->all();
 
         Log::channel('autotransfer_withdraw_callback')->info('AutoTransfer withdraw callback', $payload);
@@ -1057,7 +1057,7 @@ class AutoTransferController extends AppBaseController
     }
     public function withdraw_callback_last(Request $request)
     {
-        $config  = core()->getConfigData();
+        $config  = $this->getCoreConfig();
         $payload = (array) $request->all();
 
         Log::channel('autotransfer_withdraw_callback')->info('AutoTransfer withdraw callback', $payload);
@@ -1432,7 +1432,7 @@ class AutoTransferController extends AppBaseController
     }
     public function withdraw_callback_(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $payload = (array)$request->all();
 
         Log::channel('autotransfer_withdraw_callback')->info('AutoTransfer withdraw callback', $payload);

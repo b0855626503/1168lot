@@ -4,7 +4,7 @@ namespace Tests\Unit\Lotto;
 
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Services\SettlementService;
-use Tests\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class SettlementServiceTest extends TestCase
 {

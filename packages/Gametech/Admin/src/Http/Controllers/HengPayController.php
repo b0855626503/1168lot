@@ -280,7 +280,7 @@ class HengPayController extends AppBaseController
 
     public function payout_callback(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $datenow = now()->toDateTimeString();
         $ip = $request->ip();
         $mobile = 'test';

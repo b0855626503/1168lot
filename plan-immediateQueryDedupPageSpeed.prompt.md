@@ -1,5 +1,17 @@
 ## แผน: Immediate Query Dedup + Page Speed
 
+สถานะล่าสุด (2026-03-21):
+- เสร็จแล้ว: เพิ่ม request-scoped memoization ใน `packages/Gametech/Core/src/Core.php` ให้ `getConfigData()`, `getContact()`, `getNoticeData()`, `getNoticeNewData()`, `getGameType()`, `getProfile()`
+- เสร็จแล้ว: `app/Providers/AppServiceProvider.php` ใช้ request bag (`rememberRequestValue`) ลดการ resolve ซ้ำใน view composers
+- เสร็จแล้วบางส่วน: `packages/Gametech/Admin/src/Providers/AdminServiceProvider.php` ปรับ menu/acl cache เป็น request-scoped และ memoize permission lookup
+- คงค้าง: sweep จุดเรียก config/query ซ้ำในโมดูลใหญ่ (`Payment`, `Member`, `Promotion`) แบบ low-risk ทีละหน้า
+- อัปเดตล่าสุด: ทำ sweep ฝั่ง `Payment` เพิ่มแล้วใน `BankPaymentRepository`, `BillRepository`, `WithdrawRepository`, `PaymentPromotionRepository` โดยใช้ request-scoped config cache
+- อัปเดตล่าสุด: ทำ sweep ฝั่ง `Payment` controllers ครบจุดที่เรียก `core()->getConfigData()` แล้ว โดยย้ายไปใช้ helper `getCoreConfig()` กลางใน `AppBaseController`
+- อัปเดตล่าสุด: ทำ sweep ฝั่ง `Member` repositories หลัก (`MemberCashbackRepository`, `MemberIcRepository`, `MemberCreditLogRepository`, `MemberCreditFreeLogRepository`) และ `API` Announce controllers ให้ใช้ request-scoped config helper แล้ว
+- อัปเดตล่าสุด: ทำ sweep ฝั่ง `Admin` controllers ที่เรียก config ตรงใน callback/report/member/withdraw flows ให้ใช้ helper `getCoreConfig()` กลางใน `Admin\Http\Controllers\Controller`
+- อัปเดตล่าสุด: ปิดจุดคงค้างที่เสี่ยงสูงใน `Core`/`Game`/`Marketing` (`DailyStatRepository`, `GameUserRepository`, `MarketingController`) ให้ใช้ request-scoped config helper
+- สถานะรอบนี้: แผน immediate (phase low-risk dedup) ปิดครบตามขอบเขตที่กำหนดไว้แล้ว
+
 แผนงานนี้โฟกัสเฉพาะสิ่งที่ทำได้ทันทีเพื่อลด query ซ้ำและเร่งความเร็วโหลดหน้า โดยข้ามเรื่องการถอด `packages/Gametech/Wallet` ออกก่อน เพราะจาก dependency ที่พบตอนนี้ยังผูกกับ `config/app.php`, middleware `customer`, routes ฝั่ง user-domain, และ view `wallet::...` ในหลายโมดูลอยู่จริง หากจะถอดต้องเป็นแผนแยกอีกชุดหนึ่ง
 
 ### Steps

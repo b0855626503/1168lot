@@ -178,7 +178,7 @@ class WithdrawNewController extends AppBaseController
         $user = $this->user()->name . ' ' . $this->user()->surname;
         $datenow = now()->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $request->validate([
             'to_bank' => 'required|integer',
@@ -232,7 +232,7 @@ class WithdrawNewController extends AppBaseController
 
     public function clear(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $user = $this->user()->name . ' ' . $this->user()->surname;
         $id = $request->input('id');
         $remark = $request->input('remark');

@@ -248,7 +248,7 @@ class OnPayController extends AppBaseController
 
     public function withdraw_callback(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $datenow = now()->toDateTimeString();
         $message = $request->all();
 

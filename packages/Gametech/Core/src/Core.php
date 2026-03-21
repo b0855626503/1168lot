@@ -67,48 +67,49 @@ class Core
 	
 	public function getContact()
 	{
-		$config = core()->getConfigData();
-		
-		$data = app('Gametech\Core\Repositories\ContactChannelRepository')->orderBy('sort')->findWhere(['enable' => 'Y']);
-		
-		if ($data) {
-			return $data;
-		} else {
-			return [];
-		}
-		
+    return $this->rememberRequestValue(__FUNCTION__, function () {
+      $data = app('Gametech\Core\Repositories\ContactChannelRepository')
+        ->orderBy('sort')
+        ->findWhere(['enable' => 'Y']);
+
+      return $data ?: [];
+    });
 	}
 	
 	public function getNoticeNewData()
 	{
-		$notices = $this->noticeNewRepository->findWhere(['enable' => 'Y']);
-		$notice = [];
-		
-		foreach ($notices as $item) {
-			$route = trim($item['route'] ?? '');
-			if ($route === '') continue;
-			
-			$notice[$route]['route'] = true;
-			$notice[$route]['messages'][] = $item['message'];
-		}
-		
-		return $notice;
-		
+    return $this->rememberRequestValue(__FUNCTION__, function () {
+      $notices = $this->noticeNewRepository->findWhere(['enable' => 'Y']);
+      $notice = [];
+
+      foreach ($notices as $item) {
+        $route = trim($item['route'] ?? '');
+        if ($route === '') {
+          continue;
+        }
+
+        $notice[$route]['route'] = true;
+        $notice[$route]['messages'][] = $item['message'];
+      }
+
+      return $notice;
+    });
 	}
 
     public function getProfile()
     {
-        $datenow = now();
-        $today = $datenow->toDateString();
-        $config = core()->getConfigData();
+        return $this->rememberRequestValue(__FUNCTION__, function () {
+            $datenow = now();
+            $today = $datenow->toDateString();
+            $config = $this->getConfigData();
 
 //        dd($config);
 
-        if (Auth::guard('customer')->check()) {
-            $data = Auth::guard('customer')->user()->load('bank');
-            $user = $this->gameUserRepository->findOneByField('member_code', $data->code);
-            $userfree = app('Gametech\Game\Repositories\GameUserFreeRepository')->findOneByField('member_code', $data->code);
-            if ($user) {
+            if (Auth::guard('customer')->check()) {
+                $data = Auth::guard('customer')->user()->load('bank');
+                $user = $this->gameUserRepository->findOneByField('member_code', $data->code);
+                $userfree = app('Gametech\Game\Repositories\GameUserFreeRepository')->findOneByField('member_code', $data->code);
+                if ($user) {
 
                 $withdraw_today = $this->memberRepository->sumWithdraw($data->code, $today)->withdraw_amount_sum;
                 $withdraw = (is_null($withdraw_today) ? 0 : $withdraw_today);
@@ -145,40 +146,67 @@ class Core
                 $data->turnpro = 0;
 
                 $data->limit = 0;
-            }
-            if ($userfree) {
-                $data->turnprofree = $userfree->amount_balance;
-                $data->limitfree = $userfree->withdraw_limit_amount;
-            } else {
-                $data->turnprofree = 0;
-                $data->limitfree = 0;
-            }
-//            dd($data);
+                }
+                if ($userfree) {
+                    $data->turnprofree = $userfree->amount_balance;
+                    $data->limitfree = $userfree->withdraw_limit_amount;
+                } else {
+                    $data->turnprofree = 0;
+                    $data->limitfree = 0;
+                }
 
-            return $data;
-        } else {
+                return $data;
+            }
+
             return [];
-        }
+        });
 
     }
 
     public function getConfigData()
     {
-        return $this->configRepository->first();
+        return $this->rememberRequestValue(__FUNCTION__, function () {
+            return $this->configRepository->first();
+        });
 
     }
 
     public function getGameType()
     {
-        $gametypes = $this->gameTypeRepository->orderBy('sort')->findWhere(['enable' => 'Y'])
-            ->map(function ($g) {
-                return [
-                    'key' => strtolower($g->id),
-                    'label' => strtolower($g->id),
-                ];
-            })->values()->toArray();
+        return $this->rememberRequestValue(__FUNCTION__, function () {
+            return $this->gameTypeRepository->orderBy('sort')->findWhere(['enable' => 'Y'])
+                ->map(function ($g) {
+                    return [
+                        'key' => strtolower($g->id),
+                        'label' => strtolower($g->id),
+                    ];
+                })->values()->toArray();
+        });
+    }
 
-        return $gametypes;
+    /**
+     * Cache แบบต่อ request เท่านั้น เพื่อปลอดภัยกับ long-running worker
+     *
+     * @param callable():mixed $resolver
+     * @return mixed
+     */
+    private function rememberRequestValue(string $key, callable $resolver)
+    {
+        if (app()->bound('request')) {
+            $request = app('request');
+            $cacheKey = '_core_cache.' . $key;
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $value = $resolver();
+            $request->attributes->set($cacheKey, $value);
+
+            return $value;
+        }
+
+        return $resolver();
     }
 
     public function getSelectPro()
@@ -580,14 +608,17 @@ class Core
 
     public function getNoticeData()
     {
-        $notice = [];
-        $notices = $this->noticeRepository->findWhere(['enable' => 'Y']);
-        foreach ($notices as $item) {
-            $notice[$item['route']]['route'] = true;
-            $notice[$item['route']]['msg'] = $item['message'];
-        }
+        return $this->rememberRequestValue(__FUNCTION__, function () {
+            $notice = [];
+            $notices = $this->noticeRepository->findWhere(['enable' => 'Y']);
 
-        return $notice;
+            foreach ($notices as $item) {
+                $notice[$item['route']]['route'] = true;
+                $notice[$item['route']]['msg'] = $item['message'];
+            }
+
+            return $notice;
+        });
     }
 
     public function getGameUser($id, $method = '')

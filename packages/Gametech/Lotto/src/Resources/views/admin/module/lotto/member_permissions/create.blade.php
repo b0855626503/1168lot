@@ -1,1 +1,7 @@
-@include('admin::module.lotto._shared.create')
+<div class="row mb-2">
+	<div class="col text-right">
+		<button type="button" class="btn bg-gradient-primary btn-xs" onclick="addModal()">
+			<i class="fa fa-plus"></i> เพิ่มสิทธิ์สมาชิก
+		</button>
+	</div>
+</div>

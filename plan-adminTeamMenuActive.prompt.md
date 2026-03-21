@@ -1,5 +1,10 @@
 ## แผน: แก้ Active เมนูทีมงาน
 
+สถานะล่าสุด (2026-03-21):
+- เสร็จแล้ว: ปรับ `Gametech\Core\Tree` ให้ parent/child active และ `menu-open` ถูกต้องจาก key/path
+- เสร็จแล้ว: มี test ครอบคลุมพฤติกรรมหลักที่ `tests/Unit/Core/TreeActiveStateTest.php`
+- เสร็จแล้ว: เพิ่ม regression tests กรณี route มี query string และเมนูซ้อนหลายระดับใน `tests/Unit/Core/TreeActiveStateTest.php`
+
 แผนงานนี้จะแยกจากงาน Lotto เดิม โดยโฟกัสเฉพาะพฤติกรรม sidebar ฝั่งทีมงาน (`admin::*`) ให้เมนูหลักและเมนูย่อยแสดงสถานะ `active`/`menu-open` ถูกต้องเมื่อเข้าหน้านั้นจริง ปัญหาหลักที่พบตอนนี้อยู่ที่ตรรกะใน `Gametech\Core\Tree` ซึ่งเทียบแบบ exact match ทำให้เมนูแม่ไม่ค้างเปิดเมื่ออยู่ในหน้าลูก และเสี่ยงเกิดอาการพับเมนูเอง
 
 ### Steps

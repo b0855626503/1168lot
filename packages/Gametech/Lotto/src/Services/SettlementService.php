@@ -47,12 +47,8 @@ class SettlementService
 
                 foreach ($ticket->items as $item) {
                     $isWinner = $this->isWinningItem($item, $normalizedResult);
-                    $winAmount = $isWinner ? round((float) $item->amount * (float) $item->payout_at_time, 2) : 0.0;
-
-                    $item->update([
-                        'result_status' => $isWinner ? 'win' : 'lose',
-                        'win_amount' => $winAmount,
-                    ]);
+                    $winAmount = $this->resolveWinAmount($item, $isWinner);
+                    $this->applyItemSettlement($item, $isWinner, $winAmount);
 
                     if ($isWinner) {
                         $hasWinningItem = true;
@@ -152,6 +148,23 @@ class SettlementService
         sort($rightDigits);
 
         return $leftDigits === $rightDigits;
+    }
+
+    private function resolveWinAmount(LottoTicketItem $item, bool $isWinner): float
+    {
+        if (! $isWinner) {
+            return 0.0;
+        }
+
+        return round((float) $item->amount * (float) $item->payout_at_time, 2);
+    }
+
+    private function applyItemSettlement(LottoTicketItem $item, bool $isWinner, float $winAmount): void
+    {
+        $item->update([
+            'result_status' => $isWinner ? 'win' : 'lose',
+            'win_amount' => $winAmount,
+        ]);
     }
 }
 

@@ -56,6 +56,25 @@ class GameUserRepository extends Repository
 
     }
 
+    private function getCoreConfig()
+    {
+        if (app()->bound('request')) {
+            $request = app('request');
+            $cacheKey = '_game_user_repo.core_config';
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $config = core()->getConfigData();
+            $request->attributes->set($cacheKey, $config);
+
+            return $config;
+        }
+
+        return core()->getConfigData();
+    }
+
     public function getOneUserNew($code, $game_code)
     {
         $return['success'] = false;
@@ -148,7 +167,7 @@ class GameUserRepository extends Repository
 
     public function getUser($id, $getall = false, $getturn = false, $withdraw = false)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $results = $this->gameRepository->orderBy('sort')->findWhere(['status_open' => 'Y', 'enable' => 'Y', ['filepic', '<>', '']], array('code', 'id', 'filepic', 'game_type', 'name'));
 
         foreach ($results as $i => $result) {

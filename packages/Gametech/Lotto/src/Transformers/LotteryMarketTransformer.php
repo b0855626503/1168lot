@@ -10,6 +10,7 @@ class LotteryMarketTransformer extends TransformerAbstract
     public function transform(LotteryMarket $model): array
     {
         return [
+            'selector' => '<input type="checkbox" class="js-lotto-row-selector-markets" value="' . (int) $model->id . '">',
             'id'         => (int) $model->id,
             'name'       => $model->name,
             'group_name' => optional($model->group)->name ?? '-',

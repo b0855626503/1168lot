@@ -307,7 +307,7 @@ class PromotionController extends AppBaseController
 
     public function selectPromotion(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $id = $request->input('id');
         $promotion_id = $request->input('promotion');

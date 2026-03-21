@@ -30,6 +30,12 @@ Route::domain(
             Route::post('groups/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@update')
                 ->name('admin.lotto.groups.update');
 
+            Route::post('groups/apply-rollout', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@applyRollout')
+                ->name('admin.lotto.groups.apply_rollout');
+
+            Route::post('groups/search-members', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@searchMembers')
+                ->name('admin.lotto.groups.search_members');
+
             Route::get('markets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.markets.index',
             ])->name('admin.lotto.markets.index');
@@ -45,6 +51,12 @@ Route::domain(
 
             Route::post('markets/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@update')
                 ->name('admin.lotto.markets.update');
+
+            Route::post('markets/apply-rollout', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@applyRollout')
+                ->name('admin.lotto.markets.apply_rollout');
+
+            Route::post('markets/search-members', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@searchMembers')
+                ->name('admin.lotto.markets.search_members');
 
             Route::get('rate-plans', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.rate_plans.index',
@@ -78,12 +90,21 @@ Route::domain(
             Route::post('default-settings/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@update')
                 ->name('admin.lotto.default_settings.update');
 
-            Route::get('member-permissions', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+            Route::get('member-permissions', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.member_permissions.index',
-                'title' => 'สิทธิ์การเล่น',
-                'description' => 'กำหนดการมองเห็นและสิทธิ์เข้าเล่นหวยของสมาชิก',
-                'section' => 'member_permissions',
             ])->name('admin.lotto.member_permissions.index');
+
+            Route::post('member-permissions/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@create')
+                ->name('admin.lotto.member_permissions.create');
+
+            Route::post('member-permissions/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@loadData')
+                ->name('admin.lotto.member_permissions.loaddata');
+
+            Route::post('member-permissions/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@edit')
+                ->name('admin.lotto.member_permissions.edit');
+
+            Route::post('member-permissions/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@update')
+                ->name('admin.lotto.member_permissions.update');
 
             Route::get('member-rate-plans', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.member_rate_plans.index',
@@ -149,11 +170,8 @@ Route::domain(
             Route::post('tickets/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@loadData')
                 ->name('admin.lotto.tickets.loaddata');
 
-            Route::get('reports/exposure', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+            Route::get('reports/exposure', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoExposureReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.exposure_report.index',
-                'title' => 'รายงาน Exposure',
-                'description' => 'ดูยอดสะสมต่อเลขเพื่อประเมินความเสี่ยงของแต่ละ draw',
-                'section' => 'exposure_report',
             ])->name('admin.lotto.reports.exposure');
 
             Route::get('reports/revenue', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRevenueReportController@index')->defaults('_config', [

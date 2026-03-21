@@ -19,10 +19,15 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'name',      // ออมสิน / ธกส
         'code',      // unique: gsb, kbank
         'is_enabled',
+        'rollout_mode',
+        'affect_existing_members',
+        'policy_version',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'affect_existing_members' => 'boolean',
+        'policy_version' => 'integer',
     ];
 
     // Relationships
@@ -39,6 +44,11 @@ class LotteryMarket extends Model implements LotteryMarketContract
     public function defaultBetSettings()
     {
         return $this->hasMany(LottoMarketBetSetting::class, 'market_id');
+    }
+
+    public function memberPolicies()
+    {
+        return $this->hasMany(MemberLottoMarketPolicy::class, 'market_id');
     }
 }
 

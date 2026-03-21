@@ -519,7 +519,7 @@ class SmkPayController extends AppBaseController
      */
     public function withdraw_callback(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $message = $request->all();
 
         Log::channel('smkpay_withdraw_callback')->info('[SMKPAY] Withdraw callback', $message);

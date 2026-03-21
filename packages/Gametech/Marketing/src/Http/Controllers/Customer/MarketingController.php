@@ -354,7 +354,7 @@ class MarketingController extends AppBaseController
     public function register_staff(Request $request)
     {
         $otp = '';
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $datenow = now()->toDateTimeString();
         $today = now()->toDateString();
@@ -621,7 +621,7 @@ class MarketingController extends AppBaseController
     public function register(Request $request)
     {
         $otp = '';
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $datenow = now()->toDateTimeString();
         $today = now()->toDateString();
@@ -965,7 +965,7 @@ class MarketingController extends AppBaseController
     public function registerUser(Request $request)
     {
         $otp = '';
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $datenow = now()->toDateTimeString();
         $today = now()->toDateString();

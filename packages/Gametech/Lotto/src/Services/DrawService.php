@@ -18,23 +18,13 @@ class DrawService
 {
     public function createDraft(array $data): LottoDraw
     {
-        return LottoDraw::query()->create([
-            'market_id' => $data['market_id'],
-            'draw_date' => $data['draw_date'],
-            'open_at' => $data['open_at'],
-            'close_at' => $data['close_at'],
-            'result_at' => $data['result_at'] ?? null,
-            'status' => $data['status'] ?? 'draft',
-            'created_by' => $data['created_by'] ?? null,
-        ]);
+        return LottoDraw::query()->create($this->buildDraftPayload($data));
     }
 
     public function openDraw(LottoDraw $draw): LottoDraw
     {
         return DB::transaction(function () use ($draw) {
-            if (! in_array($draw->status, ['draft', 'closed'], true)) {
-                throw new InvalidArgumentException('Only draft or closed draws can be opened');
-            }
+            $this->assertCanOpen($draw);
 
             if (! $draw->betSettings()->exists()) {
                 $this->snapshotBetSettings($draw);
@@ -72,5 +62,25 @@ class DrawService
                 'max_per_number' => $setting->max_per_number,
             ]);
         }
+    }
+
+    private function assertCanOpen(LottoDraw $draw): void
+    {
+        if (! in_array($draw->status, ['draft', 'closed'], true)) {
+            throw new InvalidArgumentException('Only draft or closed draws can be opened');
+        }
+    }
+
+    private function buildDraftPayload(array $data): array
+    {
+        return [
+            'market_id' => $data['market_id'],
+            'draw_date' => $data['draw_date'],
+            'open_at' => $data['open_at'],
+            'close_at' => $data['close_at'],
+            'result_at' => $data['result_at'] ?? null,
+            'status' => $data['status'] ?? 'draft',
+            'created_by' => $data['created_by'] ?? null,
+        ];
     }
 }

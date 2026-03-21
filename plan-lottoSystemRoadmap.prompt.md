@@ -1,5 +1,16 @@
 ## แผน: Lotto System Roadmap
 
+สถานะล่าสุด (2026-03-21):
+- ปิดแล้ว: เมนู admin หลักและเมนูที่เคยเป็น placeholder (`member_permissions`, `reports/exposure`) ถูกทำเป็นโมดูลจริง
+- ปิดแล้ว: draw lifecycle + settlement ใช้งานได้จาก `LottoDrawController` ร่วมกับ `DrawService`/`SettlementService`
+- ปิดแล้ว: member/API scaffold ถูกเปิดใช้จริง (`api/lotto/draws`, `api/lotto/bet`, `api/lotto/tickets`)
+- ปิดแล้ว: policy C rollout scaffold สำหรับ member-market policy มี migration/service/command/tests ครบ baseline
+- ปิดแล้ว (2026-03-21): เพิ่ม test เชิงเสี่ยงสูงครบ:
+  - `SettlementReconciliationTest` – ตรวจสอบ win-amount formula (amount × payout, rounded 2dp), reconciliation totals (total_win, winning_item_count, net_revenue) ทุก scenario
+  - `ExposureRaceConditionTest` – code analysis + mathematical invariants ของ limit-check formula, race-condition scenario (stale read → oversell), atomic increment guard
+  - รวม 141 tests, 598 assertions ผ่านทั้งหมด
+- คงค้าง: roadmap Concord/Proxy cleanup ก่อน refactor ใหญ่ (เริ่มแยกแผนแล้วที่ `plan-lottoConcordProxyCleanup.prompt.md`)
+
 แผนงานนี้ใช้สำหรับขับงานระบบ Lotto แยกจากแผนเมนูทีมงาน โดยอิงจากสถานะจริงของโมดูล `packages/Gametech/Lotto`, เอกสาร `docs/LOTTO_SYSTEM_HANDOVER_TH.md`, route ที่ถูกโหลดแล้วใน `packages/Gametech/Lotto/src/Routes/admin.php`, route scaffold ใน `packages/Gametech/Lotto/src/Routes/api.php`, และ test ที่มีอยู่ใน `tests/Unit/Lotto/SettlementServiceTest.php`
 
 ### Steps

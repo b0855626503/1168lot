@@ -35,16 +35,14 @@ class AdminServiceProvider extends ServiceProvider
         AdminProxy::observe(AdminObserver::class);
         RoleProxy::observe(RoleObserver::class);
 
-        // โหมดจาก Core (มี 1 record)
-        $config = app()->make(Core::class)->getConfigData();
-        if ($config->seamless == 'Y') {
+        // โหมดจาก Core (มี 1 record) แต่กันกรณี DB/config ยังไม่พร้อมตอน bootstrap
+        $mode = $this->resolveAdminConfigMode();
+        if ($mode === 'seamless') {
             $this->registerConfigSeamless();
+        } elseif ($mode === 'single') {
+            $this->registerConfigSingle();
         } else {
-            if ($config->multigame_open == 'Y') {
-                $this->registerConfig();
-            } else {
-                $this->registerConfigSingle();
-            }
+            $this->registerConfig();
         }
 
         // โหลด routes ใน boot
@@ -104,81 +102,110 @@ class AdminServiceProvider extends ServiceProvider
     }
 
     /**
+     * เลือกโหมด config ของ admin ต่อ request พร้อม fallback ปลอดภัย
+     */
+    protected function resolveAdminConfigMode(): string
+    {
+        static $mode = null;
+
+        if (is_string($mode)) {
+            return $mode;
+        }
+
+        try {
+            $config = app()->make(Core::class)->getConfigData();
+
+            if (($config->seamless ?? 'N') === 'Y') {
+                $mode = 'seamless';
+            } elseif (($config->multigame_open ?? 'N') === 'Y') {
+                $mode = 'multi';
+            } else {
+                $mode = 'single';
+            }
+        } catch (\Throwable $e) {
+            $mode = 'multi';
+        }
+
+        return $mode;
+    }
+
+    /**
      * View composers — คอมโพสเมนูครั้งเดียวบน layout แล้ว share ให้ทุกวิว
      */
     protected function composeView()
     {
         $menuComposer = function ($view) {
-            static $menuTree = null; // cache ต่อรีเควสต์
+            $tree = $this->rememberRequestValue('menu_tree', function () {
+                $tree = Tree::create();
 
-            if ($menuTree) {
-                $view->with('menu', $menuTree);
-                return;
-            }
-
-            $tree = Tree::create();
-
-            // ยังไม่ล็อกอิน → ส่งเมนูว่าง (กัน dereference null)
-            $user = Auth::guard('admin')->user();
-            if (! $user) {
-                $view->with('menu', $tree);
-                return;
-            }
-
-            $permissionType     = $user->role->permission_type ?? 'all';
-            $allowedPermissions = (array) ($user->role->permissions ?? []);
-
-            $menu = (array) config('menu.admin', []);
-            $menuCount = count($menu);
-            $routeByKey = [];
-            foreach ($menu as $menuItem) {
-                $menuKey = (string) ($menuItem['key'] ?? '');
-                $menuRoute = (string) ($menuItem['route'] ?? '');
-                if ($menuKey !== '' && $menuRoute !== '') {
-                    $routeByKey[$menuKey] = $menuRoute;
+                // ยังไม่ล็อกอิน → ส่งเมนูว่าง (กัน dereference null)
+                $user = Auth::guard('admin')->user();
+                if (! $user) {
+                    return $tree;
                 }
-            }
 
-            $nextAllowedByParent = [];
-            if ($permissionType != 'all' && count($allowedPermissions) > 1) {
-                $max = count($allowedPermissions) - 1;
-                for ($i = 0; $i < $max; $i++) {
-                    $current = (string) ($allowedPermissions[$i] ?? '');
-                    $next = (string) ($allowedPermissions[$i + 1] ?? '');
+                $permissionType     = $user->role->permission_type ?? 'all';
+                $allowedPermissions = (array) ($user->role->permissions ?? []);
 
-                    if (substr_count($current, '.') == 1 && substr_count($next, '.') == 2) {
-                        $nextAllowedByParent[$current] = $next;
+                $menu = (array) config('menu.admin', []);
+                $menuCount = count($menu);
+                $routeByKey = [];
+                foreach ($menu as $menuItem) {
+                    $menuKey = (string) ($menuItem['key'] ?? '');
+                    $menuRoute = (string) ($menuItem['route'] ?? '');
+                    if ($menuKey !== '' && $menuRoute !== '') {
+                        $routeByKey[$menuKey] = $menuRoute;
                     }
                 }
-            }
 
-//            dump($menu);
+                $nextAllowedByParent = [];
+                if ($permissionType != 'all' && count($allowedPermissions) > 1) {
+                    $max = count($allowedPermissions) - 1;
+                    for ($i = 0; $i < $max; $i++) {
+                        $current = (string) ($allowedPermissions[$i] ?? '');
+                        $next = (string) ($allowedPermissions[$i + 1] ?? '');
 
-            foreach ($menu as $index => $item) {
-                if (!bouncer()->hasPermission($item['key'])) {
-                    continue;
-                }
-
-                if ($index + 1 < $menuCount && $permissionType != 'all') {
-                    $nextMenuItem = $menu[$index + 1] ?? null;
-                    $nextMenuKey = (string) ($nextMenuItem['key'] ?? '');
-                    $itemKey = (string) ($item['key'] ?? '');
-
-                    if (substr_count($nextMenuKey, '.') == 2 && substr_count($itemKey, '.') == 1) {
-                        $neededItem = $nextAllowedByParent[$itemKey] ?? null;
-
-                        if ($neededItem && isset($routeByKey[$neededItem])) {
-                            $item['route'] = $routeByKey[$neededItem];
+                        if (substr_count($current, '.') == 1 && substr_count($next, '.') == 2) {
+                            $nextAllowedByParent[$current] = $next;
                         }
                     }
                 }
 
-                $tree->add($item, 'menu');
-            }
+                $permissionCache = [];
+                $hasPermission = function (string $menuKey) use (&$permissionCache): bool {
+                    if (! array_key_exists($menuKey, $permissionCache)) {
+                        $permissionCache[$menuKey] = bouncer()->hasPermission($menuKey);
+                    }
 
-            $tree->items = core()->sortItems($tree->items);
+                    return (bool) $permissionCache[$menuKey];
+                };
 
-            $menuTree = $tree;
+                foreach ($menu as $index => $item) {
+                    if (! $hasPermission((string) ($item['key'] ?? ''))) {
+                        continue;
+                    }
+
+                    if ($index + 1 < $menuCount && $permissionType != 'all') {
+                        $nextMenuItem = $menu[$index + 1] ?? null;
+                        $nextMenuKey = (string) ($nextMenuItem['key'] ?? '');
+                        $itemKey = (string) ($item['key'] ?? '');
+
+                        if (substr_count($nextMenuKey, '.') == 2 && substr_count($itemKey, '.') == 1) {
+                            $neededItem = $nextAllowedByParent[$itemKey] ?? null;
+
+                            if ($neededItem && isset($routeByKey[$neededItem])) {
+                                $item['route'] = $routeByKey[$neededItem];
+                            }
+                        }
+                    }
+
+                    $tree->add($item, 'menu');
+                }
+
+                $tree->items = core()->sortItems($tree->items);
+
+                return $tree;
+            });
 
             $view->with('menu', $tree);
 
@@ -274,21 +301,17 @@ class AdminServiceProvider extends ServiceProvider
      */
     public function createACL()
     {
-        static $tree;
+        return $this->rememberRequestValue('acl_tree', function () {
+            $tree = Tree::create();
 
-        if ($tree) {
+            foreach ((array) config('acl') as $item) {
+                $tree->add($item, 'acl');
+            }
+
+            $tree->items = core()->sortItems($tree->items);
+
             return $tree;
-        }
-
-        $tree = Tree::create();
-
-        foreach ((array) config('acl') as $item) {
-            $tree->add($item, 'acl');
-        }
-
-        $tree->items = core()->sortItems($tree->items);
-
-        return $tree;
+        });
     }
 
     /**
@@ -302,5 +325,30 @@ class AdminServiceProvider extends ServiceProvider
         $this->app->singleton('bouncer', function () {
             return app()->make(Bouncer::class);
         });
+    }
+
+    /**
+     * Cache ต่อ request เท่านั้น เพื่อไม่ให้ state ค้างข้าม request บน worker แบบ long-running
+     *
+     * @param callable():mixed $resolver
+     * @return mixed
+     */
+    protected function rememberRequestValue(string $key, callable $resolver)
+    {
+        if ($this->app->bound('request')) {
+            $request = $this->app['request'];
+            $cacheKey = '_admin_provider_cache.' . $key;
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $value = $resolver();
+            $request->attributes->set($cacheKey, $value);
+
+            return $value;
+        }
+
+        return $resolver();
     }
 }

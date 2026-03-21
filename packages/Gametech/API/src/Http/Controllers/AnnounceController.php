@@ -42,7 +42,7 @@ class AnnounceController extends AppBaseController
 
     public function getDashBoard()
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $startdate = now()->toDateString();
 
         $deposit = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])->whereDate('date_create', $startdate)->sum('value');

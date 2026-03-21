@@ -154,7 +154,7 @@ class MemberController extends AppBaseController
         $fulluser = $user->name.' '.$user->surname;
         $ip = $request->ip();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $request->validate([
             'id' => ['required', 'integer'],
@@ -278,7 +278,7 @@ class MemberController extends AppBaseController
 
         $types = ['D' => 'เพิ่ม ยอดเงินคงเหลือ', 'W' => 'ลด ยอดเงินคงเหลือ'];
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $member = $this->memberRepository->find($id);
 
@@ -341,7 +341,7 @@ class MemberController extends AppBaseController
 
         $types = ['D' => 'เพิ่ม Point', 'W' => 'ลด Point'];
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $member = $this->memberRepository->find($id);
 
@@ -387,7 +387,7 @@ class MemberController extends AppBaseController
 
         $types = ['D' => 'เพิ่ม Diamond', 'W' => 'ลด Diamond'];
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $member = $this->memberRepository->find($id);
 
@@ -612,7 +612,7 @@ class MemberController extends AppBaseController
 
     public function gamewithdraw_($id)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         if ($config->seamless == 'Y') {
             $responses = collect($this->memberRepository->loadWithdrawSeamless($id, '', '')->toArray());
 

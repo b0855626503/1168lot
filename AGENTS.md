@@ -5,6 +5,7 @@
 - Lotto implementation handover: `docs/LOTTO_SYSTEM_HANDOVER_TH.md`
 - Lotto system roadmap plan: `plan-lottoSystemRoadmap.prompt.md`
 - Lotto execution phases plan: `plan-lottoExecutionPhases.prompt.md`
+- Lotto Concord/Proxy cleanup plan: `plan-lottoConcordProxyCleanup.prompt.md`
 - Admin team menu active plan: `plan-adminTeamMenuActive.prompt.md`
 - Immediate query dedup + page speed plan: `plan-immediateQueryDedupPageSpeed.prompt.md`
 
@@ -33,9 +34,9 @@ Routes are split by domain/subdomain (see `config/app.php` and `routes/web.php`)
    - Webhook handlers for payment callbacks
    - Routes: `routes/api.php` + module routes (e.g., `Gametech\API\Providers\APIServiceProvider`)
 
-**Note**: `routes/web.php` also defines wallet-domain `Route::prefix('api')` endpoints for push/track flows. Those routes still use `web` middleware and customer auth.
+**Note**: `routes/web.php` also defines wallet-domain `Route::prefix('api')` endpoints. Push subscribe/unsubscribe routes use `customer` + `authuser`, while track routes are stateful (`web`) but not guarded by `customer` middleware.
 
-**Critical**: `AppServiceProvider` lazily resolves Core service and skips heavy view compositions for API context to prevent slowdowns.
+**Critical**: `AppServiceProvider` lazily resolves Core service and skips heavy view compositions for API context to prevent slowdowns. Current `isApiContext()` detection is path/middleware based (`api/*` or `api` middleware), not host-prefix based.
 
 ### Modular Structure (Concord-based)
 **All domain logic lives in `packages/Gametech/`** (see `config/concord.php`):
@@ -68,7 +69,7 @@ Routes detected via domain + subdomain routing (routes/web.php):
 /api/*                             → API routes
 ```
 
-`routes/web.php` also contains wallet-domain `/api/*` endpoints (`PushController`, `TrackController`) that are stateful (`web` middleware), so do not assume every `/api/*` path is stateless.
+`routes/web.php` also contains wallet-domain `/api/*` endpoints (`PushController`, `TrackController`) that are stateful (`web` middleware). Only push subscribe/unsubscribe routes add `customer` + `authuser`; do not assume every `/api/*` path is stateless or customer-authenticated.
 
 ### Critical Route Pattern: `_config` Defaults
 Used extensively in Wallet & Promotion routes to pass view + action metadata:
@@ -127,7 +128,8 @@ Webpack config: `webpack.mix.js` (basic, compiles `resources/sass/app.scss` → 
 
 ### Test & Quality
 ```bash
-php artisan test                   # Run PHPUnit (tests/Unit + tests/Feature)
+./vendor/bin/phpunit              # Run PHPUnit (tests/Unit + tests/Feature)
+./vendor/bin/phpunit --filter=Lotto  # Run Lotto-focused tests
 ./vendor/bin/pint                  # Laravel Pint code style fixer
 php artisan optimize:clear         # Clear all caches
 ```
@@ -295,10 +297,15 @@ ConfigProxy::observe(ConfigObserver::class); // Invalidates cache on config upda
 - **LotteryGroup** – Lottery groups (e.g., Thai Lottery, Provincial Lottery)
 - **LotteryMarket** – Markets within groups (e.g., 2-digit, 3-digit, Hanoi)
 - **LottoRatePlan** – Rate/odds configuration per market
+- **LottoRatePlanItem** – Per-bet-type odds rows under a rate plan
 - **LottoDraw** – Draw schedules (date, time, market assignments)
+- **LottoDrawBetSetting** – Draw-level bet setting snapshot/override
+- **LottoMarketBetSetting** – Default market betting constraints
+- **LottoNumberExposure** – Aggregated number exposure records for risk/reporting
 - **LottoTicket** – Member betting tickets (collection of bets)
 - **LottoTicketItem** – Individual bets within a ticket
 - **LottoNumberBlock** – Blocked/restricted numbers per market
+- **MemberLottoMarketPolicy** – Market-level permission snapshot per member (policy-driven inheritance)
 - **MemberLottoPermission** – Member visibility and play rights per market
 - **MemberLottoSetting** – Member-specific min/max bets per market/type
 
@@ -308,6 +315,11 @@ File: `packages/Gametech/Lotto/src/Routes/admin.php`
 - Grouped under domain `config('app.admin_url').'.'.(config('app.admin_domain_url') ?: config('app.domain_url'))`
 - Middleware: `['web', 'admin', 'auth', '2fa']`
 - All routes use `->defaults('_config', [...])` pattern
+
+File: `packages/Gametech/Lotto/src/Routes/api.php`
+- Member API base route: `/api/lotto/*`
+- Middleware: `['api', 'authuser:customer']`
+- Route file is loaded in `packages/Gametech/Lotto/src/Providers/LottoServiceProvider.php`
 
 ### Lotto Admin Menu Configuration
 File: `packages/Gametech/Lotto/src/Config/admin-menu.php`
@@ -338,6 +350,8 @@ File path: `packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/`
 - `tickets/` – Ticket view and management
 - `member_permissions/` – Member access permissions
 - `member_rate_plans/` – Member-specific rate configurations
+- `exposure_report/` – Exposure report screens
+- `revenue_report/` – Revenue report screens
 - `_shared/` – Shared components used across Lotto views
 
 ### Lotto-Specific Data Tables & Transformers
@@ -352,18 +366,43 @@ Available:
 - LottoDrawDataTable + LottoDrawTransformer
 - LottoMarketBetSettingDataTable + LottoMarketBetSettingTransformer
 - MemberLottoSettingDataTable + MemberLottoSettingTransformer
+- MemberLottoPermissionDataTable + MemberLottoPermissionTransformer
 - LottoNumberBlockDataTable + LottoNumberBlockTransformer
+- LottoTicketDataTable + LottoTicketTransformer
+- LottoExposureReportDataTable + LottoExposureReportTransformer
+- LottoRevenueReportDataTable + LottoRevenueReportTransformer
 
 ### Lotto Admin Controllers
 File: `packages/Gametech/Lotto/src/Http/Controllers/Admin/`
-- **LotteryGroupController** – Manage lottery groups (CRUD + loadData)
-- **LotteryMarketController** – Manage markets within groups
-- **LottoRatePlanController** – Manage rate plans
-- **LottoDrawController** – Manage draws (CRUD + loadData)
+- **LotteryGroupController** – Manage lottery groups (CRUD + loadData + applyRollout + searchMembers)
+- **LotteryMarketController** – Manage markets within groups (CRUD + loadData + applyRollout + searchMembers)
+- **LottoRatePlanController** – Manage rate plans (CRUD + loadData)
 - **LottoMarketBetSettingController** – Manage default settings (CRUD + status toggle)
-- **MemberLottoSettingController** – Manage member rate plans (CRUD + loadData)
+- **LottoDrawController** – Manage draws (CRUD + loadData + open + close + settle)
 - **LottoNumberBlockController** – Manage number blocks (CRUD + loadData)
-- **SectionController** – Handle static sections (settings, permissions, reports)
+- **LottoTicketController** – View tickets (index + loadData; read-only)
+- **MemberLottoPermissionController** – Manage member market permissions (CRUD + allow/deny toggle)
+- **MemberLottoSettingController** – Manage member rate plans (CRUD + loadData)
+- **LottoExposureReportController** – Exposure report from `lotto_number_exposures` (read-only, filterable)
+- **LottoRevenueReportController** – Revenue report aggregated per draw (read-only)
+- **SectionController** – Handle redirect/static fallback section only
+
+### Lotto Unit Tests
+File: `tests/Unit/Lotto/` – 141 tests, 598 assertions (all passing)
+- **BetTypeTest** – BetType enum (all(), label(), distinct constants, snake_case)
+- **DrawStatusFlowTest** – Draw lifecycle state transitions
+- **LottoAclCoverageTest** – ACL entries cover all lotto action routes
+- **LottoAdminModulePatternCompletionTest** – member_permissions and exposure_report are real modules
+- **LottoAdminRolloutScaffoldTest** – rollout/search-members routes + views wired
+- **LottoApiRouteScaffoldTest** – API routes loaded via LottoServiceProvider
+- **LottoConcordProxyAuditTest** – No direct model instantiation, all Proxies exist and registered
+- **LottoConcurrencyGuardTest** – DB::transaction + lockForUpdate present in all critical paths
+- **MemberMarketPolicyServiceTest** – isValidRolloutMode accepts/rejects values correctly
+- **SettlementEdgeCasesTest** – isWinningBet edge cases (leading zeros, TOD_3 permutations, run boundaries)
+- **SettlementReconciliationTest** – win-amount formula, reconciliation totals, net revenue math
+- **ExposureRaceConditionTest** – exposure limit invariants + race-condition stale-read scenario
+- **SettlementServiceTest** – normalizeResultNumber, isWinningBet, describeResultNumber
+- **ToggleFieldGuardTest** – allowlist field guard + boolean resolver
 
 ### Lotto Routes Pattern
 Each entity follows:
@@ -383,7 +422,23 @@ Route::post('[entity]/update', '[Controller]@update')
 
 Route::post('[entity]/loaddata', '[Controller]@loadData')
     ->name('admin.lotto.[entity].loaddata');
+
+// Optional rollout action for existing members (groups/markets)
+Route::post('[entity]/apply-rollout', '[Controller]@applyRollout')
+    ->name('admin.lotto.[entity].apply_rollout');
+
+// Optional member lookup for rollout selected mode
+Route::post('[entity]/search-members', '[Controller]@searchMembers')
+    ->name('admin.lotto.[entity].search_members');
 ```
+
+### Lotto Member Policy Rollout (Policy C Baseline)
+- Group/Market supports `rollout_mode` = `new_only` / `all` / `selected` (`lotto_groups`, `lotto_markets`)
+- New member policy snapshot is bootstrapped from event `member.created.after` in `LottoServiceProvider`
+- Existing members are updated explicitly by admin rollout action (`applyRollout`) or batch command
+- Groups/Markets admin views support row-selection batch rollout actions (selected rows -> apply to `all` or `selected` members)
+- Batch backfill command: `php artisan lotto:policy-bootstrap-members --chunk=500`
+- Betting permission check reads `member_lotto_market_policies` first when policy rows exist; legacy `member_lotto_permissions` remains fallback
 
 ---
 
@@ -401,7 +456,7 @@ PAYMENT_API_URL, PAYMENT_PARTNER_ID, PAYMENT_SECRET_KEY  # Payment provider cred
 ```
 
 ### Server Setup (Caddyfile)
-Runs on port **7001** with FrankenPHP (modern PHP server). Serves `public/` root. Handles PHP routes via `try_files {path} /index.php`.
+Current `Caddyfile` uses FrankenPHP with a site block on **:7001** and `php_server` `try_files {path} /index.php`; global config also sets `http_port 7002`. The configured root is deployment-specific (`/home/www/core/kick789/public`).
 
 ### Web Server Entry Points
 - **`public/index.php`** – Main entry point (Laravel)
@@ -456,5 +511,5 @@ Runs on port **7001** with FrankenPHP (modern PHP server). Serves `public/` root
 ---
 
 **Generated**: 2026-03-20  
-**Last Updated**: Added root-level Lotto/admin/performance plan files to Quick Links, kept groups as the golden Lotto admin menu pattern, and documented the current Lotto module/menu structure for continued execution  
+**Last Updated**: 2026-03-21 – Corrected wallet `/api/*` auth nuance (push guarded, track stateful-only), documented current API-context detection (`api/*`/middleware), switched test commands to PHPUnit binary, expanded Lotto model/view inventory (RatePlanItem/DrawBetSetting/MarketBetSetting/NumberExposure + report view folders), and aligned Caddyfile notes with current :7001 + global `http_port` configuration  
 **Framework**: Laravel 8 + Concord 1.8 + Custom Gametech Modules

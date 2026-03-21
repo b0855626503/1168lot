@@ -91,7 +91,7 @@ class DashboardController extends AppBaseController
         $enddate = now()->toDateString().' 23:59:59';
         $today = now()->toDateString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $bank_in_today = app('Gametech\Payment\Repositories\BankPaymentRepository')
             ->income()->active()->waiting()
@@ -192,7 +192,7 @@ class DashboardController extends AppBaseController
 
     public function loadSum(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $startdate = now()->toDateString();
         //        $startdate = '2021-02-10';
         $method = $request->input('method');
@@ -638,7 +638,7 @@ class DashboardController extends AppBaseController
 
     public function loadSumAll(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         //        $startdate = '2021-02-04';
         //        $enddate = '2021-02-10';

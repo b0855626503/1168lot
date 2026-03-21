@@ -10,6 +10,7 @@ class LotteryGroupTransformer extends TransformerAbstract
     public function transform(LotteryGroup $model): array
     {
         return [
+            'selector' => '<input type="checkbox" class="js-lotto-row-selector-groups" value="' . (int) $model->id . '">',
             'id'         => (int) $model->id,
             'name'       => $model->name,
             'code'       => '<code>' . $model->code . '</code>',

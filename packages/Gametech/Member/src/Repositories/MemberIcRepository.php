@@ -52,9 +52,28 @@ class MemberIcRepository extends Repository
 
     }
 
+    private function getCoreConfig()
+    {
+        if (app()->bound('request')) {
+            $request = app('request');
+            $cacheKey = '_member_ic_repo.core_config';
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $config = core()->getConfigData();
+            $request->attributes->set($cacheKey, $config);
+
+            return $config;
+        }
+
+        return core()->getConfigData();
+    }
+
     public function refill(array $data): bool
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $code = ($data['code'] ?? 0);
         $member_code = $data['upline_code'];
         $downline_code = $data['member_code'];
@@ -355,7 +374,7 @@ class MemberIcRepository extends Repository
 
     public function refillSeamless(array $data): bool
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $code = $data['code'];
         $member_code = $data['upline_code'];
         $downline_code = $data['member_code'];

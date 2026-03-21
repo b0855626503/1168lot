@@ -87,6 +87,53 @@ class TreeActiveStateTest extends TestCase
         $this->assertNull($tree->getActives($wallet));
     }
 
+    public function test_query_string_does_not_break_active_detection(): void
+    {
+        $tree = $this->makeTree('/admin/lotto/groups', 'lotto.groups');
+
+        $item = [
+            'key' => 'lotto.groups',
+            'url' => '/admin/lotto/groups?tab=open',
+            'children' => [],
+        ];
+
+        $this->assertSame('active', $tree->getActive($item));
+        $this->assertNull($tree->getActives($item));
+    }
+
+    public function test_all_ancestor_levels_are_open_for_deep_current_key(): void
+    {
+        $tree = $this->makeTree('/admin/lotto/reports/exposure', 'lotto.reports.exposure');
+
+        $root = [
+            'key' => 'lotto',
+            'url' => '/admin/lotto/groups',
+            'children' => [
+                [
+                    'key' => 'lotto.reports',
+                    'url' => '/admin/lotto/reports/exposure',
+                    'children' => [
+                        [
+                            'key' => 'lotto.reports.exposure',
+                            'url' => '/admin/lotto/reports/exposure',
+                            'children' => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $mid = $root['children'][0];
+        $leaf = $mid['children'][0];
+
+        $this->assertSame('active', $tree->getActive($root));
+        $this->assertSame('menu-open', $tree->getActives($root));
+        $this->assertSame('active', $tree->getActive($mid));
+        $this->assertSame('menu-open', $tree->getActives($mid));
+        $this->assertSame('active', $tree->getActive($leaf));
+        $this->assertNull($tree->getActives($leaf));
+    }
+
     private function makeTree(string $currentPath, ?string $currentKey): Tree
     {
         $reflection = new ReflectionClass(Tree::class);

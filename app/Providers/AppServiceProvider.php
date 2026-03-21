@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -33,13 +32,6 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
         JsonResource::withoutWrapping();
 
-        // บังคับ https เฉพาะ web context เท่านั้น (กันชน CLI และ API)
-        if (! $this->app->runningInConsole() && ! $this->isApiContext()) {
-//            if (config('app.force_https', true)) {
-//                URL::forceScheme('https');
-//                $this->app['request']->server->set('HTTPS', true);
-//            }
-        }
 
         if (app()->environment('local')) {
             DB::listen(function ($query) {
@@ -59,16 +51,18 @@ class AppServiceProvider extends ServiceProvider
         // ====== WEB CONTEXT เท่านั้น ======
 
         // แชร์ webconfig แบบปลอดภัย (อย่าทำให้เว็บล่มถ้า Core เด้ง)
-        if ($core = $this->safeCore()) {
-            try {
-                View::share('webconfig', $core->getConfigData());
-
-            } catch (\Throwable $e) {
-                View::share('webconfig', null);
+        $webconfig = $this->rememberRequestValue('shared_webconfig', function () {
+            if ($core = $this->safeCore()) {
+                try {
+                    return $core->getConfigData();
+                } catch (\Throwable $e) {
+                    return null;
+                }
             }
-        } else {
-            View::share('webconfig', null);
-        }
+
+            return null;
+        });
+        View::share('webconfig', $webconfig);
         $languages = config('languages.available');
         View::share('languages', $languages);
 

@@ -20,7 +20,7 @@ class FixController extends AppBaseController
     {
         $this->_config = request('_config');
 
-        $this->setting = core()->getConfigData();
+        $this->setting = $this->getCoreConfig();
 
         $this->middleware('admin');
     }

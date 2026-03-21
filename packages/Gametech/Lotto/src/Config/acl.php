@@ -26,6 +26,18 @@ return [
 		'sort' => 2,
 	],
 	[
+		'key' => 'lotto.groups.apply_rollout',
+		'name' => 'ใช้ค่ากลุ่มหวยกับสมาชิกเดิม',
+		'route' => 'admin.lotto.groups.apply_rollout',
+		'sort' => 3,
+	],
+	[
+		'key' => 'lotto.groups.search_members',
+		'name' => 'ค้นหาสมาชิกสำหรับกลุ่มหวย',
+		'route' => 'admin.lotto.groups.search_members',
+		'sort' => 4,
+	],
+	[
 		'key' => 'lotto.markets',
 		'name' => 'รายการหวย',
 		'route' => 'admin.lotto.markets.index',
@@ -42,6 +54,18 @@ return [
 		'name' => 'แก้ไขรายการหวย',
 		'route' => 'admin.lotto.markets.update',
 		'sort' => 2,
+	],
+	[
+		'key' => 'lotto.markets.apply_rollout',
+		'name' => 'ใช้ค่ารายการหวยกับสมาชิกเดิม',
+		'route' => 'admin.lotto.markets.apply_rollout',
+		'sort' => 3,
+	],
+	[
+		'key' => 'lotto.markets.search_members',
+		'name' => 'ค้นหาสมาชิกสำหรับรายการหวย',
+		'route' => 'admin.lotto.markets.search_members',
+		'sort' => 4,
 	],
 	[
 		'key' => 'lotto.rate_plans',
@@ -68,16 +92,52 @@ return [
 		'sort' => 4,
 	],
 	[
+		'key' => 'lotto.default_settings.create',
+		'name' => 'เพิ่มค่าพื้นฐานหวย',
+		'route' => 'admin.lotto.default_settings.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.default_settings.update',
+		'name' => 'แก้ไขค่าพื้นฐานหวย',
+		'route' => 'admin.lotto.default_settings.update',
+		'sort' => 2,
+	],
+	[
 		'key' => 'lotto.member_permissions',
 		'name' => 'สิทธิ์การเล่น',
 		'route' => 'admin.lotto.member_permissions.index',
 		'sort' => 5,
 	],
 	[
+		'key' => 'lotto.member_permissions.create',
+		'name' => 'เพิ่มสิทธิ์การเล่น',
+		'route' => 'admin.lotto.member_permissions.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.member_permissions.update',
+		'name' => 'แก้ไขสิทธิ์การเล่น',
+		'route' => 'admin.lotto.member_permissions.update',
+		'sort' => 2,
+	],
+	[
 		'key' => 'lotto.member_rate_plans',
 		'name' => 'อัตราจ่ายสมาชิก',
 		'route' => 'admin.lotto.member_rate_plans.index',
 		'sort' => 6,
+	],
+	[
+		'key' => 'lotto.member_rate_plans.create',
+		'name' => 'เพิ่มอัตราจ่ายสมาชิก',
+		'route' => 'admin.lotto.member_rate_plans.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.member_rate_plans.update',
+		'name' => 'แก้ไขอัตราจ่ายสมาชิก',
+		'route' => 'admin.lotto.member_rate_plans.update',
+		'sort' => 2,
 	],
 	[
 		'key' => 'lotto.draws',
@@ -120,6 +180,18 @@ return [
 		'name' => 'เลขอั้น',
 		'route' => 'admin.lotto.number_blocks.index',
 		'sort' => 8,
+	],
+	[
+		'key' => 'lotto.number_blocks.create',
+		'name' => 'เพิ่มเลขอั้น',
+		'route' => 'admin.lotto.number_blocks.create',
+		'sort' => 1,
+	],
+	[
+		'key' => 'lotto.number_blocks.update',
+		'name' => 'แก้ไขเลขอั้น',
+		'route' => 'admin.lotto.number_blocks.update',
+		'sort' => 2,
 	],
 	[
 		'key' => 'lotto.tickets',

@@ -102,7 +102,7 @@ class MemberfreeController extends AppBaseController
 
         $types = ['D' => 'เพิ่ม Credit' , 'W' => 'ลด Credit'];
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         $member = $this->memberRepository->find($id);
 

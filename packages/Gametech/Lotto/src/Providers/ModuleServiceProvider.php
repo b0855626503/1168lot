@@ -13,6 +13,7 @@ use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\MemberLottoMarketPolicy;
 use Gametech\Lotto\Models\MemberLottoPermission;
 use Gametech\Lotto\Models\MemberLottoSetting;
 use Konekt\Concord\BaseModuleServiceProvider;
@@ -35,6 +36,7 @@ class ModuleServiceProvider extends BaseModuleServiceProvider
         LottoNumberBlock::class,
         LottoTicket::class,
         LottoTicketItem::class,
+        MemberLottoMarketPolicy::class,
         MemberLottoPermission::class,
         MemberLottoSetting::class,
     ];

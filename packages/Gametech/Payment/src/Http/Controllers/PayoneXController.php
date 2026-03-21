@@ -448,7 +448,7 @@ class PayoneXController extends AppBaseController
 
     public function withdraw_callback($message)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $datenow = now()->toDateTimeString();
 
         Log::channel('payonex_withdraw_callback')->info('Callback การฝาก', $message);

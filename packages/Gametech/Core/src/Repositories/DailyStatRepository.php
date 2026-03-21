@@ -18,9 +18,28 @@ class DailyStatRepository extends Repository
         return \Gametech\Core\Models\DailyStat::class;
     }
 
+    private function getCoreConfig()
+    {
+        if (app()->bound('request')) {
+            $request = app('request');
+            $cacheKey = '_daily_stat_repo.core_config';
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $config = core()->getConfigData();
+            $request->attributes->set($cacheKey, $config);
+
+            return $config;
+        }
+
+        return core()->getConfigData();
+    }
+
     public function sumData($date)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
 
         $yesterday = Carbon::parse($date)->subDay()->toDateString();

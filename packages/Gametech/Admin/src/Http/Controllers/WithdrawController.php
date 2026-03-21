@@ -246,7 +246,7 @@ class WithdrawController extends AppBaseController
 
     public function clear(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $user = $this->user()->name.' '.$this->user()->surname;
 
         $id = (int) $request->input('id');
@@ -385,7 +385,7 @@ class WithdrawController extends AppBaseController
 
     public function clear_(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $user = $this->user()->name.' '.$this->user()->surname;
         $id = $request->input('id');
         $remark = $request->input('remark');
@@ -558,7 +558,7 @@ class WithdrawController extends AppBaseController
 
     public function create(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $ip = $request->ip();
         $user = $this->user()->name.' '.$this->user()->surname;
         $datenow = now()->toDateTimeString();

@@ -42,7 +42,7 @@ class LotteryMarketDataTable extends DataTable
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
-                'order'       => [[0, 'asc']],
+                'order'       => [[1, 'asc']],
                 'buttons'     => ['pageLength'],
                 'columnDefs'  => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
@@ -53,6 +53,7 @@ class LotteryMarketDataTable extends DataTable
     protected function getColumns(): array
     {
         return [
+            ['data' => 'selector',   'name' => 'selector',    'title' => '<input type="checkbox" class="js-lotto-select-all-markets">', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '44px'],
             ['data' => 'id',         'name' => 'id',          'title' => '#',            'orderable' => true,  'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
             ['data' => 'name',       'name' => 'name',        'title' => 'ชื่อรายการหวย', 'orderable' => true,  'searchable' => true,  'className' => 'text-left'],
             ['data' => 'group_name', 'name' => 'group_name',  'title' => 'กลุ่มหวย',      'orderable' => false, 'searchable' => false, 'className' => 'text-center'],

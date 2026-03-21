@@ -163,7 +163,7 @@ class WithdrawSeamlessFreeController extends AppBaseController
 
     public function clear(Request $request)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $user = $this->user()->name . ' ' . $this->user()->surname;
         $id = $request->input('id');
         $remark = $request->input('remark');

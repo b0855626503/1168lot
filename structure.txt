@@ -2716,6 +2716,9 @@
 │       │       ├── Config
 │       │       │   ├── acl.php
 │       │       │   └── admin-menu.php
+│       │       ├── Console
+│       │       │   └── Commands
+│       │       │       └── BootstrapMemberMarketPoliciesCommand.php
 │       │       ├── Contracts
 │       │       │   ├── LotteryGroup.php
 │       │       │   ├── LotteryMarket.php
@@ -2728,6 +2731,7 @@
 │       │       │   ├── LottoRatePlanItem.php
 │       │       │   ├── LottoTicket.php
 │       │       │   ├── LottoTicketItem.php
+│       │       │   ├── MemberLottoMarketPolicy.php
 │       │       │   ├── MemberLottoPermission.php
 │       │       │   └── MemberLottoSetting.php
 │       │       ├── DataTables
@@ -2739,13 +2743,15 @@
 │       │       │   ├── LottoRatePlanDataTable.php
 │       │       │   ├── LottoRevenueReportDataTable.php
 │       │       │   ├── LottoTicketDataTable.php
+│       │       │   ├── MemberLottoPermissionDataTable.php
 │       │       │   └── MemberLottoSettingDataTable.php
 │       │       ├── Database
 │       │       │   └── Migrations
 │       │       │       ├── 2026_03_18_100000_create_lotto_groups_and_markets.php
 │       │       │       ├── 2026_03_18_100001_create_lotto_draws.php
 │       │       │       ├── 2026_03_18_100002_create_lotto_exposure_and_tickets.php
-│       │       │       └── 2026_03_18_100003_create_member_lotto_permissions.php
+│       │       │       ├── 2026_03_18_100003_create_member_lotto_permissions.php
+│       │       │       └── 2026_03_21_000001_add_rollout_policy_and_member_market_policies.php
 │       │       ├── Enums
 │       │       │   └── BetType.php
 │       │       ├── Http
@@ -2759,6 +2765,7 @@
 │       │       │           ├── LottoRatePlanController.php
 │       │       │           ├── LottoRevenueReportController.php
 │       │       │           ├── LottoTicketController.php
+│       │       │           ├── MemberLottoPermissionController.php
 │       │       │           ├── MemberLottoSettingController.php
 │       │       │           └── SectionController.php
 │       │       ├── Models
@@ -2784,6 +2791,8 @@
 │       │       │   ├── LottoTicketItem.php
 │       │       │   ├── LottoTicketItemProxy.php
 │       │       │   ├── LottoTicketProxy.php
+│       │       │   ├── MemberLottoMarketPolicy.php
+│       │       │   ├── MemberLottoMarketPolicyProxy.php
 │       │       │   ├── MemberLottoPermission.php
 │       │       │   ├── MemberLottoPermissionProxy.php
 │       │       │   ├── MemberLottoSetting.php
@@ -2833,6 +2842,7 @@
 │       │       │                   ├── member_permissions
 │       │       │                   │   ├── addedit.blade.php
 │       │       │                   │   ├── create.blade.php
+│       │       │                   │   ├── datatables_actions.blade.php
 │       │       │                   │   ├── index.blade.php
 │       │       │                   │   └── table.blade.php
 │       │       │                   ├── member_rate_plans
@@ -2872,7 +2882,11 @@
 │       │       │   ├── BetService.php
 │       │       │   ├── DrawService.php
 │       │       │   ├── ExposureService.php
+│       │       │   ├── MemberMarketPolicyService.php
 │       │       │   └── SettlementService.php
+│       │       ├── Support
+│       │       │   ├── DrawStatusFlow.php
+│       │       │   └── ToggleFieldGuard.php
 │       │       └── Transformers
 │       │           ├── LotteryGroupTransformer.php
 │       │           ├── LotteryMarketTransformer.php
@@ -2882,6 +2896,7 @@
 │       │           ├── LottoRatePlanTransformer.php
 │       │           ├── LottoRevenueReportTransformer.php
 │       │           ├── LottoTicketTransformer.php
+│       │           ├── MemberLottoPermissionTransformer.php
 │       │           └── MemberLottoSettingTransformer.php
 │       ├── Marketing
 │       │   ├── composer.json
@@ -4792,6 +4807,10 @@
 │           ├── webpack.mix.js
 │           └── yarn.lock
 ├── phpunit.xml
+├── plan-adminTeamMenuActive.prompt.md
+├── plan-immediateQueryDedupPageSpeed.prompt.md
+├── plan-lottoExecutionPhases.prompt.md
+├── plan-lottoSystemRoadmap.prompt.md
 ├── preload.php
 ├── public
 │   ├── assets
@@ -11549,98 +11568,33 @@
 │   │   │   └── zznBVRmHkDOseBgI6cIaLacRz0L1x468LFllyNra
 │   │   ├── testing
 │   │   └── views
-│   │       ├── 01e945d7bb2ac95d41c9eb7dd717e69f00784419.php
-│   │       ├── 02d1aa12cedfafb0d0d7bcc035c2a80adfc55882.php
 │   │       ├── 02fdfebf236094f97a5bca9372599947ca0b14cf.php
-│   │       ├── 03d26c1f62614b8f80f2471f791f0a75cf044400.php
-│   │       ├── 04e346b50189ab3f109b3266d928c37dae2eccc8.php
-│   │       ├── 0612179a866e7f0a45d728e02fe9ccd7e27fbd60.php
-│   │       ├── 061613eb88792d742137f7e779ebc468dcc10d3c.php
-│   │       ├── 06fc98ccea4fd6dbb07bdb17e81ed87f458c9fe1.php
-│   │       ├── 07b03cd53d383dae6f632308bfbe417d8bc78f29.php
-│   │       ├── 07e817f16a6df0d485b60ebc6c80f3f0e49a072c.php
-│   │       ├── 0d19bff9a8e41c9e3710c2759606870802b3bde4.php
-│   │       ├── 0df5cd9bb62d0fcfee17d098338cdaf12fb3b708.php
-│   │       ├── 0e52341d60cc1d18d3ebe5e3a84262734a42f8f4.php
-│   │       ├── 12aeb75b259e2639d175a59a6e1e30b2512ac43e.php
-│   │       ├── 1a1fb399e8c13161cffe21cef0bae5a8863dca1a.php
-│   │       ├── 1ae73e68bce7289d265dd2215a3c73d9fc6d921c.php
-│   │       ├── 2141da565415710bbb8cec8cfaa78a332f0f9ff5.php
 │   │       ├── 21ae7018466fd28ca7af4e611beac3482bb4646d.php
 │   │       ├── 24bb26df2e75983cb3dc73f06e54ecb95931a048.php
-│   │       ├── 252777e57e1bfd15fedba206a04c0dd0aca647b2.php
-│   │       ├── 2641cb8d8636717371f390821401e27396bf44ed.php
-│   │       ├── 27df5e39d98433ad13181250813546a6ceadeebd.php
-│   │       ├── 2e530a9334e384ffd3ce9438923b1ecf0805b35f.php
-│   │       ├── 2e993646a348d4d75b07b401c07322107a2f6789.php
-│   │       ├── 31980ca1ce271c40d74360153008d77861f39d41.php
-│   │       ├── 35bf0f49d9896712b7e029d36dc1ef63257a39d4.php
-│   │       ├── 3dbdda70dd513088707e494bf881cc71aac31435.php
-│   │       ├── 3e2e373c94d60fef56fab1dbac2a9c6ddb42f935.php
 │   │       ├── 3e74f54d36e88399854894cd25dfa6d0671b37f1.php
-│   │       ├── 401a9a608f07765c5e966282491849994b9d8d4f.php
-│   │       ├── 43c97762fa19b9e147c57f20ccebfb7c14379ad5.php
-│   │       ├── 4cb546b7af20c3e3cf561ae61492e55d7bf4ead2.php
-│   │       ├── 4cd8f22335fa9387f8d2bd22f6a7a62c2abf3566.php
-│   │       ├── 50558a4958975785cec46a01a91c7896cd8ff4e8.php
-│   │       ├── 55eb2c7fafebace2409362f73d485908b7d5448f.php
-│   │       ├── 5e4535c67173efda2511f6c3454107d260a58e84.php
+│   │       ├── 4110ed692a901c7ac315613f347f06bd53997736.php
 │   │       ├── 5f137a76ec858f7ac07e6bec16436b3c87ad339e.php
-│   │       ├── 5fcc233b8e68b95bc3a78027980b235cc39efc10.php
 │   │       ├── 621941bcaf9ef49a3114ec7e7054210537d3f297.php
 │   │       ├── 64d18c913091682a6b6e2103fc938b686dd3b943.php
-│   │       ├── 67eef22829485835b07aab8c470f9ed975453c17.php
 │   │       ├── 6979523adb7162f15371fae83050738f6131bba8.php
-│   │       ├── 73ac518b4eb59a9feb79e901a50760486d446a57.php
-│   │       ├── 78170ec07a2ca9060aa29281874404bcdb9297ce.php
-│   │       ├── 7ce70e510e63a8d41e277dd30873a5c755ec7298.php
-│   │       ├── 81c356c057671542cd7f25cef3d96b77341fbf69.php
-│   │       ├── 89a6977930c6ac67339cdf0f6c041094f6158b88.php
-│   │       ├── 94b2c5c842d2e834ccfd5ff686a7aa1532b738c1.php
-│   │       ├── 9570e7c32e6147d1f49ae2d28bdf23bbb8d96b71.php
-│   │       ├── 964cbdc372244baa2e6c4eb9d17595d61ba16484.php
-│   │       ├── 9ca9dab7841e4ac6cc6da8606b3966a939d9470f.php
-│   │       ├── 9ceb4367bd86b4bb9957115ece71bbf43c2fdc65.php
-│   │       ├── a24ae83387beed7669dc7acbcc3a73d8b0f396b4.php
-│   │       ├── a6f80f7fa31e36fdb3963c2936cb541a41167bac.php
-│   │       ├── aadb52938057c4e8f3255244578bee6fb35483b8.php
-│   │       ├── ac687167aa9c0ed87a7d1fd02d54a51f70128475.php
-│   │       ├── ada151b0cc0988607261623e4873986dcef85504.php
-│   │       ├── adcfebb4309b63ab945750f0da41e158cc977e14.php
-│   │       ├── b0db39b43744ca5fe9d5de43c6fc1f8e9c2759ce.php
-│   │       ├── b4681b12bc7568521b9383b4009e087f8f658c24.php
+│   │       ├── 9d51993b49c0c7e38ae6a02e0596cfdd5a39b012.php
 │   │       ├── b803dc1fed172094067fd80c83c336cb88f7e808.php
 │   │       ├── bfcec9f3a72d0be7eacd2c22c8753dca035f5ac0.php
-│   │       ├── bffd99a06ca1f6980534a2311e2462e17e03b8ea.php
-│   │       ├── c3fca8a2f5f4e7c7c42552d6c63c7bbf63935d15.php
-│   │       ├── c8697270baf6fe92c0948f395d864619d13b14d8.php
 │   │       ├── c8fd41069cfc65cb22aca1f5dfb1a9e7ecdcca75.php
 │   │       ├── cf657a45636166fbdadeaea6b7b546430dfcf682.php
 │   │       ├── d0d8b33cf099ced2e487c1d10756be5c77d385c6.php
-│   │       ├── d240ca713df2a8edee08e1b9afa75958df41b3ce.php
-│   │       ├── d98da13bfc8c055c33829e88aebabc18bdbd2f47.php
-│   │       ├── db084202540aeafe9258be96feb6bf66de404fc4.php
-│   │       ├── dde2b62e08af52106973bdc40503735e6c91b683.php
-│   │       ├── e3c383c473f69e783c91f52748ad0c23e82b24d1.php
-│   │       ├── e53a31b86394c906ce9ec724c6310089ef99279d.php
 │   │       ├── eb616e18c0e72b867680636f7eee8ac758ddd157.php
-│   │       ├── ebcea60c382196bfa637d600c3f5a8d9fb0a8505.php
-│   │       ├── f0b48a306fc35dbf94cba81801da8cb1142fd625.php
-│   │       ├── f1363b28c713aa37a72138d76a4b2c6cfede9469.php
 │   │       ├── f443096ba0dfc3ec9b53091c9cdeb14da2dbaa3e.php
-│   │       ├── f5a107617a28085779fb1438a292ee7aea8e0d09.php
-│   │       ├── f7b40f38278c0086c4a3ec230e5d9096d8ed48e9.php
-│   │       ├── fe70a0bd23233770640c7b0df20b800978662143.php
-│   │       └── ff5ef185e191ee8589ce05460e0849c0ae14ffb8.php
+│   │       └── f505c2e04caba2ce05a295333e83e647d620b8be.php
 │   └── logs
 │       ├── apay
 │       ├── autotransfer
 │       ├── bbl
 │       ├── check
 │       ├── commspay
-│       ├── daily-2026-03-18.log
 │       ├── daily-2026-03-19.log
 │       ├── daily-2026-03-20.log
+│       ├── daily-2026-03-21.log
 │       ├── gsb
 │       ├── hengpay
 │       ├── kbank
@@ -11675,10 +11629,16 @@
 │   │   └── ExampleTest.php
 │   ├── TestCase.php
 │   └── Unit
+│       ├── Core
+│       │   └── TreeActiveStateTest.php
 │       ├── ExampleTest.php
 │       └── Lotto
-│           └── SettlementServiceTest.php
+│           ├── DrawStatusFlowTest.php
+│           ├── LottoAdminRolloutScaffoldTest.php
+│           ├── MemberMarketPolicyServiceTest.php
+│           ├── SettlementServiceTest.php
+│           └── ToggleFieldGuardTest.php
 ├── webpack.mix.js
 └── yarn.lock
 
-1140 directories, 10542 files
+1144 directories, 10498 files

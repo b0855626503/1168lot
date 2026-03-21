@@ -2,10 +2,13 @@
 
 namespace Gametech\Lotto\Providers;
 
+use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\ExposureService;
+use Gametech\Lotto\Services\MemberMarketPolicyService;
 use Gametech\Lotto\Services\SettlementService;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -33,6 +36,14 @@ class LottoServiceProvider extends ServiceProvider
         $this->app->singleton(SettlementService::class, function ($app) {
             return new SettlementService();
         });
+
+        $this->app->singleton(MemberMarketPolicyService::class, function ($app) {
+            return new MemberMarketPolicyService();
+        });
+
+        $this->commands([
+            BootstrapMemberMarketPoliciesCommand::class,
+        ]);
     }
 
     public function boot(): void
@@ -40,9 +51,18 @@ class LottoServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
 
         $this->loadRoutesFrom(__DIR__ . '/../Routes/admin.php');
+        $this->loadRoutesFrom(__DIR__ . '/../Routes/api.php');
 
         $this->loadViewsFrom(__DIR__ . '/../Resources/views/admin', 'admin');
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'lotto');
+
+        Event::listen('member.created.after', function ($member): void {
+            if (! isset($member->code)) {
+                return;
+            }
+
+            app(MemberMarketPolicyService::class)->bootstrapForMember((int) $member->code);
+        });
     }
 
     protected function registerConfig(): void

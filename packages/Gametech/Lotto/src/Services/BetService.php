@@ -10,9 +10,11 @@ use Gametech\Lotto\Models\LottoRatePlan;
 use Gametech\Lotto\Models\LottoRatePlanItem;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\MemberLottoMarketPolicy;
 use Gametech\Lotto\Models\MemberLottoPermission;
 use Gametech\Lotto\Models\MemberLottoSetting;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * BetService - หัวใจของระบบแทง
@@ -31,6 +33,9 @@ use Illuminate\Support\Facades\DB;
  */
 class BetService
 {
+    private const BLOCK_MODE_BLOCK = 'block';
+    private const BLOCK_MODE_LIMIT_FUTURE = 'limit_future';
+
     public function __construct(private ExposureService $exposureService)
     {
     }
@@ -42,15 +47,7 @@ class BetService
     public function placeBet(int $memberId, int $drawId, array $items): LottoTicket
     {
         return DB::transaction(function () use ($memberId, $drawId, $items) {
-            $draw = LottoDraw::query()
-                ->with(['market', 'betSettings'])
-                ->where('id', $drawId)
-                ->where('status', 'open')
-                ->first();
-
-            if (! $draw) {
-                throw new Exception('Draw not open or not found');
-            }
+            $draw = $this->findOpenDraw($drawId);
 
             $this->validateMemberPermission($memberId, $draw);
 
@@ -78,25 +75,7 @@ class BetService
             ]);
 
             foreach ($validatedItems as $item) {
-                $exposure = $this->exposureService->lockExposureRow(
-                    $drawId,
-                    $item['bet_type'],
-                    $item['number']
-                );
-
-                if (((float) $exposure->sold_amount + $item['amount']) > $item['max_per_number']) {
-                    throw new Exception("Exposure limit reached for number {$item['number']}");
-                }
-
-                LottoTicketItem::query()->create([
-                    'ticket_id' => $ticket->id,
-                    'bet_type' => $item['bet_type'],
-                    'number' => $item['number'],
-                    'amount' => $item['amount'],
-                    'payout_at_time' => $item['payout'],
-                ]);
-
-                $exposure->increment('sold_amount', $item['amount']);
+                $this->persistTicketItemAndExposure($ticket, $drawId, $item);
             }
 
             return $ticket->fresh('items');
@@ -126,7 +105,7 @@ class BetService
             throw new Exception("Bet type {$betType} not enabled for this draw");
         }
 
-        if ($amount < (float) $setting->min_bet || $amount > (float) $setting->max_bet) {
+        if (! $this->isBetAmountInRange($amount, (float) $setting->min_bet, (float) $setting->max_bet)) {
             throw new Exception(
                 "Bet amount out of range. Min: {$setting->min_bet}, Max: {$setting->max_bet}"
             );
@@ -134,11 +113,11 @@ class BetService
 
         $blockMode = $this->resolveBlockMode($draw, $betType, $number);
 
-        if ($blockMode === 'block') {
+        if ($blockMode === self::BLOCK_MODE_BLOCK) {
             throw new Exception("Number {$number} is blocked for this draw");
         }
 
-        if ($blockMode === 'limit_future') {
+        if ($blockMode === self::BLOCK_MODE_LIMIT_FUTURE) {
             throw new Exception("Number {$number} is blocked by future-limit rule");
         }
 
@@ -152,10 +131,24 @@ class BetService
     }
 
     /**
-     * Default behavior: if no custom rows exist, allow the member.
+     * Policy-managed members use market snapshots; legacy members keep existing permission behavior.
      */
     private function validateMemberPermission(int $memberId, LottoDraw $draw): void
     {
+        if ($this->isManagedByMarketPolicy($memberId)) {
+            $hasMarketAccess = MemberLottoMarketPolicy::query()
+                ->where('member_id', $memberId)
+                ->where('market_id', (int) $draw->market_id)
+                ->where('is_allowed', true)
+                ->exists();
+
+            if (! $hasMarketAccess) {
+                throw new Exception('Member does not have permission to bet');
+            }
+
+            return;
+        }
+
         $hasCustomRules = MemberLottoPermission::query()
             ->where('member_id', $memberId)
             ->exists();
@@ -176,6 +169,17 @@ class BetService
         if (! $hasPermission) {
             throw new Exception('Member does not have permission to bet');
         }
+    }
+
+    private function isManagedByMarketPolicy(int $memberId): bool
+    {
+        if (! Schema::hasTable('member_lotto_market_policies')) {
+            return false;
+        }
+
+        return MemberLottoMarketPolicy::query()
+            ->where('member_id', $memberId)
+            ->exists();
     }
 
     /**
@@ -244,5 +248,55 @@ class BetService
             ->first(['mode']);
 
         return $record?->mode;
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function findOpenDraw(int $drawId): LottoDraw
+    {
+        $draw = LottoDraw::query()
+            ->with(['market', 'betSettings'])
+            ->where('id', $drawId)
+            ->where('status', 'open')
+            ->first();
+
+        if (! $draw) {
+            throw new Exception('Draw not open or not found');
+        }
+
+        return $draw;
+    }
+
+    private function isBetAmountInRange(float $amount, float $min, float $max): bool
+    {
+        return $amount >= $min && $amount <= $max;
+    }
+
+    /**
+     * @param array{bet_type:string,number:string,amount:float,payout:float,max_per_number:float} $item
+     * @throws Exception
+     */
+    private function persistTicketItemAndExposure(LottoTicket $ticket, int $drawId, array $item): void
+    {
+        $exposure = $this->exposureService->lockExposureRow(
+            $drawId,
+            $item['bet_type'],
+            $item['number']
+        );
+
+        if (((float) $exposure->sold_amount + $item['amount']) > $item['max_per_number']) {
+            throw new Exception("Exposure limit reached for number {$item['number']}");
+        }
+
+        LottoTicketItem::query()->create([
+            'ticket_id' => $ticket->id,
+            'bet_type' => $item['bet_type'],
+            'number' => $item['number'],
+            'amount' => $item['amount'],
+            'payout_at_time' => $item['payout'],
+        ]);
+
+        $exposure->increment('sold_amount', $item['amount']);
     }
 }

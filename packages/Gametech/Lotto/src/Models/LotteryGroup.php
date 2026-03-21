@@ -19,11 +19,16 @@ class LotteryGroup extends Model implements LotteryGroupContract
         'code',      // unique: thailand, stock, international
         'is_enabled',
         'sort',
+        'rollout_mode',
+        'affect_existing_members',
+        'policy_version',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
         'sort' => 'integer',
+        'affect_existing_members' => 'boolean',
+        'policy_version' => 'integer',
     ];
 
     // Relationships
@@ -35,6 +40,11 @@ class LotteryGroup extends Model implements LotteryGroupContract
     public function ratePlans()
     {
         return $this->hasMany(LottoRatePlan::class, 'group_id');
+    }
+
+    public function memberMarketPolicies()
+    {
+        return $this->hasMany(MemberLottoMarketPolicy::class, 'group_id');
     }
 }
 

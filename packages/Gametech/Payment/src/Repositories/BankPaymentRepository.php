@@ -265,7 +265,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $finalizeOnly = false;
@@ -1205,7 +1205,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $paymentId   = Arr::get($data, 'code');
@@ -1919,7 +1919,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $paymentId = Arr::get($data, 'code');
@@ -2584,7 +2584,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $paymentId = Arr::get($data, 'code');
@@ -3175,7 +3175,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $paymentId = Arr::get($data, 'code');
@@ -3777,7 +3777,7 @@ class BankPaymentRepository extends Repository
         $today = $now->toDateString();
         $datenow = $now->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $paymentId = Arr::get($data, 'code');
@@ -4397,7 +4397,7 @@ class BankPaymentRepository extends Repository
         $today = now()->toDateString();
         $datenow = now()->toDateTimeString();
 
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
         $special = false;
 
         $payment = $this->find($data['code']);
@@ -4896,5 +4896,27 @@ class BankPaymentRepository extends Repository
     {
         return \Gametech\Payment\Models\BankPayment::class;
 
+    }
+
+    /**
+     * อ่าน config ครั้งเดียวต่อ request เพื่อหลีกเลี่ยง query ซ้ำ
+     */
+    private function getCoreConfig()
+    {
+        if (app()->bound('request')) {
+            $request = app('request');
+            $cacheKey = '_bank_payment_repo.core_config';
+
+            if ($request->attributes->has($cacheKey)) {
+                return $request->attributes->get($cacheKey);
+            }
+
+            $config = core()->getConfigData();
+            $request->attributes->set($cacheKey, $config);
+
+            return $config;
+        }
+
+        return core()->getConfigData();
     }
 }

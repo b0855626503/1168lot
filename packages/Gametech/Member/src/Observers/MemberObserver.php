@@ -11,6 +11,7 @@ use Gametech\Member\Models\Member as EventData;
 use Gametech\Member\Models\MemberEditLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Request;
 
 class MemberObserver
@@ -21,6 +22,7 @@ class MemberObserver
     {
         DB::afterCommit(function () use ($data) {
             $this->dispatchDashboardSync($data);
+            Event::dispatch('member.created.after', [$data]);
         });
     }
 

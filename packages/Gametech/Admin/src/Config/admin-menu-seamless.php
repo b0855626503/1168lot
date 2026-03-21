@@ -20,14 +20,14 @@ return [
         'badge-color' => 'badge-warning',
         'status' => 1
     ], [
-        'key' => 'bank_out',
-        'name' => 'รายการ เงินออก',
-        'route' => 'admin.bank_out.index',
+        'key' => 'bank_in_old',
+        'name' => 'รายการฝากค้าง',
+        'route' => 'admin.bank_in_old.index',
         'sort' => 3,
-        'icon-class' => 'fa-arrow-circle-right',
+        'icon-class' => 'fa-arrow-circle-left',
         'badge' => 1,
         'badge-color' => 'badge-warning',
-        'status' => 0
+        'status' => 1
     ], [
         'key' => 'withdraw_seamless',
         'name' => 'รายการ ถอนเงิน',

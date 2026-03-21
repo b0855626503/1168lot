@@ -65,7 +65,7 @@ CREATE TABLE `all_log` (
   `date_update` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE,
   UNIQUE KEY `all_log_bank_payment_id_index` (`bank_payment_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=64982 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -152,7 +152,7 @@ CREATE TABLE `bank_payment` (
   KEY `idx_bp_date_status_enable` (`date_create`,`status`,`enable`),
   KEY `idx_bp_member_status_enable_date` (`member_topup`,`status`,`enable`,`date_create`),
   KEY `idx_bp_status_enable_date` (`status`,`enable`,`date_create`)
-) ENGINE=InnoDB AUTO_INCREMENT=61994 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -268,7 +268,7 @@ CREATE TABLE `banks_account` (
   KEY `banks_account_date_end_time_end_index` (`date_end`,`time_end`),
   KEY `banks_account_start_at_index` (`start_at`),
   KEY `banks_account_end_at_index` (`end_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -389,7 +389,7 @@ CREATE TABLE `bills` (
   KEY `pro_code` (`pro_code`) USING BTREE,
   KEY `idx_bills_enable_transfer_date_pro` (`enable`,`transfer_type`,`date_create`,`pro_code`),
   KEY `idx_bills_enable_date` (`enable`,`date_create`)
-) ENGINE=InnoDB AUTO_INCREMENT=84088 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -455,7 +455,7 @@ CREATE TABLE `bonus` (
   `date_update` timestamp NULL DEFAULT NULL,
   `date_expire` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -483,7 +483,7 @@ CREATE TABLE `bonus_spin` (
   `amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   PRIMARY KEY (`code`) USING BTREE,
   KEY `member_code` (`member_code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=26074 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -534,7 +534,7 @@ CREATE TABLE `check_case` (
   `promptpayNumber` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`code`),
   UNIQUE KEY `txid` (`txid`)
-) ENGINE=InnoDB AUTO_INCREMENT=30542 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -777,7 +777,7 @@ CREATE TABLE `coupons` (
   `norefill` enum('Y','N') NOT NULL DEFAULT 'N',
   `newuser` enum('Y','N') NOT NULL DEFAULT 'N',
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -808,7 +808,7 @@ CREATE TABLE `coupons_list` (
   `user_update` varchar(100) NOT NULL,
   `date_expire` tinyint(4) NOT NULL DEFAULT 0,
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=389 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -837,7 +837,7 @@ CREATE TABLE `daily_stat` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `bonus_sum` decimal(10,2) NOT NULL DEFAULT 0.00,
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=96 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -899,7 +899,7 @@ CREATE TABLE `dashboard_summary_daily` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_dashboard_summary_daily_date_web` (`summary_date`,`web_code`),
   KEY `idx_dashboard_summary_daily_web_date` (`web_code`,`summary_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=17936 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1004,7 +1004,7 @@ CREATE TABLE `failed_jobs` (
   `failed_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1036,7 +1036,7 @@ CREATE TABLE `failed_requests` (
   KEY `failed_requests_status_index` (`status`),
   KEY `failed_requests_company_index` (`company`),
   KEY `failed_requests_game_user_index` (`game_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=205 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1264,7 +1264,7 @@ CREATE TABLE `games_user` (
   UNIQUE KEY `user_name` (`user_name`),
   KEY `game_code` (`game_code`) USING BTREE,
   KEY `member_code` (`member_code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=2717 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1297,7 +1297,7 @@ CREATE TABLE `games_user_event` (
   `withdraw_limit_rate` decimal(10,2) NOT NULL DEFAULT 0.00,
   `complete` enum('Y','N') NOT NULL DEFAULT 'N',
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB AUTO_INCREMENT=2394 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1657,7 +1657,7 @@ CREATE TABLE `logger_admin_activity` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=65034 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1683,7 +1683,7 @@ CREATE TABLE `logger_user_activity` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=876571 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1708,7 +1708,7 @@ CREATE TABLE `logs` (
   `date_create` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `date_update` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=46556 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2084,7 +2084,7 @@ CREATE TABLE `member_deposit_stats` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_member_deposit_stats_member_code` (`member_code`),
   KEY `idx_member_deposit_stats_legacy_at` (`legacy_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=2295 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2260,7 +2260,7 @@ CREATE TABLE `members` (
   KEY `idx_members_date_regis_upline` (`date_regis`,`upline_code`),
   CONSTRAINT `members_campaign_id_foreign` FOREIGN KEY (`campaign_id`) REFERENCES `marketing_campaigns` (`id`) ON DELETE SET NULL,
   CONSTRAINT `members_team_id_foreign` FOREIGN KEY (`team_id`) REFERENCES `marketing_teams` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2731 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2299,7 +2299,7 @@ CREATE TABLE `members_cashback` (
   PRIMARY KEY (`code`) USING BTREE,
   UNIQUE KEY `unique` (`member_code`,`date_cashback`),
   UNIQUE KEY `new` (`date_cashback`,`game_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=8115 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2526,7 +2526,7 @@ CREATE TABLE `members_credit_log` (
   PRIMARY KEY (`code`),
   KEY `members_credit_log_index` (`kind`,`member_code`,`date_create`),
   KEY `idx_mcl_kind_credit_type_date` (`kind`,`credit_type`,`date_create`)
-) ENGINE=InnoDB AUTO_INCREMENT=194630 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2558,7 +2558,7 @@ CREATE TABLE `members_diamondlog` (
   PRIMARY KEY (`code`),
   KEY `member_code` (`member_code`),
   KEY `emp_code` (`emp_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=59009 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2586,7 +2586,7 @@ CREATE TABLE `members_edit_log` (
   `user_update` varchar(100) NOT NULL,
   `date_update` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=234 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2720,7 +2720,7 @@ CREATE TABLE `members_log` (
   `password_real` varchar(40) DEFAULT NULL,
   `summary` mediumtext DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=9141 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2822,7 +2822,7 @@ CREATE TABLE `members_promotionlog` (
   KEY `bill_code` (`bill_code`),
   KEY `gameuser_code` (`gameuser_code`),
   KEY `member_code` (`member_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=3172 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2973,7 +2973,7 @@ CREATE TABLE `members_select_pro` (
   `date_update` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`code`) USING BTREE,
   UNIQUE KEY `member_code` (`member_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=3563 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3110,7 +3110,7 @@ CREATE TABLE `payment_provider_accounts` (
   KEY `idx_phone_number` (`phone_number`),
   KEY `idx_customer_id` (`customer_id`),
   KEY `idx_customer_account_id` (`customer_account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3222,7 +3222,7 @@ CREATE TABLE `payments_promotion` (
   KEY `member_code` (`member_code`) USING BTREE,
   KEY `pro_code` (`pro_code`) USING BTREE,
   KEY `idx_pp_pro_enable_date` (`pro_code`,`enable`,`date_create`)
-) ENGINE=InnoDB AUTO_INCREMENT=738 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -4818,7 +4818,7 @@ CREATE TABLE `withdraws` (
   UNIQUE KEY `unique` (`member_code`,`amount`,`date_create`),
   KEY `idx_wd_status_enable_approve` (`status`,`enable`,`date_approve`),
   KEY `idx_wd_status_enable_create` (`status`,`enable`,`date_create`)
-) ENGINE=InnoDB AUTO_INCREMENT=10103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -5019,4 +5019,4 @@ CREATE TABLE `withdraws_seamless_free` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-20 16:37:05
+-- Dump completed on 2026-03-21  3:14:30

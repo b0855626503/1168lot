@@ -190,7 +190,7 @@ class ReportController extends AppBaseController
 
     public function rp_sm_payment(RpSmPaymentDataTable $rpSmPaymentDataTable, RpSmWithdrawDataTable $rpSmWithdrawDataTable,RpSmWithdrawSeamlessDataTable $rpSmWithdrawSeamlessDataTable, RpSmSetWalletDataTable $rpSmSetWalletDataTable, RpSmLogDataTable $rpSmLogDataTable)
     {
-        $config = core()->getConfigData();
+        $config = $this->getCoreConfig();
 
         if($config->seamless == 'Y'){
             $wdDataTable = $rpSmWithdrawSeamlessDataTable->html();

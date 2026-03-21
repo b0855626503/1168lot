@@ -29,10 +29,7 @@ class ExposureService
             // Concurrent insert hit the unique key; lock the winner row below.
         }
 
-        return LottoNumberExposure::query()
-            ->where('draw_id', $drawId)
-            ->where('bet_type', $betType)
-            ->where('number', $number)
+        return $this->exposureQuery($drawId, $betType, $number)
             ->lockForUpdate()
             ->firstOrFail();
     }
@@ -44,10 +41,7 @@ class ExposureService
     {
         $exposure = $this->lockExposureRow($drawId, $betType, $number);
 
-        $setting = LottoDraw::query()->findOrFail($drawId)
-            ->betSettings()
-            ->where('bet_type', $betType)
-            ->first();
+        $setting = $this->findBetSetting($drawId, $betType);
 
         if (! $setting) {
             return false;
@@ -60,11 +54,7 @@ class ExposureService
 
     public function getExposure(int $drawId, string $betType, string $number): ?float
     {
-        $value = LottoNumberExposure::query()
-            ->where('draw_id', $drawId)
-            ->where('bet_type', $betType)
-            ->where('number', $number)
-            ->value('sold_amount');
+        $value = $this->exposureQuery($drawId, $betType, $number)->value('sold_amount');
 
         return is_null($value) ? null : (float) $value;
     }
@@ -86,9 +76,24 @@ class ExposureService
             ->where('draw_id', $drawId)
             ->get()
             ->groupBy('bet_type')
-            ->map(function ($items) {
-                return $items->pluck('sold_amount', 'number');
-            })
+            ->map(static fn ($items) => $items->pluck('sold_amount', 'number'))
             ->toArray();
+    }
+
+    private function exposureQuery(int $drawId, string $betType, string $number)
+    {
+        return LottoNumberExposure::query()
+            ->where('draw_id', $drawId)
+            ->where('bet_type', $betType)
+            ->where('number', $number);
+    }
+
+    private function findBetSetting(int $drawId, string $betType)
+    {
+        return LottoDraw::query()
+            ->findOrFail($drawId)
+            ->betSettings()
+            ->where('bet_type', $betType)
+            ->first();
     }
 }
