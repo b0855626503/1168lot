@@ -41,6 +41,7 @@ class NewCashbackSeamless extends Command
      */
     public function handle()
     {
+        $withdrawTable = $this->resolveWithdrawTable();
         $ip = request()->ip();
         $startdate = $this->argument('date');
 
@@ -69,7 +70,7 @@ class NewCashbackSeamless extends Command
 //            })
 //            ->groupBy('bills.member_code', DB::raw('Date(bills.date_create)'));
 
-        $latestWD = DB::table('withdraws_seamless','withdraws')
+        $latestWD = DB::table($withdrawTable, 'withdraws')
             ->select('withdraws.member_code', DB::raw('SUM(withdraws.amount)  as withdraw_amount'), DB::raw("DATE_FORMAT(withdraws.date_approve,'%Y-%m-%d') as date_approve"))
             ->where('withdraws.enable', 'Y')
             ->where('withdraws.status', 1)
@@ -229,6 +230,20 @@ class NewCashbackSeamless extends Command
 //        }
         $bar->finish();
 
+    }
+
+    private function resolveWithdrawTable(): string
+    {
+        try {
+            $config = core()->getConfigData();
+            if (($config->seamless ?? 'N') === 'Y') {
+                return 'withdraws';
+            }
+        } catch (\Throwable $exception) {
+            // keep fallback table
+        }
+
+        return 'withdraws_seamless';
     }
 
 }

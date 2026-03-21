@@ -53,7 +53,7 @@ class RpTopWithdrawDataTable extends DataTable
         }
 
         if($config->seamless == 'Y'){
-            $table = 'withdraws_seamless';
+            $table = 'withdraws';
         }else{
             $table = 'withdraws';
         }

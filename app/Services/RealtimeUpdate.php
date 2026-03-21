@@ -34,10 +34,10 @@ class RealtimeUpdate
             ->count();
 
         if($config->seamless == 'Y'){
-            $withdraw = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')
+            $withdraw = app('Gametech\Payment\Repositories\WithdrawRepository')
                 ->active()->waiting()
                 ->count();
-            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
+            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawFreeRepository')
                 ->active()->waiting()
                 ->count();
 

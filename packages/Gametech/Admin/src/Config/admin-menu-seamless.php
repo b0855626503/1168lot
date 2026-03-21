@@ -29,18 +29,18 @@ return [
         'badge-color' => 'badge-warning',
         'status' => 1
     ], [
-        'key' => 'withdraw_seamless',
+        'key' => 'withdraw',
         'name' => 'รายการ ถอนเงิน',
-        'route' => 'admin.withdraw_seamless.index',
+        'route' => 'admin.withdraw.index',
         'sort' => 4,
         'icon-class' => 'fa-wallet',
         'badge' => 1,
         'badge-color' => 'badge-warning',
         'status' => 1
     ], [
-        'key' => 'withdraw_seamless_free',
+        'key' => 'withdraw_free',
         'name' => 'รายการ ถอนเงิน (ฟรีเครดิต)',
-        'route' => 'admin.withdraw_seamless_free.index',
+        'route' => 'admin.withdraw_free.index',
         'sort' => 5,
         'icon-class' => 'fa-wallet',
         'badge' => 1,
@@ -119,9 +119,9 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1
     ], [
-        'key' => 'wallet.rp_withdraw_seamless',
+        'key' => 'wallet.rp_withdraw',
         'name' => 'รายงาน ถอนเงิน (Credit)',
-        'route' => 'admin.rp_withdraw_seamless.index',
+        'route' => 'admin.rp_withdraw.index',
         'sort' => 5,
         'icon-class' => 'fa-users',
         'badge' => 0,
@@ -219,9 +219,9 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1
     ], [
-        'key' => 'credit.rp_withdraw_seamless_free',
+        'key' => 'credit.rp_withdraw_free',
         'name' => 'รายงาน ถอนเงิน (Free Credit)',
-        'route' => 'admin.rp_withdraw_seamless_free.index',
+        'route' => 'admin.rp_withdraw_free.index',
         'sort' => 6,
         'icon-class' => 'fa-users',
         'badge' => 0,

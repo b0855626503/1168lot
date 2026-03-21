@@ -484,8 +484,12 @@ class DashboardSummaryProjector
 
     private function withdrawTables(): array
     {
-        $tables = [];
+        $config = $this->coreConfig();
+        if (($config->seamless ?? 'N') === 'Y') {
+            return $this->hasTable('withdraws') ? ['withdraws'] : [];
+        }
 
+        $tables = [];
         foreach (['withdraws', 'withdraws_seamless'] as $table) {
             if ($this->hasTable($table)) {
                 $tables[] = $table;
@@ -493,6 +497,15 @@ class DashboardSummaryProjector
         }
 
         return $tables;
+    }
+
+    private function coreConfig(): ?object
+    {
+        try {
+            return core()->getConfigData();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     private function memberDateColumn(): string

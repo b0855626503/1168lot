@@ -102,44 +102,44 @@ return [
         'route' => 'admin.bank_out.delete',
         'sort' => 2
     ], [
-        'key' => 'withdraw_seamless',
+        'key' => 'withdraw',
         'name' => 'รายการ ถอนเงิน',
-        'route' => 'admin.withdraw_seamless.index',
+        'route' => 'admin.withdraw.index',
         'sort' => 4
     ], [
-        'key' => 'withdraw_seamless.edit',
+        'key' => 'withdraw.edit',
         'name' => 'สิทธิ์ อนุมัติรายการถอน',
-        'route' => 'admin.withdraw_seamless.edit',
+        'route' => 'admin.withdraw.edit',
         'sort' => 1
     ], [
-        'key' => 'withdraw_seamless.clear',
+        'key' => 'withdraw.clear',
         'name' => 'สิทธิ์ คืนยอดรายการถอน',
-        'route' => 'admin.withdraw_seamless.clear',
+        'route' => 'admin.withdraw.clear',
         'sort' => 2
     ], [
-        'key' => 'withdraw_seamless.delete',
+        'key' => 'withdraw.delete',
         'name' => 'สิทธิ์ ลบรายการถอน',
-        'route' => 'admin.withdraw_seamless.delete',
+        'route' => 'admin.withdraw.delete',
         'sort' => 3
     ], [
-        'key' => 'withdraw_seamless_free',
+        'key' => 'withdraw_free',
         'name' => 'รายการ ถอนเงิน (ฟรีเครดิต)',
-        'route' => 'admin.withdraw_seamless_free.index',
+        'route' => 'admin.withdraw_free.index',
         'sort' => 5
     ], [
-        'key' => 'withdraw_seamless_free.edit',
+        'key' => 'withdraw_free.edit',
         'name' => 'สิทธิ์ อนุมัติรายการถอน',
-        'route' => 'admin.withdraw_seamless_free.edit',
+        'route' => 'admin.withdraw_free.edit',
         'sort' => 1
     ], [
-        'key' => 'withdraw_seamless_free.clear',
+        'key' => 'withdraw_free.clear',
         'name' => 'สิทธิ์ คืนยอดรายการถอน',
-        'route' => 'admin.withdraw_seamless_free.clear',
+        'route' => 'admin.withdraw_free.clear',
         'sort' => 2
     ], [
-        'key' => 'withdraw_seamless_free.delete',
+        'key' => 'withdraw_free.delete',
         'name' => 'สิทธิ์ ลบรายการถอน',
-        'route' => 'admin.withdraw_seamless_free.delete',
+        'route' => 'admin.withdraw_free.delete',
         'sort' => 3
 	], [
 		'key' => 'check_case',
@@ -245,9 +245,9 @@ return [
         'route' => 'admin.rp_deposit.index',
         'sort' => 4
     ], [
-        'key' => 'wallet.rp_withdraw_seamless',
+        'key' => 'wallet.rp_withdraw',
         'name' => 'รายงาน ถอนเงิน (Credit)',
-        'route' => 'admin.rp_withdraw_seamless.index',
+        'route' => 'admin.rp_withdraw.index',
         'sort' => 5
     ], [
         'key' => 'wallet.rp_setpoint',
@@ -300,9 +300,9 @@ return [
         'route' => 'admin.rp_credit.index',
         'sort' => 3
     ], [
-        'key' => 'credit.rp_withdraw_seamless_free',
+        'key' => 'credit.rp_withdraw_free',
         'name' => 'รายงาน ถอนเงิน (Free Credit)',
-        'route' => 'admin.rp_withdraw_seamless_free.index',
+        'route' => 'admin.rp_withdraw_free.index',
         'sort' => 4
     ], [
         'key' => 'mop',

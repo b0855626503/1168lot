@@ -336,7 +336,7 @@ class LuckyPayController extends AppBaseController
         $message = $request->all();
 
         if ($config->seamless == 'Y') {
-            $data = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->findOneWhere(['txid' => $message['clientNo']]);
+            $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['clientNo']]);
         } else {
             $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['clientNo']]);
         }

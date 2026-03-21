@@ -38,6 +38,7 @@ class IcCalculate extends Command
      */
     public function handle()
     {
+        $withdrawTable = $this->resolveWithdrawTable();
         $now = now();
 
         $lastWeekStart = $now->copy()->subWeek()->startOfWeek();  // จันทร์ที่แล้ว
@@ -71,7 +72,7 @@ class IcCalculate extends Command
 //            })
 //            ->groupBy('bills.member_code');
 
-        $latestWD = DB::table('withdraws_seamless', 'withdraws')
+        $latestWD = DB::table($withdrawTable, 'withdraws')
             ->select('withdraws.member_code', DB::raw('SUM(withdraws.amount)  as withdraw_amount'))
             ->where('withdraws.enable', 'Y')
             ->where('withdraws.status', 1)
@@ -123,5 +124,19 @@ class IcCalculate extends Command
         });
 
         return 0;
+    }
+
+    private function resolveWithdrawTable(): string
+    {
+        try {
+            $config = core()->getConfigData();
+            if (($config->seamless ?? 'N') === 'Y') {
+                return 'withdraws';
+            }
+        } catch (\Throwable $exception) {
+            // keep fallback table
+        }
+
+        return 'withdraws_seamless';
     }
 }

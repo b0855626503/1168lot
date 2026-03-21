@@ -21,19 +21,20 @@ class WithdrawSeamlessFreeDataTable extends DataTable
     public function dataTable($query)
     {
         $dataTable = new EloquentDataTable($query);
+        $inWaitAmount = core()->currency((clone $query)->sum('amount'));
 
         return $dataTable
-            ->with('in_all', function () use ($query) {
-                return core()->currency((clone $query)->sum('amount'));
+            ->with('in_all', function () use ($inWaitAmount) {
+                return $inWaitAmount;
             })
-            ->with('in_wait', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 0)->sum('amount'));
+            ->with('in_wait', function () use ($inWaitAmount) {
+                return $inWaitAmount;
             })
-            ->with('in_yes', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 1)->sum('amount'));
+            ->with('in_yes', function () {
+                return core()->currency(0);
             })
-            ->with('in_no', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 2)->sum('amount'));
+            ->with('in_no', function () {
+                return core()->currency(0);
             })
             ->setTransformer(new WithdrawSeamlessFreeTransformer);
 
@@ -46,6 +47,7 @@ class WithdrawSeamlessFreeDataTable extends DataTable
      */
     public function query(WithdrawSeamlessFree $model)
     {
+        $sourceTable = $this->sourceTable();
         $status = request()->input('status');
         $startdate = request()->input('startDate');
         $enddate = request()->input('endDate');
@@ -57,6 +59,7 @@ class WithdrawSeamlessFreeDataTable extends DataTable
         }
 
         return $model->newQuery()
+            ->from($sourceTable . ' as withdraws_seamless_free')
             ->active()->where('status',0)
             ->with(['member', 'bank', 'admin','payment_last'])
             ->with(['bills' => function ($model) {
@@ -151,5 +154,14 @@ class WithdrawSeamlessFreeDataTable extends DataTable
     protected function filename()
     {
         return 'withdraw_datatable_' . time();
+    }
+
+    private function sourceTable(): string
+    {
+        $config = core()->getConfigData();
+
+        return ($config->seamless ?? 'N') === 'Y'
+            ? 'withdraws_free'
+            : 'withdraws_seamless_free';
     }
 }

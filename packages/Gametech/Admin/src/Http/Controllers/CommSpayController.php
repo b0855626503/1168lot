@@ -265,7 +265,7 @@ class CommSpayController extends AppBaseController
         $message['date'] = $datenow;
 
         if ($config->seamless == 'Y') {
-            $data = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->findOneWhere(['txid' => $message['refId']]);
+            $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['refId']]);
         } else {
             $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['refId']]);
         }

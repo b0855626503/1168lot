@@ -37,6 +37,7 @@ class RpSmWithdrawSeamlessDataTable extends DataTable
 
     public function query(WithdrawSeamless $model)
     {
+        $sourceTable = $this->sourceTable();
 
         $startdate = request()->input('startDate');
         $enddate = request()->input('endDate');
@@ -49,7 +50,7 @@ class RpSmWithdrawSeamlessDataTable extends DataTable
             $enddate = now()->toDateString() . ' 23:59:59';
         }
 
-        return $model->newQuery()->orderByDesc('code')
+        return $model->newQuery()->from($sourceTable . ' as withdraws_seamless')->orderByDesc('code')
             ->active()
             ->with(['member'])
             ->with(['bills' => function ($model) {
@@ -134,5 +135,14 @@ class RpSmWithdrawSeamlessDataTable extends DataTable
     protected function filename()
     {
         return 'bankin_datatable_' . time();
+    }
+
+    private function sourceTable(): string
+    {
+        $config = core()->getConfigData();
+
+        return ($config->seamless ?? 'N') === 'Y'
+            ? 'withdraws'
+            : 'withdraws_seamless';
     }
 }

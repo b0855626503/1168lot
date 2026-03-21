@@ -4,7 +4,6 @@ namespace Gametech\Wallet\Http\Controllers;
 
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\WithdrawRepository;
-use Gametech\Payment\Repositories\WithdrawSeamlessRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -31,7 +30,7 @@ class WithdrawController extends AppBaseController
     public function __construct(
         MemberRepository $memberRepo,
         WithdrawRepository $withdrawRepo,
-        WithdrawSeamlessRepository $withdrawSeamlessRepo
+        WithdrawRepository $withdrawSeamlessRepo
     ) {
         $this->middleware('customer');
 

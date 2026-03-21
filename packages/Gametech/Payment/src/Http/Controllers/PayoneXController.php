@@ -463,7 +463,7 @@ class PayoneXController extends AppBaseController
         }
 
         if ($config->seamless == 'Y') {
-            $data = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->findOneWhere(['txid' => $transactionId, 'status_withdraw' => 'A']);
+            $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $transactionId, 'status_withdraw' => 'A']);
         } else {
             $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $transactionId, 'status_withdraw' => 'A']);
         }

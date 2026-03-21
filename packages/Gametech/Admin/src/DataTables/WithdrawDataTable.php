@@ -22,19 +22,20 @@ class WithdrawDataTable extends DataTable
     public function dataTable($query)
     {
         $dataTable = new EloquentDataTable($query);
+        $inWaitAmount = core()->currency((clone $query)->sum('amount'));
 
         return $dataTable
-            ->with('in_all', function () use ($query) {
-                return core()->currency((clone $query)->sum('amount'));
+            ->with('in_all', function () use ($inWaitAmount) {
+                return $inWaitAmount;
             })
-            ->with('in_wait', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 0)->sum('amount'));
+            ->with('in_wait', function () use ($inWaitAmount) {
+                return $inWaitAmount;
             })
-            ->with('in_yes', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 1)->sum('amount'));
+            ->with('in_yes', function () {
+                return core()->currency(0);
             })
-            ->with('in_no', function () use ($query) {
-                return core()->currency((clone $query)->where('status', 2)->sum('amount'));
+            ->with('in_no', function () {
+                return core()->currency(0);
             })
             ->setTransformer(new WithdrawTransformer);
 

@@ -283,7 +283,7 @@ class XpayController extends AppBaseController
         UpdateBalancexpay::dispatch()->onQueue('topup');
 
         if ($config->seamless == 'Y') {
-            $data = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->findOneWhere(['txid' => $refId]);
+            $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $refId]);
         } else {
             $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $refId]);
         }

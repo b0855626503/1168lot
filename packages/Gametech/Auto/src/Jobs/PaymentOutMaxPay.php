@@ -45,9 +45,9 @@ class PaymentOutMaxPay implements ShouldQueue
 
         $datenow = now()->toDateTimeString();
         $config = core()->getConfigData();
-//        $order = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->find($id);
+//        $order = app('Gametech\Payment\Repositories\WithdrawRepository')->find($id);
         if($config->seamless == 'Y'){
-            $order = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->find($id);
+            $order = app('Gametech\Payment\Repositories\WithdrawRepository')->find($id);
         }else{
             $order = app('Gametech\Payment\Repositories\WithdrawRepository')->find($id);
         }

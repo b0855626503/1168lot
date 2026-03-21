@@ -63,6 +63,7 @@ class RpWithdrawSeamlessFreeDataTable extends DataTable
      */
     public function query(WithdrawSeamlessFree $model)
     {
+        $sourceTable = $this->sourceTable();
         $ip = request()->input('ip');
         $status = request()->input('status');
         $user = request()->input('user_name');
@@ -78,7 +79,7 @@ class RpWithdrawSeamlessFreeDataTable extends DataTable
             $enddate = now()->toDateString() . ' 23:59:59';
         }
 
-        return $model->newQuery()->with('member', 'admin', 'bank')
+        return $model->newQuery()->from($sourceTable . ' as withdraws_seamless_free')->with('member', 'admin', 'bank')
             ->active()->where('status', '>', 0)
             ->select('withdraws_seamless_free.*')->withCasts([
                 'date_create' => 'datetime:Y-m-d H:00'
@@ -190,5 +191,14 @@ class RpWithdrawSeamlessFreeDataTable extends DataTable
     protected function filename()
     {
         return 'bankin_datatable_' . time();
+    }
+
+    private function sourceTable(): string
+    {
+        $config = core()->getConfigData();
+
+        return ($config->seamless ?? 'N') === 'Y'
+            ? 'withdraws_free'
+            : 'withdraws_seamless_free';
     }
 }

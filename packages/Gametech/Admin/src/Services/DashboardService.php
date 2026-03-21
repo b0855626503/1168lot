@@ -506,7 +506,7 @@ class DashboardService
 
             $config = core()->getConfigData();
             if ($config->seamless == 'Y') {
-                $withdrawQuery = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->active();
+                $withdrawQuery = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
             } else {
                 $withdrawQuery = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
             }
@@ -1650,7 +1650,7 @@ class DashboardService
     {
         $config = core()->getConfigData();
         if ($config->seamless == 'Y') {
-            $query = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->active();
+            $query = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
         } else {
             $query = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
         }

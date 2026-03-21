@@ -711,7 +711,7 @@ class AutoTransferController extends AppBaseController
                 &$broadcastPayload
             ) {
                 $baseRepo = $config->seamless === 'Y'
-                    ? app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->query()
+                    ? app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()
                     : app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query();
 
                 $data = null;
@@ -1022,7 +1022,7 @@ class AutoTransferController extends AppBaseController
             // best-effort mark HOLD เพื่อกันหลุด แล้วให้คนตรวจ
             try {
                 $baseRepo = $config->seamless === 'Y'
-                    ? app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->query()
+                    ? app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()
                     : app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query();
 
                 $d = null;
@@ -1102,7 +1102,7 @@ class AutoTransferController extends AppBaseController
                 &$broadcastPayload
             ) {
                 $baseRepo = $config->seamless === 'Y'
-                    ? app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->query()
+                    ? app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()
                     : app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query();
 
                 $data = null;
@@ -1396,7 +1396,7 @@ class AutoTransferController extends AppBaseController
             // best-effort mark HOLD เพื่อกันหลุด แล้วให้คนตรวจ
             try {
                 $baseRepo = $config->seamless === 'Y'
-                    ? app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->query()
+                    ? app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()
                     : app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query();
 
                 $d = null;
@@ -1461,7 +1461,7 @@ class AutoTransferController extends AppBaseController
         $validStatuses = ['A','H'];
 
         if ($config->seamless === 'Y') {
-            $data = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->query()->where('transaction_id', $transactionId)->whereIn('status_withdraw', $validStatuses)->first();
+            $data = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()->where('transaction_id', $transactionId)->whereIn('status_withdraw', $validStatuses)->first();
         } else {
             $data = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->query()->where('transaction_id', $transactionId)->whereIn('status_withdraw', $validStatuses)->first();
         }

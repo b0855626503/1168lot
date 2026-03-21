@@ -1,5 +1,5 @@
 // sw v2.0.3 — Asset-only Service Worker (ไม่แตะ document/navigation เลย)
-const WEB = 'PANTER918';
+const WEB = 'GAMETECH';
 const CACHE_VERSION = 'v2.0.3';
 const STATIC_CACHE = `pwa-static-${WEB}-${CACHE_VERSION}`;
 const API_CACHE    = `pwa-api-${WEB}-${CACHE_VERSION}`; // ถ้าไม่อยากแคช API ให้เลิกใช้และลบบล็อก API ด้านล่าง

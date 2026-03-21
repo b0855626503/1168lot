@@ -80,7 +80,7 @@ class RpCashbackDataTable extends DataTable
             ->groupBy('bills.member_code', DB::raw('Date(bills.date_create)'));
 
         if($config->seamless == 'Y'){
-            $latestWD = DB::table('withdraws_seamless','withdraws')
+            $latestWD = DB::table('withdraws','withdraws')
                 ->select('withdraws.member_code', DB::raw('SUM(withdraws.amount)  as withdraw_amount'), DB::raw("DATE_FORMAT(withdraws.date_approve,'%Y-%m-%d') as date_approve"))
                 ->where('withdraws.enable', 'Y')
                 ->where('withdraws.status', 1)

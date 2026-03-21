@@ -25,6 +25,20 @@ class WithdrawSeamlessFree extends Model implements WithdrawSeamlessFreeContract
 
     protected $table = 'withdraws_seamless_free';
 
+    public function getTable()
+    {
+        try {
+            $config = core()->getConfigData();
+            if (($config->seamless ?? 'N') === 'Y') {
+                return 'withdraws_free';
+            }
+        } catch (\Throwable $exception) {
+            // Fallback to the default table when config service is unavailable.
+        }
+
+        return parent::getTable();
+    }
+
     const CREATED_AT = 'date_create';
     const UPDATED_AT = 'date_update';
 

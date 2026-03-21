@@ -290,7 +290,7 @@ class PapayaPayController extends AppBaseController
         $message = $request->all();
 
         if ($config->seamless == 'Y') {
-            $data = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->findOneWhere(['txid' => $message['fundOutPaymentReference']]);
+            $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['fundOutPaymentReference']]);
         } else {
             $data = app('Gametech\Payment\Repositories\WithdrawRepository')->findOneWhere(['txid' => $message['fundOutPaymentReference']]);
         }

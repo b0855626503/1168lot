@@ -35,9 +35,19 @@ class AppServiceProvider extends ServiceProvider
 
         if (app()->environment('local')) {
             DB::listen(function ($query) {
+                // Gather request context for traceability
+                $request = request();
+                $url = $request->fullUrl() ?? '';
+                $routeName = \Route::currentRouteName() ?? '';
+                $routeAction = \Route::currentRouteAction() ?? '';
+                $context = [
+                    'url' => $url,
+                    'route' => $routeName,
+                    'action' => $routeAction,
+                ];
                 Log::channel('slowlog')->info(
                     '['.$query->time.' ms] '.$query->sql,
-                    $query->bindings
+                    array_merge($query->bindings, $context)
                 );
             });
         }
@@ -256,3 +266,4 @@ class AppServiceProvider extends ServiceProvider
         return $resolver();
     }
 }
+
