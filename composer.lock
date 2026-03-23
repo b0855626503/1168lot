@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ca13b7c2eef7d353558adc52a711f515",
+    "content-hash": "de992f70a7662a16c9598597cbdbddf7",
     "packages": [
         {
             "name": "alexmg86/laravel-sub-query",
@@ -71,64 +71,6 @@
                 "source": "https://github.com/Alexmg86/laravel-sub-query/tree/v1.9.9"
             },
             "time": "2021-04-23T10:02:10+00:00"
-        },
-        {
-            "name": "alimranahmed/laraocr",
-            "version": "1.2.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/alimranahmed/LaraOCR.git",
-                "reference": "0ee3fea72d36f1ecba912dfb92a7864ca2a8ed0d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/alimranahmed/LaraOCR/zipball/0ee3fea72d36f1ecba912dfb92a7864ca2a8ed0d",
-                "reference": "0ee3fea72d36f1ecba912dfb92a7864ca2a8ed0d",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^7.0|^8.0"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^9.5"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "aliases": {
-                        "OCR": "Alimranahmed\\LaraOCR\\Facades\\OCR"
-                    },
-                    "providers": [
-                        "Alimranahmed\\LaraOCR\\LaraOCRServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Alimranahmed\\LaraOCR\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "Al Imran Ahmed",
-                    "email": "al.imran.cse@gmail.com"
-                }
-            ],
-            "description": "Laravel Optical Character Reader(OCR) package using different OCR engines like Tesseract",
-            "keywords": [
-                "OCR",
-                "data",
-                "image"
-            ],
-            "support": {
-                "issues": "https://github.com/alimranahmed/LaraOCR/issues",
-                "source": "https://github.com/alimranahmed/LaraOCR/tree/1.2.0"
-            },
-            "time": "2021-09-11T21:24:47+00:00"
         },
         {
             "name": "awobaz/compoships",
@@ -12280,12 +12222,12 @@
             "version": "v3.7.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/barryvdh/laravel-debugbar.git",
+                "url": "https://github.com/fruitcake/laravel-debugbar.git",
                 "reference": "3372ed65e6d2039d663ed19aa699956f9d346271"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/barryvdh/laravel-debugbar/zipball/3372ed65e6d2039d663ed19aa699956f9d346271",
+                "url": "https://api.github.com/repos/fruitcake/laravel-debugbar/zipball/3372ed65e6d2039d663ed19aa699956f9d346271",
                 "reference": "3372ed65e6d2039d663ed19aa699956f9d346271",
                 "shasum": ""
             },
@@ -14934,5 +14876,5 @@
         "ext-pcntl": "8.1",
         "ext-posix": "8.1"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

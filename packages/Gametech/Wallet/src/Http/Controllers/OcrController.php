@@ -6,10 +6,6 @@ namespace Gametech\Wallet\Http\Controllers;
 use Gametech\Game\Repositories\GameRepository;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\AcledaRepository;
-use Illuminate\Support\Facades\Storage;
-use Alimranahmed\LaraOCR\Services\OcrAbstract;
-use Illuminate\Support\Str;
-use OCR;
 
 class OcrController extends AppBaseController
 {
@@ -55,8 +51,10 @@ class OcrController extends AppBaseController
     public function readImage(){
         $image = request('image');
         if(isset($image) && $image->getPathName()){
-            $ocr = app()->make(OcrAbstract::class);
-            $parsedText = $ocr->scan($image->getPathName());
+            $parsedText = $this->scanImageText((string) $image->getPathName());
+            if ($parsedText === null) {
+                return $this->sendError('OCR service is disabled', 503);
+            }
 
 //            dd($parsedText);
             if(preg_match('/\b\d{11}\b/', $parsedText, $matches)) {
@@ -100,8 +98,10 @@ class OcrController extends AppBaseController
     public function readImageAba(){
         $image = request('image');
         if(isset($image) && $image->getPathName()){
-            $ocr = app()->make(OcrAbstract::class);
-            $parsedText = $ocr->scan($image->getPathName());
+            $parsedText = $this->scanImageText((string) $image->getPathName());
+            if ($parsedText === null) {
+                return $this->sendError('OCR service is disabled', 503);
+            }
             preg_match('/\b\d{15}\b/', $parsedText, $matches);
 
             if (!empty($matches)) {
@@ -130,6 +130,21 @@ class OcrController extends AppBaseController
         }
 
         return $this->sendError('Please add Image',200);
+    }
+
+    private function scanImageText(string $path): ?string
+    {
+        $ocrAbstractClass = 'Alimranahmed\\LaraOCR\\Services\\OcrAbstract';
+        if (! class_exists($ocrAbstractClass)) {
+            return null;
+        }
+
+        $ocr = app()->make($ocrAbstractClass);
+        if (! is_object($ocr) || ! method_exists($ocr, 'scan')) {
+            return null;
+        }
+
+        return (string) $ocr->scan($path);
     }
 
 }
