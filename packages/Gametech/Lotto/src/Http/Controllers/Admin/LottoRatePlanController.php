@@ -159,4 +159,61 @@ class LottoRatePlanController extends AppBaseController
 
         return $this->sendSuccess('อัปเดตอัตราจ่ายและส่วนลดเรียบร้อยแล้ว');
     }
+
+    public function copyFromReference(Request $request): JsonResponse
+    {
+        $payload = validator($request->all(), [
+            'target_market_ids' => ['required', 'array', 'min:1'],
+            'target_market_ids.*' => ['required', 'integer', 'exists:lotto_markets,id', 'distinct'],
+            'settings' => ['required', 'array'],
+        ], [
+            'target_market_ids.required' => 'กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ',
+            'target_market_ids.min' => 'กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ',
+        ])->validate();
+
+        $targetMarketIds = collect((array) $payload['target_market_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+        $settings = (array) $payload['settings'];
+
+        if (empty($targetMarketIds)) {
+            return $this->sendError('กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ', 422);
+        }
+
+        $rules = [];
+        foreach (BetType::all() as $betType) {
+            $rules["settings.{$betType}.payout"] = ['required', 'numeric', 'min:0'];
+            $rules["settings.{$betType}.discount_percent"] = ['nullable', 'numeric', 'min:0', 'max:100'];
+        }
+
+        validator(['settings' => $settings], $rules, [], [
+            'settings.*.payout' => 'อัตราจ่าย',
+            'settings.*.discount_percent' => 'ส่วนลด(%)',
+        ])->validate();
+
+        DB::transaction(function () use ($settings, $targetMarketIds): void {
+            foreach ($targetMarketIds as $targetMarketId) {
+                foreach (BetType::all() as $betType) {
+                    $input = (array) ($settings[$betType] ?? []);
+
+                    $setting = LottoMarketBetSetting::query()->firstOrNew([
+                        'market_id' => $targetMarketId,
+                        'bet_type' => $betType,
+                    ]);
+
+                    if (! $setting->exists) {
+                        $setting->is_enabled = true;
+                    }
+
+                    $setting->payout = (float) ($input['payout'] ?? 0);
+                    $setting->discount_percent = (float) ($input['discount_percent'] ?? 0);
+                    $setting->save();
+                }
+            }
+        });
+
+        return $this->sendSuccess('คัดลอกค่าไปยัง ' . count($targetMarketIds) . ' รายการเรียบร้อยแล้ว');
+    }
 }

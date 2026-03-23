@@ -169,5 +169,69 @@ class LottoBetLimitController extends AppBaseController
 
         return $this->sendSuccess('อัปเดตขั้นต่ำ/สูงสุด/สูงสุดต่อเลขเรียบร้อยแล้ว');
     }
-}
 
+    public function copyFromTemplate(Request $request): JsonResponse
+    {
+        $payload = validator($request->all(), [
+            'target_market_ids' => ['required', 'array', 'min:1'],
+            'target_market_ids.*' => ['required', 'integer', 'exists:lotto_markets,id', 'distinct'],
+            'settings' => ['required', 'array'],
+        ], [
+            'target_market_ids.required' => 'กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ',
+            'target_market_ids.min' => 'กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ',
+        ])->validate();
+
+        $targetMarketIds = collect((array) $payload['target_market_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+        $settings = (array) $payload['settings'];
+
+        if (empty($targetMarketIds)) {
+            return $this->sendError('กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ', 422);
+        }
+
+        $rules = [];
+        foreach (BetType::all() as $betType) {
+            $rules["settings.{$betType}.min_bet"] = ['required', 'numeric', 'min:0'];
+            $rules["settings.{$betType}.max_bet"] = ['required', 'numeric', 'min:0'];
+            $rules["settings.{$betType}.max_per_number"] = ['required', 'numeric', 'min:0'];
+        }
+
+        validator(['settings' => $settings], $rules)->validate();
+
+        foreach (BetType::all() as $betType) {
+            $input = (array) ($settings[$betType] ?? []);
+            if ((float) ($input['max_bet'] ?? 0) < (float) ($input['min_bet'] ?? 0)) {
+                return $this->sendError('ค่าสูงสุดต้องมากกว่าหรือเท่ากับขั้นต่ำ', 422);
+            }
+        }
+
+        DB::transaction(function () use ($settings, $targetMarketIds): void {
+            foreach ($targetMarketIds as $targetMarketId) {
+                foreach (BetType::all() as $betType) {
+                    $input = (array) ($settings[$betType] ?? []);
+
+                    $setting = LottoMarketBetSetting::query()->firstOrNew([
+                        'market_id' => $targetMarketId,
+                        'bet_type' => $betType,
+                    ]);
+
+                    if (! $setting->exists) {
+                        $setting->is_enabled = true;
+                        $setting->payout = 0;
+                        $setting->discount_percent = 0;
+                    }
+
+                    $setting->min_bet = (float) ($input['min_bet'] ?? 0);
+                    $setting->max_bet = (float) ($input['max_bet'] ?? 0);
+                    $setting->max_per_number = (float) ($input['max_per_number'] ?? 0);
+                    $setting->save();
+                }
+            }
+        });
+
+        return $this->sendSuccess('คัดลอกค่าไปยัง ' . count($targetMarketIds) . ' รายการเรียบร้อยแล้ว');
+    }
+}

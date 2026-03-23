@@ -44,6 +44,26 @@
             gap: 0.35rem;
             white-space: nowrap;
         }
+
+        .lotto-copy-group-box {
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .lotto-copy-group-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.35rem;
+        }
+
+        .lotto-copy-market-list {
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
     </style>
 @endpush
 
@@ -73,6 +93,10 @@
                                 button-variant="outline-primary"
                                 size="sm">
                             </b-form-radio-group>
+                            <button type="button" class="btn btn-info btn-xs ml-2" @click="openCopyModal">
+                                <i class="fa-solid fa-copy mr-1"></i>
+                                คัดลอกค่าที่กรอก
+                            </button>
                         </div>
                     </div>
 
@@ -178,6 +202,83 @@
                     </b-form>
                 </div>
             </b-modal>
+
+            <b-modal ref="copyModal"
+                     id="rate-plan-copy-modal"
+                     centered
+                     size="lg"
+                     title="คัดลอกค่าที่กรอกไปยังหลายรายการหวย"
+                     :no-close-on-backdrop="true"
+                     :hide-footer="true">
+                <b-form @submit.prevent="submitCopyFromReference">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm mb-0">
+                            <thead>
+                            <tr>
+                                <th style="min-width: 120px;">ประเภท</th>
+                                <th style="min-width: 130px;">อัตราจ่าย</th>
+                                <th style="min-width: 130px;">ส่วนลด(%)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-for="type in betTypes" :key="'copy-setting-' + type.key">
+                                <td>@{{ type.label }}</td>
+                                <td>
+                                    <b-form-input v-model.number="copyForm.settings[type.key].payout"
+                                                  type="number"
+                                                  step="0.01"
+                                                  min="0"
+                                                  size="sm"
+                                                  required>
+                                    </b-form-input>
+                                </td>
+                                <td>
+                                    <b-form-input v-model.number="copyForm.settings[type.key].discount_percent"
+                                                  type="number"
+                                                  step="0.01"
+                                                  min="0"
+                                                  max="100"
+                                                  size="sm">
+                                    </b-form-input>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mb-2">
+                        <strong>เลือกรายการหวยปลายทาง</strong>
+                    </div>
+
+                    <div v-for="group in groups" :key="'copy-group-' + group.id" class="lotto-copy-group-box">
+                        <div class="lotto-copy-group-head">
+                            <strong>@{{ group.name }}</strong>
+                            <b-form-checkbox
+                                :checked="isGroupFullySelected(group)"
+                                @change="toggleGroupTargets(group, $event)"
+                                switch
+                                size="sm">
+                                เลือกทั้งกลุ่ม
+                            </b-form-checkbox>
+                        </div>
+
+                        <div class="lotto-copy-market-list">
+                            <b-form-checkbox v-for="market in group.markets"
+                                             :key="'copy-market-' + market.id"
+                                             v-model="copyForm.target_market_ids"
+                                             :value="market.id"
+                                             size="sm">
+                                @{{ market.name }} <small class="text-muted">@{{ market.code }}</small>
+                            </b-form-checkbox>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <small class="text-muted">เลือกแล้ว @{{ copyForm.target_market_ids.length }} รายการ</small>
+                        <button type="submit" class="btn btn-primary btn-sm">บันทึก</button>
+                    </div>
+                </b-form>
+            </b-modal>
         </section>
     </script>
 
@@ -185,9 +286,18 @@
         Vue.component('lotto-rate-plans-dashboard', {
             template: '#lotto-rate-plans-dashboard-template',
             data() {
+                const initialBetTypes = @json($betTypes ?? []);
+                const initialCopySettings = {};
+                initialBetTypes.forEach((type) => {
+                    initialCopySettings[type.key] = {
+                        payout: 0,
+                        discount_percent: 0,
+                    };
+                });
+
                 return {
                     groups: @json($groupTabs ?? []),
-                    betTypes: @json($betTypes ?? []),
+                    betTypes: initialBetTypes,
                     activeGroupIndex: 0,
                     displayMode: 'payout',
                     displayModeOptions: [
@@ -199,6 +309,10 @@
                     editForm: {
                         market_id: null,
                         settings: {},
+                    },
+                    copyForm: {
+                        settings: initialCopySettings,
+                        target_market_ids: [],
                     },
                 };
             },
@@ -233,6 +347,17 @@
                     }
 
                     return market.settings[betType][field];
+                },
+                findMarketById(marketId) {
+                    const id = Number(marketId);
+                    for (const group of this.groups) {
+                        const market = (group.markets || []).find((item) => Number(item.id) === id);
+                        if (market) {
+                            return market;
+                        }
+                    }
+
+                    return null;
                 },
                 buildEmptySettings() {
                     const settings = {};
@@ -295,6 +420,99 @@
                         centered: true,
                     });
                     this.$refs.editModal.hide();
+                },
+                openCopyModal() {
+                    this.copyForm = {
+                        settings: this.buildEmptySettings(),
+                        target_market_ids: [],
+                    };
+
+                    this.$refs.copyModal.show();
+                },
+                isGroupFullySelected(group) {
+                    const candidates = (group.markets || [])
+                        .map((market) => Number(market.id))
+                        .filter((id) => id > 0);
+
+                    if (candidates.length === 0) {
+                        return false;
+                    }
+
+                    const selected = new Set((this.copyForm.target_market_ids || []).map((id) => Number(id)));
+                    return candidates.every((id) => selected.has(id));
+                },
+                toggleGroupTargets(group, checked) {
+                    const targetIds = new Set((this.copyForm.target_market_ids || []).map((id) => Number(id)));
+
+                    (group.markets || []).forEach((market) => {
+                        const marketId = Number(market.id);
+                        if (marketId <= 0) {
+                            return;
+                        }
+
+                        if (checked) {
+                            targetIds.add(marketId);
+                        } else {
+                            targetIds.delete(marketId);
+                        }
+                    });
+
+                    this.copyForm.target_market_ids = Array.from(targetIds).sort((a, b) => a - b);
+                },
+                applyCopiedSettingsLocally(targetMarketIds, settings) {
+                    targetMarketIds.forEach((targetId) => {
+                        const target = this.findMarketById(targetId);
+                        if (!target) {
+                            return;
+                        }
+
+                        if (!target.settings) {
+                            this.$set(target, 'settings', {});
+                        }
+
+                        this.betTypes.forEach((type) => {
+                            const key = type.key;
+                            const sourceRow = settings[key] || {};
+                            const targetRow = target.settings[key] || { payout: 0, discount_percent: 0 };
+                            targetRow.payout = Number(sourceRow.payout || 0);
+                            targetRow.discount_percent = Number(sourceRow.discount_percent || 0);
+                            this.$set(target.settings, key, targetRow);
+                        });
+                    });
+                },
+                async submitCopyFromReference() {
+                    const targetMarketIds = (this.copyForm.target_market_ids || [])
+                        .map((id) => Number(id))
+                        .filter((id) => id > 0);
+                    const settings = this.copyForm.settings || {};
+
+                    if (targetMarketIds.length === 0) {
+                        await this.$bvModal.msgBoxOk('กรุณาเลือกรายการหวยปลายทางอย่างน้อย 1 รายการ', {
+                            title: 'ข้อมูลไม่ครบ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                        return;
+                    }
+
+                    const response = await axios.post("{{ route('admin.lotto.rate_plans.copy_from_reference') }}", {
+                        target_market_ids: targetMarketIds,
+                        settings,
+                    });
+
+                    this.applyCopiedSettingsLocally(targetMarketIds, settings);
+
+                    await this.$bvModal.msgBoxOk(response?.data?.message || 'คัดลอกค่าที่กรอกเรียบร้อยแล้ว', {
+                        title: 'ผลการดำเนินการ',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'success',
+                        centered: true,
+                    });
+
+                    this.$refs.copyModal.hide();
                 },
             },
         });

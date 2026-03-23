@@ -74,7 +74,7 @@ class LottoDrawDataTable extends DataTable
             ['data' => 'close_at', 'name' => 'close_at', 'title' => 'ปิดรับ'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ'],
             ['data' => 'result_number', 'name' => 'result_number', 'title' => 'เลขที่ออก'],
-            ['data' => 'action', 'name' => 'action', 'title' => 'ดำเนินการ', 'orderable' => false, 'searchable' => false],
+            ['data' => 'action', 'name' => 'action', 'title' => 'ดำเนินการ', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '130px'],
         ];
     }
 
@@ -86,4 +86,3 @@ class LottoDrawDataTable extends DataTable
         return 'LottoDraw_' . date('YmdHis');
     }
 }
-

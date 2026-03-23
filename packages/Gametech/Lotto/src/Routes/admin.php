@@ -64,6 +64,9 @@ Route::domain(
             Route::post('rate-plans/update-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@updateMarket')
                 ->name('admin.lotto.rate_plans.update_market');
 
+            Route::post('rate-plans/copy-from-reference', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@copyFromReference')
+                ->name('admin.lotto.rate_plans.copy_from_reference');
+
             Route::get('bet-limits', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.bet_limits.index',
             ])->name('admin.lotto.bet_limits.index');
@@ -73,6 +76,9 @@ Route::domain(
 
             Route::post('bet-limits/update-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@updateMarket')
                 ->name('admin.lotto.bet_limits.update_market');
+
+            Route::post('bet-limits/copy-from-template', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@copyFromTemplate')
+                ->name('admin.lotto.bet_limits.copy_from_template');
 
             Route::post('default-settings/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@create')
                 ->name('admin.lotto.default_settings.create');
