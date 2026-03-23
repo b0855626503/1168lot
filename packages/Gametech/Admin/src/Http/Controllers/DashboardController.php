@@ -942,6 +942,21 @@ class DashboardController extends AppBaseController
         return $this->sendResponseNew($result, 'Complete');
     }
 
+    public function lottoSummary(Request $request, DashboardService $service)
+    {
+        return $this->sendResponseNew($service->getLottoSummary($request->all()), 'Complete');
+    }
+
+    public function lottoMarketSummary(Request $request, DashboardService $service)
+    {
+        return $this->sendResponseNew($service->getLottoMarketSummary($request->all()), 'Complete');
+    }
+
+    public function lottoRiskSnapshot(Request $request, DashboardService $service)
+    {
+        return $this->sendResponseNew($service->getLottoRiskSnapshot($request->all()), 'Complete');
+    }
+
     public function alerts(Request $request, DashboardService $service)
     {
         return $this->sendResponseNew($service->getAlerts($request->all()), 'Complete');

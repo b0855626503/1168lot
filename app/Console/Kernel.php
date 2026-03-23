@@ -2,7 +2,9 @@
 
 namespace App\Console;
 
+use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
 use App\Console\Commands\GenerateGameIdsForPayments;
+use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
 use Gametech\Auto\Console\Commands\AddCashbackSeamless;
 use Gametech\Auto\Console\Commands\AddMemberIC;
@@ -66,6 +68,8 @@ class Kernel extends ConsoleKernel
         AutoPayOut::class,
         NewCashbackV2::class,
         NewICV2::class,
+        RebuildLottoDashboardSummaryCommand::class,
+        CleanupLottoRiskSnapshotsCommand::class,
     ];
 
     /**
@@ -119,6 +123,12 @@ class Kernel extends ConsoleKernel
         // Lotto auto draw bootstrap from market schedule (manual-safe, idempotent).
         $schedule->command('lotto:generate-auto-draws --days=3')
             ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Non hot-path retention cleanup for detailed lotto risk snapshots.
+        $schedule->command('dashboard:lotto-risk-retention --days=90')
+            ->dailyAt('03:40')
             ->withoutOverlapping()
             ->runInBackground();
 

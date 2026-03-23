@@ -4,6 +4,7 @@ namespace Gametech\Admin\Services;
 
 use App\Services\Dashboard\DashboardSummarySyncService;
 use App\Services\Dashboard\DashboardWebCodeResolver;
+use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -142,8 +143,9 @@ class DashboardService
             $withdrawPendingCount = (int) (clone $withdrawPending)->count();
 
             $bonus = $this->bonusTotals($filters, $startDate, $endDate);
+            $lottoCash = $this->lottoCashTotals($filters, $startDate, $endDate);
 
-            $net = $depositSuccessAmount - $withdrawAmount;
+            $net = $depositSuccessAmount - $withdrawAmount + (float) ($lottoCash['net_cash'] ?? 0);
             $prevNet = $this->netCashflow($filters, $prevStart, $prevEnd);
             $netChangePct = $this->pctChange($prevNet, $net);
 
@@ -228,6 +230,16 @@ class DashboardService
                         'amount_raw' => (float) ($bonus['manual_amount'] ?? 0),
                         'count' => (int) ($bonus['manual_count'] ?? 0),
                     ],
+                ],
+                'lotto' => [
+                    'sales_cash' => core()->currency((float) ($lottoCash['sales_cash'] ?? 0)),
+                    'sales_cash_raw' => (float) ($lottoCash['sales_cash'] ?? 0),
+                    'payout_cash' => core()->currency((float) ($lottoCash['payout_cash'] ?? 0)),
+                    'payout_cash_raw' => (float) ($lottoCash['payout_cash'] ?? 0),
+                    'refund_cash' => core()->currency((float) ($lottoCash['refund_cash'] ?? 0)),
+                    'refund_cash_raw' => (float) ($lottoCash['refund_cash'] ?? 0),
+                    'net_cash' => core()->currency((float) ($lottoCash['net_cash'] ?? 0)),
+                    'net_cash_raw' => (float) ($lottoCash['net_cash'] ?? 0),
                 ],
                 'net' => [
                     'amount' => core()->currency($net),
@@ -1068,7 +1080,7 @@ class DashboardService
                 $syncService->syncBucket(
                     summaryDate: $date,
                     webCode: $webCode,
-                    updatedSections: ['deposit', 'withdraw', 'bonus', 'register', 'conversion', 'funnel', 'net'],
+                    updatedSections: ['deposit', 'withdraw', 'bonus', 'register', 'conversion', 'funnel', 'net', 'lotto_cash', 'lotto_product', 'lotto_risk', 'lotto_operations'],
                     sourceType: 'manual_resync',
                     sourceId: 'dashboard_sync_button'
                 );
@@ -1117,6 +1129,160 @@ class DashboardService
             'avg_bonus_per_user' => core()->currency($bonusPerUser),
             'active_deposit_users' => $summary['deposit']['users'],
             'active_withdraw_users' => $summary['withdraw']['users'],
+        ];
+    }
+
+    public function getLottoSummary(array $filters): array
+    {
+        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
+        $webCode = $this->dashboardWebCode();
+
+        if (!$this->hasTable('lotto_dashboard_summary_daily')) {
+            return [
+                'summary' => [],
+                'meta' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'web_code' => $webCode,
+                    'source' => 'summary_table_only',
+                    'warning' => 'lotto_dashboard_summary_daily not found',
+                ],
+            ];
+        }
+
+        $row = DB::table('lotto_dashboard_summary_daily')
+            ->where('web_code', $webCode)
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->selectRaw('
+                COALESCE(SUM(total_sales), 0) as total_sales,
+                COALESCE(SUM(total_payout), 0) as total_payout,
+                COALESCE(SUM(total_tickets), 0) as total_tickets,
+                COALESCE(SUM(total_players), 0) as total_players,
+                COALESCE(SUM(win_tickets), 0) as win_tickets,
+                COALESCE(SUM(lose_tickets), 0) as lose_tickets,
+                COALESCE(SUM(pending_tickets), 0) as pending_tickets,
+                COALESCE(SUM(settled_tickets), 0) as settled_tickets,
+                COALESCE(SUM(sales_unique_players), 0) as sales_unique_players,
+                COALESCE(SUM(settled_unique_players), 0) as settled_unique_players
+            ')
+            ->first();
+
+        $summary = (array) ($row ?: []);
+        $summary['total_sales'] = (float) ($summary['total_sales'] ?? 0);
+        $summary['total_payout'] = (float) ($summary['total_payout'] ?? 0);
+        $summary['net_sales_after_payout'] = round($summary['total_sales'] - $summary['total_payout'], 2);
+
+        return [
+            'summary' => $summary,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'web_code' => $webCode,
+                'source' => 'lotto_dashboard_summary_daily',
+            ],
+        ];
+    }
+
+    public function getLottoMarketSummary(array $filters): array
+    {
+        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
+        $webCode = $this->dashboardWebCode();
+
+        if (!$this->hasTable('lotto_dashboard_market_summary')) {
+            return [
+                'rows' => [],
+                'meta' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'web_code' => $webCode,
+                    'source' => 'summary_table_only',
+                    'warning' => 'lotto_dashboard_market_summary not found',
+                ],
+            ];
+        }
+
+        $query = DB::table('lotto_dashboard_market_summary')
+            ->where('web_code', $webCode)
+            ->whereBetween('summary_date', [$startDate, $endDate]);
+
+        if (!empty($filters['market_id'])) {
+            $query->where('market_id', (int) $filters['market_id']);
+        }
+
+        if (!empty($filters['round_id'])) {
+            $query->where('round_id', (int) $filters['round_id']);
+        }
+
+        $rows = $query->orderByDesc('summary_date')
+            ->orderBy('market_id')
+            ->orderBy('round_id')
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->values()
+            ->all();
+
+        return [
+            'rows' => $rows,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'web_code' => $webCode,
+                'source' => 'lotto_dashboard_market_summary',
+            ],
+        ];
+    }
+
+    public function getLottoRiskSnapshot(array $filters): array
+    {
+        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
+        $webCode = $this->dashboardWebCode();
+
+        if (!$this->hasTable('lotto_dashboard_risk_snapshot')) {
+            return [
+                'rows' => [],
+                'meta' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'web_code' => $webCode,
+                    'source' => 'summary_table_only',
+                    'warning' => 'lotto_dashboard_risk_snapshot not found',
+                ],
+            ];
+        }
+
+        [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
+
+        $query = DB::table('lotto_dashboard_risk_snapshot')
+            ->where('web_code', $webCode)
+            ->where('snapshot_at', '>=', $startAt)
+            ->where('snapshot_at', '<', $endAt);
+
+        if (!empty($filters['market_id'])) {
+            $query->where('market_id', (int) $filters['market_id']);
+        }
+
+        if (!empty($filters['round_id'])) {
+            $query->where('round_id', (int) $filters['round_id']);
+        }
+
+        $rows = $query
+            ->orderByDesc('snapshot_at')
+            ->orderBy('market_id')
+            ->orderBy('round_id')
+            ->limit(max(1, min((int) ($filters['limit'] ?? 500), 2000)))
+            ->get()
+            ->map(fn ($row) => (array) $row)
+            ->values()
+            ->all();
+
+        return [
+            'rows' => $rows,
+            'meta' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'web_code' => $webCode,
+                'source' => 'lotto_dashboard_risk_snapshot',
+            ],
         ];
     }
 
@@ -1171,6 +1337,10 @@ class DashboardService
         $bonusAmount = (float) ($current['bonus_total_amount'] ?? 0);
         $bonusCount = (int) ($current['bonus_total_count'] ?? 0);
         $bonusRatio = $depositSuccessAmount > 0 ? round(($bonusAmount / $depositSuccessAmount) * 100, 2) : 0;
+        $lottoSalesCash = (float) ($current['lotto_sales_cash'] ?? 0);
+        $lottoPayoutCash = (float) ($current['lotto_payout_cash'] ?? 0);
+        $lottoRefundCash = (float) ($current['lotto_refund_cash'] ?? 0);
+        $lottoNetCash = (float) ($current['lotto_net_cash'] ?? ($lottoSalesCash - $lottoPayoutCash - $lottoRefundCash));
 
         $net = (float) ($current['net_amount'] ?? ($depositSuccessAmount - $withdrawAmount));
         $prevNet = (float) ($previous['net_amount'] ?? 0);
@@ -1258,6 +1428,16 @@ class DashboardService
                     'amount_raw' => $bonusManualAmount,
                     'count' => $bonusManualCount,
                 ],
+            ],
+            'lotto' => [
+                'sales_cash' => core()->currency($lottoSalesCash),
+                'sales_cash_raw' => $lottoSalesCash,
+                'payout_cash' => core()->currency($lottoPayoutCash),
+                'payout_cash_raw' => $lottoPayoutCash,
+                'refund_cash' => core()->currency($lottoRefundCash),
+                'refund_cash_raw' => $lottoRefundCash,
+                'net_cash' => core()->currency($lottoNetCash),
+                'net_cash_raw' => $lottoNetCash,
             ],
             'net' => [
                 'amount' => core()->currency($net),
@@ -1402,7 +1582,21 @@ class DashboardService
             ')
             ->first();
 
-        return $row ? (array) $row : [];
+        $result = $row ? (array) $row : [];
+
+        foreach (['lotto_sales_cash', 'lotto_payout_cash', 'lotto_refund_cash', 'lotto_net_cash'] as $column) {
+            $result[$column] = 0.0;
+            if (!$this->hasColumn('dashboard_summary_daily', $column)) {
+                continue;
+            }
+
+            $result[$column] = (float) DB::table('dashboard_summary_daily')
+                ->where('web_code', $this->dashboardWebCode())
+                ->whereBetween('summary_date', [$startDate, $endDate])
+                ->sum($column);
+        }
+
+        return $result;
     }
 
     private function getDailyTrendsFromSummaryTable(string $startDate, string $endDate): array
@@ -1510,7 +1704,7 @@ class DashboardService
                     $syncService->syncBucket(
                         summaryDate: $date,
                         webCode: $webCode,
-                        updatedSections: ['deposit', 'withdraw', 'bonus', 'register', 'conversion', 'funnel', 'net'],
+                        updatedSections: ['deposit', 'withdraw', 'bonus', 'register', 'conversion', 'funnel', 'net', 'lotto_cash', 'lotto_product', 'lotto_risk', 'lotto_operations'],
                         sourceType: 'on_demand',
                         sourceId: 'dashboard_request'
                     );
@@ -1723,7 +1917,54 @@ class DashboardService
         $depositAmount = (float) $depositQuery->sum('value');
         $withdrawAmount = (float) $withdrawQuery->sum('amount');
 
-        return $depositAmount - $withdrawAmount;
+        $lottoCash = $this->lottoCashTotals($filters, $startDate, $endDate);
+
+        return $depositAmount - $withdrawAmount + (float) ($lottoCash['net_cash'] ?? 0);
+    }
+
+    /**
+     * @return array{sales_cash:float,payout_cash:float,refund_cash:float,net_cash:float}
+     */
+    private function lottoCashTotals(array $filters, string $startDate, string $endDate): array
+    {
+        if (!$this->hasTable('wallet_transactions')) {
+            return [
+                'sales_cash' => 0.0,
+                'payout_cash' => 0.0,
+                'refund_cash' => 0.0,
+                'net_cash' => 0.0,
+            ];
+        }
+
+        [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
+
+        $base = DB::table('wallet_transactions')
+            ->where('scope', 'MEMBER')
+            ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
+            ->where('created_at', '>=', $startAt)
+            ->where('created_at', '<', $endAt);
+
+        $salesCash = (float) (clone $base)
+            ->where('direction', 'DEBIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::salesRefTypes())
+            ->sum('amount');
+
+        $payoutCash = (float) (clone $base)
+            ->where('direction', 'CREDIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::payoutRefTypes())
+            ->sum('amount');
+
+        $refundCash = (float) (clone $base)
+            ->where('direction', 'CREDIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::refundRefTypes())
+            ->sum('amount');
+
+        return [
+            'sales_cash' => $salesCash,
+            'payout_cash' => $payoutCash,
+            'refund_cash' => $refundCash,
+            'net_cash' => round($salesCash - $payoutCash - $refundCash, 2),
+        ];
     }
 
     private function registerTotals(array $filters, string $startDate, string $endDate): array
