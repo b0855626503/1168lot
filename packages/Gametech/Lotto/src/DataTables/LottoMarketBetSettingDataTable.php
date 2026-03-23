@@ -70,6 +70,7 @@ class LottoMarketBetSettingDataTable extends DataTable
             ['data' => 'id', 'name' => 'id', 'title' => 'ID', 'width' => '50px'],
             ['data' => 'market_name', 'name' => 'market.name', 'title' => 'ตลาด'],
             ['data' => 'bet_type', 'name' => 'bet_type', 'title' => 'ประเภทเดิมพัน'],
+            ['data' => 'payout', 'name' => 'payout', 'title' => 'อัตราจ่าย'],
             ['data' => 'min_bet', 'name' => 'min_bet', 'title' => 'ขั้นต่ำ'],
             ['data' => 'max_bet', 'name' => 'max_bet', 'title' => 'สูงสุด'],
             ['data' => 'max_per_number', 'name' => 'max_per_number', 'title' => 'สูงสุดต่อเลข'],
@@ -86,4 +87,3 @@ class LottoMarketBetSettingDataTable extends DataTable
         return 'LottoMarketBetSetting_' . date('YmdHis');
     }
 }
-

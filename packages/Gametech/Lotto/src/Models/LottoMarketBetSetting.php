@@ -17,6 +17,8 @@ class LottoMarketBetSetting extends Model implements LottoMarketBetSettingContra
     protected $fillable = [
         'market_id',
         'bet_type',      // top_3, tod_3, etc.
+        'payout',        // อัตราจ่าย
+        'discount_percent', // ส่วนลด (%)
         'is_enabled',
         'min_bet',       // ขั้นต่ำต่อโพย
         'max_bet',       // สูงสุดต่อโพย
@@ -24,6 +26,8 @@ class LottoMarketBetSetting extends Model implements LottoMarketBetSettingContra
     ];
 
     protected $casts = [
+        'payout' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
         'is_enabled' => 'boolean',
         'min_bet' => 'decimal:2',
         'max_bet' => 'decimal:2',

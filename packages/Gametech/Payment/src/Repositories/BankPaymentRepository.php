@@ -25,6 +25,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class BankPaymentRepository extends Repository
@@ -4559,6 +4560,7 @@ class BankPaymentRepository extends Repository
             $chknew = $this->memberCreditLogRepository->findOneWhere(['member_code' => $member_code, 'refer_code' => $data['code'], 'refer_table' => 'bank_payment', 'kind' => 'TOPUP']);
             if ($chknew) {
                 ActivityLoggerUser::activity('Seamless ฝากเงินเข้าเกม '.$game_name, $money_text.' หยุดการทำงาน เนื่องจาก Log ซ้ำ');
+                DB::rollBack();
 
                 return false;
             }
@@ -4837,13 +4839,26 @@ class BankPaymentRepository extends Repository
             $bill->withdraw_limit_amount = $game_user->withdraw_limit_amount;
             $bill->save();
 
+            $walletBalanceBefore = (float) $member->balance;
+            $walletBalanceAfter = $walletBalanceBefore + (float) $total;
+
             $member->sum_deposit += $amount;
             $member->status_pro = $status_pro;
             $member->point_deposit += $point;
             $member->diamond += $diamond;
-            $member->balance = ($member->balance + $total);
+            $member->balance = $walletBalanceAfter;
             $member->count_deposit += $count_deposit;
             $member->save();
+
+            $this->recordWalletDepositTransaction(
+                (int) $member->code,
+                (string) $data['code'],
+                (float) $total,
+                $walletBalanceBefore,
+                $walletBalanceAfter,
+                (string) $data['account_code'],
+                isset($bills->code) ? (string) $bills->code : null
+            );
 
             DB::commit();
 
@@ -4918,5 +4933,56 @@ class BankPaymentRepository extends Repository
         }
 
         return core()->getConfigData();
+    }
+
+    private function recordWalletDepositTransaction(
+        int $memberId,
+        string $paymentCode,
+        float $amount,
+        float $balanceBefore,
+        float $balanceAfter,
+        string $bankAccountCode,
+        ?string $billCode = null
+    ): void {
+        if ($amount <= 0 || ! Schema::hasTable('wallet_transactions')) {
+            return;
+        }
+
+        $exists = DB::table('wallet_transactions')
+            ->where('member_id', $memberId)
+            ->where('direction', 'CREDIT')
+            ->where('ref_type', 'DEPOSIT')
+            ->where('ref_id', (int) $paymentCode)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        DB::table('wallet_transactions')->insert([
+            'member_id' => $memberId,
+            'scope' => 'MEMBER',
+            'game_user_id' => null,
+            'direction' => 'CREDIT',
+            'amount' => number_format($amount, 2, '.', ''),
+            'balance_before' => number_format($balanceBefore, 2, '.', ''),
+            'balance_after' => number_format($balanceAfter, 2, '.', ''),
+            'ref_type' => 'DEPOSIT',
+            'ref_id' => (int) $paymentCode,
+            'ref_code' => $paymentCode,
+            'group_code' => 'DEPOSIT_' . $paymentCode,
+            'related_txn_id' => null,
+            'status' => 'SUCCESS',
+            'description' => 'Auto topup from bank payment #' . $paymentCode,
+            'meta' => json_encode([
+                'source' => 'BankPaymentRepository::refillPaymentSeamless',
+                'bank_account_code' => $bankAccountCode,
+                'bill_code' => $billCode,
+            ], JSON_UNESCAPED_UNICODE),
+            'created_by_type' => 'system',
+            'created_by_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

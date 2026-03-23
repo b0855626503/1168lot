@@ -20,6 +20,9 @@
 				required
 			></b-form-select>
 		</b-form-group>
+		<b-form-group label="อัตราจ่าย:" label-for="payout">
+			<b-form-input id="payout" v-model="formaddedit.payout" type="number" step="0.01" min="0" size="sm" required></b-form-input>
+		</b-form-group>
 		<b-form-group label="ขั้นต่ำ:" label-for="min_bet">
 			<b-form-input id="min_bet" v-model="formaddedit.min_bet" type="number" step="0.01" min="0" size="sm" required></b-form-input>
 		</b-form-group>
@@ -51,6 +54,7 @@
 					formaddedit: {
 						market_id: null,
 						bet_type: null,
+						payout: 0,
 						min_bet: 0,
 						max_bet: 0,
 						max_per_number: 0,
@@ -88,6 +92,7 @@
 					this.formaddedit = {
 						market_id: this.markets.length > 0 ? this.markets[0].value : null,
 						bet_type: this.betTypes.length > 0 ? this.betTypes[0].value : null,
+						payout: 0,
 						min_bet: 0,
 						max_bet: 0,
 						max_per_number: 0,
@@ -105,6 +110,7 @@
 					this.formaddedit = {
 						market_id: d.market_id,
 						bet_type: d.bet_type,
+						payout: d.payout,
 						min_bet: d.min_bet,
 						max_bet: d.max_bet,
 						max_per_number: d.max_per_number,

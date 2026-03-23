@@ -24,6 +24,7 @@ return [
         Gametech\Reward\Providers\ModuleServiceProvider::class,
         Gametech\Sms\Providers\ModuleServiceProvider::class,
         Gametech\Lotto\Providers\ModuleServiceProvider::class,
+        Gametech\FrontendApi\Providers\ModuleServiceProvider::class,
 
     ],
     'register_route_models' => true

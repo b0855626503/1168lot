@@ -25,7 +25,7 @@ class SectionController extends Controller
 
     public function redirectToDefault(): RedirectResponse
     {
-        return redirect()->route('admin.lotto.groups.index');
+        return redirect()->route('admin.lotto.draws.index');
     }
 
     public function index(): View
@@ -36,6 +36,8 @@ class SectionController extends Controller
             'title' => $config['title'] ?? 'Lotto',
             'description' => $config['description'] ?? '',
             'section' => $config['section'] ?? 'overview',
+            'filters' => $config['filters'] ?? [],
+            'columns' => $config['columns'] ?? [],
             'links' => $this->lottoMenuLinks(),
             'routeName' => Route::currentRouteName(),
         ]);

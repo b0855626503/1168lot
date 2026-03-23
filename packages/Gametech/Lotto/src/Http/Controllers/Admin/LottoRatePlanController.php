@@ -3,11 +3,10 @@
 namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Gametech\Admin\Http\Controllers\AppBaseController;
-use Gametech\Lotto\DataTables\LottoRatePlanDataTable;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LottoMarketBetSetting;
 use Gametech\Lotto\Models\LotteryGroup;
-use Gametech\Lotto\Models\LottoRatePlan;
-use Gametech\Lotto\Models\LottoRatePlanItem;
+use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,135 +21,142 @@ class LottoRatePlanController extends AppBaseController
         $this->_config = (array) request('_config', []);
     }
 
-    public function index(LottoRatePlanDataTable $dataTable)
+    public function index()
     {
-        $groups = LotteryGroup::query()->orderBy('sort')->orderByDesc('id')->get();
-        $betTypes = collect(BetType::all())->map(function (string $type) {
-            return [
+        $betTypes = collect(BetType::all())
+            ->map(fn (string $type) => [
                 'key' => $type,
                 'label' => BetType::label($type),
-            ];
-        })->values();
+            ])
+            ->values()
+            ->toArray();
 
-        return $dataTable->render($this->_config['view'], [
-            'groups' => $groups,
+        $groups = LotteryGroup::query()
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get();
+
+        $markets = LotteryMarket::query()
+            ->whereIn('group_id', $groups->pluck('id')->all())
+            ->orderBy('id')
+            ->get()
+            ->groupBy('group_id');
+
+        $settings = LottoMarketBetSetting::query()
+            ->whereIn('market_id', $markets->flatten(1)->pluck('id')->all())
+            ->get()
+            ->groupBy('market_id');
+
+        $groupTabs = $groups->map(function ($group) use ($markets, $settings, $betTypes): array {
+            $groupMarkets = $markets->get($group->id, collect())->map(function ($market) use ($settings, $betTypes): array {
+                $settingMap = $settings->get($market->id, collect())->keyBy('bet_type');
+
+                $betSettingRows = collect($betTypes)->mapWithKeys(function (array $type) use ($settingMap): array {
+                    $setting = $settingMap->get($type['key']);
+
+                    return [
+                        $type['key'] => [
+                            'payout' => $setting ? (float) $setting->payout : null,
+                            'discount_percent' => $setting ? (float) ($setting->discount_percent ?? 0) : null,
+                        ],
+                    ];
+                })->all();
+
+                return [
+                    'id' => (int) $market->id,
+                    'name' => (string) $market->name,
+                    'code' => (string) $market->code,
+                    'settings' => $betSettingRows,
+                ];
+            })->values()->all();
+
+            return [
+                'id' => (int) $group->id,
+                'name' => (string) $group->name,
+                'markets' => $groupMarkets,
+            ];
+        })->values()->all();
+
+        return view($this->_config['view'], [
+            'groupTabs' => $groupTabs,
             'betTypes' => $betTypes,
         ]);
     }
 
-    public function loadData(Request $request): JsonResponse
+    public function loadMarket(Request $request): JsonResponse
     {
-        $id = (int) $request->input('id');
+        $validated = validator($request->all(), [
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+        ])->validate();
 
-        $data = LottoRatePlan::query()
-            ->with('items')
-            ->find($id);
-
-        if (! $data) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        $market = LotteryMarket::query()->find((int) $validated['market_id']);
+        if (! $market) {
+            return $this->sendError('ไม่พบข้อมูลตลาดหวย', 404);
         }
 
-        return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
-    }
+        $settingMap = LottoMarketBetSetting::query()
+            ->where('market_id', (int) $market->id)
+            ->get()
+            ->keyBy('bet_type');
 
-    public function create(Request $request): JsonResponse
-    {
-        $payload = $this->validatePayload((array) $request->input('data', []));
+        $payload = [
+            'market_id' => (int) $market->id,
+            'market_name' => (string) $market->name,
+            'bet_settings' => collect(BetType::all())->mapWithKeys(function (string $betType) use ($settingMap): array {
+                $setting = $settingMap->get($betType);
 
-        DB::transaction(function () use ($payload) {
-            $plan = LottoRatePlan::query()->create([
-                'group_id' => (int) $payload['group_id'],
-                'name' => $payload['name'],
-                'description' => $payload['description'] ?? null,
-                'is_enabled' => (bool) ($payload['is_enabled'] ?? false),
-            ]);
-
-            $this->syncItems($plan->id, (array) $payload['items']);
-        });
-
-        return $this->sendSuccess('สร้างอัตราจ่ายเรียบร้อยแล้ว');
-    }
-
-    public function update(Request $request): JsonResponse
-    {
-        $id = (int) $request->input('id');
-        $payload = $this->validatePayload((array) $request->input('data', []), $id);
-
-        $plan = LottoRatePlan::query()->find($id);
-
-        if (! $plan) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
-        }
-
-        DB::transaction(function () use ($plan, $payload) {
-            $plan->update([
-                'group_id' => (int) $payload['group_id'],
-                'name' => $payload['name'],
-                'description' => $payload['description'] ?? null,
-                'is_enabled' => (bool) ($payload['is_enabled'] ?? false),
-            ]);
-
-            $this->syncItems($plan->id, (array) $payload['items']);
-        });
-
-        return $this->sendSuccess('อัปเดตอัตราจ่ายเรียบร้อยแล้ว');
-    }
-
-    public function edit(Request $request): JsonResponse
-    {
-        $id = (int) $request->input('id');
-        $status = (bool) $request->input('status');
-        $method = (string) $request->input('method', '');
-
-        if ($method !== 'is_enabled') {
-            return $this->sendError('method ไม่ถูกต้อง', 422);
-        }
-
-        $plan = LottoRatePlan::query()->find($id);
-
-        if (! $plan) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
-        }
-
-        $plan->update(['is_enabled' => $status]);
-
-        return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
-    }
-
-    protected function validatePayload(array $data): array
-    {
-        $rules = [
-            'group_id' => ['required', 'integer', 'exists:lotto_groups,id'],
-            'name' => ['required', 'string', 'max:191'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'is_enabled' => ['nullable'],
-            'items' => ['required', 'array'],
+                return [
+                    $betType => [
+                        'payout' => $setting ? (float) $setting->payout : 0.00,
+                        'discount_percent' => $setting ? (float) ($setting->discount_percent ?? 0) : 0.00,
+                    ],
+                ];
+            })->all(),
         ];
 
-        foreach (BetType::all() as $type) {
-            $rules['items.' . $type . '.payout'] = ['nullable', 'numeric', 'min:0'];
-            $rules['items.' . $type . '.discount_percent'] = ['nullable', 'numeric', 'min:0', 'max:100'];
-        }
-
-        return validator($data, $rules)->validate();
+        return $this->sendResponse($payload, 'ดำเนินการเสร็จสิ้น');
     }
 
-    protected function syncItems(int $ratePlanId, array $items): void
+    public function updateMarket(Request $request): JsonResponse
     {
-        foreach (BetType::all() as $type) {
-            $item = (array) ($items[$type] ?? []);
+        $payload = validator($request->all(), [
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+            'settings' => ['required', 'array'],
+        ])->validate();
 
-            LottoRatePlanItem::query()->updateOrCreate(
-                [
-                    'rate_plan_id' => $ratePlanId,
-                    'bet_type' => $type,
-                ],
-                [
-                    'payout' => (float) ($item['payout'] ?? 0),
-                    'discount_percent' => (float) ($item['discount_percent'] ?? 0),
-                ]
-            );
+        $marketId = (int) $payload['market_id'];
+        $settings = (array) $payload['settings'];
+
+        $rules = [];
+        foreach (BetType::all() as $betType) {
+            $rules["settings.{$betType}.payout"] = ['required', 'numeric', 'min:0'];
+            $rules["settings.{$betType}.discount_percent"] = ['nullable', 'numeric', 'min:0', 'max:100'];
         }
+
+        validator(['settings' => $settings], $rules, [], [
+            'settings.*.payout' => 'อัตราจ่าย',
+            'settings.*.discount_percent' => 'ส่วนลด(%)',
+        ])->validate();
+
+        DB::transaction(function () use ($marketId, $settings): void {
+            foreach (BetType::all() as $betType) {
+                $input = (array) ($settings[$betType] ?? []);
+
+                $setting = LottoMarketBetSetting::query()->firstOrNew([
+                    'market_id' => $marketId,
+                    'bet_type' => $betType,
+                ]);
+
+                if (! $setting->exists) {
+                    $setting->is_enabled = true;
+                }
+
+                $setting->payout = (float) ($input['payout'] ?? 0);
+                $setting->discount_percent = (float) ($input['discount_percent'] ?? 0);
+                $setting->save();
+            }
+        });
+
+        return $this->sendSuccess('อัปเดตอัตราจ่ายและส่วนลดเรียบร้อยแล้ว');
     }
 }
-

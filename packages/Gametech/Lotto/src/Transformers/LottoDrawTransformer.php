@@ -13,9 +13,16 @@ class LottoDrawTransformer extends TransformerAbstract
         $resultText = '-';
 
         if (is_array($model->result_number) && ! empty($model->result_number)) {
+            $firstPrize = $model->result_number['first_prize'] ?? '-';
+            $last2Digits = $model->result_number['last_2_digits'] ?? ($model->result_number['bottom_2'] ?? '-');
             $top3 = $model->result_number['top_3'] ?? '-';
+            $top2 = $model->result_number['top_2'] ?? '-';
             $bottom2 = $model->result_number['bottom_2'] ?? '-';
-            $resultText = '3 บน ' . $top3 . ' / 2 ล่าง ' . $bottom2;
+            $resultText = 'รางวัลที่ 1 ' . $firstPrize
+                . ' / เลขท้าย 2 ตัว ' . $last2Digits
+                . ' / 3 บน ' . $top3
+                . ' / 2 บน ' . $top2
+                . ' / 2 ล่าง ' . $bottom2;
         } elseif (! empty($model->result_number)) {
             $resultText = (string) $model->result_number;
         }
@@ -47,4 +54,3 @@ class LottoDrawTransformer extends TransformerAbstract
         return $badges[$status] ?? '<span class="badge badge-light">' . $status . '</span>';
     }
 }
-

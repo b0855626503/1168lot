@@ -37,14 +37,16 @@
 
                 <page-slide></page-slide>
 
-                {{--                <recent-games api-getlogin-template="{{ route('customer.game.redirect_single', ['type' => '__TYPE__', 'provider' => '__PROVIDER__', 'id' => '__ID__']) }}"></recent-games>--}}
+                                <recent-games api-getlogin-template="{{ route('customer.game.redirect_single', ['type' => '__TYPE__', 'provider' => '__PROVIDER__', 'id' => '__ID__']) }}"></recent-games>
 
-{{--                <gametab ref="gameTabComponent" id="gametab"--}}
-{{--                         api-getgame-template="{{ route('api.games.get', ['type' => '__TYPE__', 'provider' => '__PROVIDER__']) }}"--}}
-{{--                         api-getprovider-template="{{ route('api.providers.get', ['type' => '__TYPE__']) }}"--}}
-{{--                         api-getlogin-template="{{ route('customer.game.redirect_single', ['type' => '__TYPE__', 'provider' => '__PROVIDER__', 'id' => '__ID__']) }}">--}}
+                <gametab ref="gameTabComponent" id="gametab"
+                         api-getgame-template="{{ route('api.games.get', ['type' => '__TYPE__', 'provider' => '__PROVIDER__']) }}"
+                         api-getprovider-template="{{ route('api.providers.get', ['type' => '__TYPE__']) }}"
+                         api-getlogin-template="{{ route('customer.game.redirect_single', ['type' => '__TYPE__', 'provider' => '__PROVIDER__', 'id' => '__ID__']) }}">
 
-{{--                </gametab>--}}
+                </gametab>
+
+
 
             </div>
         </div>

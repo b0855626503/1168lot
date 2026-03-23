@@ -16,6 +16,56 @@ use InvalidArgumentException;
  */
 class DrawService
 {
+    /**
+     * Auto-sync draw statuses by schedule:
+     * - draft + open_at <= now => open
+     * - open + close_at <= now => closed
+     *
+     * @return array{opened:int,closed:int}
+     */
+    public function syncScheduledStatuses(): array
+    {
+        $opened = 0;
+        $closed = 0;
+
+        $dueOpenDraws = LottoDraw::query()
+            ->where('status', 'draft')
+            ->whereNotNull('open_at')
+            ->where('open_at', '<=', now())
+            ->orderBy('id')
+            ->get();
+
+        foreach ($dueOpenDraws as $draw) {
+            try {
+                $this->openDraw($draw);
+                $opened++;
+            } catch (\Throwable $exception) {
+                // ignore one-off transition failure and continue with others
+            }
+        }
+
+        $dueCloseDraws = LottoDraw::query()
+            ->where('status', 'open')
+            ->whereNotNull('close_at')
+            ->where('close_at', '<=', now())
+            ->orderBy('id')
+            ->get();
+
+        foreach ($dueCloseDraws as $draw) {
+            try {
+                $this->closeDraw($draw);
+                $closed++;
+            } catch (\Throwable $exception) {
+                // ignore one-off transition failure and continue with others
+            }
+        }
+
+        return [
+            'opened' => $opened,
+            'closed' => $closed,
+        ];
+    }
+
     public function createDraft(array $data): LottoDraw
     {
         return LottoDraw::query()->create($this->buildDraftPayload($data));
@@ -56,6 +106,8 @@ class DrawService
                 'draw_id' => $draw->id,
                 'bet_type' => $setting->bet_type,
             ], [
+                'payout' => $setting->payout,
+                'discount_percent' => $setting->discount_percent ?? 0,
                 'is_enabled' => $setting->is_enabled,
                 'min_bet' => $setting->min_bet,
                 'max_bet' => $setting->max_bet,

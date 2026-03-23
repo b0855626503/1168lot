@@ -1,0 +1,79 @@
+<?php
+
+namespace Gametech\Lotto\Console\Commands;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class MigrateLegacyLottoPermissionsCommand extends Command
+{
+    protected $signature = 'lotto:migrate-legacy-permissions {--dry-run : Preview without writing}';
+
+    protected $description = 'Migrate member_lotto_permissions into member_lotto_market_policies';
+
+    public function handle(): int
+    {
+        $hasLegacyTable = Schema::hasTable('member_lotto_permissions');
+        $hasPolicyTable = Schema::hasTable('member_lotto_market_policies');
+
+        if (! $hasPolicyTable) {
+            $this->error('member_lotto_market_policies table is missing. Run lotto migrations first.');
+            return self::FAILURE;
+        }
+
+        if (! $hasLegacyTable) {
+            $this->info('Legacy table member_lotto_permissions does not exist. Nothing to migrate.');
+            return self::SUCCESS;
+        }
+
+        $dryRun = (bool) $this->option('dry-run');
+        $legacyRows = DB::table('member_lotto_permissions')->orderBy('id')->get();
+
+        $markets = DB::table('lotto_markets')
+            ->select('id', 'group_id')
+            ->where('is_enabled', true)
+            ->get()
+            ->groupBy('group_id');
+
+        $allMarkets = DB::table('lotto_markets')
+            ->select('id', 'group_id')
+            ->where('is_enabled', true)
+            ->get();
+
+        $upsertPayloads = [];
+
+        foreach ($legacyRows as $row) {
+            $targetMarkets = is_null($row->group_id)
+                ? $allMarkets
+                : ($markets->get((int) $row->group_id) ?? collect());
+
+            foreach ($targetMarkets as $market) {
+                $upsertPayloads[] = [
+                    'member_id' => (int) $row->member_id,
+                    'market_id' => (int) $market->id,
+                    'group_id' => (int) $market->group_id,
+                    'is_allowed' => (bool) $row->is_allowed,
+                    'source' => 'legacy_permission_migration',
+                    'policy_version' => 1,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ];
+            }
+        }
+
+        if (! $dryRun && ! empty($upsertPayloads)) {
+            DB::table('member_lotto_market_policies')->upsert(
+                $upsertPayloads,
+                ['member_id', 'market_id'],
+                ['group_id', 'is_allowed', 'source', 'policy_version', 'updated_at']
+            );
+        }
+
+        $this->info('Legacy rows: ' . $legacyRows->count());
+        $this->info('Target policy rows: ' . count($upsertPayloads));
+        $this->info('Dry-run: ' . ($dryRun ? 'yes' : 'no'));
+
+        return self::SUCCESS;
+    }
+}

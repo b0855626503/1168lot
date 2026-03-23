@@ -170,15 +170,15 @@ class SettlementEdgeCasesTest extends TestCase
     }
 
     // ------------------------------------------------------------------ //
-    // isWinningBet — TOP_2 (2 ตัวบน: first two digits of top_3)
+    // isWinningBet — TOP_2 (2 ตัวบน: last two digits of top_3)
     // ------------------------------------------------------------------ //
 
-    public function test_top_2_matches_first_two_digits_of_top_3(): void
+    public function test_top_2_matches_last_two_digits_of_top_3(): void
     {
         $result = ['top_3' => '123', 'bottom_2' => '45'];
 
-        $this->assertTrue($this->service->isWinningBet(BetType::TOP_2, '12', $result));
-        $this->assertFalse($this->service->isWinningBet(BetType::TOP_2, '23', $result));
+        $this->assertTrue($this->service->isWinningBet(BetType::TOP_2, '23', $result));
+        $this->assertFalse($this->service->isWinningBet(BetType::TOP_2, '12', $result));
         $this->assertFalse($this->service->isWinningBet(BetType::TOP_2, '13', $result));
     }
 
@@ -186,8 +186,8 @@ class SettlementEdgeCasesTest extends TestCase
     {
         $result = ['top_3' => '012', 'bottom_2' => '34'];
 
-        $this->assertTrue($this->service->isWinningBet(BetType::TOP_2, '01', $result));
-        $this->assertFalse($this->service->isWinningBet(BetType::TOP_2, '12', $result));
+        $this->assertTrue($this->service->isWinningBet(BetType::TOP_2, '12', $result));
+        $this->assertFalse($this->service->isWinningBet(BetType::TOP_2, '01', $result));
     }
 
     // ------------------------------------------------------------------ //
@@ -260,4 +260,3 @@ class SettlementEdgeCasesTest extends TestCase
         $this->assertFalse($this->service->isWinningBet('TOP_3', '123', $result)); // uppercase wrong
     }
 }
-

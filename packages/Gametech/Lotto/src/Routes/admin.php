@@ -14,6 +14,10 @@ Route::domain(
             Route::get('/', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@redirectToDefault')
                 ->name('admin.lotto.index');
 
+            Route::get('switches', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoSwitchController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.switches.index',
+            ])->name('admin.lotto.switches.index');
+
             Route::get('groups', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.groups.index',
             ])->name('admin.lotto.groups.index');
@@ -29,12 +33,6 @@ Route::domain(
 
             Route::post('groups/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@update')
                 ->name('admin.lotto.groups.update');
-
-            Route::post('groups/apply-rollout', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@applyRollout')
-                ->name('admin.lotto.groups.apply_rollout');
-
-            Route::post('groups/search-members', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryGroupController@searchMembers')
-                ->name('admin.lotto.groups.search_members');
 
             Route::get('markets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.markets.index',
@@ -52,31 +50,29 @@ Route::domain(
             Route::post('markets/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@update')
                 ->name('admin.lotto.markets.update');
 
-            Route::post('markets/apply-rollout', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@applyRollout')
-                ->name('admin.lotto.markets.apply_rollout');
-
-            Route::post('markets/search-members', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@searchMembers')
-                ->name('admin.lotto.markets.search_members');
+            Route::get('default-settings', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.default_settings.index',
+            ])->name('admin.lotto.default_settings.index');
 
             Route::get('rate-plans', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.rate_plans.index',
             ])->name('admin.lotto.rate_plans.index');
 
-            Route::post('rate-plans/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@create')
-                ->name('admin.lotto.rate_plans.create');
+            Route::post('rate-plans/load-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@loadMarket')
+                ->name('admin.lotto.rate_plans.load_market');
 
-            Route::post('rate-plans/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@loadData')
-                ->name('admin.lotto.rate_plans.loaddata');
+            Route::post('rate-plans/update-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@updateMarket')
+                ->name('admin.lotto.rate_plans.update_market');
 
-            Route::post('rate-plans/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@edit')
-                ->name('admin.lotto.rate_plans.edit');
+            Route::get('bet-limits', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.bet_limits.index',
+            ])->name('admin.lotto.bet_limits.index');
 
-            Route::post('rate-plans/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRatePlanController@update')
-                ->name('admin.lotto.rate_plans.update');
+            Route::post('bet-limits/load-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@loadMarket')
+                ->name('admin.lotto.bet_limits.load_market');
 
-            Route::get('default-settings', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.default_settings.index',
-            ])->name('admin.lotto.default_settings.index');
+            Route::post('bet-limits/update-market', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBetLimitController@updateMarket')
+                ->name('admin.lotto.bet_limits.update_market');
 
             Route::post('default-settings/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@create')
                 ->name('admin.lotto.default_settings.create');
@@ -106,22 +102,6 @@ Route::domain(
             Route::post('member-permissions/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@update')
                 ->name('admin.lotto.member_permissions.update');
 
-            Route::get('member-rate-plans', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.member_rate_plans.index',
-            ])->name('admin.lotto.member_rate_plans.index');
-
-            Route::post('member-rate-plans/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@create')
-                ->name('admin.lotto.member_rate_plans.create');
-
-            Route::post('member-rate-plans/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@loadData')
-                ->name('admin.lotto.member_rate_plans.loaddata');
-
-            Route::post('member-rate-plans/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@edit')
-                ->name('admin.lotto.member_rate_plans.edit');
-
-            Route::post('member-rate-plans/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoSettingController@update')
-                ->name('admin.lotto.member_rate_plans.update');
-
             Route::get('draws', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.draws.index',
             ])->name('admin.lotto.draws.index');
@@ -146,6 +126,9 @@ Route::domain(
 
             Route::post('draws/settle', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@settle')
                 ->name('admin.lotto.draws.settle');
+
+            Route::post('draws/generate-auto', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@generateAuto')
+                ->name('admin.lotto.draws.generate_auto');
 
             Route::get('number-blocks', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.number_blocks.index',
@@ -177,6 +160,58 @@ Route::domain(
             Route::get('reports/revenue', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoRevenueReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.revenue_report.index',
             ])->name('admin.lotto.reports.revenue');
+
+            Route::get('settings/bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.section',
+                'title' => 'ประเภทหวย',
+                'description' => 'Mockup: หน้าจัดการประเภทหวย',
+                'section' => 'settings.bet_types',
+            ])->name('admin.lotto.settings.bet_types');
+
+            Route::get('reports/pending-bets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.mockup',
+                'title' => 'รอผลเดิมพัน',
+                'description' => 'Mockup: รายงานรายการเดิมพันที่รอผล',
+                'section' => 'reports.pending_bets',
+                'filters' => ['วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'สถานะโพย'],
+                'columns' => ['เวลา', 'สมาชิก', 'ตลาด', 'ประเภท', 'เลข', 'ยอดแทง', 'สถานะ'],
+            ])->name('admin.lotto.reports.pending_bets');
+
+            Route::get('reports/profit-loss-forecast', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.mockup',
+                'title' => 'ดูของรวม/คาดคะเน ได้-เสีย',
+                'description' => 'Mockup: รายงานภาพรวมและคาดคะเนผลได้-เสีย',
+                'section' => 'reports.profit_loss_forecast',
+                'filters' => ['วันงวด', 'ตลาด', 'ประเภท'],
+                'columns' => ['ตลาด', 'ยอดแทงรวม', 'ความเสี่ยงจ่าย', 'คาดการณ์ได้/เสีย'],
+            ])->name('admin.lotto.reports.profit_loss_forecast');
+
+            Route::get('reports/member-bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.mockup',
+                'title' => 'ดูของสมาชิก/ประเภท',
+                'description' => 'Mockup: รายงานตามสมาชิกและประเภทหวย',
+                'section' => 'reports.member_bet_types',
+                'filters' => ['สมาชิก', 'วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'ประเภท'],
+                'columns' => ['สมาชิก', 'ตลาด', 'ประเภท', 'จำนวนโพย', 'ยอดแทง', 'ได้/เสีย'],
+            ])->name('admin.lotto.reports.member_bet_types');
+
+            Route::get('reports/tickets-cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.mockup',
+                'title' => 'รายการโพย/ยกเลิกโพย',
+                'description' => 'Mockup: รายงานรายการโพยและรายการยกเลิกโพย',
+                'section' => 'reports.tickets_cancel',
+                'filters' => ['วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'สถานะโพย'],
+                'columns' => ['เวลา', 'เลขโพย', 'สมาชิก', 'ยอดแทง', 'สถานะ', 'ผู้ยกเลิก'],
+            ])->name('admin.lotto.reports.tickets_cancel');
+
+            Route::get('reports/blocked-numbers', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.mockup',
+                'title' => 'เลขปิดรับ/เลขอั้น',
+                'description' => 'Mockup: รายงานเลขปิดรับและเลขอั้น',
+                'section' => 'reports.blocked_numbers',
+                'filters' => ['วันงวด', 'ตลาด', 'ประเภท', 'โหมดบล็อก'],
+                'columns' => ['ตลาด', 'ประเภท', 'เลข', 'โหมด', 'เวลาเริ่ม', 'เวลาแก้ไขล่าสุด'],
+            ])->name('admin.lotto.reports.blocked_numbers');
         });
     });
 });

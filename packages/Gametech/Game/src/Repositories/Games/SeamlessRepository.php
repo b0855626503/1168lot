@@ -990,6 +990,6 @@
 		 */
 		public function model(): string
 		{
-			return 'Gametech\Game\Contracts\User';
+			return \Gametech\Game\Models\GameSeamless::class;
 		}
 	}

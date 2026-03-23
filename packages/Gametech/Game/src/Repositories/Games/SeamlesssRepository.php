@@ -866,6 +866,6 @@ class SeamlesssRepository extends Repository
      */
     public function model(): string
     {
-        return 'Gametech\Game\Contracts\User';
+        return \Gametech\Game\Models\User::class;
     }
 }

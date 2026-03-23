@@ -11,6 +11,7 @@ use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -24,12 +25,29 @@ class LottoDrawController extends AppBaseController
         $this->_config = (array) request('_config', []);
     }
 
-    public function index(LottoDrawDataTable $dataTable)
+    public function index(LottoDrawDataTable $dataTable, DrawService $drawService)
     {
+        $drawService->syncScheduledStatuses();
+
         $marketOptions = LotteryMarket::query()
+            ->with('group:id,name,sort')
+            ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn ($market) => ['value' => (int) $market->id, 'text' => $market->name])
+            ->get(['id', 'group_id', 'name'])
+            ->groupBy(function ($market) {
+                return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
+            })
+            ->map(function ($markets, $groupName) {
+                return [
+                    'label' => (string) $groupName,
+                    'options' => $markets->map(function ($market) {
+                        return [
+                            'value' => (int) $market->id,
+                            'text' => (string) $market->name,
+                        ];
+                    })->values()->toArray(),
+                ];
+            })
             ->values()
             ->toArray();
 
@@ -38,8 +56,10 @@ class LottoDrawController extends AppBaseController
         ]);
     }
 
-    public function loadData(Request $request): JsonResponse
+    public function loadData(Request $request, DrawService $drawService): JsonResponse
     {
+        $drawService->syncScheduledStatuses();
+
         $id   = $request->input('id');
         $data = LottoDraw::query()->with('market')->find((int) $id);
 
@@ -195,8 +215,8 @@ class LottoDrawController extends AppBaseController
 
         $validated = validator($data, [
             'result_number' => ['required', 'array'],
-            'result_number.top_3' => ['required', 'digits:3'],
-            'result_number.bottom_2' => ['required', 'digits:2'],
+            'result_number.first_prize' => ['required', 'digits:6'],
+            'result_number.last_2_digits' => ['required', 'digits:2'],
             'result_at' => ['nullable', 'date_format:Y-m-d H:i'],
         ])->validate();
 
@@ -211,6 +231,44 @@ class LottoDrawController extends AppBaseController
         } catch (\Throwable $e) {
             return $this->sendError('ประกาศผลไม่สำเร็จ: ' . $e->getMessage());
         }
+    }
+
+    public function generateAuto(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'days' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'market_id' => ['nullable', 'integer', 'exists:lotto_markets,id'],
+            'dry_run' => ['nullable'],
+        ])->validate();
+
+        $params = [
+            '--days' => (int) ($validated['days'] ?? 3),
+        ];
+
+        if (! empty($validated['date'])) {
+            $params['--date'] = (string) $validated['date'];
+        }
+
+        if (! empty($validated['market_id'])) {
+            $params['--market_id'] = (int) $validated['market_id'];
+        }
+
+        if ((bool) ($validated['dry_run'] ?? false)) {
+            $params['--dry-run'] = true;
+        }
+
+        Artisan::call('lotto:generate-auto-draws', $params);
+
+        $output = trim((string) Artisan::output());
+        $decoded = json_decode($output, true);
+
+        return $this->sendResponse([
+            'command' => 'lotto:generate-auto-draws',
+            'params' => $params,
+            'summary' => is_array($decoded) ? $decoded : null,
+            'raw_output' => is_array($decoded) ? null : $output,
+        ], 'สั่งสร้างงวดอัตโนมัติเรียบร้อยแล้ว');
     }
 
     private function applyStatusTransition(
@@ -233,4 +291,3 @@ class LottoDrawController extends AppBaseController
     }
 
 }
-

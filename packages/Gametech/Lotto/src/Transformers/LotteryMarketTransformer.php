@@ -15,6 +15,10 @@ class LotteryMarketTransformer extends TransformerAbstract
             'name'       => $model->name,
             'group_name' => optional($model->group)->name ?? '-',
             'code'       => '<code>' . $model->code . '</code>',
+            'draw_mode'  => $this->drawModeLabel((string) ($model->draw_mode ?? 'manual')),
+            'result_url' => $model->result_url
+                ? '<a href="' . e($model->result_url) . '" target="_blank">ลิงก์ผล</a>'
+                : '-',
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
                 . ($model->is_enabled ? '<i class="fa fa-check"></i> เปิด' : '<i class="fa fa-times"></i> ปิด')
@@ -24,5 +28,17 @@ class LotteryMarketTransformer extends TransformerAbstract
             ])->render(),
         ];
     }
-}
 
+    private function drawModeLabel(string $mode): string
+    {
+        if ($mode === 'daily') {
+            return 'Auto ทุกวัน';
+        }
+
+        if ($mode === 'weekdays') {
+            return 'Auto จันทร์-ศุกร์';
+        }
+
+        return 'Manual';
+    }
+}

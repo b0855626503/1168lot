@@ -1,4 +1,4 @@
-<b-modal ref="addedit" id="addedit" centered size="sm" title="กลุ่มหวย" :no-stacking="true"
+<b-modal ref="addedit" id="addedit" centered size="md" title="กลุ่มหวย" :no-stacking="true"
          :no-close-on-backdrop="true"
          :hide-footer="true">
     <b-form @submit.prevent="addEditSubmit" v-if="show">
@@ -13,81 +13,125 @@
                 required
             ></b-form-input>
         </b-form-group>
-        <b-form-group label="Code:" label-for="code" description="ตัวอักษรภาษาอังกฤษ ตัวเลข หรือ underscore">
-            <b-form-input
-                id="code"
-                v-model="formaddedit.code"
-                type="text"
-                size="sm"
-                placeholder="เช่น thailand, stock"
-                autocomplete="off"
-                required
-            ></b-form-input>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่ออังกฤษ:" label-for="name_en">
+                    <b-form-input id="name_en" v-model="formaddedit.name_en" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่อเขมร:" label-for="name_kh">
+                    <b-form-input id="name_kh" v-model="formaddedit.name_kh" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่อลาว:" label-for="name_laos">
+                    <b-form-input id="name_laos" v-model="formaddedit.name_laos" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="Code:" label-for="code" description="ตัวอักษรภาษาอังกฤษ ตัวเลข หรือ underscore">
+                    <b-form-input
+                        id="code"
+                        v-model="formaddedit.code"
+                        type="text"
+                        size="sm"
+                        placeholder="เช่น thailand, stock"
+                        autocomplete="off"
+                        required
+                    ></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-form-group label="Description รายภาษา">
+            <ul class="nav nav-tabs mb-2">
+                <li class="nav-item" v-for="langItem in option.languages" :key="'desc-tab-' + langItem.value">
+                    <a href="javascript:void(0)"
+                       class="nav-link py-1 px-2"
+                       :class="{ active: activeDescriptionLang === langItem.value }"
+                       @click.prevent="selectDescriptionLanguage(langItem.value)">
+                        @{{ langItem.text }}
+                        <span class="badge ml-1" :class="hasDescriptionLanguage(langItem.value) ? 'badge-success' : 'badge-secondary'">
+                            @{{ hasDescriptionLanguage(langItem.value) ? 'มี' : 'ยังไม่มี' }}
+                        </span>
+                    </a>
+                </li>
+            </ul>
+            <small class="text-muted d-block mt-1">เก็บเป็น JSON เช่น {"th":"...","la":"..."}</small>
         </b-form-group>
-        <b-form-group label="Sort:" label-for="sort">
-            <b-form-input
-                id="sort"
-                v-model="formaddedit.sort"
-                type="number"
-                min="0"
-                size="sm"
-            ></b-form-input>
+        <b-form-group v-if="activeDescriptionLang" label="คำอธิบายสั้นๆ">
+            <div class="border rounded p-3 text-center">
+                <div class="mb-2">
+                    <strong>@{{ languageName(activeDescriptionLang) }} (@{{ activeDescriptionLang }})</strong>
+                </div>
+                <b-form-textarea
+                    v-model="activeDescriptionValue"
+                    rows="2"
+                    max-rows="3"
+                    size="sm"
+                    placeholder="คำอธิบายสั้นๆ"
+                    class="text-left"
+                ></b-form-textarea>
+                <div class="mt-2">
+                    <b-button v-if="!hasDescriptionLanguage(activeDescriptionLang)"
+                              type="button"
+                              variant="outline-primary"
+                              size="sm"
+                              @click="addDescriptionLanguage(activeDescriptionLang)">
+                        เพิ่มภาษานี้
+                    </b-button>
+                    <b-button v-else
+                              type="button"
+                              variant="outline-danger"
+                              size="sm"
+                              @click="removeDescriptionLanguage(activeDescriptionLang)">
+                        ลบภาษานี้
+                    </b-button>
+                </div>
+            </div>
         </b-form-group>
-        <b-form-group>
-            <b-form-checkbox v-model="formaddedit.is_enabled" :value="1" :unchecked-value="0">
-                เปิดใช้งาน
-            </b-form-checkbox>
-        </b-form-group>
-        <b-form-group label="นโยบายตลาดใหม่:" label-for="rollout_mode">
-            <b-form-select
-                id="rollout_mode"
-                v-model="formaddedit.rollout_mode"
-                :options="option.rolloutModes"
-                size="sm"
-                required
-            ></b-form-select>
-        </b-form-group>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="Logo URL:" label-for="logo">
+                    <b-form-input id="logo" v-model="formaddedit.logo" type="text" size="sm" autocomplete="off" placeholder="/storage/... หรือ URL"></b-form-input>
+                    <b-form-file class="mt-2" size="sm" v-model="formaddedit.logo_file" accept="image/jpeg,image/png,image/gif,image/webp" placeholder="อัปโหลด Logo"></b-form-file>
+                    <a v-if="formaddedit.logo" :href="formaddedit.logo" target="_blank" class="d-inline-block mt-1">ดูรูปปัจจุบัน</a>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="Icon URL:" label-for="icon">
+                    <b-form-input id="icon" v-model="formaddedit.icon" type="text" size="sm" autocomplete="off" placeholder="/storage/... หรือ URL"></b-form-input>
+                    <b-form-file class="mt-2" size="sm" v-model="formaddedit.icon_file" accept="image/jpeg,image/png,image/gif,image/webp" placeholder="อัปโหลด Icon"></b-form-file>
+                    <a v-if="formaddedit.icon" :href="formaddedit.icon" target="_blank" class="d-inline-block mt-1">ดูรูปปัจจุบัน</a>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="Sort:" label-for="sort">
+                    <b-form-input
+                        id="sort"
+                        v-model="formaddedit.sort"
+                        type="number"
+                        min="0"
+                        size="sm"
+                    ></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6" class="d-flex align-items-end">
+                <b-form-group class="mb-2">
+                    <b-form-checkbox v-model="formaddedit.is_enabled" :value="1" :unchecked-value="0">
+                        เปิดใช้งาน
+                    </b-form-checkbox>
+                </b-form-group>
+            </b-col>
+        </b-row>
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
             </div>
-            <b-form-group v-if="formmethod === 'edit'" class="text-right mb-0">
-                <b-button type="button" variant="outline-warning" size="sm" @click="applyRolloutAll">ใช้กับสมาชิกเดิมทั้งหมด</b-button>
-                <b-button type="button" variant="outline-secondary" size="sm" @click="applyRolloutSelected">ใช้กับสมาชิกที่ระบุ</b-button>
-            </b-form-group>
-        </div>
-    </b-form>
-</b-modal>
-
-<b-modal ref="rolloutSelector" id="group-rollout-selector" centered size="md" title="เลือกสมาชิกสำหรับ Rollout" :hide-footer="true">
-    <b-form @submit.prevent="submitSelectedRollout">
-        <b-form-group label="ค้นหาสมาชิก" label-for="rollout-keyword">
-            <div class="d-flex">
-                <b-form-input
-                    id="rollout-keyword"
-                    v-model.trim="rolloutSearchKeyword"
-                    size="sm"
-                    placeholder="ค้นหาจาก code / user_name / ชื่อ / นามสกุล"
-                ></b-form-input>
-                <b-button type="button" variant="outline-primary" size="sm" class="ml-2" @click="searchRolloutMembers">ค้นหา</b-button>
-            </div>
-        </b-form-group>
-
-        <b-form-group label="สมาชิกที่ค้นพบ">
-            <small class="text-muted">@{{ rolloutMemberOptions.length === 0 ? 'ยังไม่มีข้อมูล กรุณากดค้นหา' : '' }}</small>
-            <b-form-checkbox-group
-                v-model="rolloutSelectedMemberIds"
-                :options="rolloutMemberOptions"
-                value-field="value"
-                text-field="text"
-                stacked
-                size="sm"
-            ></b-form-checkbox-group>
-        </b-form-group>
-
-        <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted">เลือกแล้ว @{{ rolloutSelectedMemberIds.length }} รายการ</span>
-            <b-button type="submit" variant="primary" size="sm">ยืนยัน Rollout</b-button>
         </div>
     </b-form>
 </b-modal>
@@ -102,29 +146,131 @@
                     formmethod: 'add',
                     formaddedit: {
                         name: '',
+                        description_translations: {},
+                        name_en: '',
+                        name_kh: '',
+                        name_laos: '',
+                        logo: '',
+                        icon: '',
+                        logo_file: null,
+                        icon_file: null,
                         code: '',
                         sort: 0,
                         is_enabled: 1,
-                        rollout_mode: 'new_only',
                     },
                     option: {
-                        rolloutModes: [
-                            { value: 'new_only', text: 'ใช้กับสมาชิกใหม่เท่านั้น' },
-                            { value: 'all', text: 'สมาชิกใหม่ + สมาชิกเดิมทั้งหมด' },
-                            { value: 'selected', text: 'สมาชิกใหม่ + ค่อยเลือกสมาชิกเดิมภายหลัง' },
-                        ],
+                        languages: @json($languageOptions ?? []),
                     },
-                    rolloutSearchKeyword: '',
-                    rolloutMemberOptions: [],
-                    rolloutSelectedMemberIds: [],
-                    rolloutTargetIds: [],
+                    activeDescriptionLang: '',
                 };
+            },
+            computed: {
+                activeDescriptionValue: {
+                    get() {
+                        if (!this.activeDescriptionLang) {
+                            return '';
+                        }
+
+                        return this.formaddedit.description_translations[this.activeDescriptionLang] || '';
+                    },
+                    set(value) {
+                        if (!this.activeDescriptionLang) {
+                            return;
+                        }
+
+                        this.$set(this.formaddedit.description_translations, this.activeDescriptionLang, value || '');
+                    },
+                },
             },
             created() {
                 this.audio = document.getElementById('alertsound');
                 this.autoCnt(false);
+                this.activeDescriptionLang = this.option.languages.length > 0 ? this.option.languages[0].value : '';
             },
             methods: {
+                selectDescriptionLanguage(lang) {
+                    this.activeDescriptionLang = lang;
+                },
+                languageName(lang) {
+                    const found = (this.option.languages || []).find((item) => item.value === lang);
+                    return found ? found.text.replace(' (' + lang + ')', '') : lang;
+                },
+                hasDescriptionLanguage(lang) {
+                    return Object.prototype.hasOwnProperty.call(this.formaddedit.description_translations || {}, lang);
+                },
+                addDescriptionLanguage(lang) {
+                    if (!lang) {
+                        return;
+                    }
+
+                    if (!this.hasDescriptionLanguage(lang)) {
+                        this.$set(this.formaddedit.description_translations, lang, '');
+                    }
+                },
+                removeDescriptionLanguage(lang) {
+                    if (!lang) {
+                        return;
+                    }
+
+                    this.$delete(this.formaddedit.description_translations, lang);
+                },
+                parseDescriptionPayload(raw) {
+                    if (!raw || typeof raw !== 'string') {
+                        return {};
+                    }
+
+                    try {
+                        const decoded = JSON.parse(raw);
+                        if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
+                            return {};
+                        }
+
+                        return Object.keys(decoded).reduce((carry, lang) => {
+                            const value = decoded[lang];
+                            if (typeof value !== 'string') {
+                                return carry;
+                            }
+
+                            const text = value.trim();
+                            if (text === '') {
+                                return carry;
+                            }
+
+                            carry[lang] = text;
+                            return carry;
+                        }, {});
+                    } catch (e) {
+                        const fallbackLang = (this.option.languages && this.option.languages.length > 0)
+                            ? this.option.languages[0].value
+                            : 'th';
+                        const fallbackText = raw.trim();
+                        if (fallbackText === '') {
+                            return {};
+                        }
+
+                        return {
+                            [fallbackLang]: fallbackText,
+                        };
+                    }
+                },
+                serializeDescriptionPayload() {
+                    const cleaned = Object.keys(this.formaddedit.description_translations || {}).reduce((carry, lang) => {
+                        const value = this.formaddedit.description_translations[lang];
+                        if (typeof value !== 'string') {
+                            return carry;
+                        }
+
+                        const text = value.trim();
+                        if (text === '') {
+                            return carry;
+                        }
+
+                        carry[lang] = text;
+                        return carry;
+                    }, {});
+
+                    return Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : '';
+                },
                 editdata(id, status, method) {
                     this.$bvModal.msgBoxConfirm('ต้องการเปลี่ยนสถานะหรือไม่?', {
                         title: 'ยืนยัน', size: 'sm', buttonSize: 'sm',
@@ -140,7 +286,8 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { name: '', code: '', sort: 0, is_enabled: 1, rollout_mode: 'new_only' };
+                    this.formaddedit = { name: '', description_translations: {}, name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', sort: 0, is_enabled: 1 };
+                    this.activeDescriptionLang = this.option.languages.length > 0 ? this.option.languages[0].value : '';
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -152,7 +299,8 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { name: '', code: '', sort: 0, is_enabled: 1, rollout_mode: 'new_only' };
+                    this.formaddedit = { name: '', description_translations: {}, name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', sort: 0, is_enabled: 1 };
+                    this.activeDescriptionLang = this.option.languages.length > 0 ? this.option.languages[0].value : '';
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -160,30 +308,60 @@
                         this.$refs.addedit.show();
                     });
                 },
-                async searchRolloutMembers() {
-                    const response = await axios.post("{{ route('admin.lotto.groups.search_members') }}", {
-                        keyword: this.rolloutSearchKeyword,
-                        limit: 30,
-                    });
-
-                    this.rolloutMemberOptions = response?.data?.data || [];
-                },
                 async loadData() {
                     const response = await axios.post("{{ route('admin.lotto.groups.loaddata') }}", { id: this.code });
                     const d = response.data.data;
                     this.formaddedit = {
                         name:       d.name,
+                        description_translations: this.parseDescriptionPayload(d.description || ''),
+                        name_en:    d.name_en || '',
+                        name_kh:    d.name_kh || '',
+                        name_laos:  d.name_laos || '',
+                        logo:       d.logo || '',
+                        icon:       d.icon || '',
+                        logo_file:  null,
+                        icon_file:  null,
                         code:       d.code,
                         sort:       d.sort,
                         is_enabled: d.is_enabled ? 1 : 0,
-                        rollout_mode: d.rollout_mode || 'new_only',
                     };
+
+                    const existingDescriptionLangs = Object.keys(this.formaddedit.description_translations || {});
+                    this.activeDescriptionLang = existingDescriptionLangs.length > 0
+                        ? existingDescriptionLangs[0]
+                        : (this.option.languages.length > 0 ? this.option.languages[0].value : '');
                 },
                 addEditSubmit() {
                     const url = this.formmethod === 'add'
                         ? "{{ route('admin.lotto.groups.create') }}"
                         : "{{ route('admin.lotto.groups.update') }}";
-                    this.$http.post(url, { id: this.code, data: this.formaddedit })
+                    const payload = {
+                        ...this.formaddedit,
+                        description: this.serializeDescriptionPayload(),
+                    };
+
+                    const formData = new FormData();
+                    if (this.code) {
+                        formData.append('id', this.code);
+                    }
+
+                    Object.keys(payload)
+                        .filter((key) => !['logo_file', 'icon_file', 'description_translations'].includes(key))
+                        .forEach((key) => {
+                            formData.append(`data[${key}]`, payload[key] ?? '');
+                        });
+
+                    if (this.formaddedit.logo_file) {
+                        formData.append('logo_file', this.formaddedit.logo_file);
+                    }
+
+                    if (this.formaddedit.icon_file) {
+                        formData.append('icon_file', this.formaddedit.icon_file);
+                    }
+
+                    axios.post(url, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                    })
                         .then(response => {
                             this.$bvModal.msgBoxOk(response.data.message, {
                                 title: 'ผลการดำเนินการ',
@@ -201,144 +379,10 @@
                             console.error('addEditSubmit error');
                         });
                 },
-                async applyRolloutAll() {
-                    if (!this.code) {
-                        return;
-                    }
-
-                    const confirmed = await this.$bvModal.msgBoxConfirm('ยืนยันใช้ค่าปัจจุบันกับสมาชิกเดิมทั้งหมด?', {
-                        title: 'ยืนยันการ rollout',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'warning',
-                        okTitle: 'ยืนยัน',
-                        cancelTitle: 'ยกเลิก',
-                        centered: true,
-                    });
-
-                    if (!confirmed) {
-                        return;
-                    }
-
-                    this.rolloutTargetIds = [];
-                    await this.runRolloutForTargets('all', []);
-                },
-                async applyRolloutSelected() {
-                    if (!this.code) {
-                        return;
-                    }
-
-                    this.rolloutTargetIds = [];
-                    await this.openRolloutSelector();
-                },
-                async batchRolloutFromTable(scope) {
-                    const ids = (window.getSelectedGroupIds ? window.getSelectedGroupIds() : []);
-                    if (ids.length === 0) {
-                        this.$bvModal.msgBoxOk('กรุณาเลือกอย่างน้อย 1 แถว', {
-                            title: 'ยังไม่ได้เลือกข้อมูล',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'danger',
-                            centered: true,
-                        });
-                        return;
-                    }
-
-                    this.rolloutTargetIds = ids;
-
-                    if (scope === 'all') {
-                        const confirmed = await this.$bvModal.msgBoxConfirm('ยืนยันใช้ค่าปัจจุบันกับสมาชิกเดิมทั้งหมดในแถวที่เลือก?', {
-                            title: 'ยืนยันการ rollout',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'warning',
-                            okTitle: 'ยืนยัน',
-                            cancelTitle: 'ยกเลิก',
-                            centered: true,
-                        });
-
-                        if (!confirmed) {
-                            return;
-                        }
-
-                        await this.runRolloutForTargets('all', []);
-
-                        return;
-                    }
-
-                    await this.openRolloutSelector();
-                },
-                async openRolloutSelector() {
-                    this.rolloutSearchKeyword = '';
-                    this.rolloutMemberOptions = [];
-                    this.rolloutSelectedMemberIds = [];
-                    await this.searchRolloutMembers();
-                    this.$refs.rolloutSelector.show();
-                },
-                resolveRolloutTargetIds() {
-                    const source = this.rolloutTargetIds.length > 0
-                        ? this.rolloutTargetIds
-                        : [this.code];
-
-                    return Array.from(new Set(source
-                        .map((id) => parseInt(id, 10))
-                        .filter((id) => Number.isInteger(id) && id > 0)));
-                },
-                async runRolloutForTargets(scope, memberIds) {
-                    const targetIds = this.resolveRolloutTargetIds();
-                    if (targetIds.length === 0) {
-                        return;
-                    }
-
-                    const requests = targetIds.map((id) => this.$http.post("{{ route('admin.lotto.groups.apply_rollout') }}", {
-                        id,
-                        scope,
-                        member_ids: memberIds,
-                    }));
-
-                    const results = await Promise.allSettled(requests);
-                    const successItems = results.filter((result) => result.status === 'fulfilled');
-                    const success = successItems.length;
-                    const failed = results.length - success;
-                    const affected = successItems.reduce((carry, result) => {
-                        return carry + ((result.value?.data?.data?.affected_members ?? 0) | 0);
-                    }, 0);
-
-                    this.$bvModal.msgBoxOk(`สำเร็จ ${success} รายการ / ไม่สำเร็จ ${failed} รายการ / สมาชิกที่ได้รับผลรวม ${affected} รายการ`, {
-                        title: 'ผลการ rollout',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: failed > 0 ? 'warning' : 'success',
-                        centered: true,
-                    });
-
-                    this.rolloutTargetIds = [];
-                },
-                async submitSelectedRollout() {
-                    const targetIds = this.resolveRolloutTargetIds();
-                    if (targetIds.length === 0) {
-                        return;
-                    }
-
-                    if (this.rolloutSelectedMemberIds.length === 0) {
-                        this.$bvModal.msgBoxOk('กรุณาเลือกสมาชิกอย่างน้อย 1 รายการ', {
-                            title: 'ข้อมูลไม่ครบ',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'danger',
-                            centered: true,
-                        });
-                        return;
-                    }
-
-                    await this.runRolloutForTargets('selected', this.rolloutSelectedMemberIds);
-                    this.$refs.rolloutSelector.hide();
-                },
             },
         });
 
         window.addModal = function () { window.app.addModal(); };
         window.editModal = function (id) { window.app.editModal(id); };
-        window.applyGroupBatchRollout = function (scope) { window.app.batchRolloutFromTable(scope); };
     </script>
 @endpush

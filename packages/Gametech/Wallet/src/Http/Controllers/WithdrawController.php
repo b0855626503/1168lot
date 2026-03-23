@@ -429,7 +429,8 @@ class WithdrawController extends AppBaseController
         //        Cache::put('transfer_'.$id, 'lock', now()->addSeconds(10));
 
         if ($config->seamless == 'Y') {
-            $withdraw_today = $this->memberRepository->sumWithdrawSeamless($id, $today)->withdraw_seamless_amount_sum;
+//            $withdraw_today = $this->memberRepository->sumWithdrawSeamless($id, $today)->withdraw_seamless_amount_sum;
+            $withdraw_today = $this->memberRepository->sumWithdraw($id, $today)->withdraw_amount_sum;
         } else {
             $withdraw_today = $this->memberRepository->sumWithdraw($id, $today)->withdraw_amount_sum;
         }
@@ -475,7 +476,7 @@ class WithdrawController extends AppBaseController
 
             if ($config->seamless == 'Y') {
 
-                $chk = $this->withdrawSeamlessRepository->findOneWhere(['member_code' => $id, 'status' => 0, 'enable' => 'Y']);
+                $chk = $this->withdrawRepository->findOneWhere(['member_code' => $id, 'status' => 0, 'enable' => 'Y']);
                 if ($chk) {
                     //                    session()->flash('error', Lang::get('app.withdraw.dup2'));
                     //                    return redirect()->back();
@@ -501,7 +502,7 @@ class WithdrawController extends AppBaseController
                     //                    }
                 }
 
-                $response = $this->withdrawSeamlessRepository->withdrawSeamless($id, $amount);
+                $response = $this->withdrawRepository->withdrawSeamless($id, $amount);
                 if ($response['success'] === true) {
                     //                    session()->flash('success', $response['msg']);
                     return $this->sendSuccess($response['msg']);

@@ -9,6 +9,7 @@ use Gametech\Member\Models\MemberProxy;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use MongoDB\BSON\UTCDateTime;
 
 class NewCommonFlowController extends AppBaseController
@@ -126,6 +127,20 @@ class NewCommonFlowController extends AppBaseController
         return GameLogProxy::create($data);
     }
 
+    protected function safeDecrementBalance($amount, bool $allowNegative = false)
+    {
+        return DB::transaction(function () use ($amount, $allowNegative) {
+            $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+            if (! $allowNegative && $member->balance < $amount) {
+                return false;
+            }
+            $member->decrement($this->balances, $amount);
+            $this->member->refresh();
+
+            return true;
+        });
+    }
+
     public function placeBets(Request $request)
     {
         $session = $request->all();
@@ -212,14 +227,10 @@ class NewCommonFlowController extends AppBaseController
             $skipUpdate = $txn['skipBalanceUpdate'] ?? false;
 
             if (! $skipUpdate) {
-                $newBalance = $this->member->balance - $betAmount;
-
-                if ($newBalance < 0) {
+                if (! $this->safeDecrementBalance($betAmount)) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
-
-                $this->member->decrement($this->balances, $betAmount);
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -317,12 +328,10 @@ class NewCommonFlowController extends AppBaseController
                         break;
                     }
 
-                    $newBalance = $this->member->balance - $txn['betAmount'];
-                    if ($newBalance < 0) {
+                    if (! $this->safeDecrementBalance($txn['betAmount'])) {
                         $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                         break;
                     }
-                    $this->member->decrement($this->balances, $txn['betAmount']);
                 }
 
                 $this->createGameLog([
@@ -526,7 +535,7 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($txn['betAmount'] > 0) {
-                $this->member->decrement($this->balances, $txn['betAmount']);
+                $this->safeDecrementBalance($txn['betAmount'], true);
                 $method = 'betsub';
                 $amount = $txn['betAmount'];
             } else {
@@ -544,11 +553,7 @@ class NewCommonFlowController extends AppBaseController
                     return $this->responseData($session['id'], $session['username'], $session['productId'], 20002, $this->member->balance);
                 }
 
-                if ($this->member->balance - $txn['payoutAmount'] < 0) {
-                    return $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-                }
-
-                $this->member->decrement($this->balances, $txn['payoutAmount']);
+                $this->safeDecrementBalance($txn['payoutAmount'], true);
                 $method = 'unsettlesub';
                 $amount = $txn['payoutAmount'];
             }
@@ -643,14 +648,24 @@ class NewCommonFlowController extends AppBaseController
                 break;
             }
 
-            $testBalance = ($this->member->balance + $log->amount) - $txn['betAmount'];
-            if ($testBalance < 0) {
+            $isAdjusted = DB::transaction(function () use ($log, $txn) {
+                $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+                $balanceAfterRestore = $member->{$this->balances} + $log->amount;
+                if ($balanceAfterRestore < $txn['betAmount']) {
+                    return false;
+                }
+
+                $member->{$this->balances} = $balanceAfterRestore - $txn['betAmount'];
+                $member->save();
+                $this->member->refresh();
+
+                return true;
+            });
+
+            if (! $isAdjusted) {
                 $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                 break;
             }
-
-            $this->member->increment($this->balances, $log->amount);
-            $this->member->decrement($this->balances, $txn['betAmount']);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -776,7 +791,7 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($txn['betAmount'] > $betAmount) {
-                $this->member->decrement($this->balances, $betAmount);
+                $this->safeDecrementBalance($betAmount, true);
             }
 
             $this->member->increment($this->balances, $txn['betAmount']);
@@ -908,7 +923,7 @@ class NewCommonFlowController extends AppBaseController
 
             $rollbackAmount = $log->method === 'SETTLED' ? $txn['payoutAmount'] : $txn['betAmount'];
 
-            $this->member->decrement($this->balances, $rollbackAmount);
+            $this->safeDecrementBalance($rollbackAmount, true);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -1120,16 +1135,25 @@ class NewCommonFlowController extends AppBaseController
                 break;
             }
 
-            $this->member->increment($this->balances, $txn['betAmount']);
-
             $payout = $txn['payoutAmount'];
+            $isVoided = DB::transaction(function () use ($txn, $payout) {
+                $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+                $balanceAfterCredit = $member->{$this->balances} + $txn['betAmount'];
+                if ($balanceAfterCredit < $payout) {
+                    return false;
+                }
 
-            if ($this->member->balance < $payout) {
+                $member->{$this->balances} = $balanceAfterCredit - $payout;
+                $member->save();
+                $this->member->refresh();
+
+                return true;
+            });
+
+            if (! $isVoided) {
                 $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                 break;
             }
-
-            $this->member->decrement($this->balances, $payout);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -1222,14 +1246,10 @@ class NewCommonFlowController extends AppBaseController
             $skipUpdate = $txn['skipBalanceUpdate'] ?? false;
 
             if (! $skipUpdate) {
-                $newBalance = $this->member->balance - $amount;
-
-                if ($newBalance < 0) {
+                if (! $this->safeDecrementBalance($amount)) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
-
-                $this->member->decrement($this->balances, $amount);
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -1429,12 +1449,10 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($item['status'] === 'DEBIT') {
-                $balance = $this->member->balance - $item['amount'];
-                if ($balance < 0) {
+                if (! $this->safeDecrementBalance($item['amount'])) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
-                $this->member->decrement($this->balances, $item['amount']);
             } else {
                 $this->member->increment($this->balances, $item['amount']);
             }

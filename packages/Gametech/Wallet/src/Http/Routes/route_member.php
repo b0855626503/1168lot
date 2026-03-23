@@ -6,8 +6,8 @@ Route::post('getbonus', 'Gametech\Wallet\Http\Controllers\CouponController@getBo
 Route::get('bonuslist', 'Gametech\Wallet\Http\Controllers\CouponController@bonusList')->name('customer.coupon.bonuslist');
 
 
-Route::get('/games/{type}/{provider}', 'Gametech\Wallet\Http\Controllers\GameController@getGames')->name('api.games.get');
-Route::get('/list/provider/{type}', 'Gametech\Wallet\Http\Controllers\GameController@getProviders')->name('api.providers.get');
+//Route::get('/games/{type}/{provider}', 'Gametech\Wallet\Http\Controllers\GameController@getGames')->name('api.games.get');
+//Route::get('/list/provider/{type}', 'Gametech\Wallet\Http\Controllers\GameController@getProviders')->name('api.providers.get');
 
 
 

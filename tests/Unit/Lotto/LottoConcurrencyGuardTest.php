@@ -64,6 +64,20 @@ class LottoConcurrencyGuardTest extends TestCase
         $this->assertStringContainsString('max_per_number', $content);
     }
 
+    public function test_bet_service_uses_global_config_resolver_without_member_override_models(): void
+    {
+        $content = file_get_contents($this->servicePath . '/BetService.php');
+
+        $this->assertStringContainsString('LottoConfigResolver', $content);
+        $this->assertStringContainsString('resolveDrawSnapshot', $content);
+        $this->assertStringContainsString('MemberLottoMarketPolicy', $content);
+
+        $this->assertStringNotContainsString('MemberLottoSetting', $content);
+        $this->assertStringNotContainsString('MemberLottoPermission', $content);
+        $this->assertStringNotContainsString('LottoRatePlan', $content);
+        $this->assertStringNotContainsString('LottoRatePlanItem', $content);
+    }
+
     // ------------------------------------------------------------------ //
     // ExposureService
     // ------------------------------------------------------------------ //
@@ -178,6 +192,6 @@ class LottoConcurrencyGuardTest extends TestCase
         $content = file_get_contents($this->servicePath . '/DrawService.php');
 
         $this->assertStringContainsString('snapshotBetSettings', $content);
+        $this->assertStringContainsString("'payout' => \$setting->payout", $content);
     }
 }
-

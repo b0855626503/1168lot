@@ -12,6 +12,7 @@ use Illuminate\Container\Container as App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class MemberCreditLogRepository extends Repository
@@ -230,55 +231,91 @@ class MemberCreditLogRepository extends Repository
         $refer_code = $data['refer_code'];
         $refer_table = $data['refer_table'];
 
-        $member = $this->memberRepository->find($member_code);
+        try {
+            DB::transaction(function () use (
+                $member_code,
+                $amount,
+                $method,
+                $kind,
+                $remark,
+                $emp_code,
+                $emp_name,
+                $refer_code,
+                $refer_table,
+                $ip
+            ) {
+                $member = $this->memberRepository->query()
+                    ->where('code', $member_code)
+                    ->lockForUpdate()
+                    ->first();
 
-        if ($method == 'D') {
+                if (! $member) {
+                    throw new \RuntimeException('Member not found');
+                }
 
-            $credit_balance = ($member->balance + $amount);
-            //            $member->balance += $amount;
+                $walletBefore = (float) $member->balance;
+                if ($method == 'D') {
+                    $credit_balance = $walletBefore + (float) $amount;
+                } elseif ($method == 'W') {
+                    $credit_balance = $walletBefore - (float) $amount;
+                    if ($credit_balance < 0) {
+                        throw new \RuntimeException('Insufficient balance');
+                    }
+                } else {
+                    throw new \RuntimeException('Invalid method');
+                }
 
-        } elseif ($method == 'W') {
-            $credit_balance = ($member->balance - $amount);
-            //            $member->balance -= $amount;
+                $this->create([
+                    'refer_code' => $refer_code,
+                    'refer_table' => $refer_table,
+                    'credit_type' => $method,
+                    'amount' => $amount,
+                    'bonus' => 0,
+                    'total' => $amount,
+                    'balance_before' => $walletBefore,
+                    'balance_after' => $credit_balance,
+                    'credit' => 0,
+                    'credit_bonus' => 0,
+                    'credit_total' => 0,
+                    'credit_before' => 0,
+                    'credit_after' => 0,
+                    'member_code' => $member_code,
+                    'user_name' => $member->user_name,
+                    'kind' => $kind,
+                    'auto' => 'N',
+                    'remark' => $remark,
+                    'emp_code' => $emp_code,
+                    'ip' => $ip,
+                    'user_create' => $emp_name,
+                    'user_update' => $emp_name,
+                ]);
 
-            if ($credit_balance < 0) {
-                return false;
-            }
+                $member->balance = $credit_balance;
+                $member->save();
+
+                $this->recordWalletTransaction(
+                    (int) $member_code,
+                    $method == 'D' ? 'CREDIT' : 'DEBIT',
+                    (float) $amount,
+                    $walletBefore,
+                    (float) $credit_balance,
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
+                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    'Member wallet adjust via setWallet',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWallet',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
+            });
+        } catch (Throwable $e) {
+            report($e);
+            return false;
         }
-
-        $this->create([
-            'refer_code' => $refer_code,
-            'refer_table' => $refer_table,
-            'credit_type' => $method,
-            'amount' => $amount,
-            'bonus' => 0,
-            'total' => $amount,
-            'balance_before' => $member->balance,
-            'balance_after' => $credit_balance,
-            'credit' => 0,
-            'credit_bonus' => 0,
-            'credit_total' => 0,
-            'credit_before' => 0,
-            'credit_after' => 0,
-            'member_code' => $member_code,
-            'user_name' => $member->user_name,
-            'kind' => $kind,
-            'auto' => 'N',
-            'remark' => $remark,
-            'emp_code' => $emp_code,
-            'ip' => $ip,
-            'user_create' => $emp_name,
-            'user_update' => $emp_name,
-        ]);
-
-        if ($method == 'D') {
-            $member->balance += $amount;
-
-        } else {
-            $member->balance -= $amount;
-        }
-        //        $member->balance = $credit_balance;
-        $member->save();
 
         //        DB::beginTransaction();
         //        try {
@@ -408,113 +445,150 @@ class MemberCreditLogRepository extends Repository
         $pro_name = $data['pro_name'];
         $pro_code = $data['pro_code'];
 
-        $member = $this->memberRepository->find($member_code);
-
-        $game = core()->getGame();
-        $game_user = $this->gameUserRepository->findOneWhere(['member_code' => $member->code, 'enable' => 'Y']);
-        $game_code = $game->code;
-        $user_name = $game_user->user_name;
-        $user_code = $game_user->code;
-        $game_name = $game->name;
-        $game_balance = $game_user->balance;
-        $member_code = $member->code;
-
-        if ($method == 'D') {
-            $credit_balance = ($member->balance + $amount);
-        } elseif ($method == 'W') {
-            $credit_balance = ($member->balance - $amount);
-            if ($credit_balance < 0) {
-                return false;
-            }
-        }
-
-        //        DB::beginTransaction();
         try {
+            DB::transaction(function () use (
+                $member_code,
+                $amount,
+                $amount_balance,
+                $withdraw_limit,
+                $withdraw_limit_amount,
+                $method,
+                $kind,
+                $remark,
+                $emp_code,
+                $emp_name,
+                $refer_code,
+                $refer_table,
+                $pro_name,
+                $pro_code,
+                $ip
+            ) {
+                $member = $this->memberRepository->query()
+                    ->where('code', $member_code)
+                    ->lockForUpdate()
+                    ->first();
+                if (! $member) {
+                    throw new \RuntimeException('Member not found');
+                }
 
-            $this->create([
-                'refer_code' => $refer_code,
-                'refer_table' => $refer_table,
-                'credit_type' => $method,
-                'pro_code' => $pro_code,
-                'pro_name' => $pro_name,
-                'amount_balance' => $amount_balance,
-                'withdraw_limit' => $withdraw_limit,
-                'withdraw_limit_amount' => $withdraw_limit_amount,
-                'amount' => $amount,
-                'bonus' => 0,
-                'total' => $amount,
-                'balance_before' => $member->balance,
-                'balance_after' => $credit_balance,
-                'credit' => 0,
-                'credit_bonus' => 0,
-                'credit_total' => 0,
-                'credit_before' => 0,
-                'credit_after' => 0,
-                'member_code' => $member_code,
-                'user_name' => $member->user_name,
-                'kind' => $kind,
-                'auto' => 'N',
-                'remark' => $remark,
-                'emp_code' => $emp_code,
-                'ip' => $ip,
-                'user_create' => $emp_name,
-                'user_update' => $emp_name,
-            ]);
+                $walletBefore = (float) $member->balance;
 
-            app('Gametech\Payment\Repositories\BillRepository')->create([
-                'complete' => 'Y',
-                'enable' => 'Y',
-                'refer_code' => $refer_code,
-                'refer_table' => $refer_table,
-                'ref_id' => '',
-                'credit_before' => $member->balance,
-                'credit_after' => $credit_balance,
-                'member_code' => $member_code,
-                'game_code' => $game_code,
-                'gameuser_code' => $user_code,
-                'pro_code' => $pro_code,
-                'pro_name' => $pro_name,
-                'remark' => $remark,
-                'method' => $kind,
-                'transfer_type' => 1,
-                'amount' => $amount,
-                'balance_before' => $member->balance,
-                'balance_after' => $credit_balance,
-                'credit' => $amount,
-                'credit_bonus' => 0,
-                'credit_balance' => $amount,
-                'amount_request' => 0,
-                'amount_limit' => 0,
-                'ip' => $ip,
-                'user_create' => $member['name'],
-                'user_update' => $member['name'],
-            ]);
+                $game = core()->getGame();
+                $game_user = $this->gameUserRepository->query()
+                    ->where('member_code', $member->code)
+                    ->where('enable', 'Y')
+                    ->lockForUpdate()
+                    ->first();
+                if (! $game_user) {
+                    throw new \RuntimeException('Game user not found');
+                }
 
-            if ($method == 'D') {
-                $member->balance += $amount;
-                //                $game_user->balance += $amount;
-                $game_user->pro_code = $pro_code;
-                $game_user->amount_balance += $amount_balance;
-                $game_user->withdraw_limit = $withdraw_limit;
-                $game_user->withdraw_limit_amount += $withdraw_limit_amount;
-            } else {
-                $member->balance -= $amount;
-                //                $game_user->balance -= $amount;
-            }
+                $credit_balance = ($method == 'D')
+                    ? ($walletBefore + (float) $amount)
+                    : ($walletBefore - (float) $amount);
 
-            $member->save();
-            $game_user->save();
+                if ($method == 'W' && $credit_balance < 0) {
+                    throw new \RuntimeException('Insufficient balance');
+                }
 
-            //            DB::commit();
+                $this->create([
+                    'refer_code' => $refer_code,
+                    'refer_table' => $refer_table,
+                    'credit_type' => $method,
+                    'pro_code' => $pro_code,
+                    'pro_name' => $pro_name,
+                    'amount_balance' => $amount_balance,
+                    'withdraw_limit' => $withdraw_limit,
+                    'withdraw_limit_amount' => $withdraw_limit_amount,
+                    'amount' => $amount,
+                    'bonus' => 0,
+                    'total' => $amount,
+                    'balance_before' => $walletBefore,
+                    'balance_after' => $credit_balance,
+                    'credit' => 0,
+                    'credit_bonus' => 0,
+                    'credit_total' => 0,
+                    'credit_before' => 0,
+                    'credit_after' => 0,
+                    'member_code' => $member->code,
+                    'user_name' => $member->user_name,
+                    'kind' => $kind,
+                    'auto' => 'N',
+                    'remark' => $remark,
+                    'emp_code' => $emp_code,
+                    'ip' => $ip,
+                    'user_create' => $emp_name,
+                    'user_update' => $emp_name,
+                ]);
 
+                app('Gametech\Payment\Repositories\BillRepository')->create([
+                    'complete' => 'Y',
+                    'enable' => 'Y',
+                    'refer_code' => $refer_code,
+                    'refer_table' => $refer_table,
+                    'ref_id' => '',
+                    'credit_before' => $walletBefore,
+                    'credit_after' => $credit_balance,
+                    'member_code' => $member->code,
+                    'game_code' => $game->code,
+                    'gameuser_code' => $game_user->code,
+                    'pro_code' => $pro_code,
+                    'pro_name' => $pro_name,
+                    'remark' => $remark,
+                    'method' => $kind,
+                    'transfer_type' => 1,
+                    'amount' => $amount,
+                    'balance_before' => $walletBefore,
+                    'balance_after' => $credit_balance,
+                    'credit' => $amount,
+                    'credit_bonus' => 0,
+                    'credit_balance' => $amount,
+                    'amount_request' => 0,
+                    'amount_limit' => 0,
+                    'ip' => $ip,
+                    'user_create' => $member['name'],
+                    'user_update' => $member['name'],
+                ]);
+
+                $member->balance = $credit_balance;
+                if ($method == 'D') {
+                    $game_user->pro_code = $pro_code;
+                    $game_user->amount_balance += $amount_balance;
+                    $game_user->withdraw_limit = $withdraw_limit;
+                    $game_user->withdraw_limit_amount += $withdraw_limit_amount;
+                }
+
+                $member->save();
+                $game_user->save();
+
+                $this->recordWalletTransaction(
+                    (int) $member->code,
+                    $method == 'D' ? 'CREDIT' : 'DEBIT',
+                    (float) $amount,
+                    $walletBefore,
+                    (float) $credit_balance,
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
+                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    'Member wallet adjust via setWalletSeamlessWithdraw',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWalletSeamlessWithdraw',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
+            });
         } catch (Throwable $e) {
-            //            DB::rollBack();
             report($e);
-
             return false;
         }
 
-        Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        $notifyMember = $this->memberRepository->find($member_code);
+        if ($notifyMember) {
+            Notification::send($notifyMember, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        }
 
         return true;
     }
@@ -666,7 +740,10 @@ class MemberCreditLogRepository extends Repository
             return false;
         }
 
-        Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        $notifyMember = $this->memberRepository->find($member_code);
+        if ($notifyMember) {
+            Notification::send($notifyMember, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        }
 
         return true;
     }
@@ -1103,7 +1180,10 @@ class MemberCreditLogRepository extends Repository
 
         }
 
-        Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        $notifyMember = $this->memberRepository->find($member_code);
+        if ($notifyMember) {
+            Notification::send($notifyMember, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        }
 
         return true;
     }
@@ -1123,36 +1203,54 @@ class MemberCreditLogRepository extends Repository
         $refer_code = $data['refer_code'];
         $refer_table = $data['refer_table'];
 
-        $member = $this->memberRepository->find($member_code);
+        try {
+            DB::transaction(function () use (
+                $member_code,
+                $amount,
+                $method,
+                $kind,
+                $remark,
+                $emp_code,
+                $emp_name,
+                $refer_code,
+                $refer_table,
+                $ip
+            ) {
+                $member = $this->memberRepository->query()
+                    ->where('code', $member_code)
+                    ->lockForUpdate()
+                    ->first();
+                if (! $member) {
+                    throw new \RuntimeException('Member not found');
+                }
 
-        $game = core()->getGame();
-        $game_user = $this->gameUserRepository->findOneWhere(['member_code' => $member->code, 'game_code' => $game->code, 'enable' => 'Y']);
-        $game_code = $game->code;
-        $user_name = $game_user->user_name;
-        $user_code = $game_user->code;
-        $game_name = $game->name;
-        $game_balance = $game_user->balance;
-        $member_code = $member->code;
+                $game = core()->getGame();
+                $game_user = $this->gameUserRepository->query()
+                    ->where('member_code', $member->code)
+                    ->where('game_code', $game->code)
+                    ->where('enable', 'Y')
+                    ->lockForUpdate()
+                    ->first();
+                if (! $game_user) {
+                    throw new \RuntimeException('Game user not found');
+                }
 
-        if ($method == 'D') {
-            $credit_balance = ($member->balance + $amount);
-        } elseif ($method == 'W') {
-            $credit_balance = ($member->balance - $amount);
-            if ($credit_balance < 0) {
-                return false;
-            }
-        }
-
-        $money_text = 'จำนวนเงิน '.$amount;
-
-        if ($method == 'D') {
-
-            $response['before'] = $member->balance;
-            $response['after'] = ($member->balance + $amount);
-            $response['ref_id'] = '';
-
-            //            DB::beginTransaction();
-            try {
+                $response['before'] = (float) $member->balance;
+                if ($method == 'D') {
+                    $response['after'] = $response['before'] + (float) $amount;
+                    $direction = 'CREDIT';
+                    $transferType = 1;
+                } elseif ($method == 'W') {
+                    $response['after'] = $response['before'] - (float) $amount;
+                    if ($response['after'] < 0) {
+                        throw new \RuntimeException('Insufficient balance');
+                    }
+                    $direction = 'DEBIT';
+                    $transferType = 2;
+                } else {
+                    throw new \RuntimeException('Invalid method');
+                }
+                $response['ref_id'] = '';
 
                 $this->create([
                     'refer_code' => $refer_code,
@@ -1168,9 +1266,9 @@ class MemberCreditLogRepository extends Repository
                     'credit_total' => 0,
                     'credit_before' => $response['before'],
                     'credit_after' => $response['after'],
-                    'member_code' => $member_code,
-                    'gameuser_code' => $user_code,
-                    'game_code' => $game_code,
+                    'member_code' => $member->code,
+                    'gameuser_code' => $game_user->code,
+                    'game_code' => $game->code,
                     'user_name' => $member->user_name,
                     'kind' => $kind,
                     'auto' => 'N',
@@ -1195,14 +1293,14 @@ class MemberCreditLogRepository extends Repository
                     'ref_id' => $response['ref_id'],
                     'credit_before' => $response['before'],
                     'credit_after' => $response['after'],
-                    'member_code' => $member_code,
-                    'game_code' => $game_code,
-                    'gameuser_code' => $user_code,
+                    'member_code' => $member->code,
+                    'game_code' => $game->code,
+                    'gameuser_code' => $game_user->code,
                     'pro_code' => 0,
                     'pro_name' => '',
                     'remark' => $remark,
                     'method' => $kind,
-                    'transfer_type' => 1,
+                    'transfer_type' => $transferType,
                     'amount' => $amount,
                     'balance_before' => $response['before'],
                     'balance_after' => $response['after'],
@@ -1216,106 +1314,34 @@ class MemberCreditLogRepository extends Repository
                     'user_update' => $member['name'],
                 ]);
 
-                //                DB::commit();
-
-            } catch (Throwable $e) {
-                //                DB::rollBack();
-                //                $response = $this->gameUserRepository->UserWithdraw($game_code, $user_name, $amount);
-                //                if ($response['success'] === true) {
-                //                    ActivityLoggerUser::activity('ถอนเงินออกเกม '.$game_name, $money_text.' ระบบทำการถอนเงินออกจากเกมแล้ว');
-                //
-                //                } else {
-                //                    ActivityLoggerUser::activity('ถอนเงินออกเกม '.$game_name, $money_text.' ระบบไม่สามารถถอนเงินออกจากเกมได้');
-                //                }
-                report($e);
-
-                return false;
-            }
-
-        } else {
-
-            $response['before'] = $member->balance;
-            $response['after'] = ($member->balance - $amount);
-            $response['ref_id'] = '';
-
-            //            DB::beginTransaction();
-            try {
-
-                $this->create([
-                    'refer_code' => $refer_code,
-                    'refer_table' => $refer_table,
-                    'credit_type' => $method,
-                    'amount' => $amount,
-                    'bonus' => 0,
-                    'total' => $amount,
-                    'balance_before' => 0,
-                    'balance_after' => 0,
-                    'credit' => 0,
-                    'credit_bonus' => 0,
-                    'credit_total' => 0,
-                    'credit_before' => $response['before'],
-                    'credit_after' => $response['after'],
-                    'member_code' => $member_code,
-                    'gameuser_code' => $user_code,
-                    'game_code' => $game_code,
-                    'user_name' => $member->user_name,
-                    'kind' => $kind,
-                    'auto' => 'N',
-                    'remark' => 'RefID : '.$response['ref_id'].' '.$remark,
-                    'emp_code' => $emp_code,
-                    'ip' => $ip,
-                    'user_create' => $emp_name,
-                    'user_update' => $emp_name,
-                ]);
-
-                $member->balance = $response['after'];
-                $member->save();
-
-                $game_user->balance = $response['after'];
-                $game_user->save();
-
-                app('Gametech\Payment\Repositories\BillRepository')->create([
-                    'complete' => 'Y',
-                    'enable' => 'Y',
-                    'refer_code' => $refer_code,
-                    'refer_table' => $refer_table,
-                    'ref_id' => $response['ref_id'],
-                    'credit_before' => $response['before'],
-                    'credit_after' => $response['after'],
-                    'member_code' => $member_code,
-                    'game_code' => $game_code,
-                    'gameuser_code' => $user_code,
-                    'pro_code' => 0,
-                    'pro_name' => '',
-                    'remark' => $remark,
-                    'method' => $kind,
-                    'transfer_type' => 2,
-                    'amount' => $amount,
-                    'balance_before' => $response['before'],
-                    'balance_after' => $response['after'],
-                    'credit' => $amount,
-                    'credit_bonus' => 0,
-                    'credit_balance' => $amount,
-                    'amount_request' => 0,
-                    'amount_limit' => 0,
-                    'ip' => $ip,
-                    'user_create' => $member['name'],
-                    'user_update' => $member['name'],
-                ]);
-
-                //                DB::commit();
-
-            } catch (Throwable $e) {
-                //                DB::rollBack();
-
-                report($e);
-
-                return false;
-            }
-
+                $this->recordWalletTransaction(
+                    (int) $member->code,
+                    $direction,
+                    (float) $amount,
+                    (float) $response['before'],
+                    (float) $response['after'],
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
+                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    'Member wallet adjust via setWalletSeamless',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWalletSeamless',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
+            });
+        } catch (Throwable $e) {
+            report($e);
+            return false;
         }
 
-        Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        $notifyMember = $this->memberRepository->find($member_code);
+        if ($notifyMember) {
+            Notification::send($notifyMember, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        }
 
         return true;
     }
@@ -1689,8 +1715,7 @@ class MemberCreditLogRepository extends Repository
             $member->bonus = 0;
 
         }
-        $member->save();
-        //        dd($game_event);
+        // apply source-balance mutation inside transaction with row lock
 
         $game_code = $game->code;
         $user_name = $game_user->user_name;
@@ -1784,14 +1809,78 @@ class MemberCreditLogRepository extends Repository
             }
         }
 
-        //        dd('here');
-        //        DB::beginTransaction();
         try {
+            DB::transaction(function () use (
+                $member_code,
+                $game,
+                $id,
+                $amount,
+                &$response,
+                $config,
+                $game_code,
+                $pro_name,
+                $kind,
+                $msg,
+                $ip,
+                $amount_total,
+                $withdraw_limit_amount,
+                $withdraw_limit_rate,
+                $turnpro
+            ) {
+                $member = $this->memberRepository->query()
+                    ->where('code', $member_code)
+                    ->lockForUpdate()
+                    ->first();
+                $game_user = $this->gameUserRepository->query()
+                    ->where('member_code', $member_code)
+                    ->where('game_code', $game_code)
+                    ->where('enable', 'Y')
+                    ->lockForUpdate()
+                    ->first();
+                $game_event = $this->gameUserEventRepository->query()
+                    ->where('method', $id)
+                    ->where('member_code', $member_code)
+                    ->where('game_code', $game_code)
+                    ->where('enable', 'Y')
+                    ->lockForUpdate()
+                    ->first();
 
-            $bill = $this->create([
-                'refer_code' => 0,
-                'refer_table' => '',
-                'credit_type' => 'D',
+                if (! $member || ! $game_user || ! $game_event) {
+                    throw new \RuntimeException('Missing member/game records');
+                }
+
+                if ($config->seamless == 'Y') {
+                    $response['before'] = (float) $member->balance;
+                    $response['after'] = (float) $member->balance + (float) $amount;
+                    $response['ref_id'] = '';
+                }
+
+                if ($id == 'BONUS' || $id == 'SPIN') {
+                    if ((float) $member->bonus < (float) $amount) {
+                        throw new \RuntimeException('Insufficient bonus');
+                    }
+                    $member->bonus = (float) $member->bonus - (float) $amount;
+                } elseif ($id == 'FASTSTART') {
+                    if ((float) $member->faststart < (float) $amount) {
+                        throw new \RuntimeException('Insufficient faststart');
+                    }
+                    $member->faststart = (float) $member->faststart - (float) $amount;
+                } elseif ($id == 'CASHBACK') {
+                    if ((float) $member->cashback < (float) $amount) {
+                        throw new \RuntimeException('Insufficient cashback');
+                    }
+                    $member->cashback = (float) $member->cashback - (float) $amount;
+                } elseif ($id == 'IC') {
+                    if ((float) $member->ic < (float) $amount) {
+                        throw new \RuntimeException('Insufficient ic');
+                    }
+                    $member->ic = (float) $member->ic - (float) $amount;
+                }
+
+                $bill = $this->create([
+                    'refer_code' => 0,
+                    'refer_table' => '',
+                    'credit_type' => 'D',
                 'pro_code' => $game_event->pro_code,
                 'pro_name' => $pro_name,
                 'amount' => 0,
@@ -1818,9 +1907,9 @@ class MemberCreditLogRepository extends Repository
                 'withdraw_limit_amount' => $withdraw_limit_amount,
                 'user_create' => $member->name,
                 'user_update' => $member->name,
-            ]);
+                ]);
 
-            app('Gametech\Payment\Repositories\BillRepository')->create([
+                app('Gametech\Payment\Repositories\BillRepository')->create([
                 'complete' => 'Y',
                 'enable' => 'Y',
                 'refer_code' => $bill->code,
@@ -1847,38 +1936,51 @@ class MemberCreditLogRepository extends Repository
                 'ip' => $ip,
                 'user_create' => $member['name'],
                 'user_update' => $member['name'],
-            ]);
+                ]);
 
-            $member->balance = $response['after'];
-            //            $game_user->balance += $member->credit;
-            //            $member->credit -= $member->credit;
+                $member->balance = $response['after'];
+                $member->save();
 
-            $member->save();
+                $game_user->balance = $response['after'];
+                $game_user->pro_code = $game_event->pro_code;
+                $game_user->bill_code = $game_event->bill_code;
+                $game_user->amount = $game_event->amount;
+                $game_user->bonus = $game_event->bonus;
+                $game_user->turnpro = $turnpro;
+                $game_user->amount_balance = $amount_total;
+                $game_user->withdraw_limit = $game_event->withdraw_limit;
+                $game_user->withdraw_limit_rate = $withdraw_limit_rate;
+                $game_user->withdraw_limit_amount = $withdraw_limit_amount;
+                $game_user->save();
 
-            $game_user->balance = $response['after'];
-            $game_user->pro_code = $game_event->pro_code;
-            $game_user->bill_code = $game_event->bill_code;
-            $game_user->amount = $game_event->amount;
-            $game_user->bonus = $game_event->bonus;
-            $game_user->turnpro = $turnpro;
-            $game_user->amount_balance = $amount_total;
-            $game_user->withdraw_limit = $game_event->withdraw_limit;
-            $game_user->withdraw_limit_rate = $withdraw_limit_rate;
-            $game_user->withdraw_limit_amount = $withdraw_limit_amount;
-            $game_user->save();
+                $game_event->bonus = 0;
+                $game_event->turnpro = 0;
+                $game_event->amount_balance = 0;
+                $game_event->withdraw_limit = 0;
+                $game_event->withdraw_limit_rate = 0;
+                $game_event->withdraw_limit_amount = 0;
+                $game_event->save();
 
-            $game_event->bonus = 0;
-            $game_event->turnpro = 0;
-            $game_event->amount_balance = 0;
-            $game_event->withdraw_limit = 0;
-            $game_event->withdraw_limit_rate = 0;
-            $game_event->withdraw_limit_amount = 0;
-            $game_event->save();
-
-            //            DB::commit();
-
+                $this->recordWalletTransaction(
+                (int) $member_code,
+                'CREDIT',
+                (float) $amount,
+                (float) $response['before'],
+                (float) $response['after'],
+                $this->resolveWalletRefTypeForTranKind($kind),
+                isset($bill->code) ? (int) $bill->code : null,
+                'tranBonus:' . (string) $id . ':' . (isset($bill->code) ? (string) $bill->code : '0'),
+                'Transfer bonus to wallet/game via tranBonus',
+                [
+                    'source' => 'MemberCreditLogRepository::tranBonus',
+                    'event' => $id,
+                    'kind' => $kind,
+                ],
+                'system',
+                null
+                );
+            });
         } catch (Throwable $e) {
-            //            DB::rollBack();
             report($e);
 
             return false;
@@ -2022,5 +2124,85 @@ class MemberCreditLogRepository extends Repository
         }
 
         return core()->getConfigData();
+    }
+
+    private function recordWalletTransaction(
+        int $memberId,
+        string $direction,
+        float $amount,
+        float $balanceBefore,
+        float $balanceAfter,
+        string $refType,
+        ?int $refId,
+        string $refCode,
+        string $description,
+        array $meta = [],
+        string $createdByType = 'system',
+        ?int $createdById = null
+    ): void {
+        if ($amount <= 0 || ! Schema::hasTable('wallet_transactions')) {
+            return;
+        }
+
+        $query = DB::table('wallet_transactions')
+            ->where('member_id', $memberId)
+            ->where('direction', $direction)
+            ->where('ref_type', $refType);
+
+        if ($refId !== null) {
+            $query->where('ref_id', $refId);
+        } else {
+            $query->where('ref_code', $refCode);
+        }
+
+        if ($query->exists()) {
+            return;
+        }
+
+        DB::table('wallet_transactions')->insert([
+            'member_id' => $memberId,
+            'scope' => 'MEMBER',
+            'game_user_id' => null,
+            'direction' => $direction,
+            'amount' => number_format($amount, 2, '.', ''),
+            'balance_before' => number_format($balanceBefore, 2, '.', ''),
+            'balance_after' => number_format($balanceAfter, 2, '.', ''),
+            'ref_type' => $refType,
+            'ref_id' => $refId,
+            'ref_code' => $refCode,
+            'group_code' => $refType . '_' . ($refId !== null ? (string) $refId : $refCode),
+            'related_txn_id' => null,
+            'status' => 'SUCCESS',
+            'description' => $description,
+            'meta' => json_encode($meta, JSON_UNESCAPED_UNICODE),
+            'created_by_type' => $createdByType,
+            'created_by_id' => $createdById,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function resolveWalletRefTypeForAdjustKind(string $kind): string
+    {
+        $k = strtoupper(trim($kind));
+        if ($k === 'ROLLBACK') {
+            return 'ROLLBACK';
+        }
+        if ($k === 'SETWALLET') {
+            return 'SETWALLET';
+        }
+
+        return 'ADJUST';
+    }
+
+    private function resolveWalletRefTypeForTranKind(string $kind): string
+    {
+        $k = strtoupper(trim($kind));
+        $allow = ['TRANBONUS', 'TRANIC', 'TRANCB', 'TRANFT'];
+        if (in_array($k, $allow, true)) {
+            return $k;
+        }
+
+        return 'TRAN_BONUS';
     }
 }

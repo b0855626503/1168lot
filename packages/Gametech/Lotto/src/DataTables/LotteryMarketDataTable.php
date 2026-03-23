@@ -58,9 +58,10 @@ class LotteryMarketDataTable extends DataTable
             ['data' => 'name',       'name' => 'name',        'title' => 'ชื่อรายการหวย', 'orderable' => true,  'searchable' => true,  'className' => 'text-left'],
             ['data' => 'group_name', 'name' => 'group_name',  'title' => 'กลุ่มหวย',      'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'code',       'name' => 'code',        'title' => 'Code',          'orderable' => true,  'searchable' => true,  'className' => 'text-center'],
+            ['data' => 'draw_mode',  'name' => 'draw_mode',   'title' => 'โหมดงวด',       'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
+            ['data' => 'result_url', 'name' => 'result_url',  'title' => 'ลิงก์ออกผล',     'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'is_enabled', 'name' => 'is_enabled',  'title' => 'สถานะ',         'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '100px'],
             ['data' => 'action',     'name' => 'action',      'title' => 'จัดการ',        'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '80px'],
         ];
     }
 }
-

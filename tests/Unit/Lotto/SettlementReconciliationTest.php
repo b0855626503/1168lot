@@ -76,7 +76,7 @@ class SettlementReconciliationTest extends TestCase
         $items = [
             ['bet_type' => BetType::TOP_3,    'number' => '123', 'amount' => 100.0, 'payout' => 800.0],
             ['bet_type' => BetType::BOTTOM_2, 'number' => '45',  'amount' => 100.0, 'payout' => 90.0],
-            ['bet_type' => BetType::TOP_2,    'number' => '12',  'amount' => 50.0,  'payout' => 85.0],
+            ['bet_type' => BetType::TOP_2,    'number' => '23',  'amount' => 50.0,  'payout' => 85.0],
         ];
 
         [$totalWin, $winCount] = $this->computeReconciliation($items, $resultNumber);
@@ -138,6 +138,21 @@ class SettlementReconciliationTest extends TestCase
 
         $this->assertSame($expected, $totalWin);
         $this->assertSame(2, $winCount);
+    }
+
+    public function test_reconciliation_run_top_repeated_digit_in_result_counts_once_per_bet_item(): void
+    {
+        // top_3 = '555' has the same digit repeated 3 times, but one RUN_TOP bet item wins only once.
+        $resultNumber = ['top_3' => '555', 'bottom_2' => '12'];
+
+        $items = [
+            ['bet_type' => BetType::RUN_TOP, 'number' => '5', 'amount' => 100.0, 'payout' => 3.0],
+        ];
+
+        [$totalWin, $winCount] = $this->computeReconciliation($items, $resultNumber);
+
+        $this->assertSame(300.0, $totalWin);
+        $this->assertSame(1, $winCount);
     }
 
     public function test_reconciliation_tod3_all_permutations_win(): void
@@ -295,4 +310,3 @@ class SettlementReconciliationTest extends TestCase
         ];
     }
 }
-

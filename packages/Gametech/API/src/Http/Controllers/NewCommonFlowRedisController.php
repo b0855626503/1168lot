@@ -490,11 +490,11 @@
 		
 		// =================== RESPONSE & BALANCE ===================
 		
-		protected function safeDecrementBalance($amount)
+		protected function safeDecrementBalance($amount, bool $allowNegative = false)
 		{
-			return DB::transaction(function () use ($amount) {
+			return DB::transaction(function () use ($amount, $allowNegative) {
 				$member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
-				if ($member->balance < $amount) {
+				if (! $allowNegative && $member->balance < $amount) {
 					return false;
 				}
 				$member->decrement($this->balances, $amount);
@@ -879,7 +879,7 @@
 				}
 				
 				if ($txn['betAmount'] > 0) {
-					$this->member->decrement($this->balances, $txn['betAmount']);
+					$this->safeDecrementBalance($txn['betAmount'], true);
 					$method = 'betsub';
 					$amount = $txn['betAmount'];
 				} else {
@@ -890,11 +890,7 @@
 						return $this->responseData($session['id'], $session['username'], $session['productId'], 20002, $this->member->balance);
 					}
 					
-					if ($this->member->balance - $txn['payoutAmount'] < 0) {
-						return $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-					}
-					
-					$this->member->decrement($this->balances, $txn['payoutAmount']);
+					$this->safeDecrementBalance($txn['payoutAmount'], true);
 					$method = 'unsettlesub';
 					$amount = $txn['payoutAmount'];
 				}
@@ -983,12 +979,6 @@
 				$addon = $this->getAddon($this->member->user_name,$session['productId'],$log);
 				$oldBetAmount = $addon['amount'] ?? 0;
 				$newBetAmount = $txn['betAmount'];
-				
-				$testBalance = ($this->member->balance + $oldBetAmount) - $newBetAmount;
-				if ($testBalance < 0) {
-					$param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-					break;
-				}
 				
 				// Adjust balance atomically
 				DB::transaction(function () use ($oldBetAmount, $newBetAmount) {
@@ -1126,7 +1116,7 @@
 				}
 				
 				if ($txn['betAmount'] > $betAmount) {
-					$this->safeDecrementBalance($betAmount);
+					$this->safeDecrementBalance($betAmount, true);
 //                $this->member->decrement($this->balances, $betAmount);
 				}
 				
@@ -1456,10 +1446,7 @@
 				
 				$payout = $txn['payoutAmount'];
 				
-				if(!$this->safeDecrementBalance($payout)){
-					$param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-					break;
-				}
+				$this->safeDecrementBalance($payout, true);
 				
 				
 				$param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -1540,10 +1527,7 @@
 				
 				if (! $skipUpdate) {
 					
-					if(!$this->safeDecrementBalance($amount)){
-						$param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-						break;
-					}
+					$this->safeDecrementBalance($amount, true);
 					
 				}
 				
@@ -1716,10 +1700,7 @@
 				}
 				
 				if ($item['status'] === 'DEBIT') {
-					if(!$this->safeDecrementBalance($item['amount'])){
-						$param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
-						break;
-					}
+					$this->safeDecrementBalance($item['amount'], true);
 				} else {
 					$this->safeIncreaseBalance($item['amount']);
 				}

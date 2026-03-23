@@ -1,4 +1,4 @@
-<b-modal ref="addedit" id="addedit" centered size="sm" title="รายการหวย" :no-stacking="true"
+<b-modal ref="addedit" id="addedit" centered size="md" title="รายการหวย" :no-stacking="true"
          :no-close-on-backdrop="true"
          :hide-footer="true">
     <b-form @submit.prevent="addEditSubmit" v-if="show">
@@ -22,72 +22,86 @@
                 required
             ></b-form-input>
         </b-form-group>
-        <b-form-group label="Code:" label-for="code" description="ตัวอักษรภาษาอังกฤษ ตัวเลข หรือ underscore">
-            <b-form-input
-                id="code"
-                v-model="formaddedit.code"
-                type="text"
-                size="sm"
-                placeholder="เช่น gsb, kbank"
-                autocomplete="off"
-                required
-            ></b-form-input>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่ออังกฤษ:" label-for="name_en">
+                    <b-form-input id="name_en" v-model="formaddedit.name_en" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่อเขมร:" label-for="name_kh">
+                    <b-form-input id="name_kh" v-model="formaddedit.name_kh" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="ชื่อลาว:" label-for="name_laos">
+                    <b-form-input id="name_laos" v-model="formaddedit.name_laos" type="text" size="sm" autocomplete="off"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="Code:" label-for="code" description="ตัวอักษรภาษาอังกฤษ ตัวเลข หรือ underscore">
+                    <b-form-input
+                        id="code"
+                        v-model="formaddedit.code"
+                        type="text"
+                        size="sm"
+                        placeholder="เช่น gsb, kbank"
+                        autocomplete="off"
+                        required
+                    ></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-form-group label="โหมดงวด:" label-for="draw_mode" description="manual = ทีมงานสร้างงวดเอง, daily = ทุกวัน, weekdays = จันทร์-ศุกร์">
+            <b-form-select id="draw_mode" v-model="formaddedit.draw_mode" :options="option.drawModes" size="sm"></b-form-select>
         </b-form-group>
+        <b-row>
+            <b-col cols="12" md="4">
+                <b-form-group label="เวลาเปิดรับอัตโนมัติ:" label-for="auto_open_time">
+                    <b-form-input id="auto_open_time" v-model="formaddedit.auto_open_time" type="time" size="sm"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="4">
+                <b-form-group label="เวลาปิดรับอัตโนมัติ:" label-for="auto_close_time">
+                    <b-form-input id="auto_close_time" v-model="formaddedit.auto_close_time" type="time" size="sm"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="4">
+                <b-form-group label="เวลาออกผลอัตโนมัติ:" label-for="auto_result_time">
+                    <b-form-input id="auto_result_time" v-model="formaddedit.auto_result_time" type="time" size="sm"></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-form-group label="ลิงก์ออกผล:" label-for="result_url">
+            <b-form-input id="result_url" v-model="formaddedit.result_url" type="url" size="sm" placeholder="https://..."></b-form-input>
+        </b-form-group>
+        <b-row>
+            <b-col cols="12" md="6">
+                <b-form-group label="Logo URL:" label-for="logo">
+                    <b-form-input id="logo" v-model="formaddedit.logo" type="text" size="sm" autocomplete="off" placeholder="/storage/... หรือ URL"></b-form-input>
+                    <b-form-file class="mt-2" size="sm" v-model="formaddedit.logo_file" accept="image/jpeg,image/png,image/gif,image/webp" placeholder="อัปโหลด Logo"></b-form-file>
+                    <a v-if="formaddedit.logo" :href="formaddedit.logo" target="_blank" class="d-inline-block mt-1">ดูรูปปัจจุบัน</a>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="6">
+                <b-form-group label="Icon URL:" label-for="icon">
+                    <b-form-input id="icon" v-model="formaddedit.icon" type="text" size="sm" autocomplete="off" placeholder="/storage/... หรือ URL"></b-form-input>
+                    <b-form-file class="mt-2" size="sm" v-model="formaddedit.icon_file" accept="image/jpeg,image/png,image/gif,image/webp" placeholder="อัปโหลด Icon"></b-form-file>
+                    <a v-if="formaddedit.icon" :href="formaddedit.icon" target="_blank" class="d-inline-block mt-1">ดูรูปปัจจุบัน</a>
+                </b-form-group>
+            </b-col>
+        </b-row>
         <b-form-group>
             <b-form-checkbox v-model="formaddedit.is_enabled" :value="1" :unchecked-value="0">
                 เปิดใช้งาน
             </b-form-checkbox>
         </b-form-group>
-        <b-form-group label="นโยบายตลาดนี้:" label-for="rollout_mode">
-            <b-form-select
-                id="rollout_mode"
-                v-model="formaddedit.rollout_mode"
-                :options="option.rolloutModes"
-                size="sm"
-                required
-            ></b-form-select>
-        </b-form-group>
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
             </div>
-            <b-form-group v-if="formmethod === 'edit'" class="text-right mb-0">
-                <b-button type="button" variant="outline-warning" size="sm" @click="applyRolloutAll">ใช้กับสมาชิกเดิมทั้งหมด</b-button>
-                <b-button type="button" variant="outline-secondary" size="sm" @click="applyRolloutSelected">ใช้กับสมาชิกที่ระบุ</b-button>
-            </b-form-group>
-        </div>
-    </b-form>
-</b-modal>
-
-<b-modal ref="rolloutSelector" id="market-rollout-selector" centered size="md" title="เลือกสมาชิกสำหรับ Rollout" :hide-footer="true">
-    <b-form @submit.prevent="submitSelectedRollout">
-        <b-form-group label="ค้นหาสมาชิก" label-for="market-rollout-keyword">
-            <div class="d-flex">
-                <b-form-input
-                    id="market-rollout-keyword"
-                    v-model.trim="rolloutSearchKeyword"
-                    size="sm"
-                    placeholder="ค้นหาจาก code / user_name / ชื่อ / นามสกุล"
-                ></b-form-input>
-                <b-button type="button" variant="outline-primary" size="sm" class="ml-2" @click="searchRolloutMembers">ค้นหา</b-button>
-            </div>
-        </b-form-group>
-
-        <b-form-group label="สมาชิกที่ค้นพบ">
-            <small class="text-muted">@{{ rolloutMemberOptions.length === 0 ? 'ยังไม่มีข้อมูล กรุณากดค้นหา' : '' }}</small>
-            <b-form-checkbox-group
-                v-model="rolloutSelectedMemberIds"
-                :options="rolloutMemberOptions"
-                value-field="value"
-                text-field="text"
-                stacked
-                size="sm"
-            ></b-form-checkbox-group>
-        </b-form-group>
-
-        <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted">เลือกแล้ว @{{ rolloutSelectedMemberIds.length }} รายการ</span>
-            <b-button type="submit" variant="primary" size="sm">ยืนยัน Rollout</b-button>
         </div>
     </b-form>
 </b-modal>
@@ -103,9 +117,20 @@
                     formaddedit: {
                         group_id:   '',
                         name:       '',
+                        name_en:    '',
+                        name_kh:    '',
+                        name_laos:  '',
+                        logo:       '',
+                        icon:       '',
+                        logo_file:  null,
+                        icon_file:  null,
                         code:       '',
+                        draw_mode: 'manual',
+                        auto_open_time: '',
+                        auto_close_time: '',
+                        auto_result_time: '',
+                        result_url: '',
                         is_enabled: 1,
-                        rollout_mode: 'new_only',
                     },
                     option: {
                         groups: [
@@ -114,16 +139,12 @@
                             { value: {{ $g->id }}, text: '{{ $g->name }} ({{ $g->code }})' },
                             @endforeach
                         ],
-                        rolloutModes: [
-                            { value: 'new_only', text: 'ใช้กับสมาชิกใหม่เท่านั้น' },
-                            { value: 'all', text: 'สมาชิกใหม่ + สมาชิกเดิมทั้งหมด' },
-                            { value: 'selected', text: 'สมาชิกใหม่ + ค่อยเลือกสมาชิกเดิมภายหลัง' },
+                        drawModes: [
+                            { value: 'manual', text: 'Manual (เพิ่มงวดเอง)' },
+                            { value: 'daily', text: 'Auto ทุกวัน' },
+                            { value: 'weekdays', text: 'Auto จันทร์-ศุกร์' },
                         ],
                     },
-                    rolloutSearchKeyword: '',
-                    rolloutMemberOptions: [],
-                    rolloutSelectedMemberIds: [],
-                    rolloutTargetIds: [],
                 };
             },
             created() {
@@ -146,7 +167,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', code: '', is_enabled: 1, rollout_mode: 'new_only' };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -158,7 +179,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', code: '', is_enabled: 1, rollout_mode: 'new_only' };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -166,30 +187,66 @@
                         this.$refs.addedit.show();
                     });
                 },
-                async searchRolloutMembers() {
-                    const response = await axios.post("{{ route('admin.lotto.markets.search_members') }}", {
-                        keyword: this.rolloutSearchKeyword,
-                        limit: 30,
-                    });
-
-                    this.rolloutMemberOptions = response?.data?.data || [];
-                },
                 async loadData() {
                     const response = await axios.post("{{ route('admin.lotto.markets.loaddata') }}", { id: this.code });
                     const d = response.data.data;
                     this.formaddedit = {
                         group_id:   d.group_id,
                         name:       d.name,
+                        name_en:    d.name_en || '',
+                        name_kh:    d.name_kh || '',
+                        name_laos:  d.name_laos || '',
+                        logo:       d.logo || '',
+                        icon:       d.icon || '',
+                        logo_file:  null,
+                        icon_file:  null,
                         code:       d.code,
+                        draw_mode:  d.draw_mode || 'manual',
+                        auto_open_time: d.auto_open_time ? String(d.auto_open_time).substring(0, 5) : '',
+                        auto_close_time: d.auto_close_time ? String(d.auto_close_time).substring(0, 5) : '',
+                        auto_result_time: d.auto_result_time ? String(d.auto_result_time).substring(0, 5) : '',
+                        result_url: d.result_url || '',
                         is_enabled: d.is_enabled ? 1 : 0,
-                        rollout_mode: d.rollout_mode || 'new_only',
                     };
                 },
                 addEditSubmit() {
+                    const validationMessage = this.validateAutoDrawConfig();
+                    if (validationMessage) {
+                        this.$bvModal.msgBoxOk(validationMessage, {
+                            title: 'ข้อมูลไม่ครบ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                        return;
+                    }
+
                     const url = this.formmethod === 'add'
                         ? "{{ route('admin.lotto.markets.create') }}"
                         : "{{ route('admin.lotto.markets.update') }}";
-                    this.$http.post(url, { id: this.code, data: this.formaddedit })
+                    const formData = new FormData();
+                    if (this.code) {
+                        formData.append('id', this.code);
+                    }
+
+                    Object.keys(this.formaddedit)
+                        .filter((key) => !['logo_file', 'icon_file'].includes(key))
+                        .forEach((key) => {
+                            formData.append(`data[${key}]`, this.formaddedit[key] ?? '');
+                        });
+
+                    if (this.formaddedit.logo_file) {
+                        formData.append('logo_file', this.formaddedit.logo_file);
+                    }
+
+                    if (this.formaddedit.icon_file) {
+                        formData.append('icon_file', this.formaddedit.icon_file);
+                    }
+
+                    axios.post(url, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                    })
                         .then(response => {
                             this.$bvModal.msgBoxOk(response.data.message, {
                                 title: 'ผลการดำเนินการ',
@@ -203,144 +260,29 @@
                         })
                         .catch(() => console.error('addEditSubmit error'));
                 },
-                async applyRolloutAll() {
-                    if (!this.code) {
-                        return;
+                validateAutoDrawConfig() {
+                    const mode = this.formaddedit.draw_mode || 'manual';
+                    const open = (this.formaddedit.auto_open_time || '').trim();
+                    const close = (this.formaddedit.auto_close_time || '').trim();
+
+                    if (mode === 'manual') {
+                        return '';
                     }
 
-                    const confirmed = await this.$bvModal.msgBoxConfirm('ยืนยันใช้ค่าตลาดนี้กับสมาชิกเดิมทั้งหมด?', {
-                        title: 'ยืนยันการ rollout',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'warning',
-                        okTitle: 'ยืนยัน',
-                        cancelTitle: 'ยกเลิก',
-                        centered: true,
-                    });
-
-                    if (!confirmed) {
-                        return;
+                    if (!close) {
+                        return 'โหมดงวดอัตโนมัติจำเป็นต้องระบุเวลาปิดรับ';
                     }
 
-                    this.rolloutTargetIds = [];
-                    await this.runRolloutForTargets('all', []);
-                },
-                async applyRolloutSelected() {
-                    if (!this.code) {
-                        return;
+                    if (open && open >= close) {
+                        return 'เวลาเปิดรับต้องน้อยกว่าเวลาปิดรับ';
                     }
 
-                    this.rolloutTargetIds = [];
-                    await this.openRolloutSelector();
-                },
-                async batchRolloutFromTable(scope) {
-                    const ids = (window.getSelectedMarketIds ? window.getSelectedMarketIds() : []);
-                    if (ids.length === 0) {
-                        this.$bvModal.msgBoxOk('กรุณาเลือกอย่างน้อย 1 แถว', {
-                            title: 'ยังไม่ได้เลือกข้อมูล',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'danger',
-                            centered: true,
-                        });
-                        return;
-                    }
-
-                    this.rolloutTargetIds = ids;
-
-                    if (scope === 'all') {
-                        const confirmed = await this.$bvModal.msgBoxConfirm('ยืนยันใช้ค่าตลาดนี้กับสมาชิกเดิมทั้งหมดในแถวที่เลือก?', {
-                            title: 'ยืนยันการ rollout',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'warning',
-                            okTitle: 'ยืนยัน',
-                            cancelTitle: 'ยกเลิก',
-                            centered: true,
-                        });
-
-                        if (!confirmed) {
-                            return;
-                        }
-
-                        await this.runRolloutForTargets('all', []);
-
-                        return;
-                    }
-
-                    await this.openRolloutSelector();
-                },
-                async openRolloutSelector() {
-                    this.rolloutSearchKeyword = '';
-                    this.rolloutMemberOptions = [];
-                    this.rolloutSelectedMemberIds = [];
-                    await this.searchRolloutMembers();
-                    this.$refs.rolloutSelector.show();
-                },
-                resolveRolloutTargetIds() {
-                    const source = this.rolloutTargetIds.length > 0
-                        ? this.rolloutTargetIds
-                        : [this.code];
-
-                    return Array.from(new Set(source
-                        .map((id) => parseInt(id, 10))
-                        .filter((id) => Number.isInteger(id) && id > 0)));
-                },
-                async runRolloutForTargets(scope, memberIds) {
-                    const targetIds = this.resolveRolloutTargetIds();
-                    if (targetIds.length === 0) {
-                        return;
-                    }
-
-                    const requests = targetIds.map((id) => this.$http.post("{{ route('admin.lotto.markets.apply_rollout') }}", {
-                        id,
-                        scope,
-                        member_ids: memberIds,
-                    }));
-
-                    const results = await Promise.allSettled(requests);
-                    const successItems = results.filter((result) => result.status === 'fulfilled');
-                    const success = successItems.length;
-                    const failed = results.length - success;
-                    const affected = successItems.reduce((carry, result) => {
-                        return carry + ((result.value?.data?.data?.affected_members ?? 0) | 0);
-                    }, 0);
-
-                    this.$bvModal.msgBoxOk(`สำเร็จ ${success} รายการ / ไม่สำเร็จ ${failed} รายการ / สมาชิกที่ได้รับผลรวม ${affected} รายการ`, {
-                        title: 'ผลการ rollout',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: failed > 0 ? 'warning' : 'success',
-                        centered: true,
-                    });
-
-                    this.rolloutTargetIds = [];
-                },
-                async submitSelectedRollout() {
-                    const targetIds = this.resolveRolloutTargetIds();
-                    if (targetIds.length === 0) {
-                        return;
-                    }
-
-                    if (this.rolloutSelectedMemberIds.length === 0) {
-                        this.$bvModal.msgBoxOk('กรุณาเลือกสมาชิกอย่างน้อย 1 รายการ', {
-                            title: 'ข้อมูลไม่ครบ',
-                            size: 'sm',
-                            buttonSize: 'sm',
-                            okVariant: 'danger',
-                            centered: true,
-                        });
-                        return;
-                    }
-
-                    await this.runRolloutForTargets('selected', this.rolloutSelectedMemberIds);
-                    this.$refs.rolloutSelector.hide();
+                    return '';
                 },
             },
         });
 
         window.addModal = function () { window.app.addModal(); };
         window.editModal = function (id) { window.app.editModal(id); };
-        window.applyMarketBatchRollout = function (scope) { window.app.batchRolloutFromTable(scope); };
     </script>
 @endpush

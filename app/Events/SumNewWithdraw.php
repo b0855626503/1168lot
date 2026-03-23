@@ -19,7 +19,7 @@ class SumNewWithdraw implements ShouldBroadcast
 
     public $code;
 
-    public function __construct($sum, $type, $code)
+    public function __construct($sum, $type, $code = '')
     {
         $this->sum = $sum;
         $this->type = $type;

@@ -18,6 +18,8 @@ class LottoDrawBetSetting extends Model implements LottoDrawBetSettingContract
     protected $fillable = [
         'draw_id',
         'bet_type',
+        'payout',
+        'discount_percent',
         'is_enabled',
         'min_bet',
         'max_bet',
@@ -25,6 +27,8 @@ class LottoDrawBetSetting extends Model implements LottoDrawBetSettingContract
     ];
 
     protected $casts = [
+        'payout' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
         'is_enabled' => 'boolean',
         'min_bet' => 'decimal:2',
         'max_bet' => 'decimal:2',

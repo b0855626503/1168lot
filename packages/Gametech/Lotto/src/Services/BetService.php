@@ -6,39 +6,38 @@ use Exception;
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
-use Gametech\Lotto\Models\LottoRatePlan;
-use Gametech\Lotto\Models\LottoRatePlanItem;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Models\MemberLottoMarketPolicy;
-use Gametech\Lotto\Models\MemberLottoPermission;
-use Gametech\Lotto\Models\MemberLottoSetting;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * BetService - หัวใจของระบบแทง
  * ต้องใช้ transaction + lock เท่านั้น
  *
  * Validation Flow:
- * 1. เช็ค draw open
- * 2. เช็ค member permission
- * 3. เช็ค bet_type enabled
- * 4. เช็ค block number
- * 5. เช็ค min/max
- * 6. lock exposure
- * 7. เช็ค max_per_number
- * 8. insert ticket + item
- * 9. update exposure
+ * 1. load draw
+ * 2. เช็ค draw open
+ * 3. เช็ค member permission
+ * 4. เช็ค market active
+ * 5. เช็ค bet_type enabled
+ * 6. เช็ค block number
+ * 7. เช็ค min/max
+ * 8. lock exposure
+ * 9. เช็ค max_per_number
+ * 10. insert ticket + item
+ * 11. update exposure
  */
 class BetService
 {
     private const BLOCK_MODE_BLOCK = 'block';
     private const BLOCK_MODE_LIMIT_FUTURE = 'limit_future';
 
-    public function __construct(private ExposureService $exposureService)
-    {
-    }
+    public function __construct(
+        private ExposureService $exposureService,
+        private LottoConfigResolver $configResolver,
+        private WalletTransactionService $walletTransactionService
+    ) {}
 
     /**
      * @param array<int, array{bet_type:string, number:string, amount:numeric}> $items
@@ -47,9 +46,12 @@ class BetService
     public function placeBet(int $memberId, int $drawId, array $items): LottoTicket
     {
         return DB::transaction(function () use ($memberId, $drawId, $items) {
-            $draw = $this->findOpenDraw($drawId);
+            $draw = $this->findDraw($drawId);
+
+            $this->validateDrawIsOpen($draw);
 
             $this->validateMemberPermission($memberId, $draw);
+            $this->validateMarketActive($draw);
 
             $validatedItems = [];
             $totalAmount = 0;
@@ -59,12 +61,11 @@ class BetService
                     $draw,
                     (string) ($item['bet_type'] ?? ''),
                     (string) ($item['number'] ?? ''),
-                    (float) ($item['amount'] ?? 0),
-                    $memberId
+                    (float) ($item['amount'] ?? 0)
                 );
 
                 $validatedItems[] = $validated;
-                $totalAmount += $validated['amount'];
+                $totalAmount += $validated['payable_amount'];
             }
 
             $ticket = LottoTicket::query()->create([
@@ -73,6 +74,24 @@ class BetService
                 'total_amount' => $totalAmount,
                 'status' => 'active',
             ]);
+
+            $groupCode = 'LOTTO_BET_' . $ticket->id . '_' . now()->format('YmdHis');
+            $this->walletTransactionService->debitMemberBalance(
+                memberId: $memberId,
+                amount: (float) $totalAmount,
+                refType: 'LOTTO_BET',
+                refId: (int) $ticket->id,
+                refCode: (string) $ticket->id,
+                groupCode: $groupCode,
+                meta: [
+                    'draw_id' => $drawId,
+                    'ticket_id' => (int) $ticket->id,
+                    'item_count' => count($validatedItems),
+                ],
+                createdByType: 'member',
+                createdById: $memberId,
+                description: 'หักเงินจากการซื้อหวย'
+            );
 
             foreach ($validatedItems as $item) {
                 $this->persistTicketItemAndExposure($ticket, $drawId, $item);
@@ -89,17 +108,13 @@ class BetService
         LottoDraw $draw,
         string $betType,
         string $number,
-        float $amount,
-        int $memberId
+        float $amount
     ): array {
         if (! in_array($betType, BetType::all(), true)) {
             throw new Exception("Invalid bet type: {$betType}");
         }
 
-        $setting = $draw->betSettings
-            ->where('bet_type', $betType)
-            ->where('is_enabled', true)
-            ->first();
+        $setting = $this->configResolver->resolveDrawSnapshot($draw, $betType);
 
         if (! $setting) {
             throw new Exception("Bet type {$betType} not enabled for this draw");
@@ -121,49 +136,28 @@ class BetService
             throw new Exception("Number {$number} is blocked by future-limit rule");
         }
 
+        $discountPercent = $this->normalizeDiscountPercent((float) ($setting->discount_percent ?? 0));
+
         return [
             'bet_type' => $betType,
             'number' => $number,
             'amount' => $amount,
-            'payout' => $this->getPayout($draw, $betType, $memberId),
+            'payout' => (float) $setting->payout,
+            'discount_percent' => $discountPercent,
+            'payable_amount' => $this->calculatePayableAmount(
+                $amount,
+                $discountPercent
+            ),
             'max_per_number' => (float) $setting->max_per_number,
         ];
     }
 
-    /**
-     * Policy-managed members use market snapshots; legacy members keep existing permission behavior.
-     */
     private function validateMemberPermission(int $memberId, LottoDraw $draw): void
     {
-        if ($this->isManagedByMarketPolicy($memberId)) {
-            $hasMarketAccess = MemberLottoMarketPolicy::query()
-                ->where('member_id', $memberId)
-                ->where('market_id', (int) $draw->market_id)
-                ->where('is_allowed', true)
-                ->exists();
-
-            if (! $hasMarketAccess) {
-                throw new Exception('Member does not have permission to bet');
-            }
-
-            return;
-        }
-
-        $hasCustomRules = MemberLottoPermission::query()
+        $hasPermission = MemberLottoMarketPolicy::query()
             ->where('member_id', $memberId)
-            ->exists();
-
-        if (! $hasCustomRules) {
-            return;
-        }
-
-        $hasPermission = MemberLottoPermission::query()
-            ->where('member_id', $memberId)
+            ->where('market_id', (int) $draw->market_id)
             ->where('is_allowed', true)
-            ->where(function ($query) use ($draw) {
-                $query->whereNull('group_id')
-                    ->orWhere('group_id', $draw->market->group_id);
-            })
             ->exists();
 
         if (! $hasPermission) {
@@ -171,50 +165,15 @@ class BetService
         }
     }
 
-    private function isManagedByMarketPolicy(int $memberId): bool
+    private function validateMarketActive(LottoDraw $draw): void
     {
-        if (! Schema::hasTable('member_lotto_market_policies')) {
-            return false;
+        if (! $draw->market || ! (bool) $draw->market->is_enabled) {
+            throw new Exception('Market is not active');
         }
 
-        return MemberLottoMarketPolicy::query()
-            ->where('member_id', $memberId)
-            ->exists();
-    }
-
-    /**
-     * Resolve member-specific or group-default payout.
-     *
-     * @throws Exception
-     */
-    private function getPayout(LottoDraw $draw, string $betType, int $memberId): float
-    {
-        $ratePlanId = MemberLottoSetting::query()
-            ->where('member_id', $memberId)
-            ->value('rate_plan_id');
-
-        if (! $ratePlanId) {
-            $ratePlanId = LottoRatePlan::query()
-                ->where('group_id', $draw->market->group_id)
-                ->where('is_enabled', true)
-                ->orderBy('id')
-                ->value('id');
+        if (! $draw->market->group || ! (bool) $draw->market->group->is_enabled) {
+            throw new Exception('Group is not active');
         }
-
-        if (! $ratePlanId) {
-            throw new Exception('No rate plan found');
-        }
-
-        $item = LottoRatePlanItem::query()
-            ->where('rate_plan_id', $ratePlanId)
-            ->where('bet_type', $betType)
-            ->first();
-
-        if (! $item) {
-            throw new Exception("No payout rate found for {$betType}");
-        }
-
-        return (float) $item->payout;
     }
 
     /**
@@ -253,19 +212,28 @@ class BetService
     /**
      * @throws Exception
      */
-    private function findOpenDraw(int $drawId): LottoDraw
+    private function findDraw(int $drawId): LottoDraw
     {
         $draw = LottoDraw::query()
-            ->with(['market', 'betSettings'])
+            ->with(['market.group', 'betSettings'])
             ->where('id', $drawId)
-            ->where('status', 'open')
             ->first();
 
         if (! $draw) {
-            throw new Exception('Draw not open or not found');
+            throw new Exception('Draw not found');
         }
 
         return $draw;
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function validateDrawIsOpen(LottoDraw $draw): void
+    {
+        if ($draw->status !== 'open') {
+            throw new Exception('Draw not open or not found');
+        }
     }
 
     private function isBetAmountInRange(float $amount, float $min, float $max): bool
@@ -274,7 +242,7 @@ class BetService
     }
 
     /**
-     * @param array{bet_type:string,number:string,amount:float,payout:float,max_per_number:float} $item
+     * @param array{bet_type:string,number:string,amount:float,payout:float,discount_percent:float,payable_amount:float,max_per_number:float} $item
      * @throws Exception
      */
     private function persistTicketItemAndExposure(LottoTicket $ticket, int $drawId, array $item): void
@@ -298,5 +266,23 @@ class BetService
         ]);
 
         $exposure->increment('sold_amount', $item['amount']);
+    }
+
+    private function normalizeDiscountPercent(float $discountPercent): float
+    {
+        if ($discountPercent < 0) {
+            return 0.0;
+        }
+
+        if ($discountPercent > 100) {
+            return 100.0;
+        }
+
+        return round($discountPercent, 2);
+    }
+
+    private function calculatePayableAmount(float $amount, float $discountPercent): float
+    {
+        return round($amount * (1 - ($discountPercent / 100)), 2);
     }
 }

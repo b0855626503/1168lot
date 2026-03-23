@@ -14,6 +14,7 @@ class LottoMarketBetSettingTransformer extends TransformerAbstract
             'id'               => (int) $model->id,
             'market_name'      => $model->market->name ?? '-',
             'bet_type'         => $model->bet_type . ' = ' . BetType::label((string) $model->bet_type),
+            'payout'           => (float) $model->payout,
             'min_bet'          => (float) $model->min_bet,
             'max_bet'          => (float) $model->max_bet,
             'max_per_number'   => (float) $model->max_per_number,
@@ -27,4 +28,3 @@ class LottoMarketBetSettingTransformer extends TransformerAbstract
         ];
     }
 }
-

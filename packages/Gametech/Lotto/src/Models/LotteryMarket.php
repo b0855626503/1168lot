@@ -11,15 +11,28 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LotteryMarket extends Model implements LotteryMarketContract
 {
+    public const DRAW_MODE_MANUAL = 'manual';
+    public const DRAW_MODE_DAILY = 'daily';
+    public const DRAW_MODE_WEEKDAYS = 'weekdays';
+
     public $timestamps = false;
     protected $table = 'lotto_markets';
 
     protected $fillable = [
         'group_id',
         'name',      // ออมสิน / ธกส
+        'name_en',
+        'name_kh',
+        'name_laos',
+        'logo',
+        'icon',
         'code',      // unique: gsb, kbank
+        'draw_mode',
+        'auto_open_time',
+        'auto_close_time',
+        'auto_result_time',
+        'result_url',
         'is_enabled',
-        'rollout_mode',
         'affect_existing_members',
         'policy_version',
     ];
@@ -29,6 +42,15 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'affect_existing_members' => 'boolean',
         'policy_version' => 'integer',
     ];
+
+    public static function drawModes(): array
+    {
+        return [
+            self::DRAW_MODE_MANUAL,
+            self::DRAW_MODE_DAILY,
+            self::DRAW_MODE_WEEKDAYS,
+        ];
+    }
 
     // Relationships
     public function group()

@@ -6,6 +6,7 @@ use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -59,7 +60,7 @@ class TicketController extends AppBaseController
         return $this->sendResponse($payload, 'ดึงรายละเอียดโพยสำเร็จ');
     }
 
-    public function cancel(Request $request, int $id): JsonResponse
+    public function cancel(Request $request, int $id, WalletTransactionService $walletTransactionService): JsonResponse
     {
         $memberId = $this->resolveMemberId($request);
         if (! $memberId) {
@@ -67,7 +68,7 @@ class TicketController extends AppBaseController
         }
 
         try {
-            DB::transaction(function () use ($id, $memberId): void {
+            DB::transaction(function () use ($id, $memberId, $walletTransactionService): void {
                 $ticket = $this->ticketQuery($memberId)
                     ->with(['draw', 'items'])
                     ->lockForUpdate()
@@ -96,6 +97,31 @@ class TicketController extends AppBaseController
                     $nextAmount = max(0, (float) $exposure->sold_amount - (float) $item->amount);
                     $exposure->update(['sold_amount' => $nextAmount]);
                 }
+
+                $debitTxn = DB::table('wallet_transactions')
+                    ->where('member_id', $memberId)
+                    ->where('ref_type', 'LOTTO_BET')
+                    ->where('ref_id', (int) $ticket->id)
+                    ->orderByDesc('id')
+                    ->first(['id']);
+
+                $groupCode = 'LOTTO_CANCEL_' . $ticket->id . '_' . now()->format('YmdHis');
+                $walletTransactionService->creditMemberBalance(
+                    memberId: $memberId,
+                    amount: (float) $ticket->total_amount,
+                    refType: 'LOTTO_CANCEL',
+                    refId: (int) $ticket->id,
+                    refCode: (string) $ticket->id,
+                    groupCode: $groupCode,
+                    relatedTxnId: isset($debitTxn->id) ? (int) $debitTxn->id : null,
+                    meta: [
+                        'draw_id' => (int) $ticket->draw_id,
+                        'ticket_id' => (int) $ticket->id,
+                    ],
+                    createdByType: 'member',
+                    createdById: $memberId,
+                    description: 'คืนเงินจากการยกเลิกโพยหวย'
+                );
 
                 $ticket->update([
                     'status' => 'cancelled',
@@ -148,4 +174,3 @@ class TicketController extends AppBaseController
         ];
     }
 }
-

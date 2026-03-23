@@ -309,6 +309,7 @@ return [
         Gametech\Sms\Providers\SmsServiceProvider::class,
         Gametech\Reward\Providers\RewardServiceProvider::class,
         Gametech\Lotto\Providers\LottoServiceProvider::class,
+        Gametech\FrontendApi\Providers\FrontendApiServiceProvider::class,
     ],
 
     /*

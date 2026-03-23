@@ -16,10 +16,15 @@ class LotteryGroup extends Model implements LotteryGroupContract
 
     protected $fillable = [
         'name',      // หมื่น / ออมสิน / ดาวโจนส์
+        'description',
+        'name_en',
+        'name_kh',
+        'name_laos',
+        'logo',
+        'icon',
         'code',      // unique: thailand, stock, international
         'is_enabled',
         'sort',
-        'rollout_mode',
         'affect_existing_members',
         'policy_version',
     ];
@@ -35,11 +40,6 @@ class LotteryGroup extends Model implements LotteryGroupContract
     public function markets()
     {
         return $this->hasMany(LotteryMarket::class, 'group_id');
-    }
-
-    public function ratePlans()
-    {
-        return $this->hasMany(LottoRatePlan::class, 'group_id');
     }
 
     public function memberMarketPolicies()

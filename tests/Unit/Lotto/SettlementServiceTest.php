@@ -13,13 +13,16 @@ class SettlementServiceTest extends TestCase
         $service = new SettlementService();
 
         $result = $service->normalizeResultNumber([
-            'top_3' => '123',
-            'bottom_2' => '45',
+            'first_prize' => '123456',
+            'last_2_digits' => '89',
         ]);
 
         $this->assertSame([
-            'top_3' => '123',
-            'bottom_2' => '45',
+            'first_prize' => '123456',
+            'last_2_digits' => '89',
+            'top_3' => '456',
+            'top_2' => '56',
+            'bottom_2' => '89',
         ], $result);
     }
 
@@ -28,6 +31,7 @@ class SettlementServiceTest extends TestCase
         $service = new SettlementService();
         $result = [
             'top_3' => '123',
+            'top_2' => '12',
             'bottom_2' => '45',
         ];
 
@@ -51,12 +55,11 @@ class SettlementServiceTest extends TestCase
         $service = new SettlementService();
 
         $this->assertSame(
-            '3 ตัวบน 123 / 2 ตัวล่าง 45',
+            'รางวัลที่ 1 123456 / เลขท้าย 2 ตัว 89 / 3 ตัวบน 456 / 2 ตัวบน 56',
             $service->describeResultNumber([
-                'top_3' => '123',
-                'bottom_2' => '45',
+                'first_prize' => '123456',
+                'last_2_digits' => '89',
             ])
         );
     }
 }
-

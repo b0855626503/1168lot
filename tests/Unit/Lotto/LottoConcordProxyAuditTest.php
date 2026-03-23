@@ -92,8 +92,6 @@ class LottoConcordProxyAuditTest extends TestCase
             'LotteryGroup',
             'LotteryMarket',
             'LottoMarketBetSetting',
-            'LottoRatePlan',
-            'LottoRatePlanItem',
             'LottoDraw',
             'LottoDrawBetSetting',
             'LottoNumberExposure',
@@ -101,8 +99,6 @@ class LottoConcordProxyAuditTest extends TestCase
             'LottoTicket',
             'LottoTicketItem',
             'MemberLottoMarketPolicy',
-            'MemberLottoPermission',
-            'MemberLottoSetting',
         ];
 
         return array_combine($models, array_map(fn ($m) => [$m], $models));
@@ -121,8 +117,6 @@ class LottoConcordProxyAuditTest extends TestCase
             'LotteryGroup::class',
             'LotteryMarket::class',
             'LottoMarketBetSetting::class',
-            'LottoRatePlan::class',
-            'LottoRatePlanItem::class',
             'LottoDraw::class',
             'LottoDrawBetSetting::class',
             'LottoNumberExposure::class',
@@ -130,8 +124,6 @@ class LottoConcordProxyAuditTest extends TestCase
             'LottoTicket::class',
             'LottoTicketItem::class',
             'MemberLottoMarketPolicy::class',
-            'MemberLottoPermission::class',
-            'MemberLottoSetting::class',
         ];
 
         foreach ($requiredRegistrations as $registration) {
@@ -229,13 +221,11 @@ class LottoConcordProxyAuditTest extends TestCase
         return [
             'LotteryGroupController' => ['LotteryGroupController.php'],
             'LotteryMarketController' => ['LotteryMarketController.php'],
-            'LottoRatePlanController' => ['LottoRatePlanController.php'],
             'LottoMarketBetSettingController' => ['LottoMarketBetSettingController.php'],
             'LottoDrawController' => ['LottoDrawController.php'],
             'LottoNumberBlockController' => ['LottoNumberBlockController.php'],
             'LottoTicketController' => ['LottoTicketController.php'],
             'MemberLottoPermissionController' => ['MemberLottoPermissionController.php'],
-            'MemberLottoSettingController' => ['MemberLottoSettingController.php'],
             'LottoExposureReportController' => ['LottoExposureReportController.php'],
             'LottoRevenueReportController' => ['LottoRevenueReportController.php'],
         ];
@@ -253,11 +243,7 @@ class LottoConcordProxyAuditTest extends TestCase
             'LottoTicketItem',
             'LottoNumberExposure',
             'LottoNumberBlock',
-            'MemberLottoPermission',
             'MemberLottoMarketPolicy',
-            'MemberLottoSetting',
-            'LottoRatePlan',
-            'LottoRatePlanItem',
         ];
     }
 }

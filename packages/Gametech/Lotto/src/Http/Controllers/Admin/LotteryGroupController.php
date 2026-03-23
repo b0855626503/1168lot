@@ -5,21 +5,14 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LotteryGroupDataTable;
 use Gametech\Lotto\Models\LotteryGroup;
-use Gametech\Lotto\Services\MemberMarketPolicyService;
 use Gametech\Lotto\Support\ToggleFieldGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 class LotteryGroupController extends AppBaseController
 {
-    private const ROLLOUT_MODES = [
-        MemberMarketPolicyService::ROLLOUT_NEW_ONLY,
-        MemberMarketPolicyService::ROLLOUT_ALL,
-        MemberMarketPolicyService::ROLLOUT_SELECTED,
-    ];
-
     protected array $_config;
 
     public function __construct()
@@ -30,7 +23,19 @@ class LotteryGroupController extends AppBaseController
 
     public function index(LotteryGroupDataTable $dataTable)
     {
-        return $dataTable->render($this->_config['view']);
+        $availableLanguages = (array) config('languages.available', []);
+        $languageOptions = collect($availableLanguages)->map(static function ($item, $lang): array {
+            $name = is_array($item) ? (string) ($item['name'] ?? strtoupper((string) $lang)) : strtoupper((string) $lang);
+
+            return [
+                'value' => (string) $lang,
+                'text' => $name . ' (' . (string) $lang . ')',
+            ];
+        })->values()->all();
+
+        return $dataTable->render($this->_config['view'], [
+            'languageOptions' => $languageOptions,
+        ]);
     }
 
     public function loadData(Request $request): JsonResponse
@@ -51,20 +56,39 @@ class LotteryGroupController extends AppBaseController
 
         $validated = validator($data, [
             'name'       => ['required', 'string', 'max:191'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'name_en'    => ['nullable', 'string', 'max:191'],
+            'name_kh'    => ['nullable', 'string', 'max:191'],
+            'name_laos'  => ['nullable', 'string', 'max:191'],
+            'logo'       => ['nullable', 'string', 'max:255'],
+            'icon'       => ['nullable', 'string', 'max:255'],
             'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_groups,code'],
             'sort'       => ['nullable', 'integer', 'min:0'],
             'is_enabled' => ['nullable'],
-            'rollout_mode' => ['nullable', 'string', 'in:' . implode(',', self::ROLLOUT_MODES)],
         ])->validate();
 
-        LotteryGroup::query()->create([
+        $request->validate([
+            'logo_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+            'icon_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+        ]);
+
+        $payload = [
             'name'       => $validated['name'],
+            'description' => $this->normalizeDescriptionJson($validated['description'] ?? null),
+            'name_en'    => $this->nullableString($validated['name_en'] ?? null),
+            'name_kh'    => $this->nullableString($validated['name_kh'] ?? null),
+            'name_laos'  => $this->nullableString($validated['name_laos'] ?? null),
+            'logo'       => $this->nullableString($validated['logo'] ?? null),
+            'icon'       => $this->nullableString($validated['icon'] ?? null),
             'code'       => strtolower($validated['code']),
             'sort'       => (int) ($validated['sort'] ?? 0),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
-            'rollout_mode' => (string) ($validated['rollout_mode'] ?? MemberMarketPolicyService::ROLLOUT_NEW_ONLY),
             'affect_existing_members' => false,
-        ]);
+        ];
+
+        $payload = $this->attachUploadedMedia($request, $payload);
+
+        LotteryGroup::query()->create($payload);
 
         return $this->sendSuccess('สร้างกลุ่มหวยเรียบร้อยแล้ว');
     }
@@ -104,96 +128,133 @@ class LotteryGroupController extends AppBaseController
 
         $validated = validator($data, [
             'name'       => ['required', 'string', 'max:191'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'name_en'    => ['nullable', 'string', 'max:191'],
+            'name_kh'    => ['nullable', 'string', 'max:191'],
+            'name_laos'  => ['nullable', 'string', 'max:191'],
+            'logo'       => ['nullable', 'string', 'max:255'],
+            'icon'       => ['nullable', 'string', 'max:255'],
             'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_groups,code,' . $group->id],
             'sort'       => ['nullable', 'integer', 'min:0'],
             'is_enabled' => ['nullable'],
-            'rollout_mode' => ['nullable', 'string', 'in:' . implode(',', self::ROLLOUT_MODES)],
         ])->validate();
 
-        $incomingMode = (string) ($validated['rollout_mode'] ?? MemberMarketPolicyService::ROLLOUT_NEW_ONLY);
-        $isModeChanged = $group->rollout_mode !== $incomingMode;
+        $request->validate([
+            'logo_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+            'icon_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+        ]);
 
-        $group->update([
+        $payload = [
             'name'       => $validated['name'],
+            'description' => $this->normalizeDescriptionJson($validated['description'] ?? null),
+            'name_en'    => $this->nullableString($validated['name_en'] ?? null),
+            'name_kh'    => $this->nullableString($validated['name_kh'] ?? null),
+            'name_laos'  => $this->nullableString($validated['name_laos'] ?? null),
+            'logo'       => $this->nullableString($validated['logo'] ?? null),
+            'icon'       => $this->nullableString($validated['icon'] ?? null),
             'code'       => strtolower($validated['code']),
             'sort'       => (int) ($validated['sort'] ?? 0),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
-            'rollout_mode' => $incomingMode,
-            'policy_version' => $isModeChanged
-                ? ((int) $group->policy_version + 1)
-                : (int) $group->policy_version,
+        ];
+
+        $payload = $this->attachUploadedMedia($request, $payload, [
+            'logo' => (string) ($group->logo ?? ''),
+            'icon' => (string) ($group->icon ?? ''),
         ]);
+
+        $group->update($payload);
 
         return $this->sendSuccess('อัปเดตกลุ่มหวยเรียบร้อยแล้ว');
     }
 
-    public function applyRollout(Request $request, MemberMarketPolicyService $policyService): JsonResponse
+    private function attachUploadedMedia(Request $request, array $payload, array $oldMedia = []): array
     {
-        $id = (int) $request->input('id');
-        $payload = validator($request->all(), [
-            'scope' => ['required', 'string', 'in:all,selected'],
-            'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'min:1'],
-        ])->validate();
+        $map = [
+            'logo_file' => 'logo',
+            'icon_file' => 'icon',
+        ];
 
-        $group = LotteryGroup::query()->find($id);
+        foreach ($map as $fileField => $column) {
+            if (! $request->hasFile($fileField)) {
+                continue;
+            }
 
-        if (! $group) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+            $file = $request->file($fileField);
+            if (! $file || ! $file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('lotto/media', 'public');
+            $payload[$column] = '/storage/' . $path;
+
+            $this->deleteOldPublicFile($oldMedia[$column] ?? null);
         }
 
-        if ($payload['scope'] === 'selected' && empty($payload['member_ids'])) {
-            return $this->sendError('กรุณาระบุสมาชิกอย่างน้อย 1 รายการ', 422);
-        }
-
-        $affectedMembers = $policyService->applyGroupRollout(
-            $group->id,
-            (string) $payload['scope'],
-            (array) ($payload['member_ids'] ?? [])
-        );
-
-        $group->update([
-            'affect_existing_members' => true,
-            'policy_version' => (int) $group->policy_version + 1,
-        ]);
-
-        return $this->sendResponse([
-            'affected_members' => $affectedMembers,
-        ], 'อัปเดตสิทธิ์สมาชิกเดิมเรียบร้อยแล้ว');
+        return $payload;
     }
 
-    public function searchMembers(Request $request): JsonResponse
+    private function deleteOldPublicFile(?string $oldPath): void
     {
-        $keyword = trim((string) $request->input('keyword', ''));
-        $limit = max(1, min((int) $request->input('limit', 20), 50));
-
-        $query = DB::table('members')
-            ->select(['code', 'user_name', 'firstname', 'lastname'])
-            ->where('code', '>', 0)
-            ->orderByDesc('code');
-
-        if ($keyword !== '') {
-            $query->where(function ($builder) use ($keyword): void {
-                $builder->where('user_name', 'like', '%' . $keyword . '%')
-                    ->orWhere('firstname', 'like', '%' . $keyword . '%')
-                    ->orWhere('lastname', 'like', '%' . $keyword . '%');
-
-                if (ctype_digit($keyword)) {
-                    $builder->orWhere('code', (int) $keyword);
-                }
-            });
+        if (! $oldPath || ! str_starts_with($oldPath, '/storage/')) {
+            return;
         }
 
-        $items = $query->limit($limit)->get()->map(static function ($row): array {
-            $name = trim((string) (($row->firstname ?? '') . ' ' . ($row->lastname ?? '')));
-            $label = trim((string) ($row->user_name ?? ''));
+        try {
+            $relative = substr($oldPath, strlen('/storage/'));
+            if ($relative !== '') {
+                Storage::disk('public')->delete($relative);
+            }
+        } catch (\Throwable $exception) {
+            // ignore file deletion failure to keep update flow stable
+        }
+    }
 
-            return [
-                'value' => (int) $row->code,
-                'text' => '#' . (int) $row->code . ' - ' . ($label !== '' ? $label : '-') . ($name !== '' ? ' (' . $name . ')' : ''),
-            ];
-        })->values();
+    private function nullableString($value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
 
-        return $this->sendResponse($items, 'ดำเนินการเสร็จสิ้น');
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeDescriptionJson($value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $clean = [];
+        foreach ($decoded as $lang => $text) {
+            if (! is_scalar($text)) {
+                continue;
+            }
+
+            $langKey = trim((string) $lang);
+            $message = trim((string) $text);
+            if ($langKey === '' || $message === '') {
+                continue;
+            }
+
+            $clean[$langKey] = $message;
+        }
+
+        if (empty($clean)) {
+            return null;
+        }
+
+        return json_encode($clean, JSON_UNESCAPED_UNICODE);
     }
 }

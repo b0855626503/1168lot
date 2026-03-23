@@ -53,7 +53,7 @@ class Google2FAController extends Controller
 
         $google2fa_url = $google2fa->getQRCodeInline(
             config('app.name'),
-            $user->email,
+            $user->user_name,
             $user->google2fa_secret
         );
 
