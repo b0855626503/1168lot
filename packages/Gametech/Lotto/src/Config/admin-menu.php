@@ -7,7 +7,7 @@ return [
         'route' => 'admin.lotto.draws.index',
         'sort' => 87,
         'icon-class' => 'fa-ticket',
-        'badge' => 0,
+        'badge' => 1,
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
@@ -23,7 +23,7 @@ return [
     ],
     [
         'key' => 'lotto_zone.tickets',
-        'name' => 'รายการแทง',
+        'name' => 'รายการโพย',
         'route' => 'admin.lotto.tickets.index',
         'sort' => 2,
         'icon-class' => 'fa-ticket',

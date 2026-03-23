@@ -31,6 +31,11 @@
             <p>
                 {{ $menuItem['name'] ?? '-' }}
                 @if($hasChildren)
+                    @if(($menuItem['badge'] ?? 0) && $isRootLevel)
+                        <span
+                            class="badge {{ !empty($menuItem['badge-color']) ? $menuItem['badge-color'] : 'badge-info' }} right ml-2"
+                            id="badge_{{ $menuItem['key'] ?? '' }}">0</span>
+                    @endif
                     <i class="right fas fa-angle-left"></i>
                 @elseif(($menuItem['badge'] ?? 0) && $isRootLevel)
                     <span
@@ -47,4 +52,3 @@
         @endif
     </li>
 @endforeach
-

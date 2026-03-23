@@ -1,8 +1,102 @@
 @section('css')
 	@include('admin::layouts.datatables_css')
 @endsection
-{!! $dataTable->table(['width' => '100%', 'class' => 'table table-striped table-sm']) !!}
+{!! $dataTable->table(['id' => 'lottoTicketsTable', 'width' => '100%', 'class' => 'table table-striped table-sm']) !!}
 @push('scripts')
 	@include('admin::layouts.datatables_js')
 	{!! $dataTable->scripts() !!}
+    <script>
+        $(function () {
+            const tableSelector = '#lottoTicketsTable';
+            const tableKey = 'lottoTicketsTable';
+            const menuBadgeKey = 'lotto_zone';
+            const $marketSelect = $('#filter_market_id');
+            const $drawSelect = $('#filter_draw_id');
+            const drawOptionsByMarket = @json($drawOptionsByMarket ?? []);
+            const drawDefaultOption = '<option value="">เลือกงวดหวย</option>';
+
+            const renderDrawOptions = function (marketId) {
+                const normalizedMarketId = String(marketId || '');
+                const options = normalizedMarketId !== '' ? (drawOptionsByMarket[normalizedMarketId] || []) : [];
+
+                $drawSelect.empty().append(drawDefaultOption);
+
+                if (!normalizedMarketId) {
+                    $drawSelect.prop('disabled', true);
+                    return;
+                }
+
+                if (!options.length) {
+                    $drawSelect.prop('disabled', true);
+                    return;
+                }
+
+                options.forEach(function (option) {
+                    $drawSelect.append(
+                        $('<option>', {
+                            value: String(option.value),
+                            text: String(option.text || '-'),
+                        })
+                    );
+                });
+
+                // auto เลือกงวดล่าสุด (รายการแรกของข้อมูลที่ sort desc ไว้แล้ว)
+                $drawSelect.prop('disabled', false).val(String(options[0].value));
+            };
+
+            const redrawTicketTable = function () {
+                if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
+                    return;
+                }
+
+                window.LaravelDataTables[tableKey].draw(false);
+            };
+
+            $(document).off('xhr.dt.lottoTicketsBadge', tableSelector).on('xhr.dt.lottoTicketsBadge', tableSelector, function (_event, _settings, json) {
+                const total = Number(json && typeof json.recordsTotal !== 'undefined' ? json.recordsTotal : 0);
+                const value = Number.isFinite(total) ? total : 0;
+
+                if (typeof window.update === 'function') {
+                    window.update(menuBadgeKey, value);
+                }
+            });
+
+            $(document).off('preXhr.dt.lottoTicketsFilter', tableSelector).on('preXhr.dt.lottoTicketsFilter', tableSelector, function (_event, _settings, data) {
+                data.market_id = $marketSelect.val() || '';
+                data.draw_id = $drawSelect.val() || '';
+            });
+
+            $marketSelect.off('change.lottoTicketsFilter').on('change.lottoTicketsFilter', function () {
+                renderDrawOptions($(this).val());
+                redrawTicketTable();
+            });
+
+            $drawSelect.off('change.lottoTicketsFilter').on('change.lottoTicketsFilter', function () {
+                redrawTicketTable();
+            });
+
+            renderDrawOptions($marketSelect.val());
+
+            $(document).off('click.lottoTicketsRow', tableSelector + ' tbody tr').on('click.lottoTicketsRow', tableSelector + ' tbody tr', function (event) {
+                if ($(event.target).closest('a, button, input, select, textarea, label, .js-no-row-open').length) {
+                    return;
+                }
+
+                if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
+                    return;
+                }
+
+                const dt = window.LaravelDataTables[tableKey];
+                const rowData = dt.row(this).data();
+
+                if (!rowData || typeof rowData.id === 'undefined' || rowData.id === null) {
+                    return;
+                }
+
+                if (typeof window.editModal === 'function') {
+                    window.editModal(rowData.id);
+                }
+            });
+        });
+    </script>
 @endpush

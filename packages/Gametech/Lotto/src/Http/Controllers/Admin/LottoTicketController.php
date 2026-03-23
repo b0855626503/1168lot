@@ -5,7 +5,9 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoTicketDataTable;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,7 +23,35 @@ class LottoTicketController extends AppBaseController
 
     public function index(LottoTicketDataTable $dataTable)
     {
-        return $dataTable->render($this->_config['view']);
+        $marketOptions = LotteryMarket::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (LotteryMarket $market): array => [
+                'value' => (int) $market->id,
+                'text' => (string) $market->name,
+            ])
+            ->values()
+            ->toArray();
+
+        $drawOptionsByMarket = LottoDraw::query()
+            ->orderByDesc('draw_date')
+            ->orderByDesc('id')
+            ->get(['id', 'market_id', 'draw_date'])
+            ->groupBy(static fn (LottoDraw $draw): int => (int) $draw->market_id)
+            ->map(static function ($draws): array {
+                return $draws->map(static function (LottoDraw $draw): array {
+                    return [
+                        'value' => (int) $draw->id,
+                        'text' => 'งวด #' . (int) $draw->id . ' - ' . ($draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-'),
+                    ];
+                })->values()->all();
+            })
+            ->toArray();
+
+        return $dataTable->render($this->_config['view'], [
+            'marketOptions' => $marketOptions,
+            'drawOptionsByMarket' => $drawOptionsByMarket,
+        ]);
     }
 
     public function loadData(Request $request): JsonResponse

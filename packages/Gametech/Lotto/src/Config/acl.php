@@ -15,7 +15,7 @@ return [
     ],
     [
         'key' => 'lotto_zone.tickets',
-        'name' => 'รายการแทง',
+        'name' => 'รายการโพย',
         'route' => 'admin.lotto.tickets.index',
         'sort' => 2,
     ],

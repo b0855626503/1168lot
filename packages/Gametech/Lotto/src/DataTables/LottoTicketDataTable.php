@@ -15,12 +15,28 @@ class LottoTicketDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
+        $dataTable->filter(function ($query): void {
+            $keyword = trim((string) request('search.value', ''));
+            if ($keyword === '') {
+                return;
+            }
+
+            $query->where(function ($builder) use ($keyword): void {
+                $builder->where('lotto_tickets.id', 'like', '%' . $keyword . '%')
+                    ->orWhere('lotto_tickets.member_id', 'like', '%' . $keyword . '%')
+                    ->orWhereHas('member', function ($memberQuery) use ($keyword): void {
+                        $memberQuery->where('user_name', 'like', '%' . $keyword . '%')
+                            ->orWhere('name', 'like', '%' . $keyword . '%');
+                    });
+            });
+        }, true);
+
         return $dataTable->setTransformer(new LottoTicketTransformer());
     }
 
     public function query(LottoTicket $model)
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->select('lotto_tickets.*')
             ->with(['member', 'draw.market'])
             ->withSum('items as total_win_amount', 'win_amount')
@@ -30,6 +46,18 @@ class LottoTicketDataTable extends DataTable
                 },
             ])
             ->orderByDesc('id');
+
+        if ($drawId = (int) request('draw_id')) {
+            $query->where('lotto_tickets.draw_id', $drawId);
+        }
+
+        if ($marketId = (int) request('market_id')) {
+            $query->whereHas('draw', function ($builder) use ($marketId): void {
+                $builder->where('market_id', $marketId);
+            });
+        }
+
+        return $query;
     }
 
     public function html(): Builder
@@ -45,7 +73,8 @@ class LottoTicketDataTable extends DataTable
                 'stateSave'   => true,
                 'scrollX'     => true,
                 'paging'      => true,
-                'searching'   => false,
+                'searching'   => true,
+                'searchDelay' => 350,
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
@@ -70,4 +99,3 @@ class LottoTicketDataTable extends DataTable
         ];
     }
 }
-

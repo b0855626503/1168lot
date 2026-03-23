@@ -379,6 +379,53 @@
                 }, 350);
             }
         })
+        .listen('.lotto.ticket.list.changed', (e) => {
+            const message = e.message || 'รายการโพยหวยมีการเปลี่ยนแปลง';
+            const menuBadgeKey = e.menu_badge_key || 'lotto_zone';
+            const badgeId = e.badge_id || 'badge_lotto_zone';
+            const total = Number(e.total ?? 0);
+            const badgeElement = document.getElementById(badgeId);
+            const badgeValue = Number.isFinite(total) ? total : 0;
+
+            if (badgeValue === 0) {
+                if (typeof update === 'function') {
+                    update(menuBadgeKey, badgeValue);
+                }
+            } else {
+                if (typeof updateBadge === 'function') {
+                    updateBadge(menuBadgeKey, badgeValue);
+                }
+            }
+
+            if (badgeElement) {
+                badgeElement.textContent = badgeValue;
+            }
+
+            Toastify({
+                text: message,
+                duration: 20000,
+                newWindow: true,
+                close: true,
+                gravity: 'top',
+                position: 'right',
+                stopOnFocus: true,
+                className: 'rt-toast rt-info gt-toast gt-toast-info',
+            }).showToast();
+
+            const tableKey = e.datatable_id || 'lottoTicketsTable';
+            const reloadOnPath = e.path || '/lotto/tickets';
+            const isPathMatched = !reloadOnPath || window.location.pathname.indexOf(reloadOnPath) !== -1;
+
+            if (isPathMatched) {
+                if (reloadTimer) {
+                    clearTimeout(reloadTimer);
+                }
+
+                reloadTimer = setTimeout(() => {
+                    reloadNamedDataTable(tableKey, false);
+                }, 350);
+            }
+        })
         .listen('SumNewPayment', (e) => {
             if(e.sum === 0){
                 update('bank_in', e.sum);
