@@ -249,6 +249,17 @@
 
     let reloadTimer = null;
 
+    function reloadNamedDataTable(tableKey, resetPaging = false) {
+        if (!tableKey || !window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
+            return;
+        }
+
+        try {
+            window.LaravelDataTables[tableKey].draw(!!resetPaging);
+        } catch (err) {
+            console.warn('datatable reload error', err);
+        }
+    }
 
     function handleRT(e) {
         if (e.ui === 'swal') {
@@ -309,6 +320,21 @@
             style: t.style || undefined,
             avatar: t.avatar || undefined,
         }).showToast();
+
+        const tableKey = t.reloadDataTable || '';
+        const reloadOnPath = t.reloadOnPath || '';
+        const reloadDelay = Number(t.reloadDelay ?? 250);
+        const isPathMatched = !reloadOnPath || window.location.pathname.indexOf(reloadOnPath) !== -1;
+
+        if (tableKey && isPathMatched) {
+            if (reloadTimer) {
+                clearTimeout(reloadTimer);
+            }
+
+            reloadTimer = setTimeout(() => {
+                reloadNamedDataTable(tableKey, false);
+            }, Number.isFinite(reloadDelay) && reloadDelay >= 0 ? reloadDelay : 250);
+        }
     }
 
     const currentUserId = {{ auth()->guard('admin')->id() ?? 'null' }};
@@ -326,6 +352,33 @@
 
         })
         .listen('.RealTime.Message.All', handleRT)
+        .listen('.lotto.draw.closed', (e) => {
+            const message = e.message || 'มีงวดหวยปิดรับแล้ว';
+            Toastify({
+                text: message,
+                duration: 25000,
+                newWindow: true,
+                close: true,
+                gravity: 'top',
+                position: 'right',
+                stopOnFocus: true,
+                className: 'rt-toast rt-info gt-toast gt-toast-info',
+            }).showToast();
+
+            const tableKey = e.datatable_id || 'lottoDrawsTable';
+            const reloadOnPath = e.path || '/lotto/draws';
+            const isPathMatched = !reloadOnPath || window.location.pathname.indexOf(reloadOnPath) !== -1;
+
+            if (isPathMatched) {
+                if (reloadTimer) {
+                    clearTimeout(reloadTimer);
+                }
+
+                reloadTimer = setTimeout(() => {
+                    reloadNamedDataTable(tableKey, false);
+                }, 350);
+            }
+        })
         .listen('SumNewPayment', (e) => {
             if(e.sum === 0){
                 update('bank_in', e.sum);

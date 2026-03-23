@@ -355,7 +355,7 @@
                     });
 
                     this.$refs.addedit.hide();
-                    window.LaravelDataTables['dataTableBuilder'].draw(false);
+                    window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
                 async submitSettleForm() {
                     if (!this.canCalculate) {
@@ -392,7 +392,7 @@
                     });
 
                     this.$refs.addedit.hide();
-                    window.LaravelDataTables['dataTableBuilder'].draw(false);
+                    window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
                 openDraw(id) {
                     this.$http.post("{{ route('admin.lotto.draws.open') }}", { id })
@@ -404,7 +404,7 @@
                                 okVariant: 'success',
                                 centered: true,
                             });
-                            window.LaravelDataTables['dataTableBuilder'].draw(false);
+                            window.LaravelDataTables['lottoDrawsTable'].draw(false);
                         });
                 },
                 closeDraw(id) {
@@ -417,7 +417,7 @@
                                 okVariant: 'success',
                                 centered: true,
                             });
-                            window.LaravelDataTables['dataTableBuilder'].draw(false);
+                            window.LaravelDataTables['lottoDrawsTable'].draw(false);
                         });
                 },
                 async generateAutoDraws(dryRun = false) {
@@ -458,7 +458,7 @@
                         centered: true,
                     });
 
-                    window.LaravelDataTables['dataTableBuilder'].draw(false);
+                    window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
             },
         });
