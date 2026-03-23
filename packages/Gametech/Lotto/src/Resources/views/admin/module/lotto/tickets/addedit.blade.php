@@ -19,6 +19,10 @@
 					<th class="text-center">เลข</th>
 					<th class="text-right">ยอดแทง</th>
 					<th class="text-right">อัตราจ่าย</th>
+					<th class="text-right">ส่วนลด(%)</th>
+					<th class="text-right">ส่วนลด(บาท)</th>
+					<th class="text-right">จ่ายจริง</th>
+					<th class="text-right">ยอดถูกรางวัล(อ้างอิง)</th>
 					<th class="text-center">ผล</th>
 					<th class="text-right">ยอดถูก</th>
 				</tr>
@@ -29,11 +33,15 @@
 					<td class="text-center">@{{ item.number }}</td>
 					<td class="text-right">@{{ formatMoney(item.amount) }}</td>
 					<td class="text-right">@{{ formatMoney(item.payout_at_time) }}</td>
+					<td class="text-right">@{{ formatMoney(item.discount_percent_at_time) }}</td>
+					<td class="text-right">@{{ formatMoney(item.discount_amount_at_time) }}</td>
+					<td class="text-right">@{{ formatMoney(item.payable_amount_at_time) }}</td>
+					<td class="text-right">@{{ formatMoney(item.potential_win_amount_at_time) }}</td>
 					<td class="text-center">@{{ item.result_status || '-' }}</td>
 					<td class="text-right">@{{ formatMoney(item.win_amount) }}</td>
 				</tr>
 				<tr v-if="!ticket.items || ticket.items.length === 0">
-					<td colspan="6" class="text-center text-muted">ไม่พบรายการย่อย</td>
+					<td colspan="10" class="text-center text-muted">ไม่พบรายการย่อย</td>
 				</tr>
 				</tbody>
 			</table>

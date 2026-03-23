@@ -54,6 +54,10 @@ class LottoTicketController extends AppBaseController
                     'number' => (string) $item->number,
                     'amount' => (float) $item->amount,
                     'payout_at_time' => (float) $item->payout_at_time,
+                    'discount_percent_at_time' => (float) ($item->discount_percent_at_time ?? 0),
+                    'discount_amount_at_time' => (float) ($item->discount_amount_at_time ?? 0),
+                    'payable_amount_at_time' => (float) ($item->payable_amount_at_time ?? 0),
+                    'potential_win_amount_at_time' => (float) ($item->potential_win_amount_at_time ?? 0),
                     'result_status' => $item->result_status,
                     'win_amount' => (float) ($item->win_amount ?? 0),
                 ];
@@ -63,4 +67,3 @@ class LottoTicketController extends AppBaseController
         return $this->sendResponse($payload, 'ดำเนินการเสร็จสิ้น');
     }
 }
-

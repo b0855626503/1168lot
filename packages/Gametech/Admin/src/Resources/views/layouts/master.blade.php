@@ -352,8 +352,8 @@
 
         })
         .listen('.RealTime.Message.All', handleRT)
-        .listen('.lotto.draw.closed', (e) => {
-            const message = e.message || 'มีงวดหวยปิดรับแล้ว';
+        .listen('.lotto.draw.status.changed', (e) => {
+            const message = e.message || 'มีการปรับสถานะงวดหวย';
             Toastify({
                 text: message,
                 duration: 25000,

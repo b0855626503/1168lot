@@ -138,16 +138,18 @@ class BetService
 
         $discountPercent = $this->normalizeDiscountPercent((float) ($setting->discount_percent ?? 0));
 
+        $discountAmount = $this->calculateDiscountAmount($amount, $discountPercent);
+        $payableAmount = $this->calculatePayableAmount($amount, $discountAmount);
+
         return [
             'bet_type' => $betType,
             'number' => $number,
             'amount' => $amount,
             'payout' => (float) $setting->payout,
             'discount_percent' => $discountPercent,
-            'payable_amount' => $this->calculatePayableAmount(
-                $amount,
-                $discountPercent
-            ),
+            'discount_amount' => $discountAmount,
+            'payable_amount' => $payableAmount,
+            'potential_win_amount' => $this->calculatePotentialWinAmount($amount, (float) $setting->payout),
             'max_per_number' => (float) $setting->max_per_number,
         ];
     }
@@ -242,7 +244,17 @@ class BetService
     }
 
     /**
-     * @param array{bet_type:string,number:string,amount:float,payout:float,discount_percent:float,payable_amount:float,max_per_number:float} $item
+     * @param array{
+     *  bet_type:string,
+     *  number:string,
+     *  amount:float,
+     *  payout:float,
+     *  discount_percent:float,
+     *  discount_amount:float,
+     *  payable_amount:float,
+     *  potential_win_amount:float,
+     *  max_per_number:float
+     * } $item
      * @throws Exception
      */
     private function persistTicketItemAndExposure(LottoTicket $ticket, int $drawId, array $item): void
@@ -263,6 +275,10 @@ class BetService
             'number' => $item['number'],
             'amount' => $item['amount'],
             'payout_at_time' => $item['payout'],
+            'discount_percent_at_time' => $item['discount_percent'],
+            'discount_amount_at_time' => $item['discount_amount'],
+            'payable_amount_at_time' => $item['payable_amount'],
+            'potential_win_amount_at_time' => $item['potential_win_amount'],
         ]);
 
         $exposure->increment('sold_amount', $item['amount']);
@@ -281,8 +297,18 @@ class BetService
         return round($discountPercent, 2);
     }
 
-    private function calculatePayableAmount(float $amount, float $discountPercent): float
+    private function calculateDiscountAmount(float $amount, float $discountPercent): float
     {
-        return round($amount * (1 - ($discountPercent / 100)), 2);
+        return round($amount * ($discountPercent / 100), 2);
+    }
+
+    private function calculatePayableAmount(float $amount, float $discountAmount): float
+    {
+        return round(max(0, $amount - $discountAmount), 2);
+    }
+
+    private function calculatePotentialWinAmount(float $amount, float $payout): float
+    {
+        return round($amount * $payout, 2);
     }
 }

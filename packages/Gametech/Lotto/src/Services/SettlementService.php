@@ -214,6 +214,10 @@ class SettlementService
             return 0.0;
         }
 
+        if (isset($item->potential_win_amount_at_time) && $item->potential_win_amount_at_time !== null) {
+            return round((float) $item->potential_win_amount_at_time, 2);
+        }
+
         return round((float) $item->amount * (float) $item->payout_at_time, 2);
     }
 
