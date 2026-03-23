@@ -29,6 +29,10 @@ class LottoDrawDataTable extends DataTable
         return $model->newQuery()
             ->select('lotto_draws.*')
             ->with('market')
+            ->withCount([
+                'blockedNumbers as blocked_numbers_count',
+                'tickets as tickets_count',
+            ])
             ->orderByDesc('draw_date')
             ->orderByDesc('id');
     }
@@ -73,6 +77,8 @@ class LottoDrawDataTable extends DataTable
             ['data' => 'open_at', 'name' => 'open_at', 'title' => 'เปิดรับ'],
             ['data' => 'close_at', 'name' => 'close_at', 'title' => 'ปิดรับ'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ'],
+            ['data' => 'blocked_numbers_count', 'name' => 'blocked_numbers_count', 'title' => 'จำนวนเลขอั้น', 'className' => 'text-center'],
+            ['data' => 'tickets_count', 'name' => 'tickets_count', 'title' => 'จำนวนรายการ', 'className' => 'text-center'],
             ['data' => 'result_number', 'name' => 'result_number', 'title' => 'เลขที่ออก'],
             ['data' => 'action', 'name' => 'action', 'title' => 'ดำเนินการ', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '130px'],
         ];

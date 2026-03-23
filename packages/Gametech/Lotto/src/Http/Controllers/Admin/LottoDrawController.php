@@ -4,15 +4,18 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoDrawDataTable;
+use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoNumberBlock;
+use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
-use Illuminate\Support\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -83,6 +86,100 @@ class LottoDrawController extends AppBaseController
             'status' => (string) $data->status,
             'result_number' => is_array($data->result_number) ? $data->result_number : [],
         ], 'ดำเนินการเสร็จสิ้น');
+    }
+
+    public function loadBlockedNumbers(Request $request): JsonResponse
+    {
+        $draw = LottoDraw::query()
+            ->with('market:id,name')
+            ->find((int) $request->input('id'));
+
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        }
+
+        $rows = LottoNumberBlock::query()
+            ->where('draw_id', (int) $draw->id)
+            ->orderBy('bet_type')
+            ->orderBy('number')
+            ->get(['id', 'bet_type', 'number', 'mode', 'blocked_at', 'reason']);
+
+        return $this->sendResponse([
+            'draw' => [
+                'id' => (int) $draw->id,
+                'market_name' => (string) ($draw->market->name ?? '-'),
+                'draw_date' => $draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-',
+            ],
+            'count' => $rows->count(),
+            'items' => $rows->map(static function ($row): array {
+                return [
+                    'id' => (int) $row->id,
+                    'bet_type' => (string) $row->bet_type,
+                    'bet_type_label' => BetType::label((string) $row->bet_type),
+                    'number' => (string) $row->number,
+                    'mode' => (string) $row->mode,
+                    'blocked_at' => $row->blocked_at ? Carbon::parse((string) $row->blocked_at)->format('d/m/Y H:i:s') : '-',
+                    'reason' => (string) ($row->reason ?? ''),
+                ];
+            })->values()->all(),
+        ], 'ดึงรายการเลขอั้นสำเร็จ');
+    }
+
+    public function loadTicketsSummary(Request $request): JsonResponse
+    {
+        $draw = LottoDraw::query()
+            ->with('market:id,name')
+            ->find((int) $request->input('id'));
+
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        }
+
+        $rows = LottoTicket::query()
+            ->with([
+                'member:code,user_name,name',
+                'items:id,ticket_id,bet_type,number',
+            ])
+            ->where('draw_id', (int) $draw->id)
+            ->orderByDesc('id')
+            ->get(['id', 'member_id', 'total_amount', 'status', 'created_at']);
+
+        return $this->sendResponse([
+            'draw' => [
+                'id' => (int) $draw->id,
+                'market_name' => (string) ($draw->market->name ?? '-'),
+                'draw_date' => $draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-',
+            ],
+            'count' => $rows->count(),
+            'items' => $rows->map(static function ($row): array {
+                $betTypes = $row->items
+                    ->pluck('bet_type')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->map(static fn ($betType) => BetType::label((string) $betType))
+                    ->implode(', ');
+                $betNumbers = $row->items
+                    ->pluck('number')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+
+                return [
+                    'id' => (int) $row->id,
+                    'member_id' => (int) $row->member_id,
+                    'member_username' => (string) ($row->member->user_name ?? ''),
+                    'member_name' => (string) ($row->member->name ?? ''),
+                    'member_display' => (string) ($row->member->user_name ?? $row->member->name ?? ('MEM-' . $row->member_id)),
+                    'bet_types' => (string) ($betTypes !== '' ? $betTypes : '-'),
+                    'bet_numbers' => (string) ($betNumbers !== '' ? $betNumbers : '-'),
+                    'total_amount' => (float) $row->total_amount,
+                    'status' => (string) $row->status,
+                    'created_at' => $row->created_at ? $row->created_at->format('d/m/Y H:i:s') : '-',
+                ];
+            })->values()->all(),
+        ], 'ดึงรายการแทงสำเร็จ');
     }
 
     public function create(Request $request, DrawService $drawService): JsonResponse

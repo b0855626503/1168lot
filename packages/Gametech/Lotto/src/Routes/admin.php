@@ -118,6 +118,12 @@ Route::domain(
             Route::post('draws/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@loadData')
                 ->name('admin.lotto.draws.loaddata');
 
+            Route::post('draws/blocked-numbers', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@loadBlockedNumbers')
+                ->name('admin.lotto.draws.blocked_numbers');
+
+            Route::post('draws/tickets-summary', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@loadTicketsSummary')
+                ->name('admin.lotto.draws.tickets_summary');
+
             Route::post('draws/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@edit')
                 ->name('admin.lotto.draws.edit');
 

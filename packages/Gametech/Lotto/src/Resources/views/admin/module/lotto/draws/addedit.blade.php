@@ -86,6 +86,219 @@
     </b-form>
 </b-modal>
 
+<b-modal ref="blockedNumbersModal" id="blockedNumbersModal" centered size="xl" title="รายการเลขอั้นในงวด" ok-only ok-title="ปิด" modal-class="lotto-blocked-summary-modal">
+    <div class="row no-gutters mb-2 lotto-summary-row">
+        <div class="col-4 lotto-blocked-summary-item"><span>งวด :</span><strong>@{{ blockedNumbersData.draw.draw_date || '-' }}</strong></div>
+        <div class="col-4 lotto-blocked-summary-item"><span>ตลาด :</span><strong>@{{ blockedNumbersData.draw.market_name || '-' }}</strong></div>
+        <div class="col-4 lotto-blocked-summary-item"><span>จำนวนเลขอั้น :</span><strong class="lotto-summary-value-primary">@{{ blockedNumbersData.count || 0 }}</strong></div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+        <div class="text-muted small mb-1">แสดง @{{ filteredBlockedNumbersItems.length }} / @{{ blockedNumbersData.count || 0 }} รายการ</div>
+        <div class="lotto-blocked-search mb-1">
+            <b-input-group size="sm">
+                <b-form-input
+                    id="blocked-number-search"
+                    v-model.trim="blockedSearchKeyword"
+                    placeholder="ค้นหาเลข / ประเภท / หมายเหตุ"></b-form-input>
+            </b-input-group>
+        </div>
+    </div>
+    <div class="table-responsive member-list-scroll">
+        <b-table
+            class="mb-0 member-list-table lotto-blocked-summary-table"
+            striped
+            hover
+            small
+            outlined
+            show-empty
+            head-variant="light"
+            :items="filteredBlockedNumbersItems"
+            :fields="blockedNumbersFields"
+            empty-text="ไม่พบรายการเลขอั้นในงวดนี้">
+            <template #cell(index)="row">
+                <div class="text-center">@{{ row.index + 1 }}</div>
+            </template>
+            <template #cell(bet_type_label)="row">
+                @{{ row.item.bet_type_label || row.item.bet_type || '-' }}
+            </template>
+            <template #cell(number)="row">
+                <div class="text-center">@{{ row.item.number || '-' }}</div>
+            </template>
+            <template #cell(mode)="row">
+                <div class="text-center">@{{ row.item.mode || '-' }}</div>
+            </template>
+            <template #cell(blocked_at)="row">
+                <div class="text-center">@{{ row.item.blocked_at || '-' }}</div>
+            </template>
+            <template #cell(reason)="row">
+                @{{ row.item.reason || '-' }}
+            </template>
+        </b-table>
+    </div>
+</b-modal>
+
+<b-modal ref="ticketsSummaryModal" id="ticketsSummaryModal" centered size="xl" title="รายการแทงในงวด" ok-only ok-title="ปิด" modal-class="lotto-ticket-summary-modal">
+    <div class="row no-gutters mb-2 lotto-summary-row">
+        <div class="col-4 lotto-ticket-summary-item"><span>งวด :</span><strong>@{{ ticketsSummaryData.draw.draw_date || '-' }}</strong></div>
+        <div class="col-4 lotto-ticket-summary-item"><span>ตลาด :</span><strong>@{{ ticketsSummaryData.draw.market_name || '-' }}</strong></div>
+        <div class="col-4 lotto-ticket-summary-item"><span>จำนวนรายการแทง :</span><strong class="lotto-summary-value-primary">@{{ ticketsSummaryData.count || 0 }}</strong></div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+        <div class="text-muted small mb-1">แสดง @{{ filteredTicketsSummaryItems.length }} / @{{ ticketsSummaryData.count || 0 }} รายการ</div>
+        <div class="lotto-ticket-search mb-1">
+            <b-input-group size="sm">
+                <b-form-input
+                    id="ticket-member-search"
+                    v-model.trim="ticketsSearchKeyword"
+                    placeholder="ค้นหา username หรือชื่อสมาชิก"></b-form-input>
+            </b-input-group>
+        </div>
+    </div>
+
+    <div class="table-responsive member-list-scroll">
+        <b-table
+            class="mb-0 member-list-table lotto-ticket-summary-table"
+            striped
+            hover
+            small
+            outlined
+            show-empty
+            head-variant="light"
+            :items="filteredTicketsSummaryItems"
+            :fields="ticketsSummaryFields"
+            empty-text="ไม่พบรายการแทงในงวดนี้">
+            <template #cell(id)="row">
+                <div class="text-center">@{{ row.item.id || '-' }}</div>
+            </template>
+            <template #cell(member_username)="row">
+                @{{ row.item.member_username || '-' }}
+            </template>
+            <template #cell(member_name)="row">
+                @{{ row.item.member_name || '-' }}
+            </template>
+            <template #cell(bet_types)="row">
+                @{{ row.item.bet_types || '-' }}
+            </template>
+            <template #cell(bet_numbers)="row">
+                @{{ row.item.bet_numbers || '-' }}
+            </template>
+            <template #cell(total_amount)="row">
+                <div class="text-right">@{{ formatMoney(row.item.total_amount) }}</div>
+            </template>
+            <template #cell(status)="row">
+                <div class="text-center">@{{ row.item.status || '-' }}</div>
+            </template>
+            <template #cell(created_at)="row">
+                <div class="text-center">@{{ row.item.created_at || '-' }}</div>
+            </template>
+        </b-table>
+    </div>
+</b-modal>
+
+@push('css')
+    <style>
+        .member-list-table th,
+        .member-list-table td {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .member-list-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 360px;
+            overflow: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        .lotto-blocked-summary-modal .modal-dialog {
+            max-width: 1120px;
+        }
+        .lotto-blocked-summary-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 14px;
+            white-space: nowrap;
+            min-height: 32px;
+        }
+        .lotto-blocked-summary-item span {
+            color: #334155;
+            font-weight: 700;
+        }
+        .lotto-blocked-summary-item strong {
+            color: #0f172a;
+            font-size: 16px;
+        }
+        .lotto-blocked-search {
+            min-width: 320px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .lotto-blocked-summary-table .table {
+            margin-bottom: 0;
+        }
+        .lotto-blocked-summary-table thead th {
+            font-weight: 700;
+            background: #eef1f5;
+            border-top: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            color: #374151;
+        }
+        .lotto-blocked-summary-table tbody td {
+            vertical-align: middle;
+        }
+        .lotto-ticket-summary-modal .modal-dialog {
+            max-width: 1220px;
+        }
+        .lotto-ticket-summary-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 14px;
+            white-space: nowrap;
+            min-height: 32px;
+        }
+        .lotto-ticket-summary-item span {
+            color: #334155;
+            font-weight: 700;
+        }
+        .lotto-ticket-summary-item strong {
+            color: #0f172a;
+            font-size: 16px;
+        }
+        .lotto-summary-row {
+            border: 1px solid #dbe3ef;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #f8fbff 0%, #f3f8ff 100%);
+            padding: 4px 0;
+        }
+        .lotto-summary-value-primary {
+            color: #0d6efd !important;
+            font-weight: 800;
+        }
+        .lotto-ticket-search {
+            min-width: 320px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .lotto-ticket-summary-table .table {
+            margin-bottom: 0;
+        }
+        .lotto-ticket-summary-table thead th {
+            font-weight: 700;
+            background: #eef1f5;
+            border-top: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            color: #374151;
+        }
+        .lotto-ticket-summary-table tbody td {
+            vertical-align: middle;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script type="module">
         const toDateTimeLocal = (value) => {
@@ -119,6 +332,36 @@
                         draw_date: '',
                         status_label: '',
                     },
+                    blockedNumbersData: {
+                        draw: {},
+                        count: 0,
+                        items: [],
+                    },
+                    blockedSearchKeyword: '',
+                    blockedNumbersFields: [
+                        { key: 'index', label: '#', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '60px' } },
+                        { key: 'bet_type_label', label: 'ประเภท' },
+                        { key: 'number', label: 'เลข', thClass: 'text-center', tdClass: 'text-center' },
+                        { key: 'mode', label: 'โหมด', thClass: 'text-center', tdClass: 'text-center' },
+                        { key: 'blocked_at', label: 'เวลาอั้น', thClass: 'text-center', tdClass: 'text-center' },
+                        { key: 'reason', label: 'หมายเหตุ' },
+                    ],
+                    ticketsSummaryData: {
+                        draw: {},
+                        count: 0,
+                        items: [],
+                    },
+                    ticketsSearchKeyword: '',
+                    ticketsSummaryFields: [
+                        { key: 'id', label: 'โพย #', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '80px' } },
+                        { key: 'member_username', label: 'user' },
+                        { key: 'member_name', label: 'ชื่อสมาชิก' },
+                        { key: 'bet_types', label: 'ประเภท' },
+                        { key: 'bet_numbers', label: 'เลขที่แทง' },
+                        { key: 'total_amount', label: 'ยอดแทง', thClass: 'text-right', tdClass: 'text-right' },
+                        { key: 'status', label: 'สถานะ', thClass: 'text-center', tdClass: 'text-center' },
+                        { key: 'created_at', label: 'เวลาแทง', thClass: 'text-center', tdClass: 'text-center' },
+                    ],
                 };
             },
             computed: {
@@ -145,6 +388,40 @@
                     }
 
                     return null;
+                },
+                filteredTicketsSummaryItems() {
+                    const rows = Array.isArray(this.ticketsSummaryData.items) ? this.ticketsSummaryData.items : [];
+                    const keyword = String(this.ticketsSearchKeyword || '').trim().toLowerCase();
+                    if (!keyword) {
+                        return rows;
+                    }
+
+                    return rows.filter((item) => {
+                        const username = String(item.member_username || '').toLowerCase();
+                        const fullName = String(item.member_name || '').toLowerCase();
+                        const memberId = String(item.member_id || '').toLowerCase();
+                        const betTypes = String(item.bet_types || '').toLowerCase();
+                        const betNumbers = String(item.bet_numbers || '').toLowerCase();
+                        return username.includes(keyword)
+                            || fullName.includes(keyword)
+                            || memberId.includes(keyword)
+                            || betTypes.includes(keyword)
+                            || betNumbers.includes(keyword);
+                    });
+                },
+                filteredBlockedNumbersItems() {
+                    const rows = Array.isArray(this.blockedNumbersData.items) ? this.blockedNumbersData.items : [];
+                    const keyword = String(this.blockedSearchKeyword || '').trim().toLowerCase();
+                    if (!keyword) {
+                        return rows;
+                    }
+
+                    return rows.filter((item) => {
+                        const number = String(item.number || '').toLowerCase();
+                        const betType = String(item.bet_type_label || item.bet_type || '').toLowerCase();
+                        const reason = String(item.reason || '').toLowerCase();
+                        return number.includes(keyword) || betType.includes(keyword) || reason.includes(keyword);
+                    });
                 },
             },
             watch: {
@@ -319,6 +596,24 @@
 
                     return '';
                 },
+                async openBlockedNumbersModal(drawId) {
+                    const response = await axios.post("{{ route('admin.lotto.draws.blocked_numbers') }}", { id: drawId });
+                    this.blockedNumbersData = response?.data?.data || { draw: {}, count: 0, items: [] };
+                    this.blockedSearchKeyword = '';
+                    this.$refs.blockedNumbersModal.show();
+                },
+                async openTicketsSummaryModal(drawId) {
+                    const response = await axios.post("{{ route('admin.lotto.draws.tickets_summary') }}", { id: drawId });
+                    this.ticketsSummaryData = response?.data?.data || { draw: {}, count: 0, items: [] };
+                    this.ticketsSearchKeyword = '';
+                    this.$refs.ticketsSummaryModal.show();
+                },
+                formatMoney(value) {
+                    return Number(value || 0).toLocaleString('th-TH', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    });
+                },
                 async submitDrawForm() {
                     const validationMessage = this.validateDrawWindow();
                     if (validationMessage) {
@@ -469,5 +764,7 @@
         window.openDraw = function (id) { window.app.openDraw(id); };
         window.closeDraw = function (id) { window.app.closeDraw(id); };
         window.generateAutoDraws = function (dryRun) { window.app.generateAutoDraws(dryRun); };
+        window.showDrawBlockedNumbers = function (id) { window.app.openBlockedNumbersModal(id); };
+        window.showDrawTicketList = function (id) { window.app.openTicketsSummaryModal(id); };
     </script>
 @endpush
