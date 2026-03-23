@@ -2,6 +2,8 @@
 
 namespace Gametech\Lotto\Services;
 
+use App\Services\Dashboard\DashboardSummarySyncService;
+use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -118,7 +120,9 @@ class WalletTransactionService
                 'date_update' => now(),
             ]);
 
-        return (int) DB::table('wallet_transactions')->insertGetId([
+        $createdAt = now();
+
+        $txId = (int) DB::table('wallet_transactions')->insertGetId([
             'member_id' => $memberId,
             'scope' => 'MEMBER',
             'game_user_id' => null,
@@ -136,8 +140,23 @@ class WalletTransactionService
             'meta' => empty($meta) ? null : json_encode($meta, JSON_UNESCAPED_UNICODE),
             'created_by_type' => $createdByType,
             'created_by_id' => $createdById,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
         ]);
+
+        if (in_array($refType, array_merge(
+            LottoDashboardMetricConfig::salesRefTypes(),
+            LottoDashboardMetricConfig::payoutRefTypes(),
+            LottoDashboardMetricConfig::refundRefTypes()
+        ), true)) {
+            DB::afterCommit(function () use ($txId, $createdAt): void {
+                app(DashboardSummarySyncService::class)->dispatchForModelChange('lotto', [
+                    'id' => (string) $txId,
+                    'cash_dates' => [$createdAt],
+                ], [LottoDashboardMetricConfig::SECTION_CASH, 'net']);
+            });
+        }
+
+        return $txId;
     }
 }

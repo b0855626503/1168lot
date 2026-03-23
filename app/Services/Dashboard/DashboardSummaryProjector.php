@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardSummaryProjector
 {
-    public const METRIC_VERSION = 2;
+    public const METRIC_VERSION = 3;
 
     private array $tableCache = [];
     private array $columnCache = [];
@@ -22,10 +22,12 @@ class DashboardSummaryProjector
         $withdraw = $this->withdrawMetrics($summaryDate, $webCode);
         $bonus = $this->bonusMetrics($summaryDate, $webCode);
         $staff = $this->staffAdjustMetrics($summaryDate, $webCode);
+        $lottoCash = $this->lottoCashMetrics($summaryDate, $webCode);
 
         $netAmount = round(
             (float) $deposit['deposit_success_amount']
-            - (float) $withdraw['withdraw_total_amount'],
+            - (float) $withdraw['withdraw_total_amount']
+            + (float) $lottoCash['lotto_net_cash'],
             2
         );
 
@@ -77,6 +79,11 @@ class DashboardSummaryProjector
             'bonus_total_amount' => $this->toDecimal($bonus['bonus_total_amount']),
             'bonus_total_count' => (int) $bonus['bonus_total_count'],
 
+            'lotto_sales_cash' => $this->toDecimal($lottoCash['lotto_sales_cash']),
+            'lotto_payout_cash' => $this->toDecimal($lottoCash['lotto_payout_cash']),
+            'lotto_refund_cash' => $this->toDecimal($lottoCash['lotto_refund_cash']),
+            'lotto_net_cash' => $this->toDecimal($lottoCash['lotto_net_cash']),
+
             'net_amount' => $this->toDecimal($netAmount),
 
             'register_deposit_count' => (int) $register['register_deposit_count'],
@@ -92,6 +99,24 @@ class DashboardSummaryProjector
             'last_synced_at' => now()->toDateTimeString(),
             'metric_version' => self::METRIC_VERSION,
             'updated_at' => now()->toDateTimeString(),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     daily: array<string, mixed>,
+     *     markets: array<int, array<string, mixed>>,
+     *     risk: array<int, array<string, mixed>>
+     * }
+     */
+    public function projectLotto(string $summaryDate, string $webCode): array
+    {
+        $summaryDate = $this->normalizeDate($summaryDate);
+
+        return [
+            'daily' => $this->lottoProductDailyMetrics($summaryDate, $webCode),
+            'markets' => $this->lottoMarketSummaryMetrics($summaryDate, $webCode),
+            'risk' => $this->lottoRiskSnapshotMetrics($summaryDate, $webCode),
         ];
     }
 
@@ -482,6 +507,258 @@ class DashboardSummaryProjector
         return $defaults;
     }
 
+    private function lottoCashMetrics(string $summaryDate, string $webCode): array
+    {
+        [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
+
+        $defaults = [
+            'lotto_sales_cash' => 0.0,
+            'lotto_payout_cash' => 0.0,
+            'lotto_refund_cash' => 0.0,
+            'lotto_net_cash' => 0.0,
+        ];
+
+        if (!$this->hasTable('wallet_transactions')) {
+            return $defaults;
+        }
+
+        $base = DB::table('wallet_transactions')
+            ->where('scope', 'MEMBER')
+            ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
+            ->where('created_at', '>=', $rangeStart)
+            ->where('created_at', '<', $rangeEnd);
+        $base = $this->applyWebScopeByMember($base, 'wallet_transactions', $webCode);
+
+        $sales = (clone $base)
+            ->where('direction', 'DEBIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::salesRefTypes());
+        $defaults['lotto_sales_cash'] = (float) (clone $sales)->sum('amount');
+
+        $payout = (clone $base)
+            ->where('direction', 'CREDIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::payoutRefTypes());
+        $defaults['lotto_payout_cash'] = (float) (clone $payout)->sum('amount');
+
+        $refund = (clone $base)
+            ->where('direction', 'CREDIT')
+            ->whereIn('ref_type', LottoDashboardMetricConfig::refundRefTypes());
+        $defaults['lotto_refund_cash'] = (float) (clone $refund)->sum('amount');
+
+        $defaults['lotto_net_cash'] = round(
+            (float) $defaults['lotto_sales_cash']
+            - (float) $defaults['lotto_payout_cash']
+            - (float) $defaults['lotto_refund_cash'],
+            2
+        );
+
+        return $defaults;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function lottoProductDailyMetrics(string $summaryDate, string $webCode): array
+    {
+        [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
+
+        $defaults = [
+            'summary_date' => $summaryDate,
+            'web_code' => $webCode,
+            'total_sales' => 0.0,
+            'total_payout' => 0.0,
+            'total_tickets' => 0,
+            'total_players' => 0,
+            'win_tickets' => 0,
+            'lose_tickets' => 0,
+            'pending_tickets' => 0,
+            'settled_tickets' => 0,
+            'sales_unique_players' => 0,
+            'settled_unique_players' => 0,
+            'metric_version' => self::METRIC_VERSION,
+            'last_synced_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+            'created_at' => now()->toDateTimeString(),
+        ];
+
+        if (!$this->hasTable('lotto_tickets')) {
+            return $defaults;
+        }
+
+        $salesBase = DB::table('lotto_tickets')
+            ->where('created_at', '>=', $rangeStart)
+            ->where('created_at', '<', $rangeEnd);
+        $salesBase = $this->applyWebScopeByMember($salesBase, 'lotto_tickets', $webCode);
+
+        $defaults['total_sales'] = (float) (clone $salesBase)->sum(DB::raw($this->lottoTicketNetAmountExpression('lotto_tickets')));
+        $defaults['total_tickets'] = (int) (clone $salesBase)->count();
+        $defaults['total_players'] = $this->countDistinctMembers((clone $salesBase), 'lotto_tickets', 'member_id');
+        $defaults['sales_unique_players'] = $defaults['total_players'];
+
+        $pending = (clone $salesBase)
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'resulted');
+            });
+        $defaults['pending_tickets'] = (int) (clone $pending)->count();
+
+        if ($this->hasTable('lotto_draws')) {
+            $settledBase = DB::table('lotto_tickets as lt')
+                ->join('lotto_draws as ld', 'ld.id', '=', 'lt.draw_id')
+                ->where('ld.result_at', '>=', $rangeStart)
+                ->where('ld.result_at', '<', $rangeEnd)
+                ->where('lt.status', 'resulted');
+            $settledBase = $this->applyWebScopeByMember($settledBase, 'lotto_tickets', $webCode, 'lt');
+
+            $defaults['settled_tickets'] = (int) (clone $settledBase)->count();
+            $winAmountColumn = $this->lottoTicketWinAmountExpression('lotto_tickets', 'lt');
+            $defaults['win_tickets'] = (int) (clone $settledBase)->whereRaw($winAmountColumn . ' > 0')->count();
+            $defaults['lose_tickets'] = max(0, $defaults['settled_tickets'] - $defaults['win_tickets']);
+            $defaults['total_payout'] = (float) (clone $settledBase)->sum(DB::raw($winAmountColumn));
+
+            $defaults['settled_unique_players'] = (int) (clone $settledBase)
+                ->whereNotNull('lt.member_id')
+                ->distinct('lt.member_id')
+                ->count('lt.member_id');
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoMarketSummaryMetrics(string $summaryDate, string $webCode): array
+    {
+        [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
+        if (!$this->hasTable('lotto_tickets') || !$this->hasTable('lotto_draws')) {
+            return [];
+        }
+
+        $salesRows = DB::table('lotto_tickets as lt')
+            ->join('lotto_draws as ld', 'ld.id', '=', 'lt.draw_id')
+            ->select([
+                'ld.market_id',
+                'lt.draw_id as round_id',
+                DB::raw('COALESCE(SUM(' . $this->lottoTicketNetAmountExpression('lotto_tickets', 'lt') . '), 0) as total_sales'),
+                DB::raw('COUNT(*) as total_tickets'),
+                DB::raw('COUNT(DISTINCT lt.member_id) as total_players'),
+                DB::raw('MAX(ld.status) as status'),
+            ])
+            ->where('lt.created_at', '>=', $rangeStart)
+            ->where('lt.created_at', '<', $rangeEnd)
+            ->groupBy('ld.market_id', 'lt.draw_id');
+        $salesRows = $this->applyWebScopeByMember($salesRows, 'lotto_tickets', $webCode, 'lt');
+        $salesRows = $salesRows->get();
+
+        $payoutRows = DB::table('lotto_tickets as lt')
+            ->join('lotto_draws as ld', 'ld.id', '=', 'lt.draw_id')
+            ->select([
+                'ld.market_id',
+                'lt.draw_id as round_id',
+                DB::raw('COALESCE(SUM(' . $this->lottoTicketWinAmountExpression('lotto_tickets', 'lt') . '), 0) as total_payout'),
+                DB::raw('MAX(ld.status) as status'),
+            ])
+            ->where('ld.result_at', '>=', $rangeStart)
+            ->where('ld.result_at', '<', $rangeEnd)
+            ->where('lt.status', 'resulted')
+            ->groupBy('ld.market_id', 'lt.draw_id');
+        $payoutRows = $this->applyWebScopeByMember($payoutRows, 'lotto_tickets', $webCode, 'lt');
+        $payoutRows = $payoutRows->get();
+
+        $map = [];
+        foreach ($salesRows as $row) {
+            $key = (int) $row->market_id . ':' . (int) $row->round_id;
+            $map[$key] = [
+                'summary_date' => $summaryDate,
+                'web_code' => $webCode,
+                'market_id' => (int) $row->market_id,
+                'round_id' => (int) $row->round_id,
+                'total_sales' => $this->toDecimal((float) ($row->total_sales ?? 0)),
+                'total_tickets' => (int) ($row->total_tickets ?? 0),
+                'total_players' => (int) ($row->total_players ?? 0),
+                'total_payout' => 0.0,
+                'status' => (string) ($row->status ?? 'pending'),
+                'last_synced_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+                'created_at' => now()->toDateTimeString(),
+            ];
+        }
+
+        foreach ($payoutRows as $row) {
+            $key = (int) $row->market_id . ':' . (int) $row->round_id;
+            if (!isset($map[$key])) {
+                $map[$key] = [
+                    'summary_date' => $summaryDate,
+                    'web_code' => $webCode,
+                    'market_id' => (int) $row->market_id,
+                    'round_id' => (int) $row->round_id,
+                    'total_sales' => 0.0,
+                    'total_tickets' => 0,
+                    'total_players' => 0,
+                    'total_payout' => 0.0,
+                    'status' => (string) ($row->status ?? 'pending'),
+                    'last_synced_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
+                    'created_at' => now()->toDateTimeString(),
+                ];
+            }
+
+            $map[$key]['total_payout'] = $this->toDecimal((float) ($row->total_payout ?? 0));
+            $map[$key]['status'] = (string) ($row->status ?? $map[$key]['status']);
+            $map[$key]['updated_at'] = now()->toDateTimeString();
+            $map[$key]['last_synced_at'] = now()->toDateTimeString();
+        }
+
+        return array_values($map);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoRiskSnapshotMetrics(string $summaryDate, string $webCode): array
+    {
+        if (!$this->hasTable('lotto_number_exposures') || !$this->hasTable('lotto_draws')) {
+            return [];
+        }
+
+        $snapshotAt = Carbon::parse($summaryDate)->endOfDay()->format('Y-m-d H:i:s');
+
+        $rows = DB::table('lotto_number_exposures as e')
+            ->join('lotto_draws as d', 'd.id', '=', 'e.draw_id')
+            ->leftJoin('lotto_draw_bet_settings as s', function ($join) {
+                $join->on('s.draw_id', '=', 'd.id')
+                    ->on('s.bet_type', '=', 'e.bet_type');
+            })
+            ->select([
+                'd.market_id',
+                'e.draw_id as round_id',
+                'e.bet_type',
+                'e.number',
+                DB::raw('COALESCE(e.sold_amount, 0) as stake_total'),
+                DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
+            ])
+            ->whereDate('d.draw_date', '<=', $summaryDate)
+            ->get();
+
+        return $rows->map(function ($row) use ($snapshotAt, $webCode) {
+            $payoutIfHit = $this->toDecimal((float) ($row->payout_if_hit ?? 0));
+
+            return [
+                'web_code' => $webCode,
+                'market_id' => (int) $row->market_id,
+                'round_id' => (int) $row->round_id,
+                'bet_type' => (string) $row->bet_type,
+                'number' => (string) $row->number,
+                'snapshot_at' => $snapshotAt,
+                'stake_total' => $this->toDecimal((float) ($row->stake_total ?? 0)),
+                'payout_if_hit' => $payoutIfHit,
+                'liability' => $payoutIfHit,
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+            ];
+        })->values()->all();
+    }
+
     private function withdrawTables(): array
     {
         $config = $this->coreConfig();
@@ -539,7 +816,7 @@ class DashboardSummaryProjector
         return $query->where($target, $value);
     }
 
-    private function applyWebScopeByMember($query, string $table, string $webCode)
+    private function applyWebScopeByMember($query, string $table, string $webCode, ?string $alias = null)
     {
         $tableMemberKey = $this->memberForeignKey($table);
         $memberWebColumn = $this->webColumn('members');
@@ -554,8 +831,10 @@ class DashboardSummaryProjector
 
         $value = ctype_digit($webCode) ? (int) $webCode : $webCode;
 
+        $targetPrefix = $alias ? $alias . '.' : $table . '.';
+
         return $query
-            ->join('members as m_scope', 'm_scope.code', '=', $table . '.' . $tableMemberKey)
+            ->join('members as m_scope', 'm_scope.code', '=', $targetPrefix . $tableMemberKey)
             ->where('m_scope.' . $memberWebColumn, $value);
     }
 
@@ -576,7 +855,7 @@ class DashboardSummaryProjector
 
     private function isLikelyNumericMemberKey(string $table, string $column): bool
     {
-        return in_array($column, ['member_topup', 'member_code'], true) && $this->hasColumn($table, $column);
+        return in_array($column, ['member_topup', 'member_code', 'member_id'], true) && $this->hasColumn($table, $column);
     }
 
     private function webColumn(string $table): ?string
@@ -594,7 +873,7 @@ class DashboardSummaryProjector
 
     private function memberForeignKey(string $table): ?string
     {
-        $candidates = ['member_code', 'member_topup'];
+        $candidates = ['member_code', 'member_topup', 'member_id'];
         foreach ($candidates as $column) {
             if ($this->hasColumn($table, $column)) {
                 return $column;
@@ -602,6 +881,32 @@ class DashboardSummaryProjector
         }
 
         return null;
+    }
+
+    private function lottoTicketNetAmountExpression(string $table, ?string $alias = null): string
+    {
+        $prefix = $alias ? $alias . '.' : '';
+
+        if ($this->hasColumn($table, 'total_net_amount')) {
+            return 'COALESCE(' . $prefix . 'total_net_amount, ' . $prefix . 'total_amount, 0)';
+        }
+
+        if ($this->hasColumn($table, 'total_amount')) {
+            return 'COALESCE(' . $prefix . 'total_amount, 0)';
+        }
+
+        return '0';
+    }
+
+    private function lottoTicketWinAmountExpression(string $table, ?string $alias = null): string
+    {
+        $prefix = $alias ? $alias . '.' : '';
+
+        if ($this->hasColumn($table, 'total_win_amount')) {
+            return 'COALESCE(' . $prefix . 'total_win_amount, 0)';
+        }
+
+        return '0';
     }
 
     private function normalizeDate(string $summaryDate): string

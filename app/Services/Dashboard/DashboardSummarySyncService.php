@@ -17,6 +17,7 @@ class DashboardSummarySyncService
     private DashboardWebCodeResolver $webCodeResolver;
     private DashboardSummaryProjector $projector;
     private DashboardSummaryBroadcastNotifier $notifier;
+    private array $columnListingCache = [];
 
     public function __construct(
         DashboardBucketResolver $bucketResolver,
@@ -34,10 +35,17 @@ class DashboardSummarySyncService
     {
         $buckets = $this->bucketResolver->resolve($domain, $model, $overrideSections);
 
+        $sourceId = '';
+        if (is_object($model) && method_exists($model, 'getKey')) {
+            $sourceId = (string) ($model->getKey() ?? '');
+        } elseif (is_array($model)) {
+            $sourceId = (string) ($model['id'] ?? $model['source_id'] ?? '');
+        }
+
         $this->dispatchBuckets(
             buckets: $buckets,
             sourceType: $domain,
-            sourceId: (string) ($model->getKey() ?? ''),
+            sourceId: $sourceId,
         );
     }
 
@@ -89,8 +97,14 @@ class DashboardSummarySyncService
         }
 
         $payload = $this->projector->projectDaily($summaryDate, $webCode);
+        $lottoPayload = $this->projector->projectLotto($summaryDate, $webCode);
 
         DB::transaction(function () use ($payload) {
+            $payload = $this->filterPayloadByExistingColumns('dashboard_summary_daily', $payload, ['summary_date', 'web_code']);
+            if (empty($payload)) {
+                return;
+            }
+
             $updateColumns = array_keys($payload);
             $updateColumns = array_values(array_filter($updateColumns, fn ($column) => !in_array($column, ['summary_date', 'web_code'], true)));
 
@@ -99,6 +113,68 @@ class DashboardSummarySyncService
                 ['summary_date', 'web_code'],
                 $updateColumns,
             );
+        });
+
+        DB::transaction(function () use ($lottoPayload): void {
+            $dailyPayload = $this->filterPayloadByExistingColumns(
+                'lotto_dashboard_summary_daily',
+                (array) ($lottoPayload['daily'] ?? []),
+                ['summary_date', 'web_code']
+            );
+            if (!empty($dailyPayload) && Schema::hasTable('lotto_dashboard_summary_daily')) {
+                $updateColumns = array_values(array_filter(array_keys($dailyPayload), fn ($column) => !in_array($column, ['summary_date', 'web_code'], true)));
+                DB::table('lotto_dashboard_summary_daily')->upsert(
+                    [$dailyPayload],
+                    ['summary_date', 'web_code'],
+                    $updateColumns
+                );
+            }
+
+            if (Schema::hasTable('lotto_dashboard_market_summary')) {
+                $rows = [];
+                foreach ((array) ($lottoPayload['markets'] ?? []) as $row) {
+                    $filtered = $this->filterPayloadByExistingColumns(
+                        'lotto_dashboard_market_summary',
+                        (array) $row,
+                        ['summary_date', 'web_code', 'market_id', 'round_id']
+                    );
+                    if (!empty($filtered)) {
+                        $rows[] = $filtered;
+                    }
+                }
+
+                if (!empty($rows)) {
+                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => !in_array($column, ['summary_date', 'web_code', 'market_id', 'round_id'], true)));
+                    DB::table('lotto_dashboard_market_summary')->upsert(
+                        $rows,
+                        ['summary_date', 'web_code', 'market_id', 'round_id'],
+                        $updateColumns
+                    );
+                }
+            }
+
+            if (Schema::hasTable('lotto_dashboard_risk_snapshot')) {
+                $rows = [];
+                foreach ((array) ($lottoPayload['risk'] ?? []) as $row) {
+                    $filtered = $this->filterPayloadByExistingColumns(
+                        'lotto_dashboard_risk_snapshot',
+                        (array) $row,
+                        ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
+                    );
+                    if (!empty($filtered)) {
+                        $rows[] = $filtered;
+                    }
+                }
+
+                if (!empty($rows)) {
+                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => !in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
+                    DB::table('lotto_dashboard_risk_snapshot')->upsert(
+                        $rows,
+                        ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
+                        $updateColumns
+                    );
+                }
+            }
         });
 
         $this->touchDashboardCacheVersion();
@@ -121,6 +197,49 @@ class DashboardSummarySyncService
         }
 
         return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param string[] $requiredColumns
+     * @return array<string, mixed>
+     */
+    private function filterPayloadByExistingColumns(string $table, array $payload, array $requiredColumns): array
+    {
+        if (!Schema::hasTable($table)) {
+            return [];
+        }
+
+        $availableColumns = $this->tableColumns($table);
+        $filtered = [];
+        foreach ($payload as $key => $value) {
+            if (!in_array($key, $availableColumns, true)) {
+                continue;
+            }
+            $filtered[$key] = $value;
+        }
+
+        foreach ($requiredColumns as $column) {
+            if (!array_key_exists($column, $filtered)) {
+                return [];
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function tableColumns(string $table): array
+    {
+        if (!array_key_exists($table, $this->columnListingCache)) {
+            $this->columnListingCache[$table] = Schema::hasTable($table)
+                ? Schema::getColumnListing($table)
+                : [];
+        }
+
+        return $this->columnListingCache[$table];
     }
 
     private function touchDashboardCacheVersion(): void
