@@ -77,23 +77,44 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 10px;
             padding: 8px 10px;
             background: #fff6eb;
             border-bottom: 1px solid #ffe3c5;
+        }
+        .lotto-recent-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            min-width: 0;
+            flex: 1 1 auto;
         }
         .lotto-recent-title {
             font-size: 12px;
             font-weight: 700;
             color: #d16a00;
+            flex: 0 1 auto;
+            min-width: 0;
         }
         .lotto-recent-count {
             font-size: 11px;
             color: #6c757d;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 52px;
+            padding: 2px 8px;
+            border: 1px solid #f1d0ac;
+            border-radius: 999px;
+            background: #fff;
+            flex: 0 0 auto;
         }
         .lotto-recent-filter {
             min-width: 260px;
             max-width: 320px;
+            flex: 0 1 320px;
         }
         .lotto-recent-table {
             margin-bottom: 0;
@@ -784,7 +805,7 @@
                                         <div class="lotto-recent-wrap">
                                             <div class="lotto-recent-head">
                                                 <div class="lotto-recent-title">รายการโพยล่าสุด (Recent Lotto Bets)</div>
-                                                <div class="d-flex align-items-center" style="gap:8px;">
+                                                <div class="lotto-recent-actions">
                                                     <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
                                                     <select ref="lottoRecentMarketSelect" class="form-control form-control-sm lotto-recent-filter">
                                                         <option value="">ทั้งหมดทุกรายการหวย</option>
