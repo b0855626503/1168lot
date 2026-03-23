@@ -2,12 +2,6 @@
 
 return [
     [
-        'key' => 'lotto_zone',
-        'name' => 'Lotto Zone',
-        'route' => 'admin.lotto.draws.index',
-        'sort' => 87,
-    ],
-    [
         'key' => 'lotto_tickets',
         'name' => 'รายการโพย',
         'route' => 'admin.lotto.tickets.index',
@@ -23,13 +17,13 @@ return [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
-        'sort' => 1,
+        'sort' => 2,
     ],
     [
         'key' => 'lotto_settings.draws',
         'name' => 'งวดหวย',
         'route' => 'admin.lotto.draws.index',
-        'sort' => 2,
+        'sort' => 1,
     ],
     [
         'key' => 'lotto_settings.number_blocks',

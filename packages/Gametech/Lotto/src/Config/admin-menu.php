@@ -2,16 +2,6 @@
 
 return [
     [
-        'key' => 'lotto_zone',
-        'name' => 'Lotto Zone',
-        'route' => 'admin.lotto.draws.index',
-        'sort' => 87,
-        'icon-class' => 'fa-ticket',
-        'badge' => 0,
-        'badge-color' => 'badge-primary',
-        'status' => 1,
-    ],
-    [
         'key' => 'lotto_tickets',
         'name' => 'รายการโพย',
         'route' => 'admin.lotto.tickets.index',
@@ -35,7 +25,7 @@ return [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
-        'sort' => 1,
+        'sort' => 2,
         'icon-class' => 'fa-ticket',
         'badge' => 0,
         'badge-color' => 'badge-primary',
@@ -45,7 +35,7 @@ return [
         'key' => 'lotto_settings.draws',
         'name' => 'งวดหวย',
         'route' => 'admin.lotto.draws.index',
-        'sort' => 2,
+        'sort' => 1,
         'icon-class' => 'fa-ticket',
         'badge' => 0,
         'badge-color' => 'badge-primary',
