@@ -134,7 +134,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php -r \"$f='vendor/alimranahmed/laraocr/src/LaraOCRServiceProvider.php'; if (!file_exists($f)) { exit(0); } $c=file_get_contents($f); $n=str_replace(\\\"__DIR__.'../views/lara_ocr'\\\", \\\"__DIR__.'/../views/lara_ocr'\\\", $c); if ($n !== $c) { file_put_contents($f, $n); echo 'Patched laraocr view path'.PHP_EOL; }\""
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi"
