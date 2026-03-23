@@ -14,6 +14,21 @@
             const $drawSelect = $('#filter_draw_id');
             const drawOptionsByMarket = @json($drawOptionsByMarket ?? []);
             const drawDefaultOption = '<option value="">เลือกงวดหวย</option>';
+            const initMarketSelect = function () {
+                if (!$marketSelect.length || typeof $marketSelect.select2 !== 'function') {
+                    return;
+                }
+
+                if ($marketSelect.hasClass('select2-hidden-accessible')) {
+                    $marketSelect.select2('destroy');
+                }
+
+                $marketSelect.select2({
+                    width: '100%',
+                    placeholder: 'เลือกรายการหวย',
+                    allowClear: true,
+                });
+            };
 
             const renderDrawOptions = function (marketId) {
                 const normalizedMarketId = String(marketId || '');
@@ -76,6 +91,7 @@
             });
 
             renderDrawOptions($marketSelect.val());
+            initMarketSelect();
 
             $(document).off('click.lottoTicketsRow', tableSelector + ' tbody tr').on('click.lottoTicketsRow', tableSelector + ' tbody tr', function (event) {
                 if ($(event.target).closest('a, button, input, select, textarea, label, .js-no-row-open').length) {

@@ -3,8 +3,12 @@
         <label class="mb-1">รายการหวย</label>
         <select id="filter_market_id" class="form-control form-control-sm">
             <option value="">ทั้งหมด</option>
-            @foreach(($marketOptions ?? []) as $option)
-                <option value="{{ $option['value'] }}">{{ $option['text'] }}</option>
+            @foreach(($marketOptions ?? []) as $group)
+                <optgroup label="{{ $group['label'] ?? '-' }}">
+                    @foreach(($group['options'] ?? []) as $option)
+                        <option value="{{ $option['value'] }}">{{ $option['text'] }}</option>
+                    @endforeach
+                </optgroup>
             @endforeach
         </select>
     </div>

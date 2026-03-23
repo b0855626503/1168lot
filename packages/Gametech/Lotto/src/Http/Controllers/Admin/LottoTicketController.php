@@ -24,12 +24,22 @@ class LottoTicketController extends AppBaseController
     public function index(LottoTicketDataTable $dataTable)
     {
         $marketOptions = LotteryMarket::query()
+            ->with('group:id,name,sort')
+            ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(static fn (LotteryMarket $market): array => [
-                'value' => (int) $market->id,
-                'text' => (string) $market->name,
-            ])
+            ->get(['id', 'group_id', 'name'])
+            ->groupBy(static function (LotteryMarket $market): string {
+                return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
+            })
+            ->map(static function ($markets, $groupName): array {
+                return [
+                    'label' => (string) $groupName,
+                    'options' => $markets->map(static fn (LotteryMarket $market): array => [
+                        'value' => (int) $market->id,
+                        'text' => (string) $market->name,
+                    ])->values()->all(),
+                ];
+            })
             ->values()
             ->toArray();
 
