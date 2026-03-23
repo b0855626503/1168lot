@@ -142,7 +142,7 @@ class LottoDrawController extends AppBaseController
             ])
             ->where('draw_id', (int) $draw->id)
             ->orderByDesc('id')
-            ->get(['id', 'member_id', 'total_amount', 'status', 'created_at']);
+            ->get(['id', 'member_id', 'total_amount', 'total_bet_amount', 'status', 'created_at']);
 
         return $this->sendResponse([
             'draw' => [
@@ -174,7 +174,7 @@ class LottoDrawController extends AppBaseController
                     'member_display' => (string) ($row->member->user_name ?? $row->member->name ?? ('MEM-' . $row->member_id)),
                     'bet_types' => (string) ($betTypes !== '' ? $betTypes : '-'),
                     'bet_numbers' => (string) ($betNumbers !== '' ? $betNumbers : '-'),
-                    'total_amount' => (float) $row->total_amount,
+                    'total_amount' => (float) ($row->total_bet_amount ?? $row->total_amount ?? 0),
                     'status' => (string) $row->status,
                     'created_at' => $row->created_at ? $row->created_at->format('d/m/Y H:i:s') : '-',
                 ];

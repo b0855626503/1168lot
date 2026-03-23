@@ -110,9 +110,10 @@ class TicketController extends AppBaseController
                     ->first(['id']);
 
                 $groupCode = 'LOTTO_CANCEL_' . $ticket->id . '_' . now()->format('YmdHis');
+                $refundAmount = (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0);
                 $walletTransactionService->creditMemberBalance(
                     memberId: $memberId,
-                    amount: (float) $ticket->total_amount,
+                    amount: $refundAmount,
                     refType: 'LOTTO_CANCEL',
                     refId: (int) $ticket->id,
                     refCode: (string) $ticket->id,
@@ -130,7 +131,7 @@ class TicketController extends AppBaseController
                 $ticket->update([
                     'status' => 'cancelled',
                     'cancelled_at' => now(),
-                    'refund_amount' => (float) $ticket->total_amount,
+                    'refund_amount' => $refundAmount,
                 ]);
             });
 
@@ -173,7 +174,11 @@ class TicketController extends AppBaseController
             'draw_date' => optional($ticket->draw?->draw_date)->toDateString(),
             'market_name' => $ticket->draw?->market?->name,
             'status' => (string) $ticket->status,
-            'total_amount' => (float) $ticket->total_amount,
+            'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+            'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
+            'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
+            'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+            'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
             'created_at' => optional($ticket->created_at)->toDateTimeString(),
         ];
     }

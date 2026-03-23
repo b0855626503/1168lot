@@ -5,7 +5,7 @@ return [
         'key' => 'marketing',
         'name' => 'Marketing',
         'route' => 'admin.marketing_team.index',
-        'sort' => 86,
+        'sort' => 1100,
     ],
     [
         'key' => 'marketing.marketing_team',

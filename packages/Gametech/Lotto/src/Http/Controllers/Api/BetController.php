@@ -33,7 +33,11 @@ class BetController extends AppBaseController
 
             return $this->sendResponse([
                 'ticket_id' => (int) $ticket->id,
-                'total_amount' => (float) $ticket->total_amount,
+                'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+                'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
+                'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
+                'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+                'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
                 'status' => (string) $ticket->status,
                 'item_count' => $ticket->items->count(),
             ], 'แทงหวยสำเร็จ');
@@ -42,4 +46,3 @@ class BetController extends AppBaseController
         }
     }
 }
-

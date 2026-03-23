@@ -39,7 +39,6 @@ class LottoTicketDataTable extends DataTable
         $query = $model->newQuery()
             ->select('lotto_tickets.*')
             ->with(['member', 'draw.market'])
-            ->withSum('items as total_win_amount', 'win_amount')
             ->withCount([
                 'items as winning_items_count' => function ($query) {
                     $query->where('result_status', 'win');
@@ -92,7 +91,9 @@ class LottoTicketDataTable extends DataTable
             ['data' => 'id', 'name' => 'id', 'title' => '#', 'className' => 'text-center', 'width' => '60px'],
             ['data' => 'member_code', 'name' => 'member_id', 'title' => 'สมาชิก', 'className' => 'text-center'],
             ['data' => 'draw', 'name' => 'draw.draw_date', 'title' => 'งวดหวย', 'className' => 'text-left'],
-            ['data' => 'total_amount', 'name' => 'total_amount', 'title' => 'ยอดแทง', 'className' => 'text-right'],
+            ['data' => 'total_bet_amount', 'name' => 'total_bet_amount', 'title' => 'ยอดแทง', 'className' => 'text-right'],
+            ['data' => 'total_discount_amount', 'name' => 'total_discount_amount', 'title' => 'ส่วนลด', 'className' => 'text-right'],
+            ['data' => 'total_net_amount', 'name' => 'total_net_amount', 'title' => 'สุทธิ', 'className' => 'text-right'],
             ['data' => 'total_win_amount', 'name' => 'total_win_amount', 'title' => 'ยอดถูก', 'className' => 'text-right'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ', 'className' => 'text-center'],
             ['data' => 'action', 'name' => 'action', 'title' => 'จัดการ', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '90px'],

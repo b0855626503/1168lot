@@ -71,6 +71,7 @@ class SettlementService
 
                 $ticket->update([
                     'status' => 'resulted',
+                    'total_win_amount' => round($ticketWinAmount, 2),
                 ]);
 
                 if ($hasWinningItem) {

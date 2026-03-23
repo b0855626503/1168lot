@@ -42,8 +42,8 @@ class LottoTicketListChanged implements ShouldBroadcast
             'total' => $this->total,
             'message' => $this->message,
             'datatable_id' => 'lottoTicketsTable',
-            'menu_badge_key' => 'lotto_zone',
-            'badge_id' => 'badge_lotto_zone',
+            'menu_badge_key' => 'lotto_tickets',
+            'badge_id' => 'badge_lotto_tickets',
             'path' => '/lotto/tickets',
         ];
     }

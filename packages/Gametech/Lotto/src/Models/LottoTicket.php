@@ -17,6 +17,10 @@ class LottoTicket extends Model implements LottoTicketContract
         'member_id',
         'draw_id',
         'total_amount',
+        'total_bet_amount',
+        'total_discount_amount',
+        'total_net_amount',
+        'total_win_amount',
         'status',        // active | cancelled | resulted
         'cancelled_at',
         'cancelled_by',  // user_id (admin / member)
@@ -25,6 +29,10 @@ class LottoTicket extends Model implements LottoTicketContract
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'total_bet_amount' => 'decimal:2',
+        'total_discount_amount' => 'decimal:2',
+        'total_net_amount' => 'decimal:2',
+        'total_win_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'cancelled_at' => 'datetime',
     ];

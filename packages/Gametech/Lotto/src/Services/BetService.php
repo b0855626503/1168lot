@@ -54,7 +54,9 @@ class BetService
             $this->validateMarketActive($draw);
 
             $validatedItems = [];
-            $totalAmount = 0;
+            $totalBetAmount = 0.0;
+            $totalDiscountAmount = 0.0;
+            $totalNetAmount = 0.0;
 
             foreach ($items as $item) {
                 $validated = $this->validateAndPrepareItem(
@@ -65,20 +67,26 @@ class BetService
                 );
 
                 $validatedItems[] = $validated;
-                $totalAmount += $validated['payable_amount'];
+                $totalBetAmount += $validated['amount'];
+                $totalDiscountAmount += $validated['discount_amount'];
+                $totalNetAmount += $validated['payable_amount'];
             }
 
             $ticket = LottoTicket::query()->create([
                 'member_id' => $memberId,
                 'draw_id' => $drawId,
-                'total_amount' => $totalAmount,
+                'total_amount' => round($totalNetAmount, 2),
+                'total_bet_amount' => round($totalBetAmount, 2),
+                'total_discount_amount' => round($totalDiscountAmount, 2),
+                'total_net_amount' => round($totalNetAmount, 2),
+                'total_win_amount' => 0,
                 'status' => 'active',
             ]);
 
             $groupCode = 'LOTTO_BET_' . $ticket->id . '_' . now()->format('YmdHis');
             $this->walletTransactionService->debitMemberBalance(
                 memberId: $memberId,
-                amount: (float) $totalAmount,
+                amount: (float) round($totalNetAmount, 2),
                 refType: 'LOTTO_BET',
                 refId: (int) $ticket->id,
                 refCode: (string) $ticket->id,

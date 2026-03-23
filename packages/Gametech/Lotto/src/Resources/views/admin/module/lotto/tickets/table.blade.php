@@ -9,7 +9,7 @@
         $(function () {
             const tableSelector = '#lottoTicketsTable';
             const tableKey = 'lottoTicketsTable';
-            const menuBadgeKey = 'lotto_zone';
+            const menuBadgeKey = 'lotto_tickets';
             const $marketSelect = $('#filter_market_id');
             const $drawSelect = $('#filter_draw_id');
             const drawOptionsByMarket = @json($drawOptionsByMarket ?? []);

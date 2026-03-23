@@ -17,7 +17,9 @@ class LottoTicketTransformer extends TransformerAbstract
             'id' => (int) $model->id,
             'member_code' => $memberName . ' (' . $model->member_id . ')',
             'draw' => $drawDate . ' (' . $marketName . ')',
-            'total_amount' => number_format((float) $model->total_amount, 2),
+            'total_bet_amount' => number_format((float) ($model->total_bet_amount ?? 0), 2),
+            'total_discount_amount' => number_format((float) ($model->total_discount_amount ?? 0), 2),
+            'total_net_amount' => number_format((float) ($model->total_net_amount ?? 0), 2),
             'total_win_amount' => number_format((float) ($model->total_win_amount ?? 0), 2),
             'status' => $this->statusBadge((string) $model->status),
             'action' => view('admin::module.lotto.tickets.datatables_actions', [
@@ -36,4 +38,3 @@ class LottoTicketTransformer extends TransformerAbstract
         };
     }
 }
-

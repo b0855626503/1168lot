@@ -68,7 +68,6 @@ class LottoTicketController extends AppBaseController
     {
         $ticket = LottoTicket::query()
             ->with(['member', 'draw.market', 'items'])
-            ->withSum('items as total_win_amount', 'win_amount')
             ->find((int) $request->input('id'));
 
         if (! $ticket) {
@@ -85,7 +84,10 @@ class LottoTicketController extends AppBaseController
                 'market' => $ticket->draw?->market?->name,
             ],
             'status' => (string) $ticket->status,
-            'total_amount' => (float) $ticket->total_amount,
+            'total_amount' => (float) ($ticket->total_bet_amount ?? 0),
+            'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
+            'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
+            'total_net_amount' => (float) ($ticket->total_net_amount ?? 0),
             'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
             'items' => $ticket->items->map(function ($item) {
                 return [

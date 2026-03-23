@@ -5,7 +5,7 @@ return [
         'key' => 'reward',
         'name' => 'Rewards',
         'route' => 'admin.reward_list.index',
-        'sort' => 86,
+        'sort' => 1200,
     ],
     [
         'key' => 'reward.reward_list',

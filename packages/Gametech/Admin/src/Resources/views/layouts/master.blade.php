@@ -381,8 +381,8 @@
         })
         .listen('.lotto.ticket.list.changed', (e) => {
             const message = e.message || 'รายการโพยหวยมีการเปลี่ยนแปลง';
-            const menuBadgeKey = e.menu_badge_key || 'lotto_zone';
-            const badgeId = e.badge_id || 'badge_lotto_zone';
+            const menuBadgeKey = e.menu_badge_key || 'lotto_tickets';
+            const badgeId = e.badge_id || 'badge_lotto_tickets';
             const total = Number(e.total ?? 0);
             const badgeElement = document.getElementById(badgeId);
             const badgeValue = Number.isFinite(total) ? total : 0;

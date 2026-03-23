@@ -7,7 +7,9 @@
 			<div><strong>สมาชิก:</strong> @{{ ticket.member_name }} (@{{ ticket.member_id }})</div>
 			<div><strong>งวด:</strong> @{{ ticket.draw.date }} <span v-if="ticket.draw.market">(@{{ ticket.draw.market }})</span></div>
 			<div><strong>สถานะ:</strong> @{{ ticket.status }}</div>
-			<div><strong>ยอดแทง:</strong> @{{ formatMoney(ticket.total_amount) }}</div>
+			<div><strong>ยอดแทง:</strong> @{{ formatMoney(ticket.total_bet_amount) }}</div>
+			<div><strong>ส่วนลด:</strong> @{{ formatMoney(ticket.total_discount_amount) }}</div>
+			<div><strong>สุทธิ:</strong> @{{ formatMoney(ticket.total_net_amount) }}</div>
 			<div><strong>ยอดถูก:</strong> @{{ formatMoney(ticket.total_win_amount) }}</div>
 		</div>
 
