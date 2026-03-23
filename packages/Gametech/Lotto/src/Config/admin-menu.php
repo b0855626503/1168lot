@@ -99,7 +99,7 @@ return [
         'icon-class' => 'fa-ticket',
         'badge' => 0,
         'badge-color' => 'badge-primary',
-        'status' => 1,
+        'status' => 0,
     ],
     [
         'key' => 'lotto.settings.payout_settings',
