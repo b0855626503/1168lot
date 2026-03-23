@@ -9,21 +9,21 @@ return [
     ],
     [
         'key' => 'lotto_settings',
-        'name' => 'ตั้งค่า Lotto',
+        'name' => 'ตั้งค่าหวย',
         'route' => 'admin.lotto.switches.index',
         'sort' => 88,
-    ],
-    [
-        'key' => 'lotto_settings.switches',
-        'name' => 'เปิด-ปิด หวย',
-        'route' => 'admin.lotto.switches.index',
-        'sort' => 2,
     ],
     [
         'key' => 'lotto_settings.draws',
         'name' => 'งวดหวย',
         'route' => 'admin.lotto.draws.index',
         'sort' => 1,
+    ],
+    [
+        'key' => 'lotto_settings.switches',
+        'name' => 'เปิด-ปิด หวย',
+        'route' => 'admin.lotto.switches.index',
+        'sort' => 2,
     ],
     [
         'key' => 'lotto_settings.number_blocks',
@@ -45,15 +45,15 @@ return [
     ],
     [
         'key' => 'lotto_settings.payout_settings',
-        'name' => 'ตั้งค่า อัตราจ่าย',
+        'name' => 'อัตราจ่าย',
         'route' => 'admin.lotto.rate_plans.index',
-        'sort' => 7,
+        'sort' => 6,
     ],
     [
         'key' => 'lotto_settings.bet_limit_settings',
         'name' => 'ขั้นต่ำ/สูงสุด/สูงสุดต่อเลข',
         'route' => 'admin.lotto.bet_limits.index',
-        'sort' => 8,
+        'sort' => 7,
     ],
     [
         'key' => 'lotto_reports',
