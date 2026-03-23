@@ -197,7 +197,7 @@ return [
         'key' => 'wallet',
         'name' => 'Members',
         'route' => 'admin.member.index',
-        'sort' => 20
+        'sort' => 18
     ], [
         'key' => 'wallet.member',
         'name' => 'รายการสมาชิก',
@@ -329,7 +329,7 @@ return [
         'key' => 'credit.rp_withdraw_free',
         'name' => 'รายงาน ถอนเงิน (Free Credit)',
         'route' => 'admin.rp_withdraw_free.index',
-        'sort' => 4
+        'sort' => 6
     ], [
         'key' => 'mop',
         'name' => 'รายงาน (กิจกรรม)',
@@ -588,7 +588,7 @@ return [
         'key' => 'st',
         'name' => 'ตั้งค่า ระบบ',
         'route' => 'admin.setting.index',
-        'sort' => 90
+        'sort' => 998
     ], [
         'key' => 'st.setting',
         'name' => 'ค่าพื้นฐานเว็บไซต์',
@@ -768,7 +768,7 @@ return [
         'key' => 'dev',
         'name' => 'Admin Zone',
         'route' => 'admin.employees.index',
-        'sort' => 100
+        'sort' => 999
     ], [
         'key' => 'dev.employees',
         'name' => 'ผู้ใช้งานระบบ',

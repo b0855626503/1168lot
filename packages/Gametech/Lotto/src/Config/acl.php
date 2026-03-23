@@ -5,7 +5,7 @@ return [
         'key' => 'lotto_zone',
         'name' => 'Lotto Zone',
         'route' => 'admin.lotto.draws.index',
-        'sort' => 1,
+        'sort' => 87,
     ],
     [
         'key' => 'lotto_zone.draws',
@@ -23,7 +23,7 @@ return [
         'key' => 'lotto_settings',
         'name' => 'ตั้งค่า Lotto',
         'route' => 'admin.lotto.switches.index',
-        'sort' => 2,
+        'sort' => 88,
     ],
     [
         'key' => 'lotto_settings.switches',
@@ -65,7 +65,7 @@ return [
         'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',
-        'sort' => 3,
+        'sort' => 89,
     ],
     [
         'key' => 'lotto_reports.pending_bets',

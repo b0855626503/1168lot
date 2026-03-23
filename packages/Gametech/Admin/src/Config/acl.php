@@ -634,7 +634,7 @@ return [
         'key' => 'st.spin',
         'name' => 'วงล้อมหาสนุก',
         'route' => 'admin.spin.index',
-        'sort' => 6
+        'sort' => 5
     ], [
         'key' => 'st.spin.update',
         'name' => 'แก้ไข วงล้อมหาสนุก',
@@ -644,7 +644,7 @@ return [
         'key' => 'st.reward',
         'name' => 'ตั้งค่าของรางวัล',
         'route' => 'admin.reward.index',
-        'sort' => 7
+        'sort' => 6
     ], [
         'key' => 'st.reward.create',
         'name' => 'เพิ่ม ตั้งค่าของรางวัล',
@@ -664,7 +664,7 @@ return [
         'key' => 'st.notice',
         'name' => 'ตั้งค่าประกาศ',
         'route' => 'admin.notice.index',
-        'sort' => 8
+        'sort' => 7
     ], [
         'key' => 'st.notice.create',
         'name' => 'เพิ่ม ประกาศ',

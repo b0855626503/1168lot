@@ -5,7 +5,7 @@ return [
         'key' => 'line-oa',
         'name' => 'Line OA',
         'route' => 'admin.line-oa.chat',
-        'sort' => 88,
+        'sort' => 100,
     ],
     [
         'key' => 'line-oa.chat',
@@ -77,7 +77,7 @@ return [
         'key' => 'line-oa.line_quick_reply',
         'name' => 'ตั้งค่า ข้อความตอบกลับ',
         'route' => 'admin.line_quick_reply.index',
-        'sort' => 3,
+        'sort' => 4,
     ],
     [
         'key' => 'line-oa.line_quick_reply.index',
