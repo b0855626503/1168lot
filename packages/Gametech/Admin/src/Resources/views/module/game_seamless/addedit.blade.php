@@ -550,8 +550,12 @@
                     });
 
                     formData.append('data', json);
-                    formData.append('fileupload', this.fileupload);
-                    formData.append('fileupload2', this.fileupload2);
+                    if (this.fileupload) {
+                        formData.append('fileupload', this.fileupload);
+                    }
+                    if (this.fileupload2) {
+                        formData.append('fileupload2', this.fileupload2);
+                    }
 
 
                     const config = {headers: {'Content-Type': `multipart/form-data; boundary=${formData._boundary}`}};
@@ -577,4 +581,3 @@
 
     </script>
 @endpush
-
