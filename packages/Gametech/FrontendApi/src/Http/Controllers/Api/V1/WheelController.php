@@ -24,7 +24,9 @@ class WheelController extends BaseController
     public function spin(Request $request)
     {
         try {
-            return app(SpinController::class)->store($request);
+            return $this->normalizeJsonResponseImages(
+                app(SpinController::class)->store($request)
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถหมุนวงล้อได้ในขณะนี้', 422);
         }
@@ -41,4 +43,3 @@ class WheelController extends BaseController
         }
     }
 }
-

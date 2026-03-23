@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLineConversationNotesTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -56,4 +56,4 @@ class CreateLineConversationNotesTable extends Migration
     {
         Schema::dropIfExists('line_conversation_notes');
     }
-}
+};

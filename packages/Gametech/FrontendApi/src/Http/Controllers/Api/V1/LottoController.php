@@ -84,7 +84,7 @@ class LottoController extends BaseController
                 }
             }
 
-            return $response;
+            return $this->normalizeJsonResponseImages($response);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถยกเลิกโพยได้ในขณะนี้', 422);
         }
@@ -125,7 +125,9 @@ class LottoController extends BaseController
         })->values()->all();
 
         $payload['language'] = $language;
-        return response()->json($payload, $response->getStatusCode());
+        return $this->normalizeJsonResponseImages(
+            response()->json($payload, $response->getStatusCode())
+        );
     }
 
     private function localizeDrawResponse(JsonResponse $response, string $language): JsonResponse
@@ -151,7 +153,9 @@ class LottoController extends BaseController
         $payload['data'] = $data;
         $payload['language'] = $language;
 
-        return response()->json($payload, $response->getStatusCode());
+        return $this->normalizeJsonResponseImages(
+            response()->json($payload, $response->getStatusCode())
+        );
     }
 
     private function localizeTicketsResponse(JsonResponse $response, string $language): JsonResponse
@@ -191,7 +195,9 @@ class LottoController extends BaseController
 
         $payload['language'] = $language;
 
-        return response()->json($payload, $response->getStatusCode());
+        return $this->normalizeJsonResponseImages(
+            response()->json($payload, $response->getStatusCode())
+        );
     }
 
     private function localizeTicketResponse(JsonResponse $response, string $language): JsonResponse
@@ -217,7 +223,9 @@ class LottoController extends BaseController
         $payload['data'] = $data;
         $payload['language'] = $language;
 
-        return response()->json($payload, $response->getStatusCode());
+        return $this->normalizeJsonResponseImages(
+            response()->json($payload, $response->getStatusCode())
+        );
     }
 
     private function responsePayload(JsonResponse $response): array

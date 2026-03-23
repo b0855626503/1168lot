@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLineMessagesTable extends Migration
+return new class extends Migration
 {
     public function up()
     {
@@ -55,4 +55,4 @@ class CreateLineMessagesTable extends Migration
     {
         Schema::dropIfExists('line_messages');
     }
-}
+};

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLineRegisterSessionsTable extends Migration
+return new class extends Migration
 {
     public function up()
     {
@@ -40,4 +40,4 @@ class CreateLineRegisterSessionsTable extends Migration
     {
         Schema::dropIfExists('line_register_sessions');
     }
-}
+};

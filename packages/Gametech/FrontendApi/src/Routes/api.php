@@ -6,6 +6,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\SlideController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
@@ -27,6 +28,8 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
                 ->name('frontend.api.v1.games.providers');
             Route::get('games/{type}/{provider}', [GameController::class, 'games'])
                 ->name('frontend.api.v1.games.list');
+            Route::get('slides', [SlideController::class, 'list'])
+                ->name('frontend.api.v1.slides.list');
 
             Route::get('lotto/draws', [LottoController::class, 'draws'])
                 ->name('frontend.api.v1.lotto.draws');

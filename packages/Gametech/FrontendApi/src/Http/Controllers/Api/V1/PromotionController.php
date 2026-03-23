@@ -10,7 +10,9 @@ class PromotionController extends BaseController
     public function list(Request $request)
     {
         try {
-            return app(WalletPromotionController::class)->loadPromotion();
+            return $this->normalizeJsonResponseImages(
+                app(WalletPromotionController::class)->loadPromotion()
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการโปรโมชันได้ในขณะนี้', 422);
         }
@@ -23,7 +25,9 @@ class PromotionController extends BaseController
                 'promotion' => 'required',
             ]);
 
-            return app(WalletPromotionController::class)->selectPromotion($request);
+            return $this->normalizeJsonResponseImages(
+                app(WalletPromotionController::class)->selectPromotion($request)
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถเลือกโปรโมชันได้ในขณะนี้', 422);
         }
@@ -32,10 +36,11 @@ class PromotionController extends BaseController
     public function deselect(Request $request)
     {
         try {
-            return app(WalletPromotionController::class)->deselectPromotion($request);
+            return $this->normalizeJsonResponseImages(
+                app(WalletPromotionController::class)->deselectPromotion($request)
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถยกเลิกโปรโมชันได้ในขณะนี้', 422);
         }
     }
 }
-

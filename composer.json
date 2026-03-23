@@ -108,7 +108,6 @@
             "Gametech\\CenterOA\\": "packages/Gametech/CenterOA/src",
             "Gametech\\LineOA\\": "packages/Gametech/LineOA/src",
             "Gametech\\Reward\\": "packages/Gametech/Reward/src",
-            "Gametech\\Sms\\": "packages/Gametech/Sms/src",
             "Gametech\\Lotto\\": "packages/Gametech/Lotto/src",
             "Gametech\\FrontendApi\\": "packages/Gametech/FrontendApi/src"
         },

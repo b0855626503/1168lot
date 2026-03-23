@@ -121,7 +121,9 @@ class GameController extends BaseController
     public function login(Request $request)
     {
         try {
-            return app(ProfileController::class)->gameListLogin($request);
+            return $this->normalizeJsonResponseImages(
+                app(ProfileController::class)->gameListLogin($request)
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถเข้าสู่เกมได้ในขณะนี้', 422);
         }

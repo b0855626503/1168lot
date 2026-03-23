@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLineTemplatesTable extends Migration
+return new class extends Migration
 {
     public function up()
     {
@@ -46,4 +46,4 @@ class CreateLineTemplatesTable extends Migration
     {
         Schema::dropIfExists('line_templates');
     }
-}
+};

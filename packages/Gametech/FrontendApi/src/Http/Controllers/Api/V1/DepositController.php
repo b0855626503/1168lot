@@ -40,10 +40,11 @@ class DepositController extends BaseController
 
             $request->merge(['method' => $validated['method']]);
 
-            return app(SlipController::class)->loadBank($request);
+            return $this->normalizeJsonResponseImages(
+                app(SlipController::class)->loadBank($request)
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงข้อมูลบัญชีเติมเงินได้ในขณะนี้', 422);
         }
     }
 }
-

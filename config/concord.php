@@ -22,7 +22,7 @@ return [
         Gametech\LineOA\Providers\ModuleServiceProvider::class,
 //        Gametech\FacebookOA\Providers\ModuleServiceProvider::class,
         Gametech\Reward\Providers\ModuleServiceProvider::class,
-        Gametech\Sms\Providers\ModuleServiceProvider::class,
+//        Gametech\Sms\Providers\ModuleServiceProvider::class,
         Gametech\Lotto\Providers\ModuleServiceProvider::class,
         Gametech\FrontendApi\Providers\ModuleServiceProvider::class,
 

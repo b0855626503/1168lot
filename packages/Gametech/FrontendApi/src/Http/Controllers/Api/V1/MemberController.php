@@ -10,7 +10,9 @@ class MemberController extends BaseController
     public function profile(Request $request)
     {
         try {
-            return app(HomeController::class)->loadProfile();
+            return $this->normalizeJsonResponseImages(
+                app(HomeController::class)->loadProfile()
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงข้อมูลสมาชิกได้ในขณะนี้', 422);
         }
@@ -19,7 +21,9 @@ class MemberController extends BaseController
     public function balance(Request $request)
     {
         try {
-            return app(HomeController::class)->loadCreditMin();
+            return $this->normalizeJsonResponseImages(
+                app(HomeController::class)->loadCreditMin()
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงยอดเงินคงเหลือได้ในขณะนี้', 422);
         }
@@ -28,7 +32,9 @@ class MemberController extends BaseController
     public function loadBalance(Request $request)
     {
         try {
-            return app(HomeController::class)->loadCredit();
+            return $this->normalizeJsonResponseImages(
+                app(HomeController::class)->loadCredit()
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงยอดเงินคงเหลือได้ในขณะนี้', 422);
         }

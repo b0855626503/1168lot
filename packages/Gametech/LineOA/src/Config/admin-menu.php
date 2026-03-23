@@ -5,7 +5,7 @@ return [
         'key' => 'line-oa',
         'name' => 'Line OA',
         'route' => 'admin.line-oa.chat',
-        'sort' => 88,
+        'sort' => 100,
         'icon-class' => 'fa-gamepad',
         'badge' => 0,
         'badge-color' => 'badge-primary',

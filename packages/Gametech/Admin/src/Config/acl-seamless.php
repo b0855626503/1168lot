@@ -67,6 +67,32 @@ return [
         'route' => '',
         'sort' => 12
     ], [
+        'key' => 'dashboard.register-today',
+        'name' => 'สิทธิ์ เห็นสมัครใหม่วันนี้',
+        'route' => '',
+        'sort' => 13
+    ], [
+        'key' => 'dashboard.register-deposit',
+        'name' => 'สิทธิ์ เห็นสมัครฝากวันนี้',
+        'route' => '',
+        'sort' => 14
+
+    ], [
+        'key' => 'dashboard.register-not-deposit',
+        'name' => 'สิทธิ์ เห็นสมัคร ไม่ฝากวันนี้',
+        'route' => '',
+        'sort' => 15
+    ], [
+        'key' => 'dashboard.register-all-deposit',
+        'name' => 'สิทธิ์ เห็นสมัครก่่อนนี้  ฝาก',
+        'route' => '',
+        'sort' => 16
+    ], [
+        'key' => 'dashboard.index',
+        'name' => 'สิทธิ์ เข้าหน้าแดชบอด',
+        'route' => '',
+        'sort' => 17
+    ], [
         'key' => 'bank_in',
         'name' => 'รายการ เงินเข้า',
         'route' => 'admin.bank_in.index',

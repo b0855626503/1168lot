@@ -2,8 +2,8 @@
 
 return [
     [
-        'key' => 'lotto',
-        'name' => 'Lotto',
+        'key' => 'lotto_zone',
+        'name' => 'Lotto Zone',
         'route' => 'admin.lotto.draws.index',
         'sort' => 87,
         'icon-class' => 'fa-ticket',
@@ -12,17 +12,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.zone',
-        'name' => 'Lotto Zone',
-        'route' => 'admin.lotto.draws.index',
-        'sort' => 1,
-        'icon-class' => 'fa-ticket',
-        'badge' => 0,
-        'badge-color' => 'badge-primary',
-        'status' => 1,
-    ],
-    [
-        'key' => 'lotto.zone.draws',
+        'key' => 'lotto_zone.draws',
         'name' => 'งวดหวย',
         'route' => 'admin.lotto.draws.index',
         'sort' => 1,
@@ -32,7 +22,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.zone.tickets',
+        'key' => 'lotto_zone.tickets',
         'name' => 'รายการแทง',
         'route' => 'admin.lotto.tickets.index',
         'sort' => 2,
@@ -42,17 +32,17 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings',
+        'key' => 'lotto_settings',
         'name' => 'ตั้งค่า Lotto',
         'route' => 'admin.lotto.switches.index',
-        'sort' => 2,
+        'sort' => 88,
         'icon-class' => 'fa-ticket',
         'badge' => 0,
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.switches',
+        'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
         'sort' => 1,
@@ -62,7 +52,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.number_blocks',
+        'key' => 'lotto_settings.number_blocks',
         'name' => 'เลขอั้น',
         'route' => 'admin.lotto.number_blocks.index',
         'sort' => 2,
@@ -72,7 +62,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.groups',
+        'key' => 'lotto_settings.groups',
         'name' => 'กลุ่มหวย',
         'route' => 'admin.lotto.groups.index',
         'sort' => 3,
@@ -82,7 +72,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.markets',
+        'key' => 'lotto_settings.markets',
         'name' => 'รายการหวย',
         'route' => 'admin.lotto.markets.index',
         'sort' => 4,
@@ -92,17 +82,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.bet_types',
-        'name' => 'ประเภทหวย',
-        'route' => 'admin.lotto.settings.bet_types',
-        'sort' => 5,
-        'icon-class' => 'fa-ticket',
-        'badge' => 0,
-        'badge-color' => 'badge-primary',
-        'status' => 0,
-    ],
-    [
-        'key' => 'lotto.settings.payout_settings',
+        'key' => 'lotto_settings.payout_settings',
         'name' => 'ตั้งค่า อัตราจ่าย',
         'route' => 'admin.lotto.rate_plans.index',
         'sort' => 6,
@@ -112,7 +92,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.settings.bet_limit_settings',
+        'key' => 'lotto_settings.bet_limit_settings',
         'name' => 'ขั้นต่ำ/สูงสุด/สูงสุดต่อเลข',
         'route' => 'admin.lotto.bet_limits.index',
         'sort' => 7,
@@ -122,17 +102,17 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports',
+        'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',
-        'sort' => 3,
+        'sort' => 89,
         'icon-class' => 'fa-ticket',
         'badge' => 0,
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports.pending_bets',
+        'key' => 'lotto_reports.pending_bets',
         'name' => 'รอผลเดิมพัน',
         'route' => 'admin.lotto.reports.pending_bets',
         'sort' => 1,
@@ -142,7 +122,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports.profit_loss_forecast',
+        'key' => 'lotto_reports.profit_loss_forecast',
         'name' => 'ดูของรวม/คาดคะเน ได้-เสีย',
         'route' => 'admin.lotto.reports.profit_loss_forecast',
         'sort' => 2,
@@ -152,7 +132,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports.member_bet_types',
+        'key' => 'lotto_reports.member_bet_types',
         'name' => 'ดูของสมาชิก/ประเภท',
         'route' => 'admin.lotto.reports.member_bet_types',
         'sort' => 3,
@@ -162,7 +142,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports.tickets_cancel',
+        'key' => 'lotto_reports.tickets_cancel',
         'name' => 'รายการโพย/ยกเลิกโพย',
         'route' => 'admin.lotto.reports.tickets_cancel',
         'sort' => 4,
@@ -172,7 +152,7 @@ return [
         'status' => 1,
     ],
     [
-        'key' => 'lotto.reports.blocked_numbers',
+        'key' => 'lotto_reports.blocked_numbers',
         'name' => 'เลขปิดรับ/เลขอั้น',
         'route' => 'admin.lotto.reports.blocked_numbers',
         'sort' => 5,
