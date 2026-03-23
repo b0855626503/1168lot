@@ -7,6 +7,7 @@ use Gametech\Lotto\DataTables\LottoNumberBlockDataTable;
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -74,31 +75,52 @@ class LottoNumberBlockController extends AppBaseController
             'bet_type'  => [
                 'required',
                 Rule::in(BetType::all()),
-                Rule::unique('lotto_number_blocks', 'bet_type')
-                    ->where(fn ($query) => $query
-                        ->where('draw_id', (int) ($data['draw_id'] ?? 0))
-                        ->where('number', (string) ($data['number'] ?? ''))),
             ],
-            'number'    => ['required', 'string', 'max:20'],
+            'number'    => ['required', 'string', 'max:2000'],
             'mode'      => ['required', Rule::in(['block', 'limit_future'])],
             'reason'    => ['nullable', 'string', 'max:65535'],
             'blocked_at' => ['nullable', 'date_format:Y-m-d H:i'],
         ], [
-            'bet_type.unique' => 'เลขนี้ในประเภทเดิมพันเดียวกันของงวดนี้ถูกอั้นไว้แล้ว',
             'bet_type.in' => 'ประเภทเดิมพันไม่ถูกต้อง',
         ])->validate();
 
-        LottoNumberBlock::query()->create([
-            'draw_id' => $validated['draw_id'],
-            'bet_type' => $validated['bet_type'],
-            'number' => trim((string) $validated['number']),
-            'mode' => $validated['mode'],
-            'reason' => $validated['reason'] ?? null,
-            'blocked_by' => auth()->id(),
-            'blocked_at' => $validated['blocked_at'] ?? now()->format('Y-m-d H:i:s'),
-        ]);
+        $numbers = $this->parseNumbers((string) $validated['number']);
+        if (empty($numbers)) {
+            return $this->sendError('กรุณาระบุเลขอย่างน้อย 1 รายการ', 422);
+        }
+        if ($this->hasNumberTooLong($numbers)) {
+            return $this->sendError('เลขแต่ละรายการต้องไม่เกิน 20 ตัวอักษร', 422);
+        }
 
-        return $this->sendSuccess('เพิ่มเลขอั้นเรียบร้อยแล้ว');
+        $duplicateNumbers = LottoNumberBlock::query()
+            ->where('draw_id', (int) $validated['draw_id'])
+            ->where('bet_type', (string) $validated['bet_type'])
+            ->whereIn('number', $numbers)
+            ->pluck('number')
+            ->map(fn ($number) => (string) $number)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($duplicateNumbers)) {
+            return $this->sendError('มีเลขอั้นซ้ำอยู่แล้ว: ' . implode(', ', $duplicateNumbers), 422);
+        }
+
+        DB::transaction(function () use ($validated, $numbers): void {
+            foreach ($numbers as $number) {
+                LottoNumberBlock::query()->create([
+                    'draw_id' => $validated['draw_id'],
+                    'bet_type' => $validated['bet_type'],
+                    'number' => $number,
+                    'mode' => $validated['mode'],
+                    'reason' => $validated['reason'] ?? null,
+                    'blocked_by' => auth()->id(),
+                    'blocked_at' => $validated['blocked_at'] ?? now()->format('Y-m-d H:i:s'),
+                ]);
+            }
+        });
+
+        return $this->sendSuccess('เพิ่มเลขอั้นเรียบร้อยแล้ว (' . count($numbers) . ' รายการ)');
     }
 
     public function edit(Request $request): JsonResponse
@@ -133,9 +155,9 @@ class LottoNumberBlockController extends AppBaseController
                     ->ignore($block->id)
                     ->where(fn ($query) => $query
                         ->where('draw_id', (int) ($data['draw_id'] ?? 0))
-                        ->where('number', (string) ($data['number'] ?? ''))),
+                        ->where('number', (string) ($this->parseNumbers((string) ($data['number'] ?? ''))[0] ?? ''))),
             ],
-            'number'    => ['required', 'string', 'max:20'],
+            'number'    => ['required', 'string', 'max:2000'],
             'mode'      => ['required', Rule::in(['block', 'limit_future'])],
             'reason'    => ['nullable', 'string', 'max:65535'],
             'blocked_at' => ['nullable', 'date_format:Y-m-d H:i'],
@@ -144,10 +166,22 @@ class LottoNumberBlockController extends AppBaseController
             'bet_type.in' => 'ประเภทเดิมพันไม่ถูกต้อง',
         ])->validate();
 
+        $numbers = $this->parseNumbers((string) $validated['number']);
+        if (empty($numbers)) {
+            return $this->sendError('กรุณาระบุเลขอย่างน้อย 1 รายการ', 422);
+        }
+        if ($this->hasNumberTooLong($numbers)) {
+            return $this->sendError('เลขแต่ละรายการต้องไม่เกิน 20 ตัวอักษร', 422);
+        }
+
+        if (count($numbers) > 1) {
+            return $this->sendError('การแก้ไขรองรับเลขได้ 1 รายการต่อครั้ง กรุณาเพิ่มหลายเลขผ่านปุ่มเพิ่ม', 422);
+        }
+
         $block->update([
             'draw_id' => $validated['draw_id'],
             'bet_type' => $validated['bet_type'],
-            'number' => trim((string) $validated['number']),
+            'number' => $numbers[0],
             'mode' => $validated['mode'],
             'reason' => $validated['reason'] ?? null,
             'blocked_at' => $validated['blocked_at'] ?? now()->format('Y-m-d H:i:s'),
@@ -155,5 +189,34 @@ class LottoNumberBlockController extends AppBaseController
 
         return $this->sendSuccess('อัปเดตเลขอั้นเรียบร้อยแล้ว');
     }
-}
 
+    /**
+     * @return string[]
+     */
+    private function parseNumbers(string $raw): array
+    {
+        $parts = preg_split('/[\s,，]+/u', trim($raw)) ?: [];
+        $normalized = collect($parts)
+            ->map(fn ($part) => trim((string) $part))
+            ->filter(fn ($part) => $part !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        return $normalized;
+    }
+
+    /**
+     * @param string[] $numbers
+     */
+    private function hasNumberTooLong(array $numbers): bool
+    {
+        foreach ($numbers as $number) {
+            if (mb_strlen((string) $number) > 20) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

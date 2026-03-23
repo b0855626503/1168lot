@@ -8,31 +8,72 @@
     <lotto-rate-plans-dashboard></lotto-rate-plans-dashboard>
 @endsection
 
+@push('styles')
+    <style>
+        .lotto-rate-plans-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .lotto-rate-plans-tabs {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .lotto-rate-plans-display-mode {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 0.35rem;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .lotto-rate-plans-market-label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script type="text/x-template" id="lotto-rate-plans-dashboard-template">
         <section class="content text-xs">
             <div class="card">
                 <div class="card-body">
-                <ul class="nav nav-tabs mb-3" role="tablist">
-                    <li class="nav-item" v-for="(group, index) in groups" :key="'tab-' + group.id">
-                            <a href="javascript:void(0)"
-                               class="nav-link"
-                               :class="{ active: activeGroupIndex === index }"
-                               @click.prevent="setActiveGroup(index)">
-                                @{{ group.name }}
-                            </a>
-                        </li>
-                    </ul>
+                    <div class="lotto-rate-plans-toolbar">
+                        <ul class="nav nav-tabs lotto-rate-plans-tabs" role="tablist">
+                            <li class="nav-item" v-for="(group, index) in groups" :key="'tab-' + group.id">
+                                <a href="javascript:void(0)"
+                                   class="nav-link"
+                                   :class="{ active: activeGroupIndex === index }"
+                                   @click.prevent="setActiveGroup(index)">
+                                    @{{ group.name }}
+                                </a>
+                            </li>
+                        </ul>
 
-                    <div class="d-flex align-items-center mb-3">
-                        <label class="mb-0 mr-2">แสดงค่าในตาราง:</label>
-                        <b-form-radio-group
-                            v-model="displayMode"
-                            :options="displayModeOptions"
-                            buttons
-                            button-variant="outline-primary"
-                            size="sm">
-                        </b-form-radio-group>
+                        <div class="lotto-rate-plans-display-mode">
+                            <label class="mb-0 mr-1">แสดงค่าในตาราง:</label>
+                            <b-form-radio-group
+                                v-model="displayMode"
+                                :options="displayModeOptions"
+                                buttons
+                                button-variant="outline-primary"
+                                size="sm">
+                            </b-form-radio-group>
+                        </div>
                     </div>
 
                     <div v-if="activeGroup && activeGroup.markets.length > 0" class="table-responsive">
@@ -58,9 +99,10 @@
                             <tbody>
                             <tr v-for="market in activeGroup.markets" :key="'m-' + market.id">
                                 <td>
-                                    <strong>@{{ market.name }}</strong>
-                                    <br>
-                                    <small class="text-muted">@{{ market.code }}</small>
+                                    <div class="lotto-rate-plans-market-label">
+                                        <strong>@{{ market.name }}</strong>
+                                        <small class="text-muted">@{{ market.code }}</small>
+                                    </div>
                                 </td>
                                 <template v-for="type in betTypes">
                                     <td v-if="displayMode !== 'discount'" :key="'pv-' + market.id + '-' + type.key" class="text-right">
@@ -71,7 +113,8 @@
                                     </td>
                                 </template>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-primary btn-xs" @click="openEditModal(market)">
+                                    <button type="button" class="btn btn-info btn-xs" @click="openEditModal(market)">
+                                        <i class="fa-solid fa-pen-to-square mr-1"></i>
                                         แก้ไข
                                     </button>
                                 </td>
@@ -146,7 +189,7 @@
                     groups: @json($groupTabs ?? []),
                     betTypes: @json($betTypes ?? []),
                     activeGroupIndex: 0,
-                    displayMode: 'both',
+                    displayMode: 'payout',
                     displayModeOptions: [
                         { value: 'payout', text: 'อัตราจ่าย' },
                         { value: 'discount', text: 'ส่วนลด(%)' },

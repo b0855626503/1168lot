@@ -8,8 +8,8 @@
 		<b-form-group label="ประเภทเดิมพัน:" label-for="bet_type">
 			<b-form-select id="bet_type" v-model="formaddedit.bet_type" :options="betTypes" size="sm" required></b-form-select>
 		</b-form-group>
-		<b-form-group label="เลข:" label-for="number">
-			<b-form-input id="number" v-model="formaddedit.number" type="text" size="sm" autocomplete="off" required></b-form-input>
+		<b-form-group label="เลข:" label-for="number" description="กรอกหลายเลขได้ โดยคั่นด้วย , เช่น 12,34,56">
+			<b-form-input id="number" v-model="formaddedit.number" type="text" size="sm" autocomplete="off" placeholder="เช่น 12,34,56" required></b-form-input>
 		</b-form-group>
 		<b-form-group label="โหมด:" label-for="mode">
 			<b-form-select id="mode" v-model="formaddedit.mode" :options="modeOptions" size="sm" required></b-form-select>

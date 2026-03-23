@@ -9,6 +9,8 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
+use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -67,7 +69,20 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
-        return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
+        return $this->sendResponse([
+            'id' => (int) $data->id,
+            'market_id' => (int) $data->market_id,
+            'market' => [
+                'id' => (int) ($data->market->id ?? 0),
+                'name' => (string) ($data->market->name ?? '-'),
+            ],
+            'draw_date' => $data->draw_date ? $data->draw_date->format('Y-m-d') : null,
+            'open_at' => $this->formatDateTimeForForm($data->open_at),
+            'close_at' => $this->formatDateTimeForForm($data->close_at),
+            'result_at' => $this->formatDateTimeForForm($data->result_at),
+            'status' => (string) $data->status,
+            'result_number' => is_array($data->result_number) ? $data->result_number : [],
+        ], 'ดำเนินการเสร็จสิ้น');
     }
 
     public function create(Request $request, DrawService $drawService): JsonResponse
@@ -89,9 +104,9 @@ class LottoDrawController extends AppBaseController
             $draw = $drawService->createDraft([
                 'market_id'   => $validated['market_id'],
                 'draw_date'   => $validated['draw_date'],
-                'open_at'     => $validated['open_at'],
-                'close_at'    => $validated['close_at'],
-                'result_at'   => $validated['result_at'] ?? null,
+                'open_at'     => $this->normalizeDateTimeInput($validated['open_at']),
+                'close_at'    => $this->normalizeDateTimeInput($validated['close_at']),
+                'result_at'   => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
                 'created_by'  => auth()->id(),
             ]);
 
@@ -143,9 +158,9 @@ class LottoDrawController extends AppBaseController
             $draw->update([
                 'market_id'   => $validated['market_id'],
                 'draw_date'   => $validated['draw_date'],
-                'open_at'     => $validated['open_at'],
-                'close_at'    => $validated['close_at'],
-                'result_at'   => $validated['result_at'] ?? null,
+                'open_at'     => $this->normalizeDateTimeInput($validated['open_at']),
+                'close_at'    => $this->normalizeDateTimeInput($validated['close_at']),
+                'result_at'   => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
             ]);
 
             $this->applyStatusTransition($drawService, $draw, $currentStatus, $targetStatus);
@@ -224,7 +239,7 @@ class LottoDrawController extends AppBaseController
             $summary = $settlementService->settleDraw(
                 $draw,
                 (array) $validated['result_number'],
-                $validated['result_at'] ?? null
+                $this->normalizeDateTimeInput($validated['result_at'] ?? null)
             );
 
             return $this->sendResponse($summary, 'ประกาศผลและประมวลผลโพยสำเร็จ');
@@ -288,6 +303,33 @@ class LottoDrawController extends AppBaseController
                 $draw = $drawService->closeDraw($draw);
             }
         }
+    }
+
+    private function normalizeDateTimeInput(?string $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
+        $dateTime = Carbon::createFromFormat('Y-m-d H:i', (string) $value, $timezone);
+
+        return $dateTime->format('Y-m-d H:i:s');
+    }
+
+    private function formatDateTimeForForm($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if ($value instanceof CarbonInterface) {
+            return $value->copy()->setTimezone((string) config('app.timezone', 'Asia/Bangkok'))
+                ->format('Y-m-d H:i');
+        }
+
+        return Carbon::parse((string) $value, (string) config('app.timezone', 'Asia/Bangkok'))
+            ->format('Y-m-d H:i');
     }
 
 }

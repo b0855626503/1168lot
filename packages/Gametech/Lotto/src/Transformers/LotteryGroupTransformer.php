@@ -17,7 +17,7 @@ class LotteryGroupTransformer extends TransformerAbstract
             'sort'       => (int) $model->sort,
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
-                . ($model->is_enabled ? '<i class="fa fa-check"></i> เปิด' : '<i class="fa fa-times"></i> ปิด')
+                . ($model->is_enabled ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>')
                 . '</button>',
             'action' => view('admin::module.lotto.groups.datatables_actions', [
                 'id' => $model->id,
@@ -25,4 +25,3 @@ class LotteryGroupTransformer extends TransformerAbstract
         ];
     }
 }
-
