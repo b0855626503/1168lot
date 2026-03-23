@@ -6,6 +6,7 @@ use App\Services\Dashboard\DashboardSummarySyncService;
 use App\Services\Dashboard\DashboardWebCodeResolver;
 use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Carbon\Carbon;
+use Gametech\Lotto\Enums\BetType;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -129,23 +130,36 @@ class DashboardService
             $depositProblemCount = $depositPendingCount;
             $depositProblemUsers = $depositPendingUsers;
 
-            $withdrawQuery = $this->withdrawBaseQuery($filters)
-                ;
-            $this->applyDateTimeWindow($withdrawQuery, 'date_approve', $startDate, $endDate);
+            $withdrawTotals = $this->withdrawTotals($filters, 'complete', 'date_approve', $startDate, $endDate);
+            $withdrawAmount = (float) $withdrawTotals['amount'];
+            $withdrawCount = (int) $withdrawTotals['count'];
+            $withdrawUsers = (int) $withdrawTotals['users'];
+            $withdrawMainTotals = $this->withdrawTotals($filters, 'complete', 'date_approve', $startDate, $endDate, 'main');
+            $withdrawMainAmount = (float) $withdrawMainTotals['amount'];
+            $withdrawMainCount = (int) $withdrawMainTotals['count'];
+            $withdrawMainUsers = (int) $withdrawMainTotals['users'];
+            $withdrawFreeTotals = $this->withdrawTotals($filters, 'complete', 'date_approve', $startDate, $endDate, 'free');
+            $withdrawFreeAmount = (float) $withdrawFreeTotals['amount'];
+            $withdrawFreeCount = (int) $withdrawFreeTotals['count'];
+            $withdrawFreeUsers = (int) $withdrawFreeTotals['users'];
 
-            $withdrawAmount = (float) $withdrawQuery->sum('amount');
-            $withdrawCount = (int) (clone $withdrawQuery)->count();
-            $withdrawUsers = (int) (clone $withdrawQuery)->distinct('member_code')->count('member_code');
-            $withdrawPending = $this->withdrawBaseQuery($filters, 'waiting')
-                ;
-            $this->applyDateTimeWindow($withdrawPending, 'date_create', $startDate, $endDate);
-            $withdrawPendingAmount = (float) $withdrawPending->sum('amount');
-            $withdrawPendingCount = (int) (clone $withdrawPending)->count();
+            $withdrawPendingTotals = $this->withdrawTotals($filters, 'waiting', 'date_create', $startDate, $endDate);
+            $withdrawPendingAmount = (float) $withdrawPendingTotals['amount'];
+            $withdrawPendingCount = (int) $withdrawPendingTotals['count'];
+            $withdrawMainPendingTotals = $this->withdrawTotals($filters, 'waiting', 'date_create', $startDate, $endDate, 'main');
+            $withdrawMainPendingAmount = (float) $withdrawMainPendingTotals['amount'];
+            $withdrawMainPendingCount = (int) $withdrawMainPendingTotals['count'];
+            $withdrawFreePendingTotals = $this->withdrawTotals($filters, 'waiting', 'date_create', $startDate, $endDate, 'free');
+            $withdrawFreePendingAmount = (float) $withdrawFreePendingTotals['amount'];
+            $withdrawFreePendingCount = (int) $withdrawFreePendingTotals['count'];
 
             $bonus = $this->bonusTotals($filters, $startDate, $endDate);
-            $lottoCash = $this->lottoCashTotals($filters, $startDate, $endDate);
+            $lotto = $this->lottoCashMetrics($startDate, $endDate);
+            $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
+            $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
+            $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
-            $net = $depositSuccessAmount - $withdrawAmount + (float) ($lottoCash['net_cash'] ?? 0);
+            $net = $depositSuccessAmount - $withdrawAmount + (float) ($lotto['net_cash'] ?? 0);
             $prevNet = $this->netCashflow($filters, $prevStart, $prevEnd);
             $netChangePct = $this->pctChange($prevNet, $net);
 
@@ -209,6 +223,28 @@ class DashboardService
                         'amount_raw' => $withdrawPendingAmount,
                         'count' => $withdrawPendingCount,
                     ],
+                    'main' => [
+                        'amount' => core()->currency($withdrawMainAmount),
+                        'amount_raw' => $withdrawMainAmount,
+                        'count' => $withdrawMainCount,
+                        'users' => $withdrawMainUsers,
+                        'pending' => [
+                            'amount' => core()->currency($withdrawMainPendingAmount),
+                            'amount_raw' => $withdrawMainPendingAmount,
+                            'count' => $withdrawMainPendingCount,
+                        ],
+                    ],
+                    'free' => [
+                        'amount' => core()->currency($withdrawFreeAmount),
+                        'amount_raw' => $withdrawFreeAmount,
+                        'count' => $withdrawFreeCount,
+                        'users' => $withdrawFreeUsers,
+                        'pending' => [
+                            'amount' => core()->currency($withdrawFreePendingAmount),
+                            'amount_raw' => $withdrawFreePendingAmount,
+                            'count' => $withdrawFreePendingCount,
+                        ],
+                    ],
                 ],
                 'bonus' => [
                     'amount' => core()->currency($bonus['amount']),
@@ -232,15 +268,40 @@ class DashboardService
                     ],
                 ],
                 'lotto' => [
-                    'sales_cash' => core()->currency((float) ($lottoCash['sales_cash'] ?? 0)),
-                    'sales_cash_raw' => (float) ($lottoCash['sales_cash'] ?? 0),
-                    'payout_cash' => core()->currency((float) ($lottoCash['payout_cash'] ?? 0)),
-                    'payout_cash_raw' => (float) ($lottoCash['payout_cash'] ?? 0),
-                    'refund_cash' => core()->currency((float) ($lottoCash['refund_cash'] ?? 0)),
-                    'refund_cash_raw' => (float) ($lottoCash['refund_cash'] ?? 0),
-                    'net_cash' => core()->currency((float) ($lottoCash['net_cash'] ?? 0)),
-                    'net_cash_raw' => (float) ($lottoCash['net_cash'] ?? 0),
+                    'sales_cash' => core()->currency((float) ($lotto['sales_cash'] ?? 0)),
+                    'sales_cash_raw' => (float) ($lotto['sales_cash'] ?? 0),
+                    'payout_cash' => core()->currency((float) ($lotto['payout_cash'] ?? 0)),
+                    'payout_cash_raw' => (float) ($lotto['payout_cash'] ?? 0),
+                    'refund_cash' => core()->currency((float) ($lotto['refund_cash'] ?? 0)),
+                    'refund_cash_raw' => (float) ($lotto['refund_cash'] ?? 0),
+                    'net_cash' => core()->currency((float) ($lotto['net_cash'] ?? 0)),
+                    'net_cash_raw' => (float) ($lotto['net_cash'] ?? 0),
                 ],
+                'lotto_product' => [
+                    'total_sales' => core()->currency((float) ($lottoProduct['total_sales'] ?? 0)),
+                    'total_sales_raw' => (float) ($lottoProduct['total_sales'] ?? 0),
+                    'total_payout' => core()->currency((float) ($lottoProduct['total_payout'] ?? 0)),
+                    'total_payout_raw' => (float) ($lottoProduct['total_payout'] ?? 0),
+                    'total_tickets' => (int) ($lottoProduct['total_tickets'] ?? 0),
+                    'total_players' => (int) ($lottoProduct['total_players'] ?? 0),
+                    'win_tickets' => (int) ($lottoProduct['win_tickets'] ?? 0),
+                    'lose_tickets' => (int) ($lottoProduct['lose_tickets'] ?? 0),
+                    'pending_tickets' => (int) ($lottoProduct['pending_tickets'] ?? 0),
+                    'settled_tickets' => (int) ($lottoProduct['settled_tickets'] ?? 0),
+                ],
+                'lotto_risk' => [
+                    'markets' => (int) ($lottoRisk['markets'] ?? 0),
+                    'rounds' => (int) ($lottoRisk['rounds'] ?? 0),
+                    'numbers' => (int) ($lottoRisk['numbers'] ?? 0),
+                    'exposure_total' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
+                    'exposure_total_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
+                    'liability_total' => core()->currency((float) ($lottoRisk['liability_total'] ?? 0)),
+                    'liability_total_raw' => (float) ($lottoRisk['liability_total'] ?? 0),
+                    'liability_max' => core()->currency((float) ($lottoRisk['liability_max'] ?? 0)),
+                    'liability_max_raw' => (float) ($lottoRisk['liability_max'] ?? 0),
+                    'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
+                ],
+                'lotto_bet_type_insights' => $lottoBetTypeInsights,
                 'net' => [
                     'amount' => core()->currency($net),
                     'amount_raw' => $net,
@@ -329,19 +390,22 @@ class DashboardService
             $referralNotDeposit = max(0, $referralTotal - $referralDeposit);
             $referralRate = $referralTotal > 0 ? round(($referralDeposit / $referralTotal) * 100, 2) : 0;
 
-            $staffAdd = app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')
-                ->active()->where('kind', 'SETWALLET')->where('credit_type', 'D');
-            $this->applyDateTimeWindow($staffAdd, 'date_create', $startDate, $endDate);
-            $staffAdd = $this->applyMemberRelationFilters($staffAdd, $filters);
-
-            $staffReduce = app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')
-                ->active()->where('kind', 'SETWALLET')->where('credit_type', 'W');
-            $this->applyDateTimeWindow($staffReduce, 'date_create', $startDate, $endDate);
-            $staffReduce = $this->applyMemberRelationFilters($staffReduce, $filters);
-
-            $addAmount = (float) $staffAdd->sum('amount');
-            $reduceAmount = (float) $staffReduce->sum('amount');
-            $adjustCount = (int) ((clone $staffAdd)->count() + (clone $staffReduce)->count());
+            $staffMain = $this->staffAdjustMetricsByRepository(
+                'Gametech\\Member\\Repositories\\MemberCreditLogRepository',
+                $filters,
+                $startDate,
+                $endDate
+            );
+            $staffFree = $this->staffAdjustMetricsByRepository(
+                'Gametech\\Member\\Repositories\\MemberCreditFreeLogRepository',
+                $filters,
+                $startDate,
+                $endDate,
+                'members_credit_free_log'
+            );
+            $addAmount = (float) $staffMain['add_raw'] + (float) $staffFree['add_raw'];
+            $reduceAmount = (float) $staffMain['reduce_raw'] + (float) $staffFree['reduce_raw'];
+            $adjustCount = (int) $staffMain['count'] + (int) $staffFree['count'];
 
             return [
                 'register' => [
@@ -365,6 +429,8 @@ class DashboardService
                     'net' => core()->currency($addAmount - $reduceAmount),
                     'net_raw' => $addAmount - $reduceAmount,
                     'count' => $adjustCount,
+                    'main' => $staffMain,
+                    'free' => $staffFree,
                 ],
             ];
         });
@@ -405,11 +471,7 @@ class DashboardService
                     ->selectRaw('HOUR(date_create) as h, SUM(value) as v')
                     ->groupBy('h')->pluck('v', 'h')->toArray();
 
-                $withdrawQuery = $this->withdrawBaseQuery($filters);
-                $this->applyDateTimeWindow($withdrawQuery, 'date_approve', $startDate, $endDate);
-                $withdrawData = $withdrawQuery
-                    ->selectRaw('HOUR(date_approve) as h, SUM(amount) as v')
-                    ->groupBy('h')->pluck('v', 'h')->toArray();
+                $withdrawData = $this->withdrawTrendByHour($filters, $startDate, $endDate);
 
                 $bonusData = $this->bonusTrendsByHour($filters, $startDate, $endDate);
 
@@ -441,11 +503,7 @@ class DashboardService
                 ->selectRaw("DATE_FORMAT(date_create,'%Y-%m-%d') as d, SUM(value) as v")
                 ->groupBy('d')->pluck('v', 'd')->toArray();
 
-            $withdrawQuery = $this->withdrawBaseQuery($filters);
-            $this->applyDateTimeWindow($withdrawQuery, 'date_approve', $startDate, $endDate);
-            $withdrawRows = $withdrawQuery
-                ->selectRaw("DATE_FORMAT(date_approve,'%Y-%m-%d') as d, SUM(amount) as v")
-                ->groupBy('d')->pluck('v', 'd')->toArray();
+            $withdrawRows = $this->withdrawTrendByDay($filters, $startDate, $endDate);
 
             $bonusRows = $this->bonusTrendsByDay($filters, $startDate, $endDate);
 
@@ -479,16 +537,14 @@ class DashboardService
             [$startDate, $endDate] = $this->range($filters);
             $dateColumn = $this->memberDateColumn();
             $depositCountColumn = $this->memberDepositCountColumn();
+            $lottoMarketId = (int) Arr::get($filters, 'lotto_market_id', 0);
 
-            $depositQuery = app('Gametech\\Payment\\Repositories\\BankPaymentRepository')
-                ->income()->active()->whereIn('status', [0, 1])
-                ->orderBy('date_create', 'desc')
-                ->take(10);
-            $this->applyDateTimeWindow($depositQuery, 'date_create', $startDate, $endDate);
-            $depositQuery = $this->applyPaymentFilters($depositQuery, $filters);
-            $depositQuery->with(['member.bank', 'bank_account.bank']);
+            $depositBase = app('Gametech\\Payment\\Repositories\\BankPaymentRepository')
+                ->income()->active()->whereIn('status', [0, 1]);
+            $this->applyDateTimeWindow($depositBase, 'date_create', $startDate, $endDate);
+            $depositBase = $this->applyPaymentFilters($depositBase, $filters);
 
-            $deposits = $depositQuery->get()->map(function ($row) {
+            $mapDeposit = function ($row) {
                 $customerBank = $this->bankInfo(
                     optional($row->member)->bank,
                     optional($row->member)->acc_no ?? null,
@@ -498,6 +554,10 @@ class DashboardService
                     optional(optional($row->bank_account)->bank),
                     optional($row->bank_account)->acc_no ?? null
                 );
+                $admin = $row->admin ?? null;
+                $staffName = ((int) ($row->emp_topup ?? 0) === 0)
+                    ? ((string) ($row->create_by ?: $row->topup_by ?: '-'))
+                    : ((string) ($admin?->user_name ?? $admin?->name ?? $admin?->nickname ?? '-'));
 
                 return [
                     'time' => optional($row->date_create)->format('Y-m-d H:i'),
@@ -512,61 +572,102 @@ class DashboardService
                     'to_bank_logo' => $receiveBank['logo'],
                     'to_account_no' => $receiveBank['account'],
                     'channel' => $row->channel ?: '-',
+                    'staff' => $staffName,
                     'status' => $row->status == 1 ? 'สำเร็จ' : 'รอ',
                 ];
-            });
+            };
+
+            $depositQuery = (clone $depositBase)
+                ->orderBy('date_create', 'desc')
+                ->take(100)
+                ->with(['member.bank', 'bank_account.bank', 'admin']);
+
+            $depositManualQuery = (clone $depositBase)
+                ->where('channel', 'MANUAL')
+                ->orderBy('date_create', 'desc')
+                ->take(100)
+                ->with(['member.bank', 'bank_account.bank', 'admin']);
+
+            $deposits = $depositQuery->get()->map($mapDeposit);
+            $depositsManual = $depositManualQuery->get()->map($mapDeposit);
 
             $config = core()->getConfigData();
+            $withdrawQueries = [];
             if ($config->seamless == 'Y') {
-                $withdrawQuery = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+                $withdrawQueries[] = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->active();
+                if (($config->freecredit_open ?? 'N') == 'Y') {
+                    $withdrawQueries[] = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessFreeRepository')->active();
+                }
             } else {
-                $withdrawQuery = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+                $withdrawQueries[] = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+                if (($config->freecredit_open ?? 'N') == 'Y') {
+                    $withdrawQueries[] = app('Gametech\\Payment\\Repositories\\WithdrawFreeRepository')->active();
+                }
             }
 
-            $withdrawQuery->whereIn('status', [0, 1]);
-            $withdrawQuery = $this->applyMemberRelationFilters($withdrawQuery, $filters);
-            $withdrawQuery
-                ->orderByRaw('COALESCE(date_approve, date_create, date_update) DESC')
-                ->take(10);
-            $this->applyDateTimeWindow($withdrawQuery, 'date_create', $startDate, $endDate);
-            $withdrawQuery->with(['bank_tran.bank', 'bank', 'member.bank']);
+            $withdrawRows = collect();
+            foreach ($withdrawQueries as $withdrawQuery) {
+                $withdrawQuery->whereIn('status', [0, 1]);
+                $withdrawQuery = $this->applyMemberRelationFilters($withdrawQuery, $filters);
+                $withdrawQuery
+                    ->orderByRaw('COALESCE(date_approve, date_create, date_update) DESC')
+                    ->take(10);
+                $this->applyDateTimeWindow($withdrawQuery, 'date_create', $startDate, $endDate);
+                $withdrawQuery->with(['bank_tran.bank', 'bank', 'member.bank']);
 
-            $withdraws = $withdrawQuery->get()->map(function ($row) {
-                $timeValue = $row->date_approve ?? $row->date_create ?? $row->date_update;
-                $timeText = '-';
-                if (!empty($timeValue) && !in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
-                    try {
-                        $timeText = Carbon::parse($timeValue)->format('Y-m-d H:i');
-                    } catch (\Throwable $e) {
-                        $timeText = '-';
+                $rows = $withdrawQuery->get()->map(function ($row) {
+                    $timeValue = $row->date_approve ?? $row->date_create ?? $row->date_update;
+                    $timeText = '-';
+                    $sortAt = 0;
+                    if (!empty($timeValue) && !in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
+                        try {
+                            $parsedTime = Carbon::parse($timeValue);
+                            $timeText = $parsedTime->format('Y-m-d H:i');
+                            $sortAt = $parsedTime->getTimestamp();
+                        } catch (\Throwable $e) {
+                            $timeText = '-';
+                        }
                     }
-                }
 
-                $withdrawBank = $this->bankInfo(
-                    optional(optional($row->bank_tran)->bank),
-                    optional($row->bank_tran)->acc_no ?? ($row->bankout ?? null),
-                    $row->bankout ?? ''
-                );
-                $customerBank = $this->bankInfo(
-                    $row->bank ?? optional($row->member)->bank,
-                    optional($row->member)->acc_no ?? null
-                );
+                    $withdrawBank = $this->bankInfo(
+                        optional(optional($row->bank_tran)->bank),
+                        optional($row->bank_tran)->acc_no ?? ($row->bankout ?? null),
+                        $row->bankout ?? ''
+                    );
+                    $customerBank = $this->bankInfo(
+                        $row->bank ?? optional($row->member)->bank,
+                        optional($row->member)->acc_no ?? null
+                    );
 
-                return [
-                    'time' => $timeText,
-                    'username' => $row->member_user ?: (optional($row->member)->user_name ?? '-'),
-                    'amount' => core()->currency($row->amount),
-                    'from_bank' => $withdrawBank['name'],
-                    'from_bank_name' => $withdrawBank['name'],
-                    'from_bank_logo' => $withdrawBank['logo'],
-                    'from_account_no' => $withdrawBank['account'],
-                    'to_bank' => $customerBank['name'],
-                    'to_bank_name' => $customerBank['name'],
-                    'to_bank_logo' => $customerBank['logo'],
-                    'to_account_no' => $customerBank['account'],
-                    'status' => $row->status == 1 ? 'สำเร็จ' : 'รอ',
-                ];
-            });
+                    return [
+                        '__sort_at' => $sortAt,
+                        'time' => $timeText,
+                        'username' => $row->member_user ?: (optional($row->member)->user_name ?? '-'),
+                        'amount' => core()->currency($row->amount),
+                        'from_bank' => $withdrawBank['name'],
+                        'from_bank_name' => $withdrawBank['name'],
+                        'from_bank_logo' => $withdrawBank['logo'],
+                        'from_account_no' => $withdrawBank['account'],
+                        'to_bank' => $customerBank['name'],
+                        'to_bank_name' => $customerBank['name'],
+                        'to_bank_logo' => $customerBank['logo'],
+                        'to_account_no' => $customerBank['account'],
+                        'status' => $row->status == 1 ? 'สำเร็จ' : 'รอ',
+                    ];
+                });
+
+                $withdrawRows = $withdrawRows->concat($rows);
+            }
+
+            $withdraws = $withdrawRows
+                ->sortByDesc('__sort_at')
+                ->take(10)
+                ->values()
+                ->map(function ($row) {
+                    unset($row['__sort_at']);
+
+                    return $row;
+                });
 
             $registerQuery = $this->memberQuery($filters)
                 ->orderBy($dateColumn, 'desc')
@@ -594,30 +695,146 @@ class DashboardService
                     ];
                 });
 
-            $staffQuery = app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')
-                ->active()->where('kind', 'SETWALLET')
-                ->orderBy('date_create', 'desc')
-                ->take(10);
-            $this->applyDateTimeWindow($staffQuery, 'date_create', $startDate, $endDate);
-            $staffQuery = $this->applyMemberRelationFilters($staffQuery, $filters);
+            $staffQueries = [
+                app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')->active()->where('kind', 'SETWALLET'),
+            ];
+            if (($config->freecredit_open ?? 'N') == 'Y' && $this->hasTable('members_credit_free_log')) {
+                $staffQueries[] = app('Gametech\\Member\\Repositories\\MemberCreditFreeLogRepository')
+                    ->active()
+                    ->where('kind', 'SETWALLET');
+            }
 
-            $staff = $staffQuery->get()->map(function ($row) {
-                return [
-                    'time' => optional($row->date_create)->format('Y-m-d H:i'),
-                    'staff' => optional($row->admin)->user_name ?? $row->user_create ?? '-',
-                    'member' => optional($row->member)->user_name ?? '-',
-                    'type' => $row->credit_type === 'D' ? 'เพิ่ม' : 'ลด',
-                    'amount' => core()->currency($row->amount),
-                ];
-            });
+            $staffRows = collect();
+            foreach ($staffQueries as $staffQuery) {
+                $staffQuery
+                    ->orderBy('date_create', 'desc')
+                    ->take(10);
+                $this->applyDateTimeWindow($staffQuery, 'date_create', $startDate, $endDate);
+                $staffQuery = $this->applyMemberRelationFilters($staffQuery, $filters);
+
+                $rows = $staffQuery->get()->map(function ($row) {
+                    $sortAt = 0;
+                    $time = '-';
+                    if (!empty($row->date_create)) {
+                        try {
+                            $parsedTime = Carbon::parse($row->date_create);
+                            $time = $parsedTime->format('Y-m-d H:i');
+                            $sortAt = $parsedTime->getTimestamp();
+                        } catch (\Throwable $e) {
+                            $time = '-';
+                        }
+                    }
+
+                    return [
+                        '__sort_at' => $sortAt,
+                        'time' => $time,
+                        'staff' => optional($row->admin)->user_name ?? $row->user_create ?? '-',
+                        'member' => optional($row->member)->user_name ?? '-',
+                        'type' => $row->credit_type === 'D' ? 'เพิ่ม' : 'ลด',
+                        'amount' => core()->currency($row->amount),
+                    ];
+                });
+
+                $staffRows = $staffRows->concat($rows);
+            }
+
+            $staff = $staffRows
+                ->sortByDesc('__sort_at')
+                ->take(10)
+                ->values()
+                ->map(function ($row) {
+                    unset($row['__sort_at']);
+
+                    return $row;
+                });
+
+            $lottoRecentBets = $this->getRecentLottoBetsActivity(20, $lottoMarketId > 0 ? $lottoMarketId : null);
 
             return [
                 'deposits' => $deposits,
+                'deposits_manual' => $depositsManual,
                 'withdraws' => $withdraws,
                 'registers' => $registers,
                 'staff' => $staff,
+                'lotto_recent_bets' => $lottoRecentBets,
             ];
         });
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getRecentLottoBetsActivity(int $limit = 20, ?int $marketId = null): array
+    {
+        $limit = max(1, min($limit, 20));
+
+        if (
+            !$this->hasTable('lotto_tickets')
+            || !$this->hasTable('lotto_draws')
+            || !$this->hasTable('lotto_markets')
+            || !$this->hasTable('lotto_groups')
+        ) {
+            return [];
+        }
+
+        $query = DB::table('lotto_tickets as t')
+            ->join('lotto_draws as d', 'd.id', '=', 't.draw_id')
+            ->join('lotto_markets as m', 'm.id', '=', 'd.market_id')
+            ->join('lotto_groups as g', 'g.id', '=', 'm.group_id')
+            ->select([
+                't.id',
+                't.member_id',
+                't.status',
+                't.total_net_amount',
+                't.total_win_amount',
+                't.created_at',
+                'm.name as market_name',
+                'g.name as group_name',
+            ])
+            ->selectRaw(
+                ($this->hasColumn('lotto_tickets', 'bet_type_summary') ? 't.bet_type_summary' : "''")
+                . ' as bet_type_summary'
+            )
+            ->orderByDesc('t.created_at')
+            ->orderByDesc('t.id');
+
+        if ($marketId !== null && $marketId > 0) {
+            $query->where('d.market_id', $marketId);
+        }
+
+        $rows = $query->limit($limit)->get();
+
+        return $rows->map(function ($row): array {
+            $time = '-';
+            if (!empty($row->created_at)) {
+                try {
+                    $time = Carbon::parse($row->created_at)->format('Y-m-d H:i');
+                } catch (\Throwable $e) {
+                    $time = '-';
+                }
+            }
+
+            $statusRaw = (string) ($row->status ?? '');
+            $winAmount = (float) ($row->total_win_amount ?? 0);
+            $status = 'pending';
+            if ($statusRaw === 'cancelled') {
+                $status = 'cancel';
+            } elseif ($statusRaw === 'resulted') {
+                $status = $winAmount > 0 ? 'win' : 'lose';
+            }
+
+            return [
+                'ticket_id' => (int) ($row->id ?? 0),
+                'bet_at' => $time,
+                'member_code' => (string) ($row->member_id ?? '-'),
+                'group_name' => (string) ($row->group_name ?? '-'),
+                'market_name' => (string) ($row->market_name ?? '-'),
+                'bet_type_summary' => (string) ($row->bet_type_summary ?: '-'),
+                'amount' => core()->currency((float) ($row->total_net_amount ?? 0)),
+                'status' => $status,
+                'win_amount' => core()->currency($winAmount),
+            ];
+        })->values()->all();
     }
 
     public function getFunnel(array $filters): array
@@ -679,11 +896,10 @@ class DashboardService
             $alerts = [];
             $thresholdMinutes = 30;
 
-            $withdrawPending = $this->withdrawBaseQuery($filters, 'waiting')
-                ->where('date_create', '<', now()->subMinutes($thresholdMinutes))
-                ->count();
+            $withdrawPending = $this->withdrawPendingCountOlderThan($filters, now()->subMinutes($thresholdMinutes));
             if ($withdrawPending > 0) {
                 $alerts[] = [
+                    'code' => 'withdraw_pending_timeout',
                     'level' => 'danger',
                     'title' => 'ถอนรอดำเนินการเกินเวลา',
                     'message' => "มีรายการถอนค้างเกิน {$thresholdMinutes} นาที: {$withdrawPending} รายการ",
@@ -697,6 +913,7 @@ class DashboardService
             $depositPendingCount = $depositPending->count();
             if ($depositPendingCount > 0) {
                 $alerts[] = [
+                    'code' => 'deposit_pending_timeout',
                     'level' => 'warning',
                     'title' => 'ฝากค้าง match',
                     'message' => "มีรายการฝากค้างเกิน {$thresholdMinutes} นาที: {$depositPendingCount} รายการ",
@@ -706,6 +923,7 @@ class DashboardService
             $summary = $this->getSummary($filters);
             if ($summary['bonus']['ratio'] >= 30) {
                 $alerts[] = [
+                    'code' => 'bonus_ratio_high',
                     'level' => 'warning',
                     'title' => 'โบนัสผิดปกติ',
                     'message' => "โบนัส/ฝากสูง {$summary['bonus']['ratio']}%",
@@ -716,6 +934,7 @@ class DashboardService
             $netAdjust = (float) ($conversion['staff']['net_raw'] ?? 0);
             if (abs($netAdjust) >= 10000) {
                 $alerts[] = [
+                    'code' => 'staff_adjustment_high',
                     'level' => $netAdjust >= 0 ? 'warning' : 'danger',
                     'title' => 'staff adjustment สูงผิดปกติ',
                     'message' => "ปรับยอดสุทธิสูง: {$conversion['staff']['net']}",
@@ -724,6 +943,7 @@ class DashboardService
 
             if ($conversion['referral']['total'] >= 20 && $conversion['referral']['rate'] < 30) {
                 $alerts[] = [
+                    'code' => 'referral_low_conversion',
                     'level' => 'warning',
                     'title' => 'referral สมัครเยอะแต่ไม่ฝาก',
                     'message' => "Conversion ต่ำ {$conversion['referral']['rate']}% จาก {$conversion['referral']['total']} คน",
@@ -732,6 +952,7 @@ class DashboardService
 
             if ($summary['net']['amount_raw'] < 0) {
                 $alerts[] = [
+                    'code' => 'net_negative_short_range',
                     'level' => 'danger',
                     'title' => 'ยอดถอนสูงกว่าฝากในช่วงสั้น',
                     'message' => "คงเหลือสุทธิเป็นลบ: {$summary['net']['amount']}",
@@ -1132,160 +1353,6 @@ class DashboardService
         ];
     }
 
-    public function getLottoSummary(array $filters): array
-    {
-        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
-        $webCode = $this->dashboardWebCode();
-
-        if (!$this->hasTable('lotto_dashboard_summary_daily')) {
-            return [
-                'summary' => [],
-                'meta' => [
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
-                    'web_code' => $webCode,
-                    'source' => 'summary_table_only',
-                    'warning' => 'lotto_dashboard_summary_daily not found',
-                ],
-            ];
-        }
-
-        $row = DB::table('lotto_dashboard_summary_daily')
-            ->where('web_code', $webCode)
-            ->whereBetween('summary_date', [$startDate, $endDate])
-            ->selectRaw('
-                COALESCE(SUM(total_sales), 0) as total_sales,
-                COALESCE(SUM(total_payout), 0) as total_payout,
-                COALESCE(SUM(total_tickets), 0) as total_tickets,
-                COALESCE(SUM(total_players), 0) as total_players,
-                COALESCE(SUM(win_tickets), 0) as win_tickets,
-                COALESCE(SUM(lose_tickets), 0) as lose_tickets,
-                COALESCE(SUM(pending_tickets), 0) as pending_tickets,
-                COALESCE(SUM(settled_tickets), 0) as settled_tickets,
-                COALESCE(SUM(sales_unique_players), 0) as sales_unique_players,
-                COALESCE(SUM(settled_unique_players), 0) as settled_unique_players
-            ')
-            ->first();
-
-        $summary = (array) ($row ?: []);
-        $summary['total_sales'] = (float) ($summary['total_sales'] ?? 0);
-        $summary['total_payout'] = (float) ($summary['total_payout'] ?? 0);
-        $summary['net_sales_after_payout'] = round($summary['total_sales'] - $summary['total_payout'], 2);
-
-        return [
-            'summary' => $summary,
-            'meta' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'web_code' => $webCode,
-                'source' => 'lotto_dashboard_summary_daily',
-            ],
-        ];
-    }
-
-    public function getLottoMarketSummary(array $filters): array
-    {
-        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
-        $webCode = $this->dashboardWebCode();
-
-        if (!$this->hasTable('lotto_dashboard_market_summary')) {
-            return [
-                'rows' => [],
-                'meta' => [
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
-                    'web_code' => $webCode,
-                    'source' => 'summary_table_only',
-                    'warning' => 'lotto_dashboard_market_summary not found',
-                ],
-            ];
-        }
-
-        $query = DB::table('lotto_dashboard_market_summary')
-            ->where('web_code', $webCode)
-            ->whereBetween('summary_date', [$startDate, $endDate]);
-
-        if (!empty($filters['market_id'])) {
-            $query->where('market_id', (int) $filters['market_id']);
-        }
-
-        if (!empty($filters['round_id'])) {
-            $query->where('round_id', (int) $filters['round_id']);
-        }
-
-        $rows = $query->orderByDesc('summary_date')
-            ->orderBy('market_id')
-            ->orderBy('round_id')
-            ->get()
-            ->map(fn ($row) => (array) $row)
-            ->values()
-            ->all();
-
-        return [
-            'rows' => $rows,
-            'meta' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'web_code' => $webCode,
-                'source' => 'lotto_dashboard_market_summary',
-            ],
-        ];
-    }
-
-    public function getLottoRiskSnapshot(array $filters): array
-    {
-        [$startDate, $endDate] = $this->range($this->normalizeFilters($filters));
-        $webCode = $this->dashboardWebCode();
-
-        if (!$this->hasTable('lotto_dashboard_risk_snapshot')) {
-            return [
-                'rows' => [],
-                'meta' => [
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
-                    'web_code' => $webCode,
-                    'source' => 'summary_table_only',
-                    'warning' => 'lotto_dashboard_risk_snapshot not found',
-                ],
-            ];
-        }
-
-        [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
-
-        $query = DB::table('lotto_dashboard_risk_snapshot')
-            ->where('web_code', $webCode)
-            ->where('snapshot_at', '>=', $startAt)
-            ->where('snapshot_at', '<', $endAt);
-
-        if (!empty($filters['market_id'])) {
-            $query->where('market_id', (int) $filters['market_id']);
-        }
-
-        if (!empty($filters['round_id'])) {
-            $query->where('round_id', (int) $filters['round_id']);
-        }
-
-        $rows = $query
-            ->orderByDesc('snapshot_at')
-            ->orderBy('market_id')
-            ->orderBy('round_id')
-            ->limit(max(1, min((int) ($filters['limit'] ?? 500), 2000)))
-            ->get()
-            ->map(fn ($row) => (array) $row)
-            ->values()
-            ->all();
-
-        return [
-            'rows' => $rows,
-            'meta' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'web_code' => $webCode,
-                'source' => 'lotto_dashboard_risk_snapshot',
-            ],
-        ];
-    }
-
     private function getSummaryFromSummaryTable(array $filters): array
     {
         [$startDate, $endDate] = $this->range($filters);
@@ -1327,6 +1394,31 @@ class DashboardService
 
         $withdrawPendingAmount = (float) ($current['withdraw_pending_amount'] ?? 0);
         $withdrawPendingCount = (int) ($current['withdraw_pending_count'] ?? 0);
+        $withdrawFreeAmount = (float) ($current['withdraw_free_total_amount'] ?? 0);
+        $withdrawFreeCount = (int) ($current['withdraw_free_total_count'] ?? 0);
+        $withdrawFreeUsers = (int) ($current['withdraw_free_total_users'] ?? 0);
+        $withdrawFreePendingAmount = (float) ($current['withdraw_free_pending_amount'] ?? 0);
+        $withdrawFreePendingCount = (int) ($current['withdraw_free_pending_count'] ?? 0);
+        $hasWithdrawMainTotals = $this->hasColumn('dashboard_summary_daily', 'withdraw_main_total_amount')
+            && $this->hasColumn('dashboard_summary_daily', 'withdraw_main_total_count')
+            && $this->hasColumn('dashboard_summary_daily', 'withdraw_main_total_users');
+        $hasWithdrawMainPending = $this->hasColumn('dashboard_summary_daily', 'withdraw_main_pending_amount')
+            && $this->hasColumn('dashboard_summary_daily', 'withdraw_main_pending_count');
+        $withdrawMainAmount = $hasWithdrawMainTotals
+            ? (float) ($current['withdraw_main_total_amount'] ?? 0)
+            : max(0, $withdrawAmount - $withdrawFreeAmount);
+        $withdrawMainCount = $hasWithdrawMainTotals
+            ? (int) ($current['withdraw_main_total_count'] ?? 0)
+            : max(0, $withdrawCount - $withdrawFreeCount);
+        $withdrawMainUsers = $hasWithdrawMainTotals
+            ? (int) ($current['withdraw_main_total_users'] ?? 0)
+            : max(0, $withdrawUsers - $withdrawFreeUsers);
+        $withdrawMainPendingAmount = $hasWithdrawMainPending
+            ? (float) ($current['withdraw_main_pending_amount'] ?? 0)
+            : max(0, $withdrawPendingAmount - $withdrawFreePendingAmount);
+        $withdrawMainPendingCount = $hasWithdrawMainPending
+            ? (int) ($current['withdraw_main_pending_count'] ?? 0)
+            : max(0, $withdrawPendingCount - $withdrawFreePendingCount);
 
         $bonusDepositAmount = (float) ($current['bonus_deposit_amount'] ?? 0);
         $bonusDepositCount = (int) ($current['bonus_deposit_count'] ?? 0);
@@ -1341,8 +1433,11 @@ class DashboardService
         $lottoPayoutCash = (float) ($current['lotto_payout_cash'] ?? 0);
         $lottoRefundCash = (float) ($current['lotto_refund_cash'] ?? 0);
         $lottoNetCash = (float) ($current['lotto_net_cash'] ?? ($lottoSalesCash - $lottoPayoutCash - $lottoRefundCash));
+        $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
+        $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
+        $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
-        $net = (float) ($current['net_amount'] ?? ($depositSuccessAmount - $withdrawAmount));
+        $net = (float) ($current['net_amount'] ?? ($depositSuccessAmount - $withdrawAmount + $lottoNetCash));
         $prevNet = (float) ($previous['net_amount'] ?? 0);
         $netChangePct = $this->pctChange($prevNet, $net);
 
@@ -1407,6 +1502,28 @@ class DashboardService
                     'amount_raw' => $withdrawPendingAmount,
                     'count' => $withdrawPendingCount,
                 ],
+                'main' => [
+                    'amount' => core()->currency($withdrawMainAmount),
+                    'amount_raw' => $withdrawMainAmount,
+                    'count' => $withdrawMainCount,
+                    'users' => $withdrawMainUsers,
+                    'pending' => [
+                        'amount' => core()->currency($withdrawMainPendingAmount),
+                        'amount_raw' => $withdrawMainPendingAmount,
+                        'count' => $withdrawMainPendingCount,
+                    ],
+                ],
+                'free' => [
+                    'amount' => core()->currency($withdrawFreeAmount),
+                    'amount_raw' => $withdrawFreeAmount,
+                    'count' => $withdrawFreeCount,
+                    'users' => $withdrawFreeUsers,
+                    'pending' => [
+                        'amount' => core()->currency($withdrawFreePendingAmount),
+                        'amount_raw' => $withdrawFreePendingAmount,
+                        'count' => $withdrawFreePendingCount,
+                    ],
+                ],
             ],
             'bonus' => [
                 'amount' => core()->currency($bonusAmount),
@@ -1439,6 +1556,31 @@ class DashboardService
                 'net_cash' => core()->currency($lottoNetCash),
                 'net_cash_raw' => $lottoNetCash,
             ],
+            'lotto_product' => [
+                'total_sales' => core()->currency((float) ($lottoProduct['total_sales'] ?? 0)),
+                'total_sales_raw' => (float) ($lottoProduct['total_sales'] ?? 0),
+                'total_payout' => core()->currency((float) ($lottoProduct['total_payout'] ?? 0)),
+                'total_payout_raw' => (float) ($lottoProduct['total_payout'] ?? 0),
+                'total_tickets' => (int) ($lottoProduct['total_tickets'] ?? 0),
+                'total_players' => (int) ($lottoProduct['total_players'] ?? 0),
+                'win_tickets' => (int) ($lottoProduct['win_tickets'] ?? 0),
+                'lose_tickets' => (int) ($lottoProduct['lose_tickets'] ?? 0),
+                'pending_tickets' => (int) ($lottoProduct['pending_tickets'] ?? 0),
+                'settled_tickets' => (int) ($lottoProduct['settled_tickets'] ?? 0),
+            ],
+            'lotto_risk' => [
+                'markets' => (int) ($lottoRisk['markets'] ?? 0),
+                'rounds' => (int) ($lottoRisk['rounds'] ?? 0),
+                'numbers' => (int) ($lottoRisk['numbers'] ?? 0),
+                'exposure_total' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
+                'exposure_total_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
+                'liability_total' => core()->currency((float) ($lottoRisk['liability_total'] ?? 0)),
+                'liability_total_raw' => (float) ($lottoRisk['liability_total'] ?? 0),
+                'liability_max' => core()->currency((float) ($lottoRisk['liability_max'] ?? 0)),
+                'liability_max_raw' => (float) ($lottoRisk['liability_max'] ?? 0),
+                'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
+            ],
+            'lotto_bet_type_insights' => $lottoBetTypeInsights,
             'net' => [
                 'amount' => core()->currency($net),
                 'amount_raw' => $net,
@@ -1474,9 +1616,21 @@ class DashboardService
         $referralNotDeposit = max(0, $referralTotal - $referralDeposit);
         $referralRate = $referralTotal > 0 ? round(($referralDeposit / $referralTotal) * 100, 2) : 0;
 
-        $staffAdd = (float) ($current['staff_add_amount'] ?? 0);
-        $staffReduce = (float) ($current['staff_reduce_amount'] ?? 0);
-        $staffCount = (int) ($current['staff_adjust_count'] ?? 0);
+        $staffMain = $this->staffMetricPayload(
+            (float) ($current['staff_add_amount'] ?? 0),
+            (float) ($current['staff_reduce_amount'] ?? 0),
+            (int) ($current['staff_adjust_count'] ?? 0)
+        );
+        $staffFree = $this->staffAdjustMetricsByRepository(
+            'Gametech\\Member\\Repositories\\MemberCreditFreeLogRepository',
+            $filters,
+            $startDate,
+            $endDate,
+            'members_credit_free_log'
+        );
+        $staffAdd = (float) $staffMain['add_raw'] + (float) $staffFree['add_raw'];
+        $staffReduce = (float) $staffMain['reduce_raw'] + (float) $staffFree['reduce_raw'];
+        $staffCount = (int) $staffMain['count'] + (int) $staffFree['count'];
 
         return [
             'register' => [
@@ -1500,6 +1654,8 @@ class DashboardService
                 'net' => core()->currency($staffAdd - $staffReduce),
                 'net_raw' => $staffAdd - $staffReduce,
                 'count' => $staffCount,
+                'main' => $staffMain,
+                'free' => $staffFree,
             ],
         ];
     }
@@ -1534,69 +1690,71 @@ class DashboardService
             return [];
         }
 
+        $selects = [
+            'COALESCE(SUM(register_total), 0) as register_total',
+            'COALESCE(SUM(register_direct), 0) as register_direct',
+            'COALESCE(SUM(register_referral), 0) as register_referral',
+            'COALESCE(SUM(register_campaign), 0) as register_campaign',
+            'COALESCE(SUM(deposit_total_amount), 0) as deposit_total_amount',
+            'COALESCE(SUM(deposit_total_count), 0) as deposit_total_count',
+            'COALESCE(SUM(deposit_total_users), 0) as deposit_total_users',
+            'COALESCE(SUM(deposit_success_amount), 0) as deposit_success_amount',
+            'COALESCE(SUM(deposit_success_count), 0) as deposit_success_count',
+            'COALESCE(SUM(deposit_success_users), 0) as deposit_success_users',
+            'COALESCE(SUM(deposit_pending_amount), 0) as deposit_pending_amount',
+            'COALESCE(SUM(deposit_pending_count), 0) as deposit_pending_count',
+            'COALESCE(SUM(deposit_pending_users), 0) as deposit_pending_users',
+            'COALESCE(SUM(deposit_reject_amount), 0) as deposit_reject_amount',
+            'COALESCE(SUM(deposit_reject_count), 0) as deposit_reject_count',
+            'COALESCE(SUM(deposit_reject_users), 0) as deposit_reject_users',
+            'COALESCE(SUM(deposit_deleted_amount), 0) as deposit_deleted_amount',
+            'COALESCE(SUM(deposit_deleted_count), 0) as deposit_deleted_count',
+            'COALESCE(SUM(deposit_deleted_users), 0) as deposit_deleted_users',
+            'COALESCE(SUM(withdraw_total_amount), 0) as withdraw_total_amount',
+            'COALESCE(SUM(withdraw_total_count), 0) as withdraw_total_count',
+            'COALESCE(SUM(withdraw_total_users), 0) as withdraw_total_users',
+            'COALESCE(SUM(withdraw_pending_amount), 0) as withdraw_pending_amount',
+            'COALESCE(SUM(withdraw_pending_count), 0) as withdraw_pending_count',
+            $this->summarySumExpression('withdraw_main_total_amount') . ' as withdraw_main_total_amount',
+            $this->summarySumExpression('withdraw_main_total_count') . ' as withdraw_main_total_count',
+            $this->summarySumExpression('withdraw_main_total_users') . ' as withdraw_main_total_users',
+            $this->summarySumExpression('withdraw_main_pending_amount') . ' as withdraw_main_pending_amount',
+            $this->summarySumExpression('withdraw_main_pending_count') . ' as withdraw_main_pending_count',
+            $this->summarySumExpression('withdraw_free_total_amount') . ' as withdraw_free_total_amount',
+            $this->summarySumExpression('withdraw_free_total_count') . ' as withdraw_free_total_count',
+            $this->summarySumExpression('withdraw_free_total_users') . ' as withdraw_free_total_users',
+            $this->summarySumExpression('withdraw_free_pending_amount') . ' as withdraw_free_pending_amount',
+            $this->summarySumExpression('withdraw_free_pending_count') . ' as withdraw_free_pending_count',
+            'COALESCE(SUM(bonus_deposit_amount), 0) as bonus_deposit_amount',
+            'COALESCE(SUM(bonus_deposit_count), 0) as bonus_deposit_count',
+            'COALESCE(SUM(bonus_activity_amount), 0) as bonus_activity_amount',
+            'COALESCE(SUM(bonus_activity_count), 0) as bonus_activity_count',
+            'COALESCE(SUM(bonus_manual_amount), 0) as bonus_manual_amount',
+            'COALESCE(SUM(bonus_manual_count), 0) as bonus_manual_count',
+            'COALESCE(SUM(bonus_total_amount), 0) as bonus_total_amount',
+            'COALESCE(SUM(bonus_total_count), 0) as bonus_total_count',
+            $this->summarySumExpression('lotto_sales_cash') . ' as lotto_sales_cash',
+            $this->summarySumExpression('lotto_payout_cash') . ' as lotto_payout_cash',
+            $this->summarySumExpression('lotto_refund_cash') . ' as lotto_refund_cash',
+            $this->summarySumExpression('lotto_net_cash') . ' as lotto_net_cash',
+            'COALESCE(SUM(net_amount), 0) as net_amount',
+            'COALESCE(SUM(first_deposit_count), 0) as first_deposit_count',
+            'COALESCE(SUM(repeat_deposit_count), 0) as repeat_deposit_count',
+            'COALESCE(SUM(register_confirmed_count), 0) as register_confirmed_count',
+            'COALESCE(SUM(register_deposit_count), 0) as register_deposit_count',
+            'COALESCE(SUM(register_referral_deposit_count), 0) as register_referral_deposit_count',
+            'COALESCE(SUM(staff_add_amount), 0) as staff_add_amount',
+            'COALESCE(SUM(staff_reduce_amount), 0) as staff_reduce_amount',
+            'COALESCE(SUM(staff_adjust_count), 0) as staff_adjust_count',
+        ];
+
         $row = DB::table('dashboard_summary_daily')
             ->where('web_code', $this->dashboardWebCode())
             ->whereBetween('summary_date', [$startDate, $endDate])
-            ->selectRaw('
-                COALESCE(SUM(register_total), 0) as register_total,
-                COALESCE(SUM(register_direct), 0) as register_direct,
-                COALESCE(SUM(register_referral), 0) as register_referral,
-                COALESCE(SUM(register_campaign), 0) as register_campaign,
-                COALESCE(SUM(deposit_total_amount), 0) as deposit_total_amount,
-                COALESCE(SUM(deposit_total_count), 0) as deposit_total_count,
-                COALESCE(SUM(deposit_total_users), 0) as deposit_total_users,
-                COALESCE(SUM(deposit_success_amount), 0) as deposit_success_amount,
-                COALESCE(SUM(deposit_success_count), 0) as deposit_success_count,
-                COALESCE(SUM(deposit_success_users), 0) as deposit_success_users,
-                COALESCE(SUM(deposit_pending_amount), 0) as deposit_pending_amount,
-                COALESCE(SUM(deposit_pending_count), 0) as deposit_pending_count,
-                COALESCE(SUM(deposit_pending_users), 0) as deposit_pending_users,
-                COALESCE(SUM(deposit_reject_amount), 0) as deposit_reject_amount,
-                COALESCE(SUM(deposit_reject_count), 0) as deposit_reject_count,
-                COALESCE(SUM(deposit_reject_users), 0) as deposit_reject_users,
-                COALESCE(SUM(deposit_deleted_amount), 0) as deposit_deleted_amount,
-                COALESCE(SUM(deposit_deleted_count), 0) as deposit_deleted_count,
-                COALESCE(SUM(deposit_deleted_users), 0) as deposit_deleted_users,
-                COALESCE(SUM(withdraw_total_amount), 0) as withdraw_total_amount,
-                COALESCE(SUM(withdraw_total_count), 0) as withdraw_total_count,
-                COALESCE(SUM(withdraw_total_users), 0) as withdraw_total_users,
-                COALESCE(SUM(withdraw_pending_amount), 0) as withdraw_pending_amount,
-                COALESCE(SUM(withdraw_pending_count), 0) as withdraw_pending_count,
-                COALESCE(SUM(bonus_deposit_amount), 0) as bonus_deposit_amount,
-                COALESCE(SUM(bonus_deposit_count), 0) as bonus_deposit_count,
-                COALESCE(SUM(bonus_activity_amount), 0) as bonus_activity_amount,
-                COALESCE(SUM(bonus_activity_count), 0) as bonus_activity_count,
-                COALESCE(SUM(bonus_manual_amount), 0) as bonus_manual_amount,
-                COALESCE(SUM(bonus_manual_count), 0) as bonus_manual_count,
-                COALESCE(SUM(bonus_total_amount), 0) as bonus_total_amount,
-                COALESCE(SUM(bonus_total_count), 0) as bonus_total_count,
-                COALESCE(SUM(net_amount), 0) as net_amount,
-                COALESCE(SUM(first_deposit_count), 0) as first_deposit_count,
-                COALESCE(SUM(repeat_deposit_count), 0) as repeat_deposit_count,
-                COALESCE(SUM(register_confirmed_count), 0) as register_confirmed_count,
-                COALESCE(SUM(register_deposit_count), 0) as register_deposit_count,
-                COALESCE(SUM(register_referral_deposit_count), 0) as register_referral_deposit_count,
-                COALESCE(SUM(staff_add_amount), 0) as staff_add_amount,
-                COALESCE(SUM(staff_reduce_amount), 0) as staff_reduce_amount,
-                COALESCE(SUM(staff_adjust_count), 0) as staff_adjust_count
-            ')
+            ->selectRaw(implode(",\n", $selects))
             ->first();
 
-        $result = $row ? (array) $row : [];
-
-        foreach (['lotto_sales_cash', 'lotto_payout_cash', 'lotto_refund_cash', 'lotto_net_cash'] as $column) {
-            $result[$column] = 0.0;
-            if (!$this->hasColumn('dashboard_summary_daily', $column)) {
-                continue;
-            }
-
-            $result[$column] = (float) DB::table('dashboard_summary_daily')
-                ->where('web_code', $this->dashboardWebCode())
-                ->whereBetween('summary_date', [$startDate, $endDate])
-                ->sum($column);
-        }
-
-        return $result;
+        return $row ? (array) $row : [];
     }
 
     private function getDailyTrendsFromSummaryTable(string $startDate, string $endDate): array
@@ -1724,6 +1882,7 @@ class DashboardService
             'date_end' => Arr::get($filters, 'date_end') ?: now()->toDateString(),
             'register_channel' => Arr::get($filters, 'register_channel'),
             'deposit_channel' => Arr::get($filters, 'deposit_channel'),
+            'lotto_market_id' => Arr::get($filters, 'lotto_market_id'),
             'trend_mode' => Arr::get($filters, 'trend_mode', 'day'),
         ];
     }
@@ -1840,67 +1999,412 @@ class DashboardService
         return $query;
     }
 
-    private function withdrawBaseQuery(array $filters, string $status = 'complete')
+    private function withdrawBaseQueries(array $filters, string $status = 'complete', string $scope = 'all'): array
     {
         $config = core()->getConfigData();
+        $queries = [];
+        $includeMain = $scope !== 'free';
+        $includeFree = $scope !== 'main' && (($config->freecredit_open ?? 'N') == 'Y');
+
         if ($config->seamless == 'Y') {
-            $query = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+            if ($includeMain) {
+                $queries[] = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->active();
+            }
+            if ($includeFree) {
+                $queries[] = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessFreeRepository')->active();
+            }
         } else {
-            $query = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+            if ($includeMain) {
+                $queries[] = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->active();
+            }
+            if ($includeFree) {
+                $queries[] = app('Gametech\\Payment\\Repositories\\WithdrawFreeRepository')->active();
+            }
         }
 
-        if ($status === 'waiting') {
-            $query->waiting();
-        } elseif ($status === 'complete') {
-            $query->complete();
+        $prepared = [];
+        foreach ($queries as $query) {
+            if ($status === 'waiting') {
+                $query->waiting();
+            } elseif ($status === 'complete') {
+                $query->complete();
+            }
+
+            $prepared[] = $this->applyMemberRelationFilters($query, $filters);
         }
 
-        return $this->applyMemberRelationFilters($query, $filters);
+        return $prepared;
+    }
+
+    private function withdrawTotals(
+        array $filters,
+        string $status,
+        string $dateColumn,
+        string $startDate,
+        string $endDate,
+        string $scope = 'all'
+    ): array {
+        $queries = $this->withdrawBaseQueries($filters, $status, $scope);
+        $amount = 0.0;
+        $count = 0;
+
+        foreach ($queries as $query) {
+            $scoped = clone $query;
+            $this->applyDateTimeWindow($scoped, $dateColumn, $startDate, $endDate);
+
+            $amount += (float) (clone $scoped)->sum('amount');
+            $count += (int) (clone $scoped)->count();
+        }
+
+        return [
+            'amount' => $amount,
+            'count' => $count,
+            'users' => $this->withdrawDistinctUsersCount($queries, $dateColumn, $startDate, $endDate),
+        ];
+    }
+
+    private function withdrawDistinctUsersCount(
+        array $queries,
+        string $dateColumn,
+        string $startDate,
+        string $endDate
+    ): int {
+        $union = null;
+
+        foreach ($queries as $query) {
+            $scoped = clone $query;
+            $this->applyDateTimeWindow($scoped, $dateColumn, $startDate, $endDate);
+            $members = (clone $scoped)
+                ->select('member_code')
+                ->whereNotNull('member_code')
+                ->distinct();
+
+            if ($union === null) {
+                $union = $members;
+            } else {
+                $union->union($members);
+            }
+        }
+
+        if ($union === null) {
+            return 0;
+        }
+
+        return (int) DB::query()
+            ->fromSub($union, 'withdraw_members')
+            ->distinct('member_code')
+            ->count('member_code');
+    }
+
+    private function withdrawTrendByHour(array $filters, string $startDate, string $endDate): array
+    {
+        $result = [];
+
+        foreach ($this->withdrawBaseQueries($filters, 'complete') as $query) {
+            $scoped = clone $query;
+            $this->applyDateTimeWindow($scoped, 'date_approve', $startDate, $endDate);
+            $rows = $scoped
+                ->selectRaw('HOUR(date_approve) as h, SUM(amount) as v')
+                ->groupBy('h')
+                ->pluck('v', 'h')
+                ->toArray();
+
+            foreach ($rows as $hour => $amount) {
+                $key = (int) $hour;
+                $result[$key] = (float) ($result[$key] ?? 0) + (float) $amount;
+            }
+        }
+
+        return $result;
+    }
+
+    private function withdrawTrendByDay(array $filters, string $startDate, string $endDate): array
+    {
+        $result = [];
+
+        foreach ($this->withdrawBaseQueries($filters, 'complete') as $query) {
+            $scoped = clone $query;
+            $this->applyDateTimeWindow($scoped, 'date_approve', $startDate, $endDate);
+            $rows = $scoped
+                ->selectRaw("DATE_FORMAT(date_approve,'%Y-%m-%d') as d, SUM(amount) as v")
+                ->groupBy('d')
+                ->pluck('v', 'd')
+                ->toArray();
+
+            foreach ($rows as $date => $amount) {
+                $key = (string) $date;
+                $result[$key] = (float) ($result[$key] ?? 0) + (float) $amount;
+            }
+        }
+
+        return $result;
+    }
+
+    private function withdrawPendingCountOlderThan(array $filters, $cutoff): int
+    {
+        $count = 0;
+
+        foreach ($this->withdrawBaseQueries($filters, 'waiting') as $query) {
+            $count += (int) (clone $query)
+                ->where('date_create', '<', $cutoff)
+                ->count();
+        }
+
+        return $count;
     }
 
     private function bonusTotals(array $filters, string $startDate, string $endDate): array
     {
-        $promoQuery = app('Gametech\\Payment\\Repositories\\PaymentPromotionRepository')
-            ->active()->aff();
-        $this->applyDateTimeWindow($promoQuery, 'date_create', $startDate, $endDate);
-        $promoQuery = $this->applyMemberRelationFilters($promoQuery, $filters);
-        $promoQuery->where('credit_bonus', '>', 0);
-
-        $billBase = app('Gametech\\Payment\\Repositories\\BillRepository')
-            ->active()
-            ->getpro();
-        $this->applyDateTimeWindow($billBase, 'date_create', $startDate, $endDate);
-        $billBase = $this->applyMemberRelationFilters($billBase, $filters);
-        $billBase->where('credit_bonus', '>', 0);
-
-        $billActivity = clone $billBase;
-        $billManual = clone $billBase;
-
-        if ($this->hasColumn('bills', 'transfer_type')) {
-            $billActivity->where('transfer_type', 1);
-            $billManual->where(function ($query) {
-                $query->whereNull('transfer_type')->orWhere('transfer_type', '<>', 1);
-            });
-        } else {
-            $billManual->whereRaw('1 = 0');
-        }
-
-        $promoAmount = (float) (clone $promoQuery)->sum('credit_bonus');
-        $activityAmount = (float) (clone $billActivity)->sum('credit_bonus');
-        $manualAmount = (float) (clone $billManual)->sum('credit_bonus');
-        $promoCount = (int) (clone $promoQuery)->count();
-        $activityCount = (int) (clone $billActivity)->count();
-        $manualCount = (int) (clone $billManual)->count();
+        $deposit = $this->aggregateBonusSources(
+            $this->bonusSourceDefinitions('deposit'),
+            $startDate,
+            $endDate,
+            $filters
+        );
+        $activity = $this->aggregateBonusSources(
+            $this->bonusSourceDefinitions('activity'),
+            $startDate,
+            $endDate,
+            $filters
+        );
 
         return [
-            'deposit_amount' => $promoAmount,
-            'deposit_count' => $promoCount,
-            'activity_amount' => $activityAmount,
-            'activity_count' => $activityCount,
-            'manual_amount' => $manualAmount,
-            'manual_count' => $manualCount,
-            'amount' => $promoAmount + $activityAmount + $manualAmount,
-            'count' => $promoCount + $activityCount + $manualCount,
+            'deposit_amount' => $deposit['amount'],
+            'deposit_count' => $deposit['count'],
+            'activity_amount' => $activity['amount'],
+            'activity_count' => $activity['count'],
+            'manual_amount' => 0.0,
+            'manual_count' => 0,
+            'amount' => $deposit['amount'] + $activity['amount'],
+            'count' => $deposit['count'] + $activity['count'],
+        ];
+    }
+
+    private function bonusMode(): string
+    {
+        $config = core()->getConfigData();
+
+        if (($config->seamless ?? 'N') === 'Y') {
+            return (($config->freecredit_open ?? 'N') === 'Y')
+                ? 'seamless_free'
+                : 'legacy';
+        }
+
+        if (($config->multigame_open ?? 'N') === 'Y') {
+            return 'multi';
+        }
+
+        return 'legacy';
+    }
+
+    private function bonusSourceDefinitions(string $bucket): array
+    {
+        $mode = $this->bonusMode();
+
+        if ($bucket === 'deposit') {
+            return match ($mode) {
+                'seamless_free', 'multi' => [[
+                    'table' => 'members_promotionlog',
+                    'date_column' => 'date_create',
+                    'amount_column' => 'bonus',
+                    'member_column' => 'member_code',
+                    'conditions' => [
+                        ['enable', '=', 'Y'],
+                        ['bonus', '>', 0],
+                    ],
+                ]],
+                default => [[
+                    'table' => 'bills',
+                    'date_column' => 'date_create',
+                    'amount_column' => 'credit_bonus',
+                    'member_column' => 'member_code',
+                    'conditions' => [
+                        ['enable', '=', 'Y'],
+                        ['method', '=', 'TOPUP'],
+                        ['pro_code', '>', 0],
+                        ['credit_bonus', '>', 0],
+                    ],
+                ]],
+            };
+        }
+
+        return match ($mode) {
+            'seamless_free' => [[
+                'table' => 'members_credit_free_log',
+                'date_column' => 'date_create',
+                'amount_column' => 'total',
+                'member_column' => 'member_code',
+                'conditions' => [
+                    ['enable', '=', 'Y'],
+                    ['kind', 'in', ['TRANCB', 'TRANBONUS', 'TRANFT', 'TRANIC']],
+                    ['total', '>', 0],
+                ],
+            ]],
+            'multi' => [
+                [
+                    'table' => 'members_credit_log',
+                    'date_column' => 'date_create',
+                    'amount_column' => 'total',
+                    'member_column' => 'member_code',
+                    'conditions' => [
+                        ['enable', '=', 'Y'],
+                        ['kind', 'in', ['SPIN', 'CASHBACK', 'IC', 'FASTSTART']],
+                        ['total', '>', 0],
+                    ],
+                ],
+                [
+                    'table' => 'members_credit_free_log',
+                    'date_column' => 'date_create',
+                    'amount_column' => 'total',
+                    'member_column' => 'member_code',
+                    'conditions' => [
+                        ['enable', '=', 'Y'],
+                        ['kind', 'in', ['SPIN', 'CASHBACK', 'IC', 'FASTSTART']],
+                        ['total', '>', 0],
+                    ],
+                ],
+            ],
+            default => [[
+                'table' => 'bills',
+                'date_column' => 'date_create',
+                'amount_column' => 'credit_bonus',
+                'member_column' => 'member_code',
+                'conditions' => [
+                    ['enable', '=', 'Y'],
+                    ['method', '=', 'BONUS'],
+                    ['credit_bonus', '>', 0],
+                ],
+            ]],
+        };
+    }
+
+    private function aggregateBonusSources(array $sources, string $startDate, string $endDate, array $filters): array
+    {
+        $amount = 0.0;
+        $count = 0;
+
+        foreach ($sources as $source) {
+            $query = $this->buildBonusSourceQuery($source, $filters, $startDate, $endDate);
+            if ($query === null) {
+                continue;
+            }
+
+            $amount += (float) (clone $query)->sum($source['amount_column']);
+            $count += (int) (clone $query)->count();
+        }
+
+        return [
+            'amount' => $amount,
+            'count' => $count,
+        ];
+    }
+
+    private function buildBonusSourceQuery(array $source, array $filters, string $startDate, string $endDate)
+    {
+        $table = $source['table'];
+        $dateColumn = $source['date_column'];
+        $amountColumn = $source['amount_column'];
+        $memberColumn = $source['member_column'] ?? null;
+
+        if (
+            !$this->hasTable($table)
+            || !$this->hasColumn($table, $dateColumn)
+            || !$this->hasColumn($table, $amountColumn)
+        ) {
+            return null;
+        }
+
+        if ($memberColumn && !$this->hasColumn($table, $memberColumn)) {
+            return null;
+        }
+
+        foreach ($source['conditions'] ?? [] as $condition) {
+            if (!$this->hasColumn($table, $condition[0])) {
+                return null;
+            }
+        }
+
+        $query = DB::table($table);
+        $this->applyDateTimeWindow($query, $dateColumn, $startDate, $endDate);
+        $this->applyBonusConditions($query, $source['conditions'] ?? []);
+
+        if ($memberColumn) {
+            $query = $this->applyMemberCodeFilter($query, $table . '.' . $memberColumn, $filters);
+        }
+
+        return $query;
+    }
+
+    private function applyBonusConditions($query, array $conditions): void
+    {
+        foreach ($conditions as [$column, $operator, $value]) {
+            if ($operator === 'in') {
+                $query->whereIn($column, $value);
+                continue;
+            }
+
+            $query->where($column, $operator, $value);
+        }
+    }
+
+    private function applyMemberCodeFilter($query, string $qualifiedMemberColumn, array $filters)
+    {
+        if (empty($filters['register_channel']) || !$this->hasTable('members')) {
+            return $query;
+        }
+
+        $memberQuery = app('Gametech\\Member\\Repositories\\MemberRepository')
+            ->getModel()
+            ->newQuery()
+            ->select('members.code');
+
+        $memberQuery = $this->applyMemberFilters($memberQuery, $filters);
+
+        return $query->whereIn($qualifiedMemberColumn, $memberQuery->toBase());
+    }
+
+    private function staffAdjustMetricsByRepository(
+        string $repositoryClass,
+        array $filters,
+        string $startDate,
+        string $endDate,
+        ?string $requiredTable = null
+    ): array {
+        if ($requiredTable && !$this->hasTable($requiredTable)) {
+            return $this->staffMetricPayload(0, 0, 0);
+        }
+
+        $addQuery = app($repositoryClass)
+            ->active()
+            ->where('kind', 'SETWALLET')
+            ->where('credit_type', 'D');
+        $this->applyDateTimeWindow($addQuery, 'date_create', $startDate, $endDate);
+        $addQuery = $this->applyMemberRelationFilters($addQuery, $filters);
+
+        $reduceQuery = app($repositoryClass)
+            ->active()
+            ->where('kind', 'SETWALLET')
+            ->where('credit_type', 'W');
+        $this->applyDateTimeWindow($reduceQuery, 'date_create', $startDate, $endDate);
+        $reduceQuery = $this->applyMemberRelationFilters($reduceQuery, $filters);
+
+        $addAmount = (float) (clone $addQuery)->sum('amount');
+        $reduceAmount = (float) (clone $reduceQuery)->sum('amount');
+        $count = (int) ((clone $addQuery)->count() + (clone $reduceQuery)->count());
+
+        return $this->staffMetricPayload($addAmount, $reduceAmount, $count);
+    }
+
+    private function staffMetricPayload(float $addAmount, float $reduceAmount, int $count): array
+    {
+        return [
+            'add' => core()->currency($addAmount),
+            'add_raw' => $addAmount,
+            'reduce' => core()->currency($reduceAmount),
+            'reduce_raw' => $reduceAmount,
+            'net' => core()->currency($addAmount - $reduceAmount),
+            'net_raw' => $addAmount - $reduceAmount,
+            'count' => $count,
         ];
     }
 
@@ -1911,60 +2415,279 @@ class DashboardService
         $this->applyDateTimeWindow($depositQuery, 'date_create', $startDate, $endDate);
         $depositQuery = $this->applyPaymentFilters($depositQuery, $filters);
 
-        $withdrawQuery = $this->withdrawBaseQuery($filters);
-        $this->applyDateTimeWindow($withdrawQuery, 'date_approve', $startDate, $endDate);
-
         $depositAmount = (float) $depositQuery->sum('value');
-        $withdrawAmount = (float) $withdrawQuery->sum('amount');
+        $withdrawAmount = 0.0;
+        foreach ($this->withdrawBaseQueries($filters, 'complete') as $withdrawQuery) {
+            $scoped = clone $withdrawQuery;
+            $this->applyDateTimeWindow($scoped, 'date_approve', $startDate, $endDate);
+            $withdrawAmount += (float) (clone $scoped)->sum('amount');
+        }
 
-        $lottoCash = $this->lottoCashTotals($filters, $startDate, $endDate);
+        $lotto = $this->lottoCashMetrics($startDate, $endDate);
 
-        return $depositAmount - $withdrawAmount + (float) ($lottoCash['net_cash'] ?? 0);
+        return $depositAmount - $withdrawAmount + (float) ($lotto['net_cash'] ?? 0);
     }
 
-    /**
-     * @return array{sales_cash:float,payout_cash:float,refund_cash:float,net_cash:float}
-     */
-    private function lottoCashTotals(array $filters, string $startDate, string $endDate): array
+    private function lottoCashMetrics(string $startDate, string $endDate): array
     {
-        if (!$this->hasTable('wallet_transactions')) {
-            return [
-                'sales_cash' => 0.0,
-                'payout_cash' => 0.0,
-                'refund_cash' => 0.0,
-                'net_cash' => 0.0,
-            ];
+        $defaults = [
+            'sales_cash' => 0.0,
+            'payout_cash' => 0.0,
+            'refund_cash' => 0.0,
+            'net_cash' => 0.0,
+        ];
+
+        if (
+            !$this->hasTable('wallet_transactions')
+            || !$this->hasColumn('wallet_transactions', 'created_at')
+            || !$this->hasColumn('wallet_transactions', 'status')
+            || !$this->hasColumn('wallet_transactions', 'direction')
+            || !$this->hasColumn('wallet_transactions', 'ref_type')
+            || !$this->hasColumn('wallet_transactions', 'amount')
+        ) {
+            return $defaults;
         }
 
         [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
 
-        $base = DB::table('wallet_transactions')
-            ->where('scope', 'MEMBER')
-            ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
-            ->where('created_at', '>=', $startAt)
-            ->where('created_at', '<', $endAt);
+        $buildBase = function (string $direction, array $refTypes) use ($startAt, $endAt) {
+            $query = DB::table('wallet_transactions')
+                ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
+                ->where('created_at', '>=', $startAt)
+                ->where('created_at', '<', $endAt)
+                ->where('direction', $direction)
+                ->whereIn('ref_type', $refTypes);
 
-        $salesCash = (float) (clone $base)
-            ->where('direction', 'DEBIT')
-            ->whereIn('ref_type', LottoDashboardMetricConfig::salesRefTypes())
-            ->sum('amount');
+            if ($this->hasColumn('wallet_transactions', 'scope')) {
+                $query->where('scope', 'MEMBER');
+            }
 
-        $payoutCash = (float) (clone $base)
-            ->where('direction', 'CREDIT')
-            ->whereIn('ref_type', LottoDashboardMetricConfig::payoutRefTypes())
-            ->sum('amount');
+            return $query;
+        };
 
-        $refundCash = (float) (clone $base)
-            ->where('direction', 'CREDIT')
-            ->whereIn('ref_type', LottoDashboardMetricConfig::refundRefTypes())
-            ->sum('amount');
+        $defaults['sales_cash'] = (float) $buildBase('DEBIT', LottoDashboardMetricConfig::salesRefTypes())->sum('amount');
+        $defaults['payout_cash'] = (float) $buildBase('CREDIT', LottoDashboardMetricConfig::payoutRefTypes())->sum('amount');
+        $defaults['refund_cash'] = (float) $buildBase('CREDIT', LottoDashboardMetricConfig::refundRefTypes())->sum('amount');
+        $defaults['net_cash'] = round(
+            (float) $defaults['sales_cash']
+            - (float) $defaults['payout_cash']
+            - (float) $defaults['refund_cash'],
+            2
+        );
+
+        return $defaults;
+    }
+
+    private function lottoProductSummaryMetrics(string $startDate, string $endDate): array
+    {
+        $defaults = [
+            'total_sales' => 0.0,
+            'total_payout' => 0.0,
+            'total_tickets' => 0,
+            'total_players' => 0,
+            'win_tickets' => 0,
+            'lose_tickets' => 0,
+            'pending_tickets' => 0,
+            'settled_tickets' => 0,
+        ];
+
+        if (!$this->hasTable('lotto_dashboard_summary_daily')) {
+            return $defaults;
+        }
+
+        $row = DB::table('lotto_dashboard_summary_daily')
+            ->where('web_code', $this->dashboardWebCode())
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->selectRaw(implode(",\n", [
+                'COALESCE(SUM(total_sales), 0) as total_sales',
+                'COALESCE(SUM(total_payout), 0) as total_payout',
+                'COALESCE(SUM(total_tickets), 0) as total_tickets',
+                'COALESCE(SUM(total_players), 0) as total_players',
+                'COALESCE(SUM(win_tickets), 0) as win_tickets',
+                'COALESCE(SUM(lose_tickets), 0) as lose_tickets',
+                'COALESCE(SUM(pending_tickets), 0) as pending_tickets',
+                'COALESCE(SUM(settled_tickets), 0) as settled_tickets',
+            ]))
+            ->first();
+
+        if (!$row) {
+            return $defaults;
+        }
 
         return [
-            'sales_cash' => $salesCash,
-            'payout_cash' => $payoutCash,
-            'refund_cash' => $refundCash,
-            'net_cash' => round($salesCash - $payoutCash - $refundCash, 2),
+            'total_sales' => (float) ($row->total_sales ?? 0),
+            'total_payout' => (float) ($row->total_payout ?? 0),
+            'total_tickets' => (int) ($row->total_tickets ?? 0),
+            'total_players' => (int) ($row->total_players ?? 0),
+            'win_tickets' => (int) ($row->win_tickets ?? 0),
+            'lose_tickets' => (int) ($row->lose_tickets ?? 0),
+            'pending_tickets' => (int) ($row->pending_tickets ?? 0),
+            'settled_tickets' => (int) ($row->settled_tickets ?? 0),
         ];
+    }
+
+    private function lottoRiskSummaryMetrics(string $startDate, string $endDate): array
+    {
+        $defaults = [
+            'markets' => 0,
+            'rounds' => 0,
+            'numbers' => 0,
+            'exposure_total' => 0.0,
+            'liability_total' => 0.0,
+            'liability_max' => 0.0,
+            'last_snapshot_at' => '',
+        ];
+
+        if (
+            !$this->hasTable('lotto_dashboard_risk_snapshot')
+            || !$this->hasColumn('lotto_dashboard_risk_snapshot', 'snapshot_at')
+        ) {
+            return $defaults;
+        }
+
+        [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
+
+        $row = DB::table('lotto_dashboard_risk_snapshot')
+            ->where('web_code', $this->dashboardWebCode())
+            ->where('snapshot_at', '>=', $startAt)
+            ->where('snapshot_at', '<', $endAt)
+            ->selectRaw(implode(",\n", [
+                'COALESCE(COUNT(*), 0) as numbers',
+                'COALESCE(COUNT(DISTINCT market_id), 0) as markets',
+                'COALESCE(COUNT(DISTINCT round_id), 0) as rounds',
+                'COALESCE(SUM(payout_if_hit), 0) as exposure_total',
+                'COALESCE(SUM(liability), 0) as liability_total',
+                'COALESCE(MAX(liability), 0) as liability_max',
+                'MAX(snapshot_at) as last_snapshot_at',
+            ]))
+            ->first();
+
+        if (!$row) {
+            return $defaults;
+        }
+
+        return [
+            'markets' => (int) ($row->markets ?? 0),
+            'rounds' => (int) ($row->rounds ?? 0),
+            'numbers' => (int) ($row->numbers ?? 0),
+            'exposure_total' => (float) ($row->exposure_total ?? 0),
+            'liability_total' => (float) ($row->liability_total ?? 0),
+            'liability_max' => (float) ($row->liability_max ?? 0),
+            'last_snapshot_at' => (string) ($row->last_snapshot_at ?? ''),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoBetTypeInsightsSummary(string $startDate, string $endDate): array
+    {
+        if (
+            !$this->hasTable('lotto_dashboard_bet_type_summary_daily')
+            || !$this->hasTable('lotto_dashboard_bet_type_number_daily')
+        ) {
+            return [];
+        }
+
+        $isSingleDay = $startDate === $endDate;
+
+        $dailyRows = DB::table('lotto_dashboard_bet_type_summary_daily')
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->selectRaw(implode(",\n", [
+                'bet_type',
+                'COALESCE(SUM(item_count), 0) as item_count',
+                'COALESCE(SUM(total_amount), 0) as total_amount',
+                'COALESCE(SUM(unique_players), 0) as unique_players',
+            ]))
+            ->groupBy('bet_type')
+            ->orderBy('bet_type')
+            ->get();
+
+        if ($dailyRows->isEmpty()) {
+            return [];
+        }
+
+        $numberRows = DB::table('lotto_dashboard_bet_type_number_daily')
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->selectRaw(implode(",\n", [
+                'bet_type',
+                'number',
+                'COALESCE(SUM(item_count), 0) as item_count',
+                'COALESCE(SUM(total_amount), 0) as total_amount',
+            ]))
+            ->groupBy('bet_type', 'number')
+            ->orderBy('bet_type')
+            ->orderByDesc('total_amount')
+            ->orderByDesc('item_count')
+            ->orderBy('number')
+            ->get();
+
+        $topByType = [];
+        foreach ($numberRows as $row) {
+            $type = (string) ($row->bet_type ?? '');
+            if ($type === '') {
+                continue;
+            }
+
+            $amount = (float) ($row->total_amount ?? 0);
+            $count = (int) ($row->item_count ?? 0);
+            $number = (string) ($row->number ?? '');
+
+            if (!isset($topByType[$type])) {
+                $topByType[$type] = [
+                    'top_number' => $number,
+                    'top_number_amount_raw' => $amount,
+                    'top_number_item_count' => $count,
+                ];
+                continue;
+            }
+
+            $current = $topByType[$type];
+            $isBetter = false;
+            if ($amount > (float) $current['top_number_amount_raw']) {
+                $isBetter = true;
+            } elseif ($amount === (float) $current['top_number_amount_raw'] && $count > (int) $current['top_number_item_count']) {
+                $isBetter = true;
+            } elseif (
+                $amount === (float) $current['top_number_amount_raw']
+                && $count === (int) $current['top_number_item_count']
+                && strcmp($number, (string) $current['top_number']) < 0
+            ) {
+                $isBetter = true;
+            }
+
+            if ($isBetter) {
+                $topByType[$type] = [
+                    'top_number' => $number,
+                    'top_number_amount_raw' => $amount,
+                    'top_number_item_count' => $count,
+                ];
+            }
+        }
+
+        return $dailyRows->map(function ($row) use ($isSingleDay, $topByType): array {
+            $betType = (string) ($row->bet_type ?? '');
+            $top = $topByType[$betType] ?? [
+                'top_number' => '',
+                'top_number_amount_raw' => 0.0,
+            ];
+
+            $totalAmountRaw = (float) ($row->total_amount ?? 0);
+            $topAmountRaw = (float) ($top['top_number_amount_raw'] ?? 0);
+            $topNumber = (string) ($top['top_number'] ?? '');
+
+            return [
+                'bet_type' => $betType,
+                'label' => BetType::label($betType),
+                'item_count' => (int) ($row->item_count ?? 0),
+                'total_amount' => core()->currency($totalAmountRaw),
+                'total_amount_raw' => $totalAmountRaw,
+                'unique_players' => $isSingleDay ? (int) ($row->unique_players ?? 0) : null,
+                'top_number' => $topNumber !== '' ? $topNumber : null,
+                'top_number_amount' => core()->currency($topAmountRaw),
+                'top_number_amount_raw' => $topAmountRaw,
+            ];
+        })->values()->all();
     }
 
     private function registerTotals(array $filters, string $startDate, string $endDate): array
@@ -2149,58 +2872,69 @@ class DashboardService
 
     private function bonusTrendsByDay(array $filters, string $startDate, string $endDate): array
     {
-        $promoQuery = app('Gametech\\Payment\\Repositories\\PaymentPromotionRepository')
-            ->active()->aff();
-        $this->applyDateTimeWindow($promoQuery, 'date_create', $startDate, $endDate);
-        $promoQuery = $this->applyMemberRelationFilters($promoQuery, $filters);
+        return $this->mergeNumericSeries(
+            $this->bonusTrendAggregate($this->bonusSourceDefinitions('deposit'), $filters, $startDate, $endDate, 'day'),
+            $this->bonusTrendAggregate($this->bonusSourceDefinitions('activity'), $filters, $startDate, $endDate, 'day')
+        );
+    }
 
-        $promo = $promoQuery
-            ->selectRaw("DATE_FORMAT(date_create,'%Y-%m-%d') as d, SUM(credit_bonus) as v")
-            ->groupBy('d')->pluck('v', 'd')->toArray();
+    private function bonusTrendsByHour(array $filters, string $startDate, string $endDate): array
+    {
+        return $this->mergeNumericSeries(
+            $this->bonusTrendAggregate($this->bonusSourceDefinitions('deposit'), $filters, $startDate, $endDate, 'hour'),
+            $this->bonusTrendAggregate($this->bonusSourceDefinitions('activity'), $filters, $startDate, $endDate, 'hour')
+        );
+    }
 
-        $billQuery = app('Gametech\\Payment\\Repositories\\BillRepository')
-            ->active()->getpro()->where('transfer_type', 1);
-        $this->applyDateTimeWindow($billQuery, 'date_create', $startDate, $endDate);
-        $billQuery = $this->applyMemberRelationFilters($billQuery, $filters);
-
-        $bill = $billQuery
-            ->selectRaw("DATE_FORMAT(date_create,'%Y-%m-%d') as d, SUM(credit_bonus) as v")
-            ->groupBy('d')->pluck('v', 'd')->toArray();
-
+    private function bonusTrendAggregate(
+        array $sources,
+        array $filters,
+        string $startDate,
+        string $endDate,
+        string $mode
+    ): array {
         $result = [];
-        foreach (array_keys($promo + $bill) as $dt) {
-            $result[$dt] = (float) ($promo[$dt] ?? 0) + (float) ($bill[$dt] ?? 0);
+
+        foreach ($sources as $source) {
+            $query = $this->buildBonusSourceQuery($source, $filters, $startDate, $endDate);
+            if ($query === null) {
+                continue;
+            }
+
+            if ($mode === 'hour') {
+                $rows = $query
+                    ->selectRaw('HOUR(' . $source['date_column'] . ') as k, SUM(' . $source['amount_column'] . ') as v')
+                    ->groupBy('k')
+                    ->pluck('v', 'k')
+                    ->toArray();
+            } else {
+                $rows = $query
+                    ->selectRaw("DATE_FORMAT({$source['date_column']},'%Y-%m-%d') as k, SUM({$source['amount_column']}) as v")
+                    ->groupBy('k')
+                    ->pluck('v', 'k')
+                    ->toArray();
+            }
+
+            foreach ($rows as $key => $amount) {
+                $bucket = $mode === 'hour' ? (int) $key : (string) $key;
+                $result[$bucket] = (float) ($result[$bucket] ?? 0) + (float) $amount;
+            }
         }
 
         return $result;
     }
 
-    private function bonusTrendsByHour(array $filters, string $startDate, string $endDate): array
+    private function mergeNumericSeries(array ...$seriesSets): array
     {
-        $promoQuery = app('Gametech\\Payment\\Repositories\\PaymentPromotionRepository')
-            ->active()->aff();
-        $this->applyDateTimeWindow($promoQuery, 'date_create', $startDate, $endDate);
-        $promoQuery = $this->applyMemberRelationFilters($promoQuery, $filters);
+        $merged = [];
 
-        $promo = $promoQuery
-            ->selectRaw('HOUR(date_create) as h, SUM(credit_bonus) as v')
-            ->groupBy('h')->pluck('v', 'h')->toArray();
-
-        $billQuery = app('Gametech\\Payment\\Repositories\\BillRepository')
-            ->active()->getpro()->where('transfer_type', 1);
-        $this->applyDateTimeWindow($billQuery, 'date_create', $startDate, $endDate);
-        $billQuery = $this->applyMemberRelationFilters($billQuery, $filters);
-
-        $bill = $billQuery
-            ->selectRaw('HOUR(date_create) as h, SUM(credit_bonus) as v')
-            ->groupBy('h')->pluck('v', 'h')->toArray();
-
-        $result = [];
-        foreach (array_keys($promo + $bill) as $h) {
-            $result[(int) $h] = (float) ($promo[$h] ?? 0) + (float) ($bill[$h] ?? 0);
+        foreach ($seriesSets as $series) {
+            foreach ($series as $key => $value) {
+                $merged[$key] = (float) ($merged[$key] ?? 0) + (float) $value;
+            }
         }
 
-        return $result;
+        return $merged;
     }
 
     private function sourceBreakdown(array $filters, string $startDate, string $endDate): array
@@ -2479,6 +3213,15 @@ class DashboardService
         }
 
         return $minutes . ' นาที';
+    }
+
+    private function summarySumExpression(string $column): string
+    {
+        if ($this->hasColumn('dashboard_summary_daily', $column)) {
+            return "COALESCE(SUM({$column}), 0)";
+        }
+
+        return '0';
     }
 
     private function hasTable(string $table): bool

@@ -23,18 +23,22 @@ class LottoTicketRealtimeObserver
             return;
         }
 
-        if ((string) $ticket->status !== 'cancelled') {
+        $toStatus = (string) $ticket->status;
+        $fromStatus = (string) $ticket->getOriginal('status');
+
+        if (!in_array($toStatus, ['cancelled', 'resulted'], true)) {
             return;
         }
 
-        if ((string) $ticket->getOriginal('status') === 'cancelled') {
+        if ($toStatus === $fromStatus) {
             return;
         }
 
         $total = $this->resolveTotalTickets();
+        $action = $toStatus === 'cancelled' ? 'cancelled' : 'resulted';
 
-        DB::afterCommit(function () use ($total): void {
-            broadcast(new LottoTicketListChanged('cancelled', $total));
+        DB::afterCommit(function () use ($total, $action): void {
+            broadcast(new LottoTicketListChanged($action, $total));
         });
     }
 
@@ -43,4 +47,3 @@ class LottoTicketRealtimeObserver
         return (int) LottoTicket::query()->count();
     }
 }
-

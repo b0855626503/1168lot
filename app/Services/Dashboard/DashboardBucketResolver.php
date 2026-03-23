@@ -95,13 +95,15 @@ class DashboardBucketResolver
         $productDates = $this->collectLottoDates($payload, ['product_date', 'product_dates', 'ticket_date', 'ticket_dates']);
         $riskDates = $this->collectLottoDates($payload, ['risk_date', 'risk_dates', 'updated_at', 'snapshot_at']);
         $operationDates = $this->collectLottoDates($payload, ['operation_date', 'operation_dates', 'settled_at', 'result_at']);
+        $insightDates = $this->collectLottoDates($payload, ['insight_date', 'insight_dates', 'bet_confirmed_at', 'bet_confirmed_dates']);
 
         if (!empty($overrideSections)) {
             $dates = array_values(array_unique(array_filter(array_merge(
                 $cashDates,
                 $productDates,
                 $riskDates,
-                $operationDates
+                $operationDates,
+                $insightDates
             ))));
 
             if (empty($dates)) {
@@ -116,9 +118,15 @@ class DashboardBucketResolver
         $this->mergeLottoBuckets($buckets, $productDates, $webCode, ['lotto_product']);
         $this->mergeLottoBuckets($buckets, $riskDates, $webCode, ['lotto_risk']);
         $this->mergeLottoBuckets($buckets, $operationDates, $webCode, ['lotto_operations', 'lotto_product']);
+        $this->mergeLottoBuckets($buckets, $insightDates, $webCode, ['lotto_bet_type_insights']);
 
         if (empty($buckets)) {
-            $this->mergeLottoBuckets($buckets, [now()->toDateString()], $webCode, ['lotto_cash', 'lotto_product', 'lotto_risk']);
+            $this->mergeLottoBuckets(
+                $buckets,
+                [now()->toDateString()],
+                $webCode,
+                ['lotto_cash', 'lotto_product', 'lotto_risk', 'lotto_bet_type_insights']
+            );
         }
 
         return array_values($buckets);

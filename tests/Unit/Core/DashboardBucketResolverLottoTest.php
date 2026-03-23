@@ -49,4 +49,18 @@ class DashboardBucketResolverLottoTest extends TestCase
             $this->assertSame('lotto-web', $bucket['web_code']);
         }
     }
+
+    public function test_resolve_lotto_includes_bet_type_insight_section_from_confirmed_dates(): void
+    {
+        $resolver = new DashboardBucketResolver(new DashboardWebCodeResolver());
+
+        $buckets = $resolver->resolve('lotto', [
+            'web_code' => 'lotto-web',
+            'insight_dates' => ['2026-03-22 15:30:00'],
+        ]);
+
+        $this->assertCount(1, $buckets);
+        $this->assertSame('2026-03-22', $buckets[0]['summary_date']);
+        $this->assertSame(['lotto_bet_type_insights'], $buckets[0]['updated_sections']);
+    }
 }

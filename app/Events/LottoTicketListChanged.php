@@ -20,9 +20,11 @@ class LottoTicketListChanged implements ShouldBroadcast
     {
         $this->action = $action;
         $this->total = $total;
-        $this->message = $action === 'cancelled'
-            ? 'มีการคืนโพยหวย'
-            : 'มีรายการโพยหวยใหม่';
+        $this->message = match ($action) {
+            'cancelled' => 'มีการคืนโพยหวย',
+            'resulted' => 'มีโพยหวยถูกตัดสินผลแล้ว',
+            default => 'มีรายการโพยหวยใหม่',
+        };
     }
 
     public function broadcastOn(): Channel

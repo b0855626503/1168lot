@@ -263,9 +263,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::post('dashboard/alerts', 'DashboardController@alerts')->name('admin.dashboard.alerts');
             Route::post('dashboard/member-list', 'DashboardController@memberList')->name('admin.dashboard.member-list');
             Route::post('dashboard/sync-summary', 'DashboardController@syncSummary')->name('admin.dashboard.sync-summary');
-            Route::post('dashboard/lotto/summary', 'DashboardController@lottoSummary')->name('admin.dashboard.lotto.summary');
-            Route::post('dashboard/lotto/markets', 'DashboardController@lottoMarketSummary')->name('admin.dashboard.lotto.markets');
-            Route::post('dashboard/lotto/risk', 'DashboardController@lottoRiskSnapshot')->name('admin.dashboard.lotto.risk');
 
 
             Route::get('rp_log_cashback', 'ReportController@rp_log_cashback')->defaults('_config', [

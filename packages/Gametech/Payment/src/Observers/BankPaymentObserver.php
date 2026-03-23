@@ -4,6 +4,7 @@ namespace Gametech\Payment\Observers;
 
 use App\Events\RealTimeNewMessage;
 use App\Events\SumNewPayment;
+use App\Helpers\TelegramBot;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Gametech\Auto\Jobs\CheckPayments as CheckPaymentsJob;
 use Gametech\Auto\Jobs\TopupPayments as TopupPaymentsJob;
@@ -11,21 +12,33 @@ use Gametech\Core\Models\Log;
 use Gametech\Payment\Models\BankAccount;
 use Gametech\Payment\Models\BankPayment as EventData;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
+use Throwable;
 
 class BankPaymentObserver
 {
     private const DEFAULT_ENABLE_REALTIME_MESSAGE = true;
+
     private const REALTIME_MESSAGE_FLAG_ENV = 'PAYMENT_DEPOSIT_OBSERVER_REALTIME_MESSAGE';
+    private const DEFAULT_ENABLE_TELEGRAM_MESSAGE = false;
+    private const TELEGRAM_MESSAGE_FLAG_ENV = 'PAYMENT_DEPOSIT_OBSERVER_TELEGRAM_MESSAGE';
+
+    private const DASHBOARD_CACHE_VERSION_KEY = 'dashboard:summary:version';
 
     public function created(EventData $data): void
     {
         $bankShortcode = $this->handleBankJobs($data);
 
         DB::afterCommit(function () use ($data, $bankShortcode) {
+            $this->touchDashboardCacheVersion();
             $this->broadcastCount('created', $data->code);
             $this->dispatchDashboardSync($data);
+
+            if ($this->shouldSendTelegramMessage() && (int) $data->member_topup > 0) {
+                $this->sendDepositTelegramMessage($data);
+            }
 
             if ($this->shouldBroadcastRealtimeMessage()) {
                 $this->broadcastRealtimeMessage($data, $bankShortcode);
@@ -40,12 +53,14 @@ class BankPaymentObserver
 
         $shouldSyncDashboard = $this->shouldSyncDashboardOnUpdate($data);
         $shouldRecountPending = $this->shouldRecountPendingOnUpdate($data);
+        $shouldSendTelegramMessage = $data->wasChanged('member_topup') && (int) $data->member_topup > 0;
 
-        if (!$shouldSyncDashboard && !$shouldRecountPending) {
+        if (! $shouldSyncDashboard && ! $shouldRecountPending) {
             return;
         }
 
-        DB::afterCommit(function () use ($data, $shouldRecountPending, $shouldSyncDashboard) {
+        DB::afterCommit(function () use ($data, $shouldRecountPending, $shouldSyncDashboard, $shouldSendTelegramMessage) {
+            $this->touchDashboardCacheVersion();
             if ($shouldRecountPending) {
                 $this->broadcastCount('updated', $data->code);
             }
@@ -53,15 +68,19 @@ class BankPaymentObserver
             if ($shouldSyncDashboard) {
                 $this->dispatchDashboardSync($data);
             }
+
+            if ($shouldSendTelegramMessage && $this->shouldSendTelegramMessage()) {
+                $this->sendDepositTelegramMessage($data);
+            }
         });
     }
-
 
     public function deleted(EventData $data): void
     {
         $this->writeAdminLog('DEL', $data);
 
         DB::afterCommit(function () use ($data) {
+            $this->touchDashboardCacheVersion();
             $this->broadcastCount('deleted', $data->code);
             $this->dispatchDashboardSync($data);
         });
@@ -69,24 +88,16 @@ class BankPaymentObserver
 
     private function handleBankJobs(EventData $data): ?string
     {
-        $bank = BankAccount::query()
-            ->where('enable', 'Y')
-            ->where('bank_type', 1)
-            ->where('code', $data->account_code)
-            ->first();
+        $bank = BankAccount::query()->where('enable', 'Y')->where('bank_type', 1)->where('code', $data->account_code)->first();
 
-        if (!$bank) {
+        if (! $bank) {
             return null;
         }
 
-        $shouldTopup =
-            ($bank->status_topup === 'Y' && (int) $data->member_topup > 0)
-            || ($bank->status_topup !== 'Y' && (int) $data->member_topup > 0 && (int) $data->emp_topup > 0);
+        $shouldTopup = ($bank->status_topup === 'Y' && (int) $data->member_topup > 0) || ($bank->status_topup !== 'Y' && (int) $data->member_topup > 0 && (int) $data->emp_topup > 0);
 
         if ($shouldTopup) {
-            TopupPaymentsJob::dispatch($data->code)
-                ->delay(now()->addSeconds(2))
-                ->onQueue('topup');
+            TopupPaymentsJob::dispatch($data->code)->delay(now()->addSeconds(2))->onQueue('topup');
         }
 
         $short = $bank->bank?->shortcode;
@@ -100,31 +111,23 @@ class BankPaymentObserver
     private function dispatchTopupWhenReady(EventData $data): void
     {
         $memberNow = (int) $data->member_topup;
-        $memberJustSet = $data->wasChanged('member_topup')
-            && (int) $data->getOriginal('member_topup') === 0
-            && $memberNow > 0;
+        $memberJustSet = $data->wasChanged('member_topup') && (int) $data->getOriginal('member_topup') === 0 && $memberNow > 0;
 
-        $empJustSet = $data->wasChanged('emp_topup')
-            && (int) $data->getOriginal('emp_topup') === 0
-            && (int) $data->emp_topup > 0;
+        $empJustSet = $data->wasChanged('emp_topup') && (int) $data->getOriginal('emp_topup') === 0 && (int) $data->emp_topup > 0;
 
         if ($memberNow > 0 && ($memberJustSet || $empJustSet) && $data->autocheck === 'W') {
-            TopupPaymentsJob::dispatch($data->code)
-                ->delay(now()->addSeconds(2))
-                ->onQueue('topup');
+            TopupPaymentsJob::dispatch($data->code)->delay(now()->addSeconds(2))->onQueue('topup');
         }
     }
 
     private function shouldRecountPendingOnUpdate(EventData $data): bool
     {
-        return $data->wasChanged('status')
-            || $data->wasChanged('enable')
-            || $data->wasChanged('date_create');
+        return $data->wasChanged('status') || $data->wasChanged('enable');
     }
 
     private function shouldSyncDashboardOnUpdate(EventData $data): bool
     {
-        foreach (['status', 'enable', 'value', 'member_topup', 'date_create'] as $field) {
+        foreach (['status', 'enable', 'member_topup', 'date_approve', 'emp_topup'] as $field) {
             if ($data->wasChanged($field)) {
                 return true;
             }
@@ -136,11 +139,11 @@ class BankPaymentObserver
     private function writeAdminLog(string $mode, EventData $data): void
     {
         $admin = Auth::guard('admin')->user();
-        if (!$admin) {
+        if (! $admin) {
             return;
         }
 
-        $log = new Log;
+        $log = new Log();
         $log->emp_code = $admin->code;
         $log->mode = $mode;
         $log->menu = 'bank_payment';
@@ -154,48 +157,95 @@ class BankPaymentObserver
 
     private function broadcastCount(string $action, string $code): void
     {
-        $count = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->where('status', 0)
-            ->where('enable', 'Y')
-            ->whereDate('date_create', today())
-            ->count();
+        $count = app('Gametech\Payment\Repositories\BankPaymentRepository')->where('status', 0)->where('enable', 'Y')->whereDate('date_create', today())->count();
 
         broadcast(new SumNewPayment($count, $action, $code));
     }
 
     private function shouldBroadcastRealtimeMessage(): bool
     {
-        return (bool) filter_var(
-            (string) env(self::REALTIME_MESSAGE_FLAG_ENV, self::DEFAULT_ENABLE_REALTIME_MESSAGE),
-            FILTER_VALIDATE_BOOLEAN
-        );
+        return (bool) filter_var((string) env(self::REALTIME_MESSAGE_FLAG_ENV, self::DEFAULT_ENABLE_REALTIME_MESSAGE), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function shouldSendTelegramMessage(): bool
+    {
+        return (bool) filter_var((string) env(self::TELEGRAM_MESSAGE_FLAG_ENV, self::DEFAULT_ENABLE_TELEGRAM_MESSAGE), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function sendDepositTelegramMessage(EventData $data): void
+    {
+        try {
+            $username = $this->escapeTelegram(optional($data->member)->user_name ?? '-');
+            $amount = $this->escapeTelegram($data->value);
+            $bankTime = $this->escapeTelegram($data->bank_time);
+            $detail = $this->escapeTelegram($data->detail);
+            $createBy = $this->escapeTelegram($data->create_by);
+            $bank = $this->escapeTelegram($data->bank);
+            $channel = (string) ($data->channel ?? '');
+            $ref = $bank.' - '.($channel === 'MANUAL' ? $this->escapeTelegram($channel) : '');
+
+            $message = <<<HTML
+<b>แจ้งเตือนการทำรายการ</b>
+———————
+<b>ประเภท:</b> ฝากเงิน<br>
+<b>ชื่อผู้ใช้:</b> <code>{$username}</code><br>
+<b>จำนวนเงิน:</b> {$amount}<br>
+<b>เวลา:</b> {$bankTime} (GMT+7)<br>
+<b>อ้างอิง:</b> {$ref}<br>
+<b>รายละเอียดเพิ่มเติม:</b> {$detail} โดย {$createBy}
+HTML;
+
+            TelegramBot::Send('notify/send', $message, $this->telegramNotifyPayload('/withdraw'));
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function telegramNotifyPayload(string $path = '/bank_in'): array
+    {
+        $baseUrl = 'https://' . config('app.admin_url') . '.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
+
+        return [
+            'parse_mode' => 'HTML',
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [
+                    [
+                        [
+                            'text' => 'เข้าระบบ ' . config('app.name'),
+                            'url' => $baseUrl . $path,
+                        ],
+                    ],
+                ],
+            ], JSON_UNESCAPED_UNICODE),
+        ];
+    }
+
+    private function escapeTelegram($value): string
+    {
+        return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function broadcastRealtimeMessage(EventData $data, ?string $bankShortcode): void
     {
         $bankLabel = $bankShortcode ? strtoupper($bankShortcode) : 'BANK';
 
-        broadcast(new RealTimeNewMessage(
-            $bankLabel . ' มีรายการฝากเข้ามาใหม่แล้วนะ ' . $data->value . ' บาท',
-            [
-                'ui' => 'toast',
-                'as' => 'RealTime.Message.All',
-                'toast' => [
-                    'className' => 'gt-toast gt-toast-deposit',
-                    'duration' => 30000,
-                    'gravity' => 'top',
-                    'position' => 'right',
-                    'avatar' => '/assets/admin/icons/deposit.webp?v=1',
-                ],
-            ]
-        ));
+        broadcast(new RealTimeNewMessage($bankLabel.' มีรายการฝากเข้ามาใหม่แล้วนะ '.$data->value.' บาท', ['ui' => 'toast', 'as' => 'RealTime.Message.All', 'toast' => ['className' => 'gt-toast gt-toast-deposit', 'duration' => 30000, 'gravity' => 'top', 'position' => 'right', 'avatar' => '/assets/admin/icons/deposit.webp?v=1']]));
     }
 
     private function dispatchDashboardSync(EventData $data): void
     {
         try {
             app(DashboardSummarySyncService::class)->dispatchForModelChange('deposit', $data, ['deposit', 'net', 'conversion', 'funnel']);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function touchDashboardCacheVersion(): void
+    {
+        try {
+            Cache::forever(self::DASHBOARD_CACHE_VERSION_KEY, sprintf('%.6f', microtime(true)));
+        } catch (Throwable $e) {
             report($e);
         }
     }

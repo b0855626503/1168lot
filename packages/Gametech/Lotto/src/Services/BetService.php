@@ -10,6 +10,7 @@ use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Models\MemberLottoMarketPolicy;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * BetService - หัวใจของระบบแทง
@@ -72,6 +73,8 @@ class BetService
                 $totalNetAmount += $validated['payable_amount'];
             }
 
+            $betTypeSummary = $this->buildBetTypeSummary($validatedItems);
+
             $ticket = LottoTicket::query()->create([
                 'member_id' => $memberId,
                 'draw_id' => $drawId,
@@ -81,10 +84,11 @@ class BetService
                 'total_net_amount' => round($totalNetAmount, 2),
                 'total_win_amount' => 0,
                 'status' => 'active',
+                'bet_type_summary' => $betTypeSummary,
             ]);
 
             $groupCode = 'LOTTO_BET_' . $ticket->id . '_' . now()->format('YmdHis');
-            $this->walletTransactionService->debitMemberBalance(
+            $walletTxnId = $this->walletTransactionService->debitMemberBalance(
                 memberId: $memberId,
                 amount: (float) round($totalNetAmount, 2),
                 refType: 'LOTTO_BET',
@@ -100,6 +104,16 @@ class BetService
                 createdById: $memberId,
                 description: 'หักเงินจากการซื้อหวย'
             );
+
+            if (Schema::hasColumn('lotto_tickets', 'bet_confirmed_at')) {
+                $betConfirmedAt = DB::table('wallet_transactions')
+                    ->where('id', $walletTxnId)
+                    ->value('created_at');
+
+                $ticket->update([
+                    'bet_confirmed_at' => $betConfirmedAt ?: now(),
+                ]);
+            }
 
             foreach ($validatedItems as $item) {
                 $this->persistTicketItemAndExposure($ticket, $drawId, $item);
@@ -318,5 +332,24 @@ class BetService
     private function calculatePotentialWinAmount(float $amount, float $payout): float
     {
         return round($amount * $payout, 2);
+    }
+
+    /**
+     * @param array<int, array{bet_type:string}> $validatedItems
+     */
+    private function buildBetTypeSummary(array $validatedItems): string
+    {
+        $labels = collect($validatedItems)
+            ->pluck('bet_type')
+            ->filter()
+            ->map(static fn (string $type): string => BetType::label($type))
+            ->unique()
+            ->values();
+
+        if ($labels->isEmpty()) {
+            return '';
+        }
+
+        return mb_substr($labels->implode(', '), 0, 255);
     }
 }

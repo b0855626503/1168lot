@@ -5,17 +5,24 @@ namespace Gametech\Payment\Observers;
 
 
 
-use App\Events\SumNewWithdraw;
 use App\Events\SumNewWithdrawFree;
+use App\Helpers\TelegramBot;
+use App\Services\Dashboard\DashboardSummarySyncService;
+use Carbon\Carbon;
 use Gametech\Core\Models\Log;
 use Gametech\LogAdmin\Http\Traits\ActivityLogger;
 use Gametech\Payment\Models\WithdrawSeamlessFree as EventData;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
 
 class WithdrawSeamlessFreeObserver
 {
     use ActivityLogger;
+    private const DASHBOARD_CACHE_VERSION_KEY = 'dashboard:summary:version';
+    private const DEFAULT_ENABLE_TELEGRAM_MESSAGE = false;
+    private const TELEGRAM_MESSAGE_FLAG_ENV = 'PAYMENT_WITHDRAW_SEAMLESS_FREE_OBSERVER_TELEGRAM_MESSAGE';
 
     public function created(EventData $data)
     {
@@ -40,11 +47,20 @@ class WithdrawSeamlessFreeObserver
             $log->save();
         }
 
-        $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
-            ->active()->waiting()
-            ->count();
+        DB::afterCommit(function () use ($data) {
+            $this->touchDashboardCacheVersion();
+            $this->dispatchDashboardSync($data);
 
-        broadcast(new SumNewWithdrawFree($withdraw_free,'up'));
+            if ($this->shouldSendTelegramMessage()) {
+                $this->sendWithdrawTelegramMessage($data);
+            }
+
+            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
+                ->active()->waiting()
+                ->count();
+
+            broadcast(new SumNewWithdrawFree($withdraw_free, 'up'));
+        });
 
     }
 
@@ -70,11 +86,28 @@ class WithdrawSeamlessFreeObserver
             $log->save();
         }
 
-        $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
-            ->active()->waiting()
-            ->count();
+        $shouldBroadcastCount = $this->shouldBroadcastCountOnUpdate($data);
+        $shouldSyncDashboard = $this->shouldSyncDashboardOnUpdate($data);
 
-        broadcast(new SumNewWithdrawFree($withdraw_free,'down'));
+        if (! $shouldBroadcastCount && ! $shouldSyncDashboard) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($data, $shouldBroadcastCount, $shouldSyncDashboard) {
+            $this->touchDashboardCacheVersion();
+
+            if ($shouldSyncDashboard) {
+                $this->dispatchDashboardSync($data);
+            }
+
+            if ($shouldBroadcastCount) {
+                $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
+                    ->active()->waiting()
+                    ->count();
+
+                broadcast(new SumNewWithdrawFree($withdraw_free, 'down'));
+            }
+        });
 //        ActivityLogger::activitie('แก้ไขข้อมูล รายการที่ ' . $data->code, json_encode($logs));
 
     }
@@ -103,12 +136,143 @@ class WithdrawSeamlessFreeObserver
 
         }
 
-        $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
-            ->active()->waiting()
-            ->count();
+        DB::afterCommit(function () use ($data) {
+            $this->touchDashboardCacheVersion();
+            $this->dispatchDashboardSync($data);
 
-        broadcast(new SumNewWithdrawFree($withdraw_free,'down'));
+            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
+                ->active()->waiting()
+                ->count();
+
+            broadcast(new SumNewWithdrawFree($withdraw_free, 'down'));
+        });
 //        ActivityLogger::activitie('ลบข้อมูล รายการที่ ' . $data->code, json_encode($logs));
 
+    }
+
+    private function dispatchDashboardSync(EventData $data): void
+    {
+        try {
+            app(DashboardSummarySyncService::class)->dispatchForModelChange('withdraw', $data, ['withdraw', 'net']);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function shouldBroadcastCountOnUpdate(EventData $data): bool
+    {
+        return $data->wasChanged('status') || $data->wasChanged('enable') || $data->wasChanged('date_approve') || $data->wasChanged('emp_approve') || $data->wasChanged('status_withdraw');
+    }
+
+    private function shouldSyncDashboardOnUpdate(EventData $data): bool
+    {
+        foreach (['status', 'enable', 'amount', 'emp_approve', 'date_approve', 'account_code', 'status_withdraw'] as $field) {
+            if ($data->wasChanged($field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function shouldSendTelegramMessage(): bool
+    {
+        return (bool) filter_var(
+            (string) env(self::TELEGRAM_MESSAGE_FLAG_ENV, self::DEFAULT_ENABLE_TELEGRAM_MESSAGE),
+            FILTER_VALIDATE_BOOLEAN
+        );
+    }
+
+    private function sendWithdrawTelegramMessage(EventData $data): void
+    {
+        try {
+            $paymentLast = $data->payment_last;
+            if ($paymentLast) {
+                $lastDate = $this->formatDateTime($paymentLast->date_create ?? ($paymentLast['date_create'] ?? null));
+                $lastBank = $this->escapeTelegram($paymentLast->bank ?? ($paymentLast['bank'] ?? '-'));
+                $lastAmount = $this->escapeTelegram($paymentLast->value ?? ($paymentLast['value'] ?? '-'));
+                $refText = "ฝากล่่าสุด {$lastDate} - {$lastBank} [ {$lastAmount} ]";
+            } else {
+                $refText = 'ไม่พบข้อมูลการเติมก่อนหน้า';
+            }
+
+            $member = $data->member;
+            $memberBank = $member?->bank;
+            $datetimeText = $this->escapeTelegram($this->formatDateTime($data->date_create ?? null));
+            $memberUser = $this->escapeTelegram($data->member_user);
+            $amount = $this->escapeTelegram($data->amount);
+            $memberName = $this->escapeTelegram($member?->name ?? '-');
+            $bankName = $this->escapeTelegram($memberBank?->name_th ?? '-');
+            $accNoDisplay = $this->escapeTelegram($member?->acc_no ?? '-');
+            $countDeposit = $this->escapeTelegram($member?->count_deposit ?? '0');
+            $balance = $this->escapeTelegram($member?->balance ?? '0');
+            $refText = $this->escapeTelegram($refText);
+
+            $message = <<<HTML
+<b>แจ้งเตือนการทำรายการ</b>
+———————
+<b>ประเภท:</b> แจ้งถอนเงิน ฟรีเครดิต<br>
+<b>ชื่อผู้ใช้:</b> {$memberUser}<br>
+<b>จำนวนเงิน:</b> {$amount}<br>
+<b>เวลา:</b> {$datetimeText} (GMT+7)<br>
+<b>อ้างอิง:</b> {$refText}<br>
+<b>รายละเอียดเพิ่มเติม:</b><br>
+<b>ชื่อ:</b> {$memberName}<br>
+<b>ธนาคาร:</b> {$bankName}<br>
+<b>เลขบัญชี:</b> <code>{$accNoDisplay}</code><br>
+<b>ฝากทั้งหมด (ครั้ง):</b> {$countDeposit}<br>
+<b>ยอดเงินคงเหลือ:</b> {$balance}<br>
+HTML;
+
+            TelegramBot::Send('notify/send', $message, $this->telegramNotifyPayload('/withdraw_seamless_free'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function telegramNotifyPayload(string $path = '/withdraw_seamless_free'): array
+    {
+        $baseUrl = 'https://' . config('app.admin_url') . '.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
+
+        return [
+            'parse_mode' => 'HTML',
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [
+                    [
+                        [
+                            'text' => 'เข้าระบบ ' . config('app.name'),
+                            'url' => $baseUrl . $path,
+                        ],
+                    ],
+                ],
+            ], JSON_UNESCAPED_UNICODE),
+        ];
+    }
+
+    private function formatDateTime($value): string
+    {
+        if (empty($value)) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            return $this->escapeTelegram($value);
+        }
+    }
+
+    private function escapeTelegram($value): string
+    {
+        return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function touchDashboardCacheVersion(): void
+    {
+        try {
+            Cache::forever(self::DASHBOARD_CACHE_VERSION_KEY, sprintf('%.6f', microtime(true)));
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

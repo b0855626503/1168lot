@@ -16,12 +16,14 @@ class LottoTicket extends Model implements LottoTicketContract
     protected $fillable = [
         'member_id',
         'draw_id',
+        'bet_confirmed_at',
         'total_amount',
         'total_bet_amount',
         'total_discount_amount',
         'total_net_amount',
         'total_win_amount',
         'status',        // active | cancelled | resulted
+        'bet_type_summary',
         'cancelled_at',
         'cancelled_by',  // user_id (admin / member)
         'refund_amount', // ถ้า cancelled
@@ -35,9 +37,10 @@ class LottoTicket extends Model implements LottoTicketContract
         'total_win_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'cancelled_at' => 'datetime',
+        'bet_confirmed_at' => 'datetime',
     ];
 
-    protected $dates = ['cancelled_at'];
+    protected $dates = ['cancelled_at', 'bet_confirmed_at'];
 
     // Scopes
     public function scopeActive($query)

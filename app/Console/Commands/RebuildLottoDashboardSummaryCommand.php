@@ -20,7 +20,7 @@ class RebuildLottoDashboardSummaryCommand extends Command
         {--web-code= : Dashboard web code}
         {--market-id= : Limit to a market id (for lotto product/risk)}
         {--round-id= : Limit to a draw id (for lotto product/risk)}
-        {--only=all : cash|product|risk|all}
+        {--only=all : cash|product|risk|insights|all}
         {--dry-run : Preview only, do not write}';
 
     protected $description = 'Rebuild lotto dashboard summary buckets';
@@ -31,8 +31,8 @@ class RebuildLottoDashboardSummaryCommand extends Command
         DashboardWebCodeResolver $webCodeResolver
     ): int {
         $only = strtolower(trim((string) $this->option('only')));
-        if (!in_array($only, ['cash', 'product', 'risk', 'all'], true)) {
-            $this->error('--only ต้องเป็น cash|product|risk|all');
+        if (!in_array($only, ['cash', 'product', 'risk', 'insights', 'all'], true)) {
+            $this->error('--only ต้องเป็น cash|product|risk|insights|all');
             return 1;
         }
 
@@ -51,11 +51,13 @@ class RebuildLottoDashboardSummaryCommand extends Command
             'cash' => [LottoDashboardMetricConfig::SECTION_CASH, 'net'],
             'product' => [LottoDashboardMetricConfig::SECTION_PRODUCT, LottoDashboardMetricConfig::SECTION_OPERATIONS],
             'risk' => [LottoDashboardMetricConfig::SECTION_RISK],
+            'insights' => [LottoDashboardMetricConfig::SECTION_BET_TYPE_INSIGHTS],
             default => [
                 LottoDashboardMetricConfig::SECTION_CASH,
                 LottoDashboardMetricConfig::SECTION_PRODUCT,
                 LottoDashboardMetricConfig::SECTION_RISK,
                 LottoDashboardMetricConfig::SECTION_OPERATIONS,
+                LottoDashboardMetricConfig::SECTION_BET_TYPE_INSIGHTS,
                 'net',
             ],
         };
@@ -171,4 +173,3 @@ class RebuildLottoDashboardSummaryCommand extends Command
         return $dates;
     }
 }
-

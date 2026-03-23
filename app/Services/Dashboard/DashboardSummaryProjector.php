@@ -3,12 +3,13 @@
 namespace App\Services\Dashboard;
 
 use Carbon\Carbon;
+use Gametech\Lotto\Enums\BetType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class DashboardSummaryProjector
 {
-    public const METRIC_VERSION = 3;
+    public const METRIC_VERSION = 5;
 
     private array $tableCache = [];
     private array $columnCache = [];
@@ -60,6 +61,18 @@ class DashboardSummaryProjector
             'deposit_deleted_count' => (int) $deposit['deposit_deleted_count'],
             'deposit_deleted_users' => (int) $deposit['deposit_deleted_users'],
 
+            'withdraw_main_total_amount' => $this->toDecimal($withdraw['withdraw_main_total_amount']),
+            'withdraw_main_total_count' => (int) $withdraw['withdraw_main_total_count'],
+            'withdraw_main_total_users' => (int) $withdraw['withdraw_main_total_users'],
+            'withdraw_main_pending_amount' => $this->toDecimal($withdraw['withdraw_main_pending_amount']),
+            'withdraw_main_pending_count' => (int) $withdraw['withdraw_main_pending_count'],
+
+            'withdraw_free_total_amount' => $this->toDecimal($withdraw['withdraw_free_total_amount']),
+            'withdraw_free_total_count' => (int) $withdraw['withdraw_free_total_count'],
+            'withdraw_free_total_users' => (int) $withdraw['withdraw_free_total_users'],
+            'withdraw_free_pending_amount' => $this->toDecimal($withdraw['withdraw_free_pending_amount']),
+            'withdraw_free_pending_count' => (int) $withdraw['withdraw_free_pending_count'],
+
             'withdraw_total_amount' => $this->toDecimal($withdraw['withdraw_total_amount']),
             'withdraw_total_count' => (int) $withdraw['withdraw_total_count'],
             'withdraw_total_users' => (int) $withdraw['withdraw_total_users'],
@@ -106,7 +119,11 @@ class DashboardSummaryProjector
      * @return array{
      *     daily: array<string, mixed>,
      *     markets: array<int, array<string, mixed>>,
-     *     risk: array<int, array<string, mixed>>
+     *     risk: array<int, array<string, mixed>>,
+     *     insights: array{
+     *         daily: array<int, array<string, mixed>>,
+     *         numbers: array<int, array<string, mixed>>
+     *     }
      * }
      */
     public function projectLotto(string $summaryDate, string $webCode): array
@@ -117,6 +134,7 @@ class DashboardSummaryProjector
             'daily' => $this->lottoProductDailyMetrics($summaryDate, $webCode),
             'markets' => $this->lottoMarketSummaryMetrics($summaryDate, $webCode),
             'risk' => $this->lottoRiskSnapshotMetrics($summaryDate, $webCode),
+            'insights' => $this->lottoBetTypeInsightMetrics($summaryDate),
         ];
     }
 
@@ -205,36 +223,28 @@ class DashboardSummaryProjector
     {
         [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
 
-        $defaults = [
-            'withdraw_total_amount' => 0,
-            'withdraw_total_count' => 0,
-            'withdraw_total_users' => 0,
-            'withdraw_pending_amount' => 0,
-            'withdraw_pending_count' => 0,
+        $main = $this->aggregateWithdrawMetrics($this->withdrawMainTables(), $rangeStart, $rangeEnd, $webCode);
+        $free = $this->aggregateWithdrawMetrics($this->withdrawFreeTables(), $rangeStart, $rangeEnd, $webCode);
+
+        return [
+            'withdraw_main_total_amount' => $main['total_amount'],
+            'withdraw_main_total_count' => $main['total_count'],
+            'withdraw_main_total_users' => $main['total_users'],
+            'withdraw_main_pending_amount' => $main['pending_amount'],
+            'withdraw_main_pending_count' => $main['pending_count'],
+
+            'withdraw_free_total_amount' => $free['total_amount'],
+            'withdraw_free_total_count' => $free['total_count'],
+            'withdraw_free_total_users' => $free['total_users'],
+            'withdraw_free_pending_amount' => $free['pending_amount'],
+            'withdraw_free_pending_count' => $free['pending_count'],
+
+            'withdraw_total_amount' => $main['total_amount'] + $free['total_amount'],
+            'withdraw_total_count' => $main['total_count'] + $free['total_count'],
+            'withdraw_total_users' => $main['total_users'] + $free['total_users'],
+            'withdraw_pending_amount' => $main['pending_amount'] + $free['pending_amount'],
+            'withdraw_pending_count' => $main['pending_count'] + $free['pending_count'],
         ];
-
-        foreach ($this->withdrawTables() as $table) {
-            $approved = DB::table($table)
-                ->where('enable', 'Y')
-                ->where('status', 1);
-            $this->applyDateTimeWindow($approved, 'date_approve', $rangeStart, $rangeEnd);
-            $approved = $this->applyWebScope($approved, $table, $webCode);
-
-            $defaults['withdraw_total_amount'] += (float) (clone $approved)->sum('amount');
-            $defaults['withdraw_total_count'] += (int) (clone $approved)->count();
-            $defaults['withdraw_total_users'] += $this->countDistinctMembers((clone $approved), $table, 'member_code');
-
-            $pending = DB::table($table)
-                ->where('enable', 'Y')
-                ->where('status', 0);
-            $this->applyDateTimeWindow($pending, 'date_create', $rangeStart, $rangeEnd);
-            $pending = $this->applyWebScope($pending, $table, $webCode);
-
-            $defaults['withdraw_pending_amount'] += (float) (clone $pending)->sum('amount');
-            $defaults['withdraw_pending_count'] += (int) (clone $pending)->count();
-        }
-
-        return $defaults;
     }
 
     private function registerMetrics(string $summaryDate, string $webCode): array
@@ -594,11 +604,10 @@ class DashboardSummaryProjector
         $defaults['total_players'] = $this->countDistinctMembers((clone $salesBase), 'lotto_tickets', 'member_id');
         $defaults['sales_unique_players'] = $defaults['total_players'];
 
-        $pending = (clone $salesBase)
-            ->where(function ($query) {
-                $query->whereNull('status')
-                    ->orWhere('status', '!=', 'resulted');
-            });
+        $pending = (clone $salesBase)->where(function ($query) {
+            $query->whereNull('status')
+                ->orWhere('status', '!=', 'resulted');
+        });
         $defaults['pending_tickets'] = (int) (clone $pending)->count();
 
         if ($this->hasTable('lotto_draws')) {
@@ -759,30 +768,228 @@ class DashboardSummaryProjector
         })->values()->all();
     }
 
-    private function withdrawTables(): array
+    /**
+     * @return array{
+     *   daily: array<int, array<string, mixed>>,
+     *   numbers: array<int, array<string, mixed>>
+     * }
+     */
+    private function lottoBetTypeInsightMetrics(string $summaryDate): array
     {
-        $config = $this->coreConfig();
-        if (($config->seamless ?? 'N') === 'Y') {
-            return $this->hasTable('withdraws') ? ['withdraws'] : [];
+        if (!$this->hasTable('lotto_ticket_items') || !$this->hasTable('lotto_tickets')) {
+            return ['daily' => [], 'numbers' => []];
         }
 
-        $tables = [];
-        foreach (['withdraws', 'withdraws_seamless'] as $table) {
-            if ($this->hasTable($table)) {
-                $tables[] = $table;
+        if (!$this->hasColumn('lotto_tickets', 'bet_confirmed_at')) {
+            return ['daily' => [], 'numbers' => []];
+        }
+
+        [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
+
+        $query = DB::table('lotto_ticket_items as i')
+            ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+            ->select([
+                'i.bet_type',
+                'i.number',
+                'i.amount',
+                't.member_id',
+            ])
+            ->whereNotNull('t.bet_confirmed_at')
+            ->where('t.bet_confirmed_at', '>=', $rangeStart)
+            ->where('t.bet_confirmed_at', '<', $rangeEnd);
+
+        if ($this->hasColumn('lotto_tickets', 'status')) {
+            $query->whereNotIn('t.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_TICKET_STATUSES);
+        }
+
+        if ($this->hasColumn('lotto_ticket_items', 'status')) {
+            $query->whereNotIn('i.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_ITEM_STATUSES);
+        }
+
+        $rows = $query->get();
+        if ($rows->isEmpty()) {
+            return ['daily' => [], 'numbers' => []];
+        }
+
+        $now = now()->toDateTimeString();
+        $daily = [];
+        $dailyPlayers = [];
+        $numbers = [];
+
+        foreach ($rows as $row) {
+            $betType = $this->canonicalBetType((string) ($row->bet_type ?? ''));
+            if ($betType === '') {
+                continue;
             }
+
+            $number = $this->canonicalBetNumber($row->number ?? '');
+            if ($number === '') {
+                continue;
+            }
+
+            $amount = $this->toDecimal((float) ($row->amount ?? 0));
+            $memberId = (string) ($row->member_id ?? '');
+
+            if (!isset($daily[$betType])) {
+                $daily[$betType] = [
+                    'summary_date' => $summaryDate,
+                    'bet_type' => $betType,
+                    'item_count' => 0,
+                    'total_amount' => 0.0,
+                    'unique_players' => 0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+                $dailyPlayers[$betType] = [];
+            }
+
+            $daily[$betType]['item_count']++;
+            $daily[$betType]['total_amount'] = $this->toDecimal(
+                (float) $daily[$betType]['total_amount'] + $amount
+            );
+
+            if ($memberId !== '') {
+                $dailyPlayers[$betType][$memberId] = true;
+            }
+
+            $numberKey = $betType . '|' . $number;
+            if (!isset($numbers[$numberKey])) {
+                $numbers[$numberKey] = [
+                    'summary_date' => $summaryDate,
+                    'bet_type' => $betType,
+                    'number' => $number,
+                    'item_count' => 0,
+                    'total_amount' => 0.0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            $numbers[$numberKey]['item_count']++;
+            $numbers[$numberKey]['total_amount'] = $this->toDecimal(
+                (float) $numbers[$numberKey]['total_amount'] + $amount
+            );
+        }
+
+        foreach ($daily as $betType => &$row) {
+            $row['unique_players'] = count($dailyPlayers[$betType] ?? []);
+        }
+        unset($row);
+
+        ksort($daily);
+        ksort($numbers);
+
+        return [
+            'daily' => array_values($daily),
+            'numbers' => array_values($numbers),
+        ];
+    }
+
+    private function canonicalBetType(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+        $normalized = str_replace(['-', ' '], '_', $normalized);
+        $normalized = preg_replace('/_+/', '_', $normalized) ?: '';
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (in_array($normalized, BetType::all(), true)) {
+            return $normalized;
+        }
+
+        $aliases = [
+            'top3' => BetType::TOP_3,
+            'top_3' => BetType::TOP_3,
+            '3_top' => BetType::TOP_3,
+            'tod3' => BetType::TOD_3,
+            'tod_3' => BetType::TOD_3,
+            'top2' => BetType::TOP_2,
+            'top_2' => BetType::TOP_2,
+            'bottom2' => BetType::BOTTOM_2,
+            'bottom_2' => BetType::BOTTOM_2,
+            'run_top' => BetType::RUN_TOP,
+            'runtop' => BetType::RUN_TOP,
+            'run_bottom' => BetType::RUN_BOTTOM,
+            'runbottom' => BetType::RUN_BOTTOM,
+        ];
+
+        return $aliases[$normalized] ?? '';
+    }
+
+    private function canonicalBetNumber($value): string
+    {
+        return trim((string) $value);
+    }
+
+    private function aggregateWithdrawMetrics(
+        array $tables,
+        string $rangeStart,
+        string $rangeEnd,
+        string $webCode
+    ): array {
+        $metrics = [
+            'total_amount' => 0.0,
+            'total_count' => 0,
+            'total_users' => 0,
+            'pending_amount' => 0.0,
+            'pending_count' => 0,
+        ];
+
+        foreach ($tables as $table) {
+            $approved = DB::table($table)
+                ->where('enable', 'Y')
+                ->where('status', 1);
+            $this->applyDateTimeWindow($approved, 'date_approve', $rangeStart, $rangeEnd);
+            $approved = $this->applyWebScope($approved, $table, $webCode);
+
+            $metrics['total_amount'] += (float) (clone $approved)->sum('amount');
+            $metrics['total_count'] += (int) (clone $approved)->count();
+            $metrics['total_users'] += $this->countDistinctMembers((clone $approved), $table, 'member_code');
+
+            $pending = DB::table($table)
+                ->where('enable', 'Y')
+                ->where('status', 0);
+            $this->applyDateTimeWindow($pending, 'date_create', $rangeStart, $rangeEnd);
+            $pending = $this->applyWebScope($pending, $table, $webCode);
+
+            $metrics['pending_amount'] += (float) (clone $pending)->sum('amount');
+            $metrics['pending_count'] += (int) (clone $pending)->count();
+        }
+
+        return $metrics;
+    }
+
+    private function withdrawMainTables(): array
+    {
+        $config = core()->getConfigData();
+        $isSeamless = (($config->seamless ?? 'N') === 'Y');
+
+        $tables = [];
+        $primaryTable = $isSeamless ? 'withdraws_seamless' : 'withdraws';
+        if ($this->hasTable($primaryTable)) {
+            $tables[] = $primaryTable;
         }
 
         return $tables;
     }
 
-    private function coreConfig(): ?object
+    private function withdrawFreeTables(): array
     {
-        try {
-            return core()->getConfigData();
-        } catch (\Throwable $exception) {
-            return null;
+        $config = core()->getConfigData();
+        if ((($config->freecredit_open ?? 'N') !== 'Y')) {
+            return [];
         }
+
+        $isSeamless = (($config->seamless ?? 'N') === 'Y');
+        $freeTable = $isSeamless ? 'withdraws_seamless_free' : 'withdraws_free';
+
+        if ($this->hasTable($freeTable)) {
+            return [$freeTable];
+        }
+
+        return [];
     }
 
     private function memberDateColumn(): string
@@ -831,10 +1038,10 @@ class DashboardSummaryProjector
 
         $value = ctype_digit($webCode) ? (int) $webCode : $webCode;
 
-        $targetPrefix = $alias ? $alias . '.' : $table . '.';
+        $prefix = $alias ? $alias . '.' : $table . '.';
 
         return $query
-            ->join('members as m_scope', 'm_scope.code', '=', $targetPrefix . $tableMemberKey)
+            ->join('members as m_scope', 'm_scope.code', '=', $prefix . $tableMemberKey)
             ->where('m_scope.' . $memberWebColumn, $value);
     }
 

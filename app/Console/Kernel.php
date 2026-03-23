@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
+use App\Console\Commands\BackfillLottoBetConfirmedAtCommand;
 use App\Console\Commands\GenerateGameIdsForPayments;
 use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
@@ -69,6 +70,7 @@ class Kernel extends ConsoleKernel
         NewCashbackV2::class,
         NewICV2::class,
         RebuildLottoDashboardSummaryCommand::class,
+        BackfillLottoBetConfirmedAtCommand::class,
         CleanupLottoRiskSnapshotsCommand::class,
     ];
 

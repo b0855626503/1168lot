@@ -39,17 +39,36 @@ class LottoDashboardSummaryObserver
                 $model->created_at,
                 $model->getOriginal('created_at'),
             ]);
+            $payload['insight_dates'] = array_filter([
+                $model->bet_confirmed_at,
+                $model->getOriginal('bet_confirmed_at'),
+            ]);
             $payload['risk_dates'] = array_filter([
                 $model->updated_at,
                 $model->getOriginal('updated_at'),
             ]);
-            $sections = [LottoDashboardMetricConfig::SECTION_PRODUCT, LottoDashboardMetricConfig::SECTION_RISK];
+            $sections = [
+                LottoDashboardMetricConfig::SECTION_PRODUCT,
+                LottoDashboardMetricConfig::SECTION_RISK,
+                LottoDashboardMetricConfig::SECTION_BET_TYPE_INSIGHTS,
+            ];
         } elseif ($model instanceof LottoTicketItem) {
+            $ticket = $model->relationLoaded('ticket')
+                ? $model->ticket
+                : LottoTicket::query()->find($model->ticket_id);
+
+            $payload['insight_dates'] = array_filter([
+                optional($ticket)->bet_confirmed_at,
+                optional($ticket)->getOriginal('bet_confirmed_at'),
+            ]);
             $payload['risk_dates'] = array_filter([
                 $model->updated_at,
                 $model->getOriginal('updated_at'),
             ]);
-            $sections = [LottoDashboardMetricConfig::SECTION_RISK];
+            $sections = [
+                LottoDashboardMetricConfig::SECTION_RISK,
+                LottoDashboardMetricConfig::SECTION_BET_TYPE_INSIGHTS,
+            ];
         } elseif ($model instanceof LottoNumberExposure) {
             if ($action === 'updated' && !$model->wasChanged('sold_amount')) {
                 return;
@@ -89,4 +108,3 @@ class LottoDashboardSummaryObserver
         });
     }
 }
-

@@ -8,6 +8,25 @@ class LottoDashboardMetricConfig
     public const SECTION_PRODUCT = 'lotto_product';
     public const SECTION_RISK = 'lotto_risk';
     public const SECTION_OPERATIONS = 'lotto_operations';
+    public const SECTION_BET_TYPE_INSIGHTS = 'lotto_bet_type_insights';
+
+    /**
+     * Canonical status exclusions for lotto insights projector.
+     */
+    public const LOTTO_INSIGHT_EXCLUDED_TICKET_STATUSES = [
+        'cancelled',
+        'voided',
+        'deleted',
+    ];
+
+    /**
+     * Keep item-level exclusion explicit even if schema currently has no item status.
+     */
+    public const LOTTO_INSIGHT_EXCLUDED_ITEM_STATUSES = [
+        'cancelled',
+        'voided',
+        'deleted',
+    ];
 
     public const WALLET_SUCCESS_STATUS = 'SUCCESS';
 
@@ -40,4 +59,3 @@ class LottoDashboardMetricConfig
         return 90;
     }
 }
-

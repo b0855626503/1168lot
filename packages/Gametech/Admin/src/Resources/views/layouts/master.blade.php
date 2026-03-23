@@ -425,6 +425,18 @@
                     reloadNamedDataTable(tableKey, false);
                 }, 350);
             }
+
+            try {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('dashboard:activity-dirty', {
+                        detail: {
+                            source: 'lotto.ticket.list.changed',
+                            action: e.action || '',
+                            total: badgeValue
+                        }
+                    }));
+                }
+            } catch (error) {}
         })
         .listen('SumNewPayment', (e) => {
             if(e.sum === 0){

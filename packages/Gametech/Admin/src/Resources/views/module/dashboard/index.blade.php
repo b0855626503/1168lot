@@ -32,9 +32,83 @@
         .metric-deposit { border-left-color: #28a745; }
         .metric-withdraw { border-left-color: #dc3545; }
         .metric-bonus { border-left-color: #6f42c1; }
+        .metric-lotto { border-left-color: #ff7f0e; }
         .metric-net { border-left-color: #17a2b8; }
         .metric-register { border-left-color: #17a2b8; }
         .metric-ftd { border-left-color: #20c997; }
+        .lotto-section-card { border-color: #ffcf9c; }
+        .lotto-section-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .lotto-block {
+            border: 1px solid #ffe3c5;
+            border-radius: 6px;
+            padding: 10px;
+            background: #fffaf4;
+        }
+        .lotto-block-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #d16a00;
+            margin-bottom: 6px;
+        }
+        .lotto-block-main {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .lotto-block-line {
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .lotto-recent-wrap {
+            margin-top: 10px;
+            border: 1px solid #ffe3c5;
+            border-radius: 6px;
+            background: #fff;
+            overflow: hidden;
+        }
+        .lotto-recent-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: #fff6eb;
+            border-bottom: 1px solid #ffe3c5;
+        }
+        .lotto-recent-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #d16a00;
+        }
+        .lotto-recent-count {
+            font-size: 11px;
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .lotto-recent-filter {
+            min-width: 260px;
+            max-width: 320px;
+        }
+        .lotto-recent-table {
+            margin-bottom: 0;
+        }
+        .lotto-recent-table th,
+        .lotto-recent-table td {
+            font-size: 12px;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .lotto-recent-table .summary-col {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .card-teal { border-color: #20c997; }
         .dashboard-table { table-layout: fixed; width: 100%; }
         .dashboard-table th,
@@ -46,6 +120,14 @@
         }
         .dashboard-table th { font-weight: 600; }
         .dashboard-table td img { max-width: 22px; height: auto; }
+        .dashboard-tabs .nav-link {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .deposit-activity-scroll {
+            max-height: 360px;
+            overflow-y: auto;
+        }
         .bank-meta {
             display: flex;
             align-items: center;
@@ -439,6 +521,9 @@
             border-radius: 4px;
         }
         @media (max-width: 767.98px) {
+            .lotto-section-grid {
+                grid-template-columns: 1fr;
+            }
             .dashboard-equal-row > [class*="col-"] {
                 flex: 0 0 100%;
                 max-width: 100%;
@@ -457,6 +542,9 @@
 @push('scripts')
     <script src="{{ asset('/vendor/chart.js/Chart.js') }}"></script>
     <script src="{{ asset('vendor/daterangepicker/daterangepicker.js') }}"></script>
+    <script>
+        const lottoRecentMarketOptions = @json($lottoRecentMarketOptions ?? []);
+    </script>
     <script type="text/x-template" id="admin-dashboard-template">
         @php
             $permDeposit = bouncer()->hasPermission('dashboard.deposit');
@@ -483,8 +571,8 @@
             $permAlerts = bouncer()->hasPermission('dashboard.alert');
             $adminUser = auth()->guard('admin')->user();
             $canSummaryResync = $adminUser && (int) ($adminUser->role_id ?? 0) === 1;
+            $freeCreditOpen = ($config->freecredit_open ?? 'N') === 'Y';
         @endphp
-
         <section class="content text-xs" id="dashboard-app">
             <div class="container-fluid">
                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -572,7 +660,11 @@
                                     <div class="kpi-value kpi-value--withdraw">@{{ uiAnimatedAmount('withdraw') }}</div>
                                     <div class="kpi-sub">จำนวนรายการ: @{{ uiAnimatedCount('withdraw_count') }}</div>
                                     <div class="kpi-sub">จำนวนยูสที่ถอน: @{{ uiAnimatedCount('withdraw_users') }}</div>
-                                    <div class="kpi-sub">รออนุมัติ: @{{ uiValue(summary.withdraw.pending.amount, '-') }} <span class="kpi-paren">(@{{ uiAnimatedCount('withdraw_pending_count') }})</span></div>
+                                    <div class="kpi-sub">รออนุมัติ: @{{ uiValue(summary.withdraw.pending.amount, '0.00') }} <span class="kpi-paren">(@{{ uiAnimatedCount('withdraw_pending_count') }})</span></div>
+                                    @if($freeCreditOpen)
+                                        <div class="kpi-sub">เครดิต: @{{ (summary.withdraw && summary.withdraw.main && summary.withdraw.main.amount) ? summary.withdraw.main.amount : '0.00' }} <span class="kpi-paren">(@{{ (summary.withdraw && summary.withdraw.main && summary.withdraw.main.count) ? summary.withdraw.main.count : 0 }})</span></div>
+                                        <div class="kpi-sub">เครดิตฟรี: @{{ (summary.withdraw && summary.withdraw.free && summary.withdraw.free.amount) ? summary.withdraw.free.amount : '0.00' }} <span class="kpi-paren">(@{{ (summary.withdraw && summary.withdraw.free && summary.withdraw.free.count) ? summary.withdraw.free.count : 0 }})</span></div>
+                                    @endif
                                 </div>
                             </div>
                         @endif
@@ -594,7 +686,7 @@
                                 <div class="kpi-card metric-net">
                                     <div class="kpi-title"><span class="status-dot"></span> คงเหลือสุทธิ</div>
                                     <div class="kpi-value" :class="Number(summary.net.amount_raw || 0) >= 0 ? 'kpi-value--positive' : 'kpi-value--negative'">@{{ uiAnimatedAmount('net') }}</div>
-                                    <div class="kpi-sub">ฝากสำเร็จ - ถอนสำเร็จ</div>
+                                    <div class="kpi-sub">ฝากสำเร็จ - ถอนสำเร็จ + Lotto Net</div>
                                     <div class="kpi-sub">เทียบช่วงก่อนหน้า: @{{ uiAnimatedPercent('net_change_pct') }}</div>
                                 </div>
                             </div>
@@ -624,6 +716,131 @@
                             </div>
                         @endif
                     </div>
+
+                    @if($permSummary || $permBalance)
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="card card-outline lotto-section-card">
+                                    <div class="card-header py-2">
+                                        <div class="card-title"><span class="status-dot"></span> Lotto Section</div>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div class="lotto-section-grid">
+                                            <div class="lotto-block">
+                                                <div class="lotto-block-title">Lotto Cash</div>
+                                                <div class="lotto-block-main" :class="Number(summary.lotto.net_cash_raw || 0) >= 0 ? 'kpi-value--positive' : 'kpi-value--negative'">@{{ uiAnimatedAmount('lotto_net_cash') }}</div>
+                                                <div class="lotto-block-line"><span>ยอดแทง</span><strong>@{{ uiAnimatedAmount('lotto_sales_cash') }}</strong></div>
+                                                <div class="lotto-block-line"><span>จ่ายรางวัล</span><strong>@{{ uiAnimatedAmount('lotto_payout_cash') }}</strong></div>
+                                                <div class="lotto-block-line"><span>เงินคืน</span><strong>@{{ uiAnimatedAmount('lotto_refund_cash') }}</strong></div>
+                                            </div>
+                                            <div class="lotto-block">
+                                                <div class="lotto-block-title">Lotto Product</div>
+                                                <div class="lotto-block-main">@{{ uiValue(summary.lotto_product.total_sales, '0.00') }}</div>
+                                                <div class="lotto-block-line"><span>ยอดจ่ายรวม</span><strong>@{{ uiValue(summary.lotto_product.total_payout, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>จำนวนโพย</span><strong>@{{ uiCount(summary.lotto_product.total_tickets) }}</strong></div>
+                                                <div class="lotto-block-line"><span>จำนวนผู้เล่น</span><strong>@{{ uiCount(summary.lotto_product.total_players) }}</strong></div>
+                                                <div class="lotto-block-line"><span>รอตัดสิน/ตัดสินแล้ว</span><strong>@{{ uiCount(summary.lotto_product.pending_tickets) }} / @{{ uiCount(summary.lotto_product.settled_tickets) }}</strong></div>
+                                            </div>
+                                            <div class="lotto-block">
+                                                <div class="lotto-block-title">Lotto Risk</div>
+                                                <div class="lotto-block-main">@{{ uiValue(summary.lotto_risk.liability_max, '0.00') }}</div>
+                                                <div class="lotto-block-line"><span>Exposure รวม</span><strong>@{{ uiValue(summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>Liability รวม</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>ตลาด/งวด/เลข</span><strong>@{{ uiCount(summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.numbers) }}</strong></div>
+                                            </div>
+                                        </div>
+                                        <div class="lotto-recent-wrap mt-2">
+                                            <div class="lotto-recent-head">
+                                                <div class="lotto-recent-title">สรุปรายการโพยตามประเภท (Lotto Bet Type Insights)</div>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover lotto-recent-table">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>Bet Type</th>
+                                                            <th class="text-right">รายการ</th>
+                                                            <th class="text-right">ยอดรวม</th>
+                                                            <th class="text-right">ผู้เล่น</th>
+                                                            <th>เลขแทงสูงสุด</th>
+                                                            <th class="text-right">ยอดเลขสูงสุด</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="row in summary.lotto_bet_type_insights" :key="'lotto-insight-' + row.bet_type">
+                                                            <td>@{{ uiValue(row.label, '-') }}</td>
+                                                            <td class="text-right">@{{ uiCount(row.item_count) }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.total_amount, '0.00') }}</td>
+                                                            <td class="text-right">@{{ row.unique_players === null ? '-' : uiCount(row.unique_players) }}</td>
+                                                            <td>@{{ uiValue(row.top_number, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.top_number_amount, '0.00') }}</td>
+                                                        </tr>
+                                                        <tr v-if="summary.lotto_bet_type_insights.length === 0">
+                                                            <td colspan="6" class="text-center text-muted">ไม่มีข้อมูลสรุปตามประเภทในช่วงวันที่ที่เลือก</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="lotto-recent-wrap">
+                                            <div class="lotto-recent-head">
+                                                <div class="lotto-recent-title">รายการโพยล่าสุด (Recent Lotto Bets)</div>
+                                                <div class="d-flex align-items-center" style="gap:8px;">
+                                                    <select ref="lottoRecentMarketSelect" class="form-control form-control-sm lotto-recent-filter">
+                                                        <option value="">ทั้งหมดทุกรายการหวย</option>
+                                                        <optgroup v-for="group in lottoRecentMarketOptions" :key="'lotto-opt-' + group.label" :label="group.label">
+                                                            <option v-for="market in group.options" :key="'lotto-opt-' + market.value" :value="market.value">
+                                                                @{{ market.text }}
+                                                            </option>
+                                                        </optgroup>
+                                                    </select>
+                                                    <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
+                                                </div>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover lotto-recent-table">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>เวลา</th>
+                                                            <th>สมาชิก</th>
+                                                            <th>กลุ่ม/รายการ</th>
+                                                            <th>ประเภท</th>
+                                                            <th class="text-right">ยอดแทง</th>
+                                                            <th class="text-center">สถานะ</th>
+                                                            <th class="text-right">ยอดถูก</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="row in activity.lotto_recent_bets" :key="'lotto-recent-' + row.ticket_id">
+                                                            <td>@{{ uiValue(row.bet_at, '-') }}</td>
+                                                            <td>@{{ uiValue(row.member_code, '-') }}</td>
+                                                            <td>@{{ uiValue(row.group_name, '-') }} / @{{ uiValue(row.market_name, '-') }}</td>
+                                                            <td class="summary-col" :title="uiValue(row.bet_type_summary, '-')">@{{ uiValue(row.bet_type_summary, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.amount, '0.00') }}</td>
+                                                            <td class="text-center">
+                                                                <span class="badge"
+                                                                      :class="{
+                                                                        'badge-warning': row.status === 'pending',
+                                                                        'badge-success': row.status === 'win',
+                                                                        'badge-secondary': row.status === 'lose',
+                                                                        'badge-danger': row.status === 'cancel'
+                                                                      }">
+                                                                    @{{ row.status === 'pending' ? 'รอผล' : (row.status === 'win' ? 'ถูกรางวัล' : (row.status === 'lose' ? 'ไม่ถูก' : 'คืนโพย')) }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-right">@{{ uiValue(row.win_amount, '0.00') }}</td>
+                                                        </tr>
+                                                        <tr v-if="activity.lotto_recent_bets.length === 0">
+                                                            <td colspan="7" class="text-center text-muted">ไม่มีรายการแทงล่าสุด</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="row mt-2 dashboard-top-align-row">
                         @if($permSummary)
@@ -726,10 +943,17 @@
                                         <div class="card-title"><span class="block-live-badge"><i class="fas fa-pen"></i>อัปเดต</span><span class="status-dot"></span> ทีมงานปรับยอด</div>
                                     </div>
                                     <div class="card-body">
-                                        <div class="d-flex justify-content-between"><span>ทีมงานเพิ่มยอด</span><strong class="text-success">@{{ uiValue(conversion.staff.add, '-') }}</strong></div>
-                                        <div class="d-flex justify-content-between"><span>ทีมงานลดยอด</span><strong class="text-danger">@{{ uiValue(conversion.staff.reduce, '-') }}</strong></div>
-                                        <div class="d-flex justify-content-between"><span>ปรับยอดสุทธิ</span><strong>@{{ uiValue(conversion.staff.net, '-') }}</strong></div>
-                                        <div class="d-flex justify-content-between"><span>จำนวนรายการ</span><strong>@{{ uiCount(conversion.staff.count) }}</strong></div>
+                                        <div class="d-flex justify-content-between"><span>ทีมงานเพิ่มยอด</span><strong class="text-success">@{{ uiValue(conversion.staff.main.add, '-') }}</strong></div>
+                                        <div class="d-flex justify-content-between"><span>ทีมงานลดยอด</span><strong class="text-danger">@{{ uiValue(conversion.staff.main.reduce, '-') }}</strong></div>
+                                        <div class="d-flex justify-content-between"><span>ปรับยอดสุทธิ</span><strong>@{{ uiValue(conversion.staff.main.net, '-') }}</strong></div>
+                                        <div class="d-flex justify-content-between"><span>จำนวนรายการ</span><strong>@{{ uiCount(conversion.staff.main.count) }}</strong></div>
+                                        @if($freeCreditOpen)
+                                            <div class="text-center text-muted my-1">-------ฟรีเครดิต---------</div>
+                                            <div class="d-flex justify-content-between"><span>ทีมงานเพิ่มยอด</span><strong class="text-success">@{{ uiValue(conversion.staff.free.add, '-') }}</strong></div>
+                                            <div class="d-flex justify-content-between"><span>ทีมงานลดยอด</span><strong class="text-danger">@{{ uiValue(conversion.staff.free.reduce, '-') }}</strong></div>
+                                            <div class="d-flex justify-content-between"><span>ปรับยอดสุทธิ</span><strong>@{{ uiValue(conversion.staff.free.net, '-') }}</strong></div>
+                                            <div class="d-flex justify-content-between"><span>จำนวนรายการ</span><strong>@{{ uiCount(conversion.staff.free.count) }}</strong></div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -804,9 +1028,19 @@
                         @if($permDeposit)
                             <div class="col-lg-6">
                                 <div class="card card-outline card-success">
-                                    <div class="card-header"><div class="card-title"><span class="block-live-badge"><i class="fas fa-pen"></i>อัปเดต</span><span class="status-dot"></span> ฝากล่าสุด</div></div>
+                                    <div class="card-header d-flex align-items-center justify-content-between">
+                                        <div class="card-title"><span class="block-live-badge"><i class="fas fa-pen"></i>อัปเดต</span><span class="status-dot"></span> ฝากล่าสุด</div>
+                                        <ul class="nav nav-pills dashboard-tabs" role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link" :class="{active: depositTab === 'all'}" href="#" @click.prevent="depositTab = 'all'">ทั้งหมด</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" :class="{active: depositTab === 'manual'}" href="#" @click.prevent="depositTab = 'manual'">เพิ่มโดยทีมงาน</a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                     <div class="card-body p-0">
-                                        <div class="table-responsive">
+                                        <div class="table-responsive deposit-activity-scroll">
                                             <table class="table table-sm table-striped mb-0">
                                                 <thead>
                                                 <tr>
@@ -815,11 +1049,11 @@
                                                     <th>จำนวน</th>
                                                     <th>ต้นทาง</th>
                                                     <th>ปลายทาง</th>
-                                                    <th></th>
+                                                    <th v-text="depositTab === 'manual' ? 'ทีมงาน' : ''"></th>
                                                 </tr>
                                                 </thead>
                                                 <tbody>
-                                                <tr v-for="row in activity.deposits" :key="row.time + row.username">
+                                                <tr v-for="row in depositRows" :key="row.time + row.username + row.channel">
                                                     <td>@{{ row.time }}</td>
                                                     <td>@{{ row.username }}</td>
                                                     <td class="dashboard-amount dashboard-amount--deposit">@{{ row.amount ? ('+' + row.amount) : '-' }}</td>
@@ -836,12 +1070,17 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <span class="status-chip">
-                                                            <span class="status-light" :class="row.status === 'สำเร็จ' ? 'status-light--success' : 'status-light--waiting'"></span>
-                                                        </span>
+                                                        <template v-if="depositTab === 'manual'">
+                                                            <span class="text-muted">@{{ row.staff || '-' }}</span>
+                                                        </template>
+                                                        <template v-else>
+                                                            <span class="status-chip">
+                                                                <span class="status-light" :class="row.status === 'สำเร็จ' ? 'status-light--success' : 'status-light--waiting'"></span>
+                                                            </span>
+                                                        </template>
                                                     </td>
                                                 </tr>
-                                                <tr v-if="activity.deposits.length === 0">
+                                                <tr v-if="depositRows.length === 0">
                                                     <td colspan="6" class="text-center text-muted">ไม่มีข้อมูล</td>
                                                 </tr>
                                                 </tbody>
@@ -984,7 +1223,7 @@
                                                     <th>ชื่อบัญชี</th>
                                                     <th>เลขที่บัญชี</th>
                                                     <th class="text-right">ยอดเงิน</th>
-                                                    {{--                                                <th class="text-center">สถานะ</th>--}}
+{{--                                                    <th class="text-center">API Refresh</th>--}}
                                                     <th class="text-center">อัพเดทเมื่อ</th>
                                                 </tr>
                                                 </thead>
@@ -999,7 +1238,7 @@
                                                     <td>@{{ row.acc_name }}</td>
                                                     <td>@{{ row.acc_no }}</td>
                                                     <td class="text-right">@{{ row.balance }}</td>
-                                                    {{--                                                <td class="text-center">@{{ row.status }}</td>--}}
+{{--                                                    <td class="text-center">@{{ row.status }}</td>--}}
                                                     <td class="text-center">@{{ row.date_update }}</td>
                                                 </tr>
                                                 <tr v-if="bank.in.length === 0">
@@ -1107,22 +1346,6 @@
                         </div>
                     </div>
 
-                    <div class="row dashboard-activity-row align-items-start">
-                        @if($permAlerts)
-                            <div class="col-12">
-                                <div class="card card-outline card-danger">
-                                    <div class="card-header"><div class="card-title">Alerts / Watchlist</div></div>
-                                    <div class="card-body">
-                                        <div v-if="alerts.length === 0" class="text-muted">ไม่พบแจ้งเตือน</div>
-                                        <div v-for="alert in alerts" :key="alert.title" class="alert" :class="alert.level === 'danger' ? 'alert-danger' : 'alert-warning'">
-                                            <strong>@{{ alert.title }}</strong>
-                                            <div>@{{ alert.message }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
                 </div>
 
                 <member-list-modal
@@ -1407,6 +1630,8 @@
                         withdraw: {
                             amount: '-', amount_raw: 0, count: 0, users: 0,
                             pending: { amount: '-', amount_raw: 0, count: 0 },
+                            main: { amount: '0', amount_raw: 0, count: 0, users: 0, pending: { amount: '0', amount_raw: 0, count: 0 } },
+                            free: { amount: '0', amount_raw: 0, count: 0, users: 0, pending: { amount: '0', amount_raw: 0, count: 0 } },
                         },
                         bonus: {
                             amount: '-', amount_raw: 0, count: 0, ratio: 0,
@@ -1414,6 +1639,27 @@
                             activity: { amount: '-', amount_raw: 0, count: 0 },
                             manual: { amount: '-', amount_raw: 0, count: 0 },
                         },
+                        lotto: {
+                            sales_cash: '-', sales_cash_raw: 0,
+                            payout_cash: '-', payout_cash_raw: 0,
+                            refund_cash: '-', refund_cash_raw: 0,
+                            net_cash: '-', net_cash_raw: 0,
+                        },
+                        lotto_product: {
+                            total_sales: '-', total_sales_raw: 0,
+                            total_payout: '-', total_payout_raw: 0,
+                            total_tickets: 0, total_players: 0,
+                            win_tickets: 0, lose_tickets: 0,
+                            pending_tickets: 0, settled_tickets: 0,
+                        },
+                        lotto_risk: {
+                            markets: 0, rounds: 0, numbers: 0,
+                            exposure_total: '-', exposure_total_raw: 0,
+                            liability_total: '-', liability_total_raw: 0,
+                            liability_max: '-', liability_max_raw: 0,
+                            last_snapshot_at: '',
+                        },
+                        lotto_bet_type_insights: [],
                         net: { amount: '-', amount_raw: 0, change_pct: 0 },
                         register: { total: 0, normal: 0, referral: 0, campaign: 0 },
                         first_deposit: { count: 0, rate: 0 }
@@ -1421,14 +1667,23 @@
                     conversion: {
                         register: { total: 0, deposit: 0, repeat_deposit: 0, not_deposit: 0, rate: 0 },
                         referral: { total: 0, deposit: 0, not_deposit: 0, rate: 0 },
-                        staff: { add: '-', reduce: '-', net: '-', count: 0 }
+                        staff: {
+                            add: '-', reduce: '-', net: '-', count: 0,
+                            main: { add: '-', reduce: '-', net: '-', count: 0 },
+                            free: { add: '-', reduce: '-', net: '-', count: 0 }
+                        }
                     },
                     trends: { labels: [], deposit: [], withdraw: [], bonus: [] },
                     funnel: { funnel: { register: 0, register_deposit: 0, register_repeat_deposit: 0, confirmed: 0, first_deposit: 0, repeat_deposit: 0 }, sources: { direct: 0, campaign: 0, referral: 0 } },
-                    activity: { deposits: [], withdraws: [], registers: [], staff: [] },
+                    activity: { deposits: [], deposits_manual: [], withdraws: [], registers: [], staff: [], lotto_recent_bets: [] },
+                    lottoRecentMarketId: '',
+                    lottoRecentMarketOptions: lottoRecentMarketOptions,
+                    depositTab: 'all',
                     bank: { in: [], out: [] },
                     adminLogs: { login: [], logout: [] },
-                    alerts: [],
+                    canAlertToast: @json($permAlerts),
+                    freeCreditOpen: @json($freeCreditOpen),
+                    alertToastSeen: {},
                     memberList: {
                         type: 'register_deposit',
                         title: 'รายชื่อสมาชิกที่ฝากแล้ว',
@@ -1463,6 +1718,10 @@
                         bonus_deposit_amount: 0,
                         bonus_activity_amount: 0,
                         bonus_manual_amount: 0,
+                        lotto_sales_cash: 0,
+                        lotto_payout_cash: 0,
+                        lotto_refund_cash: 0,
+                        lotto_net_cash: 0,
                         net: 0,
                         net_change_pct: 0,
                         register: 0,
@@ -1486,6 +1745,10 @@
                         bonus_deposit_amount: null,
                         bonus_activity_amount: null,
                         bonus_manual_amount: null,
+                        lotto_sales_cash: null,
+                        lotto_payout_cash: null,
+                        lotto_refund_cash: null,
+                        lotto_net_cash: null,
                         net: null,
                         net_change_pct: null,
                         register: null,
@@ -1516,6 +1779,12 @@
                     }
                     return this.filters.start ? this.formatDisplayDate(this.filters.start) : '-';
                 },
+                depositRows() {
+                    if (this.depositTab === 'manual') {
+                        return Array.isArray(this.activity.deposits_manual) ? this.activity.deposits_manual : [];
+                    }
+                    return Array.isArray(this.activity.deposits) ? this.activity.deposits : [];
+                },
                 kpiCards() {
                     return [
                         {
@@ -1532,7 +1801,7 @@
                             class: 'metric-withdraw',
                             value: this.summary.withdraw.amount,
                             sub: `จำนวนรายการ: ${this.summary.withdraw.count} | จำนวนยูสที่ถอน: ${this.summary.withdraw.users}`,
-                            sub2: `รออนุมัติ: ${(this.summary.withdraw.pending && this.summary.withdraw.pending.count) ? this.summary.withdraw.pending.count : 0} รายการ`
+                            sub2: `รออนุมัติ: ${(this.summary.withdraw.pending && this.summary.withdraw.pending.count) ? this.summary.withdraw.pending.count : 0} รายการ${this.freeCreditOpen ? ' | รวมถอนเครดิตฟรีแล้ว' : ''}`
                         },
                         {
                             key: 'bonus',
@@ -1543,11 +1812,19 @@
                             sub2: `กิจกรรม: ${(this.summary.bonus.activity && this.summary.bonus.activity.amount) ? this.summary.bonus.activity.amount : '-'} | Manual: ${(this.summary.bonus.manual && this.summary.bonus.manual.amount) ? this.summary.bonus.manual.amount : '-'}`
                         },
                         {
+                            key: 'lotto_net_cash',
+                            title: 'Lotto Cash',
+                            class: 'metric-lotto',
+                            value: this.summary.lotto.net_cash,
+                            sub: `ยอดแทง: ${(this.summary.lotto && this.summary.lotto.sales_cash) ? this.summary.lotto.sales_cash : '-'}`,
+                            sub2: `จ่ายรางวัล: ${(this.summary.lotto && this.summary.lotto.payout_cash) ? this.summary.lotto.payout_cash : '-'} | เงินคืน: ${(this.summary.lotto && this.summary.lotto.refund_cash) ? this.summary.lotto.refund_cash : '-'}`
+                        },
+                        {
                             key: 'net',
                             title: 'คงเหลือสุทธิ',
                             class: 'metric-net',
                             value: this.summary.net.amount,
-                            sub: `ฝากสำเร็จ - ถอนสำเร็จ`,
+                            sub: `ฝากสำเร็จ - ถอนสำเร็จ + Lotto Net`,
                             sub2: `เทียบช่วงก่อนหน้า: ${this.summary.net.change_pct}%`
                         },
                         {
@@ -1595,8 +1872,11 @@
                 }
             },
             mounted() {
+                console.log(this.freeCreditOpen);
                 this.$nextTick(() => {
+                    this.alertToastSeen = this.loadAlertToastSeen();
                     this.initDatepicker();
+                    this.initLottoRecentMarketSelect();
                     this.animateKpiValues(this.summaryAnimationSnapshot(), 0);
                     this.refreshAll({ reason: 'initial', skeleton: false });
                     this.subscribeRealtime();
@@ -1609,10 +1889,41 @@
                 this.stopRealtimePollingFallback();
                 this.unsubscribeRealtime();
                 this.unbindActivityRealtimeSignal();
+                this.destroyLottoRecentMarketSelect();
                 if (this.realtime.debounceTimer) clearTimeout(this.realtime.debounceTimer);
                 this.stopKpiAnimations();
             },
             methods: {
+                initLottoRecentMarketSelect() {
+                    this.$nextTick(() => {
+                        const $select = $(this.$refs.lottoRecentMarketSelect);
+                        if (!$select || !$select.length) return;
+
+                        if ($.fn.select2) {
+                            $select.select2({
+                                width: '100%',
+                                placeholder: 'เลือกรายการหวย',
+                                allowClear: true,
+                            });
+                        }
+
+                        $select.val(this.lottoRecentMarketId || '').trigger('change.select2');
+                        $select.on('change.dashboardLottoRecentMarket', (event) => {
+                            const value = String($(event.currentTarget).val() || '');
+                            this.lottoRecentMarketId = value;
+                            this.refreshActivityOnly();
+                        });
+                    });
+                },
+                destroyLottoRecentMarketSelect() {
+                    const $select = $(this.$refs.lottoRecentMarketSelect);
+                    if (!$select || !$select.length) return;
+
+                    $select.off('.dashboardLottoRecentMarket');
+                    if ($.fn.select2 && $select.data('select2')) {
+                        $select.select2('destroy');
+                    }
+                },
 
                 normalizeResponse(res) {
                     if (!res || !res.data) return null;
@@ -1631,6 +1942,129 @@
                         return res.data.data;
                     }
                     return res.data;
+                },
+                alertToastStorageKey() {
+                    return 'dashboard_alert_toast_seen_v1';
+                },
+                alertToastCooldownMs() {
+                    return 30 * 60 * 1000;
+                },
+                normalizeAlerts(data) {
+                    if (Array.isArray(data)) return data;
+                    if (data && typeof data === 'object') {
+                        return Object.values(data).filter((item) => item && typeof item === 'object' && item.title);
+                    }
+                    return [];
+                },
+                loadAlertToastSeen() {
+                    if (typeof window === 'undefined' || !window.localStorage) return {};
+                    try {
+                        const raw = window.localStorage.getItem(this.alertToastStorageKey());
+                        if (!raw) return {};
+                        const parsed = JSON.parse(raw);
+                        return parsed && typeof parsed === 'object' ? parsed : {};
+                    } catch (e) {
+                        return {};
+                    }
+                },
+                saveAlertToastSeen() {
+                    if (typeof window === 'undefined' || !window.localStorage) return;
+                    try {
+                        window.localStorage.setItem(this.alertToastStorageKey(), JSON.stringify(this.alertToastSeen || {}));
+                    } catch (e) {}
+                },
+                pruneAlertToastSeen(nowMs = Date.now()) {
+                    const cooldown = this.alertToastCooldownMs();
+                    const next = {};
+                    Object.keys(this.alertToastSeen || {}).forEach((key) => {
+                        const ts = Number(this.alertToastSeen[key] || 0);
+                        if (ts > 0 && (nowMs - ts) < cooldown) {
+                            next[key] = ts;
+                        }
+                    });
+                    this.alertToastSeen = next;
+                },
+                alertToastKey(alert) {
+                    const code = String((alert && (alert.code || alert.key || alert.type)) || '').trim().toLowerCase();
+                    if (code) {
+                        return `code|${code}`;
+                    }
+                    const level = String((alert && alert.level) || '').trim().toLowerCase();
+                    const title = String((alert && alert.title) || '').trim();
+                    const message = String((alert && alert.message) || '').trim();
+                    const normalizedMessage = message
+                        .replace(/-?\d[\d,]*(\.\d+)?/g, '#')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    return `${level}|${title}|${normalizedMessage}`;
+                },
+                shouldShowAlertToast(alert, nowMs = Date.now()) {
+                    const key = this.alertToastKey(alert);
+                    if (!key || key === '||') return false;
+                    const previous = Number((this.alertToastSeen && this.alertToastSeen[key]) || 0);
+                    if (previous > 0 && (nowMs - previous) < this.alertToastCooldownMs()) {
+                        return false;
+                    }
+                    this.alertToastSeen = Object.assign({}, this.alertToastSeen, { [key]: nowMs });
+                    return true;
+                },
+                alertToastMessage(alert) {
+                    const title = String((alert && alert.title) || '').trim();
+                    const message = String((alert && alert.message) || '').trim();
+                    if (title && message) return `${title}: ${message}`;
+                    return title || message || 'มีแจ้งเตือนใหม่';
+                },
+                emitAlertToast(alert) {
+                    const payload = {
+                        ui: 'toast',
+                        as: 'RealTime.Message.All',
+                        level: String((alert && alert.level) || 'warning').toLowerCase(),
+                        message: this.alertToastMessage(alert),
+                        toast: {
+                            className: 'gt-toast gt-toast-alert',
+                            duration: 10000,
+                            gravity: 'top',
+                            position: 'right',
+                            avatar: '/assets/admin/icons/alert.webp?v=1'
+                        }
+                    };
+
+                    if (typeof window !== 'undefined' && typeof window.handleRT === 'function') {
+                        window.handleRT(payload);
+                        return;
+                    }
+                    if (typeof Toastify !== 'undefined') {
+                        Toastify({
+                            text: payload.message,
+                            duration: payload.toast.duration,
+                            newWindow: true,
+                            close: true,
+                            gravity: payload.toast.gravity,
+                            position: payload.toast.position,
+                            stopOnFocus: true,
+                            className: payload.toast.className,
+                            avatar: payload.toast.avatar
+                        }).showToast();
+                    }
+                },
+                processAlertsAsToast(responseData) {
+                    if (!this.canAlertToast) return;
+                    const alerts = this.normalizeAlerts(responseData);
+                    if (!alerts.length) return;
+
+                    const nowMs = Date.now();
+                    this.pruneAlertToastSeen(nowMs);
+
+                    let hasNew = false;
+                    alerts.forEach((alert) => {
+                        if (!this.shouldShowAlertToast(alert, nowMs)) return;
+                        hasNew = true;
+                        this.emitAlertToast(alert);
+                    });
+
+                    if (hasNew) {
+                        this.saveAlertToastSeen();
+                    }
                 },
                 formatAmountNumber(value) {
                     const number = Number(value || 0);
@@ -1661,6 +2095,10 @@
                         bonus_deposit_amount: Number((source && source.bonus && source.bonus.deposit && source.bonus.deposit.amount_raw) || 0),
                         bonus_activity_amount: Number((source && source.bonus && source.bonus.activity && source.bonus.activity.amount_raw) || 0),
                         bonus_manual_amount: Number((source && source.bonus && source.bonus.manual && source.bonus.manual.amount_raw) || 0),
+                        lotto_sales_cash: Number((source && source.lotto && source.lotto.sales_cash_raw) || 0),
+                        lotto_payout_cash: Number((source && source.lotto && source.lotto.payout_cash_raw) || 0),
+                        lotto_refund_cash: Number((source && source.lotto && source.lotto.refund_cash_raw) || 0),
+                        lotto_net_cash: Number((source && source.lotto && source.lotto.net_cash_raw) || 0),
                         net: Number((source && source.net && source.net.amount_raw) || 0),
                         net_change_pct: Number((source && source.net && source.net.change_pct) || 0),
                         register: Number((source && source.register && source.register.total) || 0),
@@ -1919,7 +2357,9 @@
                 refreshActivityOnly() {
                     if (!axios || typeof axios.post !== 'function') return;
 
-                    axios.post("{{ route('admin.dashboard.activity') }}", this.buildPayload())
+                    axios.post("{{ route('admin.dashboard.activity') }}", this.buildPayload({
+                        lotto_market_id: this.lottoRecentMarketId || '',
+                    }))
                         .then((res) => {
                             const data = this.normalizeResponse(res);
                             if (data && data.deposits) {
@@ -1966,16 +2406,31 @@
                         || sections.includes('conversion')
                         || sections.includes('funnel')
                         || sections.includes('deposit');
+                    const lottoOnlySections = new Set([
+                        'lotto_cash',
+                        'lotto_product',
+                        'lotto_risk',
+                        'lotto_operations',
+                        'lotto_bet_type_insights',
+                        'net'
+                    ]);
+                    const lottoOnly = sections.length > 0
+                        && sections.every((section) => lottoOnlySections.has(section));
                     const payload = this.buildPayload();
+                    const activityPayload = this.buildPayload({
+                        lotto_market_id: this.lottoRecentMarketId || '',
+                    });
                     const loadingToken = this.startLoading('realtime', { skeleton: false });
-                    const requests = [
-                        axios.post("{{ route('admin.dashboard.summary') }}", payload),
-                        axios.post("{{ route('admin.dashboard.trends') }}", payload),
-                        axios.post("{{ route('admin.dashboard.alerts') }}", payload),
-                        axios.post("{{ route('admin.dashboard.activity') }}", payload)
-                    ];
+                    const requests = lottoOnly
+                        ? [axios.post("{{ route('admin.dashboard.summary') }}", payload)]
+                        : [
+                            axios.post("{{ route('admin.dashboard.summary') }}", payload),
+                            axios.post("{{ route('admin.dashboard.trends') }}", payload),
+                            axios.post("{{ route('admin.dashboard.alerts') }}", payload),
+                            axios.post("{{ route('admin.dashboard.activity') }}", activityPayload)
+                        ];
 
-                    if (needRegisterFlow) {
+                    if (!lottoOnly && needRegisterFlow) {
                         requests.push(axios.post("{{ route('admin.dashboard.conversion') }}", payload));
                         requests.push(axios.post("{{ route('admin.dashboard.funnel') }}", payload));
                     }
@@ -1998,45 +2453,43 @@
                             }
                         }
 
-                        if (trendRes && trendRes.status === 'fulfilled') {
+                        if (!lottoOnly && trendRes && trendRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(trendRes.value);
                             if (data && data.labels) {
                                 this.trends = Object.assign({}, this.trends, data);
                             }
                         }
 
-                        if (alertsRes && alertsRes.status === 'fulfilled') {
+                        if (!lottoOnly && alertsRes && alertsRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(alertsRes.value);
-                            if (Array.isArray(data)) {
-                                this.alerts = data;
-                            } else if (data && typeof data === 'object') {
-                                this.alerts = Object.values(data).filter((item) => item && typeof item === 'object' && item.title);
-                            }
+                            this.processAlertsAsToast(data);
                         }
 
-                        if (activityRes && activityRes.status === 'fulfilled') {
+                        if (!lottoOnly && activityRes && activityRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(activityRes.value);
                             if (data && data.deposits) {
                                 this.activity = Object.assign({}, this.activity, data);
                             }
                         }
 
-                        if (needRegisterFlow && conversionRes && conversionRes.status === 'fulfilled') {
+                        if (!lottoOnly && needRegisterFlow && conversionRes && conversionRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(conversionRes.value);
                             if (data && data.register) {
                                 this.conversion = Object.assign({}, this.conversion, data);
                             }
                         }
 
-                        if (needRegisterFlow && funnelRes && funnelRes.status === 'fulfilled') {
+                        if (!lottoOnly && needRegisterFlow && funnelRes && funnelRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(funnelRes.value);
                             if (data && data.funnel) {
                                 this.funnel = Object.assign({}, this.funnel, data);
                             }
                         }
 
-                        this.renderMoneyChart();
-                        if (needRegisterFlow) {
+                        if (!lottoOnly) {
+                            this.renderMoneyChart();
+                        }
+                        if (!lottoOnly && needRegisterFlow) {
                             this.renderFunnelChart();
                         }
                     }).catch(() => {}).then(() => {
@@ -2065,6 +2518,9 @@
                         : (config.loadingToken || null);
 
                     const payload = this.buildPayload();
+                    const activityPayload = this.buildPayload({
+                        lotto_market_id: this.lottoRecentMarketId || '',
+                    });
                     const settle = Promise.allSettled
                         ? Promise.allSettled.bind(Promise)
                         : (list) => Promise.all(list.map((p) => p
@@ -2077,7 +2533,7 @@
                         axios.post("{{ route('admin.dashboard.conversion') }}", payload),
                         axios.post("{{ route('admin.dashboard.trends') }}", payload),
                         axios.post("{{ route('admin.dashboard.funnel') }}", payload),
-                        axios.post("{{ route('admin.dashboard.activity') }}", payload),
+                        axios.post("{{ route('admin.dashboard.activity') }}", activityPayload),
                         axios.post("{{ route('admin.dashboard.alerts') }}", payload)
                     ]).then((results) => {
                         const [summaryRes, convRes, trendRes, funnelRes, activityRes, alertsRes] = results;
@@ -2114,11 +2570,7 @@
                         }
                         if (alertsRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(alertsRes.value);
-                            if (Array.isArray(data)) {
-                                this.alerts = data;
-                            } else if (data && typeof data === 'object') {
-                                this.alerts = Object.values(data).filter((item) => item && typeof item === 'object' && item.title);
-                            }
+                            this.processAlertsAsToast(data);
                         }
                         this.renderMoneyChart();
                         this.renderFunnelChart();
@@ -2801,6 +3253,11 @@
                         updateBadge('withdraw', res.withdraw);
                     }else{
                         update('withdraw', res.withdraw);
+                    }
+                    if(res.withdraw > 0){
+                        updateBadge('withdraw_free', res.withdraw_free);
+                    }else{
+                        update('withdraw_free', res.withdraw_free);
                     }
 
                     // ✅ กันพัง: หน้าไหนไม่มี #announce ก็ไม่ต้องทำต่อ

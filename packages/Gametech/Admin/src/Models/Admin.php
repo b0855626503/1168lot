@@ -175,6 +175,10 @@ class Admin extends Authenticatable implements AdminContract
      */
     public function hasPermission($permission)
     {
+        if ((string) ($this->superadmin ?? 'N') === 'Y') {
+            return true;
+        }
+
         if ($this->role->permission_type == 'all') {
             return true;
         }
