@@ -785,6 +785,7 @@
                                             <div class="lotto-recent-head">
                                                 <div class="lotto-recent-title">รายการโพยล่าสุด (Recent Lotto Bets)</div>
                                                 <div class="d-flex align-items-center" style="gap:8px;">
+                                                    <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
                                                     <select ref="lottoRecentMarketSelect" class="form-control form-control-sm lotto-recent-filter">
                                                         <option value="">ทั้งหมดทุกรายการหวย</option>
                                                         <optgroup v-for="group in lottoRecentMarketOptions" :key="'lotto-opt-' + group.label" :label="group.label">
@@ -793,7 +794,6 @@
                                                             </option>
                                                         </optgroup>
                                                     </select>
-                                                    <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
                                                 </div>
                                             </div>
                                             <div class="table-responsive">
