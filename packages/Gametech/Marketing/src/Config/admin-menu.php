@@ -5,7 +5,7 @@ return [
         'key' => 'marketing',
         'name' => 'Marketing',
         'route' => 'admin.marketing_team.index',
-        'sort' => 86,
+        'sort' => 1100,
         'icon-class' => 'fa-gamepad',
         'badge' => 0,
         'badge-color' => 'badge-primary',
