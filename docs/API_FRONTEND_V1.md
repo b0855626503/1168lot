@@ -562,6 +562,7 @@ Response ตัวอย่างเมื่อไม่พบโพย
 - `GET /lotto/markets/latest`
 - Auth: ไม่ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- ฟิลด์รูปใน response (`market_logo`, `market_icon`) จะถูกแปลงเป็น **Full URL (absolute URL)** เช่น `https://api.1168lot.com/storage/...`
 
 Query ที่รองรับ:
 - `code` (แนะนำ) เช่น `thai` เพื่อขอเฉพาะกลุ่มนั้น
