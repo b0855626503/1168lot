@@ -39,8 +39,19 @@ Route::prefix('759gaming')->group(function () {
 Route::prefix('pgsoft')->group(function () {
     Route::post('checkBalance', 'NewCommonFlowController@getBalance');
     Route::middleware('ensure.in.game')->group(function () {
+        Route::post('placeBets', 'NewCommonFlowController@placeBets');
         Route::post('settleBets', 'NewCommonFlowController@settleBets');
     });
+    Route::post('unsettleBets', 'NewCommonFlowController@unsettleBets');
+    Route::post('adjustBets', 'NewCommonFlowController@adjustBets');
+    Route::post('adjustBalance', 'NewCommonFlowController@adjustBalance');
+    Route::post('cancelBets', 'NewCommonFlowController@cancelBets');
+    Route::post('winRewards', 'NewCommonFlowController@winRewards');
+    Route::post('transaction', 'NewCommonFlowController@transaction');
+    Route::post('voidSettled', 'NewCommonFlowController@voidSettled');
+    Route::post('rollback', 'NewCommonFlowController@rollback');
+    Route::post('placeTips', 'NewCommonFlowController@placeTips');
+    Route::post('cancelTips', 'NewCommonFlowController@cancelTips');
 });
 
 Route::prefix('pgslot')->group(function () {
@@ -1737,7 +1748,7 @@ Route::prefix('ambsuperapi')->group(function () {
 
 Route::prefix('rb7lotto')->group(function () {
     Route::post('getbalance', 'RbLottoController@getBalance');
-   
+
     Route::post('bet', 'RbLottoController@placeBet');
     Route::post('settle', 'RbLottoController@settleBet');
     Route::post('rollback-settle', 'RbLottoController@rollBack');

@@ -189,8 +189,8 @@ HTML;
 
             'count_deposit'  => (int) $model->count_deposit,
             'point'          => $point,
-            'sum_deposit'    => $sumDeposit,
-            'sum_withdraw'   => $sumWithdraw,
+//            'sum_deposit'    => $sumDeposit,
+//            'sum_withdraw'   => $sumWithdraw,
             'balance'        => $balance,
             'diamond'        => $diamond,
 
