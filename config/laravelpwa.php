@@ -1,10 +1,10 @@
 <?php
 
 return [
-    'name' => 'GAMETECH',
+    'name' => '1168lot',
     'manifest' => [
         'name' => env('APP_NAME', 'My PWA App'),
-        'short_name' => 'GAMETECH',
+        'short_name' => '1168lot',
         'start_url' => '/',
         'background_color' => '#ffffff',
         'theme_color' => '#000000',
