@@ -352,9 +352,52 @@ class AuthController extends BaseController
                     ]);
 
                     if (($result['success'] ?? false) !== true) {
-                        $message = $resultMessage ?: 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้';
-                        throw new \RuntimeException($message);
+                        $isUnauthorizedIp = is_string($resultMessage)
+                            && str_contains($resultMessage, '"statusCode":401')
+                            && str_contains(Str::lower($resultMessage), 'invalid ip');
+
+                        if ($isUnauthorizedIp) {
+                            Log::error('frontend_api_register.seamless_fallback_local_game_user', [
+                                'member_code' => (int) $member->code,
+                                'user_name' => $username,
+                                'game_code' => (int) $game->code,
+                                'reason' => 'seamless_401_invalid_ip',
+                            ]);
+
+                            $gameUserRepo->updateOrCreate(
+                                ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
+                                [
+                                    'user_name' => $username,
+                                    'user_pass' => $pass,
+                                    'balance' => 0,
+                                    'enable' => 'Y',
+                                    'user_create' => $name,
+                                    'user_update' => $name,
+                                    'date_create' => now(),
+                                    'date_update' => now(),
+                                    'bill_code' => 0,
+                                    'pro_code' => 0,
+                                    'amount' => 0,
+                                    'bonus' => 0,
+                                    'turnpro' => 0,
+                                    'amount_balance' => 0,
+                                    'withdraw_limit' => 0,
+                                    'withdraw_limit_rate' => 0,
+                                    'withdraw_limit_amount' => 0,
+                                ]
+                            );
+
+                            Log::error('frontend_api_register.seamless_fallback_local_game_user_success', [
+                                'member_code' => (int) $member->code,
+                                'user_name' => $username,
+                                'game_code' => (int) $game->code,
+                            ]);
+                        } else {
+                            $message = $resultMessage ?: 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้';
+                            throw new \RuntimeException($message);
+                        }
                     }
+
                 }
             } else {
                 $game = $gameRepo->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
