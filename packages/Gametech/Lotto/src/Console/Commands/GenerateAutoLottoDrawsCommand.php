@@ -12,7 +12,7 @@ class GenerateAutoLottoDrawsCommand extends Command
 {
     protected $signature = 'lotto:generate-auto-draws
         {--date= : Start date (Y-m-d). Default=tomorrow}
-        {--days=3 : Number of days to generate (min 1, max 30)}
+        {--days=1 : Number of days to generate (min 1, max 30)}
         {--market_id= : Generate only one market id}
         {--dry-run : Preview only without creating draws}';
 

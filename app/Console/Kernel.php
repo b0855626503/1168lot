@@ -123,7 +123,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('payment:emp-topup 50')->everyMinute();
 
         // Lotto auto draw bootstrap from market schedule (manual-safe, idempotent).
-        $schedule->command('lotto:generate-auto-draws --days=3')
+        $schedule->command('lotto:generate-auto-draws --days=1')
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();

@@ -734,7 +734,7 @@
                     }
 
                     const payload = {
-                        days: 7,
+                        days: 1,
                         dry_run: dryRun ? 1 : 0,
                     };
 

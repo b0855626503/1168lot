@@ -371,7 +371,7 @@ class LottoDrawController extends AppBaseController
         ])->validate();
 
         $params = [
-            '--days' => (int) ($validated['days'] ?? 3),
+            '--days' => (int) ($validated['days'] ?? 1),
         ];
 
         if (! empty($validated['date'])) {
