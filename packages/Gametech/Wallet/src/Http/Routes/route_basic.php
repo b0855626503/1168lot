@@ -136,17 +136,13 @@ Route::post('request/otp', 'Gametech\Wallet\Http\Controllers\VerifyController@re
 //		'view' => 'wallet::customer.game.redirect',
 //	])->name('customer.game.redirect_single');
 
-Route::get('/play/{type?}/{provider?}/{id?}', 'Gametech\Wallet\Http\Controllers\ProfileController@gameRedirectSingleAmb')->defaults('_config', [
-    'view' => 'wallet::customer.game.redirect',
-])->name('customer.game.redirect_single');
-
-//        Route::get('/play/{method?}/{id?}/{name?}', 'Gametech\Wallet\Http\Controllers\ProfileController@gameRedirectApi')->defaults('_config', [
-//            'view' => 'wallet::customer.game.redirect',
-//        ])->name('customer.game.redirect_single');
-
 Route::get('play/{method?}/{id?}/{name?}', 'Gametech\Wallet\Http\Controllers\ProfileController@gameRedirect')->defaults('_config', [
     'view' => 'wallet::customer.game.redirect',
 ])->name('customer.game.redirect');
+
+Route::get('/play/{type?}/{provider?}/{id?}', 'Gametech\Wallet\Http\Controllers\ProfileController@gameRedirectSingleAmb')->defaults('_config', [
+    'view' => 'wallet::customer.game.redirect',
+])->name('customer.game.redirect_single');
 
 Route::get('playfree/{method?}/{id?}/{name?}', 'Gametech\Wallet\Http\Controllers\ProfileController@gameCreditRedirect')->defaults('_config', [
     'view' => 'wallet::customer.credit.game.redirect',
