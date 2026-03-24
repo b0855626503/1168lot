@@ -779,7 +779,7 @@
 						$session = request()->session()->getId();
 					}
 
-					if ($setting->limit != '') {
+					if (!is_null($setting->limit)) {
 						$param = [
 							'username' => $data['username'],
 							'productId' => Str::upper($data['productId']),
