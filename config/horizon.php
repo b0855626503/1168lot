@@ -86,16 +86,16 @@ return [
     */
 
     'waits' => [
-        'redis:topup'      => 15,   // เดิม 60
-        'redis:kbank'      => 30,
+        'redis:topup' => 15,   // เดิม 60
+        'redis:kbank' => 30,
         'redis:broadcasts' => 30,
-        'redis:tw'         => 60,
-        'redis:bay'        => 60,
-        'redis:ktb'        => 60,
-        'redis:scb'        => 60,
-        'redis:batch'      => 60,
-        'redis:cashback'   => 60,
-        'redis:ic'         => 60,
+        'redis:tw' => 60,
+        'redis:bay' => 60,
+        'redis:ktb' => 60,
+        'redis:scb' => 60,
+        'redis:batch' => 60,
+        'redis:cashback' => 60,
+        'redis:ic' => 60,
     ],
 
     /*
@@ -110,12 +110,12 @@ return [
     */
 
     'trim' => [
-        'recent' => 5,
-        'pending' => 5,
-        'completed' => 5,
-        'recent_failed' => 5,
-        'failed' => 5,
-        'monitored' => 5,
+        'recent' => 60,
+        'pending' => 60,
+        'completed' => 60,
+        'recent_failed' => 10080, // 7 วัน
+        'failed' => 10080, // 7 วัน
+        'monitored' => 10080, // 7 วัน
     ],
 
     /*
@@ -221,10 +221,10 @@ return [
             'supervisor-daily' => [
                 'workers-name' => env('APP_NAME', 'laravel') . '-daily',
                 'connection' => 'redis',
-                'queue' => ['cashback', 'ic'/*, 'kbank'  <- ย้ายออกแล้ว*/],
-                'balance' => 'auto',
-                'minProcesses' => 2,
-                'maxProcesses' => 2,
+                'queue' => ['cashback', 'ic'],
+                'balance' => 'simple',
+                'minProcesses' => 1,
+                'maxProcesses' => 1,
                 'tries' => 1,
                 'timeout' => 60,
                 'sleep' => 1,
