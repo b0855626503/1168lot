@@ -779,29 +779,19 @@
 						$session = request()->session()->getId();
 					}
 
-					if (!is_null($setting->limit)) {
-						$param = [
-							'username' => $data['username'],
-							'productId' => Str::upper($data['productId']),
-							'gameCode' => $data['gameCode'],
-							'isMobileLogin' => $mobile,
-							'currency' => 'THB',
-							'language' => $lang,
-							'limit' => (int)$setting->limit,
-							'sessionToken' => $session,
-						];
-					} else {
+                    $param = [
+                        'username' => $data['username'],
+                        'productId' => Str::upper($data['productId']),
+                        'gameCode' => $data['gameCode'],
+                        'isMobileLogin' => $mobile,
+                        'currency' => 'THB',
+                        'language' => $lang,
+                        'sessionToken' => $session,
+                    ];
 
-						$param = [
-							'username' => $data['username'],
-							'productId' => Str::upper($data['productId']),
-							'gameCode' => $data['gameCode'],
-							'isMobileLogin' => $mobile,
-							'currency' => 'THB',
-							'language' => $lang,
-							'sessionToken' => $session,
-						];
-					}
+                    if ($setting !== null && $setting->limit !== null) {
+                        $param['limit'] = (int) $setting->limit;
+                    }
 					//                dd($param);
 
 					//                if($pid = 'PGSOFT2'){
