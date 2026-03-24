@@ -565,7 +565,7 @@
 
             if ($cached = Cache::get($cacheKey)) {
                 $this->syncGameListToMongo($productId, (array) ($cached['games'] ?? []));
-                Log::channel('api')->info('getgamelist load game get cache',['response' => $cached]);
+                //Log::channel('api')->info('getgamelist load game get cache',['response' => $cached]);
                 return $cached;
             }
 
@@ -587,7 +587,7 @@
                 // ===== API =====
                 $param    = ['productId' => $productId];
                 $response = $this->GameCurlGet($param, 'seamless/games');
-                Log::channel('api')->info('getgamelist loadgame',['response' => $response]);
+               // Log::channel('api')->info('getgamelist loadgame',['response' => $response]);
                 $ok = is_array($response)
                     && ($response['success'] ?? false) === true
                     && isset($response['data']['games'])
@@ -602,7 +602,7 @@
                 }
 
                 $games  = $response['data']['games'];
-                Log::channel('api')->info('getgamelist game',['response' => $games]);
+               // Log::channel('api')->info('getgamelist game',['response' => $games]);
                 // ===== normalize =====
                 $catMap = [
                     'COCKFIGHT' => 'COCK',
@@ -629,7 +629,7 @@
                     'msg'     => $response['msg'] ?? 'OK',
                     'games'   => $games,
                 ];
-                Log::channel('api')->info('getgamelist game complete',['response' => $data]);
+                //Log::channel('api')->info('getgamelist game complete',['response' => $data]);
 
                 Cache::put($cacheKey, $data, $ttl);
                 return $data;
@@ -724,6 +724,7 @@
         public function login($data)
 		{
 			$pid = Str::upper($data['productId']);
+
 			$return['game'] = $pid;
 			$Agent = new Agent;
 

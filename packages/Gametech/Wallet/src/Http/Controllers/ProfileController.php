@@ -1041,12 +1041,13 @@ class ProfileController extends AppBaseController
 
     public function gameRedirect($method, $id, $game)
     {
-        //        dd($method);
+//                dd($method);
         //        $method = 'transfer';
 
         $pro = false;
         $url = '';
         $user = $this->user();
+//        dd($user->code);
 
         //        if (Cache::has('login_' . $user->code)) {
         //            return view('wallet::customer.game.cannot');
@@ -1070,7 +1071,7 @@ class ProfileController extends AppBaseController
         //            if (!$gameuser) {
         //                return $this->sendError('ไม่พบข้อมูลสมาชิก', 200);
         //            }
-        if (!$gameuser) {
+        if (! $gameuser) {
             //            dd('no user');
             $games = $this->gameRepository->findOneWhere(['enable' => 'Y', 'status_open' => 'Y', 'id' => $method]);
             $member = app('Gametech\Member\Repositories\MemberRepository')->find($user->code);
@@ -1080,7 +1081,7 @@ class ProfileController extends AppBaseController
             //                $gameid = 'MSPORT';
             //            }
 
-            //            dd($gameid);
+//                        dd($games);
             $res = $this->gameUserRepository->addGameUser($games->code, $member->code, ['username' => $member->user_name, 'password' => $member->user_pass, 'product_id' => $gameid, 'user_create' => $member->user_name]);
 //                        dd($res);
             //            $res = $this->gameUserRepository->addGameUser($game->code, $member->code, ['username' => $member->user_name, 'product_id' => 'PGSOFT', 'user_create' => $member->user_name]);
@@ -1126,7 +1127,7 @@ class ProfileController extends AppBaseController
                     'user_update' => 'System Auto',
                     'refer_code' => 0,
                     'refer_table' => 'blank',
-                    'remark' => 'กดเข้าเกม ค่าย ' . $id . ' เกมรหัสที่ ' . $game . ' พร้อมโยกเงินเข้า จำนวน ' . $balance,
+                    'remark' => 'กดเข้าเกม ค่าย '.$id.' เกมรหัสที่ '.$game.' พร้อมโยกเงินเข้า จำนวน '.$balance,
                     'kind' => 'OTHER',
                     'amount' => $balance,
                     'amount_balance' => $gameuser->amount_balance,
@@ -1139,7 +1140,7 @@ class ProfileController extends AppBaseController
             }
         } else {
 
-            $gamechk = $this->gameUserRepository->findOneWhere(['member_code' => $user->code, 'game_code' => $gameuser->game_code]);
+            $gamechk = $this->gameUserRepository->findOneWhere(['member_code' => $user->code, 'game_code' => 1]);
             if ($gamechk && $gamechk->pro_code > 0) {
 
                 $promotion = app('Gametech\Promotion\Repositories\PromotionRepository')->where('code', $gamechk->pro_code)->first();
@@ -1175,7 +1176,7 @@ class ProfileController extends AppBaseController
                     if ($promotion->poker == 'Y') {
                         $can[] = 'ไพ่โป๊กเกอร์';
                     }
-
+//                    dd($game_s->category);
                     switch ($game_s->category) {
                         case 'EGAMES' :
                             if ($promotion->slot == 'Y') {
@@ -1211,7 +1212,7 @@ class ProfileController extends AppBaseController
                             }
                             break;
                         case 'CARD' :
-                            if ($promotion->CARD == 'Y') {
+                            if ($promotion->card == 'Y') {
                                 $login = true;
                             }
                             break;
@@ -1230,7 +1231,7 @@ class ProfileController extends AppBaseController
                             $login = false;
                     }
 
-                    if (!$login) {
+                    if (! $login) {
                         $cannot = implode(',', $can);
 
                         return view('wallet::customer.game.procannot', compact('cannot'));
@@ -1258,7 +1259,7 @@ class ProfileController extends AppBaseController
                 'user_update' => 'System Auto',
                 'refer_code' => 0,
                 'refer_table' => 'blank',
-                'remark' => 'กดเข้าเกม ค่าย ' . $id . ' เกม ' . $game_s->name,
+                'remark' => 'กดเข้าเกม ค่าย '.$id.' เกม '.$game_s->name,
                 'kind' => 'OTHER',
                 'amount' => 0,
                 'amount_balance' => $gameuser->amount_balance,
@@ -1291,8 +1292,10 @@ class ProfileController extends AppBaseController
         //        if($pid == 'PGSOFT2'){
         //            return view('wallet::customer.game.redirect2', compact('url'));
         //        }else{
-        return view($this->_config['view'], compact('url'));
-        //        }
+//        return view($this->_config['view'], compact('url'));
+        return response()
+            ->view($this->_config['view'], ['url' => $url]);
+
         //
         //        if ($result['success'] === true) {
         //            return redirect()->away($result['url']);

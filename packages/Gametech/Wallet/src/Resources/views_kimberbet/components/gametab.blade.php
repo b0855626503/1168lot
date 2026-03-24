@@ -22,12 +22,12 @@
                             :class="{ active: selectedTab === type.key }" v-for="(type, i) in categories"
                             :key="type.key" @click="selectTabScroll(type.key)">
                             <img
-                                    :src="`/assets/kimberbet/images/icon/mini_${type.key}.svg`"
-                                    alt=""
-                                    class="menu-icon"
-                                    loading="lazy"
-                                    decoding="async"
-                                    v-on:error="handleImgError($event)"/>
+                                :src="`/assets/kimberbet/images/icon/mini_${type.key}.svg`"
+                                alt=""
+                                class="menu-icon"
+                                loading="lazy"
+                                decoding="async"
+                                v-on:error="handleImgError($event)"/>
                             <span class="menu-name lh-1 pt-1 small fw-light text-white"
                                   v-text="getGameLabel(type.key)"></span>
                         </li>
@@ -50,28 +50,30 @@
                                         style="">
 
                                         <li
-                                                v-for="(item, index) in limitedGames"
-                                                :key="(item.id || item.gameId || index) + '-' + (selectedProvider?.provider || selectedProvider || '')"
-                                                :class="['game-item', getGameItemClass(item)]"
+                                            v-for="(item, index) in limitedGames"
+                                            :key="(item.id || item.gameId || index) + '-' + (selectedProvider?.provider || selectedProvider || '')"
+                                            :class="['game-item', getGameItemClass(item)]"
                                         >
-                                            <div class="game-title w-100 text-content text-center" v-text="item.gameName"></div>
+                                            <div class="game-title w-100 text-content text-center"
+                                                 v-text="item.gameName"></div>
 
                                             <div class="img-wrap ratio-3x4">
                                                 <img
-                                                        v-lazyimg="item.image.vertical"
-                                                        alt=""
-                                                        class="game-img w-100 fade-in-img"
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        v-on:load="onImgLoad"
-                                                        v-on:error="handleImgError($event)"
+                                                    v-lazyimg="item.image.vertical"
+                                                    alt=""
+                                                    class="game-img w-100 fade-in-img"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    v-on:load="onImgLoad"
+                                                    v-on:error="handleImgError($event)"
                                                 />
                                             </div>
 
                                             <div class="d-flex justify-content-center">
                                                 <button class="py-1 btn btn-custom-primary btn-play d-flex justify-content-center align-items-center"
                                                         v-on:click.prevent="openGamePopup(item)">
-                                                    <i class="bi bi-controller me-1"></i> <span v-text="trans('app.home.playgame')"></span>
+                                                    <i class="bi bi-controller me-1"></i> <span
+                                                        v-text="trans('app.home.playgame')"></span>
                                                 </button>
                                             </div>
                                         </li>
@@ -183,15 +185,20 @@
             }
 
             /* ข้าม layout/paint ของการ์ดที่อยู่นอกจอ (เบราว์เซอร์ใหม่รองรับ) */
-            .game-item{
+            .game-item {
                 content-visibility: auto;
                 contain-intrinsic-size: 360px 240px; /* ประมาณการความสูงกว้างของการ์ด ช่วยให้ scrollBar คงที่ */
             }
 
             /* ลด motion เพื่อเครื่องช้า/ผู้ใช้ตั้งค่าไว้ */
-            @media (prefers-reduced-motion: reduce){
-                .fade-in-img{ transition: none !important; }
-                .img-wrap::before{ animation: none !important; }
+            @media (prefers-reduced-motion: reduce) {
+                .fade-in-img {
+                    transition: none !important;
+                }
+
+                .img-wrap::before {
+                    animation: none !important;
+                }
             }
         </style>
     @endverbatim
@@ -236,6 +243,7 @@
             },
 
             data: function () {
+                const w = 1024, h = 720, left = (screen.width / 2) - (w / 2), top = (screen.height / 2) - (h / 2);
                 return {
                     providerList: [],
                     selectedTab: 'slot',
@@ -253,7 +261,20 @@
                     pageEnd: 0,
                     ioGames: null,            // IntersectionObserver ของ sentinel
                     appendLock: false,        // กันยิงโหลดซ้อน
+                    popupName: 'GamePopup',
+                    popupFeatures: `popup=yes,width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=0,location=0,menubar=0,status=0`,
+
                 }
+            },
+            created() {
+                this._popupWatchTimer = null;
+                this._popupWatchRAF   = null;
+                this._gameWin         = null;
+                this._popupState      = 'idle';   // 'idle' | 'opening' | 'inProvider'
+                this._closedStreak    = 0;
+                this._ignoreClosedUntil = 0;
+                this._enteredProviderAt = 0;
+                this._boundOnPopupMessage = (e) => this.onPopupMessage(e);
             },
             computed: {
                 categories() {
@@ -312,7 +333,7 @@
                             entries.forEach(entry => {
                                 if (entry.isIntersecting) loadMore();
                             });
-                        }, { root: null, rootMargin: '600px 0px', threshold: 0 });
+                        }, {root: null, rootMargin: '600px 0px', threshold: 0});
                         this.ioGames.observe(el);
                     } else {
                         // fallback: scroll passive
@@ -320,7 +341,7 @@
                             const rect = el.getBoundingClientRect();
                             if (rect.top < window.innerHeight + 600) loadMore();
                         }, 150);
-                        window.addEventListener('scroll', onScroll, { passive: true });
+                        window.addEventListener('scroll', onScroll, {passive: true});
                         this.$once('hook:beforeDestroy', () => window.removeEventListener('scroll', onScroll));
                     }
                 },
@@ -330,9 +351,14 @@
                     return function (...args) {
                         const now = Date.now();
                         if (now - last >= wait) {
-                            last = now; fn.apply(this, args);
+                            last = now;
+                            fn.apply(this, args);
                         } else if (!timer) {
-                            timer = setTimeout(() => { last = Date.now(); timer = null; fn.apply(this, args); }, wait - (now - last));
+                            timer = setTimeout(() => {
+                                last = Date.now();
+                                timer = null;
+                                fn.apply(this, args);
+                            }, wait - (now - last));
                         }
                     };
                 },
@@ -340,11 +366,11 @@
                     if (this.ioGames) this.ioGames.disconnect();
                     this.visibleGames = [];
                     // เติมหน้าแรกแบบ time-sliced เพื่อไม่บล็อก
-                    this.appendMoreGames({ initial: true }).then(() => this.setupGamesInfinite());
+                    this.appendMoreGames({initial: true}).then(() => this.setupGamesInfinite());
                 },
 
                 // เติมรายการแบบเป็นก้อน + time-slicing
-                async appendMoreGames({ initial = false } = {}) {
+                async appendMoreGames({initial = false} = {}) {
                     if (this.appendLock) return;
                     this.appendLock = true;
 
@@ -372,7 +398,7 @@
 
                             // ใช้ rAF / rIC เพื่อปล่อยเฟรม
                             if ('requestIdleCallback' in window) {
-                                requestIdleCallback(step, { timeout: 100 });
+                                requestIdleCallback(step, {timeout: 100});
                             } else {
                                 requestAnimationFrame(step);
                             }
@@ -422,43 +448,9 @@
                     }
                 },
                 handleImgError(event) {
-                    event.target.src = '/assets/kimberbet/images/icon/mini_slot.svg';
+                    event.target.src = '/storage/game_img/default.webp';
                 },
-                trans(key, replace = {}) {
-                    try {
-                        // รองรับกรณีมี prefix 'app.' ใน key → ตัดออกอัตโนมัติ
-                        if (typeof key === 'string' && key.startsWith('app.')) {
-                            key = key.slice(4); // 'app.'.length = 4
-                        }
 
-                        // รองรับทั้งโครงสร้าง i18n และ i18n.app
-                        const dictRoot = (window.i18n && (window.i18n.app || window.i18n)) || {};
-
-                        // เดินหา key แบบ a.b.c
-                        const parts = String(key).split('.');
-                        let t = dictRoot;
-                        for (let i = 0; i < parts.length; i++) {
-                            const p = parts[i];
-                            if (t && Object.prototype.hasOwnProperty.call(t, p)) {
-                                t = t[p];
-                            } else {
-                                t = null; break;
-                            }
-                        }
-
-                        let text = (typeof t === 'string') ? t : key; // fallback เป็น key ถ้าไม่เจอ
-
-                        // แทนที่ :placeholder
-                        for (const ph in replace) {
-                            if (Object.prototype.hasOwnProperty.call(replace, ph)) {
-                                text = text.replace(`:${ph}`, replace[ph]);
-                            }
-                        }
-                        return text;
-                    } catch (e) {
-                        return key; // กันพังทุกกรณี
-                    }
-                },
                 selectTab(key) {
                     console.log('select' + key);
                     // const el = document.querySelector('#gametab');
@@ -520,39 +512,6 @@
 
 
                 },
-                enterGame(game) {
-                    console.log('กำลังโหลดเกม:', game);
-
-                    fetch(`/api/login-to-game/${game.id}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.url) {
-                                const gameUrl = data.url;
-
-                                if (this.isMobile()) {
-                                    // 👉 บนมือถือ เปิดแท็บใหม่
-                                    window.open(gameUrl, '_blank');
-                                } else {
-                                    // 👉 บน desktop เปิด popup window
-                                    const width = 1024;
-                                    const height = 720;
-                                    const left = (screen.width / 2) - (width / 2);
-                                    const top = (screen.height / 2) - (height / 2);
-                                    window.open(
-                                        gameUrl,
-                                        'GameWindow',
-                                        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-                                    );
-                                }
-                            } else {
-                                alert('ไม่สามารถเข้าสู่เกมได้');
-                            }
-                        })
-                        .catch(err => {
-                            console.error('Login API ล้มเหลว:', err);
-                            alert('เกิดข้อผิดพลาด');
-                        });
-                },
                 savePlayedGame(item) {
                     const key = 'playedGames';
                     let list = JSON.parse(localStorage.getItem(key)) || [];
@@ -572,11 +531,115 @@
                     }
                 },
                 openGamePopup(game) {
+                    const url = this.apiGetloginTemplate
+                        .replace('__TYPE__', game.gameCategory || game.providerType || 'slot')
+                        .replace('__PROVIDER__', game.provider || game.providerCode || game.providerName || '')
+                        .replace('__ID__', game.id || 'lobby');
+
+                    this.savePlayedGame(game);
+
+                    // กัน false positive ระหว่าง redirect: 4–6 วินาที
+                    this._ignoreClosedUntil = Date.now() + 6000;
+                    this._popupState = 'opening';
+
+                    let win = window.__GT_GAME_POPUP;
+                    if (!win || win.closed) {
+                        try { win = window.open('', this.popupName, this.popupFeatures); } catch (e) { win = null; }
+                    }
+                    if (!win || win.closed) {
+                        win = window.open(url, this.popupName, this.popupFeatures);
+                        if (!win) { alert('โปรดอนุญาตป๊อปอัป'); return; }
+                        window.__GT_GAME_POPUP = win;
+                        this._gameWin = win;
+                        this.watchPopup(win);
+                        try { win.focus(); } catch {}
+                        return;
+                    }
+                    // reuse
+                    try { win.focus(); } catch {}
+                    try { win.location.replace(url); } catch { win.location.href = url; }
+                    window.__GT_GAME_POPUP = win;
+                    this._gameWin = win;
+                    this.watchPopup(win);
+
+                    setTimeout(() => {
+                        if (this._popupState !== 'inProvider') {
+                            this._popupState = 'inProvider';
+                            this._enteredProviderAt = Date.now(); // << สำคัญ
+                            this._ignoreClosedUntil = Math.max(this._ignoreClosedUntil, Date.now() + 4000);
+                            // console.log('[Opener] fallback: assume inProvider');
+                        }
+                    }, 800);
+                },
+
+                watchPopup(win) {
+                    this.clearPopupWatch();
+                    this._closedStreak = 0;
+
+                    this._popupWatchTimer = setInterval(() => {
+                        const now = Date.now();
+
+                        // 1) ช่วง ignore ระหว่าง redirect แรก
+                        if (now < this._ignoreClosedUntil) {
+                            this._closedStreak = 0;
+                            return;
+                        }
+
+                        // 2) อัปเดตสเตตัสปิด
+                        if (!win) {
+                            this._closedStreak++;
+                        } else {
+                            try { this._closedStreak = win.closed ? this._closedStreak + 1 : 0; }
+                            catch { this._closedStreak = 0; } // cross-origin access → ถือว่ายังเปิด
+                        }
+
+                        // 3) เงื่อนไข “ปิดจริง”
+                        const openerFocused = document.visibilityState === 'visible' && document.hasFocus();
+                        const enteredAgo = this._enteredProviderAt ? (now - this._enteredProviderAt) : 0;
+
+                        if (this._popupState === 'inProvider'
+                            && enteredAgo > 1500               // อยู่ในหน้า provider แล้วอย่างน้อย 1.5s
+                            && openerFocused                   // หน้าแม่โฟกัส (ผู้ใช้กลับมาแล้ว)
+                            && this._closedStreak >= 3) {      // ปิดติดกัน ≥ 3 รอบ (≈2.1s ที่ interval=700ms)
+                            this.clearPopupWatch();
+                            this.onPopupClosed();
+                        }
+                    }, 700);
+                },
+
+
+
+                clearPopupWatch() {
+                    if (this._popupWatchTimer) {
+                        clearInterval(this._popupWatchTimer);
+                        this._popupWatchTimer = null;
+                    }
+                    if (this._popupWatchRAF) {
+                        cancelAnimationFrame(this._popupWatchRAF);
+                        this._popupWatchRAF = null;
+                    }
+                },
+
+                onPopupClosed() {
+                    // ที่นี่ทำสิ่งที่อยากทำเมื่อปิด popup แล้ว เช่น:
+                    // - รีเฟรชเครดิต
+                    // - ปลดล็อกปุ่ม
+                    // - ล้างรีเฟอเรนซ์
+                    this._gameWin = null;
+                    // ตัวอย่าง:
+                    const comp = this.$root?.$refs?.memberComponent;
+                    if (comp?.loadCredit) comp.loadCredit();
+                },
+                openGamePopup_(game) {
                     // const url = `https://api.leo918.com/api//${game.id}`;
                     const url = this.apiGetloginTemplate
-                        .replace('__TYPE__', game.gameType ?? game.providerType)
+                        .replace('__TYPE__', game.gameCategory)
                         .replace('__PROVIDER__', game.provider)
-                        .replace('__ID__', game.id ?? 'lobby');
+                        .replace('__ID__', game.id);
+                    // const url = this.apiGetloginTemplate
+                    //     .replace('__TYPE__', game.gameType ?? game.providerType)
+                    //     .replace('__PROVIDER__', game.provider)
+                    //     .replace('__ID__', game.id ?? 'lobby');
 
                     this.savePlayedGame(game);
 
@@ -599,16 +662,33 @@
                 },
                 isMobile() {
                     return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                }
+                },
+                onPopupMessage(e) {
+                    // ขั้นทดสอบ: ยอมทุก origin ก่อน (เพราะเรา postMessage('*') จาก loader)
+                    // ภายหลังค่อยบีบให้เท่ากับโดเมนของคุณ
+                    const data = e.data || {};
+                    if (data && data.type === 'game:redirect_to_provider') {
+                        this._popupState = 'inProvider';
+                        this._enteredProviderAt = Date.now(); // << สำคัญ
+                        this._ignoreClosedUntil = Math.max(this._ignoreClosedUntil, Date.now() + 4000);
+                        console.log('[Opener] got redirect_to_provider; state=inProvider');
+                    }
+                },
+
             },
             mounted() {
+                window.addEventListener('message', this._boundOnPopupMessage);
                 this.customClassMap = {};
                 if (this.categories.length) {
                     this.selectTab(this.categories[0].key);
                 }
                 this.$nextTick(() => this.setupGamesInfinite());
+
+
             },
             beforeDestroy() {
+                window.removeEventListener('message', this._boundOnPopupMessage);
+                this.clearPopupWatch();
                 if (this.ioGames) {
                     this.ioGames.disconnect();
                     this.ioGames = null;
