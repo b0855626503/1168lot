@@ -10,7 +10,6 @@ use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use MongoDB\BSON\UTCDateTime;
 
 class NewCommonFlowController extends AppBaseController
@@ -215,7 +214,7 @@ class NewCommonFlowController extends AppBaseController
 
     protected function recordWalletTransaction(array $walletTxn, string $direction, float $amount, float $balanceBefore, float $balanceAfter): void
     {
-        if ($amount <= 0 || ! Schema::hasTable('wallet_transactions')) {
+        if ($amount <= 0) {
             return;
         }
 
@@ -270,13 +269,8 @@ class NewCommonFlowController extends AppBaseController
             'updated_at' => now(),
         ];
 
-        if (Schema::hasColumn('wallet_transactions', 'provider_txn_id')) {
-            $insert['provider_txn_id'] = $txnIdFromRequest !== '' ? $txnIdFromRequest : null;
-        }
-
-        if (Schema::hasColumn('wallet_transactions', 'provider_round_id')) {
-            $insert['provider_round_id'] = $roundIdFromRequest !== '' ? $roundIdFromRequest : null;
-        }
+        $insert['provider_txn_id'] = $txnIdFromRequest !== '' ? $txnIdFromRequest : null;
+        $insert['provider_round_id'] = $roundIdFromRequest !== '' ? $roundIdFromRequest : null;
 
         DB::table('wallet_transactions')->insert($insert);
     }
