@@ -48,29 +48,28 @@ class LottoController extends BaseController
 
             $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'code']);
 
-            $markets = LotteryMarket::query()
+            $marketsQuery = LotteryMarket::query()
                 ->where('is_enabled', true)
                 ->orderBy('group_id')
-                ->orderBy('name')
-                ->get([
-                    'id',
-                    'group_id',
-                    'name',
-                    'name_en',
-                    'name_kh',
-                    'name_laos',
-                    'logo',
-                    'icon',
-                    'is_enabled',
-                ]);
+                ->orderBy('name');
 
             if ($groups->isNotEmpty()) {
-                $markets->whereIn('group_id', $groups->pluck('id')->all());
+                $marketsQuery->whereIn('group_id', $groups->pluck('id')->all());
             } else {
-                $markets->whereRaw('1 = 0');
+                $marketsQuery->whereRaw('1 = 0');
             }
 
-            $markets = $markets->get();
+            $markets = $marketsQuery->get([
+                'id',
+                'group_id',
+                'name',
+                'name_en',
+                'name_kh',
+                'name_laos',
+                'logo',
+                'icon',
+                'is_enabled',
+            ]);
 
             $latestDrawIds = LottoDraw::query()
                 ->selectRaw('MAX(id) as id')
