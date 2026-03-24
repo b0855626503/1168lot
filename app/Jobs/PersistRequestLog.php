@@ -24,7 +24,11 @@ class PersistRequestLog implements ShouldQueue
     {
         // 1) mask header/body ที่อาจมี PII/secret
         $headers = $this->data['headers'] ?? [];
-        unset($headers['authorization'], $headers['cookie']);
+        if (is_array($headers)) {
+            $headers = $this->maskSensitiveHeaders($headers);
+        } else {
+            $headers = [];
+        }
 
         $body = $this->data['body'] ?? [];
         if (is_array($body)) {
@@ -108,6 +112,57 @@ class PersistRequestLog implements ShouldQueue
     {
         $salt = config('app.key') ?: 'trace_salt';
         return hash_hmac('sha1', implode('|', $parts), $salt);
+    }
+
+    private function maskSensitiveHeaders(array $headers): array
+    {
+        $normalized = [];
+        foreach ($headers as $key => $value) {
+            $lowerKey = Str::lower((string) $key);
+
+            if ($lowerKey === 'cookie') {
+                continue;
+            }
+
+            if ($lowerKey === 'authorization') {
+                if (is_array($value)) {
+                    $normalized[$key] = array_map(function ($item) {
+                        return $this->maskAuthorizationValue((string) $item);
+                    }, $value);
+                } else {
+                    $normalized[$key] = $this->maskAuthorizationValue((string) $value);
+                }
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
+    }
+
+    private function maskAuthorizationValue(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        if (Str::startsWith($value, 'Bearer ')) {
+            $token = substr($value, 7);
+            return 'Bearer ' . $this->maskLastThree($token);
+        }
+
+        return $this->maskLastThree($value);
+    }
+
+    private function maskLastThree(string $value): string
+    {
+        $length = strlen($value);
+        if ($length <= 3) {
+            return '***';
+        }
+
+        return substr($value, 0, $length - 3) . '***';
     }
 
     private function maskSensitiveValues(array $payload): array
