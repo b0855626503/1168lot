@@ -27,8 +27,11 @@ class PersistRequestLog implements ShouldQueue
         unset($headers['authorization'], $headers['cookie']);
 
         $body = $this->data['body'] ?? [];
-        data_set($body, 'password', '***');
-        data_set($body, 'token', '***');
+        if (is_array($body)) {
+            $body = $this->maskSensitiveValues($body);
+        } else {
+            $body = [];
+        }
 
         // 2) บังคับ response เป็นสตริง + limit ความยาว
         $response = $this->stringify($this->data['response'] ?? '');
@@ -105,5 +108,29 @@ class PersistRequestLog implements ShouldQueue
     {
         $salt = config('app.key') ?: 'trace_salt';
         return hash_hmac('sha1', implode('|', $parts), $salt);
+    }
+
+    private function maskSensitiveValues(array $payload): array
+    {
+        $sensitiveKeys = [
+            'password',
+            'token',
+            'access_token',
+            'refresh_token',
+            'authorization',
+        ];
+
+        foreach ($payload as $key => $value) {
+            if (is_array($value)) {
+                $payload[$key] = $this->maskSensitiveValues($value);
+                continue;
+            }
+
+            if (in_array(Str::lower((string) $key), $sensitiveKeys, true)) {
+                $payload[$key] = '***';
+            }
+        }
+
+        return $payload;
     }
 }
