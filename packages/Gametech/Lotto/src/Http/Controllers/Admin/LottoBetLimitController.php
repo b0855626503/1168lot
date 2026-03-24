@@ -67,6 +67,8 @@ class LottoBetLimitController extends AppBaseController
                     'id' => (int) $market->id,
                     'name' => (string) $market->name,
                     'code' => (string) $market->code,
+                    'logo' => (string) ($market->logo ?? ''),
+                    'icon' => (string) ($market->icon ?? ''),
                     'settings' => $betSettingRows,
                 ];
             })->values()->all();

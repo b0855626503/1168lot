@@ -45,6 +45,15 @@
             white-space: nowrap;
         }
 
+        .lotto-rate-plans-market-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+            flex: 0 0 20px;
+        }
+
         .lotto-copy-group-box {
             border: 1px solid #dee2e6;
             border-radius: 0.25rem;
@@ -124,6 +133,7 @@
                             <tr v-for="market in activeGroup.markets" :key="'m-' + market.id">
                                 <td>
                                     <div class="lotto-rate-plans-market-label">
+                                        <img v-if="market.logo || market.icon" :src="market.logo || market.icon" alt="" class="lotto-rate-plans-market-thumb">
                                         <strong>@{{ market.name }}</strong>
                                         <small class="text-muted">@{{ market.code }}</small>
                                     </div>
@@ -268,7 +278,11 @@
                                              v-model="copyForm.target_market_ids"
                                              :value="market.id"
                                              size="sm">
-                                @{{ market.name }} <small class="text-muted">@{{ market.code }}</small>
+                                <span class="lotto-rate-plans-market-label">
+                                    <img v-if="market.logo || market.icon" :src="market.logo || market.icon" alt="" class="lotto-rate-plans-market-thumb">
+                                    <span>@{{ market.name }}</span>
+                                    <small class="text-muted">@{{ market.code }}</small>
+                                </span>
                             </b-form-checkbox>
                         </div>
                     </div>

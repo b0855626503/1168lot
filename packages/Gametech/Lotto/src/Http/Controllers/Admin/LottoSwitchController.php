@@ -44,6 +44,8 @@ class LottoSwitchController extends AppBaseController
                     'id' => (int) $item->id,
                     'name' => (string) $item->name,
                     'code' => (string) $item->code,
+                    'logo' => (string) ($item->logo ?? ''),
+                    'icon' => (string) ($item->icon ?? ''),
                     'group_id' => (int) $item->group_id,
                     'group_name' => optional($item->group)->name ? (string) $item->group->name : '-',
                     'is_enabled' => (bool) $item->is_enabled,

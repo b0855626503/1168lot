@@ -56,6 +56,15 @@
             text-overflow: ellipsis;
         }
 
+        .lotto-switch-dashboard .market-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+            flex: 0 0 20px;
+        }
+
         .lotto-switch-dashboard .market-label span {
             white-space: nowrap;
             overflow: hidden;
@@ -136,6 +145,7 @@
                                     <div v-for="item in filteredMarkets" :key="'m-row-' + item.id"
                                          class="d-flex align-items-center justify-content-between border rounded market-row">
                                         <div class="market-label">
+                                            <img v-if="item.logo || item.icon" :src="item.logo || item.icon" alt="" class="market-thumb">
                                             <span>@{{ item.name }}</span>
                                             <small class="text-muted">@{{ item.code }}</small>
                                         </div>
