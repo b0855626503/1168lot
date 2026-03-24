@@ -18,7 +18,8 @@
                             <optgroup v-for="group in markets" :key="group.label" :label="group.label">
                                 <option v-for="option in group.options"
                                         :key="option.value"
-                                        :value="String(option.value)">
+                                        :value="String(option.value)"
+                                        :data-logo="option.logo || ''">
                                     @{{ option.text }}
                                 </option>
                             </optgroup>
@@ -509,11 +510,37 @@
 
                     this.destroyMarketSelect2();
 
+                    const renderMarketOption = (state) => {
+                        if (!state.id) {
+                            return state.text;
+                        }
+
+                        const optionEl = state.element;
+                        const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
+                        const safeText = window.jQuery('<span/>').text(state.text || '').html();
+
+                        if (!logo) {
+                            return window.jQuery('<span>' + safeText + '</span>');
+                        }
+
+                        return window.jQuery(
+                            '<span style="display:flex;align-items:center;gap:8px;">'
+                            + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+                            + '<span>' + safeText + '</span>'
+                            + '</span>'
+                        );
+                    };
+
                     $select.select2({
                         width: '100%',
                         dropdownParent: window.jQuery(this.$refs.addedit.$el),
                         placeholder: '-- เลือกรายการหวย --',
                         allowClear: false,
+                        templateResult: renderMarketOption,
+                        templateSelection: renderMarketOption,
+                        escapeMarkup: function (markup) {
+                            return markup;
+                        },
                     });
 
                     $select.on('change.drawMarket', () => {

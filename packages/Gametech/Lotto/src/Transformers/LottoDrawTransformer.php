@@ -29,7 +29,7 @@ class LottoDrawTransformer extends TransformerAbstract
         
         return [
             'id'             => (int) $model->id,
-            'market_name'    => $model->market->name ?? '-',
+            'market_name'    => $this->renderMarketName($model),
             'draw_date'      => $model->draw_date ? $model->draw_date->format('d/m/Y') : '-',
             'open_at'        => $model->open_at ? $model->open_at->format('d/m/Y H:i') : '-',
             'close_at'       => $model->close_at ? $model->close_at->format('d/m/Y H:i') : '-',
@@ -59,5 +59,22 @@ class LottoDrawTransformer extends TransformerAbstract
     private function renderCountLink(string $handlerName, int $drawId, int $count): string
     {
         return '<a href="javascript:void(0);" onclick="' . $handlerName . '(' . $drawId . ')" class="font-weight-bold">' . $count . '</a>';
+    }
+
+    private function renderMarketName(LottoDraw $model): string
+    {
+        $name = (string) ($model->market->name ?? '-');
+        $logo = (string) ($model->market->logo ?? '');
+        $icon = (string) ($model->market->icon ?? '');
+        $src = trim($logo) !== '' ? $logo : $icon;
+
+        if (trim($src) === '') {
+            return e($name);
+        }
+
+        return '<span style="display:inline-flex;align-items:center;gap:8px;">'
+            . '<img src="' . e($src) . '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+            . '<span>' . e($name) . '</span>'
+            . '</span>';
     }
 }

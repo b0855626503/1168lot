@@ -52,7 +52,7 @@ class LottoDrawController extends AppBaseController
             ->with('group:id,name,sort')
             ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'group_id', 'name'])
+            ->get(['id', 'group_id', 'name', 'logo', 'icon'])
             ->groupBy(static function (LotteryMarket $market): string {
                 return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
             })
@@ -64,6 +64,7 @@ class LottoDrawController extends AppBaseController
                             'value' => (int) $market->id,
                             'text' => (string) $market->name,
                             'group_id' => (int) $market->group_id,
+                            'logo' => (string) ($market->logo ?: $market->icon ?: ''),
                         ];
                     })->values()->toArray(),
                 ];

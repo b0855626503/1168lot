@@ -22,10 +22,36 @@
                     $marketSelect.select2('destroy');
                 }
 
+                const renderMarketOption = function (state) {
+                    if (!state.id) {
+                        return state.text;
+                    }
+
+                    const optionEl = state.element;
+                    const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
+                    const safeText = $('<span/>').text(state.text || '').html();
+
+                    if (!logo) {
+                        return $('<span>' + safeText + '</span>');
+                    }
+
+                    return $(
+                        '<span style="display:flex;align-items:center;gap:8px;">'
+                        + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+                        + '<span>' + safeText + '</span>'
+                        + '</span>'
+                    );
+                };
+
                 $marketSelect.select2({
                     width: '100%',
                     placeholder: 'ค้นหารายการหวย',
                     allowClear: true,
+                    templateResult: renderMarketOption,
+                    templateSelection: renderMarketOption,
+                    escapeMarkup: function (markup) {
+                        return markup;
+                    },
                 });
             };
 
