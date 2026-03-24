@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 class GenerateAutoLottoDrawsCommand extends Command
 {
     protected $signature = 'lotto:generate-auto-draws
-        {--date= : Start date (Y-m-d). Default=today}
+        {--date= : Start date (Y-m-d). Default=tomorrow}
         {--days=3 : Number of days to generate (min 1, max 30)}
         {--market_id= : Generate only one market id}
         {--dry-run : Preview only without creating draws}';
@@ -121,7 +121,9 @@ class GenerateAutoLottoDrawsCommand extends Command
     private function resolveStartDate(string $date): ?Carbon
     {
         if (trim($date) === '') {
-            return now()->startOfDay();
+            return now((string) config('app.timezone', 'Asia/Bangkok'))
+                ->addDay()
+                ->startOfDay();
         }
 
         try {
@@ -165,4 +167,3 @@ class GenerateAutoLottoDrawsCommand extends Command
         ];
     }
 }
-
