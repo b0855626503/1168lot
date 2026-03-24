@@ -5,6 +5,7 @@ namespace Gametech\Admin\Http\Controllers;
 use App\Libraries\KbankOut;
 use App\Libraries\ScbOut;
 use App\Services\Dashboard\DashboardWebCodeResolver;
+use App\Services\Online\MemberOnlineService;
 use Carbon\Carbon;
 use Gametech\Admin\Services\DashboardService;
 use Gametech\Lotto\Models\LotteryMarket;
@@ -13,7 +14,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Klevze\OnlineUsers\Facades\OnlineUsers;
 
 class DashboardController extends AppBaseController
 {
@@ -632,7 +632,7 @@ class DashboardController extends AppBaseController
                 break;
 
             case 'online':
-                $data = OnlineUsers::getActiveUsers() ?? 0;
+                $data = app(MemberOnlineService::class)->countActive();
                 //                $data  = DB::table('client_presence')
                 //                    ->select(DB::raw('COUNT(DISTINCT client_id) AS online_clients'))
                 //                    ->where('last_seen_at', '>=', DB::raw('NOW() - INTERVAL 5 MINUTE'))

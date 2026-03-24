@@ -5,7 +5,9 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\RealtimeController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\SlideController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
@@ -32,6 +34,10 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
                 ->name('frontend.api.v1.games.list');
             Route::get('slides', [SlideController::class, 'list'])
                 ->name('frontend.api.v1.slides.list');
+            Route::get('meta/online-members', [OnlineController::class, 'count'])
+                ->name('frontend.api.v1.meta.online_members');
+            Route::get('realtime/config', [RealtimeController::class, 'config'])
+                ->name('frontend.api.v1.realtime.config');
 
             Route::get('lotto/draws', [LottoController::class, 'draws'])
                 ->name('frontend.api.v1.lotto.draws');
@@ -51,6 +57,12 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
                 ->name('frontend.api.v1.member.balance');
             Route::get('member/loadbalance', [MemberController::class, 'loadBalance'])
                 ->name('frontend.api.v1.member.loadbalance');
+            Route::get('member/realtime-context', [RealtimeController::class, 'memberContext'])
+                ->name('frontend.api.v1.member.realtime_context');
+            Route::post('member/heartbeat', [OnlineController::class, 'heartbeat'])
+                ->name('frontend.api.v1.member.heartbeat');
+            Route::post('realtime/auth', [RealtimeController::class, 'authenticate'])
+                ->name('frontend.api.v1.realtime.auth');
 
             Route::post('wallet/withdraw', [WithdrawController::class, 'store'])
                 ->name('frontend.api.v1.wallet.withdraw');

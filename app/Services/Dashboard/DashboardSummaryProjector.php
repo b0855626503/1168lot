@@ -13,6 +13,7 @@ class DashboardSummaryProjector
 
     private array $tableCache = [];
     private array $columnCache = [];
+    private array $columnListingCache = [];
 
     public function projectDaily(string $summaryDate, string $webCode): array
     {
@@ -1152,7 +1153,14 @@ class DashboardSummaryProjector
     {
         $key = $table . '.' . $column;
         if (!array_key_exists($key, $this->columnCache)) {
-            $this->columnCache[$key] = $this->hasTable($table) && Schema::hasColumn($table, $column);
+            if (!$this->hasTable($table)) {
+                $this->columnCache[$key] = false;
+            } else {
+                if (!array_key_exists($table, $this->columnListingCache)) {
+                    $this->columnListingCache[$table] = Schema::getColumnListing($table);
+                }
+                $this->columnCache[$key] = in_array($column, $this->columnListingCache[$table], true);
+            }
         }
 
         return $this->columnCache[$key];

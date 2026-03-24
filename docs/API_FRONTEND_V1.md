@@ -812,7 +812,256 @@ Response ตัวอย่าง
 
 ---
 
-## สรุปสถานะทดสอบ (2026-03-21)
+### 9) Realtime (อัปเดตข้อมูลแบบทันที)
+
+หัวข้อนี้สำหรับทีม Next.js เพื่อให้เห็นข้อมูลใหม่ทันที เช่น
+- มีการเติมเงินสำเร็จ -> โชว์ toast + อัปเดตยอดเงิน
+- หวยปิดรับ/ออกผล -> แจ้งเตือนและรีเฟรชหน้าที่เกี่ยวข้อง
+
+#### 9.1 ดึง realtime config
+- `GET /realtime/config`
+- Auth: ไม่ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูล realtime config สำเร็จ",
+  "realtime": {
+    "broadcaster": "pusher",
+    "key": "app-key",
+    "ws_host": "api.example.com",
+    "ws_port": 6001,
+    "ws_path": "",
+    "ws_scheme": "http",
+    "force_tls": false,
+    "public_channel": "APP_events",
+    "private_channel_member_template": "APP_members.{member_code}",
+    "events": [
+      "member.activity.updated",
+      "member.balance.updated",
+      "public.activity.updated",
+      "wallet.deposit_approved",
+      "wallet.withdraw_approved",
+      "wallet.rollback_applied",
+      "lotto.draw_closed",
+      "lotto.draw_resulted",
+      "lotto.draw.status.changed",
+      "lotto.ticket.list.changed"
+    ]
+  }
+}
+```
+
+#### 9.2 ดึง channel ส่วนตัวของสมาชิก
+- `GET /member/realtime-context`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "ดึง realtime member context สำเร็จ",
+  "member_code": 10001,
+  "private_channel": "APP_members.10001"
+}
+```
+
+#### 9.3 Auth สำหรับ Private Channel (ใช้ Bearer token)
+- `POST /realtime/auth`
+- Auth: ต้องใช้ token
+- ใช้ endpoint นี้เป็น `authEndpoint` ของ Laravel Echo สำหรับ private channel
+
+Request body ตัวอย่าง
+```json
+{
+  "socket_id": "1234.5678",
+  "channel_name": "private-APP_members.10001"
+}
+```
+
+Response ตัวอย่าง (สำเร็จ)
+```json
+{
+  "auth": "app-key:signature"
+}
+```
+
+Response ตัวอย่าง (ไม่มีสิทธิ์)
+```json
+{
+  "success": false,
+  "message": "ไม่มีสิทธิ์เข้าถึง channel นี้"
+}
+```
+
+#### 9.4 Heartbeat + Online members
+- `POST /member/heartbeat` (Auth: ต้องใช้ token)  
+  แนะนำยิงทุก `10-20` วินาทีขณะ user online
+- `GET /meta/online-members` (Auth: ไม่ต้องใช้ token)  
+  ใช้แสดงจำนวนสมาชิกออนไลน์ล่าสุด
+
+Response ตัวอย่าง heartbeat
+```json
+{
+  "success": true,
+  "message": "อัปเดตสถานะออนไลน์สำเร็จ",
+  "heartbeat": "ok",
+  "online": 123
+}
+```
+
+#### 9.5 Event ที่ฝั่ง Next.js ควร listen
+
+รูปแบบกลางที่แนะนำ (เส้นเดียวสำหรับฝั่งสมาชิก):
+- event name: `member.activity.updated`
+- ใช้ key `method` เพื่อแยกประเภท:
+  - `deposit`
+  - `withdraw`
+  - `rollback`
+  - `lotto` (กรณีที่ต้องการส่งเข้า private ในอนาคต)
+
+Public channel:
+- ชื่อ channel: `{APP_NAME}_events`
+- events:
+  - `public.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ public feed)
+  - `lotto.draw_closed`
+  - `lotto.draw_resulted`
+  - `lotto.draw.status.changed`
+  - `lotto.ticket.list.changed`
+
+Private channel (ของสมาชิกคนนั้น):
+- ชื่อ channel: `{APP_NAME}_members.{member_code}`
+- events:
+  - `member.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ wallet update)
+  - `member.balance.updated`
+
+Payload ตัวอย่าง `member.activity.updated`
+```json
+{
+  "method": "deposit",
+  "event": "wallet.deposit_approved",
+  "member_code": 10001,
+  "occurred_at": "2026-03-24 23:10:05",
+  "data": {
+    "amount": 100,
+    "balance": 5230,
+    "reference_code": 889912,
+    "reason": "deposit_approved"
+  }
+}
+```
+
+Payload ตัวอย่าง `public.activity.updated`
+```json
+{
+  "method": "lotto",
+  "event": "lotto.draw_resulted",
+  "occurred_at": "2026-03-24 23:20:10",
+  "data": {
+    "draw_id": 120,
+    "market_name": "ออมสิน",
+    "status": "resulted",
+    "status_label": "ออกผล"
+  }
+}
+```
+
+Payload ตัวอย่าง `member.balance.updated` (legacy compatibility)
+```json
+{
+  "member_code": 10001,
+  "balance": 5230,
+  "amount": 100,
+  "reason": "deposit_approved",
+  "reference_code": 889912,
+  "occurred_at": "2026-03-24 23:10:05",
+  "message": "ยอดเงินของคุณถูกอัปเดต"
+}
+```
+
+#### 9.6 ตัวอย่าง Next.js (Laravel Echo)
+
+```ts
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+
+export function connectRealtime({
+  token,
+  memberCode,
+  realtime,
+  onToast,
+  onBalanceUpdate,
+  onLottoChanged
+}: {
+  token: string;
+  memberCode: number;
+  realtime: {
+    key: string;
+    ws_host: string;
+    ws_port: number;
+    force_tls: boolean;
+    public_channel: string;
+  };
+  onToast: (msg: string) => void;
+  onBalanceUpdate: (balance: number) => void;
+  onLottoChanged: (payload: unknown) => void;
+}) {
+  (globalThis as any).Pusher = Pusher;
+
+  const echo = new Echo({
+    broadcaster: "pusher",
+    key: realtime.key,
+    wsHost: realtime.ws_host,
+    wsPort: realtime.ws_port,
+    forceTLS: realtime.force_tls,
+    enabledTransports: ["ws", "wss"],
+    authEndpoint: `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/realtime/auth`,
+    auth: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  });
+
+  echo.channel(realtime.public_channel)
+    .listen(".public.activity.updated", (e: any) => onLottoChanged(e))
+    .listen(".lotto.draw.status.changed", (e: any) => onLottoChanged(e))
+    .listen(".lotto.ticket.list.changed", (e: any) => onLottoChanged(e));
+
+  echo.private(`${process.env.NEXT_PUBLIC_APP_NAME}_members.${memberCode}`)
+    .listen(".member.activity.updated", (e: any) => {
+      if (e.method === "deposit") {
+        onToast(`เติมเงินสำเร็จ +${e.data?.amount ?? 0} บาท`);
+      } else if (e.method === "withdraw") {
+        onToast(`ถอนเงินสำเร็จ -${e.data?.amount ?? 0} บาท`);
+      } else if (e.method === "rollback") {
+        onToast(`ระบบคืนยอดสำเร็จ +${e.data?.amount ?? 0} บาท`);
+      }
+      onBalanceUpdate(Number(e.data?.balance ?? 0));
+    })
+    .listen(".member.balance.updated", (e: any) => {
+      onToast(`เติมเงินสำเร็จ +${e.amount} บาท`);
+      onBalanceUpdate(Number(e.balance || 0));
+    });
+
+  return echo;
+}
+```
+
+#### 9.7 แนวทางใช้งานที่แนะนำ (Production)
+1. ตอน login สำเร็จ: เก็บ `access_token`
+2. เรียก `GET /realtime/config` และ `GET /member/realtime-context`
+3. เปิด Echo connection และ subscribe public + private channel
+4. ยิง `POST /member/heartbeat` ทุก 10-20 วินาทีจนกว่าจะ logout/close tab
+5. ตอนรับ event `member.activity.updated` หรือ `member.balance.updated` ให้
+   - โชว์ toast ทันที
+   - อัปเดต state/cache ยอดเงินทันที
+   - เรียก `GET /member/balance` ซ้ำ 1 ครั้งเพื่อ reconcile
+
+---
+
+## สรุป endpoint ที่พร้อมใช้งาน (อัปเดต 2026-03-24)
 
 ผ่านและตอบ JSON ถูกต้อง:
 - `POST /auth/login`
@@ -836,6 +1085,11 @@ Response ตัวอย่าง
 - `GET /promotion/list`
 - `POST /promotion/select`
 - `POST /promotion/deselect`
+- `GET /realtime/config`
+- `GET /member/realtime-context`
+- `POST /realtime/auth`
+- `POST /member/heartbeat`
+- `GET /meta/online-members`
 
 ข้อจำกัดที่ยังพบใน environment ทดสอบ:
 - `POST /auth/register` มีโอกาส timeout จาก dependency ภายในระบบเดิม (โดยเฉพาะส่วนที่พึ่งพา queue/redis ของระบบ)

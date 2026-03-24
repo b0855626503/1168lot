@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Observers;
 
 use App\Events\LottoTicketListChanged;
+use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoTicket;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,14 @@ class LottoTicketRealtimeObserver
 
         DB::afterCommit(function () use ($total): void {
             broadcast(new LottoTicketListChanged('created', $total));
+            broadcast(new RealtimePublicActivityUpdated(
+                'lotto',
+                'lotto.ticket.list.changed',
+                [
+                    'action' => 'created',
+                    'total' => $total,
+                ]
+            ));
         });
     }
 
@@ -39,6 +48,14 @@ class LottoTicketRealtimeObserver
 
         DB::afterCommit(function () use ($total, $action): void {
             broadcast(new LottoTicketListChanged($action, $total));
+            broadcast(new RealtimePublicActivityUpdated(
+                'lotto',
+                'lotto.ticket.list.changed',
+                [
+                    'action' => $action,
+                    'total' => $total,
+                ]
+            ));
         });
     }
 

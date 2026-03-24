@@ -13,6 +13,7 @@ use App\Http\Middleware\LogFailedRequests;
 use App\Http\Middleware\LoginSecurityMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\ThrottleRootPath;
+use App\Http\Middleware\TrackMemberOnlineActivity;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustHosts;
 use App\Http\Middleware\TrustProxies;
@@ -76,7 +77,7 @@ class Kernel extends HttpKernel
 
         ],
         'online' => [
-            \Klevze\OnlineUsers\Middleware\TrackUserActivity::class,
+            TrackMemberOnlineActivity::class,
         ],
         'whitelist' => [
             FilterIps::class,

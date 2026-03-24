@@ -75,21 +75,29 @@ class GameController extends AppBaseController
 
     public function getProviders($type)
     {
+        $normalizedType = strtoupper((string) $type);
+        $gameType = $this->gameTypeRepository->findOneWhere([
+            'id' => $normalizedType,
+            'enable' => 'Y',
+            'status_open' => 'Y',
+        ]);
 
-        $games = [];
-        $gameTypes = $this->gameTypeRepository->findWhere(['enable' => 'Y', 'status_open' => 'Y']);
-        foreach ($gameTypes as $types) {
-            $gameseamless = $this->gameSeamlessRepository->orderBy('sort')->findWhere(['game_type' => $types->id, 'status_open' => 'Y', 'enable' => 'Y']);
-            $gameseamless = collect($gameseamless)->map(function ($items) {
-                $items['filepic'] = Storage::url('game_img/'.strtolower($items->filepic).'?v='.date('ymd'));
-
-                return (object) $items;
-
-            });
-            $games[strtolower($types->id)] = $gameseamless->toArray();
+        if (!$gameType) {
+            return response()->json([]);
         }
 
-        $game = $games[$type];
+        $game = $this->gameSeamlessRepository->orderBy('sort')->findWhere([
+            'game_type' => $gameType->id,
+            'status_open' => 'Y',
+            'enable' => 'Y',
+        ]);
+
+        $game = collect($game)->map(function ($items) {
+            $items['filepic'] = Storage::url('game_img/'.strtolower($items->filepic).'?v='.date('ymd'));
+
+            return (object) $items;
+        })->toArray();
+
         $transformed = array_map(function ($item) {
             return [
                 'provider' => $item['id'], // ใช้ id เป็นรหัส provider

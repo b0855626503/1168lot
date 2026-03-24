@@ -19,6 +19,7 @@ class DashboardService
     private const ACTIVITY_CACHE_TTL_SECONDS = 5;
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
     private array $columnCache = [];
+    private array $columnListingCache = [];
     private array $tableCache = [];
     private array $summaryWarmCache = [];
 
@@ -3237,7 +3238,14 @@ class DashboardService
     {
         $key = $table . '.' . $column;
         if (!array_key_exists($key, $this->columnCache)) {
-            $this->columnCache[$key] = $this->hasTable($table) && Schema::hasColumn($table, $column);
+            if (!$this->hasTable($table)) {
+                $this->columnCache[$key] = false;
+            } else {
+                if (!array_key_exists($table, $this->columnListingCache)) {
+                    $this->columnListingCache[$table] = Schema::getColumnListing($table);
+                }
+                $this->columnCache[$key] = in_array($column, $this->columnListingCache[$table], true);
+            }
         }
 
         return $this->columnCache[$key];

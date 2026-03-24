@@ -557,14 +557,13 @@
         /**
          * ดึงรายการเกมของ product พร้อม cache, กันค้าง, และซิงก์ DB แบบ bulk
          */
-        public function gameList(string $productId): array
+		public function gameList(string $productId): array
         {
             $productId = strtoupper(trim($productId));
             $cacheKey  = "game_list_{$productId}";
             $ttl       = now()->addMinutes(10);
 
             if ($cached = Cache::get($cacheKey)) {
-                $this->syncGameListToMongo($productId, (array) ($cached['games'] ?? []));
                 //Log::channel('api')->info('getgamelist load game get cache',['response' => $cached]);
                 return $cached;
             }
@@ -622,7 +621,9 @@
                 }
                 unset($item);
 
-                $this->syncGameListToMongo($productId, $games);
+                if ($this->shouldSyncGameListToMongo($productId)) {
+                    $this->syncGameListToMongo($productId, $games);
+                }
 
                 $data = [
                     'success' => true,
@@ -637,6 +638,13 @@
             } finally {
                 $release($lock);
             }
+        }
+
+        private function shouldSyncGameListToMongo(string $productId): bool
+        {
+            $cooldownKey = "game_list_sync_mongo:{$productId}";
+
+            return Cache::add($cooldownKey, 1, now()->addMinutes(60));
         }
 
         /**

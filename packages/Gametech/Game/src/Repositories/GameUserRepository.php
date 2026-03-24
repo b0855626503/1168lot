@@ -518,12 +518,21 @@ class GameUserRepository extends Repository
         if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
 //           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
             $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+            $mongoGames = $this->getEnabledGameListFromMongo($product_id);
+
             if($response['success']){
                 $result['success'] = true;
-                $result['games'] = $this->getEnabledGameListFromMongo($product_id);
+                if (!empty($mongoGames)) {
+                    // Keep Mongo as primary source because click/rank ordering lives there.
+                    $result['games'] = $mongoGames;
+                } elseif (!empty($response['games']) && is_array($response['games'])) {
+                    $result['games'] = $response['games'];
+                } else {
+                    $result['games'] = [];
+                }
             }else{
                 $result['success'] = true;
-                $result['games'] = $this->getEnabledGameListFromMongo($product_id);
+                $result['games'] = $mongoGames;
 
             }
         }

@@ -3,6 +3,7 @@
 namespace Gametech\Payment\Observers;
 
 use App\Events\RealTimeNewMessage;
+use App\Events\RealtimeMemberActivityUpdated;
 use App\Helpers\TelegramBot;
 use App\Events\SumNewWithdrawFree;
 use App\Services\Dashboard\DashboardSummarySyncService;
@@ -57,6 +58,8 @@ class WithdrawFreeObserver
             if ($shouldBroadcastCount) {
                 $this->broadcastCount('updated', $data->code);
             }
+
+            $this->broadcastMemberWalletActivity($data);
 
             if ($shouldSyncDashboard) {
                 $this->dispatchDashboardSync($data);
@@ -235,6 +238,51 @@ HTML;
                     'position' => 'right',
                     'avatar' => '/assets/admin/icons/withdraw.webp',
                 ],
+            ]
+        ));
+    }
+
+    private function broadcastMemberWalletActivity(EventData $data): void
+    {
+        $memberCode = (int) ($data->member_code ?? 0);
+        if ($memberCode <= 0) {
+            return;
+        }
+
+        $oldStatus = (int) $data->getOriginal('status');
+        $newStatus = (int) $data->status;
+        $oldEnable = (string) $data->getOriginal('enable');
+        $newEnable = (string) $data->enable;
+
+        $method = null;
+        $event = null;
+
+        if ($newStatus === 1 && $newEnable === 'Y') {
+            $method = 'withdraw';
+            $event = 'wallet.withdraw_approved';
+        } elseif (($oldStatus === 1 && $newStatus !== 1) || ($oldEnable === 'Y' && $newEnable !== 'Y')) {
+            $method = 'rollback';
+            $event = 'wallet.rollback_applied';
+        } elseif ($newStatus === 2) {
+            $method = 'withdraw';
+            $event = 'wallet.withdraw_rejected';
+        }
+
+        if (! $method || ! $event) {
+            return;
+        }
+
+        $member = app('Gametech\Member\Repositories\MemberRepository')->find($memberCode);
+        $balance = (float) ($member->balance ?? 0);
+
+        broadcast(new RealtimeMemberActivityUpdated(
+            $memberCode,
+            $method,
+            $event,
+            [
+                'amount' => (float) ($data->amount ?? 0),
+                'balance' => $balance,
+                'reference_code' => (int) $data->code,
             ]
         ));
     }

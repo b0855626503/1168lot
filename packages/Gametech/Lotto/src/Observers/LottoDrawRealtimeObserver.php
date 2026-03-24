@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Observers;
 
 use App\Events\LottoDrawStatusChanged;
+use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoDraw;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,27 @@ class LottoDrawRealtimeObserver
                 $statusLabel,
                 $actor,
                 $changedAt
+            ));
+
+            $activityEvent = 'lotto.draw_status_changed';
+            if ($toStatus === 'closed') {
+                $activityEvent = 'lotto.draw_closed';
+            } elseif ($toStatus === 'resulted') {
+                $activityEvent = 'lotto.draw_resulted';
+            }
+
+            broadcast(new RealtimePublicActivityUpdated(
+                'lotto',
+                $activityEvent,
+                [
+                    'draw_id' => (int) $draw->id,
+                    'market_name' => $marketName,
+                    'draw_date' => $drawDate,
+                    'status' => $toStatus,
+                    'status_label' => $statusLabel,
+                    'actor' => $actor,
+                    'changed_at' => $changedAt,
+                ]
             ));
         });
     }
@@ -103,4 +125,3 @@ class LottoDrawRealtimeObserver
             ->format('Y-m-d H:i:s');
     }
 }
-

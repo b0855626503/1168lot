@@ -2,7 +2,9 @@
 
 namespace Gametech\Payment\Observers;
 
+use App\Events\MemberBalanceUpdated;
 use App\Events\RealTimeNewMessage;
+use App\Events\RealtimeMemberActivityUpdated;
 use App\Events\SumNewPayment;
 use App\Helpers\TelegramBot;
 use App\Services\Dashboard\DashboardSummarySyncService;
@@ -64,6 +66,8 @@ class BankPaymentObserver
             if ($shouldRecountPending) {
                 $this->broadcastCount('updated', $data->code);
             }
+
+            $this->broadcastMemberBalanceUpdated($data);
 
             if ($shouldSyncDashboard) {
                 $this->dispatchDashboardSync($data);
@@ -160,6 +164,47 @@ class BankPaymentObserver
         $count = app('Gametech\Payment\Repositories\BankPaymentRepository')->where('status', 0)->where('enable', 'Y')->whereDate('date_create', today())->count();
 
         broadcast(new SumNewPayment($count, $action, $code));
+    }
+
+    private function broadcastMemberBalanceUpdated(EventData $data): void
+    {
+        $memberCode = (int) ($data->member_topup ?? 0);
+        if ($memberCode <= 0) {
+            return;
+        }
+
+        if (! $data->wasChanged('status') || (int) $data->status !== 1 || (string) $data->enable !== 'Y') {
+            return;
+        }
+
+        try {
+            $member = app('Gametech\Member\Repositories\MemberRepository')->find($memberCode);
+            if (! $member) {
+                return;
+            }
+
+            broadcast(new MemberBalanceUpdated(
+                $memberCode,
+                (float) ($member->balance ?? 0),
+                (float) ($data->value ?? 0),
+                'deposit_approved',
+                (int) $data->code
+            ));
+
+            broadcast(new RealtimeMemberActivityUpdated(
+                $memberCode,
+                'deposit',
+                'wallet.deposit_approved',
+                [
+                    'amount' => (float) ($data->value ?? 0),
+                    'balance' => (float) ($member->balance ?? 0),
+                    'reference_code' => (int) $data->code,
+                    'reason' => 'deposit_approved',
+                ]
+            ));
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     private function shouldBroadcastRealtimeMessage(): bool
