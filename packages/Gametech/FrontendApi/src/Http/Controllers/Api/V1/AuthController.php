@@ -259,7 +259,7 @@ class AuthController extends BaseController
                 $teamId,
                 $campaignId
             ) {
-                return app('Gametech\Member\Repositories\MemberRepository')->create([
+                $memberPayload = [
                     'refer_code' => $referCode,
                     'upline_code' => $uplineCode,
                     'bank_code' => $bankCode,
@@ -300,7 +300,9 @@ class AuthController extends BaseController
                     'enable' => 'Y',
                     'team_id' => $teamId,
                     'campaign_id' => $campaignId,
-                ]);
+                ];
+
+                return app('Gametech\Member\Repositories\MemberRepository')->create($memberPayload);
             });
 
             $isSeamless = ((string) ($config->seamless ?? 'N') === 'Y');
