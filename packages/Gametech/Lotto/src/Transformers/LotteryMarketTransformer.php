@@ -11,6 +11,7 @@ class LotteryMarketTransformer extends TransformerAbstract
     {
         return [
             'id'         => (int) $model->id,
+            'thumbnail'  => $this->renderThumbnail((string) ($model->logo ?? ''), (string) ($model->icon ?? '')),
             'name'       => $model->name,
             'group_name' => optional($model->group)->name ?? '-',
             'code'       => '<code>' . $model->code . '</code>',
@@ -39,5 +40,15 @@ class LotteryMarketTransformer extends TransformerAbstract
         }
 
         return 'Manual';
+    }
+
+    private function renderThumbnail(string $logo, string $icon): string
+    {
+        $src = trim($logo) !== '' ? $logo : (trim($icon) !== '' ? $icon : '');
+        if ($src === '') {
+            return '-';
+        }
+
+        return '<img src="' . e($src) . '" alt="market" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6;">';
     }
 }

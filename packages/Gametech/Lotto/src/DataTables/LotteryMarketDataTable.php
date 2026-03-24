@@ -20,9 +20,15 @@ class LotteryMarketDataTable extends DataTable
 
     public function query(LotteryMarket $model)
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->with('group')
             ->select('lotto_markets.*');
+
+        if ($groupId = (int) request('group_id')) {
+            $query->where('group_id', $groupId);
+        }
+
+        return $query;
     }
 
     public function html(): Builder
@@ -54,6 +60,7 @@ class LotteryMarketDataTable extends DataTable
     {
         return [
             ['data' => 'id',         'name' => 'id',          'title' => '#',            'orderable' => true,  'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
+            ['data' => 'thumbnail',  'name' => 'thumbnail',   'title' => 'รูป',           'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '80px'],
             ['data' => 'name',       'name' => 'name',        'title' => 'ชื่อรายการหวย', 'orderable' => true,  'searchable' => true,  'className' => 'text-left'],
             ['data' => 'group_name', 'name' => 'group_name',  'title' => 'กลุ่มหวย',      'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'code',       'name' => 'code',        'title' => 'Code',          'orderable' => true,  'searchable' => true,  'className' => 'text-center'],

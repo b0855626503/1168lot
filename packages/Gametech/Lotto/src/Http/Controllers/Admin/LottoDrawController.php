@@ -8,6 +8,7 @@ use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
@@ -34,21 +35,35 @@ class LottoDrawController extends AppBaseController
     {
         $drawService->syncScheduledStatuses();
 
+        $groupOptions = LotteryGroup::query()
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static function (LotteryGroup $group): array {
+                return [
+                    'value' => (int) $group->id,
+                    'text' => (string) $group->name,
+                ];
+            })
+            ->values()
+            ->toArray();
+
         $marketOptions = LotteryMarket::query()
             ->with('group:id,name,sort')
             ->orderBy('group_id')
             ->orderBy('name')
             ->get(['id', 'group_id', 'name'])
-            ->groupBy(function ($market) {
+            ->groupBy(static function (LotteryMarket $market): string {
                 return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
             })
-            ->map(function ($markets, $groupName) {
+            ->map(static function ($markets, $groupName): array {
                 return [
                     'label' => (string) $groupName,
-                    'options' => $markets->map(function ($market) {
+                    'options' => $markets->map(static function (LotteryMarket $market): array {
                         return [
                             'value' => (int) $market->id,
                             'text' => (string) $market->name,
+                            'group_id' => (int) $market->group_id,
                         ];
                     })->values()->toArray(),
                 ];
@@ -57,6 +72,7 @@ class LottoDrawController extends AppBaseController
             ->toArray();
 
         return $dataTable->render($this->_config['view'], [
+            'groupOptions' => $groupOptions,
             'marketOptions' => $marketOptions,
         ]);
     }

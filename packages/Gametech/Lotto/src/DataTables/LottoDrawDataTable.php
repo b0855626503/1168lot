@@ -26,7 +26,7 @@ class LottoDrawDataTable extends DataTable
      */
     public function query(LottoDraw $model)
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->select('lotto_draws.*')
             ->with('market')
             ->withCount([
@@ -35,6 +35,18 @@ class LottoDrawDataTable extends DataTable
             ])
             ->orderByDesc('draw_date')
             ->orderByDesc('id');
+
+        if ($groupId = (int) request('group_id')) {
+            $query->whereHas('market', function ($builder) use ($groupId): void {
+                $builder->where('group_id', $groupId);
+            });
+        }
+
+        if ($marketId = (int) request('market_id')) {
+            $query->where('market_id', $marketId);
+        }
+
+        return $query;
     }
 
     /**

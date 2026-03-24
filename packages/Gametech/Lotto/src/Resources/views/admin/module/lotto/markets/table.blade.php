@@ -5,4 +5,27 @@
 @push('scripts')
     @include('admin::layouts.datatables_js')
     {!! $dataTable->scripts() !!}
+    <script>
+        $(function () {
+            const tableSelector = '#dataTableBuilder';
+            const tableKey = 'dataTableBuilder';
+            const $groupSelect = $('#filter_group_id');
+
+            const redrawTable = function () {
+                if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
+                    return;
+                }
+
+                window.LaravelDataTables[tableKey].draw(false);
+            };
+
+            $(document).off('preXhr.dt.lottoMarketsFilter', tableSelector).on('preXhr.dt.lottoMarketsFilter', tableSelector, function (_event, _settings, data) {
+                data.group_id = $groupSelect.val() || '';
+            });
+
+            $groupSelect.off('change.lottoMarketsFilter').on('change.lottoMarketsFilter', function () {
+                redrawTable();
+            });
+        });
+    </script>
 @endpush
