@@ -562,7 +562,7 @@
             $ttl       = now()->addMinutes(10);
 
             if ($cached = Cache::get($cacheKey)) {
-                Log::channel('api')->info('load game get cache',['response' => $cached]);
+                Log::channel('api')->info('getgamelist load game get cache',['response' => $cached]);
                 return $cached;
             }
 
@@ -583,7 +583,7 @@
                 // ===== API =====
                 $param    = ['productId' => $productId];
                 $response = $this->GameCurlGet($param, 'seamless/games');
-                Log::channel('api')->info('loadgame',['response' => $response]);
+                Log::channel('api')->info('getgamelist loadgame',['response' => $response]);
                 $ok = is_array($response)
                     && ($response['success'] ?? false) === true
                     && isset($response['data']['games'])
@@ -598,7 +598,7 @@
                 }
 
                 $games  = $response['data']['games'];
-                Log::channel('api')->info('game',['response' => $games]);
+                Log::channel('api')->info('getgamelist game',['response' => $games]);
                 // ===== normalize =====
                 $catMap = [
                     'COCKFIGHT' => 'COCK',
@@ -682,7 +682,7 @@
                     'msg'     => $response['msg'] ?? 'OK',
                     'games'   => $games,
                 ];
-                Log::channel('api')->info('game complete',['response' => $data]);
+                Log::channel('api')->info('getgamelist game complete',['response' => $data]);
 
                 Cache::put($cacheKey, $data, $ttl);
                 return $data;
