@@ -71,9 +71,12 @@ class LottoDrawController extends AppBaseController
             ->values()
             ->toArray();
 
+        $latestDrawDate = LottoDraw::query()->max('draw_date');
+
         return $dataTable->render($this->_config['view'], [
             'groupOptions' => $groupOptions,
             'marketOptions' => $marketOptions,
+            'latestDrawDate' => $latestDrawDate ? (string) $latestDrawDate : '',
         ]);
     }
 

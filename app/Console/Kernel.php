@@ -122,6 +122,12 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('payment:emp-topup 50')->everyMinute();
 
+        // Keep draw status in sync even when nobody opens admin draw page.
+        $schedule->command('lotto:sync-draw-statuses')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Lotto auto draw bootstrap from market schedule (manual-safe, idempotent).
         $schedule->command('lotto:generate-auto-draws --days=1')
             ->hourly()

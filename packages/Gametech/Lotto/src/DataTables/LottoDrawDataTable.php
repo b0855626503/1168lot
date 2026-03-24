@@ -46,6 +46,11 @@ class LottoDrawDataTable extends DataTable
             $query->where('market_id', $marketId);
         }
 
+        $drawDate = (string) request('draw_date', '');
+        if ($drawDate !== '') {
+            $query->whereDate('draw_date', $drawDate);
+        }
+
         return $query;
     }
 

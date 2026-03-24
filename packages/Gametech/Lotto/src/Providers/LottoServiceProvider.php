@@ -6,6 +6,7 @@ use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
+use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
 use Gametech\Lotto\Models\LotteryMarketProxy;
 use Gametech\Lotto\Models\LottoDrawBetSettingProxy;
@@ -78,6 +79,7 @@ class LottoServiceProvider extends ServiceProvider
             BackfillLottoPayoutCommand::class,
             GenerateAutoLottoDrawsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
+            SyncLottoDrawStatusesCommand::class,
         ]);
     }
 

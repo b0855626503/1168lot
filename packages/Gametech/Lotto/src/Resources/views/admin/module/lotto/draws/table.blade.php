@@ -11,6 +11,7 @@
             const tableKey = 'lottoDrawsTable';
             const $groupSelect = $('#filter_group_id');
             const $marketSelect = $('#filter_market_id');
+            const $drawDateInput = $('#filter_draw_date');
 
             const initMarketSelect = function () {
                 if (!$marketSelect.length || typeof $marketSelect.select2 !== 'function') {
@@ -39,6 +40,7 @@
             $(document).off('preXhr.dt.lottoDrawsFilter', tableSelector).on('preXhr.dt.lottoDrawsFilter', tableSelector, function (_event, _settings, data) {
                 data.group_id = $groupSelect.val() || '';
                 data.market_id = $marketSelect.val() || '';
+                data.draw_date = $drawDateInput.val() || '';
             });
 
             $groupSelect.off('change.lottoDrawsFilter').on('change.lottoDrawsFilter', function () {
@@ -54,6 +56,10 @@
             });
 
             $marketSelect.off('change.lottoDrawsFilter').on('change.lottoDrawsFilter', function () {
+                redrawTable();
+            });
+
+            $drawDateInput.off('change.lottoDrawsFilter').on('change.lottoDrawsFilter', function () {
                 redrawTable();
             });
 

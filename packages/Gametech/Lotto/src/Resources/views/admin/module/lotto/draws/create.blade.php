@@ -1,5 +1,5 @@
 <div class="row mb-2 align-items-end">
-    <div class="col-md-3 mb-2 mb-md-0">
+    <div class="col-md-2 mb-2 mb-md-0">
         <label class="mb-1">กลุ่มหวย</label>
         <select id="filter_group_id" class="form-control form-control-sm">
             <option value="">ทั้งหมด</option>
@@ -8,7 +8,7 @@
             @endforeach
         </select>
     </div>
-    <div class="col-md-4 mb-2 mb-md-0">
+    <div class="col-md-3 mb-2 mb-md-0">
         <label class="mb-1">รายการหวย</label>
         <select id="filter_market_id" class="form-control form-control-sm">
             <option value="">ทั้งหมด</option>
@@ -22,6 +22,10 @@
                 </optgroup>
             @endforeach
         </select>
+    </div>
+    <div class="col-md-2 mb-2 mb-md-0">
+        <label class="mb-1">วันงวด</label>
+        <input type="date" id="filter_draw_date" class="form-control form-control-sm" value="{{ $latestDrawDate ?? '' }}">
     </div>
     <div class="col-md-5 text-md-right text-left">
         <button type="button" class="btn bg-gradient-info btn-xs" onclick="generateAutoDraws(true)">
