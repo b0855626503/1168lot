@@ -41,7 +41,7 @@ class GameController extends AppBaseController
         $game = core()->getGame();
         $game_name = $this->gameSeamlessRepository->findOneByField('id', $provider);
         $games = $this->repository->getGameList($provider, $game_name->method);
-        dd($games);
+
         $gamelist = $games['games'];
 
         $method = $game_name->method;

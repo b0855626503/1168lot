@@ -562,6 +562,7 @@
             $ttl       = now()->addMinutes(10);
 
             if ($cached = Cache::get($cacheKey)) {
+                $this->syncGameListToMongo($productId, (array) ($cached['games'] ?? []));
                 Log::channel('api')->info('getgamelist load game get cache',['response' => $cached]);
                 return $cached;
             }
@@ -577,6 +578,7 @@
                 $lock && $lock->block(5);
 
                 if ($cached = Cache::get($cacheKey)) {
+                    $this->syncGameListToMongo($productId, (array) ($cached['games'] ?? []));
                     return $cached;
                 }
 
@@ -618,64 +620,7 @@
                 }
                 unset($item);
 
-                $now     = now();
-                $nowMs   = (int) round(microtime(true) * 1000);
-                $rows    = array_map(function ($it) use ($productId, $now) {
-                    return [
-                        'product'    => $productId,
-                        'code'       => $it['code'],
-                        'category'   => $it['category'],
-                        'type'       => $it['type'],
-                        'img'        => $it['img'],
-                        'name'       => $it['name'],
-                        'rank'       => $it['rank'],
-                        'game'       => $it['code'],
-                        'updated_at' => $now,
-                        'created_at' => $now,
-                    ];
-                }, $games);
-
-                // ===== Mongo bulk upsert =====
-                if (!empty($rows)) {
-                    $model    = GameListProxy::query()->getModel();
-                    $connName = $model->getConnectionName() ?: config('database.default');
-                    $table    = $model->getTable();
-
-                    \Illuminate\Support\Facades\DB::connection($connName)
-                        ->collection($table)
-                        ->raw(function ($collection) use ($rows, $nowMs) {
-                            $ops = [];
-
-                            foreach ($rows as $r) {
-                                $ops[] = [
-                                    'updateOne' => [
-                                        ['product' => $r['product'], 'code' => $r['code']],
-                                        [
-                                            '$set' => [
-                                                'category'   => $r['category'],
-                                                'type'       => $r['type'],
-                                                'img'        => $r['img'],
-                                                'name'       => $r['name'],
-                                                'rank'       => $r['rank'],
-                                                'game'       => $r['game'],
-                                                'updated_at' => new \MongoDB\BSON\UTCDateTime($nowMs),
-                                            ],
-                                            '$setOnInsert' => [
-                                                'product'    => $r['product'],
-                                                'code'       => $r['code'],
-                                                'created_at' => new \MongoDB\BSON\UTCDateTime($nowMs),
-                                            ],
-                                        ],
-                                        ['upsert' => true],
-                                    ],
-                                ];
-                            }
-
-                            if ($ops) {
-                                $collection->bulkWrite($ops, ['ordered' => false]);
-                            }
-                        });
-                }
+                $this->syncGameListToMongo($productId, $games);
 
                 $data = [
                     'success' => true,
@@ -689,6 +634,86 @@
 
             } finally {
                 $release($lock);
+            }
+        }
+
+        /**
+         * @param array<int, array<string, mixed>> $games
+         */
+        private function syncGameListToMongo(string $productId, array $games): void
+        {
+            if (empty($games)) {
+                return;
+            }
+
+            try {
+                $nowMs = (int) round(microtime(true) * 1000);
+                $rows  = array_map(static function (array $it) use ($productId): array {
+                    return [
+                        'product' => $productId,
+                        'code' => (string) ($it['code'] ?? ''),
+                        'category' => (string) ($it['category'] ?? 'SLOT'),
+                        'type' => (string) ($it['type'] ?? 'SLOT'),
+                        'img' => $it['img'] ?? null,
+                        'name' => (string) ($it['name'] ?? ''),
+                        'rank' => is_numeric($it['rank'] ?? null) ? (int) $it['rank'] : 0,
+                        'game' => (string) ($it['code'] ?? ''),
+                    ];
+                }, $games);
+
+                $rows = array_values(array_filter($rows, static fn (array $row): bool => $row['code'] !== ''));
+                if (empty($rows)) {
+                    return;
+                }
+
+                $model = GameListProxy::query()->getModel();
+                $connName = $model->getConnectionName() ?: config('database.default');
+                $table = $model->getTable();
+
+                DB::connection($connName)
+                    ->collection($table)
+                    ->raw(function ($collection) use ($rows, $nowMs): void {
+                        $ops = [];
+
+                        foreach ($rows as $r) {
+                            $ops[] = [
+                                'updateOne' => [
+                                    ['product' => $r['product'], 'code' => $r['code']],
+                                    [
+                                        '$set' => [
+                                            'category' => $r['category'],
+                                            'type' => $r['type'],
+                                            'img' => $r['img'],
+                                            'name' => $r['name'],
+                                            'rank' => $r['rank'],
+                                            'game' => $r['game'],
+                                            'updated_at' => new \MongoDB\BSON\UTCDateTime($nowMs),
+                                        ],
+                                        '$setOnInsert' => [
+                                            'product' => $r['product'],
+                                            'code' => $r['code'],
+                                            'created_at' => new \MongoDB\BSON\UTCDateTime($nowMs),
+                                        ],
+                                    ],
+                                    ['upsert' => true],
+                                ],
+                            ];
+                        }
+
+                        if (! empty($ops)) {
+                            $collection->bulkWrite($ops, ['ordered' => false]);
+                        }
+                    });
+
+                Log::channel('api')->info('getgamelist mongo sync success', [
+                    'product_id' => $productId,
+                    'count' => count($rows),
+                ]);
+            } catch (\Throwable $e) {
+                Log::channel('api')->error('getgamelist mongo sync failed', [
+                    'product_id' => $productId,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
