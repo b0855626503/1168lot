@@ -371,6 +371,7 @@ Response ตัวอย่าง (ย่อ)
       "gameName": "Treasures of Aztec",
       "gameCategory": "seamless",
       "gameType": ["SLOT"],
+      "loginURL": "https://api.1168lot.com/api/v1/games/login/PGSOFT/treasures-aztec",
       "status": "ACTIVE"
     }
   ],
@@ -386,9 +387,33 @@ Request body
 ```json
 {
   "id": "PGSOFT",
-  "game": "1"
+  "game": "treasures-aztec"
 }
 ```
+
+Response ตัวอย่างสำเร็จ
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://game-provider.example/launch?token=....",
+    "provider": "PGSOFT",
+    "code": "treasures-aztec"
+  },
+  "message": "เข้าสู่เกมสำเร็จ"
+}
+```
+
+#### 4.5 Login เกม (Path Parameter)
+- `GET /games/login/{game}/{code}`
+- Auth: ต้องใช้ token
+
+Path param
+- `game`: รหัสค่ายเกม เช่น `PGSOFT`
+- `code`: รหัสเกม เช่น `treasures-aztec`
+
+ตัวอย่าง
+- `GET /games/login/PGSOFT/treasures-aztec`
 
 Response ตัวอย่างกรณีเข้าเกมไม่ได้
 ```json
@@ -799,6 +824,7 @@ Response ตัวอย่าง
 - `GET /games/providers/{type}`
 - `GET /games/{type}/{provider}`
 - `POST /games/login` (กรณีเข้าไม่ได้ ตอบ error JSON)
+- `GET /games/login/{game}/{code}` (กรณีเข้าไม่ได้ ตอบ error JSON)
 - `GET /lotto/draws`
 - `GET /lotto/draws/{id}`
 - `GET /lotto/markets/latest`

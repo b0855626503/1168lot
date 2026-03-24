@@ -69,6 +69,8 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
 
             Route::post('games/login', [GameController::class, 'login'])
                 ->name('frontend.api.v1.games.login');
+            Route::get('games/login/{game}/{code}', [GameController::class, 'loginByPath'])
+                ->name('frontend.api.v1.games.login.path');
 
             Route::post('lotto/bet', [LottoController::class, 'bet'])
                 ->name('frontend.api.v1.lotto.bet');
