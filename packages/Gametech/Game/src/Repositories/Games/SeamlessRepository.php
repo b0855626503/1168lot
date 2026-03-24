@@ -805,13 +805,12 @@
 					$response['param'] = $param;
 					$response['datetime'] = now()->toDateTimeString();
 					$response['api'] = $this->responses;
-					$path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
-					//                file_put_contents($path, print_r($param, true), FILE_APPEND);
-
-					//                dd($response);
-					//                $path = storage_path('logs/seamless/seamlesslogin_' . now()->format('Y_m_d') . '.log');
-					file_put_contents($path, print_r($response, true), FILE_APPEND);
-					//                file_put_contents($path, print_r($this->responses, true), FILE_APPEND);
+                    Log::channel('api')->info('seamless.login.response', [
+                        'product_id' => $pid,
+                        'user_name' => $data['username'] ?? null,
+                        'game_code' => $data['gameCode'] ?? null,
+                        'response' => $response,
+                    ]);
 
 					if ($response['success'] === true && isset($response['data']['url'])) {
 
@@ -948,9 +947,10 @@
 			];
 
 			$response = $this->GameCurl($param, 'seamless/free-game');
-			$path = storage_path('logs/seamless/freegame_' . now()->format('Y_m_d') . '.log');
-			file_put_contents($path, print_r($param, true), FILE_APPEND);
-			file_put_contents($path, print_r($response, true), FILE_APPEND);
+            Log::channel('api')->info('seamless.free_game.response', [
+                'param' => $param,
+                'response' => $response,
+            ]);
 
 			if ($response['success'] === true) {
 
