@@ -219,10 +219,14 @@ class NewCommonFlowController extends AppBaseController
             return;
         }
 
+        $txnIdFromRequest = $this->resolveTxnIdFromRequest();
+        $roundIdFromRequest = $this->resolveRoundIdFromRequest();
+        $requestId = (string) $this->request->input('id', '');
+
         $refType = (string) ($walletTxn['ref_type'] ?? 'GAME_PROVIDER');
-        $refCode = trim((string) ($walletTxn['ref_code'] ?? ''));
+        $refCode = $requestId !== '' ? $requestId : trim((string) ($walletTxn['ref_code'] ?? ''));
         if ($refCode === '') {
-            $refCode = (string) ($this->request->input('id') ?? now()->format('YmdHisv'));
+            $refCode = $txnIdFromRequest !== '' ? $txnIdFromRequest : (string) ($this->request->input('id') ?? now()->format('YmdHisv'));
         }
 
         $exists = DB::table('wallet_transactions')
@@ -238,10 +242,13 @@ class NewCommonFlowController extends AppBaseController
 
         $description = (string) ($walletTxn['description'] ?? 'Game provider wallet transaction');
         $meta = (array) ($walletTxn['meta'] ?? []);
+        $meta['txn_id'] = (string) ($meta['txn_id'] ?? $txnIdFromRequest);
+        $meta['round_id'] = (string) ($meta['round_id'] ?? $roundIdFromRequest);
+        $meta['request_id'] = (string) ($meta['request_id'] ?? $this->request->input('id', ''));
         $refId = isset($walletTxn['ref_id']) && is_numeric($walletTxn['ref_id']) ? (int) $walletTxn['ref_id'] : null;
         $groupCode = (string) ($walletTxn['group_code'] ?? ($refType . '_' . $refCode));
 
-        DB::table('wallet_transactions')->insert([
+        $insert = [
             'member_id' => (int) $this->member->code,
             'scope' => 'MEMBER',
             'game_user_id' => null,
@@ -261,7 +268,37 @@ class NewCommonFlowController extends AppBaseController
             'created_by_id' => null,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if (Schema::hasColumn('wallet_transactions', 'provider_txn_id')) {
+            $insert['provider_txn_id'] = $txnIdFromRequest !== '' ? $txnIdFromRequest : null;
+        }
+
+        if (Schema::hasColumn('wallet_transactions', 'provider_round_id')) {
+            $insert['provider_round_id'] = $roundIdFromRequest !== '' ? $roundIdFromRequest : null;
+        }
+
+        DB::table('wallet_transactions')->insert($insert);
+    }
+
+    protected function resolveTxnIdFromRequest(): string
+    {
+        $txns = $this->request->input('txns');
+        if (is_array($txns) && isset($txns[0]) && is_array($txns[0]) && ! empty($txns[0]['id'])) {
+            return (string) $txns[0]['id'];
+        }
+
+        return '';
+    }
+
+    protected function resolveRoundIdFromRequest(): string
+    {
+        $txns = $this->request->input('txns');
+        if (is_array($txns) && isset($txns[0]) && is_array($txns[0]) && ! empty($txns[0]['roundId'])) {
+            return (string) $txns[0]['roundId'];
+        }
+
+        return '';
     }
 
     public function placeBets(Request $request)
