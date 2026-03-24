@@ -338,16 +338,21 @@ class AuthController extends BaseController
                         'user_create' => $name,
                     ]);
 
+                    $resultMessage = $result['msg'] ?? null;
+                    if (is_array($resultMessage) || is_object($resultMessage)) {
+                        $resultMessage = json_encode($resultMessage, JSON_UNESCAPED_UNICODE);
+                    }
+
                     Log::error('frontend_api_register.seamless_add_game_user_result', [
                         'member_code' => (int) $member->code,
                         'user_name' => $username,
                         'game_code' => (int) $game->code,
                         'success' => (bool) ($result['success'] ?? false),
-                        'message' => (string) ($result['msg'] ?? ''),
+                        'message' => $resultMessage,
                     ]);
 
                     if (($result['success'] ?? false) !== true) {
-                        $message = (string) ($result['msg'] ?? 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้');
+                        $message = $resultMessage ?: 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้';
                         throw new \RuntimeException($message);
                     }
                 }
