@@ -125,6 +125,15 @@ class AuthController extends BaseController
     private function registerFallback(Request $request): JsonResponse
     {
         $config = core()->getConfigData();
+        Log::error('frontend_api_register.entry', [
+            'path' => (string) $request->path(),
+            'seamless_config' => (string) ($config->seamless ?? 'N'),
+            'has_name' => $request->filled('name'),
+            'has_user_name' => $request->filled('user_name'),
+            'has_bank' => $request->filled('bank'),
+            'has_acc_no' => $request->filled('acc_no'),
+            'has_refer' => $request->filled('refer'),
+        ]);
 
         $data = $this->normalizeRegisterPayload((array) $request->all());
 
@@ -299,7 +308,7 @@ class AuthController extends BaseController
             $gameUserRepo = app('Gametech\Game\Repositories\GameUserRepository');
 
             if ($isSeamless) {
-                Log::info('frontend_api_register.seamless_branch_entered', [
+                Log::error('frontend_api_register.seamless_branch_entered', [
                     'member_code' => (int) $member->code,
                     'user_name' => $username,
                     'seamless_config' => (string) ($config->seamless ?? 'N'),
@@ -311,7 +320,7 @@ class AuthController extends BaseController
                     'id' => 'seamless',
                 ]);
 
-                Log::info('frontend_api_register.seamless_game_lookup', [
+                Log::error('frontend_api_register.seamless_game_lookup', [
                     'member_code' => (int) $member->code,
                     'user_name' => $username,
                     'game_found' => (bool) $game,
@@ -327,7 +336,7 @@ class AuthController extends BaseController
                         'user_create' => $name,
                     ]);
 
-                    Log::info('frontend_api_register.seamless_add_game_user_result', [
+                    Log::error('frontend_api_register.seamless_add_game_user_result', [
                         'member_code' => (int) $member->code,
                         'user_name' => $username,
                         'game_code' => (int) $game->code,
@@ -375,6 +384,14 @@ class AuthController extends BaseController
                 report($e);
             }
         } catch (\Throwable $e) {
+            Log::error('frontend_api_register.exception', [
+                'user_name' => $username ?? null,
+                'exception_class' => get_class($e),
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+            ]);
+
             if ($member && isset($member->code)) {
                 try {
                     app('Gametech\Member\Repositories\MemberRepository')->delete((int) $member->code);
