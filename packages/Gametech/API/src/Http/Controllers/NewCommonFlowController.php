@@ -118,8 +118,27 @@ class NewCommonFlowController extends AppBaseController
             'productId' => $productId,
             'currency' => 'THB',
             'username' => $username,
+            'wallet_transaction' => $this->resolveWalletTransactionId((string) $id),
             'timestampMillis' => $this->now->getTimestampMs(),
         ];
+    }
+
+    protected function resolveWalletTransactionId(string $fallback): string
+    {
+        $txns = $this->request->input('txns');
+        if (is_array($txns) && isset($txns[0]) && is_array($txns[0])) {
+            $txnId = (string) ($txns[0]['id'] ?? '');
+            if ($txnId !== '') {
+                return $txnId;
+            }
+        }
+
+        $singleTxnId = (string) $this->request->input('txn.id', $this->request->input('txnId', ''));
+        if ($singleTxnId !== '') {
+            return $singleTxnId;
+        }
+
+        return $fallback;
     }
 
     protected function createGameLog(array $data)
@@ -1463,6 +1482,7 @@ class NewCommonFlowController extends AppBaseController
                 'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
+                'wallet_transaction' => $this->resolveWalletTransactionId((string) $session['id']),
                 'balanceBefore' => (float) $oldBalance,
                 'balanceAfter' => (float) $this->member->balance,
                 'timestampMillis' => $this->now->getTimestampMs(),
