@@ -36,16 +36,6 @@ Route::domain($domain)->group(function () {
         return response()->json(['pong' => true, 'time' => now()]);
     })->name('api.ping');
 
-    Route::get('/docs/api/frontend-v1', [\App\Http\Controllers\DocsController::class, 'frontendApiV1'])
-        ->name('docs.api.frontend_v1');
-    Route::get('/docs/api/frontend-v1/raw', function () {
-        $path = base_path('docs/API_FRONTEND_V1.md');
-        abort_unless(\Illuminate\Support\Facades\File::exists($path), 404, 'API docs file not found');
-
-        return response(\Illuminate\Support\Facades\File::get($path), 200, [
-            'Content-Type' => 'text/markdown; charset=UTF-8',
-        ]);
-    })->name('docs.api.frontend_v1.raw');
 });
 
 //
@@ -55,17 +45,6 @@ $domain = config('app.user_url') === ''
 
 Route::domain($domain)->group(function () {
     Route::middleware('web')->group(function () {
-        Route::get('/docs/api/frontend-v1', [\App\Http\Controllers\DocsController::class, 'frontendApiV1'])
-            ->name('docs.api.frontend_v1.user');
-        Route::get('/docs/api/frontend-v1/raw', function () {
-            $path = base_path('docs/API_FRONTEND_V1.md');
-            abort_unless(\Illuminate\Support\Facades\File::exists($path), 404, 'API docs file not found');
-
-            return response(\Illuminate\Support\Facades\File::get($path), 200, [
-                'Content-Type' => 'text/markdown; charset=UTF-8',
-            ]);
-        })->name('docs.api.frontend_v1.raw.user');
-
         Route::get('/gate/open', function (Request $req) {
             $open = $req->query('open'); // deposit | withdraw
             $allowed = in_array($open, ['deposit','withdraw'], true);

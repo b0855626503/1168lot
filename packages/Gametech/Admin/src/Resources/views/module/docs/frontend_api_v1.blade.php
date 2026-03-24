@@ -57,9 +57,9 @@
     <div class="topbar">
         <div>
             <div class="title">{{ $title ?? 'API Docs' }}</div>
-            <div class="meta">{{ $rawPath ?? '' }}</div>
+            <div class="meta">docs/API_FRONTEND_V1.md</div>
         </div>
-        <a class="raw-link" href="{{ url('/docs/api/frontend-v1/raw') }}">Open Raw</a>
+        <a class="raw-link" href="{{ route('admin.docs.api.frontend_v1.raw') }}">Open Raw</a>
     </div>
 
     <div class="panel">
@@ -68,4 +68,3 @@
 </div>
 </body>
 </html>
-

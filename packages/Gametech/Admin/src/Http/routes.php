@@ -248,6 +248,12 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
                 'view' => 'admin::module.dashboard.index',
             ])->name('admin.home.index');
 
+            Route::get('docs/api/frontend-v1', 'ApiDocsController@frontendApiV1')->defaults('_config', [
+                'view' => 'admin::module.docs.frontend_api_v1',
+            ])->name('admin.docs.api.frontend_v1');
+            Route::get('docs/api/frontend-v1/raw', 'ApiDocsController@frontendApiV1Raw')
+                ->name('admin.docs.api.frontend_v1.raw');
+
             Route::get('loadcnt', 'DashboardController@loadCnt')->name('admin.home.loadcnt');
             Route::post('dashboard/edit', 'DashboardController@edit')->name('admin.dashboard.edit');
             Route::post('dashboard/loadsum', 'DashboardController@loadSum')->name('admin.dashboard.loadsum');
