@@ -484,7 +484,8 @@
 
 				foreach ($return['games'] as $item) {
 					GameListProxy::updateOrCreate(
-						['product' => $product_id, 'game' => $item['code']]
+						['product' => $product_id, 'game' => $item['code']],
+						['enable' => true]
 					);
 				}
 
@@ -537,7 +538,8 @@
 							'img' => $item['img'],
 							'name' => $item['name'],
 							'rank' => $item['rank'],
-							'game' => $item['code']
+							'game' => $item['code'],
+							'enable' => true,
 						]
 					);
 				}
@@ -692,6 +694,8 @@
                                         '$setOnInsert' => [
                                             'product' => $r['product'],
                                             'code' => $r['code'],
+                                            'enable' => true,
+                                            'click' => 0,
                                             'created_at' => new \MongoDB\BSON\UTCDateTime($nowMs),
                                         ],
                                     ],

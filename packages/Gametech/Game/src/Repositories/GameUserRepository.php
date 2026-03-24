@@ -520,16 +520,44 @@ class GameUserRepository extends Repository
             $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
             if($response['success']){
                 $result['success'] = true;
-                $result['games'] = GameListProxy::where('product',$product_id)->where('enable',true)->orderByDesc('click')->orderByDesc('rank')->get()->toArray();
+                $result['games'] = $this->getEnabledGameListFromMongo($product_id);
             }else{
                 $result['success'] = true;
-                $result['games'] = GameListProxy::where('product',$product_id)->where('enable',true)->orderByDesc('click')->orderByDesc('rank')->get()->toArray();
+                $result['games'] = $this->getEnabledGameListFromMongo($product_id);
 
             }
         }
 
 
         return $result;
+    }
+
+    private function getEnabledGameListFromMongo($product_id): array
+    {
+        $enabledGames = GameListProxy::where('product', $product_id)
+            ->where(function ($query) {
+                $query->where('enable', true)
+                    ->orWhere('enable', 1)
+                    ->orWhere('enable', '1')
+                    ->orWhere('enable', 'Y')
+                    ->orWhere('enable', 'y')
+                    ->orWhere('enable', 'true')
+                    ->orWhere('enable', 'TRUE');
+            })
+            ->orderByDesc('click')
+            ->orderByDesc('rank')
+            ->get()
+            ->toArray();
+
+        if (!empty($enabledGames)) {
+            return $enabledGames;
+        }
+
+        return GameListProxy::where('product', $product_id)
+            ->orderByDesc('click')
+            ->orderByDesc('rank')
+            ->get()
+            ->toArray();
     }
 
 
