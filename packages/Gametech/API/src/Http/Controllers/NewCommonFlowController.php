@@ -10,6 +10,7 @@ use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use MongoDB\BSON\UTCDateTime;
 
 class NewCommonFlowController extends AppBaseController
@@ -118,46 +119,149 @@ class NewCommonFlowController extends AppBaseController
             'productId' => $productId,
             'currency' => 'THB',
             'username' => $username,
-            'wallet_transaction' => $this->resolveWalletTransactionId((string) $id),
             'timestampMillis' => $this->now->getTimestampMs(),
         ];
     }
 
-    protected function resolveWalletTransactionId(string $fallback): string
+    protected function createGameLog(array $data)
     {
-        $txns = $this->request->input('txns');
-        if (is_array($txns) && isset($txns[0]) && is_array($txns[0])) {
-            $txnId = (string) ($txns[0]['id'] ?? '');
-            if ($txnId !== '') {
-                return $txnId;
+        if (! array_key_exists('wallet_transaction', $data)) {
+            $walletTxn = $this->resolveWalletTransactionForLog($data);
+            if ($walletTxn !== null) {
+                $data['wallet_transaction'] = $walletTxn;
             }
         }
 
-        $singleTxnId = (string) $this->request->input('txn.id', $this->request->input('txnId', ''));
-        if ($singleTxnId !== '') {
-            return $singleTxnId;
-        }
-
-        return $fallback;
-    }
-
-    protected function createGameLog(array $data)
-    {
         return GameLogProxy::create($data);
     }
 
-    protected function safeDecrementBalance($amount, bool $allowNegative = false)
+    protected function resolveWalletTransactionForLog(array $data): ?string
     {
-        return DB::transaction(function () use ($amount, $allowNegative) {
+        $input = $data['input'] ?? null;
+        if (is_array($input)) {
+            if (isset($input['id']) && $input['id'] !== '') {
+                return (string) $input['id'];
+            }
+
+            if (isset($input['txn']) && is_array($input['txn']) && isset($input['txn']['id']) && $input['txn']['id'] !== '') {
+                return (string) $input['txn']['id'];
+            }
+
+            if (isset($input['txns']) && is_array($input['txns']) && isset($input['txns'][0]) && is_array($input['txns'][0]) && isset($input['txns'][0]['id']) && $input['txns'][0]['id'] !== '') {
+                return (string) $input['txns'][0]['id'];
+            }
+        }
+
+        return null;
+    }
+
+    protected function safeDecrementBalance($amount, bool $allowNegative = false, array $walletTxn = [])
+    {
+        $amount = (float) $amount;
+        if ($amount <= 0) {
+            return true;
+        }
+
+        return DB::transaction(function () use ($amount, $allowNegative, $walletTxn) {
             $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+            $balanceBefore = (float) $member->{$this->balances};
             if (! $allowNegative && $member->balance < $amount) {
                 return false;
             }
-            $member->decrement($this->balances, $amount);
+
+            $member->{$this->balances} = $balanceBefore - $amount;
+            $member->save();
+
+            $this->recordWalletTransaction(
+                walletTxn: $walletTxn,
+                direction: 'DEBIT',
+                amount: $amount,
+                balanceBefore: $balanceBefore,
+                balanceAfter: (float) $member->{$this->balances}
+            );
+
             $this->member->refresh();
 
             return true;
         });
+    }
+
+    protected function safeIncrementBalance($amount, array $walletTxn = []): bool
+    {
+        $amount = (float) $amount;
+        if ($amount <= 0) {
+            return true;
+        }
+
+        return DB::transaction(function () use ($amount, $walletTxn) {
+            $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+            $balanceBefore = (float) $member->{$this->balances};
+            $member->{$this->balances} = $balanceBefore + $amount;
+            $member->save();
+
+            $this->recordWalletTransaction(
+                walletTxn: $walletTxn,
+                direction: 'CREDIT',
+                amount: $amount,
+                balanceBefore: $balanceBefore,
+                balanceAfter: (float) $member->{$this->balances}
+            );
+
+            $this->member->refresh();
+
+            return true;
+        });
+    }
+
+    protected function recordWalletTransaction(array $walletTxn, string $direction, float $amount, float $balanceBefore, float $balanceAfter): void
+    {
+        if ($amount <= 0 || ! Schema::hasTable('wallet_transactions')) {
+            return;
+        }
+
+        $refType = (string) ($walletTxn['ref_type'] ?? 'GAME_PROVIDER');
+        $refCode = trim((string) ($walletTxn['ref_code'] ?? ''));
+        if ($refCode === '') {
+            $refCode = (string) ($this->request->input('id') ?? now()->format('YmdHisv'));
+        }
+
+        $exists = DB::table('wallet_transactions')
+            ->where('member_id', (int) $this->member->code)
+            ->where('direction', $direction)
+            ->where('ref_type', $refType)
+            ->where('ref_code', $refCode)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $description = (string) ($walletTxn['description'] ?? 'Game provider wallet transaction');
+        $meta = (array) ($walletTxn['meta'] ?? []);
+        $refId = isset($walletTxn['ref_id']) && is_numeric($walletTxn['ref_id']) ? (int) $walletTxn['ref_id'] : null;
+        $groupCode = (string) ($walletTxn['group_code'] ?? ($refType . '_' . $refCode));
+
+        DB::table('wallet_transactions')->insert([
+            'member_id' => (int) $this->member->code,
+            'scope' => 'MEMBER',
+            'game_user_id' => null,
+            'direction' => $direction,
+            'amount' => number_format($amount, 2, '.', ''),
+            'balance_before' => number_format($balanceBefore, 2, '.', ''),
+            'balance_after' => number_format($balanceAfter, 2, '.', ''),
+            'ref_type' => $refType,
+            'ref_id' => $refId,
+            'ref_code' => $refCode,
+            'group_code' => $groupCode,
+            'related_txn_id' => null,
+            'status' => 'SUCCESS',
+            'description' => $description,
+            'meta' => empty($meta) ? null : json_encode($meta, JSON_UNESCAPED_UNICODE),
+            'created_by_type' => 'system',
+            'created_by_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     public function placeBets(Request $request)
@@ -246,7 +350,17 @@ class NewCommonFlowController extends AppBaseController
             $skipUpdate = $txn['skipBalanceUpdate'] ?? false;
 
             if (! $skipUpdate) {
-                if (! $this->safeDecrementBalance($betAmount)) {
+                if (! $this->safeDecrementBalance($betAmount, false, [
+                    'ref_type' => 'GAME_BET',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_BET_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider bet debit',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ])) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
@@ -347,7 +461,17 @@ class NewCommonFlowController extends AppBaseController
                         break;
                     }
 
-                    if (! $this->safeDecrementBalance($txn['betAmount'])) {
+                    if (! $this->safeDecrementBalance($txn['betAmount'], false, [
+                        'ref_type' => 'GAME_OPEN',
+                        'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                        'group_code' => 'GAME_OPEN_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'description' => 'Provider open debit',
+                        'meta' => [
+                            'product_id' => $session['productId'] ?? null,
+                            'round_id' => $txn['roundId'] ?? null,
+                            'status' => $txn['status'] ?? null,
+                        ],
+                    ])) {
                         $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                         break;
                     }
@@ -433,7 +557,17 @@ class NewCommonFlowController extends AppBaseController
 
             // 3. เติมเงิน
             if (! $skipBalanceUpdate) {
-                $this->member->increment($this->balances, $txn['payoutAmount']);
+                $this->safeIncrementBalance($txn['payoutAmount'], [
+                    'ref_type' => 'GAME_SETTLE',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_SETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider settle credit',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ]);
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -554,7 +688,17 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($txn['betAmount'] > 0) {
-                $this->safeDecrementBalance($txn['betAmount'], true);
+                $this->safeDecrementBalance($txn['betAmount'], true, [
+                    'ref_type' => 'GAME_UNSETTLE',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_UNSETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider unsettled debit (bet)',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ]);
                 $method = 'betsub';
                 $amount = $txn['betAmount'];
             } else {
@@ -572,7 +716,17 @@ class NewCommonFlowController extends AppBaseController
                     return $this->responseData($session['id'], $session['username'], $session['productId'], 20002, $this->member->balance);
                 }
 
-                $this->safeDecrementBalance($txn['payoutAmount'], true);
+                $this->safeDecrementBalance($txn['payoutAmount'], true, [
+                    'ref_type' => 'GAME_UNSETTLE',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_UNSETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider unsettled debit (payout)',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ]);
                 $method = 'unsettlesub';
                 $amount = $txn['payoutAmount'];
             }
@@ -667,23 +821,53 @@ class NewCommonFlowController extends AppBaseController
                 break;
             }
 
-            $isAdjusted = DB::transaction(function () use ($log, $txn) {
+            $adjustResult = DB::transaction(function () use ($log, $txn) {
                 $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+                $balanceBefore = (float) $member->{$this->balances};
                 $balanceAfterRestore = $member->{$this->balances} + $log->amount;
                 if ($balanceAfterRestore < $txn['betAmount']) {
-                    return false;
+                    return [
+                        'success' => false,
+                        'before' => $balanceBefore,
+                        'after' => $balanceBefore,
+                    ];
                 }
 
                 $member->{$this->balances} = $balanceAfterRestore - $txn['betAmount'];
                 $member->save();
                 $this->member->refresh();
 
-                return true;
+                return [
+                    'success' => true,
+                    'before' => $balanceBefore,
+                    'after' => (float) $member->{$this->balances},
+                ];
             });
 
-            if (! $isAdjusted) {
+            if (! ($adjustResult['success'] ?? false)) {
                 $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                 break;
+            }
+
+            $adjustAmount = abs(((float) ($adjustResult['after'] ?? 0)) - ((float) ($adjustResult['before'] ?? 0)));
+            if ($adjustAmount > 0) {
+                $this->recordWalletTransaction(
+                    walletTxn: [
+                        'ref_type' => 'GAME_ADJUST_BET',
+                        'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                        'group_code' => 'GAME_ADJUST_BET_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'description' => 'Provider adjust bet',
+                        'meta' => [
+                            'product_id' => $session['productId'] ?? null,
+                            'round_id' => $txn['roundId'] ?? null,
+                            'status' => $txn['status'] ?? null,
+                        ],
+                    ],
+                    direction: ((float) ($adjustResult['after'] ?? 0)) >= ((float) ($adjustResult['before'] ?? 0)) ? 'CREDIT' : 'DEBIT',
+                    amount: $adjustAmount,
+                    balanceBefore: (float) ($adjustResult['before'] ?? 0),
+                    balanceAfter: (float) ($adjustResult['after'] ?? 0),
+                );
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -810,10 +994,30 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($txn['betAmount'] > $betAmount) {
-                $this->safeDecrementBalance($betAmount, true);
+                $this->safeDecrementBalance($betAmount, true, [
+                    'ref_type' => 'GAME_CANCEL',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_CANCEL_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider cancel debit correction',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ]);
             }
 
-            $this->member->increment($this->balances, $txn['betAmount']);
+            $this->safeIncrementBalance($txn['betAmount'], [
+                'ref_type' => 'GAME_CANCEL',
+                'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                'group_code' => 'GAME_CANCEL_' . (string) ($txn['roundId'] ?? $session['id']),
+                'description' => 'Provider cancel credit',
+                'meta' => [
+                    'product_id' => $session['productId'] ?? null,
+                    'round_id' => $txn['roundId'] ?? null,
+                    'status' => $txn['status'] ?? null,
+                ],
+            ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -942,7 +1146,17 @@ class NewCommonFlowController extends AppBaseController
 
             $rollbackAmount = $log->method === 'SETTLED' ? $txn['payoutAmount'] : $txn['betAmount'];
 
-            $this->safeDecrementBalance($rollbackAmount, true);
+            $this->safeDecrementBalance($rollbackAmount, true, [
+                'ref_type' => 'GAME_ROLLBACK',
+                'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                'group_code' => 'GAME_ROLLBACK_' . (string) ($txn['roundId'] ?? $session['id']),
+                'description' => 'Provider rollback debit',
+                'meta' => [
+                    'product_id' => $session['productId'] ?? null,
+                    'round_id' => $txn['roundId'] ?? null,
+                    'status' => $txn['status'] ?? null,
+                ],
+            ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -1040,7 +1254,17 @@ class NewCommonFlowController extends AppBaseController
 
             $payout = $txn['payoutAmount'] ?? 0;
 
-            $this->member->increment($this->balances, $payout);
+            $this->safeIncrementBalance($payout, [
+                'ref_type' => 'GAME_WIN_REWARD',
+                'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                'group_code' => 'GAME_WIN_REWARD_' . (string) ($txn['roundId'] ?? $session['id']),
+                'description' => 'Provider win reward credit',
+                'meta' => [
+                    'product_id' => $session['productId'] ?? null,
+                    'round_id' => $txn['roundId'] ?? null,
+                    'status' => $txn['status'] ?? null,
+                ],
+            ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -1155,23 +1379,53 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $payout = $txn['payoutAmount'];
-            $isVoided = DB::transaction(function () use ($txn, $payout) {
+            $voidResult = DB::transaction(function () use ($txn, $payout) {
                 $member = MemberProxy::where('code', $this->member->code)->lockForUpdate()->first();
+                $balanceBefore = (float) $member->{$this->balances};
                 $balanceAfterCredit = $member->{$this->balances} + $txn['betAmount'];
                 if ($balanceAfterCredit < $payout) {
-                    return false;
+                    return [
+                        'success' => false,
+                        'before' => $balanceBefore,
+                        'after' => $balanceBefore,
+                    ];
                 }
 
                 $member->{$this->balances} = $balanceAfterCredit - $payout;
                 $member->save();
                 $this->member->refresh();
 
-                return true;
+                return [
+                    'success' => true,
+                    'before' => $balanceBefore,
+                    'after' => (float) $member->{$this->balances},
+                ];
             });
 
-            if (! $isVoided) {
+            if (! ($voidResult['success'] ?? false)) {
                 $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                 break;
+            }
+
+            $voidAmount = abs(((float) ($voidResult['after'] ?? 0)) - ((float) ($voidResult['before'] ?? 0)));
+            if ($voidAmount > 0) {
+                $this->recordWalletTransaction(
+                    walletTxn: [
+                        'ref_type' => 'GAME_VOID_SETTLED',
+                        'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                        'group_code' => 'GAME_VOID_SETTLED_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'description' => 'Provider void settled',
+                        'meta' => [
+                            'product_id' => $session['productId'] ?? null,
+                            'round_id' => $txn['roundId'] ?? null,
+                            'status' => $txn['status'] ?? null,
+                        ],
+                    ],
+                    direction: ((float) ($voidResult['after'] ?? 0)) >= ((float) ($voidResult['before'] ?? 0)) ? 'CREDIT' : 'DEBIT',
+                    amount: $voidAmount,
+                    balanceBefore: (float) ($voidResult['before'] ?? 0),
+                    balanceAfter: (float) ($voidResult['after'] ?? 0),
+                );
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
@@ -1265,7 +1519,17 @@ class NewCommonFlowController extends AppBaseController
             $skipUpdate = $txn['skipBalanceUpdate'] ?? false;
 
             if (! $skipUpdate) {
-                if (! $this->safeDecrementBalance($amount)) {
+                if (! $this->safeDecrementBalance($amount, false, [
+                    'ref_type' => 'GAME_TIP',
+                    'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                    'group_code' => 'GAME_TIP_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'description' => 'Provider tip debit',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'round_id' => $txn['roundId'] ?? null,
+                        'status' => $txn['status'] ?? null,
+                    ],
+                ])) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
@@ -1378,7 +1642,17 @@ class NewCommonFlowController extends AppBaseController
                 break;
             }
 
-            $this->member->increment($this->balances, $txn['betAmount']);
+            $this->safeIncrementBalance($txn['betAmount'], [
+                'ref_type' => 'GAME_CANCEL_TIP',
+                'ref_code' => (string) ($txn['id'] ?? $session['id']),
+                'group_code' => 'GAME_CANCEL_TIP_' . (string) ($txn['roundId'] ?? $session['id']),
+                'description' => 'Provider cancel tip credit',
+                'meta' => [
+                    'product_id' => $session['productId'] ?? null,
+                    'round_id' => $txn['roundId'] ?? null,
+                    'status' => $txn['status'] ?? null,
+                ],
+            ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
                 'balanceBefore' => (float) $oldBalance,
@@ -1468,12 +1742,30 @@ class NewCommonFlowController extends AppBaseController
             }
 
             if ($item['status'] === 'DEBIT') {
-                if (! $this->safeDecrementBalance($item['amount'])) {
+                if (! $this->safeDecrementBalance($item['amount'], false, [
+                    'ref_type' => 'GAME_ADJUST_BALANCE',
+                    'ref_code' => (string) ($item['refId'] ?? $session['id']),
+                    'group_code' => 'GAME_ADJUST_BALANCE_' . (string) ($item['refId'] ?? $session['id']),
+                    'description' => 'Provider adjust balance debit',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'status' => $item['status'] ?? null,
+                    ],
+                ])) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 10002, $this->member->balance);
                     break;
                 }
             } else {
-                $this->member->increment($this->balances, $item['amount']);
+                $this->safeIncrementBalance($item['amount'], [
+                    'ref_type' => 'GAME_ADJUST_BALANCE',
+                    'ref_code' => (string) ($item['refId'] ?? $session['id']),
+                    'group_code' => 'GAME_ADJUST_BALANCE_' . (string) ($item['refId'] ?? $session['id']),
+                    'description' => 'Provider adjust balance credit',
+                    'meta' => [
+                        'product_id' => $session['productId'] ?? null,
+                        'status' => $item['status'] ?? null,
+                    ],
+                ]);
             }
 
             $param = [
@@ -1482,7 +1774,6 @@ class NewCommonFlowController extends AppBaseController
                 'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
-                'wallet_transaction' => $this->resolveWalletTransactionId((string) $session['id']),
                 'balanceBefore' => (float) $oldBalance,
                 'balanceAfter' => (float) $this->member->balance,
                 'timestampMillis' => $this->now->getTimestampMs(),
