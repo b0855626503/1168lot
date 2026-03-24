@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-03-23
+อัปเดตล่าสุด: 2026-03-24
 
 ## Base URL
 - `http://api.<domain>/api/v1`
@@ -49,16 +49,57 @@
 - `POST /auth/register`
 - Auth: ไม่ต้องใช้ token
 
+เงื่อนไขสำคัญของฟิลด์
+- `user_name`
+  - ต้องเป็นเบอร์โทรตัวเลขเท่านั้น
+  - ระบบจะ normalize โดยตัดอักขระที่ไม่ใช่ตัวเลขออกก่อน validate
+  - หลัง normalize ต้องตรงรูปแบบ `^0\d{9}$` (10 หลัก และขึ้นต้นด้วย `0`)
+  - ใช้เป็นค่า `tel` และ `wallet_id` ด้วยในฝั่งระบบ
+- `password`
+  - ประเภท `string`
+  - ความยาวต่ำสุด `6` ตัวอักษร
+  - ความยาวสูงสุด `10` ตัวอักษร
+- `password_confirm`
+  - ถ้าส่งมา ต้องตรงกับ `password`
+- `acc_no`
+  - ตัวเลขเท่านั้น (ระบบ normalize เช่นเดียวกัน)
+  - ต้องไม่ซ้ำภายใต้ `bank` เดียวกัน
+- `bank`
+  - ต้องเป็นจำนวนเต็ม และต้องส่งเสมอ
+- `refer`
+  - ต้องเป็นจำนวนเต็ม และต้องส่งเสมอ
+
+##### Field Matrix (POST /auth/register)
+
+| Field | Required | Type | Rules / Notes |
+|---|---|---|---|
+| `user_name` | Yes | string | เบอร์โทร 10 หลักขึ้นต้น 0 (`^0\d{9}$`), ระบบจะ normalize ให้เหลือเฉพาะตัวเลข |
+| `password` | Yes | string | ความยาว 6-10 ตัวอักษร |
+| `password_confirm` | No | string | ถ้าส่งมา ต้องตรงกับ `password` |
+| `name` | Conditionally* | string | ใช้กรอกชื่อเต็ม แล้วระบบแยกเป็น `firstname`/`lastname` |
+| `firstname` | Conditionally* | string | ต้องเป็นตัวอักษร/ช่องว่าง/ขีด (`\pL \pM space -`) |
+| `lastname` | Conditionally* | string | ต้องเป็นตัวอักษร/ช่องว่าง/ขีด (`\pL \pM space -`) |
+| `bank` | Yes | integer | รหัสธนาคาร |
+| `acc_no` | Yes | string | ตัวเลขเท่านั้น, 1-14 หลัก, ห้ามซ้ำใน `bank` เดียวกัน |
+| `refer` | Yes | integer | รหัสแหล่งที่มา (`refer code`) |
+| `marketing` | No | string | โค้ดลิงก์การตลาด, ถ้ามีจะ map ไป `team_id/campaign_id` |
+| `lineid` | No | string | LINE ID |
+| `upline` | No | integer | รหัส upline (default = `0`) |
+| `promotion` | No | string | ค่าเริ่มต้น `N` |
+
+\* `name` หรือ (`firstname` + `lastname`) ต้องมีอย่างน้อยหนึ่งรูปแบบ
+
 Request body
 ```json
 {
-  "user_name": "9000000014",
+  "user_name": "0900000014",
   "password": "pass1234",
   "password_confirm": "pass1234",
-  "firstname": "Api",
-  "lastname": "User",
-  "acc_no": "9900000014",
-  "bank": 1
+  "name": "Api User",
+  "acc_no": "1234567890",
+  "bank": 1,
+  "refer": 1,
+  "marketing": "MK2026ABC"
 }
 ```
 
@@ -74,11 +115,71 @@ Response (validation fail)
 ```json
 {
   "success": false,
-  "message": "ข้อมูลสมัครสมาชิกไม่ถูกต้อง"
+  "message": "ข้อมูลสมัครสมาชิกไม่ถูกต้อง",
+  "errors": {
+    "user_name": [
+      "เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก"
+    ],
+    "acc_no": [
+      "เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบบัญชีธนาคารภายใน"
+    ]
+  },
+  "error_fields": [
+    "user_name",
+    "acc_no"
+  ],
+  "duplicate_fields": [
+    "acc_no"
+  ],
+  "details": {
+    "user_name": {
+      "messages": [
+        "เบอร์โทรต้องขึ้นต้นด้วย 0 และมี 10 หลัก"
+      ],
+      "failed_rules": [
+        "Regex"
+      ],
+      "is_duplicate": false
+    },
+    "acc_no": {
+      "messages": [
+        "เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบบัญชีธนาคารภายใน"
+      ],
+      "failed_rules": [],
+      "is_duplicate": true
+    }
+  }
 }
 ```
 
+HTTP status
+- สำเร็จ: `200`
+- validation ไม่ผ่าน: `422`
+
 หมายเหตุ: ใน environment ที่ Redis queue มีปัญหา อาจเกิด timeout จาก process ภายในระบบเดิม
+
+#### 1.1.1 รายการธนาคารสำหรับหน้าสมัคร
+- `GET /auth/register/banks`
+- Auth: ไม่ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "ดึงรายการธนาคารสำหรับสมัครสมาชิกสำเร็จ",
+  "data": {
+    "banks": [
+      {
+        "code": 1,
+        "name": "กสิกรไทย",
+        "name_th": "กสิกรไทย",
+        "name_en": "Kasikorn Bank",
+        "shortcode": "KBANK"
+      }
+    ]
+  }
+}
+```
 
 #### 1.2 ล็อกอิน
 - `POST /auth/login`

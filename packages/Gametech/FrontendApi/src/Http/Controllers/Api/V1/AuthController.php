@@ -4,8 +4,10 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Gametech\FrontendApi\Services\FrontendTokenService;
 use Gametech\Member\Models\MemberProxy;
+use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -24,6 +26,30 @@ class AuthController extends BaseController
     public function register(Request $request)
     {
         return $this->registerFallback($request);
+    }
+
+    public function registerBanks(): JsonResponse
+    {
+        try {
+            $banks = app('Gametech\Payment\Repositories\BankRepository')
+                ->findWhere(['enable' => 'Y', 'show_regis' => 'Y', ['code', '<>', 0]]);
+
+            $items = collect($banks)->map(static function ($bank): array {
+                return [
+                    'code' => (int) ($bank->code ?? 0),
+                    'name' => (string) ($bank->name_th ?? $bank->name_en ?? $bank->name ?? ''),
+                    'name_th' => (string) ($bank->name_th ?? ''),
+                    'name_en' => (string) ($bank->name_en ?? ''),
+                    'shortcode' => (string) ($bank->shortcode ?? ''),
+                ];
+            })->values()->all();
+
+            return $this->sendResponse([
+                'banks' => $items,
+            ], 'ดึงรายการธนาคารสำหรับสมัครสมาชิกสำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงรายการธนาคารสำหรับสมัครสมาชิกได้ในขณะนี้', 422);
+        }
     }
 
     public function login(Request $request): JsonResponse
@@ -99,58 +125,133 @@ class AuthController extends BaseController
     {
         $config = core()->getConfigData();
 
-        $data = $request->all();
+        $data = $this->normalizeRegisterPayload((array) $request->all());
+
         $data['user_name'] = Str::of((string) ($data['user_name'] ?? ''))
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
-        $data['tel'] = $data['user_name'];
-        $data['wallet_id'] = $data['user_name'];
+        $data['tel'] = Str::of((string) ($data['tel'] ?? $data['user_name']))
+            ->replaceMatches('/[^0-9]++/', '')
+            ->trim()
+            ->__toString();
+        $data['wallet_id'] = Str::of((string) ($data['wallet_id'] ?? $data['user_name']))
+            ->replaceMatches('/[^0-9]++/', '')
+            ->trim()
+            ->__toString();
         $data['acc_no'] = Str::of((string) ($data['acc_no'] ?? ''))
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
 
         $bankCode = (int) ($data['bank'] ?? 0);
+        $lineId = trim(strip_tags((string) ($data['lineid'] ?? '')));
+        $username = (string) $data['user_name'];
+        $tel = (string) $data['tel'];
+        $walletId = (string) $data['wallet_id'];
+        $accNo = (string) $data['acc_no'];
 
         $validator = Validator::make($data, [
             'acc_no' => [
+                'bail',
                 'required',
-                'digits_between:1,20',
+                'digits_between:1,14',
                 Rule::unique('members', 'acc_no')->where(function ($query) use ($bankCode) {
                     return $query->where('bank_code', $bankCode);
                 }),
+                function ($attribute, $value, $fail): void {
+                    if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
+                        $fail('เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบบัญชีธนาคารภายใน');
+                    }
+                },
             ],
-            'firstname' => 'required|alpha',
-            'lastname' => 'required|alpha',
-            'password' => 'required|min:6|max:10',
-            'password_confirm' => 'min:6|same:password',
-            'user_name' => 'required|numeric|unique:members,user_name',
-            'wallet_id' => 'required|numeric|unique:members,wallet_id',
-            'tel' => 'required|numeric|unique:members,tel',
-            'bank' => 'required|numeric',
+            'firstname' => ['bail', 'required', 'regex:/^[\pL\pM\s\-]+$/u'],
+            'lastname' => ['bail', 'required', 'regex:/^[\pL\pM\s\-]+$/u'],
+            'password' => 'bail|required|string|min:6|max:10',
+            'password_confirm' => 'nullable|string|same:password',
+            'user_name' => [
+                'bail',
+                'required',
+                'regex:/^\d+$/',
+                'unique:members,user_name',
+                function ($attribute, $value, $fail): void {
+                    if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
+                        $fail('หมายเลขนี้ถูกใช้เป็นเลขบัญชีธนาคารภายในแล้ว');
+                    }
+                },
+            ],
+            'wallet_id' => 'bail|required|regex:/^\d+$/|unique:members,wallet_id',
+            'tel' => [
+                'bail',
+                'required',
+                'regex:/^0\d{9}$/',
+                'unique:members,tel',
+                function ($attribute, $value, $fail): void {
+                    if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
+                        $fail('หมายเลขนี้ถูกใช้เป็นเลขบัญชีธนาคารภายในแล้ว');
+                    }
+                },
+            ],
+            'bank' => 'bail|required|integer',
+            'refer' => 'bail|required|integer',
+            'marketing' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
-            return $this->sendError('ข้อมูลสมัครสมาชิกไม่ถูกต้อง', 422);
+            return $this->validationErrorResponse($validator);
         }
 
-        $username = (string) $data['user_name'];
         $name = trim(strip_tags((string) $data['firstname'])) . ' ' . trim(strip_tags((string) $data['lastname']));
         $pass = (string) $data['password'];
         $verify = ((string) ($config->verify_open ?? 'N') === 'Y') ? 'N' : 'Y';
         $freecredit = ((string) ($config->freecredit_all ?? 'N') === 'Y') ? 'Y' : 'N';
         $today = now()->toDateString();
-        $accNo = (string) $data['acc_no'];
         $accCheck = ($bankCode === 4) ? substr($accNo, -4) : substr($accNo, -6);
         $accBay = substr($accNo, -7);
+        $referCode = (int) $data['refer'];
+        $uplineCode = (int) ($data['upline'] ?? 0);
+        $promotion = (string) ($data['promotion'] ?? 'N');
+        $teamId = null;
+        $campaignId = null;
+
+        if (! empty($data['marketing'])) {
+            $marketing = app('Gametech\Marketing\Repositories\RegistrationLinkRepository')
+                ->findOneWhere(['code' => (string) $data['marketing']]);
+            if ($marketing) {
+                $teamId = $marketing->team_id;
+                $campaignId = $marketing->campaign_id;
+            }
+        }
+
+        Event::dispatch('customer.register.before', $data);
 
         $member = null;
         try {
-            $member = MemberProxy::withoutEvents(function () use ($bankCode, $name, $data, $username, $pass, $accNo, $accCheck, $accBay, $verify, $freecredit, $today, $request) {
+            $member = MemberProxy::withoutEvents(function () use (
+                $bankCode,
+                $name,
+                $data,
+                $username,
+                $pass,
+                $accNo,
+                $accCheck,
+                $accBay,
+                $verify,
+                $freecredit,
+                $today,
+                $request,
+                $referCode,
+                $uplineCode,
+                $walletId,
+                $tel,
+                $lineId,
+                $promotion,
+                $teamId,
+                $campaignId
+            ) {
                 return app('Gametech\Member\Repositories\MemberRepository')->create([
-                    'refer_code' => 0,
-                    'upline_code' => 0,
+                    'refer_code' => $referCode,
+                    'upline_code' => $uplineCode,
                     'bank_code' => $bankCode,
                     'name' => $name,
                     'firstname' => trim(strip_tags((string) $data['firstname'])),
@@ -162,13 +263,13 @@ class AuthController extends BaseController
                     'acc_check' => $accCheck,
                     'acc_bay' => $accBay,
                     'acc_kbank' => '',
-                    'tel' => $username,
-                    'wallet_id' => $username,
-                    'lineid' => '',
+                    'tel' => $tel,
+                    'wallet_id' => $walletId,
+                    'lineid' => $lineId,
                     'confirm' => $verify,
                     'freecredit' => $freecredit,
                     'check_status' => 'N',
-                    'promotion' => 'N',
+                    'promotion' => $promotion,
                     'user_create' => $name,
                     'user_update' => $name,
                     'lastlogin' => now(),
@@ -187,6 +288,8 @@ class AuthController extends BaseController
                     'point_deposit' => 0,
                     'diamond' => 0,
                     'enable' => 'Y',
+                    'team_id' => $teamId,
+                    'campaign_id' => $campaignId,
                 ]);
             });
 
@@ -240,5 +343,95 @@ class AuthController extends BaseController
         }
 
         return $this->sendSuccess('สมัครสมาชิกสำเร็จ');
+    }
+
+    private function validationErrorResponse(ValidatorContract $validator): JsonResponse
+    {
+        $errors = $validator->errors()->toArray();
+        $failedRules = $validator->failed();
+        $duplicateFields = [];
+        $details = [];
+
+        foreach ($errors as $field => $messages) {
+            $fieldFailedRules = array_keys((array) ($failedRules[$field] ?? []));
+            $isDuplicate = in_array('Unique', $fieldFailedRules, true);
+
+            if (! $isDuplicate) {
+                foreach ($messages as $message) {
+                    $text = mb_strtolower((string) $message);
+                    if (str_contains($text, 'taken') || str_contains($text, 'ถูกใช้งานแล้ว') || str_contains($text, 'ถูกใช้')) {
+                        $isDuplicate = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($isDuplicate) {
+                $duplicateFields[] = (string) $field;
+            }
+
+            $details[$field] = [
+                'messages' => array_values((array) $messages),
+                'failed_rules' => $fieldFailedRules,
+                'is_duplicate' => $isDuplicate,
+            ];
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'ข้อมูลสมัครสมาชิกไม่ถูกต้อง',
+            'errors' => $errors,
+            'error_fields' => array_values(array_keys($errors)),
+            'duplicate_fields' => array_values(array_unique($duplicateFields)),
+            'details' => $details,
+        ], 422);
+    }
+
+    private function normalizeRegisterPayload(array $data): array
+    {
+        $username = (string) ($data['user_name'] ?? $data['phone'] ?? $data['tel'] ?? $data['username'] ?? '');
+        $phone = (string) ($data['phone'] ?? $data['tel'] ?? $username);
+        $fullName = trim((string) ($data['name'] ?? ''));
+
+        if (! isset($data['firstname']) && $fullName !== '') {
+            [$firstName, $lastName] = $this->splitFullName($fullName);
+            $data['firstname'] = $firstName;
+            $data['lastname'] = $lastName;
+        }
+
+        if (! isset($data['lastname'])) {
+            $data['lastname'] = (string) ($data['firstname'] ?? '-');
+        }
+
+        $data['user_name'] = $username;
+        $data['tel'] = $phone;
+        $data['wallet_id'] = (string) ($data['wallet_id'] ?? $username);
+        $data['password_confirm'] = (string) ($data['password_confirm'] ?? $data['password_confirmation'] ?? '');
+        $data['bank'] = $data['bank'] ?? null;
+        $data['acc_no'] = (string) ($data['acc_no'] ?? $data['account_no'] ?? '');
+        $data['refer'] = $data['refer'] ?? ($data['refer_code'] ?? null);
+
+        return $data;
+    }
+
+    /**
+     * @return array{0:string,1:string}
+     */
+    private function splitFullName(string $fullName): array
+    {
+        $normalized = trim(preg_replace('/\s+/u', ' ', $fullName) ?? '');
+        if ($normalized === '') {
+            return ['-', '-'];
+        }
+
+        $parts = explode(' ', $normalized);
+        $firstName = (string) ($parts[0] ?? '-');
+        $lastName = trim(implode(' ', array_slice($parts, 1)));
+
+        if ($lastName === '') {
+            $lastName = $firstName;
+        }
+
+        return [$firstName, $lastName];
     }
 }

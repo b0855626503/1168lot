@@ -17,6 +17,8 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
     ->prefix('api/v1')
     ->group(function () {
         Route::middleware(['api', ResolveFrontendLanguage::class])->group(function () {
+            Route::get('auth/register/banks', [AuthController::class, 'registerBanks'])
+                ->name('frontend.api.v1.auth.register.banks');
             Route::post('auth/register', [AuthController::class, 'register'])
                 ->name('frontend.api.v1.auth.register');
             Route::post('auth/login', [AuthController::class, 'login'])
