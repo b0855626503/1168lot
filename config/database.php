@@ -138,117 +138,51 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', $app . '_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+            'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
-        // Cache / default
+
         'default' => [
             'scheme' => 'tcp',
-            'host' => env('REDIS_HOST', '139.59.96.78'),
-            'password' => env('REDIS_PASSWORD', 'gametech2020'),
-            'port' => env('REDIS_PORT', '6379'),
-
-            // รองรับทั้งตัวใหม่/ตัวเก่า
-            'database' => env('REDIS_DB', env('REDIS_CACHE_DB', '0')),
-
-            // ---- phpredis persistent ----
-            'persistent' => true,
-            'persistent_id' => env('REDIS_DEFAULT_PERSISTENT_ID', $app . ':redis:default:' . env('REDIS_DB', env('REDIS_CACHE_DB', '0'))),
-
-            // ---- fail fast (กันค้าง) ----
-            'timeout' => (float) env('REDIS_TIMEOUT', 1.0),
-            'read_timeout' => (float) env('REDIS_READ_TIMEOUT', 1.0),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_DB', 0),
+            'persistent' => env('REDIS_PERSISTENT', false),
+            'persistent_id' => env('APP_NAME', 'laravel').'_cache',
         ],
 
-        // Session
+        // ใช้เฉพาะ session
         'session' => [
             'scheme' => 'tcp',
-            'host' => env('REDIS_HOST', '139.59.96.78'),
-            'password' => env('REDIS_PASSWORD', 'gametech2020'),
-            'port' => env('REDIS_PORT', '6379'),
-
-            // ตัวใหม่: REDIS_SESSION_DB, fallback: REDIS_CACHE_DB, fallback สุดท้าย: 1
-            'database' => env('REDIS_SESSION_DB', env('REDIS_CACHE_DB', '1')),
-
-            'persistent' => true,
-            'persistent_id' => env(
-                'REDIS_SESSION_PERSISTENT_ID',
-                $app . ':redis:session:' . env('REDIS_SESSION_DB', env('REDIS_CACHE_DB', '1'))
-            ),
-
-            'timeout' => (float) env('REDIS_TIMEOUT', 1.0),
-            'read_timeout' => (float) env('REDIS_READ_TIMEOUT', 1.0),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_SESSION_DB', 1),
+            'persistent' => env('REDIS_PERSISTENT', false),
+            'persistent_id' => env('APP_NAME', 'laravel').'_session',
         ],
 
-        // Queue
+        // ใช้เฉพาะคิว
         'queue' => [
             'scheme' => 'tcp',
-            'host' => env('REDIS_HOST', '139.59.96.78'),
-            'password' => env('REDIS_PASSWORD', 'gametech2020'),
-            'port' => env('REDIS_PORT', '6379'),
-
-            // ตัวใหม่: REDIS_QUEUE_DB, fallback: REDIS_CACHE_DB, fallback สุดท้าย: 2
-            'database' => env('REDIS_QUEUE_DB', env('REDIS_CACHE_DB', '2')),
-
-            'persistent' => true,
-            'persistent_id' => env(
-                'REDIS_QUEUE_PERSISTENT_ID',
-                $app . ':redis:queue:' . env('REDIS_QUEUE_DB', env('REDIS_CACHE_DB', '2'))
-            ),
-
-            'timeout' => (float) env('REDIS_TIMEOUT', 1.0),
-            'read_timeout' => (float) env('REDIS_READ_TIMEOUT', 1.0),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_QUEUE_DB', 2),
+            'persistent' => env('REDIS_PERSISTENT', false),
+            'persistent_id' => env('APP_NAME', 'laravel').'_queue',
         ],
 
-        // Game
         'game' => [
             'scheme' => 'tcp',
-            'host' => env('REDIS_HOST', '139.59.96.78'),
-            'password' => env('REDIS_PASSWORD', 'gametech2020'),
-            'port' => env('REDIS_PORT', '6379'),
-
-            // ตัวใหม่: REDIS_GAME_DB, fallback: REDIS_CACHE_DB, fallback สุดท้าย: 3
-            'database' => env('REDIS_GAME_DB', env('REDIS_CACHE_DB', '3')),
-
-            'persistent' => true,
-            'persistent_id' => env(
-                'REDIS_GAME_PERSISTENT_ID',
-                $app . ':redis:game:' . env('REDIS_GAME_DB', env('REDIS_CACHE_DB', '3'))
-            ),
-
-            'timeout' => (float) env('REDIS_TIMEOUT', 1.0),
-            'read_timeout' => (float) env('REDIS_READ_TIMEOUT', 1.0),
-        ],
-
-        'gamelog' => [
-            'host' => env('REDIS_GAMELOG_HOST', '127.0.0.1'),
-            'password' => env('REDIS_GAMELOG_PASSWORD', null),
-            'port' => env('REDIS_GAMELOG_PORT', null),
-            'database' => env('REDIS_GAMELOG_DB', '0'),
-        ],
-
-        // Fanout
-        'fanout' => [
-            'host' => env('REDIS_HOST', '139.59.96.78'),
-            'password' => env('REDIS_PASSWORD', 'gametech2020'),
-            'port' => env('REDIS_PORT', '6379'),
-
-            // ตัวใหม่: REDIS_FANOUT_DB, fallback: 5 (อย่า fallback ไป REDIS_CACHE_DB เพราะ fanout ต้องนิ่ง)
-            'database' => env('REDIS_FANOUT_DB', '5'),
-
-            'persistent' => true,
-            'persistent_id' => env(
-                'REDIS_FANOUT_PERSISTENT_ID',
-                $app . ':redis:fanout:' . env('REDIS_FANOUT_DB', '5')
-            ),
-
-            'timeout' => (float) env('REDIS_TIMEOUT', 1.0),
-            'read_timeout' => (float) env('REDIS_READ_TIMEOUT', 1.0),
-
-            'options' => [
-                'prefix' => env('FANOUT_PREFIX', 'fanout_'), // ควรเหมือนกันทุกเว็บ
-            ],
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_GAME_DB', 3),
+            'persistent' => env('REDIS_PERSISTENT', false),
+            'persistent_id' => env('APP_NAME', 'laravel').'_game',
         ],
     ],
-
 ];
