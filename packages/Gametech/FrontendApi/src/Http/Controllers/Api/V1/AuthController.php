@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -293,36 +294,79 @@ class AuthController extends BaseController
                 ]);
             });
 
-            $game = app('Gametech\Game\Repositories\GameRepository')
-                ->findOneWhere(['enable' => 'Y', 'status_open' => 'Y', 'id' => 'seamless']);
-            if (! $game) {
-                $game = app('Gametech\Game\Repositories\GameRepository')
-                    ->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
-            }
+            $isSeamless = ((string) ($config->seamless ?? 'N') === 'Y');
+            $gameRepo = app('Gametech\Game\Repositories\GameRepository');
+            $gameUserRepo = app('Gametech\Game\Repositories\GameUserRepository');
 
-            if ($game) {
-                app('Gametech\Game\Repositories\GameUserRepository')->updateOrCreate(
-                    ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
-                    [
-                        'user_name' => $username,
-                        'user_pass' => $pass,
-                        'balance' => 0,
-                        'enable' => 'Y',
+            if ($isSeamless) {
+                Log::info('frontend_api_register.seamless_branch_entered', [
+                    'member_code' => (int) $member->code,
+                    'user_name' => $username,
+                    'seamless_config' => (string) ($config->seamless ?? 'N'),
+                ]);
+
+                $game = $gameRepo->findOneWhere([
+                    'enable' => 'Y',
+                    'status_open' => 'Y',
+                    'id' => 'seamless',
+                ]);
+
+                Log::info('frontend_api_register.seamless_game_lookup', [
+                    'member_code' => (int) $member->code,
+                    'user_name' => $username,
+                    'game_found' => (bool) $game,
+                    'game_code' => $game ? (int) $game->code : null,
+                    'game_id' => $game ? (string) $game->id : null,
+                ]);
+
+                if ($game) {
+                    $result = $gameUserRepo->addGameUser((int) $game->code, (int) $member->code, [
+                        'username' => $username,
+                        'password' => $pass,
+                        'name' => $name,
                         'user_create' => $name,
-                        'user_update' => $name,
-                        'date_create' => now(),
-                        'date_update' => now(),
-                        'bill_code' => 0,
-                        'pro_code' => 0,
-                        'amount' => 0,
-                        'bonus' => 0,
-                        'turnpro' => 0,
-                        'amount_balance' => 0,
-                        'withdraw_limit' => 0,
-                        'withdraw_limit_rate' => 0,
-                        'withdraw_limit_amount' => 0,
-                    ]
-                );
+                    ]);
+
+                    Log::info('frontend_api_register.seamless_add_game_user_result', [
+                        'member_code' => (int) $member->code,
+                        'user_name' => $username,
+                        'game_code' => (int) $game->code,
+                        'success' => (bool) ($result['success'] ?? false),
+                        'message' => (string) ($result['msg'] ?? ''),
+                    ]);
+
+                    if (($result['success'] ?? false) !== true) {
+                        $message = (string) ($result['msg'] ?? 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้');
+                        throw new \RuntimeException($message);
+                    }
+                }
+            } else {
+                $game = $gameRepo->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
+
+                if ($game) {
+                    $gameUserRepo->updateOrCreate(
+                        ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
+                        [
+                            'user_name' => $username,
+                            'user_pass' => $pass,
+                            'balance' => 0,
+                            'enable' => 'Y',
+                            'user_create' => $name,
+                            'user_update' => $name,
+                            'date_create' => now(),
+                            'date_update' => now(),
+                            'bill_code' => 0,
+                            'pro_code' => 0,
+                            'amount' => 0,
+                            'bonus' => 0,
+                            'turnpro' => 0,
+                            'amount_balance' => 0,
+                            'withdraw_limit' => 0,
+                            'withdraw_limit_rate' => 0,
+                            'withdraw_limit_amount' => 0,
+                        ]
+                    );
+                }
             }
 
             try {
