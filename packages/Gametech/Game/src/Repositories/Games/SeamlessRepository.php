@@ -598,7 +598,7 @@
                 }
 
                 $games  = $response['data']['games'];
-
+                Log::channel('api')->info('game',['response' => $games]);
                 // ===== normalize =====
                 $catMap = [
                     'COCKFIGHT' => 'COCK',
@@ -682,6 +682,7 @@
                     'msg'     => $response['msg'] ?? 'OK',
                     'games'   => $games,
                 ];
+                Log::channel('api')->info('game complete',['response' => $data]);
 
                 Cache::put($cacheKey, $data, $ttl);
                 return $data;
