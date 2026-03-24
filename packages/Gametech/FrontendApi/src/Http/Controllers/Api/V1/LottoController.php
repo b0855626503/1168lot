@@ -15,6 +15,139 @@ use Illuminate\Support\Str;
 
 class LottoController extends BaseController
 {
+    public function marketsLatestByGroup(Request $request): JsonResponse
+    {
+        try {
+            $language = $this->requestLanguage($request);
+            $groupId = (int) $request->query('group_id', 0);
+            $groupCode = trim((string) $request->query('group_code', $request->query('code', '')));
+            $groupName = trim((string) ($request->query('group_name', $request->query('group', ''))));
+
+            $groupsQuery = LotteryGroup::query()
+                ->where('is_enabled', true)
+                ->orderBy('sort')
+                ->orderBy('name');
+
+            if ($groupId > 0) {
+                $groupsQuery->where('id', $groupId);
+            }
+
+            if ($groupCode !== '') {
+                $groupsQuery->where('code', $groupCode);
+            }
+
+            if ($groupName !== '') {
+                $groupsQuery->where(function ($query) use ($groupName): void {
+                    $query->where('name', 'like', '%' . $groupName . '%')
+                        ->orWhere('name_en', 'like', '%' . $groupName . '%')
+                        ->orWhere('name_kh', 'like', '%' . $groupName . '%')
+                        ->orWhere('name_laos', 'like', '%' . $groupName . '%')
+                        ->orWhere('code', 'like', '%' . $groupName . '%');
+                });
+            }
+
+            $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'code']);
+
+            $markets = LotteryMarket::query()
+                ->where('is_enabled', true)
+                ->orderBy('group_id')
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'group_id',
+                    'name',
+                    'name_en',
+                    'name_kh',
+                    'name_laos',
+                    'logo',
+                    'icon',
+                    'is_enabled',
+                ]);
+
+            if ($groups->isNotEmpty()) {
+                $markets->whereIn('group_id', $groups->pluck('id')->all());
+            } else {
+                $markets->whereRaw('1 = 0');
+            }
+
+            $markets = $markets->get();
+
+            $latestDrawIds = LottoDraw::query()
+                ->selectRaw('MAX(id) as id')
+                ->groupBy('market_id')
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id) => $id > 0)
+                ->values()
+                ->all();
+
+            $latestDrawMap = LottoDraw::query()
+                ->whereIn('id', $latestDrawIds)
+                ->get(['id', 'market_id', 'draw_date', 'open_at', 'close_at', 'result_at', 'status', 'result_number'])
+                ->keyBy(static fn (LottoDraw $draw): int => (int) $draw->market_id);
+
+            $marketRowsByGroup = $markets
+                ->groupBy(static fn (LotteryMarket $market): int => (int) $market->group_id);
+
+            $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $language): array {
+                $groupMarkets = $marketRowsByGroup->get((int) $group->id, collect());
+
+                return [
+                    'group_id' => (int) $group->id,
+                    'group_code' => (string) ($group->code ?? ''),
+                    'group_name' => $this->localizedNameByLanguage([
+                        'name' => (string) $group->name,
+                        'name_en' => (string) ($group->name_en ?? ''),
+                        'name_kh' => (string) ($group->name_kh ?? ''),
+                        'name_laos' => (string) ($group->name_laos ?? ''),
+                    ], $language, 'name'),
+                    'markets' => $groupMarkets->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
+                        $draw = $latestDrawMap->get((int) $market->id);
+                        $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
+                        $status = (string) ($draw?->status ?? 'draft');
+
+                        return [
+                            'market_id' => (int) $market->id,
+                            'market_name' => $this->localizedNameByLanguage([
+                                'name' => (string) $market->name,
+                                'name_en' => (string) ($market->name_en ?? ''),
+                                'name_kh' => (string) ($market->name_kh ?? ''),
+                                'name_laos' => (string) ($market->name_laos ?? ''),
+                            ], $language, 'name'),
+                            'market_logo' => (string) ($market->logo ?? ''),
+                            'market_icon' => (string) ($market->icon ?? ''),
+                            'is_enabled' => (bool) $market->is_enabled,
+                            'latest_draw' => [
+                                'draw_id' => (int) ($draw?->id ?? 0),
+                                'draw_date' => $draw?->draw_date ? $draw->draw_date->format('Y-m-d') : null,
+                                'open_at' => $draw?->open_at ? $draw->open_at->format('Y-m-d H:i:s') : null,
+                                'close_at' => $draw?->close_at ? $draw->close_at->format('Y-m-d H:i:s') : null,
+                                'result_at' => $draw?->result_at ? $draw->result_at->format('Y-m-d H:i:s') : null,
+                                'status' => $status,
+                                'status_label' => $this->drawStatusLabel($status),
+                                'is_open_bet' => $status === 'open',
+                                'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
+                                'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
+                            ],
+                        ];
+                    })->values()->all(),
+                ];
+            })->values()->all();
+
+            return $this->sendResponse([
+                'language' => $language,
+                'filters' => [
+                    'group_id' => $groupId > 0 ? $groupId : null,
+                    'group_code' => $groupCode !== '' ? $groupCode : null,
+                    'group_name' => $groupName !== '' ? $groupName : null,
+                ],
+                'groups' => $rows,
+            ], 'ดึงรายการหวยพร้อมงวดล่าสุดสำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงรายการหวยพร้อมงวดล่าสุดได้ในขณะนี้', 422);
+        }
+    }
+
     public function draws(Request $request)
     {
         try {
@@ -374,6 +507,16 @@ class LottoController extends BaseController
             'kh' => 'kh',
             'la' => 'laos',
             default => '',
+        };
+    }
+
+    private function drawStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'open' => 'เปิดรับแทง',
+            'closed' => 'รอออกผล',
+            'resulted' => 'ออกผลแล้ว',
+            default => 'ร่าง',
         };
     }
 }

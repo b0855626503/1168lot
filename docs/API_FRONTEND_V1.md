@@ -558,6 +558,64 @@ Response ตัวอย่างเมื่อไม่พบโพย
 }
 ```
 
+#### 5.7 รายการหวยตามกลุ่ม พร้อมงวดล่าสุด
+- `GET /lotto/markets/latest`
+- Auth: ไม่ต้องใช้ token
+- รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+
+Query ที่รองรับ:
+- `code` (แนะนำ) เช่น `thai` เพื่อขอเฉพาะกลุ่มนั้น
+- `group_code` (เทียบเท่า `code`)
+- `group_id`
+- `group_name` หรือ `group`
+
+ตัวอย่าง: ขอเฉพาะกลุ่มหวยไทยด้วย code
+`GET /lotto/markets/latest?code=thai&lang=th`
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": {
+    "language": "th",
+    "filters": {
+      "group_id": null,
+      "group_code": "thai",
+      "group_name": null
+    },
+    "groups": [
+      {
+        "group_id": 1,
+        "group_code": "thai",
+        "group_name": "หวยไทย",
+        "markets": [
+          {
+            "market_id": 3,
+            "market_name": "ออมสิน",
+            "market_logo": "/storage/lotto/markets/gsb-logo.png",
+            "market_icon": "/storage/lotto/markets/gsb-icon.png",
+            "is_enabled": true,
+            "latest_draw": {
+              "draw_id": 120,
+              "draw_date": "2026-03-24",
+              "open_at": "2026-03-24 09:00:00",
+              "close_at": "2026-03-24 15:30:00",
+              "result_at": "2026-03-24 16:00:00",
+              "status": "open",
+              "status_label": "เปิดรับแทง",
+              "is_open_bet": true,
+              "result_top_3": "123",
+              "result_bottom_2": "45"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "message": "ดึงรายการหวยพร้อมงวดล่าสุดสำเร็จ"
+}
+```
+
 ---
 
 ### 6) Deposit
@@ -742,6 +800,7 @@ Response ตัวอย่าง
 - `POST /games/login` (กรณีเข้าไม่ได้ ตอบ error JSON)
 - `GET /lotto/draws`
 - `GET /lotto/draws/{id}`
+- `GET /lotto/markets/latest`
 - `GET /deposit/channels`
 - `POST /deposit/loadbank`
 - `GET /wheel/list`

@@ -37,6 +37,8 @@ Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.do
                 ->name('frontend.api.v1.lotto.draws');
             Route::get('lotto/draws/{id}', [LottoController::class, 'draw'])
                 ->name('frontend.api.v1.lotto.draw');
+            Route::get('lotto/markets/latest', [LottoController::class, 'marketsLatestByGroup'])
+                ->name('frontend.api.v1.lotto.markets.latest');
         });
 
         Route::middleware(['api', ResolveFrontendLanguage::class, AuthenticateFrontendToken::class])->group(function () {
