@@ -90,6 +90,7 @@ class MemberController extends BaseController
             $profile['pro'] = ($config['wallet_withdraw_all'] ?? 'N') === 'Y' ? true : $hasPromotionFlow;
             $profile['pro_name'] = $gameUserProCode > 0 ? (data_get($gameUser, 'promotion.name_th', '')) : '';
             $profile['bank_code'] = $member->bank_code;
+            $profile['name'] = (string) ($member->name ?? '');
             $profile['pic_id'] = $member->pic_id ? asset('storage/' . $member->pic_id) : '';
             $profile['balance'] = $member->balance;
             $profile['diamond'] = (int) $member->diamond;
@@ -134,6 +135,16 @@ class MemberController extends BaseController
             ];
 
             if ($includeSpin) {
+                $bankName = '';
+                try {
+                    $bank = app('Gametech\Payment\Repositories\BankRepository')
+                        ->findOneByField('code', (int) ($member->bank_code ?? 0));
+                    $bankName = (string) ($bank->name_th ?? $bank->name_en ?? $bank->name ?? '');
+                } catch (\Throwable $e) {
+                    $bankName = '';
+                }
+
+                $payload['profile']['bank_name'] = $bankName;
                 $payload['spin'] = app('Gametech\Wallet\Http\Controllers\HomeController')->loadSpin();
             }
 
