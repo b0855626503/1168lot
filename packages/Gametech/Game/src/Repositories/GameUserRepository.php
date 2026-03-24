@@ -528,7 +528,7 @@ class GameUserRepository extends Repository
             }
         }
 
-        Log::channel('api')->info('check games');
+
         return $result;
     }
 
