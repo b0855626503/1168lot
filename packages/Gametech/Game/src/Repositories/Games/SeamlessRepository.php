@@ -1,7 +1,7 @@
 <?php
-	
+
 	namespace Gametech\Game\Repositories\Games;
-	
+
 	use Gametech\API\Models\GameListProxy;
 	use Gametech\API\Traits\LogSeamless;
 	use Gametech\Core\Eloquent\Repository;
@@ -16,109 +16,109 @@
 	use Illuminate\Support\Facades\Redis;
 	use Illuminate\Support\Str;
 	use Jenssegers\Agent\Agent;
-	
+
 	class SeamlessRepository extends Repository
 	{
 		use LogSeamless;
-		
+
 		protected $responses;
-		
+
 		protected $method;
-		
+
 		protected $debug;
-		
+
 		protected $url;
-		
+
 		protected $agent;
-		
+
 		protected $agentPass;
-		
+
 		protected $passkey;
-		
+
 		protected $secretkey;
-		
+
 		protected $login;
-		
+
 		protected $auth;
-		
+
 		public function __construct($method, $debug, App $app)
 		{
 			$game = 'seamless';
-			
+
 			$this->method = $method;
-			
+
 			$this->debug = $debug;
-			
+
 			$this->url = config($this->method . '.' . $game . '.apiurl');
-			
+
 			$this->agent = config($this->method . '.' . $game . '.agent');
-			
+
 			$this->agentPass = config($this->method . '.' . $game . '.agent_pass');
-			
+
 			$this->login = config($this->method . '.' . $game . '.login');
-			
+
 			$this->auth = config($this->method . '.' . $game . '.auth');
-			
+
 			$this->passkey = config($this->method . '.' . $game . '.passkey');
-			
+
 			$this->secretkey = config($this->method . '.' . $game . '.secretkey');
-			
+
 			$this->responses = [];
-			
+
 			parent::__construct($app);
 		}
-		
+
 		public function GameCurlPg($param, $action)
 		{
-			
+
 			$response = rescue(function () use ($param, $action) {
-				
+
 				$url = 'https://test.ambsuperapi.com/' . $action;
-				
+
 				return Http::timeout(10)->withHeaders([
 					'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey),
 				])->withOptions(['debug' => false])->asJson()->post($url, $param);
-				
+
 			}, function ($e) {
-				
+
 				return false;
-				
+
 			}, true);
-			
+
 			if ($this->debug) {
 				$this->Debug($response);
 			}
-			
+
 			if ($response === false) {
 				//            $result['main'] = false;
 				$result['success'] = false;
 				$result['msg'] = 'เชื่อมต่อไม่ได้';
-				
+
 				return $result;
 			}
-			
+
 			$result = $response->json();
-			
+
 			$result['msg'] = ($result['message'] ?? 'พบปัญหาบางประการ');
-			
+
 			if ($response->successful()) {
 				if ($result['code'] == 0) {
 					$result['success'] = true;
 				} else {
 					$result['success'] = false;
 				}
-				
+
 			} else {
 				$result['success'] = false;
 			}
-			
+
 			return $result;
-			
+
 		}
-		
+
 		public function Debug($response, $custom = false)
 		{
-			
+
 			if (!$custom) {
 				$return['body'] = $response->body();
 				$return['json'] = $response->json();
@@ -134,11 +134,11 @@
 				$return['clientError'] = 1;
 				$return['serverError'] = 1;
 			}
-			
+
 			$this->responses[] = $return;
-			
+
 		}
-		
+
 		public function addGameAccount($data): array
 		{
 			$result = $this->newUser();
@@ -146,71 +146,71 @@
 				$account = $result['account'];
 				$result = $this->addUser($account, $data);
 			}
-			
+
 			return $result;
 		}
-		
+
 		public function newUser(): array
 		{
 			$return['success'] = true;
 			$return['account'] = '';
-			
+
 			return $return;
 		}
-		
+
 		public function addUser($username, $data): array
 		{
 			$return['success'] = false;
-			
+
 			$param = [
 				'username' => $data['username'],
 				'productId' => 'JOKER',
 			];
-			
+
 			$response = $this->GameCurl($param, 'seamless/member');
-			
+
 			//        $path = storage_path('logs/seamless/register' . now()->format('Y_m_d') . '.log');
 			//        file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
 			//        file_put_contents($path, print_r($response, true), FILE_APPEND);
 			//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-			
+
 			if ($response['success'] === true) {
-				
+
 				$return['msg'] = 'Complete';
 				$return['success'] = true;
 				$return['user_name'] = $response['data']['username'];
 				$return['user_pass'] = $username;
-				
+
 			} else {
 				$return['msg'] = $response['msg'];
 				$return['success'] = false;
-				
+
 			}
-			
+
 			if ($this->debug) {
 				return ['debug' => $this->responses, 'success' => true];
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function GameCurl($param, $action)
 		{
-			
+
 			$response = rescue(function () use ($param, $action) {
-				
+
 				$url = $this->url . $action;
-				
+
 				return Http::timeout(10)->withHeaders([
 					'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey),
 				])->withOptions(['debug' => false])->asJson()->post($url, $param);
-				
+
 			}, function ($e) {
-				
+
 				return false;
-				
+
 			}, true);
-			
+
 			//        if ($this->debug) {
 			if ($response !== false) {
 				$this->Debug($response);
@@ -218,49 +218,49 @@
 				// debug แบบ custom หรือ log error
 				Log::error('Failed to connect or error in request', ['response' => true]);
 			}
-		
+
 			//        }
-			
+
 			if ($response === false) {
 				//            $result['main'] = false;
 				$result['success'] = false;
 				$result['msg'] = 'เชื่อมต่อไม่ได้';
-				
+
 				return $result;
 			}
-			
+
 			$result = $response->json();
-			
+
 			$result['msg'] = ($result['message'] ?? 'พบปัญหาบางประการ');
-			
+
 			if ($response->successful()) {
 				if ($result['code'] == 0) {
 					$result['success'] = true;
 				} else {
 					$result['success'] = false;
 				}
-				
+
 			} else {
 				$result['success'] = false;
 			}
-			
+
 			return $result;
-			
+
 		}
-		
+
 		public function changePass($data): array
 		{
 			$return['success'] = false;
-			
+
 			$param = [
 				'Method' => 'SP',
 				'Password' => $data['user_pass'],
 				'Timestamp' => time(),
 				'Username' => $data['user_name'],
 			];
-			
+
 			$response = $this->GameCurl($param, '');
-			
+
 			if ($response['success'] === true) {
 				if ($response['Status'] === 'OK') {
 					$return['msg'] = 'เปลี่ยนรหัสผ่านเกม เรียบร้อย';
@@ -270,33 +270,33 @@
 				$return['msg'] = $response['msg'];
 				$return['success'] = false;
 			}
-			
+
 			if ($this->debug) {
 				return ['debug' => $this->responses, 'success' => true];
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function viewBalance($username, $product_id): array
 		{
 			$return['success'] = false;
 			$return['score'] = 0;
-			
+
 			$param = [
 				'username' => $username,
 				'productId' => $product_id,
 			];
-			
+
 			$response = $this->GameCurlGet($param, 'balance');
-			
+
 			if ($response['success'] === true) {
 				if ($response['data']['status'] == 'SUCCESS') {
 					$return['msg'] = 'Complete';
 					$return['success'] = true;
 					$return['connect'] = true;
 					$return['score'] = $response['balance'];
-					
+
 				} else {
 					$return['msg'] = 'เกิดข้อผิดพลาด';
 					$return['connect'] = true;
@@ -307,31 +307,31 @@
 				$return['connect'] = false;
 				$return['success'] = false;
 			}
-			
+
 			if ($this->debug) {
 				return ['debug' => $this->responses, 'success' => true];
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function GameCurlGet($param, $action)
 		{
-			
+
 			$response = rescue(function () use ($param, $action) {
-				
+
 				$url = $this->url . $action;
-				
+
 				return Http::timeout(15)->withHeaders([
 					'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey),
 				])->asJson()->get($url, $param);
-				
+
 			}, function ($e) {
-				
+
 				return false;
-				
+
 			}, true);
-			
+
 			//        if ($this->debug) {
 			if ($response !== false) {
 				$this->Debug($response);
@@ -339,21 +339,21 @@
 				Log::error('Failed to connect or error in request', ['response' => true]);
 			}
 			//        }
-			
+
 			if ($response === false) {
 				//            $result['main'] = false;
 				$result['success'] = false;
 				$result['msg'] = 'เชื่อมต่อไม่ได้';
-				
+
 				return $result;
 			}
-			
+
 			$result = $response->json();
-			
+
 			//        dd($result);
-			
+
 			$result['msg'] = ($result['message'] ?? 'พบปัญหาบางประการ');
-			
+
 			if ($response->successful()) {
 				if ($result['code'] == 0) {
 					$result['success'] = true;
@@ -363,17 +363,17 @@
 			} else {
 				$result['success'] = false;
 			}
-			
+
 			return $result;
-			
+
 		}
-		
+
 		public function deposit($username, $amount, $product_id): array
 		{
 			$return['success'] = false;
-			
+
 			$score = $amount;
-			
+
 			if ($score < 0) {
 				$return['msg'] = 'เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง';
 				if ($this->debug) {
@@ -392,37 +392,37 @@
 					'transactionRef' => $transID,
 					'productId' => $product_id,
 				];
-				
+
 				$response = $this->GameCurl($param, 'deposit');
-				
+
 				if ($response['success'] === true) {
 					if ($response['data']['status'] == 'SUCCESS') {
 						$return['success'] = true;
 						$return['ref_id'] = $response['data']['txId'];
 						$return['after'] = $response['data']['balance'];
 						$return['before'] = $response['data']['beforeBalance'];
-						
+
 					}
 				} else {
 					$return['msg'] = 'พบข้อผิดพลาด ลองใหม่ในภายหลัง';
 					$return['success'] = false;
 				}
-				
+
 			}
-			
+
 			if ($this->debug) {
 				return ['debug' => $this->responses, 'success' => true];
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function withdraw($username, $amount, $product_id): array
 		{
 			$return['success'] = false;
-			
+
 			$score = $amount;
-			
+
 			if ($score < 1) {
 				$return['msg'] = 'เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง';
 				if ($this->debug) {
@@ -434,7 +434,7 @@
 					$this->Debug($return, true);
 				}
 			} else {
-				
+
 				$transID = 'WD' . date('YmdHis') . rand(100, 999);
 				$param = [
 					'username' => $username,
@@ -442,70 +442,70 @@
 					'transactionRef' => $transID,
 					'productId' => $product_id,
 				];
-				
+
 				$response = $this->GameCurl($param, 'withdraw');
-				
+
 				if ($response['success'] === true) {
 					if ($response['data']['status'] == 'SUCCESS') {
 						$return['success'] = true;
 						$return['ref_id'] = $response['data']['txId'];
 						$return['after'] = $response['data']['balance'];
 						$return['before'] = $response['data']['beforeBalance'];
-						
+
 					}
 				} else {
 					$return['msg'] = 'พบข้อผิดพลาด ลองใหม่ในภายหลัง';
 					$return['success'] = false;
 				}
-				
+
 			}
-			
+
 			if ($this->debug) {
 				return ['debug' => $this->responses, 'success' => true];
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function gameList_($product_id): array
 		{
 			$return['success'] = false;
-			
+
 			$param = ['productId' => $product_id];
-			
+
 			//        dd($product_id);
-			
+
 			$response = $this->GameCurlGet($param, 'seamless/games');
 			if ($response['success'] == true) {
-				
+
 				$return['success'] = true;
 				$return['msg'] = $response['msg'];
 				$return['games'] = $response['data']['games'];
-				
+
 				foreach ($return['games'] as $item) {
 					GameListProxy::updateOrCreate(
 						['product' => $product_id, 'game' => $item['code']]
 					);
 				}
-				
+
 			} else {
 				$return['msg'] = $response['msg'];
 				$return['success'] = false;
 			}
-			
+
 			//        dd($return);
-			
+
 			return $return;
 		}
-		
+
 		public function gameListAA($product_id): array
 		{
 			$cacheKey = 'game_list_' . $product_id;
-			
+
 			$data = Cache::remember($cacheKey, 600, function () use ($product_id) {
 				$param = ['productId' => $product_id];
 				$response = $this->GameCurlGet($param, 'seamless/games');
-				
+
 				if ($response['success'] !== true) {
 					return [
 						'success' => false,
@@ -513,22 +513,22 @@
 						'games' => []
 					];
 				}
-				
+
 				$games = $response['data']['games'];
-				
+
 				foreach ($games as &$item) {
 					if ($product_id === 'COCKFIGHT' || $product_id === 'AOG') {
 						$item['category'] = 'COCK';
 					}
-					
+
 					if ($product_id === 'AMBPOKER') {
 						$item['category'] = 'POKER';
 					}
-					
+
 					if ($product_id === 'KINGMAKER') {
 						$item['category'] = 'CARD';
 					}
-					
+
 					GameListProxy::updateOrCreate(
 						['product' => $product_id, 'code' => $item['code']],
 						[
@@ -541,14 +541,14 @@
 						]
 					);
 				}
-				
+
 				return [
 					'success' => true,
 					'msg' => $response['msg'],
 					'games' => $games
 				];
 			});
-			
+
 			return $data;
 		}
 
@@ -562,6 +562,7 @@
             $ttl       = now()->addMinutes(10);
 
             if ($cached = Cache::get($cacheKey)) {
+                Log::channel('api')->info('load game get cache',['response' => $cached]);
                 return $cached;
             }
 
@@ -582,7 +583,7 @@
                 // ===== API =====
                 $param    = ['productId' => $productId];
                 $response = $this->GameCurlGet($param, 'seamless/games');
-
+                Log::channel('api')->info('loadgame',['response' => $response]);
                 $ok = is_array($response)
                     && ($response['success'] ?? false) === true
                     && isset($response['data']['games'])
@@ -700,22 +701,22 @@
             if($lang !== 'th'){
                 $lang = 'en';
             }
-			
+
 			$setting = GameSeamlessProxy::where('id', $pid)->first();
-			
+
 			//        $gameid = [ 'LALIKA' , 'AFB1188' , 'VIRTUAL_SPORT' , 'COCKFIGHT' , 'AMBSPORTBOOK', 'SABASPORTS' , 'UMBET' , 'SBO'];
-			
+
 			if ($Agent->isMobile()) {
 				if ($setting->mobile == 'Y') {
 					$mobile = true;
 				} else {
 					$mobile = false;
 				}
-				
+
 			} else {
 				$mobile = false;
 			}
-			
+
 			//        if (in_array($pid, $gameid)) {
 			//            $mobile = false;
 			//        } else {
@@ -730,24 +731,24 @@
 			//        }else{
 			//            $html = false;
 			//        }
-			
+
 			//        $this->betLimit($pid,$data['username']);
-			
+
 			$return['success'] = false;
 			$response = [];
 			$member = DB::table('members')->select('user_name', 'code', 'balance')->where('session_id', request()->session()->getId())->first();
 			//        dd($member);
-			
+
 			if ($member) {
-				
+
 				if ($member->user_name == $data['username']) {
-					
+
 					if ($pid == 'RELAX') {
 						$session = Str::limit(request()->session()->getId(), 20, '');
 					} else {
 						$session = request()->session()->getId();
 					}
-					
+
 					if ($setting->limit != '') {
 						$param = [
 							'username' => $data['username'],
@@ -760,7 +761,7 @@
 							'sessionToken' => $session,
 						];
 					} else {
-						
+
 						$param = [
 							'username' => $data['username'],
 							'productId' => Str::upper($data['productId']),
@@ -772,28 +773,28 @@
 						];
 					}
 					//                dd($param);
-					
+
 					//                if($pid = 'PGSOFT2'){
 					//                    $response = $this->GameCurlPg($param, 'seamless/logIn');
 					//
 					//                }else{
 					//                    $response = $this->GameCurl($param, 'seamless/logIn');
 					//                }
-					
+
 					$response = $this->GameCurl($param, 'seamless/logIn');
 					$response['param'] = $param;
 					$response['datetime'] = now()->toDateTimeString();
 					$response['api'] = $this->responses;
 					$path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
 					//                file_put_contents($path, print_r($param, true), FILE_APPEND);
-					
+
 					//                dd($response);
 					//                $path = storage_path('logs/seamless/seamlesslogin_' . now()->format('Y_m_d') . '.log');
 					file_put_contents($path, print_r($response, true), FILE_APPEND);
 					//                file_put_contents($path, print_r($this->responses, true), FILE_APPEND);
-					
+
 					if ($response['success'] === true && isset($response['data']['url'])) {
-						
+
 						if (isset($response['data']['url']['errors'])) {
 							$return['success'] = false;
 							$return['url'] = '';
@@ -804,21 +805,21 @@
 							if ($productId == 'PGSOFT2') {
 								$productId = 'PGSOFT';
 							}
-							
+
 							// LOG: extracted values
 //                        Log::info('[LOGIN] GAME', [
 //                            'userId' => $userId,
 //                            'gameId' => $gameId,
 //                            'productId' => $productId,
 //                        ]);
-							
+
 							// บันทึกสถานะใหม่ (หรืออัปเดตเวลา)
 							Redis::connection('game')->setex("user_game_status:{$userId}", 600, json_encode([
 								'gameCode' => $gameId,
 								'productId' => $productId,
 								'last_active_at' => now()->toDateTimeString(),
 							]));
-							
+
 							$g_name = GameListProxy::where('code', $data['gameCode'])->where('product', Str::upper($data['productId']))->first();
 							GameListProxy::where('code', $data['gameCode'])->where('product', Str::upper($data['productId']))->increment('click', 1);
 							MemberProxy::where('code', $member->code)->update(['session_page' => $session]);
@@ -833,7 +834,7 @@
 							//                        $return['game'] = $pid;
 							$return['url'] = $response['data']['url'];
 						}
-						
+
 					} else {
 						$return['success'] = false;
 					}
@@ -841,16 +842,16 @@
 					$return['success'] = false;
 				}
 			}
-			
+
 			$return['api'] = $response;
-			
+
 			return $return;
 		}
-		
+
 		public function gameLog($data): array
 		{
 			$return['success'] = false;
-			
+
 			//        $param = [
 			//            'username' => $data['username'],
 			//            'productId' => $data['productId'],
@@ -859,33 +860,33 @@
 			//            'offset' => $data['offset'],
 			//            'limit' => $data['limit'],
 			//        ];
-			
+
 			$param = [
 				'productId' => $data['productId'],
 				'startTime' => $data['startTime'],
 				'endTime' => $data['endTime'],
 				'nextId' => $data['nextId'],
 			];
-			
+
 //			        dd($param);
-			
+
 			$response = $this->GameCurlGet($param, 'seamless/betTransactionsV2');
 //			dd($response);
 
             if ($response['success'] === true) {
-				
+
 				$return['success'] = true;
 				$return['msg'] = $response['msg'];
 				$return['data'] = $response['data']['txns'];
-				
+
 			} else {
 				$return['msg'] = $response['msg'];
 				$return['success'] = false;
 			}
-			
+
 			return $return;
 		}
-		
+
 		public function betLimit($product_id)
 		{
 			$pid = Str::upper($product_id);
@@ -893,7 +894,7 @@
 			$param = [
 				'productId' => $product_id,
 			];
-			
+
 			$response = $this->GameCurlGet($param, 'seamless/betLimitsV2');
 			//        dd($response);
 			if ($response['code'] == 0) {
@@ -902,20 +903,20 @@
 				//                $betLimit[] = $item;
 				//            }
 			}
-			
+
 			//        dd($betLimit);
-			
+
 			//        $path = storage_path('logs/seamless/betlimit' . now()->format('Y_m_d') . '.log');
 			//        file_put_contents($path, print_r($param, true), FILE_APPEND);
 			//        file_put_contents($path, print_r($response, true), FILE_APPEND);
-			
+
 			return $betLimit;
 		}
-		
+
 		public function freeGame($data)
 		{
 			//        $pid = Str::upper($product_id);
-			
+
 			$param = [
 				'productId' => strtoupper($data['product_id']),
 				'player_name' => $data['member_user'],
@@ -925,19 +926,19 @@
 				'game_count' => $data['game_count'],
 				'game_ids' => $data['game_ids'],
 			];
-			
+
 			$response = $this->GameCurl($param, 'seamless/free-game');
 			$path = storage_path('logs/seamless/freegame_' . now()->format('Y_m_d') . '.log');
 			file_put_contents($path, print_r($param, true), FILE_APPEND);
 			file_put_contents($path, print_r($response, true), FILE_APPEND);
-			
+
 			if ($response['success'] === true) {
-				
+
 				if (isset($response['data']['freeGameId'])) {
 					$return['success'] = true;
 					$return['msg'] = $response['msg'];
 					$return['freeGameId'] = $response['data']['freeGameId'];
-					
+
 					$newparam = [
 						'ip' => request()->ip(),
 						'credit_type' => 'D',
@@ -967,22 +968,22 @@
 						'gameuser_code' => 0,
 						'member_code' => $data['member_code'],
 					];
-					
+
 					MemberCreditLogProxy::create($newparam);
 				} else {
 					$return['msg'] = 'ไม่สามารถเพิ่มฟรีเกมได้';
 					$return['success'] = false;
 				}
-				
+
 			} else {
 				$return['msg'] = $response['msg'];
 				$return['success'] = false;
 			}
-			
+
 			return $return;
-			
+
 		}
-		
+
 		/**
 		 * Specify Model class name
 		 *
