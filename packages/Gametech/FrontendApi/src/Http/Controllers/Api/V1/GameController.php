@@ -11,7 +11,6 @@ use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GameController extends BaseController
@@ -68,15 +67,15 @@ class GameController extends BaseController
                     'enable' => 'Y',
                 ])
                 ->map(function ($item) {
-                    $logo = Storage::url('game_img/' . strtolower((string) $item->filepic) . '?v=' . date('ymd'));
+                    $logo = $this->storageMediaUrls('game_img/' . strtolower((string) $item->filepic));
 
                     return [
                         'provider' => (string) $item->id,
                         'providerTier' => 'standard',
                         'providerName' => (string) $item->name,
                         'providerType' => (string) $item->game_type,
-                        'logoURL' => url($logo),
-                        'logoTransparentURL' => url($logo),
+                        'logoURL' => $logo['url'],
+                        'logoTransparentURL' => $logo['url'],
                         'status' => (string) $item->enable === 'Y' ? 'ACTIVE' : 'INACTIVE',
                         'detailStatus' => (string) $item->status_open === 'Y',
                     ];

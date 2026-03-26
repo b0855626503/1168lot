@@ -69,17 +69,16 @@ class AuthController extends BaseController
         }
 
         if (Str::startsWith($filepic, ['http://', 'https://'])) {
-            return ['path' => $filepic, 'url' => $filepic];
+            $url = $this->appendMediaCacheBust($filepic);
+            return ['path' => $url, 'url' => $url];
         }
 
-        $path = Str::startsWith($filepic, '/')
-            ? $filepic
-            : Storage::url('bank_img/' . ltrim($filepic, '/'));
+        if (Str::startsWith($filepic, '/')) {
+            $path = $this->appendMediaCacheBust($filepic);
+            return ['path' => $path, 'url' => url($path)];
+        }
 
-        return [
-            'path' => $path,
-            'url' => url($path),
-        ];
+        return $this->storageMediaUrls('bank_img/' . ltrim($filepic, '/'));
     }
 
     public function login(Request $request): JsonResponse

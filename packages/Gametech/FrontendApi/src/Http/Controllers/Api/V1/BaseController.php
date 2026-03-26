@@ -9,6 +9,22 @@ use Illuminate\Support\Facades\Storage;
 
 class BaseController extends AppBaseController
 {
+    /**
+     * @var string[]
+     */
+    private array $mediaStorageFolders = [
+        'game_img/',
+        'icon_img/',
+        'slide_img/',
+        'promotion_img/',
+        'procontent_img/',
+        'bank_img/',
+        'bank_qr/',
+        'spin_img/',
+        'reward_img/',
+        'lotto/',
+    ];
+
     public function sendResponse($result, $message): JsonResponse
     {
         return $this->normalizeJsonResponseImages(parent::sendResponse($result, $message));
@@ -120,40 +136,89 @@ class BaseController extends AppBaseController
             str_starts_with($path, 'https://') ||
             str_starts_with($path, 'data:')
         ) {
-            return $path;
+            return $this->appendMediaCacheBust($path);
         }
 
         if (str_starts_with($path, '//')) {
-            return request()->getScheme() . ':' . $path;
+            return $this->appendMediaCacheBust(request()->getScheme() . ':' . $path);
         }
 
         if (str_starts_with($path, '/')) {
-            return url($path);
+            return $this->appendMediaCacheBust(url($path));
         }
 
         if (str_starts_with($path, 'storage/')) {
-            return url('/' . $path);
+            return $this->appendMediaCacheBust(url('/' . $path));
         }
 
-        $storageFolders = [
-            'game_img/',
-            'icon_img/',
-            'slide_img/',
-            'promotion_img/',
-            'procontent_img/',
-            'bank_img/',
-            'bank_qr/',
-            'spin_img/',
-            'reward_img/',
-            'lotto/',
-        ];
-
-        foreach ($storageFolders as $prefix) {
+        foreach ($this->mediaStorageFolders as $prefix) {
             if (str_starts_with($path, $prefix)) {
-                return url(Storage::url($path));
+                return $this->appendMediaCacheBust(url(Storage::url($path)));
             }
         }
 
         return $path;
+    }
+
+    protected function storageMediaUrls(string $storagePath): array
+    {
+        $relative = ltrim($storagePath, '/');
+        $path = Storage::url($relative);
+        $version = $this->mediaVersionForStoragePath($relative);
+        $pathWithVersion = $this->appendCacheBust($path, $version);
+
+        return [
+            'path' => $pathWithVersion,
+            'url' => url($pathWithVersion),
+        ];
+    }
+
+    protected function appendMediaCacheBust(string $url): string
+    {
+        $relative = $this->extractStorageRelativePath($url);
+        if ($relative === null) {
+            return $url;
+        }
+
+        return $this->appendCacheBust($url, $this->mediaVersionForStoragePath($relative));
+    }
+
+    private function appendCacheBust(string $url, int $version): string
+    {
+        if (str_contains($url, 'v=')) {
+            return $url;
+        }
+
+        return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
+    }
+
+    private function mediaVersionForStoragePath(string $path): int
+    {
+        try {
+            return (int) Storage::lastModified($path);
+        } catch (\Throwable $e) {
+            return (int) now()->format('Ymd');
+        }
+    }
+
+    private function extractStorageRelativePath(string $url): ?string
+    {
+        $rawPath = trim((string) parse_url($url, PHP_URL_PATH));
+        if ($rawPath === '') {
+            return null;
+        }
+
+        $candidate = ltrim($rawPath, '/');
+        if (str_starts_with($candidate, 'storage/')) {
+            $candidate = substr($candidate, 8);
+        }
+
+        foreach ($this->mediaStorageFolders as $prefix) {
+            if (str_starts_with($candidate, $prefix)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 }

@@ -3,7 +3,6 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MemberController extends BaseController
@@ -96,7 +95,7 @@ class MemberController extends BaseController
             $profile['acc_no'] = (string) ($member->acc_no ?? '');
             $profile['tel'] = (string) ($member->tel ?? '');
             $profile['phone'] = (string) ($member->tel ?? '');
-            $profile['pic_id'] = $member->pic_id ? asset('storage/' . $member->pic_id) : '';
+            $profile['pic_id'] = $member->pic_id ? $this->appendMediaCacheBust(asset('storage/' . ltrim((string) $member->pic_id, '/'))) : '';
             $profile['balance'] = $member->balance;
             $profile['diamond'] = (int) $member->diamond;
             $profile['amount_balance'] = data_get($gameUser, 'amount_balance', 0);
@@ -175,16 +174,15 @@ class MemberController extends BaseController
         }
 
         if (Str::startsWith($filepic, ['http://', 'https://'])) {
-            return ['path' => $filepic, 'url' => $filepic];
+            $url = $this->appendMediaCacheBust($filepic);
+            return ['path' => $url, 'url' => $url];
         }
 
-        $path = Str::startsWith($filepic, '/')
-            ? $filepic
-            : Storage::url('bank_img/' . ltrim($filepic, '/'));
+        if (Str::startsWith($filepic, '/')) {
+            $path = $this->appendMediaCacheBust($filepic);
+            return ['path' => $path, 'url' => url($path)];
+        }
 
-        return [
-            'path' => $path,
-            'url' => url($path),
-        ];
+        return $this->storageMediaUrls('bank_img/' . ltrim($filepic, '/'));
     }
 }

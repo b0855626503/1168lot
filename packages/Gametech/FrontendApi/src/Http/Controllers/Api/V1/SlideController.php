@@ -4,7 +4,6 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Gametech\Core\Repositories\SlideRepository;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 
 class SlideController extends BaseController
 {
@@ -25,7 +24,11 @@ class SlideController extends BaseController
                     $row = $slide->toArray();
 
                     $filepic = (string) ($row['filepic'] ?? '');
-                    $fullImageUrl = $filepic !== '' ? url(Storage::url('slide_img/' . $filepic)) : '';
+                    $fullImageUrl = '';
+                    if ($filepic !== '') {
+                        $media = $this->storageMediaUrls('slide_img/' . ltrim($filepic, '/'));
+                        $fullImageUrl = $media['url'];
+                    }
 
                     // Keep payload shape flexible for frontend while ensuring image fields are absolute URLs.
                     $row['filepic'] = $fullImageUrl;
