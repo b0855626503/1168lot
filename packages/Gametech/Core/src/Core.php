@@ -1104,22 +1104,31 @@ class Core
     public function convertToAssociativeArray(array $items)
     {
         foreach ($items as $key1 => $level1) {
+            $level1Key = (string) ($level1['key'] ?? ('item_'.$key1));
+            $level1Children = (array) ($level1['children'] ?? []);
+            $level1['children'] = $level1Children;
+
             unset($items[$key1]);
-            $items[$level1['key']] = $level1;
+            $items[$level1Key] = $level1;
 
-            if (count($level1['children'])) {
-                foreach ($level1['children'] as $key2 => $level2) {
-                    $temp2 = explode('.', $level2['key']);
-                    $finalKey2 = end($temp2);
-                    unset($items[$level1['key']]['children'][$key2]);
-                    $items[$level1['key']]['children'][$finalKey2] = $level2;
+            if (count($level1Children)) {
+                foreach ($level1Children as $key2 => $level2) {
+                    $level2Key = (string) ($level2['key'] ?? ('item_'.$key1.'_'.$key2));
+                    $temp2 = explode('.', $level2Key);
+                    $finalKey2 = end($temp2) ?: $level2Key;
+                    $level2Children = (array) ($level2['children'] ?? []);
+                    $level2['children'] = $level2Children;
 
-                    if (count($level2['children'])) {
-                        foreach ($level2['children'] as $key3 => $level3) {
-                            $temp3 = explode('.', $level3['key']);
-                            $finalKey3 = end($temp3);
-                            unset($items[$level1['key']]['children'][$finalKey2]['children'][$key3]);
-                            $items[$level1['key']]['children'][$finalKey2]['children'][$finalKey3] = $level3;
+                    unset($items[$level1Key]['children'][$key2]);
+                    $items[$level1Key]['children'][$finalKey2] = $level2;
+
+                    if (count($level2Children)) {
+                        foreach ($level2Children as $key3 => $level3) {
+                            $level3Key = (string) ($level3['key'] ?? ('item_'.$key1.'_'.$key2.'_'.$key3));
+                            $temp3 = explode('.', $level3Key);
+                            $finalKey3 = end($temp3) ?: $level3Key;
+                            unset($items[$level1Key]['children'][$finalKey2]['children'][$key3]);
+                            $items[$level1Key]['children'][$finalKey2]['children'][$finalKey3] = $level3;
                         }
                     }
 
