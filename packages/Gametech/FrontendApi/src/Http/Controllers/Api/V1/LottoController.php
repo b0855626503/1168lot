@@ -46,7 +46,7 @@ class LottoController extends BaseController
                 });
             }
 
-            $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'code']);
+            $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'description', 'code']);
 
             $marketsQuery = LotteryMarket::query()
                 ->where('is_enabled', true)
@@ -90,6 +90,7 @@ class LottoController extends BaseController
 
             $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $language): array {
                 $groupMarkets = $marketRowsByGroup->get((int) $group->id, collect());
+                $groupDescription = $this->localizedDescriptionByLanguage((string) ($group->description ?? ''), $language);
 
                 return [
                     'group_id' => (int) $group->id,
@@ -100,6 +101,7 @@ class LottoController extends BaseController
                         'name_kh' => (string) ($group->name_kh ?? ''),
                         'name_laos' => (string) ($group->name_laos ?? ''),
                     ], $language, 'name'),
+                    'description' => $groupDescription,
                     'markets' => $groupMarkets->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
                         $draw = $latestDrawMap->get((int) $market->id);
                         $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
@@ -507,6 +509,42 @@ class LottoController extends BaseController
             'la' => 'laos',
             default => '',
         };
+    }
+
+    private function localizedDescriptionByLanguage(?string $rawDescription, string $language): string
+    {
+        $description = trim((string) $rawDescription);
+        if ($description === '') {
+            return '';
+        }
+
+        $decoded = json_decode($description, true);
+        if (! is_array($decoded)) {
+            return $description;
+        }
+
+        $requestedKeys = match ($language) {
+            'en' => ['en', 'english'],
+            'kh' => ['kh', 'km', 'kmer', 'cambodia'],
+            'la' => ['la', 'laos', 'lo'],
+            default => ['th', 'thai'],
+        };
+
+        foreach ($requestedKeys as $key) {
+            $value = trim((string) ($decoded[$key] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        foreach (['th', 'en', 'kh', 'la', 'laos'] as $fallbackKey) {
+            $value = trim((string) ($decoded[$fallbackKey] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     private function drawStatusLabel(string $status): string

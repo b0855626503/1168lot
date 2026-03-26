@@ -15,7 +15,12 @@ use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
 use Illuminate\Support\Facades\Route;
 
-Route::domain('api.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url')))
+$apiSubdomain = config('gametech.api_url') ?? config('app.admin_url');
+$apiDomain = is_null(config('app.admin_domain_url'))
+    ? config('app.domain_url')
+    : config('app.admin_domain_url');
+
+Route::domain($apiSubdomain . '.' . $apiDomain)
     ->prefix('api/v1')
     ->group(function () {
         Route::middleware(['api', ResolveFrontendLanguage::class])->group(function () {

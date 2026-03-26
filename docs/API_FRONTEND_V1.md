@@ -614,6 +614,7 @@ Response ตัวอย่าง
         "group_id": 1,
         "group_code": "thai",
         "group_name": "หวยไทย",
+        "description": "หวยรัฐบาลไทย อัปเดตผลไว",
         "markets": [
           {
             "market_id": 3,

@@ -120,7 +120,10 @@ class GameController extends BaseController
                             'horizontal' => (string) ($item['img'] ?? ''),
                             'banner' => '',
                         ],
-                        'loginURL' => url('/api/v1/games/login/' . rawurlencode($providerId) . '/' . rawurlencode($gameCode)),
+                        'loginURL' => route('frontend.api.v1.games.login.path', [
+                            'game' => $providerId,
+                            'code' => $gameCode,
+                        ]),
                         'status' => ! empty($item['enable']) ? 'ACTIVE' : 'INACTIVE',
                     ];
                 })
