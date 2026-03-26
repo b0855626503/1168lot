@@ -52,6 +52,8 @@ class GenerateAutoLottoDrawsCommand extends Command
             'created' => 0,
             'exists' => 0,
             'skipped' => 0,
+            'not_in_schedule' => 0,
+            'status_counts' => [],
             'items' => [],
         ];
 
@@ -60,6 +62,7 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['skipped']++;
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
+                    'market_name' => (string) $market->name,
                     'draw_date' => null,
                     'status' => 'skip_group_disabled',
                 ];
@@ -70,6 +73,7 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['skipped']++;
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
+                    'market_name' => (string) $market->name,
                     'draw_date' => null,
                     'status' => 'skip_missing_close_time',
                 ];
@@ -80,6 +84,13 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $targetDate = $startDate->copy()->addDays($offset);
 
                 if (! $this->shouldGenerateForDate($market, $targetDate)) {
+                    $summary['not_in_schedule']++;
+                    $summary['items'][] = [
+                        'market_id' => (int) $market->id,
+                        'market_name' => (string) $market->name,
+                        'draw_date' => $targetDate->format('Y-m-d'),
+                        'status' => 'skip_not_in_schedule',
+                    ];
                     continue;
                 }
 
@@ -94,6 +105,7 @@ class GenerateAutoLottoDrawsCommand extends Command
                     $summary['exists']++;
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
+                        'market_name' => (string) $market->name,
                         'draw_date' => (string) $payload['draw_date'],
                         'status' => 'exists',
                     ];
@@ -107,11 +119,19 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['created']++;
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
+                    'market_name' => (string) $market->name,
                     'draw_date' => (string) $payload['draw_date'],
                     'status' => $dryRun ? 'will_create' : 'created',
                 ];
             }
         }
+
+        $summary['status_counts'] = collect($summary['items'])
+            ->groupBy('status')
+            ->map(static function ($rows): int {
+                return count($rows);
+            })
+            ->toArray();
 
         $this->line(json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 

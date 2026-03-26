@@ -196,6 +196,113 @@
     </div>
 </b-modal>
 
+<b-modal ref="autoGenSummaryModal" id="autoGenSummaryModal" centered size="xl" :title="autoGenModalTitle" ok-only ok-title="ปิด" modal-class="lotto-autogen-summary-modal">
+    <div class="row no-gutters mb-2 lotto-summary-row">
+        <div class="col-3 lotto-ticket-summary-item"><span>ตลาดเข้าเกณฑ์ :</span><strong>@{{ autoGenSummary.market_count || 0 }}</strong></div>
+        <div class="col-3 lotto-ticket-summary-item"><span>จะสร้าง :</span><strong class="lotto-summary-value-primary">@{{ autoGenCreateItems.length }}</strong></div>
+        <div class="col-3 lotto-ticket-summary-item"><span>ขาด :</span><strong class="text-danger">@{{ autoGenMissingItems.length }}</strong></div>
+        <div class="col-3 lotto-ticket-summary-item"><span>ไม่เข้าเกณฑ์ :</span><strong>@{{ autoGenNotInCriteriaItems.length }}</strong></div>
+    </div>
+
+    <b-tabs content-class="pt-2" small>
+        <b-tab :title="`จะสร้าง (${autoGenCreateItems.length})`" active>
+            <div class="table-responsive member-list-scroll">
+                <b-table
+                    class="mb-0 member-list-table lotto-ticket-summary-table"
+                    striped
+                    hover
+                    small
+                    outlined
+                    show-empty
+                    head-variant="light"
+                    :items="autoGenCreateItems"
+                    :fields="autoGenSummaryFields"
+                    empty-text="ไม่มีรายการที่จะสร้าง">
+                    <template #cell(index)="row">
+                        <div class="text-center">@{{ row.index + 1 }}</div>
+                    </template>
+                    <template #cell(market_id)="row">
+                        <div class="text-center">@{{ row.item.market_id || '-' }}</div>
+                    </template>
+                    <template #cell(market_name)="row">
+                        @{{ row.item.market_name || '-' }}
+                    </template>
+                    <template #cell(draw_date)="row">
+                        <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
+                    </template>
+                    <template #cell(status_label)="row">
+                        <div class="text-center">@{{ row.item.status_label || '-' }}</div>
+                    </template>
+                </b-table>
+            </div>
+        </b-tab>
+
+        <b-tab :title="`ขาด (${autoGenMissingItems.length})`">
+            <div class="table-responsive member-list-scroll">
+                <b-table
+                    class="mb-0 member-list-table lotto-ticket-summary-table"
+                    striped
+                    hover
+                    small
+                    outlined
+                    show-empty
+                    head-variant="light"
+                    :items="autoGenMissingItems"
+                    :fields="autoGenSummaryFields"
+                    empty-text="ไม่มีรายการขาด">
+                    <template #cell(index)="row">
+                        <div class="text-center">@{{ row.index + 1 }}</div>
+                    </template>
+                    <template #cell(market_id)="row">
+                        <div class="text-center">@{{ row.item.market_id || '-' }}</div>
+                    </template>
+                    <template #cell(market_name)="row">
+                        @{{ row.item.market_name || '-' }}
+                    </template>
+                    <template #cell(draw_date)="row">
+                        <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
+                    </template>
+                    <template #cell(status_label)="row">
+                        <div class="text-center">@{{ row.item.status_label || '-' }}</div>
+                    </template>
+                </b-table>
+            </div>
+        </b-tab>
+
+        <b-tab :title="`ไม่เข้าเกณฑ์ (${autoGenNotInCriteriaItems.length})`">
+            <div class="table-responsive member-list-scroll">
+                <b-table
+                    class="mb-0 member-list-table lotto-ticket-summary-table"
+                    striped
+                    hover
+                    small
+                    outlined
+                    show-empty
+                    head-variant="light"
+                    :items="autoGenNotInCriteriaItems"
+                    :fields="autoGenSummaryFields"
+                    empty-text="ไม่มีรายการที่ไม่เข้าเกณฑ์">
+                    <template #cell(index)="row">
+                        <div class="text-center">@{{ row.index + 1 }}</div>
+                    </template>
+                    <template #cell(market_id)="row">
+                        <div class="text-center">@{{ row.item.market_id || '-' }}</div>
+                    </template>
+                    <template #cell(market_name)="row">
+                        @{{ row.item.market_name || '-' }}
+                    </template>
+                    <template #cell(draw_date)="row">
+                        <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
+                    </template>
+                    <template #cell(status_label)="row">
+                        <div class="text-center">@{{ row.item.status_label || '-' }}</div>
+                    </template>
+                </b-table>
+            </div>
+        </b-tab>
+    </b-tabs>
+</b-modal>
+
 @push('css')
     <style>
         .member-list-table th,
@@ -297,6 +404,9 @@
         .lotto-ticket-summary-table tbody td {
             vertical-align: middle;
         }
+        .lotto-autogen-summary-modal .modal-dialog {
+            max-width: 1220px;
+        }
     </style>
 @endpush
 
@@ -363,6 +473,18 @@
                         { key: 'status', label: 'สถานะ', thClass: 'text-center', tdClass: 'text-center' },
                         { key: 'created_at', label: 'เวลาแทง', thClass: 'text-center', tdClass: 'text-center' },
                     ],
+                    autoGenModalTitle: 'ผล Dry-run',
+                    autoGenSummary: {
+                        market_count: 0,
+                        items: [],
+                    },
+                    autoGenSummaryFields: [
+                        { key: 'index', label: '#', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '60px' } },
+                        { key: 'market_id', label: 'Market ID', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '120px' } },
+                        { key: 'market_name', label: 'รายการหวย' },
+                        { key: 'draw_date', label: 'งวดหวย', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '140px' } },
+                        { key: 'status_label', label: 'สถานะ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '180px' } },
+                    ],
                 };
             },
             computed: {
@@ -423,6 +545,32 @@
                         const reason = String(item.reason || '').toLowerCase();
                         return number.includes(keyword) || betType.includes(keyword) || reason.includes(keyword);
                     });
+                },
+                autoGenNormalizedItems() {
+                    const rows = Array.isArray(this.autoGenSummary.items) ? this.autoGenSummary.items : [];
+                    return rows.map((item) => {
+                        const status = String(item.status || '');
+                        return {
+                            market_id: item.market_id || null,
+                            market_name: item.market_name || '-',
+                            draw_date: item.draw_date || '-',
+                            status,
+                            status_label: this.autoGenStatusLabel(status),
+                        };
+                    });
+                },
+                autoGenCreateItems() {
+                    return this.autoGenNormalizedItems.filter((item) => item.status === 'will_create' || item.status === 'created');
+                },
+                autoGenMissingItems() {
+                    return this.autoGenNormalizedItems.filter((item) =>
+                        item.status === 'skip_group_disabled'
+                        || item.status === 'skip_missing_close_time'
+                        || item.status === 'unknown'
+                    );
+                },
+                autoGenNotInCriteriaItems() {
+                    return this.autoGenNormalizedItems.filter((item) => item.status === 'skip_not_in_schedule');
                 },
             },
             watch: {
@@ -641,6 +789,48 @@
                         maximumFractionDigits: 2,
                     });
                 },
+                autoGenStatusLabel(status) {
+                    const map = {
+                        created: 'สร้างแล้ว',
+                        will_create: 'จะสร้าง',
+                        exists: 'มีอยู่แล้ว',
+                        skip_not_in_schedule: 'ไม่เข้าเกณฑ์วันนั้น',
+                        skip_group_disabled: 'ขาด: กลุ่มปิด',
+                        skip_missing_close_time: 'ขาด: ไม่มีเวลาปิด',
+                        unknown: 'ขาด: ไม่ทราบสาเหตุ',
+                    };
+
+                    return map[status] || `ขาด: ไม่ทราบ (${status || '-'})`;
+                },
+                prepareAutoGenSummary(summary, dryRun) {
+                    const knownStatuses = [
+                        'created',
+                        'will_create',
+                        'exists',
+                        'skip_not_in_schedule',
+                        'skip_group_disabled',
+                        'skip_missing_close_time',
+                    ];
+
+                    const items = Array.isArray(summary?.items) ? summary.items : [];
+                    const normalizedItems = items.map((item) => {
+                        const status = String(item?.status || '');
+                        return {
+                            ...item,
+                            status: knownStatuses.includes(status) ? status : 'unknown',
+                        };
+                    });
+
+                    this.autoGenSummary = {
+                        market_count: Number(summary?.market_count || 0),
+                        created: Number(summary?.created || 0),
+                        exists: Number(summary?.exists || 0),
+                        skipped: Number(summary?.skipped || 0),
+                        not_in_schedule: Number(summary?.not_in_schedule || 0),
+                        items: normalizedItems,
+                    };
+                    this.autoGenModalTitle = dryRun ? 'ผล Dry-run Auto งวด' : 'ผล Generate Auto งวด';
+                },
                 async submitDrawForm() {
                     const validationMessage = this.validateDrawWindow();
                     if (validationMessage) {
@@ -768,17 +958,18 @@
                     const response = await axios.post("{{ route('admin.lotto.draws.generate_auto') }}", payload);
                     const summary = response?.data?.data?.summary || null;
 
-                    const message = summary
-                        ? `ตลาดที่เข้าเกณฑ์: ${summary.market_count}, สร้างใหม่: ${summary.created}, มีอยู่แล้ว: ${summary.exists}, ข้าม: ${summary.skipped}`
-                        : (response?.data?.message || 'ดำเนินการเสร็จสิ้น');
-
-                    this.$bvModal.msgBoxOk(message, {
-                        title: dryRun ? 'ผล Dry-run' : 'ผลการ Generate',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'success',
-                        centered: true,
-                    });
+                    if (summary) {
+                        this.prepareAutoGenSummary(summary, dryRun);
+                        this.$refs.autoGenSummaryModal.show();
+                    } else {
+                        await this.$bvModal.msgBoxOk(response?.data?.message || 'ดำเนินการเสร็จสิ้น', {
+                            title: dryRun ? 'ผล Dry-run' : 'ผลการ Generate',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                    }
 
                     window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
