@@ -347,7 +347,7 @@ class LottoDrawController extends AppBaseController
 
         $validated = validator($data, [
             'result_number' => ['required', 'array'],
-            'result_number.first_prize' => ['required', 'digits:6'],
+            'result_number.first_prize' => ['required', 'regex:/^\d{5,6}$/'],
             'result_number.last_2_digits' => ['required', 'digits:2'],
             'result_at' => ['nullable', 'date_format:Y-m-d H:i'],
         ])->validate();

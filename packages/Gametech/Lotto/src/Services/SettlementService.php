@@ -103,8 +103,8 @@ class SettlementService
         $last2Digits = preg_replace('/\D+/', '', (string) ($resultNumber['last_2_digits'] ?? ''));
 
         if ($firstPrize !== '' || $last2Digits !== '') {
-            if (strlen($firstPrize) !== 6) {
-                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 6 หลัก');
+            if (! in_array(strlen($firstPrize), [5, 6], true)) {
+                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 5 หรือ 6 หลัก');
             }
 
             if (strlen($last2Digits) !== 2) {

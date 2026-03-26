@@ -26,6 +26,24 @@ class SettlementServiceTest extends TestCase
         ], $result);
     }
 
+    public function test_normalize_result_number_accepts_five_digit_first_prize(): void
+    {
+        $service = new SettlementService();
+
+        $result = $service->normalizeResultNumber([
+            'first_prize' => '12345',
+            'last_2_digits' => '67',
+        ]);
+
+        $this->assertSame([
+            'first_prize' => '12345',
+            'last_2_digits' => '67',
+            'top_3' => '345',
+            'top_2' => '45',
+            'bottom_2' => '67',
+        ], $result);
+    }
+
     public function test_is_winning_bet_matches_all_supported_bet_types(): void
     {
         $service = new SettlementService();
