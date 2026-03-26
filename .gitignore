@@ -27,3 +27,6 @@ Homestead.json
 /bank/
 /vendor/
 /game/
+/.ai/
+/.codex/
+/.github/
