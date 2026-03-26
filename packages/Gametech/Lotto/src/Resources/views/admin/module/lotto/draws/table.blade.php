@@ -90,6 +90,12 @@
             });
 
             initMarketSelect();
+
+            // DataTable first request may fire before custom filters are attached.
+            // Force one redraw so default draw_date filter is applied on initial page load.
+            if ($drawDateInput.val()) {
+                redrawTable();
+            }
         });
     </script>
 @endpush
