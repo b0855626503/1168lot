@@ -38,4 +38,27 @@ class ApiDocsController extends AppBaseController
             'Content-Type' => 'text/markdown; charset=UTF-8',
         ]);
     }
+
+    public function laravelEchoNextjsInstall(): View
+    {
+        $path = base_path('docs/public/api/laravel-echo-nextjs-install.md');
+
+        abort_unless(File::exists($path), 404, 'API docs file not found');
+
+        return view($this->_config['view'], [
+            'title' => 'Laravel Echo Nextjs Install',
+            'markdown' => File::get($path),
+        ]);
+    }
+
+    public function laravelEchoNextjsInstallRaw(): Response
+    {
+        $path = base_path('docs/public/api/laravel-echo-nextjs-install.md');
+
+        abort_unless(File::exists($path), 404, 'API docs file not found');
+
+        return response(File::get($path), 200, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
+    }
 }
