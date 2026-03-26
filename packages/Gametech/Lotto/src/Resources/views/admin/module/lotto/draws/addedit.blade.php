@@ -230,6 +230,18 @@
                     <template #cell(draw_date)="row">
                         <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
                     </template>
+                    <template #cell(draw_mode_label)="row">
+                        <div class="text-center">@{{ row.item.draw_mode_label || '-' }}</div>
+                    </template>
+                    <template #cell(open_at)="row">
+                        <div class="text-center">@{{ row.item.open_at || '-' }}</div>
+                    </template>
+                    <template #cell(close_at)="row">
+                        <div class="text-center">@{{ row.item.close_at || '-' }}</div>
+                    </template>
+                    <template #cell(result_at)="row">
+                        <div class="text-center">@{{ row.item.result_at || '-' }}</div>
+                    </template>
                     <template #cell(status_label)="row">
                         <div class="text-center">@{{ row.item.status_label || '-' }}</div>
                     </template>
@@ -262,6 +274,18 @@
                     <template #cell(draw_date)="row">
                         <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
                     </template>
+                    <template #cell(draw_mode_label)="row">
+                        <div class="text-center">@{{ row.item.draw_mode_label || '-' }}</div>
+                    </template>
+                    <template #cell(open_at)="row">
+                        <div class="text-center">@{{ row.item.open_at || '-' }}</div>
+                    </template>
+                    <template #cell(close_at)="row">
+                        <div class="text-center">@{{ row.item.close_at || '-' }}</div>
+                    </template>
+                    <template #cell(result_at)="row">
+                        <div class="text-center">@{{ row.item.result_at || '-' }}</div>
+                    </template>
                     <template #cell(status_label)="row">
                         <div class="text-center">@{{ row.item.status_label || '-' }}</div>
                     </template>
@@ -293,6 +317,18 @@
                     </template>
                     <template #cell(draw_date)="row">
                         <div class="text-center">@{{ row.item.draw_date || '-' }}</div>
+                    </template>
+                    <template #cell(draw_mode_label)="row">
+                        <div class="text-center">@{{ row.item.draw_mode_label || '-' }}</div>
+                    </template>
+                    <template #cell(open_at)="row">
+                        <div class="text-center">@{{ row.item.open_at || '-' }}</div>
+                    </template>
+                    <template #cell(close_at)="row">
+                        <div class="text-center">@{{ row.item.close_at || '-' }}</div>
+                    </template>
+                    <template #cell(result_at)="row">
+                        <div class="text-center">@{{ row.item.result_at || '-' }}</div>
                     </template>
                     <template #cell(status_label)="row">
                         <div class="text-center">@{{ row.item.status_label || '-' }}</div>
@@ -483,6 +519,10 @@
                         { key: 'market_id', label: 'Market ID', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '120px' } },
                         { key: 'market_name', label: 'รายการหวย' },
                         { key: 'draw_date', label: 'งวดหวย', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '140px' } },
+                        { key: 'draw_mode_label', label: 'โหมดงวด', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '120px' } },
+                        { key: 'open_at', label: 'เปิดรับ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '170px' } },
+                        { key: 'close_at', label: 'ปิดรับ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '170px' } },
+                        { key: 'result_at', label: 'ออกผล', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '170px' } },
                         { key: 'status_label', label: 'สถานะ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '180px' } },
                     ],
                 };
@@ -554,6 +594,10 @@
                             market_id: item.market_id || null,
                             market_name: item.market_name || '-',
                             draw_date: item.draw_date || '-',
+                            draw_mode_label: this.autoGenDrawModeLabel(String(item.draw_mode || '')),
+                            open_at: item.open_at || '-',
+                            close_at: item.close_at || '-',
+                            result_at: item.result_at || '-',
                             status,
                             status_label: this.autoGenStatusLabel(status),
                         };
@@ -801,6 +845,15 @@
                     };
 
                     return map[status] || `ขาด: ไม่ทราบ (${status || '-'})`;
+                },
+                autoGenDrawModeLabel(mode) {
+                    const map = {
+                        daily: 'ทุกวัน',
+                        weekdays: 'จ.-ศ.',
+                        manual: 'แมนนวล',
+                    };
+
+                    return map[mode] || mode || '-';
                 },
                 prepareAutoGenSummary(summary, dryRun) {
                     const knownStatuses = [

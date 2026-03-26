@@ -63,7 +63,11 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
+                    'draw_mode' => (string) $market->draw_mode,
                     'draw_date' => null,
+                    'open_at' => null,
+                    'close_at' => null,
+                    'result_at' => null,
                     'status' => 'skip_group_disabled',
                 ];
                 continue;
@@ -74,7 +78,11 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
+                    'draw_mode' => (string) $market->draw_mode,
                     'draw_date' => null,
+                    'open_at' => null,
+                    'close_at' => null,
+                    'result_at' => null,
                     'status' => 'skip_missing_close_time',
                 ];
                 continue;
@@ -82,19 +90,22 @@ class GenerateAutoLottoDrawsCommand extends Command
 
             for ($offset = 0; $offset < $days; $offset++) {
                 $targetDate = $startDate->copy()->addDays($offset);
+                $payload = $this->buildDrawPayload($market, $targetDate);
 
                 if (! $this->shouldGenerateForDate($market, $targetDate)) {
                     $summary['not_in_schedule']++;
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
                         'market_name' => (string) $market->name,
-                        'draw_date' => $targetDate->format('Y-m-d'),
+                        'draw_mode' => (string) $market->draw_mode,
+                        'draw_date' => (string) $payload['draw_date'],
+                        'open_at' => (string) $payload['open_at'],
+                        'close_at' => (string) $payload['close_at'],
+                        'result_at' => $payload['result_at'] ? (string) $payload['result_at'] : null,
                         'status' => 'skip_not_in_schedule',
                     ];
                     continue;
                 }
-
-                $payload = $this->buildDrawPayload($market, $targetDate);
 
                 $alreadyExists = LottoDraw::query()
                     ->where('market_id', (int) $market->id)
@@ -106,7 +117,11 @@ class GenerateAutoLottoDrawsCommand extends Command
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
                         'market_name' => (string) $market->name,
+                        'draw_mode' => (string) $market->draw_mode,
                         'draw_date' => (string) $payload['draw_date'],
+                        'open_at' => (string) $payload['open_at'],
+                        'close_at' => (string) $payload['close_at'],
+                        'result_at' => $payload['result_at'] ? (string) $payload['result_at'] : null,
                         'status' => 'exists',
                     ];
                     continue;
@@ -120,7 +135,11 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
+                    'draw_mode' => (string) $market->draw_mode,
                     'draw_date' => (string) $payload['draw_date'],
+                    'open_at' => (string) $payload['open_at'],
+                    'close_at' => (string) $payload['close_at'],
+                    'result_at' => $payload['result_at'] ? (string) $payload['result_at'] : null,
                     'status' => $dryRun ? 'will_create' : 'created',
                 ];
             }
