@@ -93,6 +93,9 @@ class MemberController extends BaseController
             $profile['pro_name'] = $gameUserProCode > 0 ? (data_get($gameUser, 'promotion.name_th', '')) : '';
             $profile['bank_code'] = $member->bank_code;
             $profile['name'] = (string) ($member->name ?? '');
+            $profile['acc_no'] = (string) ($member->acc_no ?? '');
+            $profile['tel'] = (string) ($member->tel ?? '');
+            $profile['phone'] = (string) ($member->tel ?? '');
             $profile['pic_id'] = $member->pic_id ? asset('storage/' . $member->pic_id) : '';
             $profile['balance'] = $member->balance;
             $profile['diamond'] = (int) $member->diamond;
