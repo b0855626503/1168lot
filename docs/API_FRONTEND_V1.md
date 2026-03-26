@@ -240,6 +240,10 @@ Response ตัวอย่าง
     "diamond": "0.00",
     "balance_free": "0.00",
     "user_name": "9000000011",
+    "name": "API Test User",
+    "acc_no": "1234567890",
+    "tel": "0900000011",
+    "phone": "0900000011",
     "bank_name": "กสิกรไทย",
     "bank_image": "/storage/bank_img/kbank.png",
     "bank_image_url": "https://api.1168lot.com/storage/bank_img/kbank.png"
