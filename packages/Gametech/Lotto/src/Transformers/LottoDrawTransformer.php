@@ -10,21 +10,14 @@ class LottoDrawTransformer extends TransformerAbstract
     public function transform(LottoDraw $model): array
     {
         $statusBadge = $this->getStatusBadge($model->status);
-        $resultText = '-';
+        $top3 = '-';
+        $top2 = '-';
+        $bottom2 = '-';
 
         if (is_array($model->result_number) && ! empty($model->result_number)) {
-            $firstPrize = $model->result_number['first_prize'] ?? '-';
-            $last2Digits = $model->result_number['last_2_digits'] ?? ($model->result_number['bottom_2'] ?? '-');
-            $top3 = $model->result_number['top_3'] ?? '-';
-            $top2 = $model->result_number['top_2'] ?? '-';
-            $bottom2 = $model->result_number['bottom_2'] ?? '-';
-            $resultText = 'รางวัลที่ 1 ' . $firstPrize
-                . ' / เลขท้าย 2 ตัว ' . $last2Digits
-                . ' / 3 บน ' . $top3
-                . ' / 2 บน ' . $top2
-                . ' / 2 ล่าง ' . $bottom2;
-        } elseif (! empty($model->result_number)) {
-            $resultText = (string) $model->result_number;
+            $top3 = (string) ($model->result_number['top_3'] ?? '-');
+            $top2 = (string) ($model->result_number['top_2'] ?? '-');
+            $bottom2 = (string) ($model->result_number['bottom_2'] ?? ($model->result_number['last_2_digits'] ?? '-'));
         }
         
         return [
@@ -36,7 +29,9 @@ class LottoDrawTransformer extends TransformerAbstract
             'status'         => $statusBadge,
             'blocked_numbers_count' => $this->renderCountLink('showDrawBlockedNumbers', (int) $model->id, (int) ($model->blocked_numbers_count ?? 0)),
             'tickets_count' => $this->renderCountLink('showDrawTicketList', (int) $model->id, (int) ($model->tickets_count ?? 0)),
-            'result_number'  => $resultText,
+            'top_3'          => $top3,
+            'top_2'          => $top2,
+            'bottom_2'       => $bottom2,
             'action'         => view('admin::module.lotto.draws.datatables_actions', [
                 'id' => $model->id,
                 'status' => (string) $model->status,
