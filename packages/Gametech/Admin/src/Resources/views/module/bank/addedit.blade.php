@@ -163,24 +163,21 @@
                         this.trigger++;
                         this.formaddedit.filepic = this.versionedFilepic(
                             response.data.data.filepic,
-                            response.data.data.date_update
+                            response.data.data.filepic_version
                         );
                     }
                 },
-                versionedFilepic(filename, dateUpdate) {
+                versionedFilepic(filename, version) {
                     const cleanName = (filename || '').toString().trim();
                     if (!cleanName) {
                         return '';
                     }
 
-                    const normalizedDate = dateUpdate
-                        ? dateUpdate.toString().replace(' ', 'T')
-                        : '';
-                    const ts = normalizedDate ? Date.parse(normalizedDate) : NaN;
-                    const version = Number.isNaN(ts) ? Date.now() : ts;
+                    const ts = Number.parseInt(version, 10);
+                    const finalVersion = Number.isNaN(ts) ? Date.now() : ts;
                     const separator = cleanName.includes('?') ? '&' : '?';
 
-                    return `${cleanName}${separator}v=${version}`;
+                    return `${cleanName}${separator}v=${finalVersion}`;
                 },
                 clearImage() {
                     this.trigger++;

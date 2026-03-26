@@ -3,6 +3,7 @@
 namespace Gametech\Admin\Transformers;
 
 
+use Carbon\Carbon;
 use Gametech\Payment\Contracts\Bank;
 use Illuminate\Support\Facades\Storage;
 use League\Fractal\TransformerAbstract;
@@ -13,9 +14,13 @@ class BankTransformer extends TransformerAbstract
 
     public function transform(Bank $model): array
     {
-        $version = time();
+        $version = (int) round(microtime(true) * 1000);
         if (!empty($model->date_update)) {
-            $version = strtotime((string) $model->date_update) ?: $version;
+            try {
+                $version = Carbon::parse((string) $model->date_update)->getTimestampMs();
+            } catch (\Throwable $e) {
+                // keep fallback version
+            }
         }
 
         return [
