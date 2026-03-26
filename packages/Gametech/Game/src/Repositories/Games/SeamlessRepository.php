@@ -732,6 +732,17 @@
 		public function login($data)
 		{
 			$pid = Str::upper($data['productId']);
+            $traceId = trim((string) ($data['trace_id'] ?? (request()->attributes->get('frontend_game_login_trace_id') ?? '')));
+            if ($traceId === '') {
+                $traceId = (string) Str::uuid();
+            }
+
+            Log::channel('api')->info('seamless.login.enter', [
+                'trace_id' => $traceId,
+                'product_id' => $pid,
+                'user_name' => (string) ($data['username'] ?? ''),
+                'game_code' => (string) ($data['gameCode'] ?? ''),
+            ]);
 
 			$return['game'] = $pid;
 			$Agent = new Agent;
@@ -809,6 +820,13 @@
                     'session_page' => $session,
                 ]);
 
+                Log::channel('api')->info('seamless.login.member_resolved', [
+                    'trace_id' => $traceId,
+                    'member_code' => (int) $member->code,
+                    'user_name' => (string) ($member->user_name ?? ''),
+                    'session_token' => $session,
+                ]);
+
                     $param = [
                         'username' => $data['username'],
                         'productId' => Str::upper($data['productId']),
@@ -836,6 +854,7 @@
 					$response['datetime'] = now()->toDateTimeString();
 					$response['api'] = $this->responses;
                     Log::channel('api')->info('seamless.login.response', [
+                        'trace_id' => $traceId,
                         'product_id' => $pid,
                         'user_name' => $data['username'] ?? null,
                         'game_code' => $data['gameCode'] ?? null,
@@ -892,6 +911,12 @@
 			} else {
 				$return['success'] = false;
                 $return['msg'] = 'ไม่พบข้อมูลสมาชิกสำหรับเข้าเกม';
+                Log::channel('api')->warning('seamless.login.member_not_found', [
+                    'trace_id' => $traceId,
+                    'product_id' => $pid,
+                    'user_name' => (string) ($data['username'] ?? ''),
+                    'session_id' => (string) request()->session()->getId(),
+                ]);
 			}
 
 			$return['api'] = $response;

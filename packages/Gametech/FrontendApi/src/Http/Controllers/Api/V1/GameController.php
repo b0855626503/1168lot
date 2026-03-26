@@ -10,7 +10,9 @@ use Gametech\API\Models\GameListProxy;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GameController extends BaseController
 {
@@ -158,6 +160,9 @@ class GameController extends BaseController
 
     private function loginGameRedirect(Request $request, string $provider, string $gameCode): JsonResponse
     {
+        $traceId = (string) Str::uuid();
+        $request->attributes->set('frontend_game_login_trace_id', $traceId);
+
         $provider = strtoupper(trim($provider));
         $gameCode = trim($gameCode);
         if ($provider === '' || $gameCode === '') {
@@ -168,6 +173,15 @@ class GameController extends BaseController
         if (! $user) {
             return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
         }
+
+        Log::channel('api')->info('frontend.game.login.start', [
+            'trace_id' => $traceId,
+            'member_code' => (int) $user->code,
+            'user_name' => (string) ($user->user_name ?? ''),
+            'provider' => $provider,
+            'game_code' => $gameCode,
+            'path' => (string) $request->path(),
+        ]);
 
         $this->bankPaymentRepository
             ->where('member_topup', $user->code)
@@ -215,6 +229,17 @@ class GameController extends BaseController
         }
 
         $result = $this->gameUserRepository->autoLoginSeamless($user->code, $provider, $gameCode);
+        Log::channel('api')->info('frontend.game.login.result', [
+            'trace_id' => $traceId,
+            'member_code' => (int) $user->code,
+            'provider' => $provider,
+            'game_code' => $gameCode,
+            'success' => (bool) ($result['success'] ?? false),
+            'msg' => (string) ($result['msg'] ?? ''),
+            'has_url' => ! empty($result['url']),
+            'api' => $result['api'] ?? null,
+        ]);
+
         if (($result['success'] ?? false) !== true || empty($result['url'])) {
             return $this->sendError((string) ($result['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้'), 422);
         }

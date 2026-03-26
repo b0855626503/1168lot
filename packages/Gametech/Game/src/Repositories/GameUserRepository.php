@@ -430,10 +430,16 @@ class GameUserRepository extends Repository
         }
 
         if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . ucfirst($games->method) . 'Repository.php'))) {
+            $traceId = null;
+            if (app()->bound('request')) {
+                $traceId = app('request')->attributes->get('frontend_game_login_trace_id');
+            }
+
             return app('Gametech\Game\Repositories\Games\\' . ucfirst($games->method) . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login([
                 'username' => $user->user_name,
                 'productId' => $product_id,
                 'gameCode' => $game_code,
+                'trace_id' => $traceId,
             ]);
         }
 
