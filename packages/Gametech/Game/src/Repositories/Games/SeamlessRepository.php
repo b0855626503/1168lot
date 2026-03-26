@@ -757,7 +757,7 @@
 			//        $gameid = [ 'LALIKA' , 'AFB1188' , 'VIRTUAL_SPORT' , 'COCKFIGHT' , 'AMBSPORTBOOK', 'SABASPORTS' , 'UMBET' , 'SBO'];
 
 			if ($Agent->isMobile()) {
-				if ($setting->mobile == 'Y') {
+				if ($setting && $setting->mobile == 'Y') {
 					$mobile = true;
 				} else {
 					$mobile = false;
@@ -793,7 +793,7 @@
 
             // Backward-compatible fallback for old web-session flow.
             if (! $member) {
-                $sessionId = request()->session()->getId();
+                $sessionId = $this->resolveRequestSessionId();
                 if (is_string($sessionId) && $sessionId !== '') {
                     $member = DB::table('members')
                         ->select('user_name', 'code', 'balance')
@@ -803,7 +803,7 @@
             }
 
 			if ($member) {
-                $requestSession = (string) request()->session()->getId();
+                $requestSession = $this->resolveRequestSessionId();
                 $headerSession = (string) request()->header('X-Game-Session-Token', '');
                 $session = trim($headerSession) !== '' ? trim($headerSession) : $requestSession;
                 if ($session === '') {
@@ -915,7 +915,7 @@
                     'trace_id' => $traceId,
                     'product_id' => $pid,
                     'user_name' => (string) ($data['username'] ?? ''),
-                    'session_id' => (string) request()->session()->getId(),
+                    'session_id' => $this->resolveRequestSessionId(),
                 ]);
 			}
 
@@ -923,6 +923,20 @@
 
 			return $return;
 		}
+
+        private function resolveRequestSessionId(): string
+        {
+            try {
+                $request = request();
+                if (method_exists($request, 'hasSession') && $request->hasSession()) {
+                    return (string) $request->session()->getId();
+                }
+            } catch (\Throwable $e) {
+                // Session may not be available in stateless API routes.
+            }
+
+            return '';
+        }
 
 		public function gameLog($data): array
 		{

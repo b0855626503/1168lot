@@ -145,6 +145,13 @@ class GameController extends BaseController
 
             return $this->loginGameRedirect($request, $provider, $gameCode);
         } catch (\Throwable $e) {
+            Log::channel('api')->error('frontend.game.login.exception', [
+                'path' => (string) $request->path(),
+                'provider' => (string) $request->input('id', ''),
+                'game_code' => (string) $request->input('game', ''),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return $this->sendError('ไม่สามารถเข้าสู่เกมได้ในขณะนี้', 422);
         }
     }
@@ -154,6 +161,13 @@ class GameController extends BaseController
         try {
             return $this->loginGameRedirect($request, $game, $code);
         } catch (\Throwable $e) {
+            Log::channel('api')->error('frontend.game.login.path.exception', [
+                'path' => (string) $request->path(),
+                'provider' => $game,
+                'game_code' => $code,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return $this->sendError('ไม่สามารถเข้าสู่เกมได้ในขณะนี้', 422);
         }
     }
