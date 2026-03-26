@@ -20,6 +20,36 @@ return [
         'sort' => 1,
     ],
     [
+        'key' => 'lotto_draws.edit',
+        'name' => 'แก้ไขงวดหวย',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 11,
+    ],
+    [
+        'key' => 'lotto_draws.open',
+        'name' => 'เปิดรับงวดหวย',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 12,
+    ],
+    [
+        'key' => 'lotto_draws.force_open',
+        'name' => 'เปิดรับก่อนเวลา',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 13,
+    ],
+    [
+        'key' => 'lotto_draws.close',
+        'name' => 'ปิดรับงวดหวย',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 14,
+    ],
+    [
+        'key' => 'lotto_draws.settle',
+        'name' => 'ประกาศผลงวดหวย',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 15,
+    ],
+    [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',

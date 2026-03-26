@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -249,7 +250,7 @@ class LottoDrawController extends AppBaseController
         return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
     }
 
-    public function update(Request $request, DrawService $drawService): JsonResponse
+    public function update(Request $request): JsonResponse
     {
         $id   = $request->input('id');
         $data = (array) $request->input('data', []);
@@ -259,28 +260,21 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
-        $validated = validator($data, [
-            'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
-            'draw_date'   => ['required', 'date_format:Y-m-d'],
-            'open_at'     => ['required', 'date_format:Y-m-d H:i'],
-            'close_at'    => ['required', 'date_format:Y-m-d H:i', 'after:open_at'],
-            'status'      => ['nullable', Rule::in(DrawStatusFlow::allowedStatuses())],
-            'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
-        ])->validate();
+        $rules = $this->rulesForUpdateByStatus($draw);
+        if ($rules === []) {
+            return $this->sendError('งวดที่ประกาศผลแล้วไม่อนุญาตให้แก้ไข', 422);
+        }
 
         try {
-            $currentStatus = (string) $draw->status;
-            $targetStatus = (string) ($validated['status'] ?? $draw->status);
+            $this->assertNoUnexpectedFields($data, array_keys($rules));
+            $validated = validator($data, $rules)->validate();
 
-            $draw->update([
-                'market_id'   => $validated['market_id'],
-                'draw_date'   => $validated['draw_date'],
-                'open_at'     => $this->normalizeDateTimeInput($validated['open_at']),
-                'close_at'    => $this->normalizeDateTimeInput($validated['close_at']),
-                'result_at'   => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
-            ]);
+            $payload = $this->buildUpdatePayloadByStatus($draw, $validated);
+            if ($payload === []) {
+                throw new InvalidArgumentException('ไม่มีฟิลด์ที่อนุญาตให้แก้ไขสำหรับสถานะปัจจุบัน');
+            }
 
-            $this->applyStatusTransition($drawService, $draw, $currentStatus, $targetStatus);
+            $draw->update($payload);
 
             return $this->sendSuccess('อัปเดตงวดหวยสำเร็จ');
         } catch (InvalidArgumentException $e) {
@@ -300,7 +294,7 @@ class LottoDrawController extends AppBaseController
         }
 
         try {
-            $drawService->openDraw($draw);
+            $drawService->openDraw($draw, $this->manualTransitionContext('manual_open'));
 
             return $this->sendSuccess('เปิดรับงวดหวยสำเร็จ');
         } catch (InvalidArgumentException $e) {
@@ -320,7 +314,7 @@ class LottoDrawController extends AppBaseController
         }
 
         try {
-            $drawService->closeDraw($draw);
+            $drawService->closeDraw($draw, $this->manualTransitionContext('manual_close'));
 
             return $this->sendSuccess('ปิดรับงวดหวยสำเร็จ');
         } catch (InvalidArgumentException $e) {
@@ -345,21 +339,23 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ประกาศผลได้เฉพาะงวดที่ปิดรับแล้ว', 422);
         }
 
-        $validated = validator($data, [
-            'result_number' => ['required', 'array'],
-            'result_number.first_prize' => ['required', 'regex:/^\d{5,6}$/'],
-            'result_number.last_2_digits' => ['required', 'digits:2'],
-            'result_at' => ['nullable', 'date_format:Y-m-d H:i'],
-        ])->validate();
-
         try {
+            $this->assertNoUnexpectedFields($data, ['result_number']);
+
+            $validated = validator($data, [
+                'result_number' => ['required', 'array'],
+                'result_number.first_prize' => ['required', 'regex:/^\d{5,6}$/'],
+                'result_number.last_2_digits' => ['required', 'digits:2'],
+            ])->validate();
+
             $summary = $settlementService->settleDraw(
                 $draw,
-                (array) $validated['result_number'],
-                $this->normalizeDateTimeInput($validated['result_at'] ?? null)
+                (array) $validated['result_number']
             );
 
             return $this->sendResponse($summary, 'ประกาศผลและประมวลผลโพยสำเร็จ');
+        } catch (InvalidArgumentException $e) {
+            return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
             return $this->sendError('ประกาศผลไม่สำเร็จ: ' . $e->getMessage());
         }
@@ -413,12 +409,152 @@ class LottoDrawController extends AppBaseController
 
         foreach ($steps as $step) {
             if ($step === 'open') {
-                $draw = $drawService->openDraw($draw);
+                $draw = $drawService->openDraw($draw, $this->manualTransitionContext('status_transition_open'));
             }
 
             if ($step === 'close') {
-                $draw = $drawService->closeDraw($draw);
+                $draw = $drawService->closeDraw($draw, $this->manualTransitionContext('status_transition_close'));
             }
+        }
+    }
+
+    private function manualTransitionContext(string $reason): array
+    {
+        $admin = auth('admin')->user();
+
+        return [
+            'source' => DrawService::SOURCE_MANUAL,
+            'actor_id' => $admin ? (int) ($admin->id ?? 0) : null,
+            'actor_type' => 'admin',
+            'reason' => $reason,
+        ];
+    }
+
+    private function rulesForUpdateByStatus(LottoDraw $draw): array
+    {
+        $status = (string) $draw->status;
+
+        if ($status === 'resulted') {
+            return [];
+        }
+
+        if ($status === 'draft') {
+            return [
+                'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
+                'draw_date'   => ['required', 'date_format:Y-m-d'],
+                'open_at'     => ['required', 'date_format:Y-m-d H:i'],
+                'close_at'    => ['required', 'date_format:Y-m-d H:i', 'after:open_at'],
+                'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
+            ];
+        }
+
+        if ($status === 'open') {
+            $rules = [
+                'close_at' => ['sometimes', 'required', 'date_format:Y-m-d H:i'],
+            ];
+
+            if ($this->drawColumnExists('remark')) {
+                $rules['remark'] = ['sometimes', 'nullable', 'string', 'max:1000'];
+            }
+
+            if ($this->drawColumnExists('display_name')) {
+                $rules['display_name'] = ['sometimes', 'nullable', 'string', 'max:255'];
+            }
+
+            return $rules;
+        }
+
+        if ($status === 'closed') {
+            $rules = [];
+
+            if ($this->drawColumnExists('remark')) {
+                $rules['remark'] = ['sometimes', 'nullable', 'string', 'max:1000'];
+            }
+
+            if ($this->drawColumnExists('display_name')) {
+                $rules['display_name'] = ['sometimes', 'nullable', 'string', 'max:255'];
+            }
+
+            return $rules;
+        }
+
+        throw new InvalidArgumentException('สถานะงวดไม่ถูกต้อง');
+    }
+
+    private function buildUpdatePayloadByStatus(LottoDraw $draw, array $validated): array
+    {
+        $status = (string) $draw->status;
+
+        if ($status === 'draft') {
+            return [
+                'market_id' => (int) $validated['market_id'],
+                'draw_date' => (string) $validated['draw_date'],
+                'open_at' => $this->normalizeDateTimeInput((string) $validated['open_at']),
+                'close_at' => $this->normalizeDateTimeInput((string) $validated['close_at']),
+                'result_at' => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
+            ];
+        }
+
+        if ($status === 'open') {
+            $payload = [];
+            if (array_key_exists('close_at', $validated)) {
+                $normalizedCloseAt = $this->normalizeDateTimeInput((string) $validated['close_at']);
+                if ($draw->open_at && $normalizedCloseAt !== null && Carbon::parse($normalizedCloseAt)->lte($draw->open_at)) {
+                    throw new InvalidArgumentException('เวลา close_at ต้องมากกว่าเวลา open_at');
+                }
+                $payload['close_at'] = $normalizedCloseAt;
+            }
+
+            if ($this->drawColumnExists('remark') && array_key_exists('remark', $validated)) {
+                $payload['remark'] = $validated['remark'];
+            }
+
+            if ($this->drawColumnExists('display_name') && array_key_exists('display_name', $validated)) {
+                $payload['display_name'] = $validated['display_name'];
+            }
+
+            return $payload;
+        }
+
+        if ($status === 'closed') {
+            $payload = [];
+
+            if ($this->drawColumnExists('remark') && array_key_exists('remark', $validated)) {
+                $payload['remark'] = $validated['remark'];
+            }
+
+            if ($this->drawColumnExists('display_name') && array_key_exists('display_name', $validated)) {
+                $payload['display_name'] = $validated['display_name'];
+            }
+
+            return $payload;
+        }
+
+        return [];
+    }
+
+    private function drawColumnExists(string $column): bool
+    {
+        static $cache = [];
+
+        if (! array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('lotto_draws', $column);
+        }
+
+        return (bool) $cache[$column];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param array<int, string> $allowedKeys
+     */
+    private function assertNoUnexpectedFields(array $payload, array $allowedKeys): void
+    {
+        $unexpected = array_diff(array_keys($payload), $allowedKeys);
+        if ($unexpected !== []) {
+            throw new InvalidArgumentException(
+                'พบฟิลด์ที่ไม่อนุญาตให้แก้ไข: ' . implode(', ', $unexpected)
+            );
         }
     }
 

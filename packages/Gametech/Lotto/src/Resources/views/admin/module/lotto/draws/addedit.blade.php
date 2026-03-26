@@ -73,10 +73,6 @@
                 </b-col>
             </b-row>
 
-            <b-form-group label="ประกาศผลเมื่อ:" label-for="settle_result_at">
-                <b-form-input id="settle_result_at" v-model="formaddedit.result_at" type="datetime-local" size="sm"></b-form-input>
-            </b-form-group>
-
             <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted" v-if="!canCalculate">กรอกรางวัลที่ 1 และเลขท้าย 2 ตัวให้ครบก่อน จึงจะแสดงปุ่มคำนวณ</small>
                 <b-button v-if="canCalculate" type="submit" variant="success" size="sm">
@@ -934,7 +930,6 @@
                             first_prize: onlyDigits(this.formaddedit.result_number.first_prize),
                             last_2_digits: onlyDigits(this.formaddedit.result_number.last_2_digits),
                         },
-                        result_at: this.formaddedit.result_at ? this.formaddedit.result_at.replace('T', ' ') : null,
                     };
 
                     const response = await this.$http.post("{{ route('admin.lotto.draws.settle') }}", {

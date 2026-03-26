@@ -15,13 +15,17 @@ use Illuminate\Database\Eloquent\Model;
 class LottoDraw extends Model implements LottoDrawContract
 {
     protected $table = 'lotto_draws';
-    protected $dates = ['draw_date', 'open_at', 'close_at', 'result_at'];
+    protected $dates = ['draw_date', 'open_at', 'opened_at', 'close_at', 'closed_at', 'result_at'];
 
     protected $fillable = [
         'market_id',
         'draw_date',     // วันงวด (date)
         'open_at',       // เปิดรับ (datetime)
+        'opened_at',     // เวลาเปิดรับจริง
+        'open_mode',     // scheduled | manual
         'close_at',      // ปิดรับ (datetime)
+        'closed_at',     // เวลาปิดรับจริง
+        'close_mode',    // scheduled | manual
         'result_at',     // ประกาศผล (datetime, nullable)
         'status',        // draft | open | closed | resulted
         'result_number', // เลขที่ออก (json array หรือ string)
@@ -31,8 +35,12 @@ class LottoDraw extends Model implements LottoDrawContract
     protected $casts = [
         'draw_date' => 'date',
         'open_at' => 'datetime',
+        'opened_at' => 'datetime',
         'close_at' => 'datetime',
+        'closed_at' => 'datetime',
         'result_at' => 'datetime',
+        'open_mode' => 'string',
+        'close_mode' => 'string',
         'result_number' => 'array',
     ];
 

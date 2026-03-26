@@ -24,11 +24,11 @@ class SettlementService
      * @return array<string, int|float|array<string, string>>
      * @throws Exception
      */
-    public function settleDraw(LottoDraw $draw, array $resultNumber, ?string $resultAt = null): array
+    public function settleDraw(LottoDraw $draw, array $resultNumber): array
     {
         $normalizedResult = $this->normalizeResultNumber($resultNumber);
 
-        return DB::transaction(function () use ($draw, $normalizedResult, $resultAt) {
+        return DB::transaction(function () use ($draw, $normalizedResult) {
             $draw = LottoDraw::query()->lockForUpdate()->findOrFail($draw->id);
 
             if ((string) $draw->status === 'resulted') {
@@ -37,7 +37,7 @@ class SettlementService
 
             $draw->update([
                 'result_number' => $normalizedResult,
-                'result_at' => $resultAt ?? now(),
+                'result_at' => now(),
                 'status' => 'resulted',
             ]);
 
