@@ -4,6 +4,11 @@
 
 เอกสารนี้สำหรับ Agent ที่ต้องแก้/เพิ่ม/ปรับ `FrontendApi` บ่อย ให้ทำงานเร็วและลด regression
 
+## 0) คำศัพท์อ้างอิง (Terminology)
+- เมื่อผู้ใช้พิมพ์ว่า `คู่มือ` ให้หมายถึง `docs/API_FRONTEND_V1.md`
+- เมื่อผู้ใช้พิมพ์ว่า `คู่มือ agent` หรือ `คู่มือเอเจ้น` ให้หมายถึงเอกสารสำหรับ Agent ทำงาน เช่น `AGENTS.md` และ `docs/AGENT_FRONTENDAPI.md`
+- หากมีการเพิ่ม/เปลี่ยน API contract ให้บันทึกทั้งโค้ดและเอกสารที่เกี่ยวข้องในรอบเดียวกัน
+
 ## 1) ขอบเขตโมดูล
 - Module: `packages/Gametech/FrontendApi/`
 - Route หลัก: `packages/Gametech/FrontendApi/src/Routes/api.php`

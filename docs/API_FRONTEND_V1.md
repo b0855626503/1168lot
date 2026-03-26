@@ -223,6 +223,24 @@ Response
 }
 ```
 
+#### 1.4 ข้อมูลเว็บไซต์ (Site Meta)
+- `GET /meta/site`
+- Auth: ไม่ต้องใช้ token
+- คืนค่าแบรนด์หลักสำหรับหน้าเว็บ เช่น `logo`, `title`, `name`, `description`
+- ฟิลด์ `logo` จะถูก normalize เป็น Full URL (absolute URL) อัตโนมัติ เมื่อในระบบเก็บเป็น path
+
+Response ตัวอย่าง
+```json
+{
+  "logo": "https://api.1168lot.com/storage/img/logo.png?v=1742970000000",
+  "title": "1168LOT",
+  "name": "1168LOT",
+  "description": "เว็บตรง ฝากถอนออโต้",
+  "success": true,
+  "message": "ดึงข้อมูลเว็บไซต์สำเร็จ"
+}
+```
+
 ---
 
 ### 2) Member
