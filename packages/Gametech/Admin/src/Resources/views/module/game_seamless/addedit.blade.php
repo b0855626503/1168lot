@@ -515,17 +515,35 @@
 
                         if (response.data.data.filepic) {
                             this.trigger++;
-                            this.formaddedit.filepic = response.data.data.filepic;
+                            this.formaddedit.filepic = this.versionedFilename(
+                                response.data.data.filepic,
+                                response.data.data.filepic_version
+                            );
                         }
 
                         if (response.data.data.icon) {
                             this.trigger++;
-                            this.formaddedit.icon = response.data.data.icon;
+                            this.formaddedit.icon = this.versionedFilename(
+                                response.data.data.icon,
+                                response.data.data.icon_version
+                            );
                         }
 
                     } catch (error) {
                         console.log(error)
                     }
+                },
+                versionedFilename(filename, version) {
+                    const cleanName = (filename || '').toString().trim();
+                    if (!cleanName) {
+                        return '';
+                    }
+
+                    const ts = Number.parseInt(version, 10);
+                    const finalVersion = Number.isNaN(ts) ? Date.now() : ts;
+                    const separator = cleanName.includes('?') ? '&' : '?';
+
+                    return `${cleanName}${separator}v=${finalVersion}`;
                 },
                 async loadBetLimit() {
                     const response = await axios.post("{{ url($menu->currentRoute.'/loadBetLimit') }}", {id: this.product});

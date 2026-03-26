@@ -1,6 +1,7 @@
 <?php
 
 use Gametech\FrontendApi\Http\Controllers\Api\V1\AuthController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\ContactChannelController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
@@ -41,6 +42,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.slides.list');
             Route::get('meta/online-members', [OnlineController::class, 'count'])
                 ->name('frontend.api.v1.meta.online_members');
+            Route::get('meta/contact-channels', [ContactChannelController::class, 'list'])
+                ->name('frontend.api.v1.meta.contact_channels');
             Route::get('realtime/config', [RealtimeController::class, 'config'])
                 ->name('frontend.api.v1.realtime.config');
 

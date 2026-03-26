@@ -3,6 +3,7 @@
 namespace Gametech\Admin\Http\Controllers;
 
 
+use Carbon\Carbon;
 use Gametech\Admin\DataTables\GameDataTable;
 use Gametech\Admin\DataTables\GameSeamlessDataTable;
 use Gametech\Admin\DataTables\GameTypeDataTable;
@@ -130,6 +131,17 @@ class GameSeamlessController extends AppBaseController
         if (!$data) {
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
+
+        $version = (int) round(microtime(true) * 1000);
+        if (!empty($data->date_update)) {
+            try {
+                $version = Carbon::parse((string) $data->date_update)->getTimestampMs();
+            } catch (\Throwable $e) {
+                // keep fallback version
+            }
+        }
+        $data->filepic_version = $version;
+        $data->icon_version = $version;
 
         return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
 

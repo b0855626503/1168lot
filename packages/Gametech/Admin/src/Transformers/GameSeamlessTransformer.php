@@ -3,9 +3,8 @@
 namespace Gametech\Admin\Transformers;
 
 
-use Gametech\Game\Contracts\Game;
+use Carbon\Carbon;
 use Gametech\Game\Contracts\GameSeamless;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use League\Fractal\TransformerAbstract;
 
@@ -15,9 +14,14 @@ class GameSeamlessTransformer extends TransformerAbstract
 
     public function transform(GameSeamless $model)
     {
-
-
-
+        $version = (int) round(microtime(true) * 1000);
+        if (!empty($model->date_update)) {
+            try {
+                $version = Carbon::parse((string) $model->date_update)->getTimestampMs();
+            } catch (\Throwable $e) {
+                // keep fallback version
+            }
+        }
 
         return [
             'code' => (int)$model->code,
@@ -32,8 +36,8 @@ class GameSeamlessTransformer extends TransformerAbstract
             'status_open' => '<button type="button" class="btn ' . ($model->status_open == 'Y' ? 'btn-success' : 'btn-danger') . ' btn-xs icon-only" onclick="editdata(' . $model->code . "," . "'" . core()->flip($model->status_open) . "'" . "," . "'status_open'" . ')">' . ($model->status_open == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>') . '</button>',
 //            'batch_game' => ($model->batch_game == 'Y' ? 'เพิ่มที่เมนู Batch User' : 'สมัครได้ทันที'),
             'enable' => '<button type="button" class="btn ' . ($model->enable == 'Y' ? 'btn-success' : 'btn-danger') . ' btn-xs icon-only" onclick="editdata(' . $model->code . "," . "'" . core()->flip($model->enable) . "'" . "," . "'enable'" . ')">' . ($model->enable == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>') . '</button>',
-            'filepic' => '<img src="' . Storage::url('game_img/' . $model->filepic) . '" class="rounded" style="width:50px;height:50px;">',
-            'icon' => '<img src="' . Storage::url('icon_img/' . $model->icon) . '" class="rounded" style="width:50px;height:50px;">',
+            'filepic' => '<img src="' . Storage::url('game_img/' . $model->filepic) . '?v=' . $version . '" class="rounded" style="width:50px;height:50px;">',
+            'icon' => '<img src="' . Storage::url('icon_img/' . $model->icon) . '?v=' . $version . '" class="rounded" style="width:50px;height:50px;">',
             'action' => view('admin::module.game_seamless.datatables_actions', ['code' => $model->code])->render(),
         ];
     }

@@ -908,6 +908,8 @@ Response ตัวอย่าง (ไม่มีสิทธิ์)
   แนะนำยิงทุก `10-20` วินาทีขณะ user online
 - `GET /meta/online-members` (Auth: ไม่ต้องใช้ token)  
   ใช้แสดงจำนวนสมาชิกออนไลน์ล่าสุด
+- `GET /meta/contact-channels` (Auth: ไม่ต้องใช้ token)  
+  ใช้ดึงข้อมูลช่องทางติดต่อจากตาราง `contact_channels`
 
 Response ตัวอย่าง heartbeat
 ```json
@@ -916,6 +918,25 @@ Response ตัวอย่าง heartbeat
   "message": "อัปเดตสถานะออนไลน์สำเร็จ",
   "heartbeat": "ok",
   "online": 123
+}
+```
+
+Response ตัวอย่าง contact channels
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลช่องทางติดต่อสำเร็จ",
+  "data": {
+    "contact_channels": [
+      {
+        "code": 1,
+        "type": "line",
+        "label": "@brand",
+        "link": "https://lin.ee/xxxx",
+        "sort": 1
+      }
+    ]
+  }
 }
 ```
 
