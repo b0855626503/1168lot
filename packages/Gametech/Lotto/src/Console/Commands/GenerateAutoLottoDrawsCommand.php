@@ -83,22 +83,22 @@ class GenerateAutoLottoDrawsCommand extends Command
                     continue;
                 }
 
+                $payload = $this->buildDrawPayload($market, $targetDate);
+
                 $alreadyExists = LottoDraw::query()
                     ->where('market_id', (int) $market->id)
-                    ->whereDate('draw_date', $targetDate->format('Y-m-d'))
+                    ->whereDate('draw_date', (string) $payload['draw_date'])
                     ->exists();
 
                 if ($alreadyExists) {
                     $summary['exists']++;
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
-                        'draw_date' => $targetDate->format('Y-m-d'),
+                        'draw_date' => (string) $payload['draw_date'],
                         'status' => 'exists',
                     ];
                     continue;
                 }
-
-                $payload = $this->buildDrawPayload($market, $targetDate);
 
                 if (! $dryRun) {
                     $drawService->createDraft($payload);
@@ -107,7 +107,7 @@ class GenerateAutoLottoDrawsCommand extends Command
                 $summary['created']++;
                 $summary['items'][] = [
                     'market_id' => (int) $market->id,
-                    'draw_date' => $targetDate->format('Y-m-d'),
+                    'draw_date' => (string) $payload['draw_date'],
                     'status' => $dryRun ? 'will_create' : 'created',
                 ];
             }
@@ -148,20 +148,28 @@ class GenerateAutoLottoDrawsCommand extends Command
 
     private function buildDrawPayload(LotteryMarket $market, Carbon $date): array
     {
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
         $openTime = (string) ($market->auto_open_time ?: '00:00:00');
         $closeTime = (string) $market->auto_close_time;
         $resultTime = (string) ($market->auto_result_time ?: '');
 
-        $openAt = $date->format('Y-m-d') . ' ' . substr($openTime, 0, 8);
-        $closeAt = $date->format('Y-m-d') . ' ' . substr($closeTime, 0, 8);
-        $resultAt = $resultTime !== '' ? $date->format('Y-m-d') . ' ' . substr($resultTime, 0, 8) : null;
+        $openAt = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . substr($openTime, 0, 8), $timezone);
+        $closeAt = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . substr($closeTime, 0, 8), $timezone);
+        $resultAt = null;
+
+        if ($resultTime !== '') {
+            $resultAt = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . substr($resultTime, 0, 8), $timezone);
+            if ($resultAt->lessThanOrEqualTo($closeAt)) {
+                $resultAt->addDay();
+            }
+        }
 
         return [
             'market_id' => (int) $market->id,
-            'draw_date' => $date->format('Y-m-d'),
-            'open_at' => $openAt,
-            'close_at' => $closeAt,
-            'result_at' => $resultAt,
+            'draw_date' => $resultAt ? $resultAt->format('Y-m-d') : $date->format('Y-m-d'),
+            'open_at' => $openAt->format('Y-m-d H:i:s'),
+            'close_at' => $closeAt->format('Y-m-d H:i:s'),
+            'result_at' => $resultAt ? $resultAt->format('Y-m-d H:i:s') : null,
             'status' => 'draft',
             'created_by' => null,
         ];
