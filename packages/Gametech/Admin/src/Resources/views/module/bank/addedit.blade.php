@@ -161,8 +161,26 @@
                     };
                     if (response.data.data.filepic) {
                         this.trigger++;
-                        this.formaddedit.filepic = response.data.data.filepic;
+                        this.formaddedit.filepic = this.versionedFilepic(
+                            response.data.data.filepic,
+                            response.data.data.date_update
+                        );
                     }
+                },
+                versionedFilepic(filename, dateUpdate) {
+                    const cleanName = (filename || '').toString().trim();
+                    if (!cleanName) {
+                        return '';
+                    }
+
+                    const normalizedDate = dateUpdate
+                        ? dateUpdate.toString().replace(' ', 'T')
+                        : '';
+                    const ts = normalizedDate ? Date.parse(normalizedDate) : NaN;
+                    const version = Number.isNaN(ts) ? Date.now() : ts;
+                    const separator = cleanName.includes('?') ? '&' : '?';
+
+                    return `${cleanName}${separator}v=${version}`;
                 },
                 clearImage() {
                     this.trigger++;
@@ -220,4 +238,3 @@
 
     </script>
 @endpush
-
