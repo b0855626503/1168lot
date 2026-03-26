@@ -195,9 +195,9 @@ class BaseController extends AppBaseController
     private function mediaVersionForStoragePath(string $path): int
     {
         try {
-            return (int) Storage::lastModified($path);
+            return (int) Storage::lastModified($path) * 1000;
         } catch (\Throwable $e) {
-            return (int) now()->format('Ymd');
+            return (int) round(microtime(true) * 1000);
         }
     }
 
