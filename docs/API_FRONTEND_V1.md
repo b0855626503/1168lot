@@ -239,7 +239,10 @@ Response ตัวอย่าง
     "point_deposit": "0.00",
     "diamond": "0.00",
     "balance_free": "0.00",
-    "user_name": "9000000011"
+    "user_name": "9000000011",
+    "bank_name": "กสิกรไทย",
+    "bank_image": "/storage/bank_img/kbank.png",
+    "bank_image_url": "https://api.1168lot.com/storage/bank_img/kbank.png"
   },
   "system": {
     "point": false,

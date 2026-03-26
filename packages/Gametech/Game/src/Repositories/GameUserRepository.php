@@ -412,15 +412,29 @@ class GameUserRepository extends Repository
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
 
         $games = $this->gameSeamlessRepository->findOneWhere(['id' => $product_id, 'enable' => 'Y']);
-        $game = core()->getGame($games->method);
-//        dd($game);
-        $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
-//        dd($user);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . ucfirst($games->method) . 'Repository.php'))) {
-                return app('Gametech\Game\Repositories\Games\\' . ucfirst($games->method) . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'productId' => $product_id, 'gameCode' => $game_code]);
+        if (is_null($games)) {
+            $result['msg'] = 'ไม่พบค่ายเกมที่เลือก';
+            return $result;
+        }
 
-            }
+        $game = core()->getGame($games->method);
+        if (is_null($game)) {
+            $result['msg'] = 'ไม่พบการตั้งค่าระบบเกม';
+            return $result;
+        }
+
+        $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
+        if (is_null($user)) {
+            $result['msg'] = 'ไม่พบข้อมูลบัญชีเกมของสมาชิก';
+            return $result;
+        }
+
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . ucfirst($games->method) . 'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\' . ucfirst($games->method) . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login([
+                'username' => $user->user_name,
+                'productId' => $product_id,
+                'gameCode' => $game_code,
+            ]);
         }
 
 

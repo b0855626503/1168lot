@@ -3,6 +3,8 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MemberController extends BaseController
 {
@@ -140,8 +142,13 @@ class MemberController extends BaseController
                     $bank = app('Gametech\Payment\Repositories\BankRepository')
                         ->findOneByField('code', (int) ($member->bank_code ?? 0));
                     $bankName = (string) ($bank->name_th ?? $bank->name_en ?? $bank->name ?? '');
+                    $bankImage = $this->resolveBankImage((string) ($bank->filepic ?? ''));
+                    $payload['profile']['bank_image'] = $bankImage['path'];
+                    $payload['profile']['bank_image_url'] = $bankImage['url'];
                 } catch (\Throwable $e) {
                     $bankName = '';
+                    $payload['profile']['bank_image'] = '';
+                    $payload['profile']['bank_image_url'] = '';
                 }
 
                 $payload['profile']['bank_name'] = $bankName;
@@ -152,5 +159,29 @@ class MemberController extends BaseController
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงยอดเงินคงเหลือได้ในขณะนี้', 422);
         }
+    }
+
+    /**
+     * @return array{path:string,url:string}
+     */
+    private function resolveBankImage(string $filepic): array
+    {
+        $filepic = trim($filepic);
+        if ($filepic === '') {
+            return ['path' => '', 'url' => ''];
+        }
+
+        if (Str::startsWith($filepic, ['http://', 'https://'])) {
+            return ['path' => $filepic, 'url' => $filepic];
+        }
+
+        $path = Str::startsWith($filepic, '/')
+            ? $filepic
+            : Storage::url('bank_img/' . ltrim($filepic, '/'));
+
+        return [
+            'path' => $path,
+            'url' => url($path),
+        ];
     }
 }

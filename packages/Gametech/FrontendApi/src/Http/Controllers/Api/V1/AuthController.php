@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -35,13 +36,17 @@ class AuthController extends BaseController
             $banks = app('Gametech\Payment\Repositories\BankRepository')
                 ->findWhere(['enable' => 'Y', 'show_regis' => 'Y', ['code', '<>', 0]]);
 
-            $items = collect($banks)->map(static function ($bank): array {
+            $items = collect($banks)->map(function ($bank): array {
+                $bankImage = $this->resolveBankImage((string) ($bank->filepic ?? ''));
+
                 return [
                     'code' => (int) ($bank->code ?? 0),
                     'name' => (string) ($bank->name_th ?? $bank->name_en ?? $bank->name ?? ''),
                     'name_th' => (string) ($bank->name_th ?? ''),
                     'name_en' => (string) ($bank->name_en ?? ''),
                     'shortcode' => (string) ($bank->shortcode ?? ''),
+                    'image' => $bankImage['path'],
+                    'image_url' => $bankImage['url'],
                 ];
             })->values()->all();
 
@@ -51,6 +56,30 @@ class AuthController extends BaseController
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการธนาคารสำหรับสมัครสมาชิกได้ในขณะนี้', 422);
         }
+    }
+
+    /**
+     * @return array{path:string,url:string}
+     */
+    private function resolveBankImage(string $filepic): array
+    {
+        $filepic = trim($filepic);
+        if ($filepic === '') {
+            return ['path' => '', 'url' => ''];
+        }
+
+        if (Str::startsWith($filepic, ['http://', 'https://'])) {
+            return ['path' => $filepic, 'url' => $filepic];
+        }
+
+        $path = Str::startsWith($filepic, '/')
+            ? $filepic
+            : Storage::url('bank_img/' . ltrim($filepic, '/'));
+
+        return [
+            'path' => $path,
+            'url' => url($path),
+        ];
     }
 
     public function login(Request $request): JsonResponse

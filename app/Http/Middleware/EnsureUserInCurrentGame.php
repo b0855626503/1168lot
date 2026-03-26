@@ -13,8 +13,9 @@ class EnsureUserInCurrentGame
     {
         $userId = $request->input('username');
         $type = $this->extractRequestType($request);
-        $gameId = $this->extractGameId($request);
-        $productId = $request->input('productId');
+        $gameId = $this->normalizeGameCode($this->extractGameId($request));
+        $productId = $this->normalizeProductId($request->input('productId'));
+        $requestSessionToken = $this->extractSessionToken($request);
 
         if ($this->shouldSkipSessionCheck($type)) {
             $this->logDebug('CREDIT request detected — skipping session check', $userId, compact('type'));
@@ -66,18 +67,25 @@ class EnsureUserInCurrentGame
             $this->logDebug('Skipping gameCode check due to config', $userId, compact('type', 'productId', 'skipGameCheck', 'skipGameIdCheckForType'));
         }
 
+        $sessionGameCode = $this->normalizeGameCode($session['gameCode'] ?? null);
+        $sessionProductId = $this->normalizeProductId($session['productId'] ?? null);
+        $sessionToken = (string) ($session['sessionToken'] ?? '');
         $shouldCheckGameCode = ! $skipGameCheck && ! $skipGameIdCheckForType;
-        $gameCodeMismatch = $shouldCheckGameCode && ($session['gameCode'] ?? null) !== $gameId;
-        $productIdMismatch = ($session['productId'] ?? null) !== $productId;
+        $gameCodeMismatch = $shouldCheckGameCode && $sessionGameCode !== $gameId;
+        $productIdMismatch = $sessionProductId !== $productId;
+        $sessionTokenMismatch = $requestSessionToken !== null && $sessionToken !== '' && $sessionToken !== $requestSessionToken;
 
-        if ($gameCodeMismatch || $productIdMismatch) {
+        if ($gameCodeMismatch || $productIdMismatch || $sessionTokenMismatch) {
             $this->logWarning('Session mismatch', $userId, [
                 'session_gameCode' => $session['gameCode'] ?? null,
                 'session_productId' => $session['productId'] ?? null,
+                'session_sessionToken' => $sessionToken,
                 'request_gameId' => $gameId,
                 'request_productId' => $productId,
+                'request_sessionToken' => $requestSessionToken,
                 'skipGameCheck' => $skipGameCheck,
                 'skipGameIdCheckForType' => $skipGameIdCheckForType,
+                'sessionTokenMismatch' => $sessionTokenMismatch,
             ]);
             return $this->invalidResponse($request, 30001);
         }
@@ -125,6 +133,52 @@ class EnsureUserInCurrentGame
     {
         $skipGameCheckProducts = ['SBO','SEXY','BIGGAME','ALLBET','BETGAME','MICRO_LIVECASINO','PRETTY','WM'];
         return in_array(strtoupper($productId), $skipGameCheckProducts);
+    }
+
+    private function extractSessionToken(Request $request): ?string
+    {
+        $token = $request->input('sessionToken', $request->input('token'));
+        if (is_scalar($token)) {
+            $normalized = trim((string) $token);
+            if ($normalized !== '') {
+                return $normalized;
+            }
+        }
+
+        $txns = $request->input('txns');
+        if (is_array($txns) && isset($txns[0]) && is_array($txns[0])) {
+            $txnToken = $txns[0]['sessionToken'] ?? ($txns[0]['token'] ?? null);
+            if (is_scalar($txnToken)) {
+                $normalized = trim((string) $txnToken);
+                if ($normalized !== '') {
+                    return $normalized;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeProductId($productId): ?string
+    {
+        if (! is_scalar($productId)) {
+            return null;
+        }
+
+        $value = strtoupper(trim((string) $productId));
+
+        return $value === '' ? null : $value;
+    }
+
+    private function normalizeGameCode($gameCode): ?string
+    {
+        if (! is_scalar($gameCode)) {
+            return null;
+        }
+
+        $value = strtolower(trim((string) $gameCode));
+
+        return $value === '' ? null : $value;
     }
 
     private function invalidResponse(Request $request, int $code)

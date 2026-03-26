@@ -729,7 +729,7 @@
             }
         }
 
-        public function login($data)
+		public function login($data)
 		{
 			$pid = Str::upper($data['productId']);
 
@@ -775,18 +775,39 @@
 
 			$return['success'] = false;
 			$response = [];
-			$member = DB::table('members')->select('user_name', 'code', 'balance')->where('session_id', request()->session()->getId())->first();
-			//        dd($member);
+			$member = DB::table('members')
+                ->select('user_name', 'code', 'balance')
+                ->where('user_name', (string) ($data['username'] ?? ''))
+                ->first();
+
+            // Backward-compatible fallback for old web-session flow.
+            if (! $member) {
+                $sessionId = request()->session()->getId();
+                if (is_string($sessionId) && $sessionId !== '') {
+                    $member = DB::table('members')
+                        ->select('user_name', 'code', 'balance')
+                        ->where('session_id', $sessionId)
+                        ->first();
+                }
+            }
 
 			if ($member) {
+                $requestSession = (string) request()->session()->getId();
+                $headerSession = (string) request()->header('X-Game-Session-Token', '');
+                $session = trim($headerSession) !== '' ? trim($headerSession) : $requestSession;
+                if ($session === '') {
+                    $session = (string) Str::uuid();
+                }
 
-				if ($member->user_name == $data['username']) {
+				if ($pid == 'RELAX') {
+					$session = Str::limit($session, 20, '');
+				}
 
-					if ($pid == 'RELAX') {
-						$session = Str::limit(request()->session()->getId(), 20, '');
-					} else {
-						$session = request()->session()->getId();
-					}
+                // Keep provider callback identity tied to the latest game login.
+                MemberProxy::where('code', $member->code)->update([
+                    'session_id' => $session,
+                    'session_page' => $session,
+                ]);
 
                     $param = [
                         'username' => $data['username'],
@@ -843,8 +864,9 @@
 
 							// บันทึกสถานะใหม่ (หรืออัปเดตเวลา)
 							Redis::connection('game')->setex("user_game_status:{$userId}", 600, json_encode([
-								'gameCode' => $gameId,
-								'productId' => $productId,
+								'gameCode' => strtolower((string) $gameId),
+								'productId' => strtoupper((string) $productId),
+                                'sessionToken' => $session,
 								'last_active_at' => now()->toDateTimeString(),
 							]));
 
@@ -865,10 +887,11 @@
 
 					} else {
 						$return['success'] = false;
+                        $return['msg'] = (string) ($response['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้');
 					}
-				} else {
-					$return['success'] = false;
-				}
+			} else {
+				$return['success'] = false;
+                $return['msg'] = 'ไม่พบข้อมูลสมาชิกสำหรับเข้าเกม';
 			}
 
 			$return['api'] = $response;
