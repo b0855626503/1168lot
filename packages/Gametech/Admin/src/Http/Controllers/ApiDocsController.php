@@ -18,7 +18,7 @@ class ApiDocsController extends AppBaseController
 
     public function frontendApiV1(): View
     {
-        $path = base_path('docs/API_FRONTEND_V1.md');
+        $path = base_path('docs/public/api/api-frontend-v1.md');
 
         abort_unless(File::exists($path), 404, 'API docs file not found');
 
@@ -30,7 +30,7 @@ class ApiDocsController extends AppBaseController
 
     public function frontendApiV1Raw(): Response
     {
-        $path = base_path('docs/API_FRONTEND_V1.md');
+        $path = base_path('docs/public/api/api-frontend-v1.md');
 
         abort_unless(File::exists($path), 404, 'API docs file not found');
 

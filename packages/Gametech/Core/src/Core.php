@@ -1075,17 +1075,24 @@ class Core
     public function sortItems(array $items)
     {
         foreach ($items as &$item) {
-            if (count($item['children'])) {
-                $item['children'] = $this->sortItems($item['children']);
+            $children = (array) ($item['children'] ?? []);
+            $item['children'] = $children;
+
+            if (count($children)) {
+                $item['children'] = $this->sortItems($children);
             }
         }
+        unset($item);
 
         usort($items, function ($a, $b) {
-            if ($a['sort'] == $b['sort']) {
+            $sortA = is_numeric($a['sort'] ?? null) ? (int) $a['sort'] : PHP_INT_MAX;
+            $sortB = is_numeric($b['sort'] ?? null) ? (int) $b['sort'] : PHP_INT_MAX;
+
+            if ($sortA == $sortB) {
                 return 0;
             }
 
-            return ($a['sort'] < $b['sort']) ? -1 : 1;
+            return ($sortA < $sortB) ? -1 : 1;
         });
 
         return $this->convertToAssociativeArray($items);

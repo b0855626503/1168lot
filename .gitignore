@@ -30,3 +30,6 @@ Homestead.json
 /.ai/
 /.codex/
 /.github/
+!/.github/
+!/.github/workflows/
+!/.github/workflows/*.yml

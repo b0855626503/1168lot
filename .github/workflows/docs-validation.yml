@@ -1,0 +1,15 @@
+name: docs-validation
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  docs-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run docs validation
+        run: bash scripts/docs-validation/run.sh
