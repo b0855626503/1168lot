@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-03-24
+อัปเดตล่าสุด: 2026-03-26
 
 ## Base URL
 - `http://api.<domain>/api/v1`
@@ -910,6 +910,8 @@ Response ตัวอย่าง (ไม่มีสิทธิ์)
   ใช้แสดงจำนวนสมาชิกออนไลน์ล่าสุด
 - `GET /meta/contact-channels` (Auth: ไม่ต้องใช้ token)  
   ใช้ดึงข้อมูลช่องทางติดต่อจากตาราง `contact_channels`
+- `GET /meta/site` (Auth: ไม่ต้องใช้ token)  
+  ใช้ดึงข้อมูลแบรนด์เว็บไซต์สำหรับ frontend (`logo`, `title`, `name`, `description`)
 
 Response ตัวอย่าง heartbeat
 ```json
@@ -937,6 +939,18 @@ Response ตัวอย่าง contact channels
       }
     ]
   }
+}
+```
+
+Response ตัวอย่าง meta site
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลเว็บไซต์สำเร็จ",
+  "logo": "https://api.example.com/storage/img/logo.png?v=1743012345000",
+  "title": "Brand Title",
+  "name": "Brand Name",
+  "description": "Brand description"
 }
 ```
 

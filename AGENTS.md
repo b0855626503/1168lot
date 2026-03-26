@@ -3,6 +3,7 @@
 ## Quick Links
 - Dev workflow (PHPStorm + WSL): `docs/DEV_WORKFLOW_PHPSTORM_WSL.md`
 - Lotto implementation handover: `docs/LOTTO_SYSTEM_HANDOVER_TH.md`
+- FrontendApi agent playbook: `docs/AGENT_FRONTENDAPI.md`
 - Lotto system roadmap plan: `plan-lottoSystemRoadmap.prompt.md`
 - Lotto execution phases plan: `plan-lottoExecutionPhases.prompt.md`
 - Lotto Concord/Proxy cleanup plan: `plan-lottoConcordProxyCleanup.prompt.md`
