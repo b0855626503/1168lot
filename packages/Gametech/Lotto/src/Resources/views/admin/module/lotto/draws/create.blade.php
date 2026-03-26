@@ -27,7 +27,7 @@
     </div>
     <div class="col-md-2 mb-2 mb-md-0">
         <label class="mb-1">วันงวด</label>
-        <input type="date" id="filter_draw_date" class="form-control form-control-sm" value="{{ $latestDrawDate ?? '' }}">
+        <input type="date" id="filter_draw_date" class="form-control form-control-sm" value="{{ now(config('app.timezone', 'Asia/Bangkok'))->format('Y-m-d') }}">
     </div>
     <div class="col-md-5 text-md-right text-left">
         <button type="button" class="btn bg-gradient-info btn-xs" onclick="generateAutoDraws(true)">
