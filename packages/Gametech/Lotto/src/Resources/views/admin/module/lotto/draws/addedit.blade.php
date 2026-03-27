@@ -235,42 +235,47 @@
     <div class="mb-2 small text-muted">
         Log ID: @{{ autoResultLogDetail.id || '-' }} | Run ID: @{{ autoResultLogDetail.run_id || '-' }}
     </div>
-    <b-row>
-        <b-col md="6">
-            <b-form-group label="Request URL">
-                <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.request_url || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-        <b-col md="6">
-            <b-form-group label="Error Message">
-                <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.error_message || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-    </b-row>
-    <b-row>
-        <b-col md="6">
-            <b-form-group label="Request Meta JSON">
-                <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.request_meta_json || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-        <b-col md="6">
-            <b-form-group label="Parsed Payload JSON">
-                <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.parsed_payload_json || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-    </b-row>
-    <b-row>
-        <b-col md="6">
-            <b-form-group label="Normalized Result JSON">
-                <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.normalized_result_json || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-        <b-col md="6">
-            <b-form-group label="Response Body (preview)">
-                <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.response_body_preview || '-'"></b-form-textarea>
-            </b-form-group>
-        </b-col>
-    </b-row>
+    <div v-if="isAutoResultLogDetailLoading" class="py-3 text-center text-muted">
+        กำลังเตรียมรายละเอียด...
+    </div>
+    <template v-else>
+        <b-row>
+            <b-col md="6">
+                <b-form-group label="Request URL">
+                    <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.request_url || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+            <b-col md="6">
+                <b-form-group label="Error Message">
+                    <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.error_message || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col md="6">
+                <b-form-group label="Request Meta JSON">
+                    <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.request_meta_json || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+            <b-col md="6">
+                <b-form-group label="Parsed Payload JSON">
+                    <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.parsed_payload_json || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col md="6">
+                <b-form-group label="Normalized Result JSON">
+                    <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.normalized_result_json || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+            <b-col md="6">
+                <b-form-group label="Response Body (preview)">
+                    <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.response_body_preview || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+        </b-row>
+    </template>
 </b-modal>
 
 <b-modal ref="autoGenSummaryModal" id="autoGenSummaryModal" centered size="xl" :title="autoGenModalTitle" ok-only ok-title="ปิด" modal-class="lotto-autogen-summary-modal">
@@ -666,6 +671,7 @@
                         draw_id: null,
                         items: [],
                     },
+                    isAutoResultLogDetailLoading: false,
                     autoResultLogDetail: {},
                     autoResultLogFields: [
                         { key: 'id', label: '#', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '70px' } },
@@ -1476,14 +1482,49 @@
                     };
                     this.$refs.autoResultLogsModal.show();
                 },
+                toReadableJson(value, maxLength = 12000) {
+                    if (value === null || value === undefined || value === '') {
+                        return '';
+                    }
+
+                    let output = '';
+                    if (typeof value === 'string') {
+                        output = value;
+                    } else {
+                        try {
+                            output = JSON.stringify(value);
+                        } catch (error) {
+                            output = String(value);
+                        }
+                    }
+
+                    if (output.length > maxLength) {
+                        return `${output.substring(0, maxLength)}\n...(ตัดข้อความเพื่อการแสดงผล)`;
+                    }
+
+                    return output;
+                },
                 openAutoResultLogDetail(item) {
+                    this.isAutoResultLogDetailLoading = true;
                     this.autoResultLogDetail = {
                         ...item,
-                        request_meta_json: item?.request_meta_json ? JSON.stringify(item.request_meta_json, null, 2) : '',
-                        parsed_payload_json: item?.parsed_payload_json ? JSON.stringify(item.parsed_payload_json, null, 2) : '',
-                        normalized_result_json: item?.normalized_result_json ? JSON.stringify(item.normalized_result_json, null, 2) : '',
+                        request_meta_json: '',
+                        parsed_payload_json: '',
+                        normalized_result_json: '',
                     };
                     this.$refs.autoResultLogDetailModal.show();
+
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            this.autoResultLogDetail = {
+                                ...item,
+                                request_meta_json: this.toReadableJson(item?.request_meta_json),
+                                parsed_payload_json: this.toReadableJson(item?.parsed_payload_json),
+                                normalized_result_json: this.toReadableJson(item?.normalized_result_json),
+                            };
+                            this.isAutoResultLogDetailLoading = false;
+                        }, 0);
+                    });
                 },
             },
         });

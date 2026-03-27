@@ -306,3 +306,7 @@ Implement exactly as specified.
   - ให้เปิด modal ทันที
   - แสดง loading state ขณะดึงข้อมูล
   - โหลดข้อมูลแบบ async แล้วค่อยเติมค่าในฟอร์ม
+* ปุ่ม `ดูรายละเอียด` ใน modal `Auto Result Fetch Logs` ต้องไม่ค้างก่อนเปิด:
+  - ให้เปิด detail modal ทันที
+  - แสดง loading state ระหว่างเตรียมข้อความ JSON
+  - แปลง/ตัดข้อความ JSON สำหรับการแสดงผลแบบเบา (truncate) เพื่อลด main-thread freeze
