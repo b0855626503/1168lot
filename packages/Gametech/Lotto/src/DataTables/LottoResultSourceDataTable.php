@@ -62,7 +62,7 @@ class LottoResultSourceDataTable extends DataTable
                 'deferRender' => true,
                 'retrieve' => true,
                 'ordering' => true,
-                'order' => [[0, 'desc'],[3, 'asc']],
+                'order' => [[0, 'desc']],
                 'buttons' => ['pageLength'],
                 'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
