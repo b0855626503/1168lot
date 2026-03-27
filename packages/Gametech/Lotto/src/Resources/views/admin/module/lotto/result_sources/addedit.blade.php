@@ -1,92 +1,268 @@
 <b-modal ref="addeditSource" id="addeditSource" centered size="lg" title="ตั้งค่า Auto Result Source" :hide-footer="true" @shown="onModalShown" @hidden="onModalHidden">
     <b-form v-if="showSourceForm" @submit.prevent="submitSourceForm">
-        <b-row>
-            <b-col md="6">
-                <b-form-group label="ตลาด">
-                    <select ref="marketSelect" class="form-control form-control-sm" required @change="onNativeMarketChange">
-                        <option value="">-- เลือกตลาด --</option>
-                        @foreach(($marketOptionsGrouped ?? []) as $group)
-                            <optgroup label="{{ $group['label'] ?? '-' }}">
-                                @foreach(($group['options'] ?? []) as $market)
-                                    <option value="{{ (string) ($market['value'] ?? '') }}"
-                                            data-logo="{{ $market['logo'] ?? '' }}">
-                                        {{ $market['text'] ?? '-' }}
-                                    </option>
+        <b-tabs v-model="activeSourceTab" content-class="pt-3">
+            <b-tab title="ทั่วไป">
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="ตลาด">
+                            <select ref="marketSelect" class="form-control form-control-sm" required @change="onNativeMarketChange">
+                                <option value="">-- เลือกตลาด --</option>
+                                @foreach(($marketOptionsGrouped ?? []) as $group)
+                                    <optgroup label="{{ $group['label'] ?? '-' }}">
+                                        @foreach(($group['options'] ?? []) as $market)
+                                            <option value="{{ (string) ($market['value'] ?? '') }}"
+                                                    data-logo="{{ $market['logo'] ?? '' }}">
+                                                {{ $market['text'] ?? '-' }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
-                            </optgroup>
-                        @endforeach
-                    </select>
+                            </select>
+                            <small class="text-muted d-block mt-1">เลือกตลาดหวยที่ source นี้จะใช้ดึงผล</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="Priority">
+                            <b-form-input size="sm" type="number" min="1" v-model="sourceForm.priority"></b-form-input>
+                            <small class="text-muted d-block mt-1">เลขน้อยทำงานก่อน ใช้จัดลำดับหลาย source</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="Timeout (sec)">
+                            <b-form-input size="sm" type="number" min="1" max="60" v-model="sourceForm.timeout_seconds"></b-form-input>
+                            <small class="text-muted d-block mt-1">เวลารอ response จาก source ก่อนถือว่าล้มเหลว</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="4">
+                        <b-form-group label="Source Type">
+                            <b-form-select size="sm" :options="sourceTypes" v-model="sourceForm.source_type"></b-form-select>
+                            <small class="text-muted d-block mt-1">ระบุประเภทแหล่งข้อมูล เช่น API หรือ HTML</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="HTTP Method">
+                            <b-form-select size="sm" :options="httpMethods" v-model="sourceForm.http_method"></b-form-select>
+                            <small class="text-muted d-block mt-1">วิธีส่ง request ไป endpoint เช่น GET/POST</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="Parser Type">
+                            <b-form-select size="sm" :options="parserTypes" v-model="sourceForm.parser_type"></b-form-select>
+                            <small class="text-muted d-block mt-1">เครื่องมือดึง field จาก payload ที่ fetch มา</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-form-group label="Endpoint URL">
+                    <b-form-input size="sm" v-model="sourceForm.endpoint_url" required></b-form-input>
+                    <small class="text-muted d-block mt-1">URL หลักของ source ที่ใช้ดึงผลลอตเตอรี่</small>
                 </b-form-group>
-            </b-col>
-            <b-col md="3">
-                <b-form-group label="Priority">
-                    <b-form-input size="sm" type="number" min="1" v-model="sourceForm.priority"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col md="3">
-                <b-form-group label="Timeout (sec)">
-                    <b-form-input size="sm" type="number" min="1" max="60" v-model="sourceForm.timeout_seconds"></b-form-input>
-                </b-form-group>
-            </b-col>
-        </b-row>
 
-        <b-row>
-            <b-col md="4"><b-form-group label="Source Type"><b-form-select size="sm" :options="sourceTypes" v-model="sourceForm.source_type"></b-form-select></b-form-group></b-col>
-            <b-col md="4"><b-form-group label="HTTP Method"><b-form-select size="sm" :options="httpMethods" v-model="sourceForm.http_method"></b-form-select></b-form-group></b-col>
-            <b-col md="4"><b-form-group label="Parser Type"><b-form-select size="sm" :options="parserTypes" v-model="sourceForm.parser_type"></b-form-select></b-form-group></b-col>
-        </b-row>
+                <b-row>
+                    <b-col md="8">
+                        <b-form-group label="Lookup Date Mode">
+                            <b-form-select size="sm" :options="lookupDateModes" v-model="sourceForm.lookup_date_mode"></b-form-select>
+                            <small class="text-muted d-block mt-1">กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="Offset Days">
+                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="sourceForm.lookup_date_offset_days"></b-form-input>
+                            <small class="text-muted d-block mt-1">เลื่อนวันงวดจากฐาน เช่น -1 คือวันก่อนหน้า</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-row>
-            <b-col md="4"><b-form-group label="Pipeline Version"><b-form-select size="sm" :options="pipelineVersions" v-model="sourceForm.pipeline_version"></b-form-select></b-form-group></b-col>
-            <b-col md="4"><b-form-group label="Fetch Strategy"><b-form-select size="sm" :options="fetchStrategies" v-model="sourceForm.fetch_strategy"></b-form-select></b-form-group></b-col>
-            <b-col md="4"><b-form-group label="Selection Stage"><b-form-select size="sm" :options="selectionStages" v-model="sourceForm.selection_stage"></b-form-select></b-form-group></b-col>
-        </b-row>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Effective From (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="sourceForm.effective_from"></b-form-input>
+                            <small class="text-muted d-block mt-1">วันเริ่มใช้งาน source นี้ (ว่างได้)</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Effective To (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="sourceForm.effective_to"></b-form-input>
+                            <small class="text-muted d-block mt-1">วันสิ้นสุดใช้งาน source นี้ (ว่างได้)</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+            </b-tab>
 
-        <b-row>
-            <b-col md="3"><b-form-group label="Supports Partial"><b-form-checkbox v-model="sourceForm.supports_partial" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
-            <b-col md="3"><b-form-group label="Requires Browser"><b-form-checkbox v-model="sourceForm.requires_browser" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
-            <b-col md="3"><b-form-group label="Shadow Enabled"><b-form-checkbox v-model="sourceForm.shadow_enabled" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
-            <b-col md="3"><b-form-group label="Cutover Enabled"><b-form-checkbox v-model="sourceForm.cutover_enabled" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
-        </b-row>
+            <b-tab title="Pipeline">
+                <b-row>
+                    <b-col md="4">
+                        <b-form-group label="Pipeline Version" :class="{ 'source-risk-input': isRiskyCutover }">
+                            <b-form-select size="sm" :options="pipelineVersions" v-model="sourceForm.pipeline_version"></b-form-select>
+                            <small class="text-muted d-block mt-1">โหมดการรัน: legacy, shadow เทียบผล, หรือ cutover ใช้งาน v2</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="Fetch Strategy">
+                            <b-form-select size="sm" :options="fetchStrategies" v-model="sourceForm.fetch_strategy"></b-form-select>
+                            <small class="text-muted d-block mt-1">วิธีดึงข้อมูลหลัก เช่น JSON_HTTP หรือ RENDERED_BROWSER</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="Selection Stage">
+                            <b-form-select size="sm" :options="selectionStages" v-model="sourceForm.selection_stage"></b-form-select>
+                            <small class="text-muted d-block mt-1">เลือก candidate ก่อน mapping หรือหลัง mapping</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-form-group label="Endpoint URL">
-            <b-form-input size="sm" v-model="sourceForm.endpoint_url" required></b-form-input>
-        </b-form-group>
+                <b-row>
+                    <b-col md="3">
+                        <b-form-group label="Supports Partial">
+                            <b-form-checkbox v-model="sourceForm.supports_partial" switch>เปิดใช้งาน</b-form-checkbox>
+                            <small class="text-muted d-block mt-1">อนุญาตผลบางช่องไม่ครบได้</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="Requires Browser">
+                            <b-form-checkbox v-model="sourceForm.requires_browser" switch>เปิดใช้งาน</b-form-checkbox>
+                            <small class="text-muted d-block mt-1">source นี้ต้องใช้ browser worker</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="Shadow Enabled">
+                            <b-form-checkbox v-model="sourceForm.shadow_enabled" switch>เปิดใช้งาน</b-form-checkbox>
+                            <small class="text-muted d-block mt-1">รัน old+v2 เทียบผล แต่ยังไม่สลับผลจริง</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="Cutover Enabled" :class="{ 'source-risk-input': isRiskyCutover }">
+                            <b-form-checkbox v-model="sourceForm.cutover_enabled" switch>เปิดใช้งาน</b-form-checkbox>
+                            <small class="text-muted d-block mt-1">ใช้ผลจาก v2 เป็นผลหลักของระบบ</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-row>
-            <b-col md="8"><b-form-group label="Lookup Date Mode"><b-form-select size="sm" :options="lookupDateModes" v-model="sourceForm.lookup_date_mode"></b-form-select></b-form-group></b-col>
-            <b-col md="4"><b-form-group label="Offset Days"><b-form-input size="sm" type="number" min="-365" max="365" v-model="sourceForm.lookup_date_offset_days"></b-form-input></b-form-group></b-col>
-        </b-row>
+                <b-alert v-if="isRiskyCutover" show variant="warning" class="py-2">
+                    โหมด Cutover มีผลกับผลลัพธ์จริงของระบบ กรุณากด Validate Config และ Validate Cutover ก่อนบันทึกทุกครั้ง
+                </b-alert>
+            </b-tab>
 
-        <b-row>
-            <b-col md="6"><b-form-group label="Effective From (Y-m-d H:i:s)"><b-form-input size="sm" v-model="sourceForm.effective_from"></b-form-input></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Effective To (Y-m-d H:i:s)"><b-form-input size="sm" v-model="sourceForm.effective_to"></b-form-input></b-form-group></b-col>
-        </b-row>
+            <b-tab title="Configs JSON">
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Headers JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_headers_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.request_headers_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">HTTP headers ที่ต้องส่งเพิ่ม เช่น token หรือ content-type</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Query Template JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_query_template_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.request_query_template_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">template query string โดยระบบจะแทนค่าตาม context</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Body Template JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_body_template_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.request_body_template_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">template request body สำหรับ method ที่มี payload</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Fetch Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('fetch_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.fetch_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">config ราย fetch strategy เช่น html/json/rendered browser</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Parser Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('parser_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.parser_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">กำหนด extractor และ parse mode เพื่อแตก raw field</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Mapping Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('mapping_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.mapping_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">แปลง raw field เป็น canonical field พร้อม transform chain</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Selection Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('selection_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.selection_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">กติกาเลือก candidate ที่ถูกต้องในแต่ละ run</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Validation Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('validation_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.validation_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">ตรวจรูปแบบ/schema ของผลลัพธ์ canonical</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Readiness Config JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('readiness_config_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.readiness_config_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">ตรวจความพร้อมเชิงธุรกิจว่าใช้ผลได้หรือยัง</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Retry Policy JSON">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('retry_policy_json')">Insert Example</button>
+                            </div>
+                            <b-form-textarea rows="4" v-model="sourceForm.retry_policy_json"></b-form-textarea>
+                            <small class="text-muted d-block mt-1">กำหนดนโยบาย retry เมื่อ fetch/parse ไม่สำเร็จ</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+            </b-tab>
 
-        <b-row>
-            <b-col md="6"><b-form-group label="Headers JSON"><b-form-textarea rows="4" v-model="sourceForm.request_headers_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Query Template JSON"><b-form-textarea rows="4" v-model="sourceForm.request_query_template_json"></b-form-textarea></b-form-group></b-col>
-        </b-row>
-        <b-row>
-            <b-col md="6"><b-form-group label="Body Template JSON"><b-form-textarea rows="4" v-model="sourceForm.request_body_template_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Parser Config JSON"><b-form-textarea rows="4" v-model="sourceForm.parser_config_json"></b-form-textarea></b-form-group></b-col>
-        </b-row>
-        <b-row>
-            <b-col md="6"><b-form-group label="Mapping Config JSON"><b-form-textarea rows="4" v-model="sourceForm.mapping_config_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Validation Config JSON"><b-form-textarea rows="4" v-model="sourceForm.validation_config_json"></b-form-textarea></b-form-group></b-col>
-        </b-row>
-        <b-row>
-            <b-col md="6"><b-form-group label="Fetch Config JSON"><b-form-textarea rows="4" v-model="sourceForm.fetch_config_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Selection Config JSON"><b-form-textarea rows="4" v-model="sourceForm.selection_config_json"></b-form-textarea></b-form-group></b-col>
-        </b-row>
-        <b-row>
-            <b-col md="6"><b-form-group label="Readiness Config JSON"><b-form-textarea rows="4" v-model="sourceForm.readiness_config_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"><b-form-group label="Revision Reason"><b-form-input size="sm" v-model="sourceForm.revision_reason" placeholder="เหตุผลการเปลี่ยนแปลง"></b-form-input></b-form-group></b-col>
-        </b-row>
-        <b-row>
-            <b-col md="6"><b-form-group label="Retry Policy JSON"><b-form-textarea rows="4" v-model="sourceForm.retry_policy_json"></b-form-textarea></b-form-group></b-col>
-            <b-col md="6"></b-col>
-        </b-row>
+            <b-tab title="Governance">
+                <b-row>
+                    <b-col md="8">
+                        <b-form-group label="Revision Reason">
+                            <b-form-input size="sm" v-model="sourceForm.revision_reason" placeholder="เหตุผลการเปลี่ยนแปลง"></b-form-input>
+                            <small class="text-muted d-block mt-1">อธิบายว่าปรับ config เพราะอะไร เพื่อเก็บประวัติ revision</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4" class="d-flex align-items-end">
+                        <small class="text-muted mb-3">แนะนำให้กด Preview และ Validate ทุกครั้งก่อนบันทึกหรือ cutover</small>
+                    </b-col>
+                </b-row>
+            </b-tab>
+        </b-tabs>
 
         <div class="d-flex justify-content-between">
             <div>
@@ -149,6 +325,17 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        #addeditSource .btn-xs {
+            font-size: 11px;
+            line-height: 1.2;
+            padding: 2px 8px;
+        }
+
+        #addeditSource .source-risk-input label {
+            color: #8a6d3b;
+            font-weight: 600;
+        }
     </style>
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
@@ -162,6 +349,7 @@
             data() {
                 return {
                     showSourceForm: true,
+                    activeSourceTab: 0,
                     sourceFormMethod: 'add',
                     sourceId: null,
                     lookupDateModes: @json($lookupDateModes ?? []),
@@ -171,11 +359,71 @@
                     pipelineVersions: @json($pipelineVersions ?? []),
                     fetchStrategies: @json($fetchStrategies ?? []),
                     selectionStages: @json($selectionStages ?? []),
+                    jsonExamples: this.buildJsonExamples(),
                     sourceForm: this.newSourceForm(),
                     isSyncingMarketSelect: false,
                 };
             },
+            computed: {
+                isRiskyCutover() {
+                    return this.sourceForm.pipeline_version === 'V2_CUTOVER' || !!this.sourceForm.cutover_enabled;
+                },
+            },
             methods: {
+                buildJsonExamples() {
+                    return {
+                        request_headers_json: {
+                            Accept: 'application/json',
+                            'User-Agent': 'LottoFetcher/2.0',
+                        },
+                        request_query_template_json: {
+                            draw_date: '{{draw_date:YYYY-MM-DD}}',
+                            lang: 'th',
+                        },
+                        request_body_template_json: {
+                            market_key: '{{market_key}}',
+                            draw_date: '{{draw_date:YYYY-MM-DD}}',
+                        },
+                        fetch_config_json: {
+                            strategy: 'json_http',
+                            url_override: null,
+                            response_json_path: '$',
+                        },
+                        parser_config_json: {
+                            parse_mode: 'single_payload',
+                            fields: {
+                                draw_date_raw: { type: 'JSON_PATH', expr: '$.date' },
+                                first_3_raw: { type: 'JSON_PATH', expr: '$.first_3' },
+                                last_2_raw: { type: 'JSON_PATH', expr: '$.last_2' },
+                            },
+                        },
+                        mapping_config_json: {
+                            draw_date: { from: 'draw_date_raw', transforms: [{ op: 'date', from: 'd/m/Y', to: 'Y-m-d' }] },
+                            first_prize: { from_fields: ['lotto_2', 'lotto_3', 'lotto_4'], join: '' },
+                            last_2_digits: { from: 'last_2_raw', transforms: ['trim', 'digits_only', { op: 'right', value: 2 }] },
+                        },
+                        selection_config_json: {
+                            strategy: 'strict_single_match',
+                            expected_draw_date_field: 'draw_date_raw',
+                        },
+                        validation_config_json: {
+                            required_fields: ['draw_date', 'first_prize', 'last_2_digits'],
+                            rules: {
+                                draw_date: 'date:Y-m-d',
+                                first_prize: 'digits:3,6',
+                                last_2_digits: 'digits:2',
+                            },
+                        },
+                        readiness_config_json: {
+                            allow_partial: false,
+                            required_for_ready: ['draw_date', 'first_prize', 'last_2_digits'],
+                        },
+                        retry_policy_json: {
+                            max_attempts: 3,
+                            backoff_seconds: [10, 30, 60],
+                        },
+                    };
+                },
                 newSourceForm() {
                     return {
                         id: null,
@@ -218,9 +466,23 @@
 
                     return JSON.stringify(value, null, 2);
                 },
+                applyJsonExample(field) {
+                    const example = this.jsonExamples[field];
+                    if (!example) {
+                        return;
+                    }
+
+                    const current = String(this.sourceForm[field] || '').trim();
+                    if (current !== '' && !window.confirm('ช่องนี้มีข้อมูลอยู่แล้ว ต้องการแทนที่ด้วยตัวอย่างหรือไม่?')) {
+                        return;
+                    }
+
+                    this.sourceForm[field] = JSON.stringify(example, null, 2);
+                },
                 addSourceModal() {
                     this.sourceId = null;
                     this.sourceFormMethod = 'add';
+                    this.activeSourceTab = 0;
                     this.sourceForm = this.newSourceForm();
                     this.showSourceForm = true;
 
@@ -231,6 +493,7 @@
                 async editSourceModal(id) {
                     this.sourceId = id;
                     this.sourceFormMethod = 'edit';
+                    this.activeSourceTab = 0;
 
                     const response = await axios.post("{{ route('admin.lotto.result_sources.loaddata') }}", { id });
                     const item = response?.data?.data || {};
@@ -263,6 +526,7 @@
                 },
                 onModalHidden() {
                     this.destroyMarketSelect2();
+                    this.activeSourceTab = 0;
                 },
                 onNativeMarketChange(event) {
                     if (this.isSyncingMarketSelect) {
