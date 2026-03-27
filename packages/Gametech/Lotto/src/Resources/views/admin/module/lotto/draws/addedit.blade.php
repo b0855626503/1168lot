@@ -7,20 +7,15 @@
         <template v-if="formmethod !== 'settle'">
             <b-row>
                 <b-col cols="12" md="6">
-                    <b-form-group label="ตลาด:" label-for="market_id">
-                        <select id="market_id"
-                                ref="marketSelect"
-                                class="form-control form-control-sm"
-                                :value="formaddedit.market_id ? String(formaddedit.market_id) : ''"
-                                @change="onNativeMarketChange"
-                                required>
-                            <option value="">-- เลือกรายการหวย --</option>
+                    <b-form-group label="ตลาด">
+                        <select ref="marketSelect" class="form-control form-control-sm" required>
+                            <option value="">-- เลือกตลาด --</option>
                             @foreach(($marketOptions ?? []) as $group)
                                 <optgroup label="{{ $group['label'] ?? '-' }}">
-                                    @foreach(($group['options'] ?? []) as $option)
-                                        <option value="{{ (string) ($option['value'] ?? '') }}"
-                                                data-logo="{{ $option['logo'] ?? '' }}">
-                                            {{ $option['text'] ?? '-' }}
+                                    @foreach(($group['options'] ?? []) as $market)
+                                        <option value="{{ (string) ($market['value'] ?? '') }}"
+                                                data-logo="{{ $market['logo'] ?? '' }}">
+                                            {{ $market['text'] ?? '-' }}
                                         </option>
                                     @endforeach
                                 </optgroup>
@@ -519,6 +514,55 @@
         .lotto-autogen-summary-modal .modal-dialog {
             max-width: 1220px;
         }
+
+        #addedit .select2-container--default .select2-selection--single {
+            height: calc(1.5em + .5rem + 2px);
+            min-height: calc(1.5em + .5rem + 2px);
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        #addedit .select2-container--default .select2-selection--single .select2-selection__rendered {
+            width: 100%;
+            padding-left: .5rem;
+            padding-right: 1.75rem;
+            line-height: normal;
+            display: flex !important;
+            align-items: center;
+            min-height: calc(1.5em + .5rem + 2px);
+            overflow: visible;
+        }
+
+        #addedit .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 100%;
+            right: .35rem;
+        }
+
+        .select2-container .lotto-market-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .select2-container .lotto-market-option__logo {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        .select2-container .lotto-market-option__text {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     </style>
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
@@ -720,6 +764,10 @@
             },
             watch: {
                 'formaddedit.market_id'() {
+                    if (this.isSyncingMarketSelect) {
+                        return;
+                    }
+
                     this.$nextTick(() => this.syncMarketSelectValue());
                 },
             },
@@ -729,9 +777,10 @@
             },
             methods: {
                 resetForm() {
-                    const firstMarketId = this.firstMarketOption ? this.firstMarketOption.value : null;
+                    const firstMarketId = this.firstMarketOption ? parseInt(this.firstMarketOption.value, 10) : null;
+
                     this.formaddedit = {
-                        market_id: firstMarketId,
+                        market_id: Number.isNaN(firstMarketId) ? null : firstMarketId,
                         draw_date: '',
                         open_at: '',
                         close_at: '',
@@ -753,6 +802,7 @@
                     this.code = id;
                     this.formmethod = 'edit';
                     this.show = false;
+
                     this.$nextTick(async () => {
                         this.show = true;
                         await this.loadData();
@@ -764,6 +814,7 @@
                     this.formmethod = 'add';
                     this.resetForm();
                     this.show = false;
+
                     this.$nextTick(() => {
                         this.show = true;
                         this.$refs.addedit.show();
@@ -773,6 +824,7 @@
                     this.code = id;
                     this.formmethod = 'settle';
                     this.show = false;
+
                     this.$nextTick(async () => {
                         this.show = true;
                         await this.loadData();
@@ -781,18 +833,9 @@
                 },
                 onModalShown() {
                     this.initMarketSelect2();
-                    this.syncMarketSelectValue();
                 },
                 onModalHidden() {
                     this.destroyMarketSelect2();
-                },
-                onNativeMarketChange(event) {
-                    if (this.isSyncingMarketSelect) {
-                        return;
-                    }
-
-                    const value = event?.target?.value || '';
-                    this.formaddedit.market_id = value ? parseInt(value, 10) : null;
                 },
                 getMarketDropdownParent(selectEl) {
                     if (!window.jQuery || !selectEl) {
@@ -801,6 +844,7 @@
 
                     const $select = window.jQuery(selectEl);
                     const $modal = $select.closest('.modal');
+
                     if ($modal.length) {
                         return $modal;
                     }
@@ -808,17 +852,84 @@
                     const modalId = this.$refs.addedit && this.$refs.addedit.id
                         ? String(this.$refs.addedit.id)
                         : 'addedit';
+
                     const $fallbackModal = window.jQuery('#' + modalId).closest('.modal');
+
                     if ($fallbackModal.length) {
                         return $fallbackModal;
                     }
 
                     const $shownModal = window.jQuery('.modal.show').last();
+
                     if ($shownModal.length) {
                         return $shownModal;
                     }
 
                     return window.jQuery(document.body);
+                },
+                normalizeLogoUrl(rawUrl) {
+                    const value = String(rawUrl || '').trim();
+                    if (!value) {
+                        return '';
+                    }
+
+                    if (/^https?:\/\//i.test(value)) {
+                        return value;
+                    }
+
+                    if (value.startsWith('/')) {
+                        return `${window.location.origin}${value}`;
+                    }
+
+                    return `${window.location.origin}/${value}`;
+                },
+                resolveLogoFromState(state, $select) {
+                    if (state?.element) {
+                        const byDataset = state.element.dataset ? state.element.dataset.logo : '';
+                        if (byDataset) {
+                            return byDataset;
+                        }
+
+                        const byAttr = state.element.getAttribute ? state.element.getAttribute('data-logo') : '';
+                        if (byAttr) {
+                            return byAttr;
+                        }
+                    }
+
+                    if ($select && state?.id) {
+                        const $opt = $select.find('option[value="' + String(state.id) + '"]');
+                        if ($opt.length) {
+                            return String($opt.attr('data-logo') || '');
+                        }
+                    }
+
+                    return '';
+                },
+                renderMarketOption(state, $select) {
+                    if (!state.id) {
+                        return state.text || '';
+                    }
+
+                    const logoRaw = this.resolveLogoFromState(state, $select);
+                    const logo = this.normalizeLogoUrl(logoRaw);
+                    const text = String(state.text || '').trim();
+
+                    const $wrapper = window.jQuery('<span class="lotto-market-option"></span>');
+
+                    if (logo) {
+                        const $img = window.jQuery('<img class="lotto-market-option__logo" alt="">');
+                        $img.attr('src', logo);
+                        $img.on('error', function () {
+                            window.jQuery(this).remove();
+                        });
+                        $wrapper.append($img);
+                    }
+
+                    $wrapper.append(
+                        window.jQuery('<span class="lotto-market-option__text"></span>').text(text)
+                    );
+
+                    return $wrapper;
                 },
                 initMarketSelect2() {
                     const selectEl = this.$refs.marketSelect;
@@ -833,86 +944,43 @@
 
                     this.destroyMarketSelect2();
 
-                    const normalizeLogoUrl = (rawUrl) => {
-                        const value = String(rawUrl || '').trim();
-                        if (!value) {
-                            return '';
-                        }
-
-                        if (/^https?:\/\//i.test(value)) {
-                            return value;
-                        }
-
-                        if (value.startsWith('/')) {
-                            return `${window.location.origin}${value}`;
-                        }
-
-                        return `${window.location.origin}/${value}`;
-                    };
-
-                    const resolveLogoFromState = (state) => {
-                        if (state?.element) {
-                            const byDataset = state.element.dataset ? state.element.dataset.logo : '';
-                            if (byDataset) {
-                                return byDataset;
-                            }
-
-                            const byAttr = state.element.getAttribute ? state.element.getAttribute('data-logo') : '';
-                            if (byAttr) {
-                                return byAttr;
-                            }
-                        }
-
-                        if (state?.id) {
-                            const $opt = $select.find('option[value="' + String(state.id) + '"]');
-                            if ($opt.length) {
-                                return String($opt.attr('data-logo') || '');
-                            }
-                        }
-
-                        return '';
-                    };
-
-                    const renderMarketOption = (state) => {
-                        if (!state.id) {
-                            return state.text;
-                        }
-
-                        const logo = normalizeLogoUrl(resolveLogoFromState(state));
-                        const safeText = window.jQuery('<span/>').text(state.text || '').html();
-
-                        if (!logo) {
-                            return '<span>' + safeText + '</span>';
-                        }
-
-                        return '<span style="display:flex;align-items:center;gap:8px;">'
-                            + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
-                            + '<span>' + safeText + '</span>'
-                            + '</span>';
-                    };
-
                     const dropdownParent = this.getMarketDropdownParent(selectEl);
+                    const self = this;
 
                     $select.select2({
                         width: '100%',
+                        theme: 'bootstrap4',
                         dropdownParent: dropdownParent,
                         placeholder: '-- เลือกรายการหวย --',
                         allowClear: false,
-                        templateResult: renderMarketOption,
-                        templateSelection: renderMarketOption,
-                        escapeMarkup: function (markup) {
+                        templateResult(state) {
+                            return self.renderMarketOption(state, $select);
+                        },
+                        templateSelection(state) {
+                            return self.renderMarketOption(state, $select);
+                        },
+                        escapeMarkup(markup) {
                             return markup;
                         },
                     });
 
                     $select.on('change.drawMarket', () => {
-                        if (this.isSyncingMarketSelect) {
+                        const value = $select.val();
+                        const normalizedValue = value ? parseInt(value, 10) : null;
+
+                        if (this.formaddedit.market_id === normalizedValue) {
                             return;
                         }
 
-                        const value = $select.val();
-                        this.formaddedit.market_id = value ? parseInt(value, 10) : null;
+                        this.isSyncingMarketSelect = true;
+                        this.formaddedit.market_id = normalizedValue;
+
+                        this.$nextTick(() => {
+                            this.isSyncingMarketSelect = false;
+                        });
                     });
+
+                    this.syncMarketSelectValue();
                 },
                 destroyMarketSelect2() {
                     const selectEl = this.$refs.marketSelect;
@@ -926,6 +994,7 @@
                     }
 
                     $select.off('.drawMarket');
+
                     if ($select.hasClass('select2-hidden-accessible') && typeof $select.select2 === 'function') {
                         $select.select2('destroy');
                     }
@@ -938,6 +1007,11 @@
 
                     const value = this.formaddedit.market_id ? String(this.formaddedit.market_id) : '';
                     const $select = window.jQuery(selectEl);
+
+                    if (String($select.val() || '') === value) {
+                        return;
+                    }
+
                     this.isSyncingMarketSelect = true;
                     $select.val(value);
 
@@ -970,7 +1044,7 @@
                     };
 
                     this.formaddedit = {
-                        market_id: d.market_id,
+                        market_id: d.market_id ? parseInt(d.market_id, 10) : null,
                         draw_date: d.draw_date ? String(d.draw_date).substring(0, 10) : '',
                         open_at: toDateTimeLocal(d.open_at),
                         close_at: toDateTimeLocal(d.close_at),
@@ -1207,7 +1281,7 @@
                 async runAutoResultTestFetch(id) {
                     const response = await axios.post("{{ route('admin.lotto.draws.auto_result_test_fetch') }}", { draw_id: id });
                     const runId = response?.data?.data?.run_id || '';
-                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Dry-run แล้ว\\nRun ID: ${runId}`, {
+                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Dry-run แล้ว\nRun ID: ${runId}`, {
                         title: 'Auto Result Dry-run',
                         size: 'sm',
                         buttonSize: 'sm',
@@ -1218,7 +1292,7 @@
                 async runAutoResultManualRetry(id) {
                     const response = await axios.post("{{ route('admin.lotto.draws.auto_result_manual_retry') }}", { draw_id: id });
                     const runId = response?.data?.data?.run_id || '';
-                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Retry แล้ว\\nRun ID: ${runId}`, {
+                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Retry แล้ว\nRun ID: ${runId}`, {
                         title: 'Auto Result Retry',
                         size: 'sm',
                         buttonSize: 'sm',
