@@ -377,12 +377,12 @@
                             'User-Agent': 'LottoFetcher/2.0',
                         },
                         request_query_template_json: {
-                            draw_date: '{{draw_date:YYYY-MM-DD}}',
+                            draw_date: '@{{draw_date:YYYY-MM-DD}}',
                             lang: 'th',
                         },
                         request_body_template_json: {
-                            market_key: '{{market_key}}',
-                            draw_date: '{{draw_date:YYYY-MM-DD}}',
+                            market_key: '@{{market_key}}',
+                            draw_date: '@{{draw_date:YYYY-MM-DD}}',
                         },
                         fetch_config_json: {
                             strategy: 'json_http',
