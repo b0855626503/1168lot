@@ -6,6 +6,9 @@ use Gametech\Lotto\Exceptions\ResultParseException;
 use Gametech\Lotto\Exceptions\ResultValidationException;
 use Gametech\Lotto\Exceptions\TemplateRenderException;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoResultSource;
+use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
+use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
@@ -78,6 +81,74 @@ class AutoResultPipelineService
                 'run_id' => $runId,
                 'attempt_no' => $attemptNo,
             ];
+        }
+
+        $shadowResult = null;
+        if ($this->isV2ShadowEnabled($source)) {
+            try {
+                $shadowResult = (new LottoResultPipelineRunner())->run($draw, $source, [
+                    'run_id' => $runId,
+                    'expected_draw_date' => $expectedDrawDate,
+                ]);
+            } catch (\Throwable $e) {
+                $shadowResult = [
+                    'shadow_compare' => [
+                        'shadow_compare_status' => 'ERROR',
+                        'error_message' => $e->getMessage(),
+                    ],
+                ];
+            }
+        }
+
+        if ($this->isV2CutoverEnabled($source)) {
+            $v2Result = (new LottoResultPipelineRunner())->run($draw, $source, [
+                'run_id' => $runId,
+                'expected_draw_date' => $expectedDrawDate,
+            ]);
+
+            if ((string) ($v2Result['status'] ?? '') !== 'VALID') {
+                return $this->markAndLog($draw, [
+                    'status' => 'VALIDATION_ERROR',
+                    'attempt_no' => $attemptNo,
+                    'run_id' => $runId,
+                    'pipeline_stage' => 'v2_cutover',
+                    'source_id' => (int) $source->id,
+                    'is_dry_run' => $dryRun,
+                    'is_manual_retry' => $isManualRetry,
+                    'trace_json' => $v2Result['trace_json'] ?? null,
+                    'error_code' => (string) ($v2Result['error_code'] ?? 'VALIDATION_ERROR'),
+                    'error_stage' => (string) ($v2Result['error_stage'] ?? 'READINESS'),
+                    'error_message' => (string) ($v2Result['error_message'] ?? 'V2 cutover validation failed'),
+                ]);
+            }
+
+            $validated = (array) ($v2Result['validated'] ?? []);
+            $applyResult = $this->applier->apply($draw, $validated, [
+                'selection' => $v2Result['selection'] ?? [],
+                'mapped' => $v2Result['mapped'] ?? [],
+                'v2_trace' => $v2Result['trace_json'] ?? [],
+            ], $dryRun);
+
+            $status = $this->normalizeStatus((string) ($applyResult['status'] ?? 'APPLIED'));
+
+            return $this->markAndLog($draw, [
+                'status' => $status,
+                'attempt_no' => $attemptNo,
+                'run_id' => $runId,
+                'pipeline_stage' => 'apply_v2',
+                'source_id' => (int) $source->id,
+                'normalized_result_json' => $validated,
+                'trace_json' => $v2Result['trace_json'] ?? null,
+                'error_code' => (string) ($v2Result['error_code'] ?? null),
+                'error_stage' => (string) ($v2Result['error_stage'] ?? null),
+                'shadow_compare_status' => $shadowResult['shadow_compare']['shadow_compare_status'] ?? null,
+                'shadow_diff_json' => $shadowResult['shadow_compare']['mismatches'] ?? null,
+                'legacy_result_json' => $shadowResult['canonical_outcome'] ?? null,
+                'v2_result_json' => $v2Result['validated'] ?? null,
+                'is_dry_run' => $dryRun,
+                'is_manual_retry' => $isManualRetry,
+                'error_message' => $status === 'CONFLICT' ? 'Result conflict' : null,
+            ], $status === 'APPLIED' ? null : $status);
         }
 
         try {
@@ -203,6 +274,7 @@ class AutoResultPipelineService
             'parsed' => $parsed,
             'selection' => $selectionWithParserDebug,
             'mapped' => $mapped,
+            'shadow' => $shadowResult,
         ], $dryRun);
 
         $status = $this->normalizeStatus((string) ($applyResult['status'] ?? 'APPLIED'));
@@ -219,6 +291,10 @@ class AutoResultPipelineService
             'parsed_payload_json' => $parsed,
             'selection_debug_json' => $selectionWithParserDebug,
             'normalized_result_json' => $validated,
+            'shadow_compare_status' => $shadowResult['shadow_compare']['shadow_compare_status'] ?? null,
+            'shadow_diff_json' => $shadowResult['shadow_compare']['mismatches'] ?? null,
+            'legacy_result_json' => $shadowResult['canonical_outcome'] ?? null,
+            'v2_result_json' => $shadowResult['v2_shadow_result']['validated'] ?? null,
             'duration_ms' => (int) $fetched['duration_ms'],
             'is_dry_run' => $dryRun,
             'is_manual_retry' => $isManualRetry,
@@ -318,6 +394,20 @@ class AutoResultPipelineService
         return Schema::hasColumn('lotto_draws', 'result_fetch_status')
             && Schema::hasColumn('lotto_draws', 'result_fetch_error')
             && Schema::hasColumn('lotto_draws', 'result_fetched_at');
+    }
+
+    private function isV2ShadowEnabled(LottoResultSource $source): bool
+    {
+        $version = strtoupper((string) ($source->pipeline_version ?? CompiledSourcePipelineData::VERSION_LEGACY));
+
+        return $version === CompiledSourcePipelineData::VERSION_V2_SHADOW || (bool) ($source->shadow_enabled ?? false);
+    }
+
+    private function isV2CutoverEnabled(LottoResultSource $source): bool
+    {
+        $version = strtoupper((string) ($source->pipeline_version ?? CompiledSourcePipelineData::VERSION_LEGACY));
+
+        return $version === CompiledSourcePipelineData::VERSION_V2_CUTOVER || (bool) ($source->cutover_enabled ?? false);
     }
 
     private function normalizeStatus(string $status): string
