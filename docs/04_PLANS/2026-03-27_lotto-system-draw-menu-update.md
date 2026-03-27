@@ -191,6 +191,7 @@ Implement explicit allowlist per status:
 
 ALLOW ONLY:
 
+* draw_date
 * close_at
 * remark (if exists)
 * display_name (if exists)
@@ -271,7 +272,7 @@ REJECT structural changes
 
 5. update:
 
-    * open status only allows allowlist fields
+    * open status only allows allowlist fields (`draw_date`, `close_at`, และ metadata ที่อนุญาต)
     * resulted rejects all updates
 
 6. audit:
@@ -310,3 +311,7 @@ Implement exactly as specified.
   - ให้เปิด detail modal ทันที
   - แสดง loading state ระหว่างเตรียมข้อความ JSON
   - แปลง/ตัดข้อความ JSON สำหรับการแสดงผลแบบเบา (truncate) เพื่อลด main-thread freeze
+* ปุ่ม `Retry` ในเมนูงวดหวย:
+  - manual retry แบบระบุ `draw_id` ต้อง bypass เงื่อนไขคัดกรอง `result_at/result_fetch_status/backoff` ที่ทำให้ไม่ถูกประมวลผล
+  - endpoint admin manual retry ต้องเรียก command แบบทันที (synchronous) เพื่อไม่ขึ้นกับ worker queue และให้เห็นผล/log ได้ทันที
+* งวดสถานะ `open` อนุญาตให้แก้ `draw_date` ได้จากหน้าจอแก้ไขงวด (นอกเหนือจาก `close_at`)

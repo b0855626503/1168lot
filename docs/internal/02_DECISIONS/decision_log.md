@@ -17,3 +17,9 @@
 - ล็อก settle idempotency แบบ reject เมื่อ `status=resulted`
 - ล็อก `result_at` ให้ใช้ server time ใน service เท่านั้น
 - เพิ่มฟิลด์ audit transition ของ draw (`opened_at`, `closed_at`, `open_mode`, `close_mode`)
+
+## 2026-03-27 — Open Draw Date Editable (APPROVED)
+
+- อนุญาตให้แก้ `draw_date` ได้ในหน้าแก้ไขงวด เมื่อสถานะงวดเป็น `open`
+- คงหลัก allowlist ของ update ไว้ โดยเพิ่ม `draw_date` เข้า allowlist ของสถานะ `open`
+- ฝั่ง UI และ backend ต้องสอดคล้องกัน (เปิด field + validate/persist ได้จริง)

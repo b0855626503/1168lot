@@ -715,7 +715,7 @@
                         return true;
                     }
 
-                    return this.isEditMode && this.currentDrawStatus === 'draft';
+                    return this.isEditMode && (this.currentDrawStatus === 'draft' || this.currentDrawStatus === 'open');
                 },
                 canEditOpenAtField() {
                     if (this.formmethod === 'add') {
@@ -1198,6 +1198,7 @@
 
                     if (this.currentDrawStatus === 'open') {
                         return {
+                            draw_date: this.formaddedit.draw_date,
                             close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
                         };
                     }

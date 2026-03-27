@@ -446,18 +446,28 @@ class LottoDrawController extends AppBaseController
         ])->validate();
 
         $runId = sprintf('admin_retry_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
-        Artisan::queue('lotto:fetch-auto-results', [
+        $params = [
             '--draw-id' => (int) $validated['draw_id'],
             '--limit' => 1,
             '--manual-retry' => true,
             '--run-id' => $runId,
-        ]);
+        ];
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
+        $output = trim((string) Artisan::output());
+
+        if ($exitCode !== 0) {
+            return $this->sendError('Retry Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+        }
 
         return $this->sendResponse([
             'run_id' => $runId,
             'draw_id' => (int) $validated['draw_id'],
             'mode' => 'manual_retry',
-        ], 'ส่งคำสั่ง Retry Auto Result เข้าคิวแล้ว');
+            'command' => 'lotto:fetch-auto-results',
+            'params' => $params,
+            'output' => $output !== '' ? $output : null,
+        ], 'ดำเนินการ Retry Auto Result เรียบร้อยแล้ว');
     }
 
     public function autoResultLogs(Request $request): JsonResponse
@@ -563,6 +573,7 @@ class LottoDrawController extends AppBaseController
 
         if ($status === 'open') {
             $rules = [
+                'draw_date' => ['sometimes', 'required', 'date_format:Y-m-d'],
                 'close_at' => ['sometimes', 'required', 'date_format:Y-m-d H:i'],
             ];
 
@@ -610,6 +621,10 @@ class LottoDrawController extends AppBaseController
 
         if ($status === 'open') {
             $payload = [];
+            if (array_key_exists('draw_date', $validated)) {
+                $payload['draw_date'] = (string) $validated['draw_date'];
+            }
+
             if (array_key_exists('close_at', $validated)) {
                 $normalizedCloseAt = $this->normalizeDateTimeInput((string) $validated['close_at']);
                 if ($draw->open_at && $normalizedCloseAt !== null && Carbon::parse($normalizedCloseAt)->lte($draw->open_at)) {

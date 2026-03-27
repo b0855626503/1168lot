@@ -9,6 +9,12 @@
 - หลัก domain สำคัญ: Admin, Wallet, Payment, API, Lotto
 - Lotto ใช้สถานะงวดหลัก: `draft -> open -> closed -> resulted`
 
+## นโยบายแก้ไขงวดหวย (Admin)
+
+- สถานะ `draft`: แก้ไขฟิลด์หลักของงวดได้
+- สถานะ `open`: อนุญาตแก้ `draw_date` และ `close_at` (รวม metadata ที่ระบบ allowlist ไว้)
+- สถานะ `resulted`: ไม่อนุญาตให้แก้ไข
+
 ## โครงสร้างเอกสาร
 
 - Internal docs: `docs/internal/*`

@@ -29,21 +29,29 @@ class LottoFetchAutoResultsCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
         $drawId = $this->option('draw-id');
         $marketId = $this->option('market-id');
+        $forceSingleDrawRetry = $manualRetry && $drawId !== null && $drawId !== '';
 
-        $query = LottoDraw::query()
-            ->where('status', 'closed')
-            ->whereNotNull('result_at')
-            ->where('result_at', '<=', $now)
-            ->where(function ($q): void {
-                $q->whereNull('result_fetch_status')
-                    ->orWhereNotIn('result_fetch_status', ['APPLIED', 'CONFLICT', 'EXHAUSTED']);
-            })
-            ->orderBy('result_at')
-            ->orderBy('id')
-            ->limit($limit);
+        if ($forceSingleDrawRetry) {
+            $query = LottoDraw::query()
+                ->where('id', (int) $drawId)
+                ->where('status', 'closed')
+                ->limit(1);
+        } else {
+            $query = LottoDraw::query()
+                ->where('status', 'closed')
+                ->whereNotNull('result_at')
+                ->where('result_at', '<=', $now)
+                ->where(function ($q): void {
+                    $q->whereNull('result_fetch_status')
+                        ->orWhereNotIn('result_fetch_status', ['APPLIED', 'CONFLICT', 'EXHAUSTED']);
+                })
+                ->orderBy('result_at')
+                ->orderBy('id')
+                ->limit($limit);
 
-        if ($drawId !== null && $drawId !== '') {
-            $query->where('id', (int) $drawId);
+            if ($drawId !== null && $drawId !== '') {
+                $query->where('id', (int) $drawId);
+            }
         }
 
         if ($marketId !== null && $marketId !== '') {
@@ -63,21 +71,23 @@ class LottoFetchAutoResultsCommand extends Command
         ];
 
         foreach ($draws as $draw) {
-            $resultAt = $draw->result_at ? Carbon::parse((string) $draw->result_at) : null;
-            if ($resultAt && $now->lt($resultAt)) {
-                $summary['skipped_not_due']++;
-                continue;
-            }
+            if (! $forceSingleDrawRetry) {
+                $resultAt = $draw->result_at ? Carbon::parse((string) $draw->result_at) : null;
+                if ($resultAt && $now->lt($resultAt)) {
+                    $summary['skipped_not_due']++;
+                    continue;
+                }
 
-            if ($this->isWindowExpired($draw, $now)) {
-                $pipeline->markExhausted($draw);
-                $summary['marked_exhausted']++;
-                continue;
-            }
+                if ($this->isWindowExpired($draw, $now)) {
+                    $pipeline->markExhausted($draw);
+                    $summary['marked_exhausted']++;
+                    continue;
+                }
 
-            if ($this->mustSkipByRetryPolicy($pipeline, $draw, $now)) {
-                $summary['skipped_backoff']++;
-                continue;
+                if ($this->mustSkipByRetryPolicy($pipeline, $draw, $now)) {
+                    $summary['skipped_backoff']++;
+                    continue;
+                }
             }
 
             $result = $pipeline->processDraw($draw, $dryRun, $manualRetry, $runId);
