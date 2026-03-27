@@ -13,24 +13,16 @@
         <select id="filter_market_id" class="form-control form-control-sm">
             <option value="">ทั้งหมด</option>
             @foreach(($marketOptions ?? []) as $group)
-                @foreach(($group['options'] ?? []) as $option)
-                <option value="{{ $option['value'] }}"
-                        data-group-id="{{ $option['group_id'] ?? '' }}">
-                    {{ $option['text'] }} ({{ $option['group'] ?? '-' }})
-                </option>
+                <optgroup label="{{ $group['label'] ?? '-' }}">
+                    @foreach(($group['options'] ?? []) as $option)
+                        <option value="{{ $option['value'] }}"
+                                data-group-id="{{ $option['group_id'] ?? '' }}"
+                                data-logo="{{ $option['logo'] ?? '' }}">
+                            {{ $option['text'] }}
+                        </option>
+                    @endforeach
+                </optgroup>
             @endforeach
-            @endforeach
-{{--            @foreach(($marketOptions ?? []) as $group)--}}
-{{--                <optgroup label="{{ $group['label'] ?? '-' }}">--}}
-{{--                    @foreach(($group['options'] ?? []) as $option)--}}
-{{--                        <option value="{{ $option['value'] }}"--}}
-{{--                                data-group-id="{{ $option['group_id'] ?? '' }}"--}}
-{{--                                data-logo="{{ $option['logo'] ?? '' }}">--}}
-{{--                            {{ $option['text'] }}--}}
-{{--                        </option>--}}
-{{--                    @endforeach--}}
-{{--                </optgroup>--}}
-{{--            @endforeach--}}
         </select>
     </div>
     <div class="col-md-2 mb-2 mb-md-0">
