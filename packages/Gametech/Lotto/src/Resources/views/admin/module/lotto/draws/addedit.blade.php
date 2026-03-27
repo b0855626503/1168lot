@@ -546,14 +546,20 @@
             min-width: 0;
         }
 
+        #addedit .select2-container .lotto-market-option__logo,
         .select2-container .lotto-market-option__logo {
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 1px solid #e5e7eb;
-            background: #fff;
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            max-width: 20px !important;
+            min-height: 20px !important;
+            max-height: 20px !important;
+            flex: 0 0 20px !important;
+            display: block !important;
+            object-fit: cover !important;
+            border-radius: 50% !important;
+            border: 1px solid #e5e7eb !important;
+            background: #fff !important;
         }
 
         .select2-container .lotto-market-option__text {
