@@ -153,7 +153,7 @@ class TransformPipelineExecutor
                     break;
                 }
             }
-        } elseif (array_key_exists('from_fields', $rule) && is_array($rule['from_fields'])) {
+        } elseif (array_key_exists('from_fields', $rule) && is_array($rule['from_fields']) && $rule['from_fields'] !== []) {
             $items = [];
             foreach ($rule['from_fields'] as $path) {
                 $items[] = data_get($payload, (string) $path);
