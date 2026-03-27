@@ -68,3 +68,9 @@
 - score-based strategy เป็น opt-in เท่านั้น และต้อง reject เมื่อ tie
 - เพิ่ม runtime debug field `selection_debug_json` ใน `lotto_result_fetch_logs` (execution metadata)
 - รองรับส่ง `expected_draw_date` จาก command/admin action เข้า pipeline โดยตรง
+
+## 2026-03-27 — Auto Result Skip When Source Config Missing (APPROVED)
+
+- ใน command `lotto:fetch-auto-results` โหมด auto sweep ให้เช็กก่อนว่า market นั้นมี source config ใน `lotto_result_sources` หรือยัง
+- ถ้ายังไม่มีให้ `skip` โดยไม่เรียก pipeline, ไม่เพิ่ม retry attempts, และไม่ปล่อยให้วิ่งจน `EXHAUSTED`
+- ใช้เพื่อกันเคส noise alert ประเภท exhausted จาก draw ที่ยังไม่ได้ onboard source

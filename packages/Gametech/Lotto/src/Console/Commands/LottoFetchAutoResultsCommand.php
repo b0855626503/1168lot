@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Console\Commands;
 
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResult\AutoResultPipelineService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -69,6 +70,7 @@ class LottoFetchAutoResultsCommand extends Command
             'run_id' => $runId,
             'selected' => $draws->count(),
             'processed' => 0,
+            'skipped_no_source_config' => 0,
             'skipped_not_due' => 0,
             'skipped_backoff' => 0,
             'marked_exhausted' => 0,
@@ -77,6 +79,11 @@ class LottoFetchAutoResultsCommand extends Command
 
         foreach ($draws as $draw) {
             if (! $forceSingleDrawRetry) {
+                if (! $this->hasConfiguredSourceForMarket((int) $draw->market_id)) {
+                    $summary['skipped_no_source_config']++;
+                    continue;
+                }
+
                 $resultAt = $draw->result_at ? Carbon::parse((string) $draw->result_at) : null;
                 if ($resultAt && $now->lt($resultAt)) {
                     $summary['skipped_not_due']++;
@@ -120,10 +127,11 @@ class LottoFetchAutoResultsCommand extends Command
         ksort($summary['statuses']);
 
         $this->info(sprintf(
-            'Auto result run=%s selected=%d processed=%d skipped_not_due=%d skipped_backoff=%d marked_exhausted=%d',
+            'Auto result run=%s selected=%d processed=%d skipped_no_source_config=%d skipped_not_due=%d skipped_backoff=%d marked_exhausted=%d',
             $summary['run_id'],
             $summary['selected'],
             $summary['processed'],
+            $summary['skipped_no_source_config'],
             $summary['skipped_not_due'],
             $summary['skipped_backoff'],
             $summary['marked_exhausted']
@@ -160,4 +168,15 @@ class LottoFetchAutoResultsCommand extends Command
 
         return $now->gt($deadline);
     }
+    private function hasConfiguredSourceForMarket(int $marketId): bool
+    {
+        if ($marketId <= 0) {
+            return false;
+        }
+
+        return LottoResultSource::query()
+            ->where('market_id', $marketId)
+            ->exists();
+    }
+
 }
