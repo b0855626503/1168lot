@@ -520,58 +520,6 @@
             max-width: 1220px;
         }
     </style>
-    <style>
-        #filter_market_id + .select2-container {
-            width: 100% !important;
-        }
-
-        #filter_market_id + .select2-container .select2-selection--single {
-            min-height: calc(1.5em + .5rem + 2px);
-            height: calc(1.5em + .5rem + 2px);
-            display: flex;
-            align-items: center;
-        }
-
-        #filter_market_id + .select2-container .select2-selection__rendered {
-            display: flex !important;
-            align-items: center;
-            gap: 8px;
-            line-height: normal !important;
-            padding-left: .5rem !important;
-            padding-right: 1.75rem !important;
-            min-height: calc(1.5em + .5rem + 2px);
-        }
-
-        #filter_market_id + .select2-container .select2-selection__arrow {
-            height: 100% !important;
-            right: .35rem !important;
-        }
-
-        .select2-container .lotto-market-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-        }
-
-        .select2-container .lotto-market-option__logo {
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-        }
-
-        .select2-container .lotto-market-option__text {
-            display: block;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    </style>
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endpush
@@ -675,6 +623,7 @@
                         { key: 'created_at', label: 'เวลา', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '150px' } },
                         { key: 'action', label: 'จัดการ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '95px' } },
                     ],
+                    isSyncingMarketSelect: false,
                 };
             },
             computed: {
@@ -838,8 +787,38 @@
                     this.destroyMarketSelect2();
                 },
                 onNativeMarketChange(event) {
+                    if (this.isSyncingMarketSelect) {
+                        return;
+                    }
+
                     const value = event?.target?.value || '';
                     this.formaddedit.market_id = value ? parseInt(value, 10) : null;
+                },
+                getMarketDropdownParent(selectEl) {
+                    if (!window.jQuery || !selectEl) {
+                        return null;
+                    }
+
+                    const $select = window.jQuery(selectEl);
+                    const $modal = $select.closest('.modal');
+                    if ($modal.length) {
+                        return $modal;
+                    }
+
+                    const modalId = this.$refs.addedit && this.$refs.addedit.id
+                        ? String(this.$refs.addedit.id)
+                        : 'addedit';
+                    const $fallbackModal = window.jQuery('#' + modalId).closest('.modal');
+                    if ($fallbackModal.length) {
+                        return $fallbackModal;
+                    }
+
+                    const $shownModal = window.jQuery('.modal.show').last();
+                    if ($shownModal.length) {
+                        return $shownModal;
+                    }
+
+                    return window.jQuery(document.body);
                 },
                 initMarketSelect2() {
                     const selectEl = this.$refs.marketSelect;
@@ -912,9 +891,11 @@
                             + '</span>';
                     };
 
+                    const dropdownParent = this.getMarketDropdownParent(selectEl);
+
                     $select.select2({
                         width: '100%',
-                        dropdownParent: window.jQuery(this.$refs.addedit.$el),
+                        dropdownParent: dropdownParent,
                         placeholder: '-- เลือกรายการหวย --',
                         allowClear: false,
                         templateResult: renderMarketOption,
@@ -925,6 +906,10 @@
                     });
 
                     $select.on('change.drawMarket', () => {
+                        if (this.isSyncingMarketSelect) {
+                            return;
+                        }
+
                         const value = $select.val();
                         this.formaddedit.market_id = value ? parseInt(value, 10) : null;
                     });
@@ -953,11 +938,16 @@
 
                     const value = this.formaddedit.market_id ? String(this.formaddedit.market_id) : '';
                     const $select = window.jQuery(selectEl);
+                    this.isSyncingMarketSelect = true;
                     $select.val(value);
 
                     if ($select.hasClass('select2-hidden-accessible')) {
                         $select.trigger('change.select2');
                     }
+
+                    this.$nextTick(() => {
+                        this.isSyncingMarketSelect = false;
+                    });
                 },
                 statusLabel(status) {
                     const map = {
