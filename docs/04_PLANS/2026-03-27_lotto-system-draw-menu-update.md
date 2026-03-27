@@ -302,3 +302,7 @@ Implement exactly as specified.
 * เมื่อ backend ตอบ error และมี `error.response.data.message` ต้องแสดงข้อความนั้นผ่าน `this.$bvModal.msgBoxOk`
 * ถ้าไม่มี message ให้ fallback เป็น: `บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`
 * ห้ามเกิด silent failure เมื่อผู้ใช้กด submit
+* เปิด modal แบบ edit/settle ต้องไม่ block UI ระหว่างรอ `loadData()`:
+  - ให้เปิด modal ทันที
+  - แสดง loading state ขณะดึงข้อมูล
+  - โหลดข้อมูลแบบ async แล้วค่อยเติมค่าในฟอร์ม

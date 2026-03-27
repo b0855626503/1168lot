@@ -3,7 +3,10 @@
          @shown="onModalShown"
          @hidden="onModalHidden"
          :hide-footer="true">
-    <b-form v-if="show" @submit.prevent="formmethod === 'settle' ? submitSettleForm() : submitDrawForm()">
+    <div v-if="isModalLoading" class="py-4 text-center text-muted">
+        กำลังโหลดข้อมูล...
+    </div>
+    <b-form v-else @submit.prevent="formmethod === 'settle' ? submitSettleForm() : submitDrawForm()">
         <template v-if="formmethod !== 'settle'">
             <b-row>
                 <b-col cols="12" md="6">
@@ -592,9 +595,9 @@
             el: '#app',
             data() {
                 return {
-                    show: true,
                     code: null,
                     formmethod: 'add',
+                    isModalLoading: false,
                     markets: @json($marketOptions ?? []),
                     formaddedit: {
                         market_id: null,
@@ -862,36 +865,38 @@
                     this.$nextTick(() => this.syncMarketSelectValue());
                 },
                 editModal(id) {
-                    this.code = id;
-                    this.formmethod = 'edit';
-                    this.show = false;
-
-                    this.$nextTick(async () => {
-                        this.show = true;
-                        await this.loadData();
-                        this.$refs.addedit.show();
-                    });
+                    this.openModalWithDrawData('edit', id);
                 },
                 addModal() {
                     this.code = null;
                     this.formmethod = 'add';
+                    this.isModalLoading = false;
                     this.resetForm();
-                    this.show = false;
-
-                    this.$nextTick(() => {
-                        this.show = true;
-                        this.$refs.addedit.show();
-                    });
+                    this.$refs.addedit.show();
                 },
                 settleModal(id) {
+                    this.openModalWithDrawData('settle', id);
+                },
+                async openModalWithDrawData(mode, id) {
                     this.code = id;
-                    this.formmethod = 'settle';
-                    this.show = false;
+                    this.formmethod = mode;
+                    this.resetForm();
+                    this.isModalLoading = true;
+                    this.$refs.addedit.show();
 
-                    this.$nextTick(async () => {
-                        this.show = true;
+                    try {
                         await this.loadData();
-                        this.$refs.addedit.show();
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'โหลดข้อมูลงวดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                        this.$refs.addedit.hide();
+                        return;
+                    } finally {
+                        this.isModalLoading = false;
+                    }
+
+                    this.$nextTick(() => {
+                        this.initMarketSelect2();
+                        this.applyMarketSelectDisabledState();
                     });
                 },
                 onModalShown() {
