@@ -95,14 +95,14 @@
             right: .35rem;
         }
 
-        #addeditSource .lotto-market-option {
+        .select2-container .lotto-market-option {
             display: flex;
             align-items: center;
             gap: 8px;
             min-width: 0;
         }
 
-        #addeditSource .lotto-market-option__logo {
+        .select2-container .lotto-market-option__logo {
             width: 20px;
             height: 20px;
             min-width: 20px;
@@ -112,7 +112,7 @@
             background: #fff;
         }
 
-        #addeditSource .lotto-market-option__text {
+        .select2-container .lotto-market-option__text {
             display: block;
             min-width: 0;
             overflow: hidden;
@@ -120,9 +120,12 @@
             white-space: nowrap;
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endpush
 
 @push('scripts')
+    <script src="{{ asset('vendor/select2/js/select2.full.min.js') }}"></script>
     <script type="module">
         window.sourceFormApp = new Vue({
             el: '#app',
@@ -222,27 +225,35 @@
                     const value = event?.target?.value || '';
                     this.sourceForm.market_id = value ? String(value) : '';
                 },
-                getMarketDropdownParent() {
-                    const modalRef = this.$refs.addeditSource;
-                    const modalEl = modalRef && modalRef.$el ? modalRef.$el : null;
-
-                    if (!modalEl || !window.jQuery) {
-                        return window.jQuery ? window.jQuery(document.body) : null;
+                getMarketDropdownParent(selectEl) {
+                    if (!window.jQuery || !selectEl) {
+                        return null;
                     }
 
-                    const $modalEl = window.jQuery(modalEl);
-                    const $content = $modalEl.find('.modal-content');
+                    const $select = window.jQuery(selectEl);
+                    const $modal = $select.closest('.modal');
 
-                    if ($content.length) {
-                        return $content;
+                    if ($modal.length) {
+                        return $modal;
                     }
 
-                    const $dialog = $modalEl.find('.modal-dialog');
-                    if ($dialog.length) {
-                        return $dialog;
+                    const modalId = this.$refs.addeditSource && this.$refs.addeditSource.id
+                        ? String(this.$refs.addeditSource.id)
+                        : 'addeditSource';
+
+                    const $fallbackModal = window.jQuery('#' + modalId).closest('.modal');
+
+                    if ($fallbackModal.length) {
+                        return $fallbackModal;
                     }
 
-                    return $modalEl;
+                    const $shownModal = window.jQuery('.modal.show').last();
+
+                    if ($shownModal.length) {
+                        return $shownModal;
+                    }
+
+                    return window.jQuery(document.body);
                 },
                 normalizeLogoUrl(rawUrl) {
                     const value = String(rawUrl || '').trim();
@@ -321,11 +332,12 @@
 
                     this.destroyMarketSelect2();
 
-                    const dropdownParent = this.getMarketDropdownParent();
+                    const dropdownParent = this.getMarketDropdownParent(selectEl);
                     const self = this;
 
                     $select.select2({
                         width: '100%',
+                        theme: 'bootstrap4',
                         dropdownParent: dropdownParent,
                         placeholder: '-- เลือกรายการหวย --',
                         allowClear: false,
