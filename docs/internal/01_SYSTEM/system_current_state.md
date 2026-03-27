@@ -79,12 +79,17 @@
 - เพิ่ม admin actions ใหม่ในเมนู `/lotto/auto-result-sources`:
   - preview config, validate config, validate cutover
 - ฟอร์ม admin ของ `auto-result-sources` ใช้โหมด V2-only:
+  - มีแท็บ `Quick Setup` สำหรับผู้ใช้ทั่วไป กรอก URL + path หลัก แล้วระบบ generate pipeline JSON อัตโนมัติ
+  - มีช่องหลัก `Pipeline Config JSON (Single Source of Truth)` สำหรับตั้งค่ารวม
+  - ระบบ sync/แตกค่าไป field ย่อยอัตโนมัติก่อน preview/validate/save
+  - ซ่อนช่อง JSON ย่อยจากหน้า form หลักเพื่อลดการกรอกซ้ำและลดความสับสนของผู้ใช้
   - derive ค่า legacy-required fields (`endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`) จาก JSON config อัตโนมัติก่อน preview/validate/save
   - ลดความสับสนจากการกรอกค่า legacy และ v2 ซ้ำซ้อน
+- runtime `AutoResultPipelineService` ใช้ V2 cutover path เท่านั้น (latest-only) และไม่วิ่ง legacy/shadow path แล้ว
 - policy ของ `validate cutover`:
   - `local/testing`: บังคับ fixture gate ต่อ source (สำหรับ regression test)
   - `production`: ใช้ live validation จาก `endpoint_url` จริงผ่าน pipeline runner (ไม่บังคับให้ผู้ใช้ admin สร้างไฟล์ fixture)
-  - ถ้าไม่ส่ง `expected_draw_date` และ fail ด้วย `NO_CANDIDATE_MATCHES_EXPECTED_DRAW_DATE` ระบบจะ retry live validation อีกครั้งโดยไม่ผูก expected date เพื่อลด false-negative
+  - strict date-check ตาม `expected_draw_date` (ไม่ fallback แบบข้ามเงื่อนไขวันที่)
 - `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
   - main fetch path ห้าม block รอ browser execution แบบ synchronous
 

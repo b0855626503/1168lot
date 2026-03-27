@@ -113,3 +113,16 @@
 - ก่อน `preview/validate/save` ระบบจะ derive ค่า field ที่ backend legacy ยังต้องใช้จาก JSON config อัตโนมัติ:
   - `endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`
 - ตั้ง default ฝั่งฟอร์มเป็น `pipeline_version=V2_CUTOVER` เพื่อให้ flow การใช้งานสอดคล้องกับ runtime ใหม่
+
+## 2026-03-27 — Auto Result Latest-Only Runtime (APPROVED)
+
+- ปรับ runtime ให้ใช้ V2 cutover path เท่านั้น (`latest-only`)
+- ปิดการใช้งาน shadow/legacy path ใน `AutoResultPipelineService`
+- นโยบายตรวจวันงวดยังคง strict (ห้าม fallback ข้าม expected_draw_date)
+
+## 2026-03-27 — Auto Result Form Single JSON Input UX (APPROVED)
+
+- ฟอร์ม `admin/lotto/auto-result-sources` ให้ผู้ใช้กรอก config หลักผ่าน `Pipeline Config JSON` ช่องเดียว
+- ช่อง JSON ย่อย (fetch/parser/mapping/selection/validation/readiness/retry/headers/query/body) ถูกซ่อนจากหน้า form หลัก
+- ก่อน preview/validate/save ระบบยัง split/derive ไป field ย่อยอัตโนมัติเพื่อคง backend contract เดิม
+- เพิ่มแท็บ `Quick Setup` สำหรับ generate config อัตโนมัติจาก input สั้น ๆ และมี preset สำเร็จรูป

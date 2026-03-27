@@ -145,107 +145,96 @@
                 </b-alert>
             </b-tab>
 
+            <b-tab title="Quick Setup">
+                <b-alert show variant="success" class="py-2">
+                    โหมดง่าย: กรอกข้อมูลพื้นฐาน แล้วกด <strong>Generate Pipeline JSON</strong> ระบบจะสร้าง config ให้ทันที
+                </b-alert>
+
+                <b-row>
+                    <b-col md="8">
+                        <b-form-group label="URL ผลหวย">
+                            <b-form-input size="sm" v-model="sourceForm.quick_endpoint_url" placeholder="https://example.com/result"></b-form-input>
+                            <small class="text-muted d-block mt-1">ลิงก์ API/เว็บที่ระบบจะดึงข้อมูล</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="HTTP Method">
+                            <b-form-select size="sm" v-model="sourceForm.quick_http_method" :options="httpMethods"></b-form-select>
+                            <small class="text-muted d-block mt-1">ส่วนใหญ่ใช้ GET</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="Path ของวันที่">
+                            <b-form-input size="sm" v-model="sourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
+                            <small class="text-muted d-block mt-1">JSONPath ของวันที่ในผลลัพธ์</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="รูปแบบวันที่ต้นทาง">
+                            <b-form-select size="sm" v-model="sourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
+                            <small class="text-muted d-block mt-1">เช่น <code>d/m/Y</code> หรือ <code>Y-m-d</code></small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="8">
+                        <b-form-group label="Path ของรางวัลที่ 1">
+                            <b-form-input size="sm" v-model="sourceForm.quick_first_prize_paths" placeholder="$.results.prize_1st หรือ $.lotto_2,$.lotto_3,$.lotto_4"></b-form-input>
+                            <small class="text-muted d-block mt-1">ถ้าต้องต่อหลายช่อง ให้คั่นด้วย comma</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="เก็บท้ายกี่หลัก (รางวัลที่ 1)">
+                            <b-form-input size="sm" type="number" min="1" max="10" v-model="sourceForm.quick_first_prize_take_right"></b-form-input>
+                            <small class="text-muted d-block mt-1">ปกติใช้ 3</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="8">
+                        <b-form-group label="Path ของเลขท้าย 2 ตัว">
+                            <b-form-input size="sm" v-model="sourceForm.quick_last2_paths" placeholder="$.results.prize_2nd หรือ $.lotto_1,$.lotto_2"></b-form-input>
+                            <small class="text-muted d-block mt-1">ถ้าต้องต่อหลายช่อง ให้คั่นด้วย comma</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="เก็บท้ายกี่หลัก (เลขท้าย)">
+                            <b-form-input size="sm" type="number" min="1" max="10" v-model="sourceForm.quick_last2_take_right"></b-form-input>
+                            <small class="text-muted d-block mt-1">ปกติใช้ 2</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <div class="d-flex">
+                    <button type="button" class="btn btn-primary btn-sm mr-2" @click="generateQuickPipelineJson">Generate Pipeline JSON</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="applyQuickPresetLaosVip">Preset: Laos VIP</button>
+                </div>
+            </b-tab>
+
             <b-tab title="Configs JSON">
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Headers JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_headers_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.request_headers_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">HTTP headers ที่ต้องส่งเพิ่ม เช่น token หรือ content-type</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Query Template JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_query_template_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.request_query_template_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">template query string โดยระบบจะแทนค่าตาม context</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Body Template JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('request_body_template_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.request_body_template_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">template request body สำหรับ method ที่มี payload</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Fetch Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('fetch_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.fetch_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">config ราย fetch strategy เช่น html/json/rendered browser</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Parser Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('parser_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.parser_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">กำหนด extractor และ parse mode เพื่อแตก raw field</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Mapping Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('mapping_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.mapping_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">แปลง raw field เป็น canonical field พร้อม transform chain</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Selection Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('selection_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.selection_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">กติกาเลือก candidate ที่ถูกต้องในแต่ละ run</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Validation Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('validation_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.validation_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">ตรวจรูปแบบ/schema ของผลลัพธ์ canonical</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-                <b-row>
-                    <b-col md="6">
-                        <b-form-group label="Readiness Config JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('readiness_config_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.readiness_config_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">ตรวจความพร้อมเชิงธุรกิจว่าใช้ผลได้หรือยัง</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="6">
-                        <b-form-group label="Retry Policy JSON">
-                            <div class="d-flex justify-content-end mb-1">
-                                <button type="button" class="btn btn-outline-secondary btn-xs" @click="applyJsonExample('retry_policy_json')">Insert Example</button>
-                            </div>
-                            <b-form-textarea rows="4" v-model="sourceForm.retry_policy_json"></b-form-textarea>
-                            <small class="text-muted d-block mt-1">กำหนดนโยบาย retry เมื่อ fetch/parse ไม่สำเร็จ</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
+                <b-form-group label="Pipeline Config JSON (Single Source of Truth)">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติก่อน preview/validate/save</small>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1" @click="applyJsonExample('unified_pipeline_json')">Insert Starter</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1" @click="syncUnifiedFromForm">Refresh From Current</button>
+                            <button type="button" class="btn btn-outline-primary btn-xs" @click="applyUnifiedToForm">Apply To Fields</button>
+                        </div>
+                    </div>
+                    <b-form-textarea rows="16" v-model="sourceForm.unified_pipeline_json"></b-form-textarea>
+                    <small class="text-muted d-block mt-1">
+                        โครงสร้างหลักที่ต้องมี: <code>fetch_config_json</code>, <code>parser_config_json</code>, <code>mapping_config_json</code>, <code>selection_config_json</code>, <code>validation_config_json</code>, <code>readiness_config_json</code>
+                    </small>
+                </b-form-group>
+
+                <b-alert show variant="light" class="py-2">
+                    ช่อง JSON ย่อยถูกซ่อนจากหน้า UI เพื่อลดความสับสน ระบบจะ map ให้เองจาก JSON ก้อนเดียวนี้
+                </b-alert>
             </b-tab>
 
             <b-tab title="Governance">
@@ -352,6 +341,12 @@
                     sourceFormMethod: 'add',
                     sourceId: null,
                     lookupDateModes: @json($lookupDateModes ?? []),
+                    quickDateFormats: [
+                        { value: 'd/m/Y', text: 'd/m/Y (เช่น 27/03/2026)' },
+                        { value: 'Y-m-d', text: 'Y-m-d (เช่น 2026-03-27)' },
+                        { value: 'd-m-Y', text: 'd-m-Y (เช่น 27-03-2026)' },
+                        { value: 'Y/m/d', text: 'Y/m/d (เช่น 2026/03/27)' },
+                    ],
                     parserTypes: @json($parserTypes ?? []),
                     sourceTypes: @json($sourceTypes ?? []),
                     httpMethods: @json($httpMethods ?? []),
@@ -367,14 +362,17 @@
                 isRiskyCutover() {
                     return this.sourceForm.pipeline_version === 'V2_CUTOVER' || !!this.sourceForm.cutover_enabled;
                 },
+                parsedUnifiedConfig() {
+                    return this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                },
                 parsedFetchConfig() {
-                    return this.parseJsonSafe(this.sourceForm.fetch_config_json);
+                    return this.parsedUnifiedConfig.fetch_config_json || this.parseJsonSafe(this.sourceForm.fetch_config_json);
                 },
                 parsedParserConfig() {
-                    return this.parseJsonSafe(this.sourceForm.parser_config_json);
+                    return this.parsedUnifiedConfig.parser_config_json || this.parseJsonSafe(this.sourceForm.parser_config_json);
                 },
                 parsedSelectionConfig() {
-                    return this.parseJsonSafe(this.sourceForm.selection_config_json);
+                    return this.parsedUnifiedConfig.selection_config_json || this.parseJsonSafe(this.sourceForm.selection_config_json);
                 },
                 derivedEndpointUrl() {
                     return String(this.parsedFetchConfig.endpoint_url || this.sourceForm.endpoint_url || '');
@@ -394,18 +392,79 @@
             },
             methods: {
                 buildJsonExamples() {
-                    return {
+                    const unifiedStarter = {
                         request_headers_json: {
                             Accept: 'application/json',
                             'User-Agent': 'LottoFetcher/2.0',
                         },
                         request_query_template_json: {
-                            draw_date: '@{{draw_date:YYYY-MM-DD}}',
+                            draw_date: '__DRAW_DATE__',
                             lang: 'th',
                         },
                         request_body_template_json: {
-                            market_key: '@{{market_key}}',
-                            draw_date: '@{{draw_date:YYYY-MM-DD}}',
+                            market_key: '__MARKET_KEY__',
+                            draw_date: '__DRAW_DATE__',
+                        },
+                        fetch_config_json: {
+                            fetch_strategy: 'JSON_HTTP',
+                            endpoint_url: 'https://example.com/result',
+                            http_method: 'GET',
+                            headers: {},
+                            query: {},
+                            timeout_seconds: 10,
+                        },
+                        parser_config_json: {
+                            version: 2,
+                            mode: 'single_payload',
+                            parser_type: 'JSON_PATH',
+                            fields: {
+                                draw_date_raw: { type: 'JSON_PATH', path: '$.date' },
+                                first_prize_raw: { type: 'JSON_PATH', path: '$.results.prize_1st' },
+                                last_2_raw: { type: 'JSON_PATH', path: '$.results.prize_2nd' },
+                            },
+                        },
+                        mapping_config_json: {
+                            fields: {
+                                draw_date: { from: 'draw_date_raw', transforms: [{ op: 'date', from: 'Y-m-d', to: 'Y-m-d' }] },
+                                first_prize: { from: 'first_prize_raw', transforms: [{ op: 'digits_only' }, { op: 'right', length: 3 }] },
+                                last_2_digits: { from: 'last_2_raw', transforms: [{ op: 'digits_only' }, { op: 'right', length: 2 }] },
+                            },
+                        },
+                        selection_config_json: {
+                            selection_stage: 'PRE_MAPPING',
+                            strategy: 'strict_single_match',
+                            date_field: 'draw_date_raw',
+                            required_fields: [],
+                            meta: {
+                                candidate_draw_date_offset_days: 0,
+                            },
+                        },
+                        validation_config_json: {
+                            required_fields: ['draw_date', 'first_prize', 'last_2_digits'],
+                        },
+                        readiness_config_json: {
+                            enabled: true,
+                            minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
+                        },
+                        retry_policy_json: {
+                            max_attempts: 3,
+                            backoff_seconds: [10, 30, 60],
+                        },
+                    };
+
+                    return {
+                        unified_pipeline_json: unifiedStarter,
+                        request_headers_json: {
+                            Accept: 'application/json',
+                            'User-Agent': 'LottoFetcher/2.0',
+                        },
+                        request_query_template_json: {
+                            draw_date: '__DRAW_DATE__',
+                            lang: 'th',
+                        },
+                        request_body_template_json: {
+                            market_key: '__MARKET_KEY__',
+                            draw_date: '__DRAW_DATE__',
                         },
                         fetch_config_json: {
                             fetch_strategy: 'JSON_HTTP',
@@ -476,6 +535,7 @@
                         validation_config_json: '',
                         readiness_config_json: '',
                         retry_policy_json: '',
+                        unified_pipeline_json: '',
                         timeout_seconds: 10,
                         pipeline_version: 'V2_CUTOVER',
                         fetch_strategy: 'JSON_HTTP',
@@ -487,6 +547,14 @@
                         revision_reason: '',
                         effective_from: '',
                         effective_to: '',
+                        quick_endpoint_url: '',
+                        quick_http_method: 'GET',
+                        quick_draw_date_path: '$.date',
+                        quick_draw_date_from_format: 'd/m/Y',
+                        quick_first_prize_paths: '',
+                        quick_first_prize_take_right: 3,
+                        quick_last2_paths: '',
+                        quick_last2_take_right: 2,
                     };
                 },
                 toJsonText(value) {
@@ -508,19 +576,287 @@
                         return {};
                     }
                 },
+                buildUnifiedConfigObject() {
+                    return {
+                        request_headers_json: this.parseJsonSafe(this.sourceForm.request_headers_json),
+                        request_query_template_json: this.parseJsonSafe(this.sourceForm.request_query_template_json),
+                        request_body_template_json: this.parseJsonSafe(this.sourceForm.request_body_template_json),
+                        fetch_config_json: this.parseJsonSafe(this.sourceForm.fetch_config_json),
+                        parser_config_json: this.parseJsonSafe(this.sourceForm.parser_config_json),
+                        mapping_config_json: this.parseJsonSafe(this.sourceForm.mapping_config_json),
+                        selection_config_json: this.parseJsonSafe(this.sourceForm.selection_config_json),
+                        validation_config_json: this.parseJsonSafe(this.sourceForm.validation_config_json),
+                        readiness_config_json: this.parseJsonSafe(this.sourceForm.readiness_config_json),
+                        retry_policy_json: this.parseJsonSafe(this.sourceForm.retry_policy_json),
+                    };
+                },
+                syncUnifiedFromForm() {
+                    const unified = this.buildUnifiedConfigObject();
+                    this.sourceForm.unified_pipeline_json = JSON.stringify(unified, null, 2);
+                    this.populateQuickFromUnified(unified);
+                },
+                applyUnifiedToForm() {
+                    const unified = this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                    if (!unified || typeof unified !== 'object') {
+                        return;
+                    }
+
+                    const assignJson = (key) => {
+                        const value = unified[key];
+                        this.sourceForm[key] = value && typeof value === 'object'
+                            ? JSON.stringify(value, null, 2)
+                            : '';
+                    };
+
+                    assignJson('request_headers_json');
+                    assignJson('request_query_template_json');
+                    assignJson('request_body_template_json');
+                    assignJson('fetch_config_json');
+                    assignJson('parser_config_json');
+                    assignJson('mapping_config_json');
+                    assignJson('selection_config_json');
+                    assignJson('validation_config_json');
+                    assignJson('readiness_config_json');
+                    assignJson('retry_policy_json');
+                    this.populateQuickFromUnified(unified);
+                },
+                populateQuickFromUnified(unifiedConfig = null) {
+                    const unified = unifiedConfig && typeof unifiedConfig === 'object'
+                        ? unifiedConfig
+                        : this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+
+                    const fetchConfig = (unified.fetch_config_json && typeof unified.fetch_config_json === 'object')
+                        ? unified.fetch_config_json
+                        : {};
+                    const parserConfig = (unified.parser_config_json && typeof unified.parser_config_json === 'object')
+                        ? unified.parser_config_json
+                        : {};
+                    const mappingConfig = (unified.mapping_config_json && typeof unified.mapping_config_json === 'object')
+                        ? unified.mapping_config_json
+                        : {};
+
+                    const fields = (parserConfig.fields && typeof parserConfig.fields === 'object')
+                        ? parserConfig.fields
+                        : {};
+                    const mapFields = (mappingConfig.fields && typeof mappingConfig.fields === 'object')
+                        ? mappingConfig.fields
+                        : {};
+
+                    this.sourceForm.quick_endpoint_url = String(fetchConfig.endpoint_url || this.sourceForm.quick_endpoint_url || '');
+                    this.sourceForm.quick_http_method = String(fetchConfig.http_method || this.sourceForm.quick_http_method || 'GET').toUpperCase();
+                    this.sourceForm.quick_draw_date_path = String((fields.draw_date_raw || {}).path || this.sourceForm.quick_draw_date_path || '$.date');
+
+                    const drawDateTransforms = Array.isArray((mapFields.draw_date || {}).transforms)
+                        ? mapFields.draw_date.transforms
+                        : [];
+                    const drawDateTransform = drawDateTransforms.find((item) => item && String(item.op || '').toLowerCase() === 'date');
+                    if (drawDateTransform && drawDateTransform.from) {
+                        this.sourceForm.quick_draw_date_from_format = String(drawDateTransform.from);
+                    }
+
+                    const resolvePathsFromRule = (rule, prefix) => {
+                        if (!rule || typeof rule !== 'object') {
+                            return [];
+                        }
+
+                        if (rule.from && fields[rule.from] && fields[rule.from].path) {
+                            return [String(fields[rule.from].path)];
+                        }
+
+                        if (Array.isArray(rule.from_fields)) {
+                            return rule.from_fields
+                                .map((fieldName) => fields[fieldName] && fields[fieldName].path ? String(fields[fieldName].path) : '')
+                                .filter((path) => path !== '');
+                        }
+
+                        return Object.keys(fields)
+                            .filter((fieldName) => fieldName.startsWith(prefix) && fields[fieldName] && fields[fieldName].path)
+                            .sort()
+                            .map((fieldName) => String(fields[fieldName].path));
+                    };
+
+                    const resolveRightDigits = (rule, fallback) => {
+                        const transforms = Array.isArray((rule || {}).transforms) ? rule.transforms : [];
+                        const rightTransform = transforms.find((item) => item && String(item.op || '').toLowerCase() === 'right');
+                        const len = rightTransform ? Number(rightTransform.length || 0) : 0;
+                        return len > 0 ? len : fallback;
+                    };
+
+                    const firstPrizeRule = mapFields.first_prize || {};
+                    const last2Rule = mapFields.last_2_digits || {};
+
+                    const firstPrizePaths = resolvePathsFromRule(firstPrizeRule, 'first_prize_raw_');
+                    const last2Paths = resolvePathsFromRule(last2Rule, 'last_2_raw_');
+
+                    if (firstPrizePaths.length > 0) {
+                        this.sourceForm.quick_first_prize_paths = firstPrizePaths.join(',');
+                    }
+                    if (last2Paths.length > 0) {
+                        this.sourceForm.quick_last2_paths = last2Paths.join(',');
+                    }
+
+                    this.sourceForm.quick_first_prize_take_right = resolveRightDigits(firstPrizeRule, this.sourceForm.quick_first_prize_take_right || 3);
+                    this.sourceForm.quick_last2_take_right = resolveRightDigits(last2Rule, this.sourceForm.quick_last2_take_right || 2);
+                },
+                splitQuickPaths(text) {
+                    return String(text || '')
+                        .split(',')
+                        .map(v => String(v || '').trim())
+                        .filter(v => v !== '');
+                },
+                applyQuickPresetLaosVip() {
+                    this.sourceForm.quick_endpoint_url = 'https://laosviplot.com/result';
+                    this.sourceForm.quick_http_method = 'GET';
+                    this.sourceForm.quick_draw_date_path = '$.date';
+                    this.sourceForm.quick_draw_date_from_format = 'd/m/Y';
+                    this.sourceForm.quick_first_prize_paths = '$.lotto_2,$.lotto_3,$.lotto_4';
+                    this.sourceForm.quick_first_prize_take_right = 3;
+                    this.sourceForm.quick_last2_paths = '$.lotto_1,$.lotto_2';
+                    this.sourceForm.quick_last2_take_right = 2;
+                },
+                generateQuickPipelineJson() {
+                    try {
+                        const endpointUrl = String(this.sourceForm.quick_endpoint_url || '').trim();
+                        if (endpointUrl === '') {
+                            throw new Error('กรุณาใส่ URL ผลหวยใน Quick Setup');
+                        }
+
+                        const drawDatePath = String(this.sourceForm.quick_draw_date_path || '').trim();
+                        if (drawDatePath === '') {
+                            throw new Error('กรุณาใส่ Path ของวันที่');
+                        }
+
+                        const firstPrizePaths = this.splitQuickPaths(this.sourceForm.quick_first_prize_paths);
+                        const last2Paths = this.splitQuickPaths(this.sourceForm.quick_last2_paths);
+                        if (firstPrizePaths.length === 0) {
+                            throw new Error('กรุณาใส่ Path ของรางวัลที่ 1');
+                        }
+                        if (last2Paths.length === 0) {
+                            throw new Error('กรุณาใส่ Path ของเลขท้าย 2 ตัว');
+                        }
+
+                        const parserFields = {
+                            draw_date_raw: { type: 'JSON_PATH', path: drawDatePath },
+                        };
+
+                        const firstPrizeRawFields = firstPrizePaths.map((path, idx) => {
+                            const key = `first_prize_raw_${idx + 1}`;
+                            parserFields[key] = { type: 'JSON_PATH', path };
+                            return key;
+                        });
+
+                        const last2RawFields = last2Paths.map((path, idx) => {
+                            const key = `last_2_raw_${idx + 1}`;
+                            parserFields[key] = { type: 'JSON_PATH', path };
+                            return key;
+                        });
+
+                        const buildComposeRule = (rawFields, rightDigits) => {
+                            const transforms = [{ op: 'digits_only' }];
+                            if (rightDigits > 0) {
+                                transforms.push({ op: 'right', length: Number(rightDigits) });
+                            }
+
+                            if (rawFields.length === 1) {
+                                return {
+                                    from: rawFields[0],
+                                    transforms,
+                                };
+                            }
+
+                            return {
+                                from_fields: rawFields,
+                                join: '',
+                                transforms,
+                            };
+                        };
+
+                        this.sourceForm.unified_pipeline_json = JSON.stringify({
+                            request_headers_json: {},
+                            request_query_template_json: {},
+                            request_body_template_json: {},
+                            fetch_config_json: {
+                                fetch_strategy: 'JSON_HTTP',
+                                endpoint_url: endpointUrl,
+                                http_method: String(this.sourceForm.quick_http_method || 'GET').toUpperCase(),
+                                headers: {},
+                                query: {},
+                                timeout_seconds: Number(this.sourceForm.timeout_seconds || 10),
+                            },
+                            parser_config_json: {
+                                version: 2,
+                                mode: 'single_payload',
+                                parser_type: 'JSON_PATH',
+                                fields: parserFields,
+                            },
+                            mapping_config_json: {
+                                fields: {
+                                    draw_date: {
+                                        from: 'draw_date_raw',
+                                        transforms: [
+                                            { op: 'trim' },
+                                            { op: 'date', from: String(this.sourceForm.quick_draw_date_from_format || 'd/m/Y'), to: 'Y-m-d' },
+                                        ],
+                                    },
+                                    first_prize: buildComposeRule(firstPrizeRawFields, this.sourceForm.quick_first_prize_take_right),
+                                    last_2_digits: buildComposeRule(last2RawFields, this.sourceForm.quick_last2_take_right),
+                                },
+                            },
+                            selection_config_json: {
+                                selection_stage: 'PRE_MAPPING',
+                                strategy: 'strict_single_match',
+                                date_field: 'draw_date_raw',
+                                required_fields: [],
+                                meta: {
+                                    candidate_draw_date_offset_days: 0,
+                                },
+                            },
+                            validation_config_json: {
+                                required_fields: ['draw_date', 'first_prize', 'last_2_digits'],
+                            },
+                            readiness_config_json: {
+                                enabled: true,
+                                minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
+                            },
+                            retry_policy_json: {
+                                max_attempts: 3,
+                                backoff_seconds: [10, 30, 60],
+                            },
+                        }, null, 2);
+
+                        this.applyUnifiedToForm();
+                        this.activeSourceTab = 3;
+                    } catch (error) {
+                        const message = error?.message || 'สร้าง Pipeline Config ไม่สำเร็จ';
+                        this.$bvModal.msgBoxOk(message, {
+                            title: 'Quick Setup',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
+                },
                 buildV2Payload() {
+                    this.applyUnifiedToForm();
+
+                    const unifiedConfig = this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                    if (!unifiedConfig || Object.keys(unifiedConfig).length === 0) {
+                        throw new Error('กรุณาใส่ Pipeline Config JSON ให้ถูกต้อง');
+                    }
+
                     const fetchConfig = this.parseJsonSafe(this.sourceForm.fetch_config_json);
                     const parserConfig = this.parseJsonSafe(this.sourceForm.parser_config_json);
                     const selectionConfig = this.parseJsonSafe(this.sourceForm.selection_config_json);
 
                     const endpointUrl = String(fetchConfig.endpoint_url || this.sourceForm.endpoint_url || '').trim();
                     if (endpointUrl === '') {
-                        throw new Error('กรุณาใส่ fetch_config_json.endpoint_url');
+                        throw new Error('กรุณาใส่ endpoint_url ใน fetch_config_json');
                     }
 
                     const parserType = String(parserConfig.parser_type || this.sourceForm.parser_type || '').trim().toUpperCase();
                     if (parserType === '') {
-                        throw new Error('กรุณาใส่ parser_config_json.parser_type');
+                        throw new Error('กรุณาใส่ parser_type ใน parser_config_json');
                     }
 
                     return {
@@ -555,6 +891,7 @@
                     this.activeSourceTab = 0;
                     this.sourceForm = this.newSourceForm();
                     this.showSourceForm = true;
+                    this.syncUnifiedFromForm();
 
                     this.$nextTick(() => {
                         this.$refs.addeditSource.show();
@@ -583,6 +920,7 @@
                         readiness_config_json: this.toJsonText(item.readiness_config_json),
                         retry_policy_json: this.toJsonText(item.retry_policy_json),
                     };
+                    this.syncUnifiedFromForm();
 
                     this.showSourceForm = true;
 

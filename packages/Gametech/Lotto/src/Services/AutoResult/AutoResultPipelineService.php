@@ -7,7 +7,6 @@ use Gametech\Lotto\Exceptions\ResultValidationException;
 use Gametech\Lotto\Exceptions\TemplateRenderException;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultSource;
-use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Support\Carbon;
@@ -398,16 +397,12 @@ class AutoResultPipelineService
 
     private function isV2ShadowEnabled(LottoResultSource $source): bool
     {
-        $version = strtoupper((string) ($source->pipeline_version ?? CompiledSourcePipelineData::VERSION_LEGACY));
-
-        return $version === CompiledSourcePipelineData::VERSION_V2_SHADOW || (bool) ($source->shadow_enabled ?? false);
+        return false;
     }
 
     private function isV2CutoverEnabled(LottoResultSource $source): bool
     {
-        $version = strtoupper((string) ($source->pipeline_version ?? CompiledSourcePipelineData::VERSION_LEGACY));
-
-        return $version === CompiledSourcePipelineData::VERSION_V2_CUTOVER || (bool) ($source->cutover_enabled ?? false);
+        return true;
     }
 
     private function normalizeStatus(string $status): string

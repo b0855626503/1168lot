@@ -116,8 +116,6 @@ class LottoResultSourceController extends AppBaseController
                 'PUT',
             ],
             'pipelineVersions' => [
-                'LEGACY',
-                'V2_SHADOW',
                 'V2_CUTOVER',
             ],
             'fetchStrategies' => [
@@ -252,7 +250,7 @@ class LottoResultSourceController extends AppBaseController
             'timeout_seconds' => ['nullable', 'integer', 'min:1', 'max:60'],
             'effective_from' => ['nullable', 'date_format:Y-m-d H:i:s'],
             'effective_to' => ['nullable', 'date_format:Y-m-d H:i:s', 'after_or_equal:effective_from'],
-            'pipeline_version' => ['nullable', Rule::in(['LEGACY', 'V2_SHADOW', 'V2_CUTOVER'])],
+            'pipeline_version' => ['nullable', Rule::in(['V2_CUTOVER'])],
             'fetch_strategy' => ['nullable', Rule::in(['JSON_HTTP', 'HTML_HTTP', 'RENDERED_BROWSER', 'EMBEDDED_JSON', 'MANUAL_INPUT'])],
             'selection_stage' => ['nullable', Rule::in(['PRE_MAPPING', 'POST_MAPPING'])],
             'supports_partial' => ['nullable', 'boolean'],
@@ -292,21 +290,16 @@ class LottoResultSourceController extends AppBaseController
                 'selection_config_json' => $this->parseJsonInput($payload['selection_config_json'] ?? null, 'selection_config_json'),
                 'readiness_config_json' => $this->parseJsonInput($payload['readiness_config_json'] ?? null, 'readiness_config_json'),
                 'retry_policy_json' => $this->parseJsonInput($payload['retry_policy_json'] ?? null, 'retry_policy_json'),
-                'pipeline_version' => strtoupper((string) ($validated['pipeline_version'] ?? 'LEGACY')),
+                'pipeline_version' => CompiledSourcePipelineData::VERSION_V2_CUTOVER,
                 'fetch_strategy' => strtoupper((string) ($validated['fetch_strategy'] ?? 'JSON_HTTP')),
                 'selection_stage' => strtoupper((string) ($validated['selection_stage'] ?? 'POST_MAPPING')),
                 'supports_partial' => (bool) ($validated['supports_partial'] ?? false),
                 'requires_browser' => (bool) ($validated['requires_browser'] ?? false),
-                'shadow_enabled' => (bool) ($validated['shadow_enabled'] ?? false),
-                'cutover_enabled' => (bool) ($validated['cutover_enabled'] ?? false),
+                'shadow_enabled' => false,
+                'cutover_enabled' => true,
             ]);
 
-            $compiled = null;
-            if (strtoupper((string) $source->pipeline_version) !== CompiledSourcePipelineData::VERSION_LEGACY
-                || (bool) $source->shadow_enabled
-                || (bool) $source->cutover_enabled) {
-                $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPipelinePayload($source));
-            }
+            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPipelinePayload($source));
 
             if ($source->cutover_enabled && $this->shouldEnforceFixtureGate() && ! $this->hasFixtureSet($source)) {
                 throw new InvalidArgumentException('เปิด cutover ไม่ได้: ยังไม่พบ fixture test สำหรับ source นี้ (required only in local/testing)');
@@ -365,10 +358,6 @@ class LottoResultSourceController extends AppBaseController
             $payload = (array) $request->input('data', []);
             $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
             $sourceId = (int) ($request->input('id') ?: 0);
-
-            if ($compiled->pipelineVersion() !== CompiledSourcePipelineData::VERSION_V2_CUTOVER && ! (bool) ($payload['cutover_enabled'] ?? false)) {
-                throw new InvalidArgumentException('source ยังไม่ถูกตั้งเป็น V2_CUTOVER/cutover_enabled');
-            }
 
             if ($sourceId > 0) {
                 $source = LottoResultSource::query()->find($sourceId);
@@ -469,7 +458,7 @@ class LottoResultSourceController extends AppBaseController
     private function buildPreviewPayload(array $payload): array
     {
         return [
-            'pipeline_version' => strtoupper($this->stringValue($payload['pipeline_version'] ?? 'LEGACY')),
+            'pipeline_version' => CompiledSourcePipelineData::VERSION_V2_CUTOVER,
             'fetch_strategy' => strtoupper($this->stringValue($payload['fetch_strategy'] ?? 'JSON_HTTP')),
             'fetch_config_json' => (array) ($this->parseJsonInput($payload['fetch_config_json'] ?? null, 'fetch_config_json') ?? []),
             'endpoint_url' => $this->stringValue($payload['endpoint_url'] ?? ''),
@@ -486,8 +475,8 @@ class LottoResultSourceController extends AppBaseController
             'readiness_config_json' => (array) ($this->parseJsonInput($payload['readiness_config_json'] ?? null, 'readiness_config_json') ?? []),
             'selection_stage' => strtoupper($this->stringValue($payload['selection_stage'] ?? 'POST_MAPPING')),
             'supports_partial' => (bool) ($payload['supports_partial'] ?? false),
-            'shadow_enabled' => (bool) ($payload['shadow_enabled'] ?? false),
-            'cutover_enabled' => (bool) ($payload['cutover_enabled'] ?? false),
+            'shadow_enabled' => false,
+            'cutover_enabled' => true,
         ];
     }
 
@@ -497,7 +486,7 @@ class LottoResultSourceController extends AppBaseController
     private function buildPipelinePayload(LottoResultSource $source): array
     {
         return [
-            'pipeline_version' => (string) ($source->pipeline_version ?: 'LEGACY'),
+            'pipeline_version' => CompiledSourcePipelineData::VERSION_V2_CUTOVER,
             'fetch_strategy' => (string) ($source->fetch_strategy ?: 'JSON_HTTP'),
             'fetch_config_json' => (array) ($source->fetch_config_json ?? []),
             'endpoint_url' => (string) $source->endpoint_url,
@@ -514,8 +503,8 @@ class LottoResultSourceController extends AppBaseController
             'readiness_config_json' => (array) ($source->readiness_config_json ?? []),
             'selection_stage' => (string) ($source->selection_stage ?: 'POST_MAPPING'),
             'supports_partial' => (bool) $source->supports_partial,
-            'shadow_enabled' => (bool) $source->shadow_enabled,
-            'cutover_enabled' => (bool) $source->cutover_enabled,
+            'shadow_enabled' => false,
+            'cutover_enabled' => true,
         ];
     }
 
@@ -553,13 +542,13 @@ class LottoResultSourceController extends AppBaseController
             'http_method' => strtoupper($this->stringValue($payload['http_method'] ?? $source->http_method ?? 'GET')),
             'timeout_seconds' => (int) ($payload['timeout_seconds'] ?? $source->timeout_seconds ?? 10),
             'parser_type' => strtoupper($this->stringValue($payload['parser_type'] ?? $source->parser_type ?? 'JSON_PATH')),
-            'pipeline_version' => strtoupper($this->stringValue($payload['pipeline_version'] ?? $source->pipeline_version ?? CompiledSourcePipelineData::VERSION_V2_CUTOVER)),
+            'pipeline_version' => CompiledSourcePipelineData::VERSION_V2_CUTOVER,
             'fetch_strategy' => strtoupper($this->stringValue($payload['fetch_strategy'] ?? $source->fetch_strategy ?? 'JSON_HTTP')),
             'selection_stage' => strtoupper($this->stringValue($payload['selection_stage'] ?? $source->selection_stage ?? 'POST_MAPPING')),
             'supports_partial' => (bool) ($payload['supports_partial'] ?? $source->supports_partial ?? false),
             'requires_browser' => (bool) ($payload['requires_browser'] ?? $source->requires_browser ?? false),
-            'shadow_enabled' => (bool) ($payload['shadow_enabled'] ?? $source->shadow_enabled ?? false),
-            'cutover_enabled' => (bool) ($payload['cutover_enabled'] ?? $source->cutover_enabled ?? true),
+            'shadow_enabled' => false,
+            'cutover_enabled' => true,
             'request_headers_json' => $this->parseJsonInput($payload['request_headers_json'] ?? $source->request_headers_json ?? null, 'request_headers_json') ?? [],
             'request_query_template_json' => $this->parseJsonInput($payload['request_query_template_json'] ?? $source->request_query_template_json ?? null, 'request_query_template_json') ?? [],
             'request_body_template_json' => $this->parseJsonInput($payload['request_body_template_json'] ?? $source->request_body_template_json ?? null, 'request_body_template_json') ?? [],
