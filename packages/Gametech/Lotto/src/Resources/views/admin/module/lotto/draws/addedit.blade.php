@@ -15,14 +15,16 @@
                                 @change="onNativeMarketChange"
                                 required>
                             <option value="">-- เลือกรายการหวย --</option>
-                            <optgroup v-for="group in markets" :key="group.label" :label="group.label">
-                                <option v-for="option in group.options"
-                                        :key="option.value"
-                                        :value="String(option.value)"
-                                        :data-logo="option.logo || ''">
-                                    @{{ option.text }}
-                                </option>
-                            </optgroup>
+                            @foreach(($marketOptions ?? []) as $group)
+                                <optgroup label="{{ $group['label'] ?? '-' }}">
+                                    @foreach(($group['options'] ?? []) as $option)
+                                        <option value="{{ (string) ($option['value'] ?? '') }}"
+                                                data-logo="{{ $option['logo'] ?? '' }}">
+                                            {{ $option['text'] ?? '-' }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
                         </select>
                     </b-form-group>
                 </b-col>
@@ -518,9 +520,65 @@
             max-width: 1220px;
         }
     </style>
+    <style>
+        #filter_market_id + .select2-container {
+            width: 100% !important;
+        }
+
+        #filter_market_id + .select2-container .select2-selection--single {
+            min-height: calc(1.5em + .5rem + 2px);
+            height: calc(1.5em + .5rem + 2px);
+            display: flex;
+            align-items: center;
+        }
+
+        #filter_market_id + .select2-container .select2-selection__rendered {
+            display: flex !important;
+            align-items: center;
+            gap: 8px;
+            line-height: normal !important;
+            padding-left: .5rem !important;
+            padding-right: 1.75rem !important;
+            min-height: calc(1.5em + .5rem + 2px);
+        }
+
+        #filter_market_id + .select2-container .select2-selection__arrow {
+            height: 100% !important;
+            right: .35rem !important;
+        }
+
+        .select2-container .lotto-market-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .select2-container .lotto-market-option__logo {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        .select2-container .lotto-market-option__text {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endpush
 
 @push('scripts')
+    <script src="{{ asset('vendor/select2/js/select2.full.min.js') }}"></script>
+
     <script type="module">
         const toDateTimeLocal = (value) => {
             if (!value) return '';
