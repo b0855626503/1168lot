@@ -390,9 +390,9 @@ class LottoResultSourceController extends AppBaseController
                     'expected_draw_date' => $expectedDrawDate !== '' ? $expectedDrawDate : null,
                 ]);
 
-                if ((string) ($runResult['status'] ?? '') !== 'VALID') {
-                    $errorCode = (string) ($runResult['error_code'] ?? 'VALIDATION_ERROR');
-                    $errorStage = (string) ($runResult['error_stage'] ?? 'READINESS');
+                if ($this->stringValue($runResult['status'] ?? '') !== 'VALID') {
+                    $errorCode = $this->stringValue($runResult['error_code'] ?? 'VALIDATION_ERROR');
+                    $errorStage = $this->stringValue($runResult['error_stage'] ?? 'READINESS');
                     throw new InvalidArgumentException('live validate ไม่ผ่าน: ' . $errorCode . ' @ ' . $errorStage);
                 }
             }
