@@ -79,7 +79,7 @@ class LottoResultSourceDataTable extends DataTable
             ['data' => 'priority', 'name' => 'lotto_result_sources.priority', 'title' => 'Priority', 'className' => 'text-center', 'width' => '90px'],
             ['data' => 'source_type', 'name' => 'lotto_result_sources.source_type', 'title' => 'Type', 'className' => 'text-center', 'width' => '90px'],
             ['data' => 'http_method', 'name' => 'lotto_result_sources.http_method', 'title' => 'Method', 'className' => 'text-center', 'width' => '90px'],
-            ['data' => 'endpoint_url', 'name' => 'lotto_result_sources.endpoint_url', 'title' => 'Endpoint', 'width' => '150px'],
+            ['data' => 'endpoint_url', 'name' => 'lotto_result_sources.endpoint_url', 'title' => 'Endpoint', 'width' => '100px'],
             ['data' => 'lookup_date_mode', 'name' => 'lotto_result_sources.lookup_date_mode', 'title' => 'Lookup', 'className' => 'text-center', 'width' => '170px'],
             ['data' => 'parser_type', 'name' => 'lotto_result_sources.parser_type', 'title' => 'Parser', 'className' => 'text-center', 'width' => '110px'],
             ['data' => 'is_active', 'name' => 'lotto_result_sources.is_active', 'title' => 'สถานะ', 'className' => 'text-center', 'width' => '90px'],

@@ -20,7 +20,7 @@ class LottoResultSourceTransformer extends TransformerAbstract
             'priority' => (int) $model->priority,
             'source_type' => strtoupper((string) $model->source_type),
             'http_method' => strtoupper((string) $model->http_method),
-            'endpoint_url' => (string) $model->endpoint_url,
+            'endpoint_url' => $this->renderEndpointUrl($model),
             'lookup_date_mode' => (string) $model->lookup_date_mode,
             'parser_type' => (string) $model->parser_type,
             'is_active' => '<button type="button" class="btn ' . ($active ? 'btn-success' : 'btn-danger') . ' btn-xs"'
@@ -47,6 +47,15 @@ class LottoResultSourceTransformer extends TransformerAbstract
         return '<span style="display:inline-flex;align-items:center;gap:8px;">'
             . '<img src="' . e($src) . '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
             . '<span>' . e($name) . '</span>'
+            . '</span>';
+    }
+
+    private function renderEndpointUrl(LottoResultSource $model): string
+    {
+        $url = (string) ($model->endpoint_url ?? '');
+
+        return '<span title="' . e($url) . '" style="display:inline-block;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;">'
+            . e($url)
             . '</span>';
     }
 }
