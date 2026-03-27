@@ -145,10 +145,19 @@ class SelectionExecutor
     private function buildDateComparisonDebug(string $candidateDate, string $expectedDate): array
     {
         $directMatch = $candidateDate === $expectedDate;
+        $candidateAny = $this->normalizeDateAny($candidateDate);
+        $expectedAny = $this->normalizeDateAny($expectedDate);
+        $canonicalMatch = $candidateAny['normalized'] !== null
+            && $expectedAny['normalized'] !== null
+            && $candidateAny['normalized'] === $expectedAny['normalized'];
+
         if ($directMatch) {
             return [
                 'matched' => true,
                 'direct_match' => true,
+                'canonical_match' => true,
+                'candidate_any' => $candidateAny,
+                'expected_any' => $expectedAny,
                 'format_attempts' => [],
                 'consistency' => $this->runConsistencyCheck($candidateDate, $expectedDate),
             ];
@@ -178,8 +187,11 @@ class SelectionExecutor
         }
 
         return [
-            'matched' => $matched,
+            'matched' => $matched || $canonicalMatch,
             'direct_match' => false,
+            'canonical_match' => $canonicalMatch,
+            'candidate_any' => $candidateAny,
+            'expected_any' => $expectedAny,
             'format_attempts' => $attempts,
             'consistency' => $this->runConsistencyCheck($candidateDate, $expectedDate),
         ];
@@ -226,6 +238,14 @@ class SelectionExecutor
             return true;
         }
 
+        $candidateAny = $this->normalizeDateAny($candidateDate);
+        $expectedAny = $this->normalizeDateAny($expectedDate);
+        if ($candidateAny['normalized'] !== null
+            && $expectedAny['normalized'] !== null
+            && $candidateAny['normalized'] === $expectedAny['normalized']) {
+            return true;
+        }
+
         $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d', 'Ymd'];
         foreach ($formats as $format) {
             $left = $this->normalizeDateByFormat($candidateDate, $format);
@@ -236,6 +256,28 @@ class SelectionExecutor
         }
 
         return false;
+    }
+
+    /**
+     * @return array{normalized:?string,format:?string}
+     */
+    private function normalizeDateAny(string $value): array
+    {
+        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d', 'Ymd'];
+        foreach ($formats as $format) {
+            $normalized = $this->normalizeDateByFormat($value, $format);
+            if ($normalized !== null) {
+                return [
+                    'normalized' => $normalized,
+                    'format' => $format,
+                ];
+            }
+        }
+
+        return [
+            'normalized' => null,
+            'format' => null,
+        ];
     }
 
     /**
