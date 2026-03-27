@@ -398,7 +398,7 @@ class LottoResultSourceController extends AppBaseController
                     && ! $expectedDrawDateProvided) {
                     $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
                         'run_id' => 'cutover_validate_retry_' . now()->format('YmdHisv'),
-                        'expected_draw_date' => null,
+                        'expected_draw_date' => '',
                     ]);
                 }
 
