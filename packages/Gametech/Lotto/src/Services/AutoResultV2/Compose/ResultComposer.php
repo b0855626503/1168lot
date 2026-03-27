@@ -110,17 +110,28 @@ class ResultComposer
     {
         foreach (['first_prize', 'last_2_digits'] as $field) {
             if (array_key_exists($field, $canonical) && $canonical[$field] !== null) {
-                $canonical[$field] = preg_replace('/\D+/', '', (string) $canonical[$field]);
+                $scalar = $this->toScalarStringOrNull($canonical[$field]);
+                if ($scalar === null) {
+                    continue;
+                }
+
+                $canonical[$field] = preg_replace('/\D+/', '', $scalar);
             }
         }
 
         $dateField = (string) (data_get($context, 'expected_draw_date_field') ?: 'draw_date');
         if (array_key_exists($dateField, $canonical) && $canonical[$dateField] !== null) {
-            $canonical[$dateField] = $this->normalizeDate((string) $canonical[$dateField]);
+            $normalized = $this->normalizeDateMixed($canonical[$dateField]);
+            if ($normalized !== null) {
+                $canonical[$dateField] = $normalized;
+            }
         }
 
         if (array_key_exists('draw_date', $canonical) && $canonical['draw_date'] !== null) {
-            $canonical['draw_date'] = $this->normalizeDate((string) $canonical['draw_date']);
+            $normalized = $this->normalizeDateMixed($canonical['draw_date']);
+            if ($normalized !== null) {
+                $canonical['draw_date'] = $normalized;
+            }
         }
 
         return $canonical;
@@ -145,6 +156,29 @@ class ResultComposer
         } catch (\Throwable $e) {
             return $raw;
         }
+    }
+
+    private function normalizeDateMixed(mixed $value): ?string
+    {
+        $scalar = $this->toScalarStringOrNull($value);
+        if ($scalar === null) {
+            return null;
+        }
+
+        return $this->normalizeDate($scalar);
+    }
+
+    private function toScalarStringOrNull(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return null;
     }
 
     /**
