@@ -29,13 +29,13 @@
                     const $option = $(this);
                     const value = String($option.val() || '');
                     if (value === '') {
-                        $option.prop('hidden', false);
+                        $option.prop('hidden', false).prop('disabled', false);
                         return;
                     }
 
                     const optionGroupId = String($option.data('group-id') || '');
                     const visible = !selectedGroup || optionGroupId === selectedGroup;
-                    $option.prop('hidden', !visible);
+                    $option.prop('hidden', !visible).prop('disabled', !visible);
                 });
 
                 if (selectedMarket) {

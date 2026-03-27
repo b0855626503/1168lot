@@ -21,6 +21,46 @@
                 // select2 for market will run only in add/edit modal.
             };
 
+            const rebuildMarketFilterOptions = function (groupId) {
+                const selectedGroup = String(groupId || '');
+                const selectedMarket = String($marketSelect.val() || '');
+
+                $marketSelect.find('option').each(function () {
+                    const $option = $(this);
+                    const value = String($option.val() || '');
+
+                    if (value === '') {
+                        $option.prop('hidden', false).prop('disabled', false);
+                        return;
+                    }
+
+                    const optionGroupId = String($option.data('group-id') || '');
+                    const visible = !selectedGroup || optionGroupId === selectedGroup;
+                    $option.prop('hidden', !visible).prop('disabled', !visible);
+                });
+
+                $marketSelect.find('optgroup').each(function () {
+                    const $optgroup = $(this);
+                    const hasVisibleOptions = $optgroup.find('option').filter(function () {
+                        const value = String($(this).val() || '');
+                        if (value === '') {
+                            return false;
+                        }
+
+                        return !$(this).prop('hidden');
+                    }).length > 0;
+
+                    $optgroup.prop('hidden', !hasVisibleOptions);
+                });
+
+                if (selectedMarket) {
+                    const $selectedOption = $marketSelect.find('option[value="' + selectedMarket + '"]');
+                    if (! $selectedOption.length || $selectedOption.prop('hidden')) {
+                        $marketSelect.val('');
+                    }
+                }
+            };
+
             const redrawTable = function () {
                 if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
                     return;
@@ -40,14 +80,7 @@
             $groupSelect
                 .off('change.lottoDrawsFilter')
                 .on('change.lottoDrawsFilter', function () {
-                    const selectedGroupId = String($(this).val() || '');
-                    const selectedMarketOption = $marketSelect.find('option:selected');
-                    const selectedMarketGroupId = String(selectedMarketOption.data('group-id') || '');
-
-                    if (selectedGroupId && selectedMarketGroupId && selectedGroupId !== selectedMarketGroupId) {
-                        $marketSelect.val('');
-                    }
-
+                    rebuildMarketFilterOptions($(this).val() || '');
                     redrawTable();
                 });
 
@@ -64,6 +97,7 @@
                 });
 
             initMarketSelect();
+            rebuildMarketFilterOptions($groupSelect.val() || '');
 
             // DataTable first request may fire before custom filters are attached.
             // Force one redraw so default draw_date filter is applied on initial page load.
