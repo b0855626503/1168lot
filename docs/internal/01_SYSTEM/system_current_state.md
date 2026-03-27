@@ -81,6 +81,7 @@
 - policy ของ `validate cutover`:
   - `local/testing`: บังคับ fixture gate ต่อ source (สำหรับ regression test)
   - `production`: ใช้ live validation จาก `endpoint_url` จริงผ่าน pipeline runner (ไม่บังคับให้ผู้ใช้ admin สร้างไฟล์ fixture)
+  - ถ้าไม่ส่ง `expected_draw_date` และ fail ด้วย `NO_CANDIDATE_MATCHES_EXPECTED_DRAW_DATE` ระบบจะ retry live validation อีกครั้งโดยไม่ผูก expected date เพื่อลด false-negative
 - `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
   - main fetch path ห้าม block รอ browser execution แบบ synchronous
 

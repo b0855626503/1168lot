@@ -100,6 +100,7 @@
 - ปรับ `validate cutover` ให้เหมาะกับ production:
   - `production` ใช้ live validation โดยรัน pipeline กับ `endpoint_url` จริง
   - ไม่บังคับให้ผู้ใช้ admin จัดการไฟล์ fixture เอง
+  - เพิ่ม fallback deterministic: หากไม่ส่ง `expected_draw_date` และเจอ `NO_CANDIDATE_MATCHES_EXPECTED_DRAW_DATE` ให้ retry live validate แบบไม่ผูก expected date 1 ครั้ง
 - คง fixture gate ไว้เฉพาะ `local/testing` เพื่อรองรับ regression test ของทีมพัฒนา
 - ตอนบันทึก source ที่เปิด `cutover_enabled=true`:
   - production ไม่บล็อกด้วย fixture gate

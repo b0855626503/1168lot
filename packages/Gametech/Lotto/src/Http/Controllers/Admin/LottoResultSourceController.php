@@ -383,11 +383,24 @@ class LottoResultSourceController extends AppBaseController
             if (! $this->shouldEnforceFixtureGate()) {
                 $source = $this->buildSourceForLiveValidation($payload, $sourceId);
                 $draw = $this->resolveValidationDraw((int) ($payload['market_id'] ?? 0), $source);
+                $expectedDrawDateProvided = array_key_exists('expected_draw_date', $payload);
+                $expectedDrawDate = trim((string) ($payload['expected_draw_date'] ?? optional($draw->draw_date)->format('Y-m-d')));
 
                 $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
                     'run_id' => 'cutover_validate_' . now()->format('YmdHisv'),
-                    'expected_draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+                    'expected_draw_date' => $expectedDrawDate !== '' ? $expectedDrawDate : null,
                 ]);
+
+                // Production live check should not fail only because current source payload date
+                // is temporarily out of sync with latest draw date in the backoffice.
+                if ((string) ($runResult['status'] ?? '') !== 'VALID'
+                    && (string) ($runResult['error_code'] ?? '') === 'NO_CANDIDATE_MATCHES_EXPECTED_DRAW_DATE'
+                    && ! $expectedDrawDateProvided) {
+                    $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
+                        'run_id' => 'cutover_validate_retry_' . now()->format('YmdHisv'),
+                        'expected_draw_date' => null,
+                    ]);
+                }
 
                 if ((string) ($runResult['status'] ?? '') !== 'VALID') {
                     $errorCode = (string) ($runResult['error_code'] ?? 'VALIDATION_ERROR');
