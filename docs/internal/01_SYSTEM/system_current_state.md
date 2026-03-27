@@ -15,6 +15,12 @@
 - สถานะ `open`: อนุญาตแก้ `draw_date` และ `close_at` (รวม metadata ที่ระบบ allowlist ไว้)
 - สถานะ `resulted`: ไม่อนุญาตให้แก้ไข
 
+## นโยบายสิทธิ์ปุ่มงวดหวย (Admin UI)
+
+- ปุ่มในตาราง `draws` ถูกเช็กสิทธิ์รายปุ่มด้วย `bouncer()->hasPermission(...)`
+- ผู้ใช้ `superadmin` ผ่านการตรวจสิทธิ์ทั้งหมดตามกลไก bouncer เดิม
+- เคส `resulted` ยังคงแสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์ที่เกี่ยวข้อง
+
 ## โครงสร้างเอกสาร
 
 - Internal docs: `docs/internal/*`

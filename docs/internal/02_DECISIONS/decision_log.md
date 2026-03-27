@@ -23,3 +23,10 @@
 - อนุญาตให้แก้ `draw_date` ได้ในหน้าแก้ไขงวด เมื่อสถานะงวดเป็น `open`
 - คงหลัก allowlist ของ update ไว้ โดยเพิ่ม `draw_date` เข้า allowlist ของสถานะ `open`
 - ฝั่ง UI และ backend ต้องสอดคล้องกัน (เปิด field + validate/persist ได้จริง)
+
+## 2026-03-27 — Draw Actions Permission Gate (APPROVED)
+
+- เพิ่มการเช็กสิทธิ์รายปุ่มในหน้า `draws` action column ผ่าน `bouncer()->hasPermission(...)`
+- map ACL key ตาม action (`edit/open/close/settle/dry-run/retry/logs`)
+- กำหนดให้สถานะ `resulted` ยังแสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์
+- ยืนยันว่า `superadmin` ผ่านทุกสิทธิ์ตาม bouncer behavior เดิม

@@ -315,3 +315,12 @@ Implement exactly as specified.
   - manual retry แบบระบุ `draw_id` ต้อง bypass เงื่อนไขคัดกรอง `result_at/result_fetch_status/backoff` ที่ทำให้ไม่ถูกประมวลผล
   - endpoint admin manual retry ต้องเรียก command แบบทันที (synchronous) เพื่อไม่ขึ้นกับ worker queue และให้เห็นผล/log ได้ทันที
 * งวดสถานะ `open` อนุญาตให้แก้ `draw_date` ได้จากหน้าจอแก้ไขงวด (นอกเหนือจาก `close_at`)
+* ปุ่ม action ในตาราง `draws` ต้องเช็กสิทธิ์รายปุ่มด้วย ACL key:
+  - `edit` → `lotto_draws.edit`
+  - `open` → `lotto_draws.open`
+  - `close` → `lotto_draws.close`
+  - `settle` → `lotto_draws.settle`
+  - `dry-run` → `lotto_draws.auto_result_test_fetch`
+  - `retry` → `lotto_draws.auto_result_manual_retry`
+  - `logs` → `lotto_draws.auto_result_metrics`
+* สถานะ `resulted` ให้แสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์
