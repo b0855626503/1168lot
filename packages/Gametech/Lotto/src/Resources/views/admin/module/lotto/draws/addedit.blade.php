@@ -220,6 +220,7 @@
             <template #cell(duration_ms)="row"><div class="text-center">@{{ row.item.duration_ms || '-' }}</div></template>
             <template #cell(created_at)="row"><div class="text-center">@{{ row.item.created_at || '-' }}</div></template>
             <template #cell(error_message)="row">@{{ row.item.error_message || '-' }}</template>
+            <template #cell(decision)="row"><small>@{{ row.item.decision || '-' }}</small></template>
             <template #cell(preview)="row"><small>@{{ row.item.preview || '-' }}</small></template>
             <template #cell(run_id)="row"><small>@{{ row.item.run_id || '-' }}</small></template>
             <template #cell(action)="row">
@@ -270,6 +271,13 @@
                 </b-form-group>
             </b-col>
             <b-col md="6">
+                <b-form-group label="Selection Debug JSON">
+                    <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.selection_debug_json || '-'"></b-form-textarea>
+                </b-form-group>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col md="12">
                 <b-form-group label="Response Body (preview)">
                     <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.response_body_preview || '-'"></b-form-textarea>
                 </b-form-group>
@@ -680,7 +688,8 @@
                         { key: 'pipeline_stage', label: 'Stage', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '110px' } },
                         { key: 'response_http_status', label: 'HTTP', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '80px' } },
                         { key: 'duration_ms', label: 'ms', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '80px' } },
-                        { key: 'preview', label: 'Parsed/Normalized Preview' },
+                        { key: 'preview', label: 'Parsed/Selection/Normalized Preview' },
+                        { key: 'decision', label: 'Decision' },
                         { key: 'error_message', label: 'Error' },
                         { key: 'run_id', label: 'Run ID' },
                         { key: 'created_at', label: 'เวลา', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '150px' } },
@@ -1531,10 +1540,17 @@
                     });
                     const rows = (response?.data?.data?.items || []).map((item) => {
                         const parsed = item?.parsed_payload_json ? JSON.stringify(item.parsed_payload_json) : '';
+                        const selection = item?.selection_debug_json ? JSON.stringify({
+                            decision: item?.selection_debug_json?.decision || null,
+                            decision_reason: item?.selection_debug_json?.decision_reason || null,
+                            rejection_reason: item?.selection_debug_json?.rejection_reason || null,
+                            candidate_count: item?.selection_debug_json?.candidate_count || item?.selection_debug_json?.candidates?.length || 0,
+                        }) : '';
                         const normalized = item?.normalized_result_json ? JSON.stringify(item.normalized_result_json) : '';
-                        const joined = [parsed, normalized].filter(Boolean).join(' | ');
+                        const joined = [parsed, selection, normalized].filter(Boolean).join(' | ');
                         return {
                             ...item,
+                            decision: item?.selection_debug_json?.decision || '-',
                             preview: joined.length > 180 ? `${joined.substring(0, 180)}...` : (joined || '-'),
                         };
                     });
@@ -1573,6 +1589,7 @@
                         request_meta_json: '',
                         parsed_payload_json: '',
                         normalized_result_json: '',
+                        selection_debug_json: '',
                     };
                     this.$refs.autoResultLogDetailModal.show();
 
@@ -1583,6 +1600,7 @@
                                 request_meta_json: this.toReadableJson(item?.request_meta_json),
                                 parsed_payload_json: this.toReadableJson(item?.parsed_payload_json),
                                 normalized_result_json: this.toReadableJson(item?.normalized_result_json),
+                                selection_debug_json: this.toReadableJson(item?.selection_debug_json),
                             };
                             this.isAutoResultLogDetailLoading = false;
                         }, 0);

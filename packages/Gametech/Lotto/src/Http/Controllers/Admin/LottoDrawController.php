@@ -429,6 +429,7 @@ class LottoDrawController extends AppBaseController
     {
         $validated = validator($request->all(), [
             'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'expected_draw_date' => ['nullable', 'date_format:Y-m-d'],
         ])->validate();
 
         $runId = sprintf('admin_test_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
@@ -439,6 +440,10 @@ class LottoDrawController extends AppBaseController
             '--manual-retry' => true,
             '--run-id' => $runId,
         ];
+
+        if (! empty($validated['expected_draw_date'])) {
+            $params['--expected-draw-date'] = (string) $validated['expected_draw_date'];
+        }
 
         $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
         $output = trim((string) Artisan::output());
@@ -461,6 +466,7 @@ class LottoDrawController extends AppBaseController
     {
         $validated = validator($request->all(), [
             'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'expected_draw_date' => ['nullable', 'date_format:Y-m-d'],
         ])->validate();
 
         $runId = sprintf('admin_retry_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
@@ -470,6 +476,10 @@ class LottoDrawController extends AppBaseController
             '--manual-retry' => true,
             '--run-id' => $runId,
         ];
+
+        if (! empty($validated['expected_draw_date'])) {
+            $params['--expected-draw-date'] = (string) $validated['expected_draw_date'];
+        }
 
         $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
         $output = trim((string) Artisan::output());
@@ -530,6 +540,7 @@ class LottoDrawController extends AppBaseController
                 'is_manual_retry' => (bool) ($log->is_manual_retry ?? false),
                 'parsed_payload_json' => $log->parsed_payload_json,
                 'normalized_result_json' => $log->normalized_result_json,
+                'selection_debug_json' => $log->selection_debug_json,
                 'created_at' => $log->created_at ? $log->created_at->format('Y-m-d H:i:s') : null,
             ];
         })->values()->all();

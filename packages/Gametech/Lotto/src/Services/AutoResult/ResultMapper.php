@@ -4,6 +4,11 @@ namespace Gametech\Lotto\Services\AutoResult;
 
 class ResultMapper
 {
+    public function __construct(
+        private ResultTransformChain $transformChain
+    ) {
+    }
+
     /**
      * @param array<string,mixed> $parsed
      * @param array<string,mixed> $mappingConfig
@@ -15,16 +20,28 @@ class ResultMapper
             return [
                 'first_prize' => $parsed['first_prize'] ?? null,
                 'last_2_digits' => $parsed['last_2_digits'] ?? ($parsed['bottom_2'] ?? null),
+                'draw_date' => $parsed['draw_date'] ?? null,
             ];
         }
 
-        $firstPrizeMap = $mappingConfig['first_prize'] ?? 'first_prize';
-        $last2DigitsMap = $mappingConfig['last_2_digits'] ?? 'last_2_digits';
+        $mapped = [];
+        foreach ($mappingConfig as $field => $mapRule) {
+            if (! is_string($field) || trim($field) === '') {
+                continue;
+            }
 
-        return [
-            'first_prize' => $this->resolveMapping($parsed, $firstPrizeMap),
-            'last_2_digits' => $this->resolveMapping($parsed, $last2DigitsMap),
-        ];
+            $mapped[$field] = $this->resolveMapping($parsed, $mapRule);
+        }
+
+        if (! array_key_exists('first_prize', $mapped)) {
+            $mapped['first_prize'] = $parsed['first_prize'] ?? null;
+        }
+
+        if (! array_key_exists('last_2_digits', $mapped)) {
+            $mapped['last_2_digits'] = $parsed['last_2_digits'] ?? ($parsed['bottom_2'] ?? null);
+        }
+
+        return $mapped;
     }
 
     /**
@@ -69,23 +86,31 @@ class ResultMapper
 
         $path = (string) ($mapRule['from'] ?? '');
         $value = $this->readPath($data, $path);
-        $transform = (string) ($mapRule['transform'] ?? '');
 
-        if ($transform === '' || $value === null) {
+        $transforms = $this->resolveTransforms($mapRule);
+        if ($transforms === [] || $value === null) {
             return $value;
         }
 
-        $stringValue = (string) $value;
-        if (preg_match('/^right:(\d+)$/', $transform, $m) === 1) {
-            $len = (int) $m[1];
-            return $len > 0 ? substr($stringValue, -$len) : $stringValue;
+        return $this->transformChain->apply($value, $transforms);
+    }
+
+    /**
+     * @param array<string,mixed> $mapRule
+     * @return array<int,mixed>
+     */
+    private function resolveTransforms(array $mapRule): array
+    {
+        $transforms = $mapRule['transforms'] ?? null;
+        if (is_array($transforms)) {
+            return array_values($transforms);
         }
 
-        if (preg_match('/^left:(\d+)$/', $transform, $m) === 1) {
-            $len = (int) $m[1];
-            return $len > 0 ? substr($stringValue, 0, $len) : $stringValue;
+        $legacy = $mapRule['transform'] ?? null;
+        if (is_string($legacy) && trim($legacy) !== '') {
+            return [trim($legacy)];
         }
 
-        return $value;
+        return [];
     }
 }

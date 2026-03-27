@@ -13,6 +13,7 @@ class LottoFetchAutoResultsCommand extends Command
         {--draw-id= : Process only one draw id}
         {--market-id= : Process only one market id}
         {--run-id= : Override execution run id}
+        {--expected-draw-date= : Expected draw date for strict context validation (Y-m-d)}
         {--limit=100 : Maximum draws to process per run}
         {--dry-run : Execute pipeline without applying settlement}
         {--manual-retry : Mark this run as manual retry context}';
@@ -29,6 +30,7 @@ class LottoFetchAutoResultsCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
         $drawId = $this->option('draw-id');
         $marketId = $this->option('market-id');
+        $expectedDrawDate = $this->option('expected-draw-date');
         $forceSingleDrawRetry = $manualRetry && $drawId !== null && $drawId !== '';
         $singleDrawStatuses = ($forceSingleDrawRetry && $dryRun)
             ? ['closed', 'resulted']
@@ -93,7 +95,13 @@ class LottoFetchAutoResultsCommand extends Command
                 }
             }
 
-            $result = $pipeline->processDraw($draw, $dryRun, $manualRetry, $runId);
+            $result = $pipeline->processDraw(
+                $draw,
+                $dryRun,
+                $manualRetry,
+                $runId,
+                is_string($expectedDrawDate) && trim($expectedDrawDate) !== '' ? trim($expectedDrawDate) : null
+            );
             $status = (string) ($result['status'] ?? 'VALIDATION_ERROR');
 
             if (! isset($summary['statuses'][$status])) {

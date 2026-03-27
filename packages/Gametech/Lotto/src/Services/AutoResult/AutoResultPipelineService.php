@@ -32,6 +32,7 @@ class AutoResultPipelineService
         private ResultRequestBuilder $requestBuilder,
         private ResultFetcher $fetcher,
         private ResultParser $parser,
+        private ResultCandidateSelector $selector,
         private ResultMapper $mapper,
         private ResultValidator $validator,
         private ResultApplier $applier,
@@ -42,11 +43,17 @@ class AutoResultPipelineService
     /**
      * @return array<string,mixed>
      */
-    public function processDraw(LottoDraw $draw, bool $dryRun = false, bool $isManualRetry = false, ?string $runId = null): array
-    {
+    public function processDraw(
+        LottoDraw $draw,
+        bool $dryRun = false,
+        bool $isManualRetry = false,
+        ?string $runId = null,
+        ?string $expectedDrawDate = null
+    ): array {
         $draw = $draw->fresh(['market']);
         $runId = $runId ?: ('run_' . $draw->id . '_' . now()->format('YmdHisv'));
         $attemptNo = max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1);
+        $expectedDrawDate = $expectedDrawDate ?: ($draw->draw_date ? $draw->draw_date->format('Y-m-d') : null);
 
         $this->incrementAttempt($draw);
 
@@ -127,10 +134,41 @@ class AutoResultPipelineService
             ]);
         }
 
-        $mapped = $this->mapper->map($parsed, (array) ($source->mapping_config_json ?? []));
+        $selection = $this->selector->select(
+            $parsed,
+            (array) ($source->parser_config_json ?? []),
+            (array) ($source->validation_config_json ?? []),
+            new ResultParseContext($expectedDrawDate)
+        );
+
+        if ((string) ($selection['decision'] ?? '') !== 'selected') {
+            return $this->markAndLog($draw, [
+                'status' => 'VALIDATION_ERROR',
+                'attempt_no' => $attemptNo,
+                'run_id' => $runId,
+                'pipeline_stage' => 'select',
+                'source_id' => (int) $source->id,
+                'request_url' => (string) $built['url'],
+                'response_http_status' => $fetched['http_status'],
+                'response_body' => $responseBody,
+                'parsed_payload_json' => $parsed,
+                'selection_debug_json' => $selection,
+                'duration_ms' => (int) $fetched['duration_ms'],
+                'is_dry_run' => $dryRun,
+                'is_manual_retry' => $isManualRetry,
+                'error_message' => 'VALIDATION_ERROR: selection rejected (' . (string) ($selection['rejection_reason'] ?? 'unknown') . ')',
+            ]);
+        }
+
+        $selectedFields = (array) (($selection['selected_candidate']['fields'] ?? []));
 
         try {
-            $validated = $this->validator->validate($mapped);
+            $mapped = $this->mapper->map($selectedFields, (array) ($source->mapping_config_json ?? []));
+            $validated = $this->validator->validate(
+                $mapped,
+                (array) ($source->validation_config_json ?? []),
+                $expectedDrawDate
+            );
         } catch (ResultValidationException $e) {
             $message = $e->getMessage();
             $status = str_contains($message, 'NOT_READY') ? 'NOT_READY' : 'VALIDATION_ERROR';
@@ -145,7 +183,8 @@ class AutoResultPipelineService
                 'response_http_status' => $fetched['http_status'],
                 'response_body' => $responseBody,
                 'parsed_payload_json' => $parsed,
-                'normalized_result_json' => $mapped,
+                'selection_debug_json' => $selection,
+                'normalized_result_json' => $mapped ?? [],
                 'duration_ms' => (int) $fetched['duration_ms'],
                 'is_dry_run' => $dryRun,
                 'is_manual_retry' => $isManualRetry,
@@ -158,6 +197,7 @@ class AutoResultPipelineService
             'response_http_status' => $fetched['http_status'],
             'response_body' => $responseBody,
             'parsed' => $parsed,
+            'selection' => $selection,
             'mapped' => $mapped,
         ], $dryRun);
 
@@ -173,6 +213,7 @@ class AutoResultPipelineService
             'response_http_status' => $fetched['http_status'],
             'response_body' => $responseBody,
             'parsed_payload_json' => $parsed,
+            'selection_debug_json' => $selection,
             'normalized_result_json' => $validated,
             'duration_ms' => (int) $fetched['duration_ms'],
             'is_dry_run' => $dryRun,

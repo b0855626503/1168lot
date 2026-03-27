@@ -37,6 +37,24 @@
 - ปุ่ม `Retry` และ `Dry-run` ในหน้า `draws` เรียก `lotto:fetch-auto-results` แบบ synchronous (`Artisan::call`)
 - เป้าหมายคือไม่ผูกกับ worker queue ใน production เพื่อให้คำสั่งถูกประมวลผลทันทีและเห็นผล/log ได้จริง
 - ฝั่ง UI ของปุ่มดังกล่าวต้องแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว (ห้าม silent failure)
+- รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
+
+## นโยบาย Auto Result Parser/Selector v2
+
+- parser v2 เป็น `context-aware` และแยกบทบาทชัดเจน:
+  - `parser` = extract candidate + raw fields เท่านั้น
+  - `selector` = เลือกหรือ reject candidate
+  - `mapper` = normalize/transform chain
+  - `validator` = validate canonical output + expected context
+- strategy default สำหรับ source v2 คือ `strict_single_match` (โดยเฉพาะ HTML/text)
+- reject แบบ strict เมื่อ:
+  - ไม่มี candidate ตรง `expected_draw_date`
+  - มีหลาย candidate ตรง `expected_draw_date`
+  - candidate ที่ถูกเลือกไม่ผ่าน required fields
+  - candidate ที่ถูกเลือกไม่ตรง `expected_draw_date`
+  - tie score ในกรณี strategy ที่อิง score
+- transform chain อยู่ใน `mapping_config_json` เป็นหลัก (`trim`, `digits_only`, `left:n`, `right:n`, `{op:"date"...}`)
+- debug runtime เก็บใน `lotto_result_fetch_logs.selection_debug_json` เท่านั้น (ไม่เก็บใน master state)
 
 ## โครงสร้างเอกสาร
 

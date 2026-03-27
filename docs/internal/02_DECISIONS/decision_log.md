@@ -55,3 +55,16 @@
 - ถ้า `result_at` น้อยกว่า `close_at` ให้ normalize `result_at` เป็นวันถัดไป
 - ถ้าเวลาที่กรอกน้อยกว่าค่าอ้างอิง ระบบให้ normalize ไปวันถัดไปจนได้ลำดับเวลาที่ถูกต้อง
 - เมนู `รายการหวย` ใช้กติกาเวลาเดียวกัน และ command `lotto:generate-auto-draws` ต้องคำนวณข้ามวันให้ตรงกับ config
+
+## 2026-03-27 — Auto Result Parser v2 Strict Context (APPROVED)
+
+- เพิ่ม parser pipeline v2 แบบ candidate/record-scoped เพื่อกัน cross-block mismatch
+- ล็อกความรับผิดชอบ layer:
+  - parser = extract candidate/raw fields
+  - selector = choose/reject candidate
+  - mapper = transform chain
+  - validator = canonical validation + expected context
+- default strategy ของ v2 คือ `strict_single_match` และไม่ fallback แบบเงียบเมื่อ ambiguous
+- score-based strategy เป็น opt-in เท่านั้น และต้อง reject เมื่อ tie
+- เพิ่ม runtime debug field `selection_debug_json` ใน `lotto_result_fetch_logs` (execution metadata)
+- รองรับส่ง `expected_draw_date` จาก command/admin action เข้า pipeline โดยตรง

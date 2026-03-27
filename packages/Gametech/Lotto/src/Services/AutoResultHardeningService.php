@@ -240,6 +240,7 @@ class AutoResultHardeningService
             'response_body' => $payload['response_body'] ?? null,
             'parsed_payload_json' => isset($payload['parsed_payload_json']) ? json_encode($payload['parsed_payload_json'], JSON_UNESCAPED_UNICODE) : null,
             'normalized_result_json' => isset($payload['normalized_result_json']) ? json_encode($payload['normalized_result_json'], JSON_UNESCAPED_UNICODE) : null,
+            'selection_debug_json' => isset($payload['selection_debug_json']) ? json_encode($payload['selection_debug_json'], JSON_UNESCAPED_UNICODE) : null,
             'is_dry_run' => (bool) ($payload['is_dry_run'] ?? false),
             'is_manual_settle' => (bool) ($payload['is_manual_settle'] ?? false),
             'is_manual_retry' => (bool) ($payload['is_manual_retry'] ?? false),
