@@ -69,6 +69,59 @@
     </b-form>
 </b-modal>
 
+@push('styles')
+    <style>
+        #addeditSource .select2-container--default .select2-selection--single {
+            height: calc(1.5em + .5rem + 2px);
+            min-height: calc(1.5em + .5rem + 2px);
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        #addeditSource .select2-container--default .select2-selection--single .select2-selection__rendered {
+            width: 100%;
+            padding-left: .5rem;
+            padding-right: 1.75rem;
+            line-height: normal;
+            display: flex !important;
+            align-items: center;
+            min-height: calc(1.5em + .5rem + 2px);
+            overflow: visible;
+        }
+
+        #addeditSource .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 100%;
+            right: .35rem;
+        }
+
+        #addeditSource .lotto-market-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        #addeditSource .lotto-market-option__logo {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        #addeditSource .lotto-market-option__text {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script type="module">
         window.sourceFormApp = new Vue({
@@ -83,6 +136,7 @@
                     sourceTypes: @json($sourceTypes ?? []),
                     httpMethods: @json($httpMethods ?? []),
                     sourceForm: this.newSourceForm(),
+                    isSyncingMarketSelect: false,
                 };
             },
             methods: {
@@ -114,6 +168,7 @@
                     if (!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && Object.keys(value).length === 0)) {
                         return '';
                     }
+
                     return JSON.stringify(value, null, 2);
                 },
                 addSourceModal() {
@@ -121,6 +176,7 @@
                     this.sourceFormMethod = 'add';
                     this.sourceForm = this.newSourceForm();
                     this.showSourceForm = true;
+
                     this.$nextTick(() => {
                         this.$refs.addeditSource.show();
                     });
@@ -128,8 +184,10 @@
                 async editSourceModal(id) {
                     this.sourceId = id;
                     this.sourceFormMethod = 'edit';
+
                     const response = await axios.post("{{ route('admin.lotto.result_sources.loaddata') }}", { id });
                     const item = response?.data?.data || {};
+
                     this.sourceForm = {
                         ...this.newSourceForm(),
                         ...item,
@@ -142,7 +200,9 @@
                         validation_config_json: this.toJsonText(item.validation_config_json),
                         retry_policy_json: this.toJsonText(item.retry_policy_json),
                     };
+
                     this.showSourceForm = true;
+
                     this.$nextTick(() => {
                         this.$refs.addeditSource.show();
                     });
@@ -155,8 +215,98 @@
                     this.destroyMarketSelect2();
                 },
                 onNativeMarketChange(event) {
+                    if (this.isSyncingMarketSelect) {
+                        return;
+                    }
+
                     const value = event?.target?.value || '';
                     this.sourceForm.market_id = value ? String(value) : '';
+                },
+                getMarketDropdownParent() {
+                    const modalRef = this.$refs.addeditSource;
+                    const modalEl = modalRef && modalRef.$el ? modalRef.$el : null;
+
+                    if (!modalEl || !window.jQuery) {
+                        return window.jQuery ? window.jQuery(document.body) : null;
+                    }
+
+                    const $modalEl = window.jQuery(modalEl);
+                    const $content = $modalEl.find('.modal-content');
+
+                    if ($content.length) {
+                        return $content;
+                    }
+
+                    const $dialog = $modalEl.find('.modal-dialog');
+                    if ($dialog.length) {
+                        return $dialog;
+                    }
+
+                    return $modalEl;
+                },
+                normalizeLogoUrl(rawUrl) {
+                    const value = String(rawUrl || '').trim();
+                    if (!value) {
+                        return '';
+                    }
+
+                    if (/^https?:\/\//i.test(value)) {
+                        return value;
+                    }
+
+                    if (value.startsWith('/')) {
+                        return `${window.location.origin}${value}`;
+                    }
+
+                    return `${window.location.origin}/${value}`;
+                },
+                resolveLogoFromState(state, $select) {
+                    if (state?.element) {
+                        const byDataset = state.element.dataset ? state.element.dataset.logo : '';
+                        if (byDataset) {
+                            return byDataset;
+                        }
+
+                        const byAttr = state.element.getAttribute ? state.element.getAttribute('data-logo') : '';
+                        if (byAttr) {
+                            return byAttr;
+                        }
+                    }
+
+                    if ($select && state?.id) {
+                        const $opt = $select.find('option[value="' + String(state.id) + '"]');
+                        if ($opt.length) {
+                            return String($opt.attr('data-logo') || '');
+                        }
+                    }
+
+                    return '';
+                },
+                renderMarketOption(state, $select) {
+                    if (!state.id) {
+                        return state.text || '';
+                    }
+
+                    const logoRaw = this.resolveLogoFromState(state, $select);
+                    const logo = this.normalizeLogoUrl(logoRaw);
+                    const text = String(state.text || '').trim();
+
+                    const $wrapper = window.jQuery('<span class="lotto-market-option"></span>');
+
+                    if (logo) {
+                        const $img = window.jQuery('<img class="lotto-market-option__logo" alt="">');
+                        $img.attr('src', logo);
+                        $img.on('error', function () {
+                            window.jQuery(this).remove();
+                        });
+                        $wrapper.append($img);
+                    }
+
+                    $wrapper.append(
+                        window.jQuery('<span class="lotto-market-option__text"></span>').text(text)
+                    );
+
+                    return $wrapper;
                 },
                 initMarketSelect2() {
                     const selectEl = this.$refs.marketSelect;
@@ -171,42 +321,39 @@
 
                     this.destroyMarketSelect2();
 
-                    const renderMarketOption = (state) => {
-                        if (!state.id) {
-                            return state.text;
-                        }
-
-                        const optionEl = state.element;
-                        const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
-                        const safeText = window.jQuery('<span/>').text(state.text || '').html();
-
-                        if (!logo) {
-                            return window.jQuery('<span>' + safeText + '</span>');
-                        }
-
-                        return window.jQuery(
-                            '<span style="display:flex;align-items:center;gap:8px;">'
-                            + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
-                            + '<span>' + safeText + '</span>'
-                            + '</span>'
-                        );
-                    };
+                    const dropdownParent = this.getMarketDropdownParent();
+                    const self = this;
 
                     $select.select2({
                         width: '100%',
-                        dropdownParent: window.jQuery(this.$refs.addeditSource.$el),
+                        dropdownParent: dropdownParent,
                         placeholder: '-- เลือกรายการหวย --',
                         allowClear: false,
-                        templateResult: renderMarketOption,
-                        templateSelection: renderMarketOption,
-                        escapeMarkup: function (markup) {
+                        templateResult(state) {
+                            return self.renderMarketOption(state, $select);
+                        },
+                        templateSelection(state) {
+                            return self.renderMarketOption(state, $select);
+                        },
+                        escapeMarkup(markup) {
                             return markup;
                         },
                     });
 
                     $select.on('change.resultSourceMarket', () => {
                         const value = $select.val();
-                        this.sourceForm.market_id = value ? String(value) : '';
+                        const normalizedValue = value ? String(value) : '';
+
+                        if (this.sourceForm.market_id === normalizedValue) {
+                            return;
+                        }
+
+                        this.isSyncingMarketSelect = true;
+                        this.sourceForm.market_id = normalizedValue;
+
+                        this.$nextTick(() => {
+                            this.isSyncingMarketSelect = false;
+                        });
                     });
                 },
                 destroyMarketSelect2() {
@@ -221,6 +368,7 @@
                     }
 
                     $select.off('.resultSourceMarket');
+
                     if ($select.hasClass('select2-hidden-accessible') && typeof $select.select2 === 'function') {
                         $select.select2('destroy');
                     }
@@ -233,16 +381,27 @@
 
                     const value = this.sourceForm.market_id ? String(this.sourceForm.market_id) : '';
                     const $select = window.jQuery(selectEl);
+
+                    if (String($select.val() || '') === value) {
+                        return;
+                    }
+
+                    this.isSyncingMarketSelect = true;
                     $select.val(value);
 
                     if ($select.hasClass('select2-hidden-accessible')) {
                         $select.trigger('change.select2');
                     }
+
+                    this.$nextTick(() => {
+                        this.isSyncingMarketSelect = false;
+                    });
                 },
                 async submitSourceForm() {
                     const url = this.sourceFormMethod === 'add'
                         ? "{{ route('admin.lotto.result_sources.create') }}"
                         : "{{ route('admin.lotto.result_sources.update') }}";
+
                     try {
                         const response = await axios.post(url, {
                             id: this.sourceId,
@@ -265,6 +424,7 @@
                         });
                     } catch (error) {
                         const message = error?.response?.data?.message || 'บันทึก source ไม่สำเร็จ';
+
                         await this.$bvModal.msgBoxOk(message, {
                             title: 'เกิดข้อผิดพลาด',
                             size: 'sm',
@@ -276,11 +436,18 @@
                 },
                 editSourceStatus(id, status) {
                     this.$bvModal.msgBoxConfirm('ต้องการเปลี่ยนสถานะ source หรือไม่?', {
-                        title: 'ยืนยัน', size: 'sm', buttonSize: 'sm',
-                        okVariant: 'danger', okTitle: 'ตกลง', cancelTitle: 'ยกเลิก',
+                        title: 'ยืนยัน',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'danger',
+                        okTitle: 'ตกลง',
+                        cancelTitle: 'ยกเลิก',
                         centered: true,
                     }).then(async (value) => {
-                        if (!value) return;
+                        if (!value) {
+                            return;
+                        }
+
                         try {
                             const response = await axios.post("{{ route('admin.lotto.result_sources.edit') }}", {
                                 id: id,
@@ -299,6 +466,7 @@
                             });
                         } catch (error) {
                             const message = error?.response?.data?.message || 'อัปเดตสถานะ source ไม่สำเร็จ';
+
                             await this.$bvModal.msgBoxOk(message, {
                                 title: 'เกิดข้อผิดพลาด',
                                 size: 'sm',
@@ -312,6 +480,10 @@
             },
             watch: {
                 'sourceForm.market_id'() {
+                    if (this.isSyncingMarketSelect) {
+                        return;
+                    }
+
                     this.$nextTick(() => this.syncMarketSelectValue());
                 },
             },
