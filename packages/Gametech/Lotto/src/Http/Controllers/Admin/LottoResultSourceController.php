@@ -481,22 +481,22 @@ class LottoResultSourceController extends AppBaseController
     private function buildPreviewPayload(array $payload): array
     {
         return [
-            'pipeline_version' => strtoupper((string) ($payload['pipeline_version'] ?? 'LEGACY')),
-            'fetch_strategy' => strtoupper((string) ($payload['fetch_strategy'] ?? 'JSON_HTTP')),
+            'pipeline_version' => strtoupper($this->stringValue($payload['pipeline_version'] ?? 'LEGACY')),
+            'fetch_strategy' => strtoupper($this->stringValue($payload['fetch_strategy'] ?? 'JSON_HTTP')),
             'fetch_config_json' => (array) ($this->parseJsonInput($payload['fetch_config_json'] ?? null, 'fetch_config_json') ?? []),
-            'endpoint_url' => (string) ($payload['endpoint_url'] ?? ''),
-            'http_method' => strtoupper((string) ($payload['http_method'] ?? 'GET')),
+            'endpoint_url' => $this->stringValue($payload['endpoint_url'] ?? ''),
+            'http_method' => strtoupper($this->stringValue($payload['http_method'] ?? 'GET')),
             'request_headers_json' => (array) ($this->parseJsonInput($payload['request_headers_json'] ?? null, 'request_headers_json') ?? []),
             'request_query_template_json' => (array) ($this->parseJsonInput($payload['request_query_template_json'] ?? null, 'request_query_template_json') ?? []),
             'request_body_template_json' => (array) ($this->parseJsonInput($payload['request_body_template_json'] ?? null, 'request_body_template_json') ?? []),
             'timeout_seconds' => (int) ($payload['timeout_seconds'] ?? 10),
-            'parser_type' => strtoupper((string) ($payload['parser_type'] ?? 'JSON_PATH')),
+            'parser_type' => strtoupper($this->stringValue($payload['parser_type'] ?? 'JSON_PATH')),
             'parser_config_json' => (array) ($this->parseJsonInput($payload['parser_config_json'] ?? null, 'parser_config_json') ?? []),
             'mapping_config_json' => (array) ($this->parseJsonInput($payload['mapping_config_json'] ?? null, 'mapping_config_json') ?? []),
             'selection_config_json' => (array) ($this->parseJsonInput($payload['selection_config_json'] ?? null, 'selection_config_json') ?? []),
             'validation_config_json' => (array) ($this->parseJsonInput($payload['validation_config_json'] ?? null, 'validation_config_json') ?? []),
             'readiness_config_json' => (array) ($this->parseJsonInput($payload['readiness_config_json'] ?? null, 'readiness_config_json') ?? []),
-            'selection_stage' => strtoupper((string) ($payload['selection_stage'] ?? 'POST_MAPPING')),
+            'selection_stage' => strtoupper($this->stringValue($payload['selection_stage'] ?? 'POST_MAPPING')),
             'supports_partial' => (bool) ($payload['supports_partial'] ?? false),
             'shadow_enabled' => (bool) ($payload['shadow_enabled'] ?? false),
             'cutover_enabled' => (bool) ($payload['cutover_enabled'] ?? false),
@@ -560,14 +560,14 @@ class LottoResultSourceController extends AppBaseController
         $source->forceFill([
             'id' => $source->id ?: $sourceId,
             'market_id' => (int) ($payload['market_id'] ?? $source->market_id),
-            'source_type' => (string) ($payload['source_type'] ?? $source->source_type ?? 'api'),
-            'endpoint_url' => (string) ($payload['endpoint_url'] ?? $source->endpoint_url ?? ''),
-            'http_method' => strtoupper((string) ($payload['http_method'] ?? $source->http_method ?? 'GET')),
+            'source_type' => $this->stringValue($payload['source_type'] ?? $source->source_type ?? 'api'),
+            'endpoint_url' => $this->stringValue($payload['endpoint_url'] ?? $source->endpoint_url ?? ''),
+            'http_method' => strtoupper($this->stringValue($payload['http_method'] ?? $source->http_method ?? 'GET')),
             'timeout_seconds' => (int) ($payload['timeout_seconds'] ?? $source->timeout_seconds ?? 10),
-            'parser_type' => strtoupper((string) ($payload['parser_type'] ?? $source->parser_type ?? 'JSON_PATH')),
-            'pipeline_version' => strtoupper((string) ($payload['pipeline_version'] ?? $source->pipeline_version ?? CompiledSourcePipelineData::VERSION_V2_CUTOVER)),
-            'fetch_strategy' => strtoupper((string) ($payload['fetch_strategy'] ?? $source->fetch_strategy ?? 'JSON_HTTP')),
-            'selection_stage' => strtoupper((string) ($payload['selection_stage'] ?? $source->selection_stage ?? 'POST_MAPPING')),
+            'parser_type' => strtoupper($this->stringValue($payload['parser_type'] ?? $source->parser_type ?? 'JSON_PATH')),
+            'pipeline_version' => strtoupper($this->stringValue($payload['pipeline_version'] ?? $source->pipeline_version ?? CompiledSourcePipelineData::VERSION_V2_CUTOVER)),
+            'fetch_strategy' => strtoupper($this->stringValue($payload['fetch_strategy'] ?? $source->fetch_strategy ?? 'JSON_HTTP')),
+            'selection_stage' => strtoupper($this->stringValue($payload['selection_stage'] ?? $source->selection_stage ?? 'POST_MAPPING')),
             'supports_partial' => (bool) ($payload['supports_partial'] ?? $source->supports_partial ?? false),
             'requires_browser' => (bool) ($payload['requires_browser'] ?? $source->requires_browser ?? false),
             'shadow_enabled' => (bool) ($payload['shadow_enabled'] ?? $source->shadow_enabled ?? false),
@@ -606,6 +606,21 @@ class LottoResultSourceController extends AppBaseController
         }
 
         return $draw;
+    }
+
+    private function stringValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $encoded === false ? '' : $encoded;
     }
 
     private function saveRevision(LottoResultSource $source, string $reason, ?CompiledSourcePipelineData $compiled = null): void

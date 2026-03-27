@@ -38,7 +38,7 @@ class V2ResultPipelineRunner
     public function run(LottoDraw $draw, LottoResultSource $source, CompiledSourcePipelineData $compiled, array $options = []): array
     {
         $expectedDrawDate = $options['expected_draw_date'] ?? optional($draw->draw_date)->format('Y-m-d');
-        $runId = (string) ($options['run_id'] ?? ('v2_' . $draw->id . '_' . now()->format('YmdHisv')));
+        $runId = $this->stringValue($options['run_id'] ?? ('v2_' . $draw->id . '_' . now()->format('YmdHisv')));
 
         $trace = [
             'run_id' => $runId,
@@ -65,11 +65,11 @@ class V2ResultPipelineRunner
         ];
 
         $fetch = $this->fetchExecutor->execute($compiled->fetch());
-        $trace['response_content_type'] = (string) ($fetch['response_content_type'] ?? '');
-        $trace['response_preview'] = mb_substr((string) ($fetch['response_body'] ?? ''), 0, 1000);
+        $trace['response_content_type'] = $this->stringValue($fetch['response_content_type'] ?? '');
+        $trace['response_preview'] = mb_substr($this->stringValue($fetch['response_body'] ?? ''), 0, 1000);
 
         if (! (bool) ($fetch['ok'] ?? false)) {
-            $status = (string) ($fetch['status'] ?? 'FETCH_FAILED');
+            $status = $this->stringValue($fetch['status'] ?? 'FETCH_FAILED');
             $trace['pipeline_stage'] = PipelineStage::FETCH;
             $trace['status'] = $status;
             $trace['final_decision'] = 'REJECTED';
@@ -78,24 +78,24 @@ class V2ResultPipelineRunner
 
             return [
                 'status' => $status,
-                'error_code' => (string) $trace['error_code'],
-                'error_stage' => (string) $trace['error_stage'],
+                'error_code' => $this->stringValue($trace['error_code']),
+                'error_stage' => $this->stringValue($trace['error_stage']),
                 'trace_json' => PipelineTraceNormalizer::normalize($trace),
                 'fetch' => $fetch,
             ];
         }
 
-        $extract = $this->extractExecutor->execute((string) ($fetch['response_body'] ?? ''), $compiled->parser());
+        $extract = $this->extractExecutor->execute($this->stringValue($fetch['response_body'] ?? ''), $compiled->parser());
         $trace['pipeline_stage'] = PipelineStage::PARSE;
         $trace['record_selector_match_count'] = (int) ($extract['record_selector_match_count'] ?? 0);
-        $trace['first_matched_block_preview'] = mb_substr((string) ($extract['first_matched_block_preview'] ?? ''), 0, 1000);
+        $trace['first_matched_block_preview'] = mb_substr($this->stringValue($extract['first_matched_block_preview'] ?? ''), 0, 1000);
         $trace['parsed_raw_fields'] = (array) (($extract['candidates'][0]['fields'] ?? []));
 
         $selection = $this->selectionExecutor->execute($extract, $compiled->selection(), [
             'expected_draw_date' => is_string($expectedDrawDate) ? $expectedDrawDate : null,
         ]);
         $trace['selection_result'] = $selection;
-        if ((string) ($selection['decision'] ?? '') !== 'selected') {
+        if ($this->stringValue($selection['decision'] ?? '') !== 'selected') {
             $trace['pipeline_stage'] = PipelineStage::SELECT;
             $trace['status'] = 'VALIDATION_ERROR';
             $trace['final_decision'] = 'REJECTED';
@@ -113,7 +113,7 @@ class V2ResultPipelineRunner
         }
 
         $compose = $this->normalizeComposeExecutor->execute((array) ($selection['selected_candidate'] ?? []), $compiled->mapping(), [
-            'expected_draw_date_field' => (string) ($compiled->validation()->expectedDrawDate()['field'] ?? 'draw_date'),
+            'expected_draw_date_field' => $this->stringValue($compiled->validation()->expectedDrawDate()['field'] ?? 'draw_date'),
         ]);
         $mapped = (array) ($compose['canonical_outcome'] ?? []);
         $trace['pipeline_stage'] = PipelineStage::MAP;
@@ -125,12 +125,12 @@ class V2ResultPipelineRunner
             $trace['pipeline_stage'] = PipelineStage::VALIDATE;
             $trace['status'] = 'VALIDATION_ERROR';
             $trace['final_decision'] = 'REJECTED';
-            $trace['error_code'] = (string) ($validation['error_code'] ?? 'REQUIRED_FIELD_MISSING');
+            $trace['error_code'] = $this->stringValue($validation['error_code'] ?? 'REQUIRED_FIELD_MISSING');
             $trace['error_stage'] = PipelineStage::VALIDATE;
 
             return [
                 'status' => 'VALIDATION_ERROR',
-                'error_code' => (string) $trace['error_code'],
+                'error_code' => $this->stringValue($trace['error_code']),
                 'error_stage' => PipelineStage::VALIDATE,
                 'trace_json' => PipelineTraceNormalizer::normalize($trace),
                 'validation' => $validation,
@@ -145,12 +145,12 @@ class V2ResultPipelineRunner
         if (! (bool) ($readiness['ready'] ?? false)) {
             $trace['status'] = 'NOT_READY';
             $trace['final_decision'] = 'REJECTED';
-            $trace['error_code'] = (string) ($readiness['error_code'] ?? 'NOT_READY_PARTIAL_RESULT');
+            $trace['error_code'] = $this->stringValue($readiness['error_code'] ?? 'NOT_READY_PARTIAL_RESULT');
             $trace['error_stage'] = PipelineStage::READINESS;
 
             return [
                 'status' => 'NOT_READY',
-                'error_code' => (string) $trace['error_code'],
+                'error_code' => $this->stringValue($trace['error_code']),
                 'error_stage' => PipelineStage::READINESS,
                 'trace_json' => PipelineTraceNormalizer::normalize($trace),
                 'readiness' => $readiness,
@@ -176,5 +176,20 @@ class V2ResultPipelineRunner
             'compose' => $compose,
             'readiness' => $readiness,
         ];
+    }
+
+    private function stringValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $encoded === false ? '' : $encoded;
     }
 }
