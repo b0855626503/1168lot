@@ -27,7 +27,7 @@ class LottoTicketController extends AppBaseController
             ->with('group:id,name,sort')
             ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'group_id', 'name'])
+            ->get(['id', 'group_id', 'name', 'logo', 'icon'])
             ->groupBy(static function (LotteryMarket $market): string {
                 return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
             })
@@ -37,6 +37,7 @@ class LottoTicketController extends AppBaseController
                     'options' => $markets->map(static fn (LotteryMarket $market): array => [
                         'value' => (int) $market->id,
                         'text' => (string) $market->name,
+                        'logo' => (string) ($market->logo ?: $market->icon ?: ''),
                     ])->values()->all(),
                 ];
             })

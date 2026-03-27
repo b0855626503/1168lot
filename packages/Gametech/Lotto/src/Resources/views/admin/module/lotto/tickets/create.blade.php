@@ -6,7 +6,10 @@
             @foreach(($marketOptions ?? []) as $group)
                 <optgroup label="{{ $group['label'] ?? '-' }}">
                     @foreach(($group['options'] ?? []) as $option)
-                        <option value="{{ $option['value'] }}">{{ $option['text'] }}</option>
+                        <option value="{{ $option['value'] }}"
+                                data-logo="{{ $option['logo'] ?? '' }}">
+                            {{ $option['text'] }}
+                        </option>
                     @endforeach
                 </optgroup>
             @endforeach

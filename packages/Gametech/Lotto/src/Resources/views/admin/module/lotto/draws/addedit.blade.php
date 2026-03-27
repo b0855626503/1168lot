@@ -796,25 +796,62 @@
 
                     this.destroyMarketSelect2();
 
+                    const normalizeLogoUrl = (rawUrl) => {
+                        const value = String(rawUrl || '').trim();
+                        if (!value) {
+                            return '';
+                        }
+
+                        if (/^https?:\/\//i.test(value)) {
+                            return value;
+                        }
+
+                        if (value.startsWith('/')) {
+                            return `${window.location.origin}${value}`;
+                        }
+
+                        return `${window.location.origin}/${value}`;
+                    };
+
+                    const resolveLogoFromState = (state) => {
+                        if (state?.element) {
+                            const byDataset = state.element.dataset ? state.element.dataset.logo : '';
+                            if (byDataset) {
+                                return byDataset;
+                            }
+
+                            const byAttr = state.element.getAttribute ? state.element.getAttribute('data-logo') : '';
+                            if (byAttr) {
+                                return byAttr;
+                            }
+                        }
+
+                        if (state?.id) {
+                            const $opt = $select.find('option[value="' + String(state.id) + '"]');
+                            if ($opt.length) {
+                                return String($opt.attr('data-logo') || '');
+                            }
+                        }
+
+                        return '';
+                    };
+
                     const renderMarketOption = (state) => {
                         if (!state.id) {
                             return state.text;
                         }
 
-                        const optionEl = state.element;
-                        const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
+                        const logo = normalizeLogoUrl(resolveLogoFromState(state));
                         const safeText = window.jQuery('<span/>').text(state.text || '').html();
 
                         if (!logo) {
-                            return window.jQuery('<span>' + safeText + '</span>');
+                            return '<span>' + safeText + '</span>';
                         }
 
-                        return window.jQuery(
-                            '<span style="display:flex;align-items:center;gap:8px;">'
+                        return '<span style="display:flex;align-items:center;gap:8px;">'
                             + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
                             + '<span>' + safeText + '</span>'
-                            + '</span>'
-                        );
+                            + '</span>';
                     };
 
                     $select.select2({
