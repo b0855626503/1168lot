@@ -80,6 +80,8 @@
   - preview config, validate config, validate cutover
 - ฟอร์ม admin ของ `auto-result-sources` ใช้โหมด V2-only:
   - มีแท็บ `Quick Setup` สำหรับผู้ใช้ทั่วไป กรอก URL + path หลัก แล้วระบบ generate pipeline JSON อัตโนมัติ
+  - ฟิลด์ที่แก้ได้จริงถูกรวมไว้ที่แท็บ `Quick Setup` (เช่น market/priority/timeout/lookup/offset/effective)
+  - แท็บ `ทั่วไป` ถูกปรับเป็นมุมมองสรุปแบบ read-only
   - มีช่องหลัก `Pipeline Config JSON (Single Source of Truth)` สำหรับตั้งค่ารวม
   - ตัดแท็บ `Pipeline` ออกจากหน้าแก้ไข เพื่อไม่ให้สับสนกับแท็บตั้งค่าหลัก
   - ปรับ label/tab/action ใน modal เป็นภาษาไทยและจัด layout 2 คอลัมน์ในโหมดตั้งค่าด่วนเพื่อให้อ่านง่ายขึ้น

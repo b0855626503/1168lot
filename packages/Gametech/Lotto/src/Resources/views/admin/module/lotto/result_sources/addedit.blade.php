@@ -4,33 +4,21 @@
             <b-tab title="ทั่วไป">
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="ตลาด">
-                            <select ref="marketSelect" class="form-control form-control-sm" required @change="onNativeMarketChange">
-                                <option value="">-- เลือกตลาด --</option>
-                                @foreach(($marketOptionsGrouped ?? []) as $group)
-                                    <optgroup label="{{ $group['label'] ?? '-' }}">
-                                        @foreach(($group['options'] ?? []) as $market)
-                                            <option value="{{ (string) ($market['value'] ?? '') }}"
-                                                    data-logo="{{ $market['logo'] ?? '' }}">
-                                                {{ $market['text'] ?? '-' }}
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">เลือกตลาดหวยที่ source นี้จะใช้ดึงผล</small>
+                        <b-form-group label="ตลาด (สรุป)">
+                            <b-form-input size="sm" :value="selectedMarketText" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="ลำดับความสำคัญ">
-                            <b-form-input size="sm" type="number" min="1" v-model="sourceForm.priority"></b-form-input>
-                            <small class="text-muted d-block mt-1">เลขน้อยทำงานก่อน ใช้จัดลำดับหลาย source</small>
+                        <b-form-group label="ลำดับความสำคัญ (สรุป)">
+                            <b-form-input size="sm" :value="sourceForm.priority" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="หมดเวลารอ (วินาที)">
-                            <b-form-input size="sm" type="number" min="1" max="60" v-model="sourceForm.timeout_seconds"></b-form-input>
-                            <small class="text-muted d-block mt-1">เวลารอ response จาก source ก่อนถือว่าล้มเหลว</small>
+                        <b-form-group label="หมดเวลารอ (สรุป)">
+                            <b-form-input size="sm" :value="sourceForm.timeout_seconds" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -62,15 +50,15 @@
 
                 <b-row>
                     <b-col md="8">
-                        <b-form-group label="โหมดอ้างอิงวันงวด">
-                            <b-form-select size="sm" :options="lookupDateModesLocalized" v-model="sourceForm.lookup_date_mode"></b-form-select>
-                            <small class="text-muted d-block mt-1">กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request</small>
+                        <b-form-group label="โหมดอ้างอิงวันงวด (สรุป)">
+                            <b-form-input size="sm" :value="lookupModeLabel(sourceForm.lookup_date_mode)" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
-                        <b-form-group label="เลื่อนวัน (วัน)">
-                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="sourceForm.lookup_date_offset_days"></b-form-input>
-                            <small class="text-muted d-block mt-1">เลื่อนวันงวดจากฐาน เช่น -1 คือวันก่อนหน้า</small>
+                        <b-form-group label="เลื่อนวัน (สรุป)">
+                            <b-form-input size="sm" :value="sourceForm.lookup_date_offset_days" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -78,14 +66,14 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="เริ่มใช้งานตั้งแต่ (Y-m-d H:i:s)">
-                            <b-form-input size="sm" v-model="sourceForm.effective_from"></b-form-input>
-                            <small class="text-muted d-block mt-1">วันเริ่มใช้งาน source นี้ (ว่างได้)</small>
+                            <b-form-input size="sm" :value="sourceForm.effective_from" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
                         <b-form-group label="สิ้นสุดใช้งาน (Y-m-d H:i:s)">
-                            <b-form-input size="sm" v-model="sourceForm.effective_to"></b-form-input>
-                            <small class="text-muted d-block mt-1">วันสิ้นสุดใช้งาน source นี้ (ว่างได้)</small>
+                            <b-form-input size="sm" :value="sourceForm.effective_to" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -98,14 +86,59 @@
 
                 <b-row>
                     <b-col md="6">
+                        <b-form-group label="ตลาด">
+                            <b-form-select size="sm" :options="marketSelectOptions" v-model="sourceForm.market_id"></b-form-select>
+                            <small class="text-muted d-block mt-1">เลือกตลาดหวยที่ source นี้จะใช้ดึงผล</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="ลำดับความสำคัญ">
+                            <b-form-input size="sm" type="number" min="1" v-model="sourceForm.priority"></b-form-input>
+                            <small class="text-muted d-block mt-1">เลขน้อยทำงานก่อน ใช้จัดลำดับหลาย source</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="หมดเวลารอ (วินาที)">
+                            <b-form-input size="sm" type="number" min="1" max="60" v-model="sourceForm.timeout_seconds"></b-form-input>
+                            <small class="text-muted d-block mt-1">เวลารอ response จาก source ก่อนถือว่าล้มเหลว</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="โหมดอ้างอิงวันงวด">
+                            <b-form-select size="sm" :options="lookupDateModesLocalized" v-model="sourceForm.lookup_date_mode"></b-form-select>
+                            <small class="text-muted d-block mt-1">กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request</small>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เลื่อนวัน (วัน)">
+                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="sourceForm.lookup_date_offset_days"></b-form-input>
+                            <small class="text-muted d-block mt-1">เลื่อนวันงวดจากฐาน เช่น -1 คือวันก่อนหน้า</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
                         <b-form-group label="URL ผลหวย">
                             <b-form-input size="sm" v-model="sourceForm.quick_endpoint_url" placeholder="https://example.com/result"></b-form-input>
                             <small class="text-muted d-block mt-1">ลิงก์ API/เว็บที่ระบบจะดึงข้อมูล</small>
                         </b-form-group>
                     </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เริ่มใช้งานตั้งแต่ (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="sourceForm.effective_from"></b-form-input>
+                            <small class="text-muted d-block mt-1">วันเริ่มใช้งาน source นี้ (ว่างได้)</small>
+                        </b-form-group>
+                    </b-col>
                     <b-col md="6">
                         <b-form-group label="วิธีเรียก API">
-                            <b-form-select size="sm" v-model="sourceForm.quick_http_method" :options="httpMethods"></b-form-select>
+                            <b-form-select size="sm" v-model="sourceForm.quick_http_method" :options="httpMethodsLocalized"></b-form-select>
                             <small class="text-muted d-block mt-1">ส่วนใหญ่ใช้ GET</small>
                         </b-form-group>
                     </b-col>
@@ -113,15 +146,33 @@
 
                 <b-row>
                     <b-col md="6">
+                        <b-form-group label="สิ้นสุดใช้งาน (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="sourceForm.effective_to"></b-form-input>
+                            <small class="text-muted d-block mt-1">วันสิ้นสุดใช้งาน source นี้ (ว่างได้)</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
                         <b-form-group label="Path ของวันที่">
                             <b-form-input size="sm" v-model="sourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
                             <small class="text-muted d-block mt-1">JSONPath ของวันที่ในผลลัพธ์</small>
                         </b-form-group>
                     </b-col>
+                </b-row>
+
+                <b-row>
                     <b-col md="6">
                         <b-form-group label="รูปแบบวันที่ต้นทาง">
                             <b-form-select size="sm" v-model="sourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
                             <small class="text-muted d-block mt-1">เช่น <code>d/m/Y</code> หรือ <code>Y-m-d</code></small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="ตัวเลือกเพิ่มเติม">
+                            <div class="pt-1">
+                                <b-form-checkbox v-model="sourceForm.supports_partial" switch class="mb-1">ยอมรับผลไม่ครบ (Partial)</b-form-checkbox>
+                                <b-form-checkbox v-model="sourceForm.requires_browser" switch>ใช้ Browser Worker</b-form-checkbox>
+                            </div>
+                            <small class="text-muted d-block mt-1">เปิดเฉพาะกรณี source นี้ต้องใช้เงื่อนไขพิเศษ</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -165,11 +216,10 @@
             <b-tab title="JSON หลัก">
                 <b-form-group label="Pipeline Config JSON (จุดตั้งค่าหลักช่องเดียว)">
                     <div class="d-flex flex-wrap justify-content-between align-items-start mb-1 unified-header-row">
-                        <small class="text-muted unified-header-note">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติก่อน preview/validate/save</small>
+                        <small class="text-muted unified-header-note">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติทุกครั้งก่อนพรีวิว/ตรวจสอบ/บันทึก (ไม่ต้องกดนำค่าไปใช้ก่อน)</small>
                         <div class="d-flex flex-wrap unified-header-actions">
                             <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1 json-action-btn" @click="applyJsonExample('unified_pipeline_json')">ใส่ตัวอย่าง</button>
                             <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1 json-action-btn" @click="syncUnifiedFromForm">รีเฟรชค่าปัจจุบัน</button>
-                            <button type="button" class="btn btn-outline-primary btn-xs mb-1 json-action-btn" @click="applyUnifiedToForm">นำค่าไปใช้</button>
                         </div>
                     </div>
                     <b-form-textarea rows="16" v-model="sourceForm.unified_pipeline_json"></b-form-textarea>
@@ -211,55 +261,6 @@
 
 @push('styles')
     <style>
-        #addeditSource .select2-container--default .select2-selection--single {
-            height: calc(1.5em + .5rem + 2px);
-            min-height: calc(1.5em + .5rem + 2px);
-            padding: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        #addeditSource .select2-container--default .select2-selection--single .select2-selection__rendered {
-            width: 100%;
-            padding-left: .5rem;
-            padding-right: 1.75rem;
-            line-height: normal;
-            display: flex !important;
-            align-items: center;
-            min-height: calc(1.5em + .5rem + 2px);
-            overflow: visible;
-        }
-
-        #addeditSource .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 100%;
-            right: .35rem;
-        }
-
-        .select2-container .lotto-market-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-        }
-
-        .select2-container .lotto-market-option__logo {
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-        }
-
-        .select2-container .lotto-market-option__text {
-            display: block;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
         #addeditSource .btn-xs {
             font-size: 11px;
             line-height: 1.2;
@@ -280,11 +281,15 @@
         }
 
         #addeditSource .form-group {
-            margin-bottom: .75rem;
+            margin-bottom: 1rem;
         }
 
         #addeditSource small.text-muted.d-block.mt-1 {
-            min-height: 18px;
+            display: block;
+            min-height: 34px;
+            line-height: 1.25;
+            margin-top: .35rem !important;
+            word-break: break-word;
         }
 
         #addeditSource .unified-header-row {
@@ -353,12 +358,9 @@
             font-weight: 600;
         }
     </style>
-    <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endpush
 
 @push('scripts')
-    <script src="{{ asset('vendor/select2/js/select2.full.min.js') }}"></script>
     <script type="module">
         window.sourceFormApp = new Vue({
             el: '#app',
@@ -368,6 +370,7 @@
                     activeSourceTab: 0,
                     sourceFormMethod: 'add',
                     sourceId: null,
+                    marketOptionsGrouped: @json($marketOptionsGrouped ?? []),
                     lookupDateModes: @json($lookupDateModes ?? []),
                     quickDateFormats: [
                         { value: 'd/m/Y', text: 'd/m/Y (เช่น 27/03/2026)' },
@@ -427,6 +430,56 @@
                         };
                     });
                 },
+                marketSelectOptions() {
+                    const groups = Array.isArray(this.marketOptionsGrouped) ? this.marketOptionsGrouped : [];
+                    const optionGroups = groups.map((group) => ({
+                        label: String(group?.label || '-'),
+                        options: Array.isArray(group?.options)
+                            ? group.options.map((market) => ({
+                                value: String(market?.value ?? ''),
+                                text: String(market?.text ?? '-'),
+                            }))
+                            : [],
+                    }));
+
+                    return [
+                        { value: '', text: '-- เลือกตลาด --' },
+                        ...optionGroups,
+                    ];
+                },
+                selectedMarketText() {
+                    const marketId = String(this.sourceForm.market_id || '');
+                    if (!marketId) {
+                        return '';
+                    }
+
+                    const groups = Array.isArray(this.marketOptionsGrouped) ? this.marketOptionsGrouped : [];
+                    for (const group of groups) {
+                        const options = Array.isArray(group?.options) ? group.options : [];
+                        const found = options.find((market) => String(market?.value ?? '') === marketId);
+                        if (found) {
+                            return String(found?.text ?? marketId);
+                        }
+                    }
+
+                    return marketId;
+                },
+                httpMethodsLocalized() {
+                    const list = Array.isArray(this.httpMethods) ? this.httpMethods : [];
+                    return list.map((item) => {
+                        if (item && typeof item === 'object') {
+                            const value = String(item.value ?? item.id ?? item.key ?? '');
+                            return {
+                                ...item,
+                                value,
+                                text: value === 'GET' ? 'GET (แนะนำ)' : String(item.text ?? item.label ?? value),
+                            };
+                        }
+
+                        const raw = String(item || '').toUpperCase();
+                        return { value: raw, text: raw === 'GET' ? 'GET (แนะนำ)' : raw };
+                    });
+                },
                 parsedUnifiedConfig() {
                     return this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
                 },
@@ -456,6 +509,11 @@
                 },
             },
             methods: {
+                lookupModeLabel(mode) {
+                    const value = String(mode || '');
+                    const found = this.lookupDateModesLocalized.find((item) => String(item.value || '') === value);
+                    return found ? String(found.text || value) : value;
+                },
                 buildJsonExamples() {
                     const unifiedStarter = {
                         request_headers_json: {
