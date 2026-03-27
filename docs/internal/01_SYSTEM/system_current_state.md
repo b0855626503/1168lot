@@ -82,6 +82,7 @@
   - มีแท็บ `Quick Setup` สำหรับผู้ใช้ทั่วไป กรอก URL + path หลัก แล้วระบบ generate pipeline JSON อัตโนมัติ
   - มีช่องหลัก `Pipeline Config JSON (Single Source of Truth)` สำหรับตั้งค่ารวม
   - ตัดแท็บ `Pipeline` ออกจากหน้าแก้ไข เพื่อไม่ให้สับสนกับแท็บตั้งค่าหลัก
+  - ปรับ label/tab/action ใน modal เป็นภาษาไทยและจัด layout 2 คอลัมน์ในโหมดตั้งค่าด่วนเพื่อให้อ่านง่ายขึ้น
   - ระบบ sync/แตกค่าไป field ย่อยอัตโนมัติก่อน preview/validate/save
   - ซ่อนช่อง JSON ย่อยจากหน้า form หลักเพื่อลดการกรอกซ้ำและลดความสับสนของผู้ใช้
   - derive ค่า legacy-required fields (`endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`) จาก JSON config อัตโนมัติก่อน preview/validate/save

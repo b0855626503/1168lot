@@ -22,13 +22,13 @@
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="Priority">
+                        <b-form-group label="ลำดับความสำคัญ">
                             <b-form-input size="sm" type="number" min="1" v-model="sourceForm.priority"></b-form-input>
                             <small class="text-muted d-block mt-1">เลขน้อยทำงานก่อน ใช้จัดลำดับหลาย source</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="Timeout (sec)">
+                        <b-form-group label="หมดเวลารอ (วินาที)">
                             <b-form-input size="sm" type="number" min="1" max="60" v-model="sourceForm.timeout_seconds"></b-form-input>
                             <small class="text-muted d-block mt-1">เวลารอ response จาก source ก่อนถือว่าล้มเหลว</small>
                         </b-form-group>
@@ -41,34 +41,34 @@
 
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="Derived Endpoint URL">
+                        <b-form-group label="URL ปลายทาง (สรุป)">
                             <b-form-input size="sm" :value="derivedEndpointUrl" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Quick Setup</code> หรือ <code>Configs JSON</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code> หรือ <code>JSON หลัก</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="Derived HTTP Method">
+                        <b-form-group label="วิธีเรียก API (สรุป)">
                             <b-form-input size="sm" :value="derivedHttpMethod" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Quick Setup</code> หรือ <code>Configs JSON</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code> หรือ <code>JSON หลัก</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
-                        <b-form-group label="Derived Parser Type">
+                        <b-form-group label="ชนิด Parser (สรุป)">
                             <b-form-input size="sm" :value="derivedParserType" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Configs JSON</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>JSON หลัก</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
 
                 <b-row>
                     <b-col md="8">
-                        <b-form-group label="Lookup Date Mode">
-                            <b-form-select size="sm" :options="lookupDateModes" v-model="sourceForm.lookup_date_mode"></b-form-select>
+                        <b-form-group label="โหมดอ้างอิงวันงวด">
+                            <b-form-select size="sm" :options="lookupDateModesLocalized" v-model="sourceForm.lookup_date_mode"></b-form-select>
                             <small class="text-muted d-block mt-1">กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
-                        <b-form-group label="Offset Days">
+                        <b-form-group label="เลื่อนวัน (วัน)">
                             <b-form-input size="sm" type="number" min="-365" max="365" v-model="sourceForm.lookup_date_offset_days"></b-form-input>
                             <small class="text-muted d-block mt-1">เลื่อนวันงวดจากฐาน เช่น -1 คือวันก่อนหน้า</small>
                         </b-form-group>
@@ -77,13 +77,13 @@
 
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="Effective From (Y-m-d H:i:s)">
+                        <b-form-group label="เริ่มใช้งานตั้งแต่ (Y-m-d H:i:s)">
                             <b-form-input size="sm" v-model="sourceForm.effective_from"></b-form-input>
                             <small class="text-muted d-block mt-1">วันเริ่มใช้งาน source นี้ (ว่างได้)</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Effective To (Y-m-d H:i:s)">
+                        <b-form-group label="สิ้นสุดใช้งาน (Y-m-d H:i:s)">
                             <b-form-input size="sm" v-model="sourceForm.effective_to"></b-form-input>
                             <small class="text-muted d-block mt-1">วันสิ้นสุดใช้งาน source นี้ (ว่างได้)</small>
                         </b-form-group>
@@ -91,20 +91,20 @@
                 </b-row>
             </b-tab>
 
-            <b-tab title="Quick Setup">
+            <b-tab title="ตั้งค่าด่วน">
                 <b-alert show variant="success" class="py-2">
-                    โหมดง่าย: กรอกข้อมูลพื้นฐาน แล้วกด <strong>Generate Pipeline JSON</strong> ระบบจะสร้าง config ให้ทันที
+                    โหมดง่าย: กรอกข้อมูลพื้นฐาน แล้วกด <strong>สร้าง JSON อัตโนมัติ</strong> ระบบจะสร้าง config ให้ทันที
                 </b-alert>
 
                 <b-row>
-                    <b-col md="8">
+                    <b-col md="6">
                         <b-form-group label="URL ผลหวย">
                             <b-form-input size="sm" v-model="sourceForm.quick_endpoint_url" placeholder="https://example.com/result"></b-form-input>
                             <small class="text-muted d-block mt-1">ลิงก์ API/เว็บที่ระบบจะดึงข้อมูล</small>
                         </b-form-group>
                     </b-col>
-                    <b-col md="4">
-                        <b-form-group label="HTTP Method">
+                    <b-col md="6">
+                        <b-form-group label="วิธีเรียก API">
                             <b-form-select size="sm" v-model="sourceForm.quick_http_method" :options="httpMethods"></b-form-select>
                             <small class="text-muted d-block mt-1">ส่วนใหญ่ใช้ GET</small>
                         </b-form-group>
@@ -127,13 +127,13 @@
                 </b-row>
 
                 <b-row>
-                    <b-col md="8">
+                    <b-col md="6">
                         <b-form-group label="Path ของรางวัลที่ 1">
                             <b-form-input size="sm" v-model="sourceForm.quick_first_prize_paths" placeholder="$.results.prize_1st หรือ $.lotto_2,$.lotto_3,$.lotto_4"></b-form-input>
                             <small class="text-muted d-block mt-1">ถ้าต้องต่อหลายช่อง ให้คั่นด้วย comma</small>
                         </b-form-group>
                     </b-col>
-                    <b-col md="4">
+                    <b-col md="6">
                         <b-form-group label="เก็บท้ายกี่หลัก (รางวัลที่ 1)">
                             <b-form-input size="sm" type="number" min="1" max="10" v-model="sourceForm.quick_first_prize_take_right"></b-form-input>
                             <small class="text-muted d-block mt-1">ปกติใช้ 3</small>
@@ -142,13 +142,13 @@
                 </b-row>
 
                 <b-row>
-                    <b-col md="8">
+                    <b-col md="6">
                         <b-form-group label="Path ของเลขท้าย 2 ตัว">
                             <b-form-input size="sm" v-model="sourceForm.quick_last2_paths" placeholder="$.results.prize_2nd หรือ $.lotto_1,$.lotto_2"></b-form-input>
                             <small class="text-muted d-block mt-1">ถ้าต้องต่อหลายช่อง ให้คั่นด้วย comma</small>
                         </b-form-group>
                     </b-col>
-                    <b-col md="4">
+                    <b-col md="6">
                         <b-form-group label="เก็บท้ายกี่หลัก (เลขท้าย)">
                             <b-form-input size="sm" type="number" min="1" max="10" v-model="sourceForm.quick_last2_take_right"></b-form-input>
                             <small class="text-muted d-block mt-1">ปกติใช้ 2</small>
@@ -157,19 +157,19 @@
                 </b-row>
 
                 <div class="d-flex flex-wrap quick-setup-actions">
-                    <button type="button" class="btn btn-primary btn-sm mr-2 mb-2" @click="generateQuickPipelineJson">Generate Pipeline JSON</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm mb-2" @click="applyQuickPresetLaosVip">Preset: Laos VIP</button>
+                    <button type="button" class="btn btn-primary btn-sm quick-action-btn mr-2 mb-2" @click="generateQuickPipelineJson">สร้าง JSON อัตโนมัติ</button>
+                    <button type="button" class="btn btn-secondary btn-sm quick-action-btn mb-2" @click="applyQuickPresetLaosVip">ตั้งค่าอัตโนมัติ: Laos VIP</button>
                 </div>
             </b-tab>
 
-            <b-tab title="Configs JSON">
-                <b-form-group label="Pipeline Config JSON (Single Source of Truth)">
+            <b-tab title="JSON หลัก">
+                <b-form-group label="Pipeline Config JSON (จุดตั้งค่าหลักช่องเดียว)">
                     <div class="d-flex flex-wrap justify-content-between align-items-start mb-1 unified-header-row">
                         <small class="text-muted unified-header-note">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติก่อน preview/validate/save</small>
                         <div class="d-flex flex-wrap unified-header-actions">
-                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyJsonExample('unified_pipeline_json')">Insert Starter</button>
-                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="syncUnifiedFromForm">Refresh From Current</button>
-                            <button type="button" class="btn btn-outline-primary btn-xs mb-1" @click="applyUnifiedToForm">Apply To Fields</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1 json-action-btn" @click="applyJsonExample('unified_pipeline_json')">ใส่ตัวอย่าง</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1 json-action-btn" @click="syncUnifiedFromForm">รีเฟรชค่าปัจจุบัน</button>
+                            <button type="button" class="btn btn-outline-primary btn-xs mb-1 json-action-btn" @click="applyUnifiedToForm">นำค่าไปใช้</button>
                         </div>
                     </div>
                     <b-form-textarea rows="16" v-model="sourceForm.unified_pipeline_json"></b-form-textarea>
@@ -183,16 +183,16 @@
                 </b-alert>
             </b-tab>
 
-            <b-tab title="Governance">
+            <b-tab title="ประวัติการเปลี่ยนแปลง">
                 <b-row>
                     <b-col md="8">
-                        <b-form-group label="Revision Reason">
+                        <b-form-group label="เหตุผลการแก้ไข">
                             <b-form-input size="sm" v-model="sourceForm.revision_reason" placeholder="เหตุผลการเปลี่ยนแปลง"></b-form-input>
                             <small class="text-muted d-block mt-1">อธิบายว่าปรับ config เพราะอะไร เพื่อเก็บประวัติ revision</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="4" class="d-flex align-items-end">
-                        <small class="text-muted mb-3">แนะนำให้กด Preview และ Validate ทุกครั้งก่อนบันทึกหรือ cutover</small>
+                        <small class="text-muted mb-3">แนะนำให้กด พรีวิว + ตรวจสอบค่า ก่อนบันทึกหรือเปิดใช้งานจริงทุกครั้ง</small>
                     </b-col>
                 </b-row>
             </b-tab>
@@ -200,11 +200,11 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-center action-bar">
             <div class="d-flex flex-wrap action-bar-left">
-                <button type="button" class="btn btn-outline-primary btn-sm mr-1 mb-2" @click="previewSourceConfig">Preview Config</button>
-                <button type="button" class="btn btn-outline-info btn-sm mr-1 mb-2" @click="validateSourceConfig">Validate Config</button>
-                <button type="button" class="btn btn-outline-warning btn-sm mb-2" @click="validateSourceCutover">Validate Cutover</button>
+                <button type="button" class="btn btn-primary btn-sm mr-1 mb-2 action-main-btn" @click="previewSourceConfig">พรีวิว</button>
+                <button type="button" class="btn btn-info btn-sm mr-1 mb-2 action-main-btn text-white" @click="validateSourceConfig">ตรวจสอบค่า</button>
+                <button type="button" class="btn btn-warning btn-sm mb-2 action-main-btn" @click="validateSourceCutover">ตรวจสอบก่อนเปิดใช้งานจริง</button>
             </div>
-            <button type="submit" class="btn btn-success btn-sm mb-2 action-bar-save">บันทึก</button>
+            <button type="submit" class="btn btn-success btn-sm mb-2 action-bar-save action-main-btn">บันทึก</button>
         </div>
     </b-form>
 </b-modal>
@@ -266,6 +266,19 @@
             padding: 2px 8px;
         }
 
+        #addeditSource .nav-tabs .nav-link {
+            border-radius: .4rem .4rem 0 0;
+            font-weight: 600;
+            color: #4b5563;
+            padding: .45rem .75rem;
+        }
+
+        #addeditSource .nav-tabs .nav-link.active {
+            color: #0f4c81;
+            background: #eef6ff;
+            border-color: #bfdcff #bfdcff #eef6ff;
+        }
+
         #addeditSource .form-group {
             margin-bottom: .75rem;
         }
@@ -288,17 +301,41 @@
             gap: 0;
         }
 
+        #addeditSource .json-action-btn {
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+            min-height: 26px;
+            min-width: 118px;
+            text-align: center;
+        }
+
         #addeditSource .quick-setup-actions {
             gap: 0;
+            width: 100%;
+        }
+
+        #addeditSource .quick-action-btn {
+            flex: 1 1 220px;
+            min-height: 36px;
+            font-weight: 600;
         }
 
         #addeditSource .action-bar {
             gap: 8px;
             margin-top: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 10px 4px;
         }
 
         #addeditSource .action-bar-left {
             gap: 0;
+        }
+
+        #addeditSource .action-main-btn {
+            min-height: 34px;
+            font-weight: 600;
         }
 
         @media (max-width: 767.98px) {
@@ -352,6 +389,43 @@
             computed: {
                 isRiskyCutover() {
                     return this.sourceForm.pipeline_version === 'V2_CUTOVER' || !!this.sourceForm.cutover_enabled;
+                },
+                lookupDateModesLocalized() {
+                    const labelMap = {
+                        ROUND_DATE: 'วันงวดที่ระบบกำลังประมวลผล',
+                        TODAY: 'วันปัจจุบัน',
+                        YESTERDAY: 'วันก่อนหน้า',
+                        TOMORROW: 'วันถัดไป',
+                    };
+
+                    if (!Array.isArray(this.lookupDateModes)) {
+                        if (this.lookupDateModes && typeof this.lookupDateModes === 'object') {
+                            return Object.keys(this.lookupDateModes).map((key) => ({
+                                value: key,
+                                text: labelMap[key] || String(this.lookupDateModes[key] || key),
+                            }));
+                        }
+
+                        return [];
+                    }
+
+                    return this.lookupDateModes.map((item) => {
+                        if (item && typeof item === 'object') {
+                            const value = item.value ?? item.id ?? item.key ?? '';
+                            const fallbackText = item.text ?? item.label ?? String(value);
+                            return {
+                                ...item,
+                                value,
+                                text: labelMap[value] || fallbackText,
+                            };
+                        }
+
+                        const raw = String(item || '');
+                        return {
+                            value: raw,
+                            text: labelMap[raw] || raw,
+                        };
+                    });
                 },
                 parsedUnifiedConfig() {
                     return this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
@@ -709,7 +783,7 @@
                     try {
                         const endpointUrl = String(this.sourceForm.quick_endpoint_url || '').trim();
                         if (endpointUrl === '') {
-                            throw new Error('กรุณาใส่ URL ผลหวยใน Quick Setup');
+                            throw new Error('กรุณาใส่ URL ผลหวยในแท็บตั้งค่าด่วน');
                         }
 
                         const drawDatePath = String(this.sourceForm.quick_draw_date_path || '').trim();
@@ -820,7 +894,7 @@
                     } catch (error) {
                         const message = error?.message || 'สร้าง Pipeline Config ไม่สำเร็จ';
                         this.$bvModal.msgBoxOk(message, {
-                            title: 'Quick Setup',
+                            title: 'ตั้งค่าด่วน',
                             size: 'sm',
                             buttonSize: 'sm',
                             okVariant: 'danger',
@@ -1180,13 +1254,13 @@
                     }
                 },
                 async previewSourceConfig() {
-                    await this.callConfigAction("{{ route('admin.lotto.result_sources.preview_config') }}", 'Preview สำเร็จ');
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.preview_config') }}", 'พรีวิวสำเร็จ');
                 },
                 async validateSourceConfig() {
-                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_config') }}", 'Validation สำเร็จ');
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_config') }}", 'ตรวจสอบค่าสำเร็จ');
                 },
                 async validateSourceCutover() {
-                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_cutover') }}", 'Cutover validation สำเร็จ');
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_cutover') }}", 'ตรวจสอบก่อนเปิดใช้งานจริงสำเร็จ');
                 },
                 editSourceStatus(id, status) {
                     this.$bvModal.msgBoxConfirm('ต้องการเปลี่ยนสถานะ source หรือไม่?', {

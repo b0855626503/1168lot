@@ -127,3 +127,4 @@
 - ก่อน preview/validate/save ระบบยัง split/derive ไป field ย่อยอัตโนมัติเพื่อคง backend contract เดิม
 - เพิ่มแท็บ `Quick Setup` สำหรับ generate config อัตโนมัติจาก input สั้น ๆ และมี preset สำเร็จรูป
 - ยกเลิกแท็บ `Pipeline` ในหน้า UI เพื่อลด field ซ้ำซ้อนและลด cognitive load ของผู้ใช้
+- ปรับ label/tab/action เป็นภาษาไทย และจัด layout ของ `ตั้งค่าด่วน` เป็น 2 คอลัมน์สมมาตร พร้อมปรับปุ่ม action ให้มองเห็นชัดขึ้น
