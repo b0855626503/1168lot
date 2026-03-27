@@ -73,18 +73,32 @@ class ResultComposer
         foreach (['mapping_config', 'mapping_config_json'] as $key) {
             $value = data_get($context, $key);
             if (is_array($value) && $value !== []) {
-                return $value;
+                return $this->unwrapMappingFields($value);
             }
         }
 
         foreach (['mapping_config_json', 'mapping_config', 'fields'] as $key) {
             $value = data_get($sourceConfig, $key);
             if (is_array($value) && $value !== []) {
-                return $value;
+                return $this->unwrapMappingFields($value);
             }
         }
 
         return [];
+    }
+
+    /**
+     * @param array<string,mixed> $mappingConfig
+     * @return array<string,mixed>
+     */
+    private function unwrapMappingFields(array $mappingConfig): array
+    {
+        $fields = data_get($mappingConfig, 'fields');
+        if (is_array($fields) && $fields !== []) {
+            return $fields;
+        }
+
+        return $mappingConfig;
     }
 
     /**
