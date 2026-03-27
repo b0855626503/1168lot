@@ -410,7 +410,7 @@
     </b-tabs>
 </b-modal>
 
-@push('css')
+@push('styles')
     <style>
         .member-list-table th,
         .member-list-table td {
