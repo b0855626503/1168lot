@@ -29,14 +29,43 @@ class LottoResultSourceController extends AppBaseController
             ->with('group:id,name')
             ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'group_id', 'name'])
+            ->get(['id', 'group_id', 'name', 'logo'])
             ->map(static function (LotteryMarket $market): array {
                 return [
                     'value' => (int) $market->id,
                     'group_id' => (int) $market->group_id,
                     'text' => (string) $market->name,
                     'group' => (string) optional($market->group)->name,
+                    'logo' => (string) ($market->logo ?? ''),
                 ];
+            })
+            ->values()
+            ->toArray();
+
+        $marketOptionsGrouped = LotteryGroup::query()
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->with(['markets' => function ($query): void {
+                $query->orderBy('name');
+            }])
+            ->get(['id', 'name'])
+            ->map(static function (LotteryGroup $group): array {
+                return [
+                    'label' => (string) $group->name,
+                    'options' => collect($group->markets ?? [])
+                        ->map(static function (LotteryMarket $market): array {
+                            return [
+                                'value' => (int) $market->id,
+                                'text' => (string) $market->name,
+                                'logo' => (string) ($market->logo ?? ''),
+                            ];
+                        })
+                        ->values()
+                        ->toArray(),
+                ];
+            })
+            ->filter(static function (array $group): bool {
+                return ! empty($group['options']);
             })
             ->values()
             ->toArray();
@@ -56,6 +85,7 @@ class LottoResultSourceController extends AppBaseController
 
         return $dataTable->render($this->_config['view'], [
             'marketOptions' => $marketOptions,
+            'marketOptionsGrouped' => $marketOptionsGrouped,
             'groupOptions' => $groupOptions,
             'lookupDateModes' => [
                 'ROUND_DATE',

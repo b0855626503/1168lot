@@ -1,13 +1,15 @@
-<b-modal ref="addeditSource" id="addeditSource" centered size="lg" title="ตั้งค่า Auto Result Source" :hide-footer="true">
+<b-modal ref="addeditSource" id="addeditSource" centered size="lg" title="ตั้งค่า Auto Result Source" :hide-footer="true" @shown="onModalShown" @hidden="onModalHidden">
     <b-form v-if="showSourceForm" @submit.prevent="submitSourceForm">
         <b-row>
             <b-col md="6">
                 <b-form-group label="ตลาด">
-                    <select class="form-control form-control-sm" v-model="sourceForm.market_id" required>
+                    <select ref="marketSelect" class="form-control form-control-sm" required @change="onNativeMarketChange">
                         <option value="">-- เลือกตลาด --</option>
-                        <option v-for="market in sourceMarketOptions" :key="market.value" :value="String(market.value)">
-                            @{{ market.text }} (@{{ market.group || '-' }})
-                        </option>
+                        <optgroup v-for="group in sourceMarketOptionsGrouped" :key="group.label" :label="group.label">
+                            <option v-for="market in group.options" :key="market.value" :value="String(market.value)" :data-logo="market.logo || ''">
+                                @{{ market.text }}
+                            </option>
+                        </optgroup>
                     </select>
                 </b-form-group>
             </b-col>
@@ -72,6 +74,7 @@
                     sourceFormMethod: 'add',
                     sourceId: null,
                     sourceMarketOptions: @json($marketOptions ?? []),
+                    sourceMarketOptionsGrouped: @json($marketOptionsGrouped ?? []),
                     lookupDateModes: @json($lookupDateModes ?? []),
                     parserTypes: @json($parserTypes ?? []),
                     sourceTypes: @json($sourceTypes ?? []),
@@ -114,7 +117,10 @@
                     this.sourceId = null;
                     this.sourceFormMethod = 'add';
                     this.sourceForm = this.newSourceForm();
-                    this.$refs.addeditSource.show();
+                    this.showSourceForm = true;
+                    this.$nextTick(() => {
+                        this.$refs.addeditSource.show();
+                    });
                 },
                 async editSourceModal(id) {
                     this.sourceId = id;
@@ -133,7 +139,102 @@
                         validation_config_json: this.toJsonText(item.validation_config_json),
                         retry_policy_json: this.toJsonText(item.retry_policy_json),
                     };
-                    this.$refs.addeditSource.show();
+                    this.showSourceForm = true;
+                    this.$nextTick(() => {
+                        this.$refs.addeditSource.show();
+                    });
+                },
+                onModalShown() {
+                    this.initMarketSelect2();
+                    this.syncMarketSelectValue();
+                },
+                onModalHidden() {
+                    this.destroyMarketSelect2();
+                },
+                onNativeMarketChange(event) {
+                    const value = event?.target?.value || '';
+                    this.sourceForm.market_id = value ? String(value) : '';
+                },
+                initMarketSelect2() {
+                    const selectEl = this.$refs.marketSelect;
+                    if (!selectEl || !window.jQuery) {
+                        return;
+                    }
+
+                    const $select = window.jQuery(selectEl);
+                    if (!$select.length || typeof $select.select2 !== 'function') {
+                        return;
+                    }
+
+                    this.destroyMarketSelect2();
+
+                    const renderMarketOption = (state) => {
+                        if (!state.id) {
+                            return state.text;
+                        }
+
+                        const optionEl = state.element;
+                        const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
+                        const safeText = window.jQuery('<span/>').text(state.text || '').html();
+
+                        if (!logo) {
+                            return window.jQuery('<span>' + safeText + '</span>');
+                        }
+
+                        return window.jQuery(
+                            '<span style="display:flex;align-items:center;gap:8px;">'
+                            + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+                            + '<span>' + safeText + '</span>'
+                            + '</span>'
+                        );
+                    };
+
+                    $select.select2({
+                        width: '100%',
+                        dropdownParent: window.jQuery(this.$refs.addeditSource.$el),
+                        placeholder: '-- เลือกรายการหวย --',
+                        allowClear: false,
+                        templateResult: renderMarketOption,
+                        templateSelection: renderMarketOption,
+                        escapeMarkup: function (markup) {
+                            return markup;
+                        },
+                    });
+
+                    $select.on('change.resultSourceMarket', () => {
+                        const value = $select.val();
+                        this.sourceForm.market_id = value ? String(value) : '';
+                    });
+                },
+                destroyMarketSelect2() {
+                    const selectEl = this.$refs.marketSelect;
+                    if (!selectEl || !window.jQuery) {
+                        return;
+                    }
+
+                    const $select = window.jQuery(selectEl);
+                    if (!$select.length) {
+                        return;
+                    }
+
+                    $select.off('.resultSourceMarket');
+                    if ($select.hasClass('select2-hidden-accessible') && typeof $select.select2 === 'function') {
+                        $select.select2('destroy');
+                    }
+                },
+                syncMarketSelectValue() {
+                    const selectEl = this.$refs.marketSelect;
+                    if (!selectEl || !window.jQuery) {
+                        return;
+                    }
+
+                    const value = this.sourceForm.market_id ? String(this.sourceForm.market_id) : '';
+                    const $select = window.jQuery(selectEl);
+                    $select.val(value);
+
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.trigger('change.select2');
+                    }
                 },
                 async submitSourceForm() {
                     const url = this.sourceFormMethod === 'add'
@@ -204,6 +305,11 @@
                             });
                         }
                     });
+                },
+            },
+            watch: {
+                'sourceForm.market_id'() {
+                    this.$nextTick(() => this.syncMarketSelectValue());
                 },
             },
         });
