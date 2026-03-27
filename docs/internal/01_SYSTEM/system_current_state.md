@@ -78,6 +78,9 @@
   - ตาราง `lotto_result_source_revisions` เก็บ `changed_by`, `reason`, `config_hash` และ snapshot ต่อ revision
 - เพิ่ม admin actions ใหม่ในเมนู `/lotto/auto-result-sources`:
   - preview config, validate config, validate cutover
+- policy ของ `validate cutover`:
+  - `local/testing`: บังคับ fixture gate ต่อ source (สำหรับ regression test)
+  - `production`: ใช้ live validation จาก `endpoint_url` จริงผ่าน pipeline runner (ไม่บังคับให้ผู้ใช้ admin สร้างไฟล์ fixture)
 - `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
   - main fetch path ห้าม block รอ browser execution แบบ synchronous
 

@@ -94,3 +94,13 @@
 - บังคับ deterministic mismatch policy ใน shadow compare โดยเทียบ canonical outcome set เท่านั้น
 - บังคับ `RenderedBrowserFetchDriver` เป็น async worker/runtime path เท่านั้น (ไม่ block main fetch path)
 - เพิ่ม admin preview/validate config และ validate cutover ก่อนเปิด cutover
+
+## 2026-03-27 — Cutover Validation Production Readiness (APPROVED)
+
+- ปรับ `validate cutover` ให้เหมาะกับ production:
+  - `production` ใช้ live validation โดยรัน pipeline กับ `endpoint_url` จริง
+  - ไม่บังคับให้ผู้ใช้ admin จัดการไฟล์ fixture เอง
+- คง fixture gate ไว้เฉพาะ `local/testing` เพื่อรองรับ regression test ของทีมพัฒนา
+- ตอนบันทึก source ที่เปิด `cutover_enabled=true`:
+  - production ไม่บล็อกด้วย fixture gate
+  - local/testing ยังบล็อกจนกว่าจะมี fixture ตาม source
