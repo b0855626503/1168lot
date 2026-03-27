@@ -151,7 +151,7 @@ class ResultCandidateSelector
     {
         $nonEmpty = 0;
         foreach ($fields as $value) {
-            if ($value !== null && trim((string) $value) !== '') {
+            if ($this->isValueFilled($value)) {
                 $nonEmpty++;
             }
         }
@@ -159,6 +159,26 @@ class ResultCandidateSelector
         $requiredScore = max(0, 20 - (count($missingRequired) * 10));
 
         return ($dateMatched ? 100 : 0) + $requiredScore + $nonEmpty;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function isValueFilled($value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        if (is_object($value)) {
+            return true;
+        }
+
+        return trim((string) $value) !== '';
     }
 
     /**

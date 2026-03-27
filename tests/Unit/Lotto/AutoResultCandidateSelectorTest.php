@@ -80,6 +80,22 @@ class AutoResultCandidateSelectorTest extends TestCase
         $this->assertSame('tie_score_among_valid_candidates', $decision['rejection_reason']);
     }
 
+    public function test_selector_handles_array_field_values_without_type_error(): void
+    {
+        $selector = new ResultCandidateSelector();
+
+        $decision = $selector->select($this->parsedCandidates([
+            ['draw_date' => '27/03/2026', 'first_prize' => '123456', 'last_2_digits' => '12', 'meta' => ['x' => 1]],
+        ]), [
+            'selection_strategy' => ['type' => 'strict_single_match'],
+        ], [
+            'required' => ['first_prize', 'last_2_digits', 'draw_date'],
+            'expected_draw_date' => ['field' => 'draw_date'],
+        ], new ResultParseContext('2026-03-27'));
+
+        $this->assertSame('selected', $decision['decision']);
+    }
+
     /**
      * @param array<int,array<string,mixed>> $candidateFields
      * @return array<string,mixed>
