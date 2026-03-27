@@ -24,6 +24,8 @@ class LottoResultSourceDataTable extends DataTable
             ->select(
                 'lotto_result_sources.*',
                 'lotto_markets.name as market_name',
+                'lotto_markets.logo as market_logo',
+                'lotto_markets.icon as market_icon',
                 'lotto_markets.group_id as group_id',
                 'lotto_groups.name as group_name'
             )

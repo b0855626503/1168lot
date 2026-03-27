@@ -16,7 +16,7 @@ class LottoResultSourceTransformer extends TransformerAbstract
             'group_id' => (int) ($model->group_id ?? 0),
             'group_name' => (string) ($model->group_name ?? '-'),
             'market_id' => (int) ($model->market_id ?? 0),
-            'market_name' => (string) ($model->market_name ?? '-'),
+            'market_name' => $this->renderMarketName($model),
             'priority' => (int) $model->priority,
             'source_type' => strtoupper((string) $model->source_type),
             'http_method' => strtoupper((string) $model->http_method),
@@ -31,5 +31,22 @@ class LottoResultSourceTransformer extends TransformerAbstract
                 'id' => (int) $model->id,
             ])->render(),
         ];
+    }
+
+    private function renderMarketName(LottoResultSource $model): string
+    {
+        $name = (string) ($model->market_name ?? '-');
+        $logo = (string) ($model->market_logo ?? '');
+        $icon = (string) ($model->market_icon ?? '');
+        $src = trim($logo) !== '' ? $logo : $icon;
+
+        if (trim($src) === '') {
+            return e($name);
+        }
+
+        return '<span style="display:inline-flex;align-items:center;gap:8px;">'
+            . '<img src="' . e($src) . '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+            . '<span>' . e($name) . '</span>'
+            . '</span>';
     }
 }

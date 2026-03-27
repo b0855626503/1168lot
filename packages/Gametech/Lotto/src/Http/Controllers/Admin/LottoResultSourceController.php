@@ -29,14 +29,14 @@ class LottoResultSourceController extends AppBaseController
             ->with('group:id,name')
             ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'group_id', 'name', 'logo'])
+            ->get(['id', 'group_id', 'name', 'logo', 'icon'])
             ->map(static function (LotteryMarket $market): array {
                 return [
                     'value' => (int) $market->id,
                     'group_id' => (int) $market->group_id,
                     'text' => (string) $market->name,
                     'group' => (string) optional($market->group)->name,
-                    'logo' => (string) ($market->logo ?? ''),
+                    'logo' => (string) ($market->logo ?: $market->icon ?: ''),
                 ];
             })
             ->values()
@@ -57,7 +57,7 @@ class LottoResultSourceController extends AppBaseController
                             return [
                                 'value' => (int) $market->id,
                                 'text' => (string) $market->name,
-                                'logo' => (string) ($market->logo ?? ''),
+                                'logo' => (string) ($market->logo ?: $market->icon ?: ''),
                             ];
                         })
                         ->values()
