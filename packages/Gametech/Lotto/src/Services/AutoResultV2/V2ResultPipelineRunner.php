@@ -94,6 +94,9 @@ class V2ResultPipelineRunner
         $trace['parsed_raw_fields'] = (array) (($extract['candidates'][0]['fields'] ?? []));
 
         $selection = $this->selectionExecutor->execute($extract, $compiled->selection(), [
+            'run_id' => $runId,
+            'draw_id' => (int) $draw->id,
+            'source_id' => (int) $source->id,
             'expected_draw_date' => $ignoreExpectedDrawDate
                 ? null
                 : (is_string($expectedDrawDate) ? $expectedDrawDate : null),
