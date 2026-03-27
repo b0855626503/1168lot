@@ -74,3 +74,23 @@
 - ใน command `lotto:fetch-auto-results` โหมด auto sweep ให้เช็กก่อนว่า market นั้นมี source config ใน `lotto_result_sources` หรือยัง
 - ถ้ายังไม่มีให้ `skip` โดยไม่เรียก pipeline, ไม่เพิ่ม retry attempts, และไม่ปล่อยให้วิ่งจน `EXHAUSTED`
 - ใช้เพื่อกันเคส noise alert ประเภท exhausted จาก draw ที่ยังไม่ได้ onboard source
+
+## 2026-03-27 — Lotto Result Pipeline v2 Enum/Trace/Shadow Governance (APPROVED)
+
+- เพิ่ม fixed enum/value sets สำหรับ pipeline orchestration:
+  - `pipeline_version`: `LEGACY|V2_SHADOW|V2_CUTOVER`
+  - `fetch_strategy`: `JSON_HTTP|HTML_HTTP|RENDERED_BROWSER|EMBEDDED_JSON|MANUAL_INPUT`
+  - `selection_stage`: `PRE_MAPPING|POST_MAPPING`
+  - `shadow_compare_status`: `MATCH|MISMATCH|ERROR|SKIPPED`
+- เพิ่ม schema/config storage สำหรับ source v2:
+  - `fetch_config_json`, `selection_config_json`, `readiness_config_json`
+  - flags: `supports_partial`, `requires_browser`, `shadow_enabled`, `cutover_enabled`
+- เพิ่ม structured trace/error storage ใน `lotto_result_fetch_logs`:
+  - `trace_json`, `error_code`, `error_stage`
+  - `legacy_result_json`, `v2_result_json`, `shadow_diff_json`, `shadow_compare_status`
+- เพิ่ม source revision table `lotto_result_source_revisions` พร้อม metadata:
+  - `changed_by`, `reason`, `config_hash`
+- บังคับ trace normalization ก่อน persist (minimum required keys + shape normalization)
+- บังคับ deterministic mismatch policy ใน shadow compare โดยเทียบ canonical outcome set เท่านั้น
+- บังคับ `RenderedBrowserFetchDriver` เป็น async worker/runtime path เท่านั้น (ไม่ block main fetch path)
+- เพิ่ม admin preview/validate config และ validate cutover ก่อนเปิด cutover

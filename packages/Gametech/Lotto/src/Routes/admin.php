@@ -128,6 +128,15 @@ Route::domain(
             Route::post('auto-result-sources/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@update')
                 ->name('admin.lotto.result_sources.update');
 
+            Route::post('auto-result-sources/preview-config', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@previewConfig')
+                ->name('admin.lotto.result_sources.preview_config');
+
+            Route::post('auto-result-sources/validate-config', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@validateConfig')
+                ->name('admin.lotto.result_sources.validate_config');
+
+            Route::post('auto-result-sources/validate-cutover', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@validateCutover')
+                ->name('admin.lotto.result_sources.validate_cutover');
+
             Route::post('draws/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@create')
                 ->name('admin.lotto.draws.create');
 

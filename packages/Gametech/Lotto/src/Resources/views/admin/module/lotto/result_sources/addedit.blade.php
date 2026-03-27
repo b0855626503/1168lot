@@ -36,6 +36,19 @@
             <b-col md="4"><b-form-group label="Parser Type"><b-form-select size="sm" :options="parserTypes" v-model="sourceForm.parser_type"></b-form-select></b-form-group></b-col>
         </b-row>
 
+        <b-row>
+            <b-col md="4"><b-form-group label="Pipeline Version"><b-form-select size="sm" :options="pipelineVersions" v-model="sourceForm.pipeline_version"></b-form-select></b-form-group></b-col>
+            <b-col md="4"><b-form-group label="Fetch Strategy"><b-form-select size="sm" :options="fetchStrategies" v-model="sourceForm.fetch_strategy"></b-form-select></b-form-group></b-col>
+            <b-col md="4"><b-form-group label="Selection Stage"><b-form-select size="sm" :options="selectionStages" v-model="sourceForm.selection_stage"></b-form-select></b-form-group></b-col>
+        </b-row>
+
+        <b-row>
+            <b-col md="3"><b-form-group label="Supports Partial"><b-form-checkbox v-model="sourceForm.supports_partial" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
+            <b-col md="3"><b-form-group label="Requires Browser"><b-form-checkbox v-model="sourceForm.requires_browser" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
+            <b-col md="3"><b-form-group label="Shadow Enabled"><b-form-checkbox v-model="sourceForm.shadow_enabled" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
+            <b-col md="3"><b-form-group label="Cutover Enabled"><b-form-checkbox v-model="sourceForm.cutover_enabled" switch>เปิดใช้งาน</b-form-checkbox></b-form-group></b-col>
+        </b-row>
+
         <b-form-group label="Endpoint URL">
             <b-form-input size="sm" v-model="sourceForm.endpoint_url" required></b-form-input>
         </b-form-group>
@@ -63,11 +76,24 @@
             <b-col md="6"><b-form-group label="Validation Config JSON"><b-form-textarea rows="4" v-model="sourceForm.validation_config_json"></b-form-textarea></b-form-group></b-col>
         </b-row>
         <b-row>
+            <b-col md="6"><b-form-group label="Fetch Config JSON"><b-form-textarea rows="4" v-model="sourceForm.fetch_config_json"></b-form-textarea></b-form-group></b-col>
+            <b-col md="6"><b-form-group label="Selection Config JSON"><b-form-textarea rows="4" v-model="sourceForm.selection_config_json"></b-form-textarea></b-form-group></b-col>
+        </b-row>
+        <b-row>
+            <b-col md="6"><b-form-group label="Readiness Config JSON"><b-form-textarea rows="4" v-model="sourceForm.readiness_config_json"></b-form-textarea></b-form-group></b-col>
+            <b-col md="6"><b-form-group label="Revision Reason"><b-form-input size="sm" v-model="sourceForm.revision_reason" placeholder="เหตุผลการเปลี่ยนแปลง"></b-form-input></b-form-group></b-col>
+        </b-row>
+        <b-row>
             <b-col md="6"><b-form-group label="Retry Policy JSON"><b-form-textarea rows="4" v-model="sourceForm.retry_policy_json"></b-form-textarea></b-form-group></b-col>
             <b-col md="6"></b-col>
         </b-row>
 
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-between">
+            <div>
+                <button type="button" class="btn btn-outline-primary btn-sm mr-1" @click="previewSourceConfig">Preview Config</button>
+                <button type="button" class="btn btn-outline-info btn-sm mr-1" @click="validateSourceConfig">Validate Config</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" @click="validateSourceCutover">Validate Cutover</button>
+            </div>
             <button type="submit" class="btn btn-success btn-sm">บันทึก</button>
         </div>
     </b-form>
@@ -142,6 +168,9 @@
                     parserTypes: @json($parserTypes ?? []),
                     sourceTypes: @json($sourceTypes ?? []),
                     httpMethods: @json($httpMethods ?? []),
+                    pipelineVersions: @json($pipelineVersions ?? []),
+                    fetchStrategies: @json($fetchStrategies ?? []),
+                    selectionStages: @json($selectionStages ?? []),
                     sourceForm: this.newSourceForm(),
                     isSyncingMarketSelect: false,
                 };
@@ -164,9 +193,20 @@
                         parser_type: 'JSON_PATH',
                         parser_config_json: '',
                         mapping_config_json: '',
+                        fetch_config_json: '',
+                        selection_config_json: '',
                         validation_config_json: '',
+                        readiness_config_json: '',
                         retry_policy_json: '',
                         timeout_seconds: 10,
+                        pipeline_version: 'LEGACY',
+                        fetch_strategy: 'JSON_HTTP',
+                        selection_stage: 'POST_MAPPING',
+                        supports_partial: false,
+                        requires_browser: false,
+                        shadow_enabled: false,
+                        cutover_enabled: false,
+                        revision_reason: '',
                         effective_from: '',
                         effective_to: '',
                     };
@@ -204,7 +244,10 @@
                         request_body_template_json: this.toJsonText(item.request_body_template_json),
                         parser_config_json: this.toJsonText(item.parser_config_json),
                         mapping_config_json: this.toJsonText(item.mapping_config_json),
+                        fetch_config_json: this.toJsonText(item.fetch_config_json),
+                        selection_config_json: this.toJsonText(item.selection_config_json),
                         validation_config_json: this.toJsonText(item.validation_config_json),
+                        readiness_config_json: this.toJsonText(item.readiness_config_json),
                         retry_policy_json: this.toJsonText(item.retry_policy_json),
                     };
 
@@ -449,6 +492,44 @@
                             centered: true,
                         });
                     }
+                },
+                async callConfigAction(url, successTitle) {
+                    try {
+                        const response = await axios.post(url, {
+                            id: this.sourceId,
+                            data: {
+                                ...this.sourceForm,
+                                id: this.sourceId,
+                                market_id: this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : null,
+                            },
+                        });
+
+                        await this.$bvModal.msgBoxOk(response?.data?.message || successTitle, {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'ดำเนินการไม่สำเร็จ';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'เกิดข้อผิดพลาด',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
+                },
+                async previewSourceConfig() {
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.preview_config') }}", 'Preview สำเร็จ');
+                },
+                async validateSourceConfig() {
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_config') }}", 'Validation สำเร็จ');
+                },
+                async validateSourceCutover() {
+                    await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_cutover') }}", 'Cutover validation สำเร็จ');
                 },
                 editSourceStatus(id, status) {
                     this.$bvModal.msgBoxConfirm('ต้องการเปลี่ยนสถานะ source หรือไม่?', {

@@ -56,6 +56,31 @@
 - transform chain อยู่ใน `mapping_config_json` เป็นหลัก (`trim`, `digits_only`, `left:n`, `right:n`, `{op:"date"...}`)
 - debug runtime เก็บใน `lotto_result_fetch_logs.selection_debug_json` เท่านั้น (ไม่เก็บใน master state)
 
+## นโยบาย Lotto Result Pipeline v2 (Config-Driven)
+
+- รองรับ pipeline เวอร์ชันต่อ source ผ่าน `pipeline_version`:
+  - `LEGACY`
+  - `V2_SHADOW`
+  - `V2_CUTOVER`
+- รองรับ `fetch_strategy` แบบ fixed set:
+  - `JSON_HTTP`, `HTML_HTTP`, `RENDERED_BROWSER`, `EMBEDDED_JSON`, `MANUAL_INPUT`
+- รองรับ `selection_stage` แบบ fixed set:
+  - `PRE_MAPPING`, `POST_MAPPING`
+- มี shadow compare status แบบ fixed set:
+  - `MATCH`, `MISMATCH`, `ERROR`, `SKIPPED`
+- เพิ่ม config storage ฝั่ง source:
+  - `fetch_config_json`, `selection_config_json`, `readiness_config_json`
+  - flags: `supports_partial`, `requires_browser`, `shadow_enabled`, `cutover_enabled`
+- เพิ่ม structured trace/error ใน fetch logs:
+  - `trace_json`, `error_code`, `error_stage`
+  - `legacy_result_json`, `v2_result_json`, `shadow_diff_json`, `shadow_compare_status`
+- เพิ่ม revision history สำหรับ source config:
+  - ตาราง `lotto_result_source_revisions` เก็บ `changed_by`, `reason`, `config_hash` และ snapshot ต่อ revision
+- เพิ่ม admin actions ใหม่ในเมนู `/lotto/auto-result-sources`:
+  - preview config, validate config, validate cutover
+- `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
+  - main fetch path ห้าม block รอ browser execution แบบ synchronous
+
 ## โครงสร้างเอกสาร
 
 - Internal docs: `docs/internal/*`

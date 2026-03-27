@@ -1,0 +1,4 @@
+{
+  "input": {"date": "26/03/2026", "lotto_1": "2", "lotto_2": "3"},
+  "expected": {"draw_date": "2026-03-26", "last_2_digits": "23"}
+}
