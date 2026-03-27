@@ -267,8 +267,14 @@ class LottoResultSourceController extends AppBaseController
                 ? LottoResultSource::query()->findOrFail((int) $validated['id'])
                 : new LottoResultSource();
 
+            if (! empty($validated['id']) && (int) $source->market_id !== (int) $validated['market_id']) {
+                throw new InvalidArgumentException('โหมดแก้ไขไม่อนุญาตให้เปลี่ยนตลาดของ source');
+            }
+
             $source->fill([
-                'market_id' => (int) $validated['market_id'],
+                'market_id' => ! empty($validated['id'])
+                    ? (int) $source->market_id
+                    : (int) $validated['market_id'],
                 'is_active' => (bool) $validated['is_active'],
                 'priority' => (int) $validated['priority'],
                 'source_type' => (string) $validated['source_type'],

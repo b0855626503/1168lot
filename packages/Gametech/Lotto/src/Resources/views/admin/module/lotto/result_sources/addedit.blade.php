@@ -87,8 +87,8 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="ตลาด">
-                            <b-form-select size="sm" :options="marketSelectOptions" v-model="sourceForm.market_id"></b-form-select>
-                            <small class="text-muted d-block mt-1">เลือกตลาดหวยที่ source นี้จะใช้ดึงผล</small>
+                            <b-form-select size="sm" :options="marketSelectOptions" v-model="sourceForm.market_id" :disabled="sourceFormMethod === 'edit'"></b-form-select>
+                            <small class="text-muted d-block mt-1">สร้างใหม่เลือกได้, โหมดแก้ไขจะล็อกตลาดเดิมเพื่อกันย้าย source ผิดตลาด</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
