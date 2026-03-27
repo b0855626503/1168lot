@@ -126,3 +126,4 @@
 - ช่อง JSON ย่อย (fetch/parser/mapping/selection/validation/readiness/retry/headers/query/body) ถูกซ่อนจากหน้า form หลัก
 - ก่อน preview/validate/save ระบบยัง split/derive ไป field ย่อยอัตโนมัติเพื่อคง backend contract เดิม
 - เพิ่มแท็บ `Quick Setup` สำหรับ generate config อัตโนมัติจาก input สั้น ๆ และมี preset สำเร็จรูป
+- ยกเลิกแท็บ `Pipeline` ในหน้า UI เพื่อลด field ซ้ำซ้อนและลด cognitive load ของผู้ใช้

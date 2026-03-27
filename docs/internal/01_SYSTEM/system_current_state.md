@@ -81,6 +81,7 @@
 - ฟอร์ม admin ของ `auto-result-sources` ใช้โหมด V2-only:
   - มีแท็บ `Quick Setup` สำหรับผู้ใช้ทั่วไป กรอก URL + path หลัก แล้วระบบ generate pipeline JSON อัตโนมัติ
   - มีช่องหลัก `Pipeline Config JSON (Single Source of Truth)` สำหรับตั้งค่ารวม
+  - ตัดแท็บ `Pipeline` ออกจากหน้าแก้ไข เพื่อไม่ให้สับสนกับแท็บตั้งค่าหลัก
   - ระบบ sync/แตกค่าไป field ย่อยอัตโนมัติก่อน preview/validate/save
   - ซ่อนช่อง JSON ย่อยจากหน้า form หลักเพื่อลดการกรอกซ้ำและลดความสับสนของผู้ใช้
   - derive ค่า legacy-required fields (`endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`) จาก JSON config อัตโนมัติก่อน preview/validate/save

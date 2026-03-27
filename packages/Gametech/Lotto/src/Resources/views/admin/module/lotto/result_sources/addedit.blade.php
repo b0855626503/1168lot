@@ -36,26 +36,26 @@
                 </b-row>
 
                 <b-alert show variant="info" class="py-2">
-                    โหมดฟอร์มนี้เป็น V2-only: ค่า <code>endpoint_url</code>, <code>http_method</code>, <code>parser_type</code>, <code>fetch_strategy</code>, <code>selection_stage</code> จะ derive จาก JSON config อัตโนมัติ
+                    โหมดฟอร์มนี้เป็น V2-only: หน้าจอนี้แสดงค่าแบบสรุป (read-only) จาก config ปัจจุบันเท่านั้น
                 </b-alert>
 
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="Derived Endpoint URL">
                             <b-form-input size="sm" :value="derivedEndpointUrl" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.endpoint_url</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Quick Setup</code> หรือ <code>Configs JSON</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
                         <b-form-group label="Derived HTTP Method">
                             <b-form-input size="sm" :value="derivedHttpMethod" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.http_method</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Quick Setup</code> หรือ <code>Configs JSON</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="3">
                         <b-form-group label="Derived Parser Type">
                             <b-form-input size="sm" :value="derivedParserType" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">อ่านจาก <code>parser_config_json.parser_type</code></small>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>Configs JSON</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -89,60 +89,6 @@
                         </b-form-group>
                     </b-col>
                 </b-row>
-            </b-tab>
-
-            <b-tab title="Pipeline">
-                <b-row>
-                    <b-col md="4">
-                        <b-form-group label="Pipeline Version" :class="{ 'source-risk-input': isRiskyCutover }">
-                            <b-form-input size="sm" value="V2_CUTOVER" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">ล็อกเป็นเวอร์ชันล่าสุด</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="4">
-                        <b-form-group label="Derived Fetch Strategy">
-                            <b-form-input size="sm" :value="derivedFetchStrategy" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.fetch_strategy</code></small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="4">
-                        <b-form-group label="Derived Selection Stage">
-                            <b-form-input size="sm" :value="derivedSelectionStage" readonly></b-form-input>
-                            <small class="text-muted d-block mt-1">อ่านจาก <code>selection_config_json.selection_stage</code></small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col md="3">
-                        <b-form-group label="Supports Partial">
-                            <b-form-checkbox v-model="sourceForm.supports_partial" switch>เปิดใช้งาน</b-form-checkbox>
-                            <small class="text-muted d-block mt-1">อนุญาตผลบางช่องไม่ครบได้</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="3">
-                        <b-form-group label="Requires Browser">
-                            <b-form-checkbox v-model="sourceForm.requires_browser" switch>เปิดใช้งาน</b-form-checkbox>
-                            <small class="text-muted d-block mt-1">source นี้ต้องใช้ browser worker</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="3">
-                        <b-form-group label="Shadow Enabled">
-                            <b-form-checkbox v-model="sourceForm.shadow_enabled" switch>เปิดใช้งาน</b-form-checkbox>
-                            <small class="text-muted d-block mt-1">รัน old+v2 เทียบผล แต่ยังไม่สลับผลจริง</small>
-                        </b-form-group>
-                    </b-col>
-                    <b-col md="3">
-                        <b-form-group label="Cutover Enabled" :class="{ 'source-risk-input': isRiskyCutover }">
-                            <b-form-checkbox v-model="sourceForm.cutover_enabled" switch>เปิดใช้งาน</b-form-checkbox>
-                            <small class="text-muted d-block mt-1">ใช้ผลจาก v2 เป็นผลหลักของระบบ</small>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-alert v-if="isRiskyCutover" show variant="warning" class="py-2">
-                    โหมด Cutover มีผลกับผลลัพธ์จริงของระบบ กรุณากด Validate Config และ Validate Cutover ก่อนบันทึกทุกครั้ง
-                </b-alert>
             </b-tab>
 
             <b-tab title="Quick Setup">
@@ -210,20 +156,20 @@
                     </b-col>
                 </b-row>
 
-                <div class="d-flex">
-                    <button type="button" class="btn btn-primary btn-sm mr-2" @click="generateQuickPipelineJson">Generate Pipeline JSON</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="applyQuickPresetLaosVip">Preset: Laos VIP</button>
+                <div class="d-flex flex-wrap quick-setup-actions">
+                    <button type="button" class="btn btn-primary btn-sm mr-2 mb-2" @click="generateQuickPipelineJson">Generate Pipeline JSON</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm mb-2" @click="applyQuickPresetLaosVip">Preset: Laos VIP</button>
                 </div>
             </b-tab>
 
             <b-tab title="Configs JSON">
                 <b-form-group label="Pipeline Config JSON (Single Source of Truth)">
-                    <div class="d-flex justify-content-between mb-1">
-                        <small class="text-muted">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติก่อน preview/validate/save</small>
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1" @click="applyJsonExample('unified_pipeline_json')">Insert Starter</button>
-                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1" @click="syncUnifiedFromForm">Refresh From Current</button>
-                            <button type="button" class="btn btn-outline-primary btn-xs" @click="applyUnifiedToForm">Apply To Fields</button>
+                    <div class="d-flex flex-wrap justify-content-between align-items-start mb-1 unified-header-row">
+                        <small class="text-muted unified-header-note">แก้ config หลักที่ช่องนี้ช่องเดียว ระบบจะแตกไป field ย่อยให้อัตโนมัติก่อน preview/validate/save</small>
+                        <div class="d-flex flex-wrap unified-header-actions">
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyJsonExample('unified_pipeline_json')">Insert Starter</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="syncUnifiedFromForm">Refresh From Current</button>
+                            <button type="button" class="btn btn-outline-primary btn-xs mb-1" @click="applyUnifiedToForm">Apply To Fields</button>
                         </div>
                     </div>
                     <b-form-textarea rows="16" v-model="sourceForm.unified_pipeline_json"></b-form-textarea>
@@ -252,13 +198,13 @@
             </b-tab>
         </b-tabs>
 
-        <div class="d-flex justify-content-between">
-            <div>
-                <button type="button" class="btn btn-outline-primary btn-sm mr-1" @click="previewSourceConfig">Preview Config</button>
-                <button type="button" class="btn btn-outline-info btn-sm mr-1" @click="validateSourceConfig">Validate Config</button>
-                <button type="button" class="btn btn-outline-warning btn-sm" @click="validateSourceCutover">Validate Cutover</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center action-bar">
+            <div class="d-flex flex-wrap action-bar-left">
+                <button type="button" class="btn btn-outline-primary btn-sm mr-1 mb-2" @click="previewSourceConfig">Preview Config</button>
+                <button type="button" class="btn btn-outline-info btn-sm mr-1 mb-2" @click="validateSourceConfig">Validate Config</button>
+                <button type="button" class="btn btn-outline-warning btn-sm mb-2" @click="validateSourceCutover">Validate Cutover</button>
             </div>
-            <button type="submit" class="btn btn-success btn-sm">บันทึก</button>
+            <button type="submit" class="btn btn-success btn-sm mb-2 action-bar-save">บันทึก</button>
         </div>
     </b-form>
 </b-modal>
@@ -318,6 +264,51 @@
             font-size: 11px;
             line-height: 1.2;
             padding: 2px 8px;
+        }
+
+        #addeditSource .form-group {
+            margin-bottom: .75rem;
+        }
+
+        #addeditSource small.text-muted.d-block.mt-1 {
+            min-height: 18px;
+        }
+
+        #addeditSource .unified-header-row {
+            gap: 8px;
+        }
+
+        #addeditSource .unified-header-note {
+            flex: 1 1 320px;
+            margin-bottom: 0;
+        }
+
+        #addeditSource .unified-header-actions {
+            flex: 0 1 auto;
+            gap: 0;
+        }
+
+        #addeditSource .quick-setup-actions {
+            gap: 0;
+        }
+
+        #addeditSource .action-bar {
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        #addeditSource .action-bar-left {
+            gap: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            #addeditSource .action-bar {
+                justify-content: flex-start !important;
+            }
+
+            #addeditSource .action-bar-save {
+                width: 100%;
+            }
         }
 
         #addeditSource .source-risk-input label {
@@ -825,7 +816,7 @@
                         }, null, 2);
 
                         this.applyUnifiedToForm();
-                        this.activeSourceTab = 3;
+                        this.activeSourceTab = 2;
                     } catch (error) {
                         const message = error?.message || 'สร้าง Pipeline Config ไม่สำเร็จ';
                         this.$bvModal.msgBoxOk(message, {
