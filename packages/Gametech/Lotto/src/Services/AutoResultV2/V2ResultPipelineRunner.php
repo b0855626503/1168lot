@@ -97,6 +97,8 @@ class V2ResultPipelineRunner
             'run_id' => $runId,
             'draw_id' => (int) $draw->id,
             'source_id' => (int) $source->id,
+            'candidate_draw_date_offset_days' => (int) ($selectionMeta['candidate_draw_date_offset_days'] ?? 0),
+            'expected_draw_date_offset_days' => (int) ($selectionMeta['expected_draw_date_offset_days'] ?? 0),
             'expected_draw_date' => $ignoreExpectedDrawDate
                 ? null
                 : (is_string($expectedDrawDate) ? $expectedDrawDate : null),

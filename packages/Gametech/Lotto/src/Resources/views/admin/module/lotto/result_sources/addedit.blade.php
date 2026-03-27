@@ -35,31 +35,30 @@
                     </b-col>
                 </b-row>
 
+                <b-alert show variant="info" class="py-2">
+                    โหมดฟอร์มนี้เป็น V2-only: ค่า <code>endpoint_url</code>, <code>http_method</code>, <code>parser_type</code>, <code>fetch_strategy</code>, <code>selection_stage</code> จะ derive จาก JSON config อัตโนมัติ
+                </b-alert>
+
                 <b-row>
-                    <b-col md="4">
-                        <b-form-group label="Source Type">
-                            <b-form-select size="sm" :options="sourceTypes" v-model="sourceForm.source_type"></b-form-select>
-                            <small class="text-muted d-block mt-1">ระบุประเภทแหล่งข้อมูล เช่น API หรือ HTML</small>
+                    <b-col md="6">
+                        <b-form-group label="Derived Endpoint URL">
+                            <b-form-input size="sm" :value="derivedEndpointUrl" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.endpoint_url</code></small>
                         </b-form-group>
                     </b-col>
-                    <b-col md="4">
-                        <b-form-group label="HTTP Method">
-                            <b-form-select size="sm" :options="httpMethods" v-model="sourceForm.http_method"></b-form-select>
-                            <small class="text-muted d-block mt-1">วิธีส่ง request ไป endpoint เช่น GET/POST</small>
+                    <b-col md="3">
+                        <b-form-group label="Derived HTTP Method">
+                            <b-form-input size="sm" :value="derivedHttpMethod" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.http_method</code></small>
                         </b-form-group>
                     </b-col>
-                    <b-col md="4">
-                        <b-form-group label="Parser Type">
-                            <b-form-select size="sm" :options="parserTypes" v-model="sourceForm.parser_type"></b-form-select>
-                            <small class="text-muted d-block mt-1">เครื่องมือดึง field จาก payload ที่ fetch มา</small>
+                    <b-col md="3">
+                        <b-form-group label="Derived Parser Type">
+                            <b-form-input size="sm" :value="derivedParserType" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">อ่านจาก <code>parser_config_json.parser_type</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
-
-                <b-form-group label="Endpoint URL">
-                    <b-form-input size="sm" v-model="sourceForm.endpoint_url" required></b-form-input>
-                    <small class="text-muted d-block mt-1">URL หลักของ source ที่ใช้ดึงผลลอตเตอรี่</small>
-                </b-form-group>
 
                 <b-row>
                     <b-col md="8">
@@ -96,20 +95,20 @@
                 <b-row>
                     <b-col md="4">
                         <b-form-group label="Pipeline Version" :class="{ 'source-risk-input': isRiskyCutover }">
-                            <b-form-select size="sm" :options="pipelineVersions" v-model="sourceForm.pipeline_version"></b-form-select>
-                            <small class="text-muted d-block mt-1">โหมดการรัน: legacy, shadow เทียบผล, หรือ cutover ใช้งาน v2</small>
+                            <b-form-input size="sm" value="V2_CUTOVER" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">ล็อกเป็นเวอร์ชันล่าสุด</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
-                        <b-form-group label="Fetch Strategy">
-                            <b-form-select size="sm" :options="fetchStrategies" v-model="sourceForm.fetch_strategy"></b-form-select>
-                            <small class="text-muted d-block mt-1">วิธีดึงข้อมูลหลัก เช่น JSON_HTTP หรือ RENDERED_BROWSER</small>
+                        <b-form-group label="Derived Fetch Strategy">
+                            <b-form-input size="sm" :value="derivedFetchStrategy" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">อ่านจาก <code>fetch_config_json.fetch_strategy</code></small>
                         </b-form-group>
                     </b-col>
                     <b-col md="4">
-                        <b-form-group label="Selection Stage">
-                            <b-form-select size="sm" :options="selectionStages" v-model="sourceForm.selection_stage"></b-form-select>
-                            <small class="text-muted d-block mt-1">เลือก candidate ก่อน mapping หรือหลัง mapping</small>
+                        <b-form-group label="Derived Selection Stage">
+                            <b-form-input size="sm" :value="derivedSelectionStage" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">อ่านจาก <code>selection_config_json.selection_stage</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -368,6 +367,30 @@
                 isRiskyCutover() {
                     return this.sourceForm.pipeline_version === 'V2_CUTOVER' || !!this.sourceForm.cutover_enabled;
                 },
+                parsedFetchConfig() {
+                    return this.parseJsonSafe(this.sourceForm.fetch_config_json);
+                },
+                parsedParserConfig() {
+                    return this.parseJsonSafe(this.sourceForm.parser_config_json);
+                },
+                parsedSelectionConfig() {
+                    return this.parseJsonSafe(this.sourceForm.selection_config_json);
+                },
+                derivedEndpointUrl() {
+                    return String(this.parsedFetchConfig.endpoint_url || this.sourceForm.endpoint_url || '');
+                },
+                derivedHttpMethod() {
+                    return String(this.parsedFetchConfig.http_method || this.sourceForm.http_method || 'GET').toUpperCase();
+                },
+                derivedParserType() {
+                    return String(this.parsedParserConfig.parser_type || this.sourceForm.parser_type || 'JSON_PATH').toUpperCase();
+                },
+                derivedFetchStrategy() {
+                    return String(this.parsedFetchConfig.fetch_strategy || this.sourceForm.fetch_strategy || 'JSON_HTTP').toUpperCase();
+                },
+                derivedSelectionStage() {
+                    return String(this.parsedSelectionConfig.selection_stage || this.sourceForm.selection_stage || 'POST_MAPPING').toUpperCase();
+                },
             },
             methods: {
                 buildJsonExamples() {
@@ -385,38 +408,45 @@
                             draw_date: '@{{draw_date:YYYY-MM-DD}}',
                         },
                         fetch_config_json: {
-                            strategy: 'json_http',
-                            url_override: null,
-                            response_json_path: '$',
+                            fetch_strategy: 'JSON_HTTP',
+                            endpoint_url: 'https://example.com/result',
+                            http_method: 'GET',
+                            headers: {},
+                            query: {},
+                            timeout_seconds: 10,
                         },
                         parser_config_json: {
-                            parse_mode: 'single_payload',
+                            version: 2,
+                            mode: 'single_payload',
+                            parser_type: 'JSON_PATH',
                             fields: {
-                                draw_date_raw: { type: 'JSON_PATH', expr: '$.date' },
-                                first_3_raw: { type: 'JSON_PATH', expr: '$.first_3' },
-                                last_2_raw: { type: 'JSON_PATH', expr: '$.last_2' },
+                                draw_date_raw: { type: 'JSON_PATH', path: '$.date' },
+                                first_prize_raw: { type: 'JSON_PATH', path: '$.results.prize_1st' },
+                                last_2_raw: { type: 'JSON_PATH', path: '$.results.prize_2nd' },
                             },
                         },
                         mapping_config_json: {
-                            draw_date: { from: 'draw_date_raw', transforms: [{ op: 'date', from: 'd/m/Y', to: 'Y-m-d' }] },
-                            first_prize: { from_fields: ['lotto_2', 'lotto_3', 'lotto_4'], join: '' },
-                            last_2_digits: { from: 'last_2_raw', transforms: ['trim', 'digits_only', { op: 'right', value: 2 }] },
+                            fields: {
+                                draw_date: { from: 'draw_date_raw', transforms: [{ op: 'date', from: 'Y-m-d', to: 'Y-m-d' }] },
+                                first_prize: { from: 'first_prize_raw', transforms: [{ op: 'digits_only' }, { op: 'right', length: 3 }] },
+                                last_2_digits: { from: 'last_2_raw', transforms: [{ op: 'digits_only' }, { op: 'right', length: 2 }] },
+                            },
                         },
                         selection_config_json: {
+                            selection_stage: 'PRE_MAPPING',
                             strategy: 'strict_single_match',
-                            expected_draw_date_field: 'draw_date_raw',
+                            date_field: 'draw_date_raw',
+                            required_fields: [],
+                            meta: {
+                                candidate_draw_date_offset_days: 0,
+                            },
                         },
                         validation_config_json: {
                             required_fields: ['draw_date', 'first_prize', 'last_2_digits'],
-                            rules: {
-                                draw_date: 'date:Y-m-d',
-                                first_prize: 'digits:3,6',
-                                last_2_digits: 'digits:2',
-                            },
                         },
                         readiness_config_json: {
-                            allow_partial: false,
-                            required_for_ready: ['draw_date', 'first_prize', 'last_2_digits'],
+                            enabled: true,
+                            minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
                         },
                         retry_policy_json: {
                             max_attempts: 3,
@@ -447,7 +477,7 @@
                         readiness_config_json: '',
                         retry_policy_json: '',
                         timeout_seconds: 10,
-                        pipeline_version: 'LEGACY',
+                        pipeline_version: 'V2_CUTOVER',
                         fetch_strategy: 'JSON_HTTP',
                         selection_stage: 'POST_MAPPING',
                         supports_partial: false,
@@ -465,6 +495,46 @@
                     }
 
                     return JSON.stringify(value, null, 2);
+                },
+                parseJsonSafe(text) {
+                    if (!text || String(text).trim() === '') {
+                        return {};
+                    }
+
+                    try {
+                        const parsed = JSON.parse(text);
+                        return parsed && typeof parsed === 'object' ? parsed : {};
+                    } catch (e) {
+                        return {};
+                    }
+                },
+                buildV2Payload() {
+                    const fetchConfig = this.parseJsonSafe(this.sourceForm.fetch_config_json);
+                    const parserConfig = this.parseJsonSafe(this.sourceForm.parser_config_json);
+                    const selectionConfig = this.parseJsonSafe(this.sourceForm.selection_config_json);
+
+                    const endpointUrl = String(fetchConfig.endpoint_url || this.sourceForm.endpoint_url || '').trim();
+                    if (endpointUrl === '') {
+                        throw new Error('กรุณาใส่ fetch_config_json.endpoint_url');
+                    }
+
+                    const parserType = String(parserConfig.parser_type || this.sourceForm.parser_type || '').trim().toUpperCase();
+                    if (parserType === '') {
+                        throw new Error('กรุณาใส่ parser_config_json.parser_type');
+                    }
+
+                    return {
+                        ...this.sourceForm,
+                        id: this.sourceId,
+                        market_id: this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : null,
+                        source_type: 'api',
+                        endpoint_url: endpointUrl,
+                        http_method: String(fetchConfig.http_method || this.sourceForm.http_method || 'GET').toUpperCase(),
+                        parser_type: parserType,
+                        pipeline_version: 'V2_CUTOVER',
+                        fetch_strategy: String(fetchConfig.fetch_strategy || this.sourceForm.fetch_strategy || 'JSON_HTTP').toUpperCase(),
+                        selection_stage: String(selectionConfig.selection_stage || this.sourceForm.selection_stage || 'POST_MAPPING').toUpperCase(),
+                    };
                 },
                 applyJsonExample(field) {
                     const example = this.jsonExamples[field];
@@ -726,13 +796,10 @@
                         : "{{ route('admin.lotto.result_sources.update') }}";
 
                     try {
+                        const payloadData = this.buildV2Payload();
                         const response = await axios.post(url, {
                             id: this.sourceId,
-                            data: {
-                                ...this.sourceForm,
-                                id: this.sourceId,
-                                market_id: this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : null,
-                            },
+                            data: payloadData,
                         });
 
                         this.$refs.addeditSource.hide();
@@ -746,7 +813,7 @@
                             centered: true,
                         });
                     } catch (error) {
-                        const message = error?.response?.data?.message || 'บันทึก source ไม่สำเร็จ';
+                        const message = error?.response?.data?.message || error?.message || 'บันทึก source ไม่สำเร็จ';
 
                         await this.$bvModal.msgBoxOk(message, {
                             title: 'เกิดข้อผิดพลาด',
@@ -759,13 +826,10 @@
                 },
                 async callConfigAction(url, successTitle) {
                     try {
+                        const payloadData = this.buildV2Payload();
                         const response = await axios.post(url, {
                             id: this.sourceId,
-                            data: {
-                                ...this.sourceForm,
-                                id: this.sourceId,
-                                market_id: this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : null,
-                            },
+                            data: payloadData,
                         });
 
                         await this.$bvModal.msgBoxOk(response?.data?.message || successTitle, {
@@ -776,7 +840,7 @@
                             centered: true,
                         });
                     } catch (error) {
-                        const message = error?.response?.data?.message || 'ดำเนินการไม่สำเร็จ';
+                        const message = error?.response?.data?.message || error?.message || 'ดำเนินการไม่สำเร็จ';
                         await this.$bvModal.msgBoxOk(message, {
                             title: 'เกิดข้อผิดพลาด',
                             size: 'sm',

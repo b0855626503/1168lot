@@ -105,3 +105,11 @@
 - ตอนบันทึก source ที่เปิด `cutover_enabled=true`:
   - production ไม่บล็อกด้วย fixture gate
   - local/testing ยังบล็อกจนกว่าจะมี fixture ตาม source
+
+## 2026-03-27 — Auto Result Source Form V2-Only Mode (APPROVED)
+
+- ลดความสับสนจากการมี field legacy+v2 ซ้ำซ้อนในฟอร์มเดียว
+- ฟอร์ม `admin/lotto/auto-result-sources` แสดงและเน้นการตั้งค่าแบบ V2 config เป็นหลัก
+- ก่อน `preview/validate/save` ระบบจะ derive ค่า field ที่ backend legacy ยังต้องใช้จาก JSON config อัตโนมัติ:
+  - `endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`
+- ตั้ง default ฝั่งฟอร์มเป็น `pipeline_version=V2_CUTOVER` เพื่อให้ flow การใช้งานสอดคล้องกับ runtime ใหม่

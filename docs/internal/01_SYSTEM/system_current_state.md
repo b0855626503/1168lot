@@ -78,6 +78,9 @@
   - ตาราง `lotto_result_source_revisions` เก็บ `changed_by`, `reason`, `config_hash` และ snapshot ต่อ revision
 - เพิ่ม admin actions ใหม่ในเมนู `/lotto/auto-result-sources`:
   - preview config, validate config, validate cutover
+- ฟอร์ม admin ของ `auto-result-sources` ใช้โหมด V2-only:
+  - derive ค่า legacy-required fields (`endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`) จาก JSON config อัตโนมัติก่อน preview/validate/save
+  - ลดความสับสนจากการกรอกค่า legacy และ v2 ซ้ำซ้อน
 - policy ของ `validate cutover`:
   - `local/testing`: บังคับ fixture gate ต่อ source (สำหรับ regression test)
   - `production`: ใช้ live validation จาก `endpoint_url` จริงผ่าน pipeline runner (ไม่บังคับให้ผู้ใช้ admin สร้างไฟล์ fixture)

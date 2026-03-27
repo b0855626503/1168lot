@@ -28,6 +28,8 @@ class SelectionExecutor
         $required = $config->requiredFields();
         $expectedDrawDate = trim((string) ($context['expected_draw_date'] ?? ''));
         $dateField = trim((string) ($config->dateField() ?? 'draw_date'));
+        $candidateDateOffsetDays = (int) ($context['candidate_draw_date_offset_days'] ?? 0);
+        $expectedDateOffsetDays = (int) ($context['expected_draw_date_offset_days'] ?? 0);
         $dateCompareDebug = [];
 
         $valid = [];
@@ -39,12 +41,19 @@ class SelectionExecutor
 
             if ($expectedDrawDate !== '' && $dateField !== '') {
                 $candidateDate = $this->scalarToTrimmedString($fields[$dateField] ?? null);
-                $compare = $this->buildDateComparisonDebug($candidateDate, $expectedDrawDate);
+                $compare = $this->buildDateComparisonDebug(
+                    $candidateDate,
+                    $expectedDrawDate,
+                    $candidateDateOffsetDays,
+                    $expectedDateOffsetDays
+                );
                 $dateCompareDebug[] = [
                     'candidate_index' => (int) ($candidate['index'] ?? 0),
                     'date_field' => $dateField,
                     'candidate_date_raw' => $candidateDate,
                     'expected_draw_date' => $expectedDrawDate,
+                    'candidate_draw_date_offset_days' => $candidateDateOffsetDays,
+                    'expected_draw_date_offset_days' => $expectedDateOffsetDays,
                     'matched' => (bool) $compare['matched'],
                     'direct_match' => (bool) $compare['direct_match'],
                     'format_attempts' => $compare['format_attempts'],
@@ -100,9 +109,19 @@ class SelectionExecutor
         return true;
     }
 
-    private function dateMatches(string $candidateDate, string $expectedDate): bool
+    private function dateMatches(
+        string $candidateDate,
+        string $expectedDate,
+        int $candidateDateOffsetDays = 0,
+        int $expectedDateOffsetDays = 0
+    ): bool
     {
-        return (bool) ($this->buildDateComparisonDebug($candidateDate, $expectedDate)['matched'] ?? false);
+        return (bool) ($this->buildDateComparisonDebug(
+            $candidateDate,
+            $expectedDate,
+            $candidateDateOffsetDays,
+            $expectedDateOffsetDays
+        )['matched'] ?? false);
     }
 
     private function isBlank(mixed $value): bool
@@ -142,14 +161,21 @@ class SelectionExecutor
     /**
      * @return array<string,mixed>
      */
-    private function buildDateComparisonDebug(string $candidateDate, string $expectedDate): array
+    private function buildDateComparisonDebug(
+        string $candidateDate,
+        string $expectedDate,
+        int $candidateDateOffsetDays = 0,
+        int $expectedDateOffsetDays = 0
+    ): array
     {
         $directMatch = $candidateDate === $expectedDate;
         $candidateAny = $this->normalizeDateAny($candidateDate);
         $expectedAny = $this->normalizeDateAny($expectedDate);
-        $canonicalMatch = $candidateAny['normalized'] !== null
-            && $expectedAny['normalized'] !== null
-            && $candidateAny['normalized'] === $expectedAny['normalized'];
+        $candidateAdjusted = $this->adjustDateString($candidateAny['normalized'], $candidateDateOffsetDays);
+        $expectedAdjusted = $this->adjustDateString($expectedAny['normalized'], $expectedDateOffsetDays);
+        $canonicalMatch = $candidateAdjusted !== null
+            && $expectedAdjusted !== null
+            && $candidateAdjusted === $expectedAdjusted;
 
         if ($directMatch) {
             return [
@@ -158,8 +184,15 @@ class SelectionExecutor
                 'canonical_match' => true,
                 'candidate_any' => $candidateAny,
                 'expected_any' => $expectedAny,
+                'candidate_adjusted' => $candidateAdjusted,
+                'expected_adjusted' => $expectedAdjusted,
                 'format_attempts' => [],
-                'consistency' => $this->runConsistencyCheck($candidateDate, $expectedDate),
+                'consistency' => $this->runConsistencyCheck(
+                    $candidateDate,
+                    $expectedDate,
+                    $candidateDateOffsetDays,
+                    $expectedDateOffsetDays
+                ),
             ];
         }
 
@@ -192,8 +225,15 @@ class SelectionExecutor
             'canonical_match' => $canonicalMatch,
             'candidate_any' => $candidateAny,
             'expected_any' => $expectedAny,
+            'candidate_adjusted' => $candidateAdjusted,
+            'expected_adjusted' => $expectedAdjusted,
             'format_attempts' => $attempts,
-            'consistency' => $this->runConsistencyCheck($candidateDate, $expectedDate),
+            'consistency' => $this->runConsistencyCheck(
+                $candidateDate,
+                $expectedDate,
+                $candidateDateOffsetDays,
+                $expectedDateOffsetDays
+            ),
         ];
     }
 
@@ -209,14 +249,19 @@ class SelectionExecutor
     /**
      * @return array<string,mixed>
      */
-    private function runConsistencyCheck(string $candidateDate, string $expectedDate): array
+    private function runConsistencyCheck(
+        string $candidateDate,
+        string $expectedDate,
+        int $candidateDateOffsetDays = 0,
+        int $expectedDateOffsetDays = 0
+    ): array
     {
-        $baseline = $this->dateMatchesCore($candidateDate, $expectedDate);
+        $baseline = $this->dateMatchesCore($candidateDate, $expectedDate, $candidateDateOffsetDays, $expectedDateOffsetDays);
         $stable = true;
         $firstMismatchRound = null;
 
         for ($round = 1; $round <= self::DATE_COMPARE_DIAGNOSTIC_ROUNDS; $round++) {
-            $current = $this->dateMatchesCore($candidateDate, $expectedDate);
+            $current = $this->dateMatchesCore($candidateDate, $expectedDate, $candidateDateOffsetDays, $expectedDateOffsetDays);
             if ($current !== $baseline) {
                 $stable = false;
                 $firstMismatchRound = $round;
@@ -232,7 +277,12 @@ class SelectionExecutor
         ];
     }
 
-    private function dateMatchesCore(string $candidateDate, string $expectedDate): bool
+    private function dateMatchesCore(
+        string $candidateDate,
+        string $expectedDate,
+        int $candidateDateOffsetDays = 0,
+        int $expectedDateOffsetDays = 0
+    ): bool
     {
         if ($candidateDate === $expectedDate) {
             return true;
@@ -240,9 +290,11 @@ class SelectionExecutor
 
         $candidateAny = $this->normalizeDateAny($candidateDate);
         $expectedAny = $this->normalizeDateAny($expectedDate);
-        if ($candidateAny['normalized'] !== null
-            && $expectedAny['normalized'] !== null
-            && $candidateAny['normalized'] === $expectedAny['normalized']) {
+        $candidateAdjusted = $this->adjustDateString($candidateAny['normalized'], $candidateDateOffsetDays);
+        $expectedAdjusted = $this->adjustDateString($expectedAny['normalized'], $expectedDateOffsetDays);
+        if ($candidateAdjusted !== null
+            && $expectedAdjusted !== null
+            && $candidateAdjusted === $expectedAdjusted) {
             return true;
         }
 
@@ -256,6 +308,25 @@ class SelectionExecutor
         }
 
         return false;
+    }
+
+    private function adjustDateString(?string $date, int $offsetDays): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        if ($offsetDays === 0) {
+            return $date;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $date)
+                ->addDays($offsetDays)
+                ->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return $date;
+        }
     }
 
     /**
