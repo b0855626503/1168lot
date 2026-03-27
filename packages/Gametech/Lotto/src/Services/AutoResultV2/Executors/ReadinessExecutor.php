@@ -15,7 +15,7 @@ class ReadinessExecutor
         $missing = [];
         foreach ($config->minimumRequiredKeys() as $field) {
             $value = $normalized[$field] ?? null;
-            if ($value === null || trim((string) $value) === '') {
+            if ($this->isBlank($value)) {
                 $missing[] = $field;
             }
         }
@@ -46,5 +46,26 @@ class ReadinessExecutor
             'missing_fields' => $missing,
             'error_code' => 'NOT_READY_BUSINESS_RULE',
         ];
+    }
+
+    private function isBlank(mixed $value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            return trim($value) === '';
+        }
+
+        if (is_array($value)) {
+            return $value === [];
+        }
+
+        if (is_object($value)) {
+            return false;
+        }
+
+        return trim((string) $value) === '';
     }
 }

@@ -34,7 +34,7 @@ class SelectionExecutor
             }
 
             if ($expectedDrawDate !== '' && $dateField !== '') {
-                $candidateDate = trim((string) ($fields[$dateField] ?? ''));
+                $candidateDate = $this->scalarToTrimmedString($fields[$dateField] ?? null);
                 if (! $this->dateMatches($candidateDate, $expectedDrawDate)) {
                     continue;
                 }
@@ -74,7 +74,7 @@ class SelectionExecutor
     {
         foreach ($required as $field) {
             $value = $fields[$field] ?? null;
-            if ($value === null || trim((string) $value) === '') {
+            if ($this->isBlank($value)) {
                 return false;
             }
         }
@@ -101,5 +101,39 @@ class SelectionExecutor
         }
 
         return false;
+    }
+
+    private function isBlank(mixed $value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            return trim($value) === '';
+        }
+
+        if (is_array($value)) {
+            return $value === [];
+        }
+
+        if (is_object($value)) {
+            return false;
+        }
+
+        return trim((string) $value) === '';
+    }
+
+    private function scalarToTrimmedString(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            return trim((string) $value);
+        }
+
+        return '';
     }
 }

@@ -15,7 +15,7 @@ class ValidationExecutor
         $missing = [];
         foreach ($config->requiredFields() as $field) {
             $value = $mapped[$field] ?? null;
-            if ($value === null || trim((string) $value) === '') {
+            if ($this->isBlank($value)) {
                 $missing[] = $field;
             }
         }
@@ -35,5 +35,26 @@ class ValidationExecutor
             'missing_fields' => [],
             'normalized' => $mapped,
         ];
+    }
+
+    private function isBlank(mixed $value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            return trim($value) === '';
+        }
+
+        if (is_array($value)) {
+            return $value === [];
+        }
+
+        if (is_object($value)) {
+            return false;
+        }
+
+        return trim((string) $value) === '';
     }
 }
