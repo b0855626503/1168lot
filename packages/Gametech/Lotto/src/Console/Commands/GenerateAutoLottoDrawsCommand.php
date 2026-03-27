@@ -196,9 +196,13 @@ class GenerateAutoLottoDrawsCommand extends Command
         $closeAt = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . substr($closeTime, 0, 8), $timezone);
         $resultAt = null;
 
+        while ($closeAt->lessThanOrEqualTo($openAt)) {
+            $closeAt->addDay();
+        }
+
         if ($resultTime !== '') {
             $resultAt = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d') . ' ' . substr($resultTime, 0, 8), $timezone);
-            if ($resultAt->lessThanOrEqualTo($closeAt)) {
+            while ($resultAt->lessThanOrEqualTo($closeAt)) {
                 $resultAt->addDay();
             }
         }

@@ -213,20 +213,28 @@ class LottoDrawController extends AppBaseController
             'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
             'draw_date'   => ['required', 'date_format:Y-m-d'],
             'open_at'     => ['required', 'date_format:Y-m-d H:i'],
-            'close_at'    => ['required', 'date_format:Y-m-d H:i', 'after:open_at'],
+            'close_at'    => ['required', 'date_format:Y-m-d H:i'],
             'status'      => ['nullable', Rule::in(DrawStatusFlow::allowedStatuses())],
             'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
         ])->validate();
 
         try {
             $targetStatus = (string) ($validated['status'] ?? 'draft');
+            [$normalizedOpenAt, $normalizedCloseAt] = $this->normalizeOpenCloseWindow(
+                (string) $validated['open_at'],
+                (string) $validated['close_at']
+            );
+            $normalizedResultAt = $this->normalizeResultAtWithCloseAt(
+                $validated['result_at'] ?? null,
+                $normalizedCloseAt
+            );
 
             $draw = $drawService->createDraft([
                 'market_id'   => $validated['market_id'],
                 'draw_date'   => $validated['draw_date'],
-                'open_at'     => $this->normalizeDateTimeInput($validated['open_at']),
-                'close_at'    => $this->normalizeDateTimeInput($validated['close_at']),
-                'result_at'   => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
+                'open_at'     => $normalizedOpenAt,
+                'close_at'    => $normalizedCloseAt,
+                'result_at'   => $normalizedResultAt,
                 'created_by'  => auth()->id(),
             ]);
 
@@ -424,19 +432,29 @@ class LottoDrawController extends AppBaseController
         ])->validate();
 
         $runId = sprintf('admin_test_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
-        Artisan::queue('lotto:fetch-auto-results', [
+        $params = [
             '--draw-id' => (int) $validated['draw_id'],
             '--limit' => 1,
             '--dry-run' => true,
             '--manual-retry' => true,
             '--run-id' => $runId,
-        ]);
+        ];
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
+        $output = trim((string) Artisan::output());
+
+        if ($exitCode !== 0) {
+            return $this->sendError('Dry-run Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+        }
 
         return $this->sendResponse([
             'run_id' => $runId,
             'draw_id' => (int) $validated['draw_id'],
             'mode' => 'dry_run',
-        ], 'ส่งคำสั่งทดสอบดึงผลแบบ Dry-run เข้าคิวแล้ว');
+            'command' => 'lotto:fetch-auto-results',
+            'params' => $params,
+            'output' => $output !== '' ? $output : null,
+        ], 'ดำเนินการ Dry-run Auto Result เรียบร้อยแล้ว');
     }
 
     public function autoResultManualRetry(Request $request): JsonResponse
@@ -566,7 +584,7 @@ class LottoDrawController extends AppBaseController
                 'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
                 'draw_date'   => ['required', 'date_format:Y-m-d'],
                 'open_at'     => ['required', 'date_format:Y-m-d H:i'],
-                'close_at'    => ['required', 'date_format:Y-m-d H:i', 'after:open_at'],
+                'close_at'    => ['required', 'date_format:Y-m-d H:i'],
                 'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
             ];
         }
@@ -610,12 +628,21 @@ class LottoDrawController extends AppBaseController
         $status = (string) $draw->status;
 
         if ($status === 'draft') {
+            [$normalizedOpenAt, $normalizedCloseAt] = $this->normalizeOpenCloseWindow(
+                (string) $validated['open_at'],
+                (string) $validated['close_at']
+            );
+            $normalizedResultAt = $this->normalizeResultAtWithCloseAt(
+                $validated['result_at'] ?? null,
+                $normalizedCloseAt
+            );
+
             return [
                 'market_id' => (int) $validated['market_id'],
                 'draw_date' => (string) $validated['draw_date'],
-                'open_at' => $this->normalizeDateTimeInput((string) $validated['open_at']),
-                'close_at' => $this->normalizeDateTimeInput((string) $validated['close_at']),
-                'result_at' => $this->normalizeDateTimeInput($validated['result_at'] ?? null),
+                'open_at' => $normalizedOpenAt,
+                'close_at' => $normalizedCloseAt,
+                'result_at' => $normalizedResultAt,
             ];
         }
 
@@ -626,11 +653,10 @@ class LottoDrawController extends AppBaseController
             }
 
             if (array_key_exists('close_at', $validated)) {
-                $normalizedCloseAt = $this->normalizeDateTimeInput((string) $validated['close_at']);
-                if ($draw->open_at && $normalizedCloseAt !== null && Carbon::parse($normalizedCloseAt)->lte($draw->open_at)) {
-                    throw new InvalidArgumentException('เวลา close_at ต้องมากกว่าเวลา open_at');
-                }
-                $payload['close_at'] = $normalizedCloseAt;
+                $payload['close_at'] = $this->normalizeCloseAtWithExistingOpenAt(
+                    (string) $validated['close_at'],
+                    $draw->open_at
+                );
             }
 
             if ($this->drawColumnExists('remark') && array_key_exists('remark', $validated)) {
@@ -711,6 +737,77 @@ class LottoDrawController extends AppBaseController
 
         return Carbon::parse((string) $value, (string) config('app.timezone', 'Asia/Bangkok'))
             ->format('Y-m-d H:i');
+    }
+
+    /**
+     * รองรับเคสข้ามวัน: ถ้า close_at น้อยกว่า open_at
+     * จะตีความ close_at เป็นวันถัดไปจนกว่าจะมากกว่า open_at
+     *
+     * @return array{0:string,1:string}
+     */
+    private function normalizeOpenCloseWindow(string $openAtInput, string $closeAtInput): array
+    {
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
+        $openAt = Carbon::createFromFormat('Y-m-d H:i', $openAtInput, $timezone);
+        $closeAt = Carbon::createFromFormat('Y-m-d H:i', $closeAtInput, $timezone);
+
+        if ($closeAt->equalTo($openAt)) {
+            throw new InvalidArgumentException('เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน');
+        }
+
+        while ($closeAt->lt($openAt)) {
+            $closeAt = $closeAt->copy()->addDay();
+        }
+
+        return [
+            $openAt->format('Y-m-d H:i:s'),
+            $closeAt->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * @param CarbonInterface|string|null $openAt
+     */
+    private function normalizeCloseAtWithExistingOpenAt(string $closeAtInput, $openAt): string
+    {
+        $normalizedCloseAt = $this->normalizeDateTimeInput($closeAtInput);
+        if ($normalizedCloseAt === null || ! $openAt) {
+            return (string) $normalizedCloseAt;
+        }
+
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
+        $openAtCarbon = $openAt instanceof CarbonInterface
+            ? $openAt->copy()->setTimezone($timezone)
+            : Carbon::parse((string) $openAt, $timezone);
+        $closeAtCarbon = Carbon::parse($normalizedCloseAt, $timezone);
+
+        if ($closeAtCarbon->equalTo($openAtCarbon)) {
+            throw new InvalidArgumentException('เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน');
+        }
+
+        while ($closeAtCarbon->lt($openAtCarbon)) {
+            $closeAtCarbon = $closeAtCarbon->copy()->addDay();
+        }
+
+        return $closeAtCarbon->format('Y-m-d H:i:s');
+    }
+
+    private function normalizeResultAtWithCloseAt(?string $resultAtInput, ?string $closeAt): ?string
+    {
+        $normalizedResultAt = $this->normalizeDateTimeInput($resultAtInput);
+        if ($normalizedResultAt === null || empty($closeAt)) {
+            return $normalizedResultAt;
+        }
+
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
+        $closeAtCarbon = Carbon::parse($closeAt, $timezone);
+        $resultAtCarbon = Carbon::parse($normalizedResultAt, $timezone);
+
+        while ($resultAtCarbon->lt($closeAtCarbon)) {
+            $resultAtCarbon = $resultAtCarbon->copy()->addDay();
+        }
+
+        return $resultAtCarbon->format('Y-m-d H:i:s');
     }
 
 }

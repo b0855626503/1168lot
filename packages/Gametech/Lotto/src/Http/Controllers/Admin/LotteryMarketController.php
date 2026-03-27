@@ -255,8 +255,8 @@ class LotteryMarketController extends AppBaseController
         }
 
         if (! empty($validated['auto_open_time']) && ! empty($validated['auto_close_time'])) {
-            if ((string) $validated['auto_open_time'] >= (string) $validated['auto_close_time']) {
-                throw new InvalidArgumentException('เวลาเปิดรับต้องน้อยกว่าเวลาปิดรับ');
+            if ((string) $validated['auto_open_time'] === (string) $validated['auto_close_time']) {
+                throw new InvalidArgumentException('เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน');
             }
         }
     }

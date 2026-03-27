@@ -1157,11 +1157,12 @@
                         return 'กรุณาระบุเวลาเปิดรับและปิดรับให้ครบ';
                     }
 
-                    if (this.formaddedit.open_at >= this.formaddedit.close_at) {
-                        return 'เวลาเปิดรับต้องน้อยกว่าเวลาปิดรับ';
+                    const closeAtError = this.validateCloseAtAgainstOpenAt(this.formaddedit.open_at, this.formaddedit.close_at);
+                    if (closeAtError) {
+                        return closeAtError;
                     }
 
-                    return '';
+                    return this.validateResultAtAgainstCloseAt(this.formaddedit.close_at, this.formaddedit.result_at);
                 },
                 validateEditWindow() {
                     if (this.currentDrawStatus === 'draft') {
@@ -1173,8 +1174,8 @@
                             return 'กรุณาระบุเวลาปิดรับ';
                         }
 
-                        if (this.formaddedit.open_at && this.formaddedit.open_at >= this.formaddedit.close_at) {
-                            return 'เวลาเปิดรับต้องน้อยกว่าเวลาปิดรับ';
+                        if (this.formaddedit.open_at) {
+                            return this.validateCloseAtAgainstOpenAt(this.formaddedit.open_at, this.formaddedit.close_at);
                         }
 
                         return '';
@@ -1204,6 +1205,40 @@
                     }
 
                     return {};
+                },
+                validateCloseAtAgainstOpenAt(openAtValue, closeAtValue) {
+                    const openAt = new Date(openAtValue);
+                    const closeAt = new Date(closeAtValue);
+
+                    if (Number.isNaN(openAt.getTime()) || Number.isNaN(closeAt.getTime())) {
+                        return 'รูปแบบวันเวลาไม่ถูกต้อง';
+                    }
+
+                    if (openAt.getTime() === closeAt.getTime()) {
+                        return 'เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน';
+                    }
+
+                    if (closeAt.getTime() > openAt.getTime()) {
+                        return '';
+                    }
+                    return '';
+                },
+                validateResultAtAgainstCloseAt(closeAtValue, resultAtValue) {
+                    if (!resultAtValue) {
+                        return '';
+                    }
+
+                    const closeAt = new Date(closeAtValue);
+                    const resultAt = new Date(resultAtValue);
+
+                    if (Number.isNaN(closeAt.getTime()) || Number.isNaN(resultAt.getTime())) {
+                        return 'รูปแบบวันเวลาไม่ถูกต้อง';
+                    }
+
+                    if (resultAt.getTime() >= closeAt.getTime()) {
+                        return '';
+                    }
+                    return '';
                 },
                 resolveApiErrorMessage(error, fallbackMessage) {
                     const backendMessage = error?.response?.data?.message;
@@ -1443,26 +1478,52 @@
                     window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
                 async runAutoResultTestFetch(id) {
-                    const response = await axios.post("{{ route('admin.lotto.draws.auto_result_test_fetch') }}", { draw_id: id });
-                    const runId = response?.data?.data?.run_id || '';
-                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Dry-run แล้ว\nRun ID: ${runId}`, {
-                        title: 'Auto Result Dry-run',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'warning',
-                        centered: true,
-                    });
+                    try {
+                        const response = await axios.post("{{ route('admin.lotto.draws.auto_result_test_fetch') }}", { draw_id: id });
+                        const runId = response?.data?.data?.run_id || '';
+                        const output = String(response?.data?.data?.output || '');
+                        const outputPreview = output ? `\n\nOutput:\n${output.substring(0, 1200)}` : '';
+                        await this.$bvModal.msgBoxOk(`ดำเนินการ Dry-run แล้ว\nRun ID: ${runId}${outputPreview}`, {
+                            title: 'Auto Result Dry-run',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'warning',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'Dry-run ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'Auto Result Dry-run',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
                 },
                 async runAutoResultManualRetry(id) {
-                    const response = await axios.post("{{ route('admin.lotto.draws.auto_result_manual_retry') }}", { draw_id: id });
-                    const runId = response?.data?.data?.run_id || '';
-                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Retry แล้ว\nRun ID: ${runId}`, {
-                        title: 'Auto Result Retry',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'dark',
-                        centered: true,
-                    });
+                    try {
+                        const response = await axios.post("{{ route('admin.lotto.draws.auto_result_manual_retry') }}", { draw_id: id });
+                        const runId = response?.data?.data?.run_id || '';
+                        const output = String(response?.data?.data?.output || '');
+                        const outputPreview = output ? `\n\nOutput:\n${output.substring(0, 1200)}` : '';
+                        await this.$bvModal.msgBoxOk(`ดำเนินการ Retry แล้ว\nRun ID: ${runId}${outputPreview}`, {
+                            title: 'Auto Result Retry',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'dark',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'Retry ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'Auto Result Retry',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
                 },
                 async showAutoResultLogs(id) {
                     const response = await axios.get("{{ route('admin.lotto.draws.auto_result_logs') }}", {

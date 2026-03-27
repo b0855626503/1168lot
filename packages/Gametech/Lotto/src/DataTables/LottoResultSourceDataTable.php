@@ -30,9 +30,7 @@ class LottoResultSourceDataTable extends DataTable
                 'lotto_groups.name as group_name'
             )
             ->leftJoin('lotto_markets', 'lotto_markets.id', '=', 'lotto_result_sources.market_id')
-            ->leftJoin('lotto_groups', 'lotto_groups.id', '=', 'lotto_markets.group_id')
-            ->orderBy('lotto_result_sources.priority')
-            ->orderByDesc('lotto_result_sources.id');
+            ->leftJoin('lotto_groups', 'lotto_groups.id', '=', 'lotto_markets.group_id');
 
         $groupId = (int) request()->get('group_id', 0);
         if ($groupId > 0) {
@@ -64,7 +62,7 @@ class LottoResultSourceDataTable extends DataTable
                 'deferRender' => true,
                 'retrieve' => true,
                 'ordering' => true,
-                'order' => [[0, 'desc']],
+                'order' => [[3, 'asc'], [0, 'desc']],
                 'buttons' => ['pageLength'],
                 'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
@@ -75,17 +73,17 @@ class LottoResultSourceDataTable extends DataTable
     protected function getColumns(): array
     {
         return [
-            ['data' => 'id', 'name' => 'id', 'title' => '#', 'className' => 'text-center', 'width' => '60px'],
-            ['data' => 'group_name', 'name' => 'group_name', 'title' => 'กลุ่มหวย'],
-            ['data' => 'market_name', 'name' => 'market_name', 'title' => 'รายการหวย'],
-            ['data' => 'priority', 'name' => 'priority', 'title' => 'Priority', 'className' => 'text-center', 'width' => '90px'],
-            ['data' => 'source_type', 'name' => 'source_type', 'title' => 'Type', 'className' => 'text-center', 'width' => '90px'],
-            ['data' => 'http_method', 'name' => 'http_method', 'title' => 'Method', 'className' => 'text-center', 'width' => '90px'],
-            ['data' => 'endpoint_url', 'name' => 'endpoint_url', 'title' => 'Endpoint'],
-            ['data' => 'lookup_date_mode', 'name' => 'lookup_date_mode', 'title' => 'Lookup', 'className' => 'text-center', 'width' => '170px'],
-            ['data' => 'parser_type', 'name' => 'parser_type', 'title' => 'Parser', 'className' => 'text-center', 'width' => '110px'],
-            ['data' => 'is_active', 'name' => 'is_active', 'title' => 'สถานะ', 'className' => 'text-center', 'width' => '90px'],
-            ['data' => 'action', 'name' => 'action', 'title' => 'จัดการ', 'className' => 'text-center', 'width' => '100px'],
+            ['data' => 'id', 'name' => 'lotto_result_sources.id', 'title' => '#', 'className' => 'text-center', 'width' => '60px'],
+            ['data' => 'group_name', 'name' => 'lotto_groups.name', 'title' => 'กลุ่มหวย'],
+            ['data' => 'market_name', 'name' => 'lotto_markets.name', 'title' => 'รายการหวย'],
+            ['data' => 'priority', 'name' => 'lotto_result_sources.priority', 'title' => 'Priority', 'className' => 'text-center', 'width' => '90px'],
+            ['data' => 'source_type', 'name' => 'lotto_result_sources.source_type', 'title' => 'Type', 'className' => 'text-center', 'width' => '90px'],
+            ['data' => 'http_method', 'name' => 'lotto_result_sources.http_method', 'title' => 'Method', 'className' => 'text-center', 'width' => '90px'],
+            ['data' => 'endpoint_url', 'name' => 'lotto_result_sources.endpoint_url', 'title' => 'Endpoint'],
+            ['data' => 'lookup_date_mode', 'name' => 'lotto_result_sources.lookup_date_mode', 'title' => 'Lookup', 'className' => 'text-center', 'width' => '170px'],
+            ['data' => 'parser_type', 'name' => 'lotto_result_sources.parser_type', 'title' => 'Parser', 'className' => 'text-center', 'width' => '110px'],
+            ['data' => 'is_active', 'name' => 'lotto_result_sources.is_active', 'title' => 'สถานะ', 'className' => 'text-center', 'width' => '90px'],
+            ['data' => 'action', 'name' => 'action', 'title' => 'จัดการ', 'className' => 'text-center', 'width' => '100px', 'orderable' => false, 'searchable' => false],
         ];
     }
 }

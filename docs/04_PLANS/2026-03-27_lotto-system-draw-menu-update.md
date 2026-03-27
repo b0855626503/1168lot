@@ -314,6 +314,18 @@ Implement exactly as specified.
 * ปุ่ม `Retry` ในเมนูงวดหวย:
   - manual retry แบบระบุ `draw_id` ต้อง bypass เงื่อนไขคัดกรอง `result_at/result_fetch_status/backoff` ที่ทำให้ไม่ถูกประมวลผล
   - endpoint admin manual retry ต้องเรียก command แบบทันที (synchronous) เพื่อไม่ขึ้นกับ worker queue และให้เห็นผล/log ได้ทันที
+* ปุ่ม `Dry-run` ในเมนูงวดหวย:
+  - endpoint admin dry-run ต้องเรียก command แบบทันที (synchronous) เช่นเดียวกับ retry
+  - ห้ามใช้ queue dispatch ใน flow นี้ เพื่อหลีกเลี่ยงเคส prod ที่ไม่มี worker ทำให้งานไม่ถูกประมวลผล
+  - ฝั่ง UI ต้องห่อ `try/catch` และแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว
+* กติกาเวลางวดแบบข้ามวัน (admin modal `draws/addedit`):
+  - ถ้า `close_at` น้อยกว่า `open_at` ให้ตีความ `close_at` เป็นวันถัดไปอัตโนมัติ
+  - ถ้า `result_at` น้อยกว่า `close_at` ให้ตีความ `result_at` เป็นวันถัดไปอัตโนมัติ
+  - กรณีเวลาที่กรอกน้อยกว่าค่าอ้างอิง ระบบจะ normalize ไปวันถัดไปจนได้ลำดับเวลาเชิงตรรกะที่ถูกต้อง
+* เมนู `รายการหวย` (`markets`) ต้องใช้กติกาเวลาเดียวกัน:
+  - ยอมรับ `auto_open_time > auto_close_time` เป็นเคสข้ามวัน
+  - ป้องกันเฉพาะกรณี `auto_open_time === auto_close_time`
+  - command `lotto:generate-auto-draws` ต้อง normalize `close_at/result_at` แบบข้ามวันให้สอดคล้องกับ config
 * งวดสถานะ `open` อนุญาตให้แก้ `draw_date` ได้จากหน้าจอแก้ไขงวด (นอกเหนือจาก `close_at`)
 * ปุ่ม action ในตาราง `draws` ต้องเช็กสิทธิ์รายปุ่มด้วย ACL key:
   - `edit` → `lotto_draws.edit`
@@ -324,3 +336,6 @@ Implement exactly as specified.
   - `retry` → `lotto_draws.auto_result_manual_retry`
   - `logs` → `lotto_draws.auto_result_metrics`
 * สถานะ `resulted` ให้แสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์
+* ตาราง `/lotto/auto-result-sources` ต้องรองรับการกด sort ทุกคอลัมน์ที่ sortable:
+  - ห้าม lock `orderBy(...)` ตายตัวไว้ใน query หลัก
+  - ให้ตั้ง default initial sort ผ่าน DataTables parameter (`priority asc`, `id desc`) แทน
