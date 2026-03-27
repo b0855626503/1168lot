@@ -905,6 +905,12 @@
                             };
                         };
 
+                        const lookupMode = String(this.sourceForm.lookup_date_mode || 'ROUND_DATE');
+                        const lookupOffset = Math.abs(Number(this.sourceForm.lookup_date_offset_days || 0));
+                        const candidateDateOffsetDays = lookupMode === 'ROUND_DATE_MINUS_DAYS'
+                            ? lookupOffset
+                            : (lookupMode === 'ROUND_DATE_PLUS_DAYS' ? -lookupOffset : 0);
+
                         this.sourceForm.unified_pipeline_json = JSON.stringify({
                             request_headers_json: {},
                             request_query_template_json: {},
@@ -942,7 +948,8 @@
                                 date_field: 'draw_date_raw',
                                 required_fields: [],
                                 meta: {
-                                    candidate_draw_date_offset_days: 0,
+                                    candidate_draw_date_offset_days: candidateDateOffsetDays,
+                                    expected_draw_date_offset_days: 0,
                                 },
                             },
                             validation_config_json: {
