@@ -29,6 +29,10 @@ class AutoResultParserV2Test extends TestCase
         $this->assertSame('26/03/2026', $parsed['candidates'][0]['fields']['draw_date']);
         $this->assertSame('987654', $parsed['candidates'][1]['fields']['first_prize']);
         $this->assertSame('54', $parsed['candidates'][1]['fields']['last_2_digits']);
+        $this->assertSame(strlen((string) $html), $parsed['_debug']['raw_response_length']);
+        $this->assertNotEmpty($parsed['_debug']['raw_response_preview']);
+        $this->assertSame(2, $parsed['_debug']['record_selector_match_count']);
+        $this->assertNotEmpty($parsed['_debug']['first_matched_block']);
     }
 
     public function test_parse_v2_regex_record_list_with_invalid_pattern_throws(): void

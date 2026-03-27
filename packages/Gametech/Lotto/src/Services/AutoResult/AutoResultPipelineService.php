@@ -140,6 +140,10 @@ class AutoResultPipelineService
             (array) ($source->validation_config_json ?? []),
             new ResultParseContext($expectedDrawDate)
         );
+        $selectionWithParserDebug = $selection;
+        if (isset($parsed['_debug']) && is_array($parsed['_debug'])) {
+            $selectionWithParserDebug['parser_debug'] = $parsed['_debug'];
+        }
 
         if ((string) ($selection['decision'] ?? '') !== 'selected') {
             return $this->markAndLog($draw, [
@@ -152,7 +156,7 @@ class AutoResultPipelineService
                 'response_http_status' => $fetched['http_status'],
                 'response_body' => $responseBody,
                 'parsed_payload_json' => $parsed,
-                'selection_debug_json' => $selection,
+                'selection_debug_json' => $selectionWithParserDebug,
                 'duration_ms' => (int) $fetched['duration_ms'],
                 'is_dry_run' => $dryRun,
                 'is_manual_retry' => $isManualRetry,
@@ -183,7 +187,7 @@ class AutoResultPipelineService
                 'response_http_status' => $fetched['http_status'],
                 'response_body' => $responseBody,
                 'parsed_payload_json' => $parsed,
-                'selection_debug_json' => $selection,
+                'selection_debug_json' => $selectionWithParserDebug,
                 'normalized_result_json' => $mapped ?? [],
                 'duration_ms' => (int) $fetched['duration_ms'],
                 'is_dry_run' => $dryRun,
@@ -197,7 +201,7 @@ class AutoResultPipelineService
             'response_http_status' => $fetched['http_status'],
             'response_body' => $responseBody,
             'parsed' => $parsed,
-            'selection' => $selection,
+            'selection' => $selectionWithParserDebug,
             'mapped' => $mapped,
         ], $dryRun);
 
@@ -213,7 +217,7 @@ class AutoResultPipelineService
             'response_http_status' => $fetched['http_status'],
             'response_body' => $responseBody,
             'parsed_payload_json' => $parsed,
-            'selection_debug_json' => $selection,
+            'selection_debug_json' => $selectionWithParserDebug,
             'normalized_result_json' => $validated,
             'duration_ms' => (int) $fetched['duration_ms'],
             'is_dry_run' => $dryRun,

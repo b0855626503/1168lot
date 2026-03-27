@@ -49,12 +49,29 @@ class ResultParser
             throw new ResultParseException('parser_config_json v2 ต้องกำหนด fields');
         }
 
+        $recordSelectorMatchCount = 0;
+        $firstMatchedBlock = null;
+
         $candidates = match ($mode) {
             self::MODE_SINGLE_PAYLOAD => $this->extractSinglePayloadCandidates($recordType, $responseBody, $fields),
             self::MODE_RECORD_LIST => $this->extractRecordListCandidates($recordType, $recordSelector, $responseBody, $fields),
             self::MODE_SCOPED_RECORD => $this->extractScopedRecordCandidates($recordType, $recordSelector, $responseBody, $fields),
             default => throw new ResultParseException('parser mode ไม่รองรับ: ' . $mode),
         };
+
+        if ($mode === self::MODE_RECORD_LIST || $mode === self::MODE_SCOPED_RECORD) {
+            $recordSelectorMatchCount = count($candidates);
+            if ($recordSelectorMatchCount > 0) {
+                $firstMatchedBlock = $this->stringifyBlock($candidates[0]['raw_record'] ?? null);
+            }
+        } else {
+            $recordSelectorMatchCount = count($candidates);
+            if ($recordSelectorMatchCount > 0) {
+                $firstMatchedBlock = $this->stringifyBlock($candidates[0]['raw_record'] ?? null);
+            }
+        }
+
+        $firstCandidateFields = is_array($candidates[0]['fields'] ?? null) ? $candidates[0]['fields'] : [];
 
         return [
             'version' => 2,
@@ -63,6 +80,18 @@ class ResultParser
             'record_parser_type' => $recordType,
             'candidate_count' => count($candidates),
             'candidates' => $candidates,
+            '_debug' => [
+                'raw_response_length' => strlen($responseBody),
+                'raw_response_preview' => mb_substr($responseBody, 0, 1500),
+                'record_selector' => $recordSelector,
+                'record_selector_match_count' => $recordSelectorMatchCount,
+                'first_matched_block' => $firstMatchedBlock,
+                'field_probe' => [
+                    'draw_date_raw' => $firstCandidateFields['draw_date_raw'] ?? ($firstCandidateFields['draw_date'] ?? null),
+                    'first_prize_raw' => $firstCandidateFields['first_prize_raw'] ?? ($firstCandidateFields['first_prize'] ?? null),
+                    'last2_source' => $firstCandidateFields['last2_source'] ?? ($firstCandidateFields['last_2_digits'] ?? null),
+                ],
+            ],
         ];
     }
 
@@ -384,6 +413,27 @@ class ResultParser
         }
 
         throw new ResultParseException('field type ไม่รองรับ: ' . $type);
+    }
+
+    /**
+     * @param mixed $block
+     */
+    private function stringifyBlock($block): ?string
+    {
+        if ($block === null) {
+            return null;
+        }
+
+        if (is_scalar($block)) {
+            return (string) $block;
+        }
+
+        try {
+            $encoded = json_encode($block, JSON_UNESCAPED_UNICODE);
+            return $encoded === false ? null : $encoded;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**

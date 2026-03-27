@@ -41,7 +41,24 @@ class AutoResultCandidateSelectorTest extends TestCase
         ], new ResultParseContext('2026-03-27'));
 
         $this->assertSame('rejected', $decision['decision']);
-        $this->assertSame('no_candidate_matches_expected_draw_date', $decision['rejection_reason']);
+        $this->assertSame('expected_draw_date_mismatch', $decision['rejection_reason']);
+    }
+
+    public function test_strict_single_match_rejects_draw_date_not_parsed_before_mismatch(): void
+    {
+        $selector = new ResultCandidateSelector();
+
+        $decision = $selector->select($this->parsedCandidates([
+            ['draw_date' => '', 'first_prize' => '111111', 'last_2_digits' => '11'],
+        ]), [
+            'selection_strategy' => ['type' => 'strict_single_match'],
+        ], [
+            'required' => ['first_prize', 'last_2_digits', 'draw_date'],
+            'expected_draw_date' => ['field' => 'draw_date'],
+        ], new ResultParseContext('2026-03-27'));
+
+        $this->assertSame('rejected', $decision['decision']);
+        $this->assertSame('draw_date_field_not_parsed', $decision['rejection_reason']);
     }
 
     public function test_strict_single_match_rejects_ambiguity_with_multiple_matches(): void

@@ -61,6 +61,11 @@ class AutoResultPipelineRegressionTest extends TestCase
         ];
 
         $parsed = $parser->parse('CSS_SELECTOR', $parserConfig, (string) $html);
+        $this->assertSame(2, $parsed['_debug']['record_selector_match_count']);
+        $this->assertSame('26/03/2026', $parsed['_debug']['field_probe']['draw_date_raw']);
+        $this->assertSame('111111', $parsed['_debug']['field_probe']['first_prize_raw']);
+        $this->assertNull($parsed['_debug']['field_probe']['last2_source']);
+
         $selection = $selector->select($parsed, $parserConfig, $validationConfig, new ResultParseContext('2026-03-27'));
 
         $this->assertSame('selected', $selection['decision']);
@@ -100,6 +105,11 @@ class AutoResultPipelineRegressionTest extends TestCase
         ];
 
         $parsed = $parser->parse('CSS_SELECTOR', $parserConfig, (string) $html);
+        $this->assertSame(2, $parsed['_debug']['record_selector_match_count']);
+        $this->assertSame('27/03/2026', $parsed['_debug']['field_probe']['draw_date_raw'] ?? $parsed['_debug']['field_probe']['draw_date'] ?? null);
+        $this->assertSame('222222', $parsed['_debug']['field_probe']['first_prize_raw'] ?? $parsed['_debug']['field_probe']['first_prize'] ?? null);
+        $this->assertSame('22', $parsed['_debug']['field_probe']['last2_source']);
+
         $selection = $selector->select($parsed, $parserConfig, $validationConfig, new ResultParseContext('2026-03-27'));
 
         $this->assertSame('rejected', $selection['decision']);

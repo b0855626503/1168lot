@@ -46,6 +46,12 @@ class ResultCandidateSelector
         }
 
         if ($evaluated === []) {
+            $parserDebug = is_array($parsed['_debug'] ?? null) ? $parsed['_debug'] : [];
+            $selectorMatchCount = (int) ($parserDebug['record_selector_match_count'] ?? 0);
+            if ($selectorMatchCount === 0) {
+                return $this->rejected('record_selector_not_match', $evaluated);
+            }
+
             return $this->rejected('no_candidates', $evaluated);
         }
 
@@ -191,7 +197,11 @@ class ResultCandidateSelector
 
         if (trim((string) $expectedDrawDate) !== '') {
             if ($matched === []) {
-                return $this->rejected('no_candidate_matches_expected_draw_date', $evaluated);
+                if (! $this->hasParsedDateValue($evaluated)) {
+                    return $this->rejected('draw_date_field_not_parsed', $evaluated);
+                }
+
+                return $this->rejected('expected_draw_date_mismatch', $evaluated);
             }
 
             if (count($matched) > 1) {
@@ -227,7 +237,11 @@ class ResultCandidateSelector
         if ($requireDateMatch && trim((string) $expectedDrawDate) !== '') {
             $pool = array_values(array_filter($pool, static fn (array $item) => (bool) ($item['date_matched'] ?? false)));
             if ($pool === []) {
-                return $this->rejected('no_candidate_matches_expected_draw_date', $evaluated);
+                if (! $this->hasParsedDateValue($evaluated)) {
+                    return $this->rejected('draw_date_field_not_parsed', $evaluated);
+                }
+
+                return $this->rejected('expected_draw_date_mismatch', $evaluated);
             }
         }
 
@@ -323,6 +337,21 @@ class ResultCandidateSelector
             'rejection_reason' => $reason,
             'candidates' => $evaluated,
         ];
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $evaluated
+     */
+    private function hasParsedDateValue(array $evaluated): bool
+    {
+        foreach ($evaluated as $item) {
+            $raw = trim((string) ($item['candidate_draw_date'] ?? ''));
+            if ($raw !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
