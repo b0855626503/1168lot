@@ -192,6 +192,84 @@
     </div>
 </b-modal>
 
+<b-modal ref="autoResultLogsModal" id="autoResultLogsModal" centered size="xl" title="Auto Result Fetch Logs" ok-only ok-title="ปิด" modal-class="lotto-auto-result-log-modal">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="text-muted small">แสดง @{{ autoResultLogsData.items.length }} รายการล่าสุด</div>
+        <div class="text-muted small">Draw ID: @{{ autoResultLogsData.draw_id || '-' }}</div>
+    </div>
+    <div class="table-responsive member-list-scroll">
+        <b-table
+            class="mb-0 member-list-table lotto-ticket-summary-table"
+            striped
+            hover
+            small
+            outlined
+            show-empty
+            head-variant="light"
+            :items="autoResultLogsData.items"
+            :fields="autoResultLogFields"
+            empty-text="ไม่พบ fetch logs">
+            <template #cell(id)="row"><div class="text-center">@{{ row.item.id }}</div></template>
+            <template #cell(attempt_no)="row"><div class="text-center">@{{ row.item.attempt_no }}</div></template>
+            <template #cell(status)="row"><div class="text-center">@{{ row.item.status }}</div></template>
+            <template #cell(pipeline_stage)="row"><div class="text-center">@{{ row.item.pipeline_stage || '-' }}</div></template>
+            <template #cell(response_http_status)="row"><div class="text-center">@{{ row.item.response_http_status || '-' }}</div></template>
+            <template #cell(duration_ms)="row"><div class="text-center">@{{ row.item.duration_ms || '-' }}</div></template>
+            <template #cell(created_at)="row"><div class="text-center">@{{ row.item.created_at || '-' }}</div></template>
+            <template #cell(error_message)="row">@{{ row.item.error_message || '-' }}</template>
+            <template #cell(preview)="row"><small>@{{ row.item.preview || '-' }}</small></template>
+            <template #cell(run_id)="row"><small>@{{ row.item.run_id || '-' }}</small></template>
+            <template #cell(action)="row">
+                <div class="text-center">
+                    <button type="button" class="btn btn-info btn-xs" @click="openAutoResultLogDetail(row.item)">ดูรายละเอียด</button>
+                </div>
+            </template>
+        </b-table>
+    </div>
+</b-modal>
+
+<b-modal ref="autoResultLogDetailModal" id="autoResultLogDetailModal" centered size="xl" title="รายละเอียด Fetch Log" ok-only ok-title="ปิด">
+    <div class="mb-2 small text-muted">
+        Log ID: @{{ autoResultLogDetail.id || '-' }} | Run ID: @{{ autoResultLogDetail.run_id || '-' }}
+    </div>
+    <b-row>
+        <b-col md="6">
+            <b-form-group label="Request URL">
+                <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.request_url || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+        <b-col md="6">
+            <b-form-group label="Error Message">
+                <b-form-textarea rows="3" no-resize readonly :value="autoResultLogDetail.error_message || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+    </b-row>
+    <b-row>
+        <b-col md="6">
+            <b-form-group label="Request Meta JSON">
+                <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.request_meta_json || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+        <b-col md="6">
+            <b-form-group label="Parsed Payload JSON">
+                <b-form-textarea rows="8" no-resize readonly :value="autoResultLogDetail.parsed_payload_json || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+    </b-row>
+    <b-row>
+        <b-col md="6">
+            <b-form-group label="Normalized Result JSON">
+                <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.normalized_result_json || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+        <b-col md="6">
+            <b-form-group label="Response Body (preview)">
+                <b-form-textarea rows="6" no-resize readonly :value="autoResultLogDetail.response_body_preview || '-'"></b-form-textarea>
+            </b-form-group>
+        </b-col>
+    </b-row>
+</b-modal>
+
 <b-modal ref="autoGenSummaryModal" id="autoGenSummaryModal" centered size="xl" :title="autoGenModalTitle" ok-only ok-title="ปิด" modal-class="lotto-autogen-summary-modal">
     <div class="row no-gutters mb-2 lotto-summary-row">
         <div class="col-3 lotto-ticket-summary-item"><span>ตลาดเข้าเกณฑ์ :</span><strong>@{{ autoGenSummary.market_count || 0 }}</strong></div>
@@ -520,6 +598,24 @@
                         { key: 'close_at', label: 'ปิดรับ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '170px' } },
                         { key: 'result_at', label: 'ออกผล', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '170px' } },
                         { key: 'status_label', label: 'สถานะ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '180px' } },
+                    ],
+                    autoResultLogsData: {
+                        draw_id: null,
+                        items: [],
+                    },
+                    autoResultLogDetail: {},
+                    autoResultLogFields: [
+                        { key: 'id', label: '#', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '70px' } },
+                        { key: 'attempt_no', label: 'Attempt', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '85px' } },
+                        { key: 'status', label: 'Status', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '130px' } },
+                        { key: 'pipeline_stage', label: 'Stage', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '110px' } },
+                        { key: 'response_http_status', label: 'HTTP', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '80px' } },
+                        { key: 'duration_ms', label: 'ms', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '80px' } },
+                        { key: 'preview', label: 'Parsed/Normalized Preview' },
+                        { key: 'error_message', label: 'Error' },
+                        { key: 'run_id', label: 'Run ID' },
+                        { key: 'created_at', label: 'เวลา', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '150px' } },
+                        { key: 'action', label: 'จัดการ', thClass: 'text-center', tdClass: 'text-center', thStyle: { width: '95px' } },
                     ],
                 };
             },
@@ -1023,6 +1119,56 @@
 
                     window.LaravelDataTables['lottoDrawsTable'].draw(false);
                 },
+                async runAutoResultTestFetch(id) {
+                    const response = await axios.post("{{ route('admin.lotto.draws.auto_result_test_fetch') }}", { draw_id: id });
+                    const runId = response?.data?.data?.run_id || '';
+                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Dry-run แล้ว\\nRun ID: ${runId}`, {
+                        title: 'Auto Result Dry-run',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'warning',
+                        centered: true,
+                    });
+                },
+                async runAutoResultManualRetry(id) {
+                    const response = await axios.post("{{ route('admin.lotto.draws.auto_result_manual_retry') }}", { draw_id: id });
+                    const runId = response?.data?.data?.run_id || '';
+                    await this.$bvModal.msgBoxOk(`ส่งคำสั่ง Retry แล้ว\\nRun ID: ${runId}`, {
+                        title: 'Auto Result Retry',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'dark',
+                        centered: true,
+                    });
+                },
+                async showAutoResultLogs(id) {
+                    const response = await axios.get("{{ route('admin.lotto.draws.auto_result_logs') }}", {
+                        params: { draw_id: id, limit: 100 },
+                    });
+                    const rows = (response?.data?.data?.items || []).map((item) => {
+                        const parsed = item?.parsed_payload_json ? JSON.stringify(item.parsed_payload_json) : '';
+                        const normalized = item?.normalized_result_json ? JSON.stringify(item.normalized_result_json) : '';
+                        const joined = [parsed, normalized].filter(Boolean).join(' | ');
+                        return {
+                            ...item,
+                            preview: joined.length > 180 ? `${joined.substring(0, 180)}...` : (joined || '-'),
+                        };
+                    });
+                    this.autoResultLogsData = {
+                        draw_id: id,
+                        items: rows,
+                    };
+                    this.$refs.autoResultLogsModal.show();
+                },
+                openAutoResultLogDetail(item) {
+                    this.autoResultLogDetail = {
+                        ...item,
+                        request_meta_json: item?.request_meta_json ? JSON.stringify(item.request_meta_json, null, 2) : '',
+                        parsed_payload_json: item?.parsed_payload_json ? JSON.stringify(item.parsed_payload_json, null, 2) : '',
+                        normalized_result_json: item?.normalized_result_json ? JSON.stringify(item.normalized_result_json, null, 2) : '',
+                    };
+                    this.$refs.autoResultLogDetailModal.show();
+                },
             },
         });
 
@@ -1034,5 +1180,8 @@
         window.generateAutoDraws = function (dryRun) { window.app.generateAutoDraws(dryRun); };
         window.showDrawBlockedNumbers = function (id) { window.app.openBlockedNumbersModal(id); };
         window.showDrawTicketList = function (id) { window.app.openTicketsSummaryModal(id); };
+        window.runAutoResultTestFetch = function (id) { window.app.runAutoResultTestFetch(id); };
+        window.runAutoResultManualRetry = function (id) { window.app.runAutoResultManualRetry(id); };
+        window.showAutoResultLogs = function (id) { window.app.showAutoResultLogs(id); };
     </script>
 @endpush

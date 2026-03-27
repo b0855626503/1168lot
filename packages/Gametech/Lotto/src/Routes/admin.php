@@ -112,6 +112,22 @@ Route::domain(
                 'view' => 'admin::module.lotto.draws.index',
             ])->name('admin.lotto.draws.index');
 
+            Route::get('auto-result-sources', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.result_sources.index',
+            ])->name('admin.lotto.result_sources.index');
+
+            Route::post('auto-result-sources/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@loadData')
+                ->name('admin.lotto.result_sources.loaddata');
+
+            Route::post('auto-result-sources/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@create')
+                ->name('admin.lotto.result_sources.create');
+
+            Route::post('auto-result-sources/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@edit')
+                ->name('admin.lotto.result_sources.edit');
+
+            Route::post('auto-result-sources/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@update')
+                ->name('admin.lotto.result_sources.update');
+
             Route::post('draws/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@create')
                 ->name('admin.lotto.draws.create');
 
@@ -141,6 +157,18 @@ Route::domain(
 
             Route::post('draws/generate-auto', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@generateAuto')
                 ->name('admin.lotto.draws.generate_auto');
+
+            Route::get('draws/auto-result-metrics', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultMetrics')
+                ->name('admin.lotto.draws.auto_result_metrics');
+
+            Route::post('draws/auto-result-test-fetch', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultTestFetch')
+                ->name('admin.lotto.draws.auto_result_test_fetch');
+
+            Route::post('draws/auto-result-manual-retry', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultManualRetry')
+                ->name('admin.lotto.draws.auto_result_manual_retry');
+
+            Route::get('draws/auto-result-logs', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultLogs')
+                ->name('admin.lotto.draws.auto_result_logs');
 
             Route::get('number-blocks', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.number_blocks.index',

@@ -134,6 +134,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // End-to-end auto-result pipeline runner (resolve->build->fetch->parse->map->validate->apply).
+        $schedule->command('lotto:fetch-auto-results --limit=100')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Non hot-path retention cleanup for detailed lotto risk snapshots.
         $schedule->command('dashboard:lotto-risk-retention --days=90')
             ->dailyAt('03:40')

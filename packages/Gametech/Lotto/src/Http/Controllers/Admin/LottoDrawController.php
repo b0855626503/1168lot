@@ -7,9 +7,11 @@ use Gametech\Lotto\DataTables\LottoDrawDataTable;
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
+use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
@@ -397,6 +399,117 @@ class LottoDrawController extends AppBaseController
             'summary' => is_array($decoded) ? $decoded : null,
             'raw_output' => is_array($decoded) ? null : $output,
         ], 'สั่งสร้างงวดอัตโนมัติเรียบร้อยแล้ว');
+    }
+
+    public function autoResultMetrics(Request $request, AutoResultHardeningService $hardeningService): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'hours' => ['nullable', 'integer', 'min:1', 'max:720'],
+        ])->validate();
+
+        $hours = (int) ($validated['hours'] ?? (int) config('lotto_auto_result.hardening.metrics.default_window_hours', 24));
+        $to = now((string) config('lotto_auto_result.timezone', (string) config('app.timezone', 'Asia/Bangkok')));
+        $from = $to->copy()->subHours(max(1, $hours));
+
+        return $this->sendResponse(
+            $hardeningService->metrics($from, $to),
+            'ดึงสรุป metrics ของระบบ auto-result สำเร็จ'
+        );
+    }
+
+    public function autoResultTestFetch(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+        ])->validate();
+
+        $runId = sprintf('admin_test_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
+        Artisan::queue('lotto:fetch-auto-results', [
+            '--draw-id' => (int) $validated['draw_id'],
+            '--limit' => 1,
+            '--dry-run' => true,
+            '--manual-retry' => true,
+            '--run-id' => $runId,
+        ]);
+
+        return $this->sendResponse([
+            'run_id' => $runId,
+            'draw_id' => (int) $validated['draw_id'],
+            'mode' => 'dry_run',
+        ], 'ส่งคำสั่งทดสอบดึงผลแบบ Dry-run เข้าคิวแล้ว');
+    }
+
+    public function autoResultManualRetry(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+        ])->validate();
+
+        $runId = sprintf('admin_retry_%s_%d', now()->format('YmdHisv'), (int) $validated['draw_id']);
+        Artisan::queue('lotto:fetch-auto-results', [
+            '--draw-id' => (int) $validated['draw_id'],
+            '--limit' => 1,
+            '--manual-retry' => true,
+            '--run-id' => $runId,
+        ]);
+
+        return $this->sendResponse([
+            'run_id' => $runId,
+            'draw_id' => (int) $validated['draw_id'],
+            'mode' => 'manual_retry',
+        ], 'ส่งคำสั่ง Retry Auto Result เข้าคิวแล้ว');
+    }
+
+    public function autoResultLogs(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'draw_id' => ['nullable', 'integer', 'exists:lotto_draws,id'],
+            'run_id' => ['nullable', 'string', 'max:64'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ])->validate();
+
+        $limit = (int) ($validated['limit'] ?? 100);
+        $query = LottoResultFetchLog::query()
+            ->orderByDesc('id')
+            ->limit($limit);
+
+        if (! empty($validated['draw_id'])) {
+            $query->where('draw_id', (int) $validated['draw_id']);
+        }
+
+        if (! empty($validated['run_id'])) {
+            $query->where('run_id', (string) $validated['run_id']);
+        }
+
+        $items = $query->get()->map(static function (LottoResultFetchLog $log): array {
+            return [
+                'id' => (int) $log->id,
+                'draw_id' => (int) ($log->draw_id ?? 0),
+                'source_id' => $log->source_id !== null ? (int) $log->source_id : null,
+                'attempt_no' => (int) ($log->attempt_no ?? 1),
+                'status' => (string) $log->status,
+                'pipeline_stage' => (string) ($log->pipeline_stage ?? ''),
+                'run_id' => (string) ($log->run_id ?? ''),
+                'request_url' => (string) ($log->request_url ?? ''),
+                'request_meta_json' => $log->request_meta_json,
+                'response_http_status' => $log->response_http_status,
+                'response_body_preview' => $log->response_body !== null
+                    ? mb_substr((string) $log->response_body, 0, 5000)
+                    : null,
+                'duration_ms' => $log->duration_ms,
+                'error_message' => (string) ($log->error_message ?? ''),
+                'is_dry_run' => (bool) ($log->is_dry_run ?? false),
+                'is_manual_retry' => (bool) ($log->is_manual_retry ?? false),
+                'parsed_payload_json' => $log->parsed_payload_json,
+                'normalized_result_json' => $log->normalized_result_json,
+                'created_at' => $log->created_at ? $log->created_at->format('Y-m-d H:i:s') : null,
+            ];
+        })->values()->all();
+
+        return $this->sendResponse([
+            'items' => $items,
+            'count' => count($items),
+        ], 'ดึง fetch log สำเร็จ');
     }
 
     private function applyStatusTransition(

@@ -17,6 +17,15 @@
             <button type="button" class="btn btn-success btn-xs mr-1 mb-1" onclick="settleModal({{ $id }})">
                 <i class="fas fa-check-circle"></i> ประกาศผล
             </button>
+            <button type="button" class="btn btn-warning btn-xs mr-1 mb-1" onclick="runAutoResultTestFetch({{ $id }})">
+                <i class="fas fa-vial"></i> Dry-run
+            </button>
+            <button type="button" class="btn btn-dark btn-xs mr-1 mb-1" onclick="runAutoResultManualRetry({{ $id }})">
+                <i class="fas fa-redo"></i> Retry
+            </button>
+            <button type="button" class="btn btn-secondary btn-xs mr-1 mb-1" onclick="showAutoResultLogs({{ $id }})">
+                <i class="fas fa-stream"></i> Logs
+            </button>
         @endif
     </div>
 @endif

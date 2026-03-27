@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 class LottoDraw extends Model implements LottoDrawContract
 {
     protected $table = 'lotto_draws';
-    protected $dates = ['draw_date', 'open_at', 'opened_at', 'close_at', 'closed_at', 'result_at'];
+    protected $dates = ['draw_date', 'open_at', 'opened_at', 'close_at', 'closed_at', 'result_at', 'result_fetched_at', 'result_applied_at', 'result_conflicted_at', 'result_exhausted_at', 'exhausted_alerted_at'];
 
     protected $fillable = [
         'market_id',
@@ -29,6 +29,21 @@ class LottoDraw extends Model implements LottoDrawContract
         'result_at',     // ประกาศผล (datetime, nullable)
         'status',        // draft | open | closed | resulted
         'result_number', // เลขที่ออก (json array หรือ string)
+        'result_fetch_status',
+        'result_fetch_attempts',
+        'result_fetched_at',
+        'result_fetch_error',
+        'result_raw_payload_json',
+        'result_normalized_payload_json',
+        'result_hash',
+        'result_source_snapshot_json',
+        'result_source_id',
+        'result_source_version',
+        'result_applied_at',
+        'result_conflicted_at',
+        'result_conflict_payload_json',
+        'result_exhausted_at',
+        'exhausted_alerted_at',
         'created_by',    // user_id
     ];
 
@@ -42,6 +57,21 @@ class LottoDraw extends Model implements LottoDrawContract
         'open_mode' => 'string',
         'close_mode' => 'string',
         'result_number' => 'array',
+        'result_fetch_status' => 'string',
+        'result_fetch_attempts' => 'integer',
+        'result_fetched_at' => 'datetime',
+        'result_fetch_error' => 'string',
+        'result_raw_payload_json' => 'array',
+        'result_normalized_payload_json' => 'array',
+        'result_hash' => 'string',
+        'result_source_snapshot_json' => 'array',
+        'result_source_id' => 'integer',
+        'result_source_version' => 'string',
+        'result_applied_at' => 'datetime',
+        'result_conflicted_at' => 'datetime',
+        'result_conflict_payload_json' => 'array',
+        'result_exhausted_at' => 'datetime',
+        'exhausted_alerted_at' => 'datetime',
     ];
 
     // Scopes
@@ -84,6 +114,11 @@ class LottoDraw extends Model implements LottoDrawContract
     public function blockedNumbers()
     {
         return $this->hasMany(LottoNumberBlock::class, 'draw_id');
+    }
+
+    public function resultSource()
+    {
+        return $this->belongsTo(LottoResultSource::class, 'result_source_id');
     }
 }
 

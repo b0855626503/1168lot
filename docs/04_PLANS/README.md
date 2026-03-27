@@ -14,7 +14,11 @@
 - `2026-03-21_wallet-ledger-implementation.md`
 - `2026-03-27_lotto-global-config-migration.md`
 
+## TRACKER
+- `2026-03-27_lotto-auto-result-execution-tracker.md` (implementation memory only; merged plan is source of truth)
+
 ## DONE
+- `2026-03-27_lotto-auto-result-integration.md`
 - `2026-03-21_admin-query-audit-2026.md`
 - `2026-03-21_admin-team-menu-active.md`
 - `2026-03-21_immediate-query-dedup-page-speed.md`

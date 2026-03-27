@@ -5,6 +5,8 @@ namespace Gametech\Lotto\Providers;
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
+use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
+use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
@@ -18,8 +20,10 @@ use Gametech\Lotto\Models\LottoTicketItemProxy;
 use Gametech\Lotto\Models\LottoTicketProxy;
 use Gametech\Lotto\Observers\LottoAuditObserver;
 use Gametech\Lotto\Observers\LottoDashboardSummaryObserver;
+use Gametech\Lotto\Observers\LottoDrawAutoResultObserver;
 use Gametech\Lotto\Observers\LottoDrawRealtimeObserver;
 use Gametech\Lotto\Observers\LottoTicketRealtimeObserver;
+use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\ExposureService;
@@ -74,10 +78,16 @@ class LottoServiceProvider extends ServiceProvider
             return new WalletTransactionService();
         });
 
+        $this->app->singleton(AutoResultHardeningService::class, function ($app) {
+            return new AutoResultHardeningService();
+        });
+
         $this->commands([
             BootstrapMemberMarketPoliciesCommand::class,
             BackfillLottoPayoutCommand::class,
             GenerateAutoLottoDrawsCommand::class,
+            LottoFetchAutoResultsCommand::class,
+            LottoAutoResultMetricsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
             SyncLottoDrawStatusesCommand::class,
         ]);
@@ -124,6 +134,7 @@ class LottoServiceProvider extends ServiceProvider
         LottoDrawProxy::observe(LottoAuditObserver::class);
         LottoDrawProxy::observe(LottoDrawRealtimeObserver::class);
         LottoDrawProxy::observe(LottoDashboardSummaryObserver::class);
+        LottoDrawProxy::observe(LottoDrawAutoResultObserver::class);
         LottoDrawBetSettingProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoDashboardSummaryObserver::class);

@@ -92,6 +92,16 @@ return [
         'status' => 1,
     ],
     [
+        'key' => 'lotto_settings.auto_result_sources',
+        'name' => 'Auto Result Sources',
+        'route' => 'admin.lotto.result_sources.index',
+        'sort' => 8,
+        'icon-class' => 'fa-ticket',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1,
+    ],
+    [
         'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',

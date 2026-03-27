@@ -50,6 +50,30 @@ return [
         'sort' => 15,
     ],
     [
+        'key' => 'lotto_draws.auto_result_metrics',
+        'name' => 'ดูสถานะ Auto Result',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 16,
+    ],
+    [
+        'key' => 'lotto_draws.auto_result_test_fetch',
+        'name' => 'ทดสอบดึงผล Auto Result (Dry-run)',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 17,
+    ],
+    [
+        'key' => 'lotto_draws.auto_result_manual_retry',
+        'name' => 'สั่ง Retry Auto Result',
+        'route' => 'admin.lotto.draws.index',
+        'sort' => 18,
+    ],
+    [
+        'key' => 'lotto_settings.auto_result_sources',
+        'name' => 'ตั้งค่าแหล่งผล Auto Result',
+        'route' => 'admin.lotto.result_sources.index',
+        'sort' => 8,
+    ],
+    [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
