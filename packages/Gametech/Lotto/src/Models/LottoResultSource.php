@@ -19,6 +19,16 @@ class LottoResultSource extends Model implements LottoResultSourceContract
         'request_headers_json',
         'request_query_template_json',
         'request_body_template_json',
+        'fetch_config_json',
+        'selection_config_json',
+        'readiness_config_json',
+        'pipeline_version',
+        'fetch_strategy',
+        'selection_stage',
+        'supports_partial',
+        'requires_browser',
+        'shadow_enabled',
+        'cutover_enabled',
         'lookup_date_mode',
         'lookup_date_offset_days',
         'parser_type',
@@ -37,6 +47,16 @@ class LottoResultSource extends Model implements LottoResultSourceContract
         'request_headers_json' => 'array',
         'request_query_template_json' => 'array',
         'request_body_template_json' => 'array',
+        'fetch_config_json' => 'array',
+        'selection_config_json' => 'array',
+        'readiness_config_json' => 'array',
+        'pipeline_version' => 'string',
+        'fetch_strategy' => 'string',
+        'selection_stage' => 'string',
+        'supports_partial' => 'boolean',
+        'requires_browser' => 'boolean',
+        'shadow_enabled' => 'boolean',
+        'cutover_enabled' => 'boolean',
         'lookup_date_offset_days' => 'integer',
         'parser_config_json' => 'array',
         'mapping_config_json' => 'array',
@@ -50,5 +70,10 @@ class LottoResultSource extends Model implements LottoResultSourceContract
     public function market()
     {
         return $this->belongsTo(LotteryMarket::class, 'market_id');
+    }
+
+    public function revisions()
+    {
+        return $this->hasMany(LottoResultSourceRevision::class, 'source_id')->orderBy('revision_no');
     }
 }
