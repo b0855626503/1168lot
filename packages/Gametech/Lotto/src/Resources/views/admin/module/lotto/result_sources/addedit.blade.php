@@ -5,11 +5,16 @@
                 <b-form-group label="ตลาด">
                     <select ref="marketSelect" class="form-control form-control-sm" required @change="onNativeMarketChange">
                         <option value="">-- เลือกตลาด --</option>
-                        <optgroup v-for="group in sourceMarketOptionsGrouped" :key="group.label" :label="group.label">
-                            <option v-for="market in group.options" :key="market.value" :value="String(market.value)" :data-logo="market.logo || ''">
-                                @{{ market.text }}
-                            </option>
-                        </optgroup>
+                        @foreach(($marketOptionsGrouped ?? []) as $group)
+                            <optgroup label="{{ $group['label'] ?? '-' }}">
+                                @foreach(($group['options'] ?? []) as $market)
+                                    <option value="{{ (string) ($market['value'] ?? '') }}"
+                                            data-logo="{{ $market['logo'] ?? '' }}">
+                                        {{ $market['text'] ?? '-' }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
                     </select>
                 </b-form-group>
             </b-col>
@@ -73,8 +78,6 @@
                     showSourceForm: true,
                     sourceFormMethod: 'add',
                     sourceId: null,
-                    sourceMarketOptions: @json($marketOptions ?? []),
-                    sourceMarketOptionsGrouped: @json($marketOptionsGrouped ?? []),
                     lookupDateModes: @json($lookupDateModes ?? []),
                     parserTypes: @json($parserTypes ?? []),
                     sourceTypes: @json($sourceTypes ?? []),
