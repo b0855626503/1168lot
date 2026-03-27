@@ -109,7 +109,7 @@
                     <b-col md="6">
                         <b-form-group label="โหมดอ้างอิงวันงวด">
                             <b-form-select size="sm" :options="lookupDateModesLocalized" v-model="sourceForm.lookup_date_mode"></b-form-select>
-                            <small class="text-muted d-block mt-1">กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request</small>
+                            <small class="text-muted d-block mt-1">@{{ lookupModeHelpText }}</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -395,10 +395,10 @@
                 },
                 lookupDateModesLocalized() {
                     const labelMap = {
-                        ROUND_DATE: 'วันงวดที่ระบบกำลังประมวลผล',
-                        TODAY: 'วันปัจจุบัน',
-                        YESTERDAY: 'วันก่อนหน้า',
-                        TOMORROW: 'วันถัดไป',
+                        ROUND_DATE: 'ใช้วันงวดในระบบ (ตรงวัน)',
+                        ROUND_DATE_MINUS_DAYS: 'ใช้วันงวดในระบบ - จำนวนวันที่เลื่อน',
+                        ROUND_DATE_PLUS_DAYS: 'ใช้วันงวดในระบบ + จำนวนวันที่เลื่อน',
+                        RESULT_AT_DATE: 'ใช้วันที่ตามเวลาประกาศผล (result_at)',
                     };
 
                     if (!Array.isArray(this.lookupDateModes)) {
@@ -429,6 +429,17 @@
                             text: labelMap[raw] || raw,
                         };
                     });
+                },
+                lookupModeHelpText() {
+                    const helpMap = {
+                        ROUND_DATE: 'เทียบด้วยวันงวดเดียวกันตรงๆ ระหว่างระบบเราและปลายทาง',
+                        ROUND_DATE_MINUS_DAYS: 'ปลายทางช้ากว่าเรา: ระบบจะเอาวันงวดลบตามค่า "เลื่อนวัน"',
+                        ROUND_DATE_PLUS_DAYS: 'ปลายทางเร็วกว่าเรา: ระบบจะเอาวันงวดบวกตามค่า "เลื่อนวัน"',
+                        RESULT_AT_DATE: 'ใช้อ้างอิงจากวันที่ของ result_at ในงวดนั้นแทน draw_date',
+                    };
+
+                    const mode = String(this.sourceForm.lookup_date_mode || 'ROUND_DATE');
+                    return helpMap[mode] || 'กำหนดว่าจะอ้างวันงวดจากค่าไหนตอนยิง request';
                 },
                 marketSelectOptions() {
                     const groups = Array.isArray(this.marketOptionsGrouped) ? this.marketOptionsGrouped : [];
