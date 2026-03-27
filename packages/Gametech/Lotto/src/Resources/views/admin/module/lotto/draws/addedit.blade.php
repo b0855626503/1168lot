@@ -8,7 +8,7 @@
             <b-row>
                 <b-col cols="12" md="6">
                     <b-form-group label="ตลาด">
-                        <select ref="marketSelect" class="form-control form-control-sm" required>
+                        <select ref="marketSelect" class="form-control form-control-sm" required :disabled="!canEditMarketField">
                             <option value="">-- เลือกตลาด --</option>
                             @foreach(($marketOptions ?? []) as $group)
                                 <optgroup label="{{ $group['label'] ?? '-' }}">
@@ -25,28 +25,31 @@
                 </b-col>
                 <b-col cols="12" md="6">
                     <b-form-group label="วันงวด:" label-for="draw_date">
-                        <b-form-input id="draw_date" v-model="formaddedit.draw_date" type="date" size="sm" required></b-form-input>
+                        <b-form-input id="draw_date" v-model="formaddedit.draw_date" type="date" size="sm" required :readonly="!canEditDrawDateField"></b-form-input>
                     </b-form-group>
                 </b-col>
             </b-row>
             <b-row>
                 <b-col cols="12" md="6">
                     <b-form-group label="เปิดรับ:" label-for="open_at">
-                        <b-form-input id="open_at" v-model="formaddedit.open_at" type="datetime-local" size="sm" required></b-form-input>
+                        <b-form-input id="open_at" v-model="formaddedit.open_at" type="datetime-local" size="sm" required :readonly="!canEditOpenAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
                 <b-col cols="12" md="6">
                     <b-form-group label="ปิดรับ:" label-for="close_at">
-                        <b-form-input id="close_at" v-model="formaddedit.close_at" type="datetime-local" size="sm" required></b-form-input>
+                        <b-form-input id="close_at" v-model="formaddedit.close_at" type="datetime-local" size="sm" required :readonly="!canEditCloseAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
             </b-row>
             <b-form-group label="เวลาออกผล (คาดการณ์):" label-for="result_at">
-                <b-form-input id="result_at" v-model="formaddedit.result_at" type="datetime-local" size="sm"></b-form-input>
+                <b-form-input id="result_at" v-model="formaddedit.result_at" type="datetime-local" size="sm" :readonly="!canEditResultAtField"></b-form-input>
             </b-form-group>
 
             <div class="d-flex justify-content-end">
-                <b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
+                <b-button type="submit" variant="primary" size="sm" :disabled="!canSubmitDrawForm">บันทึก</b-button>
+            </div>
+            <div v-if="formmethod === 'edit' && !canSubmitDrawForm" class="text-danger small mt-2">
+                สถานะงวดนี้ไม่อนุญาตให้แก้ไขฟิลด์ในฟอร์มนี้
             </div>
         </template>
 
@@ -607,6 +610,7 @@
                     currentDraw: {
                         market_name: '',
                         draw_date: '',
+                        status: '',
                         status_label: '',
                     },
                     blockedNumbersData: {
@@ -683,6 +687,58 @@
                     }
 
                     return 'งวดหวย';
+                },
+                isEditMode() {
+                    return this.formmethod === 'edit';
+                },
+                currentDrawStatus() {
+                    return String(this.currentDraw.status || '').toLowerCase();
+                },
+                canEditMarketField() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    return this.isEditMode && this.currentDrawStatus === 'draft';
+                },
+                canEditDrawDateField() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    return this.isEditMode && this.currentDrawStatus === 'draft';
+                },
+                canEditOpenAtField() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    return this.isEditMode && this.currentDrawStatus === 'draft';
+                },
+                canEditCloseAtField() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    return this.isEditMode && (this.currentDrawStatus === 'draft' || this.currentDrawStatus === 'open');
+                },
+                canEditResultAtField() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    return this.isEditMode && this.currentDrawStatus === 'draft';
+                },
+                canSubmitDrawForm() {
+                    if (this.formmethod === 'add') {
+                        return true;
+                    }
+
+                    if (!this.isEditMode) {
+                        return false;
+                    }
+
+                    return this.currentDrawStatus === 'draft' || this.currentDrawStatus === 'open';
                 },
                 canCalculate() {
                     if (this.formmethod !== 'settle') {
@@ -799,6 +855,7 @@
                     this.currentDraw = {
                         market_name: '',
                         draw_date: '',
+                        status: '',
                         status_label: '',
                     };
 
@@ -839,6 +896,7 @@
                 },
                 onModalShown() {
                     this.initMarketSelect2();
+                    this.$nextTick(() => this.applyMarketSelectDisabledState());
                 },
                 onModalHidden() {
                     this.destroyMarketSelect2();
@@ -987,6 +1045,7 @@
                     });
 
                     this.syncMarketSelectValue();
+                    this.applyMarketSelectDisabledState();
                 },
                 destroyMarketSelect2() {
                     const selectEl = this.$refs.marketSelect;
@@ -1029,6 +1088,21 @@
                         this.isSyncingMarketSelect = false;
                     });
                 },
+                applyMarketSelectDisabledState() {
+                    const selectEl = this.$refs.marketSelect;
+                    if (!selectEl || !window.jQuery) {
+                        return;
+                    }
+
+                    const shouldDisable = !this.canEditMarketField;
+                    const $select = window.jQuery(selectEl);
+
+                    $select.prop('disabled', shouldDisable);
+
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.trigger('change.select2');
+                    }
+                },
                 statusLabel(status) {
                     const map = {
                         draft: 'ร่าง',
@@ -1046,6 +1120,7 @@
                     this.currentDraw = {
                         market_name: d.market?.name || '-',
                         draw_date: d.draw_date ? String(d.draw_date).substring(0, 10) : '-',
+                        status: String(d.status || ''),
                         status_label: this.statusLabel(d.status || '-'),
                     };
 
@@ -1061,7 +1136,10 @@
                         result_at: toDateTimeLocal(d.result_at),
                     };
 
-                    this.$nextTick(() => this.syncMarketSelectValue());
+                    this.$nextTick(() => {
+                        this.syncMarketSelectValue();
+                        this.applyMarketSelectDisabledState();
+                    });
                 },
                 validateDrawWindow() {
                     if (!this.formaddedit.open_at || !this.formaddedit.close_at) {
@@ -1073,6 +1151,65 @@
                     }
 
                     return '';
+                },
+                validateEditWindow() {
+                    if (this.currentDrawStatus === 'draft') {
+                        return this.validateDrawWindow();
+                    }
+
+                    if (this.currentDrawStatus === 'open') {
+                        if (!this.formaddedit.close_at) {
+                            return 'กรุณาระบุเวลาปิดรับ';
+                        }
+
+                        if (this.formaddedit.open_at && this.formaddedit.open_at >= this.formaddedit.close_at) {
+                            return 'เวลาเปิดรับต้องน้อยกว่าเวลาปิดรับ';
+                        }
+
+                        return '';
+                    }
+
+                    return 'สถานะงวดนี้ไม่อนุญาตให้แก้ไขฟิลด์ในฟอร์มนี้';
+                },
+                buildCreatePayload() {
+                    return {
+                        market_id: this.formaddedit.market_id,
+                        draw_date: this.formaddedit.draw_date,
+                        open_at: this.formaddedit.open_at ? this.formaddedit.open_at.replace('T', ' ') : null,
+                        close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
+                        result_at: this.formaddedit.result_at ? this.formaddedit.result_at.replace('T', ' ') : null,
+                    };
+                },
+                buildUpdatePayload() {
+                    if (this.currentDrawStatus === 'draft') {
+                        return this.buildCreatePayload();
+                    }
+
+                    if (this.currentDrawStatus === 'open') {
+                        return {
+                            close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
+                        };
+                    }
+
+                    return {};
+                },
+                resolveApiErrorMessage(error, fallbackMessage) {
+                    const backendMessage = error?.response?.data?.message;
+                    if (typeof backendMessage === 'string' && backendMessage.trim() !== '') {
+                        return backendMessage;
+                    }
+
+                    return fallbackMessage;
+                },
+                async showSubmitErrorModal(error, fallbackMessage = 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') {
+                    const message = this.resolveApiErrorMessage(error, fallbackMessage);
+                    await this.$bvModal.msgBoxOk(message, {
+                        title: 'เกิดข้อผิดพลาด',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'danger',
+                        centered: true,
+                    });
                 },
                 async openBlockedNumbersModal(drawId) {
                     const response = await axios.post("{{ route('admin.lotto.draws.blocked_numbers') }}", { id: drawId });
@@ -1144,7 +1281,9 @@
                     this.autoGenModalTitle = dryRun ? 'ผล Dry-run Auto งวด' : 'ผล Generate Auto งวด';
                 },
                 async submitDrawForm() {
-                    const validationMessage = this.validateDrawWindow();
+                    const validationMessage = this.formmethod === 'add'
+                        ? this.validateDrawWindow()
+                        : this.validateEditWindow();
                     if (validationMessage) {
                         await this.$bvModal.msgBoxOk(validationMessage, {
                             title: 'ข้อมูลไม่ถูกต้อง',
@@ -1156,30 +1295,33 @@
                         return;
                     }
 
-                    const payload = {
-                        market_id: this.formaddedit.market_id,
-                        draw_date: this.formaddedit.draw_date,
-                        open_at: this.formaddedit.open_at ? this.formaddedit.open_at.replace('T', ' ') : null,
-                        close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
-                        result_at: this.formaddedit.result_at ? this.formaddedit.result_at.replace('T', ' ') : null,
-                    };
+                    const payload = this.formmethod === 'add'
+                        ? this.buildCreatePayload()
+                        : this.buildUpdatePayload();
 
                     const url = this.formmethod === 'add'
                         ? "{{ route('admin.lotto.draws.create') }}"
                         : "{{ route('admin.lotto.draws.update') }}";
+                    const requestBody = this.formmethod === 'add'
+                        ? { data: payload }
+                        : { id: this.code, data: payload };
 
-                    const response = await this.$http.post(url, { id: this.code, data: payload });
+                    try {
+                        const response = await this.$http.post(url, requestBody);
 
-                    await this.$bvModal.msgBoxOk(response.data.message, {
-                        title: 'ผลการดำเนินการ',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'success',
-                        centered: true,
-                    });
+                        await this.$bvModal.msgBoxOk(response.data.message, {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
 
-                    this.$refs.addedit.hide();
-                    window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                        this.$refs.addedit.hide();
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
                 },
                 async submitSettleForm() {
                     if (!this.canCalculate) {
@@ -1193,29 +1335,33 @@
                         },
                     };
 
-                    const response = await this.$http.post("{{ route('admin.lotto.draws.settle') }}", {
-                        id: this.code,
-                        data: payload,
-                    });
+                    try {
+                        const response = await this.$http.post("{{ route('admin.lotto.draws.settle') }}", {
+                            id: this.code,
+                            data: payload,
+                        });
 
-                    const summary = response?.data?.data || {};
-                    const message = [
-                        response.data.message || 'คำนวณรางวัลเรียบร้อยแล้ว',
-                        `จำนวนโพย: ${summary.ticket_count || 0}`,
-                        `โพยที่ถูกรางวัล: ${summary.winning_ticket_count || 0}`,
-                        `ยอดจ่ายรวม: ${summary.total_win_amount || 0}`,
-                    ].join('\n');
+                        const summary = response?.data?.data || {};
+                        const message = [
+                            response.data.message || 'คำนวณรางวัลเรียบร้อยแล้ว',
+                            `จำนวนโพย: ${summary.ticket_count || 0}`,
+                            `โพยที่ถูกรางวัล: ${summary.winning_ticket_count || 0}`,
+                            `ยอดจ่ายรวม: ${summary.total_win_amount || 0}`,
+                        ].join('\n');
 
-                    await this.$bvModal.msgBoxOk(message, {
-                        title: 'ผลการคำนวณ',
-                        size: 'sm',
-                        buttonSize: 'sm',
-                        okVariant: 'success',
-                        centered: true,
-                    });
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'ผลการคำนวณ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
 
-                    this.$refs.addedit.hide();
-                    window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                        this.$refs.addedit.hide();
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
                 },
                 openDraw(id) {
                     this.$http.post("{{ route('admin.lotto.draws.open') }}", { id })

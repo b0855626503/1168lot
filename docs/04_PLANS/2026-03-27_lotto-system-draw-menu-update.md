@@ -289,3 +289,16 @@ REJECT structural changes
 * DO NOT mutate open_at / close_at during transitions
 
 Implement exactly as specified.
+
+---
+
+# UI ALIGNMENT NOTE (2026-03-27)
+
+สำหรับฟอร์ม modal ฝั่ง admin (`draws/addedit`):
+
+* submit add ต้องส่ง payload ตาม contract: `{ data: ... }`
+* submit edit/update ต้องส่ง payload ตาม contract: `{ id, data: ... }`
+* submit add/edit/settle ต้องห่อ request ด้วย `try/catch`
+* เมื่อ backend ตอบ error และมี `error.response.data.message` ต้องแสดงข้อความนั้นผ่าน `this.$bvModal.msgBoxOk`
+* ถ้าไม่มี message ให้ fallback เป็น: `บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`
+* ห้ามเกิด silent failure เมื่อผู้ใช้กด submit
