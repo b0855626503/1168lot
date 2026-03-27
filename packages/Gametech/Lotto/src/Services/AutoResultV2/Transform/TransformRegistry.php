@@ -124,7 +124,13 @@ class TransformRegistry
             return (string) $value;
         });
         $this->register('date', static function ($value, array $context) {
-            $raw = trim((string) $value);
+            if (is_array($value) || is_object($value)) {
+                return $value;
+            }
+
+            $raw = is_string($value)
+                ? trim($value)
+                : (is_scalar($value) ? trim((string) $value) : '');
             if ($raw === '') {
                 return '';
             }
