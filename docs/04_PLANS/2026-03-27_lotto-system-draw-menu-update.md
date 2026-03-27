@@ -335,7 +335,7 @@ Implement exactly as specified.
   - `dry-run` → `lotto_draws.auto_result_test_fetch`
   - `retry` → `lotto_draws.auto_result_manual_retry`
   - `logs` → `lotto_draws.auto_result_metrics`
-* สถานะ `resulted` ให้แสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์
+* สถานะ `resulted` ให้แสดงปุ่ม `Logs` และ `Dry-run` ได้เมื่อมีสิทธิ์
 * ตาราง `/lotto/auto-result-sources` ต้องรองรับการกด sort ทุกคอลัมน์ที่ sortable:
   - ห้าม lock `orderBy(...)` ตายตัวไว้ใน query หลัก
   - ให้ตั้ง default initial sort ผ่าน DataTables parameter (`priority asc`, `id desc`) แทน

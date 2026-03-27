@@ -30,11 +30,14 @@ class LottoFetchAutoResultsCommand extends Command
         $drawId = $this->option('draw-id');
         $marketId = $this->option('market-id');
         $forceSingleDrawRetry = $manualRetry && $drawId !== null && $drawId !== '';
+        $singleDrawStatuses = ($forceSingleDrawRetry && $dryRun)
+            ? ['closed', 'resulted']
+            : ['closed'];
 
         if ($forceSingleDrawRetry) {
             $query = LottoDraw::query()
                 ->where('id', (int) $drawId)
-                ->where('status', 'closed')
+                ->whereIn('status', $singleDrawStatuses)
                 ->limit(1);
         } else {
             $query = LottoDraw::query()

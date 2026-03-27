@@ -28,8 +28,13 @@
 
 - เพิ่มการเช็กสิทธิ์รายปุ่มในหน้า `draws` action column ผ่าน `bouncer()->hasPermission(...)`
 - map ACL key ตาม action (`edit/open/close/settle/dry-run/retry/logs`)
-- กำหนดให้สถานะ `resulted` ยังแสดงปุ่ม `Logs` ได้เมื่อมีสิทธิ์
+- กำหนดให้สถานะ `resulted` ยังแสดงปุ่ม `Logs` และ `Dry-run` ได้เมื่อมีสิทธิ์
 - ยืนยันว่า `superadmin` ผ่านทุกสิทธิ์ตาม bouncer behavior เดิม
+
+## 2026-03-27 — Resulted Dry-run Visibility (APPROVED)
+
+- เพิ่มการแสดงปุ่ม `Dry-run` ในสถานะงวด `resulted` เมื่อผู้ใช้มีสิทธิ์ `lotto_draws.auto_result_test_fetch`
+- ปรับ command `lotto:fetch-auto-results` ให้ manual dry-run แบบระบุ `draw_id` รองรับสถานะ `closed` และ `resulted`
 
 ## 2026-03-27 — Auto Result Sources Table Sorting (APPROVED)
 

@@ -33,7 +33,7 @@
         </button>
     @endif
 
-    @if($status === 'closed' && $canDryRun)
+    @if(($status === 'closed' || $status === 'resulted') && $canDryRun)
         <button type="button" class="btn btn-warning btn-xs btn-block mr-1 mb-1" onclick="runAutoResultTestFetch({{ $id }})">
             <i class="fas fa-vial"></i> Dry-run
         </button>
