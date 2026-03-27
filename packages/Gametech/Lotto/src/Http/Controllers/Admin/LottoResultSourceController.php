@@ -56,6 +56,7 @@ class LottoResultSourceController extends AppBaseController
                         ->map(static function (LotteryMarket $market): array {
                             return [
                                 'value' => (int) $market->id,
+                                'group_id' => (int) $market->group_id,
                                 'text' => (string) $market->name,
                                 'logo' => (string) ($market->logo ?: $market->icon ?: ''),
                             ];

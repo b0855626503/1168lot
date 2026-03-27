@@ -38,6 +38,20 @@
                     $option.prop('hidden', !visible).prop('disabled', !visible);
                 });
 
+                $marketSelect.find('optgroup').each(function () {
+                    const $optgroup = $(this);
+                    const hasVisibleOptions = $optgroup.find('option').filter(function () {
+                        const value = String($(this).val() || '');
+                        if (value === '') {
+                            return false;
+                        }
+
+                        return !$(this).prop('hidden');
+                    }).length > 0;
+
+                    $optgroup.prop('hidden', !hasVisibleOptions);
+                });
+
                 if (selectedMarket) {
                     const selectedOption = $marketSelect.find('option[value="' + selectedMarket + '"]');
                     if (!selectedOption.length || selectedOption.prop('hidden')) {

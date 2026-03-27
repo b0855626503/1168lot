@@ -10,6 +10,8 @@
             const tableSelector = '#dataTableBuilder';
             const tableKey = 'dataTableBuilder';
             const $groupSelect = $('#filter_group_id');
+            const $marketNameInput = $('#filter_market_name');
+            let marketNameTypingTimer = null;
 
             const redrawTable = function () {
                 if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
@@ -21,10 +23,21 @@
 
             $(document).off('preXhr.dt.lottoMarketsFilter', tableSelector).on('preXhr.dt.lottoMarketsFilter', tableSelector, function (_event, _settings, data) {
                 data.group_id = $groupSelect.val() || '';
+                data.market_name = ($marketNameInput.val() || '').trim();
             });
 
             $groupSelect.off('change.lottoMarketsFilter').on('change.lottoMarketsFilter', function () {
                 redrawTable();
+            });
+
+            $marketNameInput.off('input.lottoMarketsFilter').on('input.lottoMarketsFilter', function () {
+                if (marketNameTypingTimer) {
+                    clearTimeout(marketNameTypingTimer);
+                }
+
+                marketNameTypingTimer = setTimeout(function () {
+                    redrawTable();
+                }, 250);
             });
         });
     </script>

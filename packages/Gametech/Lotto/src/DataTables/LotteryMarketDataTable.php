@@ -28,6 +28,11 @@ class LotteryMarketDataTable extends DataTable
             $query->where('group_id', $groupId);
         }
 
+        $marketName = trim((string) request('market_name', ''));
+        if ($marketName !== '') {
+            $query->where('name', 'like', '%' . $marketName . '%');
+        }
+
         return $query;
     }
 

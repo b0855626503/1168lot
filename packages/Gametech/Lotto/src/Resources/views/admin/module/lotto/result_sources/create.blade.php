@@ -12,11 +12,16 @@
         <label class="mb-1">รายการหวย</label>
         <select id="source_market_filter" class="form-control form-control-sm">
             <option value="">ทั้งหมด</option>
-            @foreach(($marketOptions ?? []) as $option)
-                <option value="{{ $option['value'] }}"
-                        data-group-id="{{ $option['group_id'] ?? '' }}">
-                    {{ $option['text'] }} ({{ $option['group'] ?? '-' }})
-                </option>
+            @foreach(($marketOptionsGrouped ?? []) as $group)
+                <optgroup label="{{ $group['label'] ?? '-' }}">
+                    @foreach(($group['options'] ?? []) as $option)
+                        <option value="{{ $option['value'] }}"
+                                data-group-id="{{ $option['group_id'] ?? '' }}"
+                                data-logo="{{ $option['logo'] ?? '' }}">
+                            {{ $option['text'] }}
+                        </option>
+                    @endforeach
+                </optgroup>
             @endforeach
         </select>
     </div>
