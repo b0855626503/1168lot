@@ -60,7 +60,11 @@
         </b-row>
         <b-row>
             <b-col md="6"><b-form-group label="Mapping Config JSON"><b-form-textarea rows="4" v-model="sourceForm.mapping_config_json"></b-form-textarea></b-form-group></b-col>
+            <b-col md="6"><b-form-group label="Validation Config JSON"><b-form-textarea rows="4" v-model="sourceForm.validation_config_json"></b-form-textarea></b-form-group></b-col>
+        </b-row>
+        <b-row>
             <b-col md="6"><b-form-group label="Retry Policy JSON"><b-form-textarea rows="4" v-model="sourceForm.retry_policy_json"></b-form-textarea></b-form-group></b-col>
+            <b-col md="6"></b-col>
         </b-row>
 
         <div class="d-flex justify-content-end">
