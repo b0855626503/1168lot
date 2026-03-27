@@ -38,6 +38,8 @@ class V2ResultPipelineRunner
     public function run(LottoDraw $draw, LottoResultSource $source, CompiledSourcePipelineData $compiled, array $options = []): array
     {
         $expectedDrawDate = $options['expected_draw_date'] ?? optional($draw->draw_date)->format('Y-m-d');
+        $selectionMeta = $compiled->selection()->meta();
+        $ignoreExpectedDrawDate = (bool) ($selectionMeta['ignore_expected_draw_date'] ?? false);
         $runId = $this->stringValue($options['run_id'] ?? ('v2_' . $draw->id . '_' . now()->format('YmdHisv')));
 
         $trace = [
@@ -92,7 +94,9 @@ class V2ResultPipelineRunner
         $trace['parsed_raw_fields'] = (array) (($extract['candidates'][0]['fields'] ?? []));
 
         $selection = $this->selectionExecutor->execute($extract, $compiled->selection(), [
-            'expected_draw_date' => is_string($expectedDrawDate) ? $expectedDrawDate : null,
+            'expected_draw_date' => $ignoreExpectedDrawDate
+                ? null
+                : (is_string($expectedDrawDate) ? $expectedDrawDate : null),
         ]);
         $trace['selection_result'] = $selection;
         if ($this->stringValue($selection['decision'] ?? '') !== 'selected') {

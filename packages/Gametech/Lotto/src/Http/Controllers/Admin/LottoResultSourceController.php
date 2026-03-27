@@ -390,17 +390,6 @@ class LottoResultSourceController extends AppBaseController
                     'expected_draw_date' => $expectedDrawDate !== '' ? $expectedDrawDate : null,
                 ]);
 
-                // Production live check should not fail only because current source payload date
-                // is temporarily out of sync with latest draw date in the backoffice.
-                if ((string) ($runResult['status'] ?? '') !== 'VALID'
-                    && (string) ($runResult['error_code'] ?? '') === 'NO_CANDIDATE_MATCHES_EXPECTED_DRAW_DATE'
-                ) {
-                    $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
-                        'run_id' => 'cutover_validate_retry_' . now()->format('YmdHisv'),
-                        'expected_draw_date' => '',
-                    ]);
-                }
-
                 if ((string) ($runResult['status'] ?? '') !== 'VALID') {
                     $errorCode = (string) ($runResult['error_code'] ?? 'VALIDATION_ERROR');
                     $errorStage = (string) ($runResult['error_stage'] ?? 'READINESS');
