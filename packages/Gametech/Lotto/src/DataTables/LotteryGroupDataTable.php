@@ -66,8 +66,7 @@ class LotteryGroupDataTable extends DataTable
     protected function getColumns(): array
     {
         return [
-            ['data' => 'selector',   'name' => 'selector',   'title' => '<input type="checkbox" class="js-lotto-select-all-groups">', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '44px'],
-            ['data' => 'id',         'name' => 'id',         'title' => '#',        'orderable' => true,  'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
+           ['data' => 'id',         'name' => 'id',         'title' => '#',        'orderable' => true,  'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
             ['data' => 'name',       'name' => 'name',       'title' => 'ชื่อกลุ่ม', 'orderable' => true,  'searchable' => true,  'className' => 'text-left'],
             ['data' => 'code',       'name' => 'code',       'title' => 'Code',      'orderable' => true,  'searchable' => true,  'className' => 'text-center'],
             ['data' => 'sort',       'name' => 'sort',       'title' => 'Sort',      'orderable' => true,  'searchable' => false, 'className' => 'text-center', 'width' => '80px'],
