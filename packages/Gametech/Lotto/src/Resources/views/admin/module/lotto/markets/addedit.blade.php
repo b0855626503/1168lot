@@ -170,198 +170,215 @@
         <b-tabs v-model="activeSourceTab" content-class="pt-3">
             <b-tab title="ทั่วไป">
                 <b-row>
-                    <b-col cols="12" md="3">
-                        <b-form-group label="Market ID">
-                            <b-form-input size="sm" :value="autoSourceForm.market_id" readonly></b-form-input>
+                    <b-col md="6">
+                        <b-form-group label="ตลาด (สรุป)">
+                            <b-form-input size="sm" :value="selectedMarketText" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="3">
-                        <b-form-group label="Priority">
-                            <b-form-input size="sm" type="number" min="1" max="9999" v-model="autoSourceForm.priority"></b-form-input>
+                    <b-col md="3">
+                        <b-form-group label="ลำดับความสำคัญ (สรุป)">
+                            <b-form-input size="sm" :value="autoSourceForm.priority" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="3">
-                        <b-form-group label="HTTP Method">
-                            <b-form-select size="sm" :options="autoSourceOptions.httpMethods" v-model="autoSourceForm.http_method"></b-form-select>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="3">
-                        <b-form-group label="Parser Type">
-                            <b-form-select size="sm" :options="autoSourceOptions.parserTypes" v-model="autoSourceForm.parser_type"></b-form-select>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Source Type">
-                            <b-form-select size="sm" :options="autoSourceOptions.sourceTypes" v-model="autoSourceForm.source_type"></b-form-select>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Lookup Date Mode">
-                            <b-form-select size="sm" :options="autoSourceOptions.lookupDateModes" v-model="autoSourceForm.lookup_date_mode"></b-form-select>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Lookup Offset (days)">
-                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
+                    <b-col md="3">
+                        <b-form-group label="หมดเวลารอ (สรุป)">
+                            <b-form-input size="sm" :value="autoSourceForm.timeout_seconds" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
 
                 <b-row>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Timeout (seconds)">
+                    <b-col md="6">
+                        <b-form-group label="URL ปลายทาง (สรุป)">
+                            <b-form-input size="sm" :value="autoSourceForm.endpoint_url || '-'" readonly></b-form-input>
+                            <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code> หรือ <code>JSON หลัก</code></small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="วิธีเรียก API (สรุป)">
+                            <b-form-input size="sm" :value="autoSourceForm.http_method" readonly></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="3">
+                        <b-form-group label="ชนิด Parser (สรุป)">
+                            <b-form-input size="sm" :value="autoSourceForm.parser_type" readonly></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+            </b-tab>
+
+            <b-tab title="ตั้งค่าด่วน">
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="ตลาด">
+                            <b-form-input size="sm" :value="selectedMarketText" readonly></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="ลำดับความสำคัญ">
+                            <b-form-input size="sm" type="number" min="1" v-model="autoSourceForm.priority"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="หมดเวลารอ (วินาที)">
                             <b-form-input size="sm" type="number" min="1" max="60" v-model="autoSourceForm.timeout_seconds"></b-form-input>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Fetch Strategy">
-                            <b-form-select size="sm" :options="autoSourceOptions.fetchStrategies" v-model="autoSourceForm.fetch_strategy"></b-form-select>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Selection Stage">
-                            <b-form-select size="sm" :options="autoSourceOptions.selectionStages" v-model="autoSourceForm.selection_stage"></b-form-select>
+                    <b-col md="6">
+                        <b-form-group label="โหมดอ้างอิงวันงวด">
+                            <b-form-select size="sm" :options="autoSourceOptions.lookupDateModes" v-model="autoSourceForm.lookup_date_mode"></b-form-select>
+                            <small class="text-muted d-block mt-1">@{{ lookupModeHelpText }}</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
 
-                <b-form-group label="Endpoint URL">
-                    <b-form-input size="sm" v-model="autoSourceForm.endpoint_url" placeholder="https://..."></b-form-input>
-                </b-form-group>
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เลื่อนวัน (วัน)">
+                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="URL ผลหวย">
+                            <b-form-input size="sm" v-model="autoSourceForm.quick_endpoint_url" placeholder="https://example.com/result"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
                 <b-row>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Effective From (Y-m-d H:i:s)">
+                    <b-col md="6">
+                        <b-form-group label="วิธีเรียก API">
+                            <b-form-select size="sm" v-model="autoSourceForm.quick_http_method" :options="autoSourceOptions.httpMethods"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Path ของวันที่">
+                            <b-form-input size="sm" v-model="autoSourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เริ่มใช้งานตั้งแต่ (Y-m-d H:i:s)">
                             <b-form-input size="sm" v-model="autoSourceForm.effective_from"></b-form-input>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="Effective To (Y-m-d H:i:s)">
+                    <b-col md="6">
+                        <b-form-group label="สิ้นสุดใช้งาน (Y-m-d H:i:s)">
                             <b-form-input size="sm" v-model="autoSourceForm.effective_to"></b-form-input>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="4" class="pt-3">
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="รูปแบบวันที่ต้นทาง">
+                            <b-form-select size="sm" v-model="autoSourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Path ของรางวัลที่ 1">
+                            <b-form-input size="sm" v-model="autoSourceForm.quick_first_prize_paths" placeholder="$.lotData.DB"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เก็บท้ายกี่หลัก (รางวัลที่ 1)">
+                            <b-form-input size="sm" type="number" min="1" max="10" v-model="autoSourceForm.quick_first_prize_take_right"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="Path ของเลขท้าย 2 ตัว">
+                            <b-form-input size="sm" v-model="autoSourceForm.quick_last2_paths" placeholder="$.lotData.1"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="เก็บท้ายกี่หลัก (เลขท้าย)">
+                            <b-form-input size="sm" type="number" min="1" max="10" v-model="autoSourceForm.quick_last2_take_right"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6" class="pt-2">
                         <b-form-checkbox v-model="autoSourceForm.is_active" switch>เปิดใช้งาน</b-form-checkbox>
-                        <b-form-checkbox v-model="autoSourceForm.supports_partial" switch>supports_partial</b-form-checkbox>
-                        <b-form-checkbox v-model="autoSourceForm.requires_browser" switch>requires_browser</b-form-checkbox>
+                        <b-form-checkbox v-model="autoSourceForm.supports_partial" switch class="mt-1">ยอมรับผลไม่ครบ (Partial)</b-form-checkbox>
+                        <b-form-checkbox v-model="autoSourceForm.requires_browser" switch class="mt-1">ใช้ Browser Worker</b-form-checkbox>
                     </b-col>
                 </b-row>
 
                 <b-form-group label="เหตุผลการเปลี่ยนแปลง">
                     <b-form-input size="sm" v-model="autoSourceForm.revision_reason" placeholder="optional"></b-form-input>
                 </b-form-group>
+
+                <div class="d-flex flex-wrap">
+                    <button type="button" class="btn btn-primary btn-sm mr-2 mb-2" @click="generateQuickPipelineJson">สร้าง JSON อัตโนมัติ</button>
+                    <button type="button" class="btn btn-secondary btn-sm mb-2" @click="applyQuickPresetLaosVip">ตั้งค่าอัตโนมัติ: Laos VIP</button>
+                </div>
             </b-tab>
 
             <b-tab title="JSON หลัก">
                 <div class="d-flex flex-wrap mb-2">
-                    <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyAutoSourceExample">ใส่ตัวอย่าง JSON</button>
-                    <button type="button" class="btn btn-outline-primary btn-xs mr-1 mb-1" @click="previewAutoSource">Preview</button>
-                    <button type="button" class="btn btn-outline-info btn-xs mr-1 mb-1" @click="validateAutoSource">Validate</button>
-                    <button type="button" class="btn btn-outline-warning btn-xs mr-1 mb-1" @click="validateAutoSourceCutover">Validate Cutover</button>
+                    <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyAutoSourceExample">ใส่ตัวอย่าง</button>
+                    <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="syncUnifiedFromForm">รีเฟรชค่าปัจจุบัน</button>
                 </div>
-
-                <b-row>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="request_headers_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.request_headers_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="request_query_template_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.request_query_template_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="request_body_template_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.request_body_template_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="fetch_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.fetch_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="parser_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.parser_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="mapping_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.mapping_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="selection_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.selection_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="validation_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.validation_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
-
-                <b-row>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="readiness_config_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.readiness_config_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                    <b-col cols="12" md="6">
-                        <b-form-group label="retry_policy_json">
-                            <b-form-textarea rows="4" v-model="autoSourceForm.retry_policy_json"></b-form-textarea>
-                        </b-form-group>
-                    </b-col>
-                </b-row>
+                <b-form-group label="Pipeline Config JSON">
+                    <b-form-textarea rows="14" v-model="autoSourceForm.unified_pipeline_json"></b-form-textarea>
+                </b-form-group>
+                <b-alert show variant="light" class="py-2">
+                    ระบบจะ map ค่าใน JSON ก้อนนี้ไปยัง field ย่อยก่อน preview/validate/save อัตโนมัติ
+                </b-alert>
             </b-tab>
 
             <b-tab title="ทดสอบตามวันที่">
                 <b-row>
-                    <b-col cols="12" md="4">
-                        <b-form-group label="วันที่ทดสอบ">
+                    <b-col md="6">
+                        <b-form-group label="วันที่งวดที่ใช้ทดสอบ">
                             <b-form-input size="sm" type="date" v-model="sourceTestDate"></b-form-input>
                         </b-form-group>
                     </b-col>
-                    <b-col cols="12" md="8">
-                        <label class="d-block">ทดสอบ</label>
-                        <div class="d-flex flex-wrap">
-                            <button
-                                v-if="permissions.canTestFetch"
-                                type="button"
-                                class="btn btn-warning btn-sm mr-1 mb-1"
-                                @click="runAutoSourceTestByDate">
-                                Dry Run ตามวันที่
-                            </button>
-                            <button
-                                v-if="permissions.canViewLogs"
-                                type="button"
-                                class="btn btn-secondary btn-sm mb-1"
-                                @click="showAutoSourceLogsByDate">
-                                ดู Log ตามวันที่
-                            </button>
-                        </div>
-                        <small class="text-muted">ใช้แทนปุ่ม dry run / log จากเมนูงวดหวย โดยเลือกวันที่ที่นี่ได้ทันที</small>
+                    <b-col md="6">
+                        <b-form-group label="สรุปผลการทดสอบล่าสุด">
+                            <b-form-textarea size="sm" rows="4" :value="testRunSummary" readonly></b-form-textarea>
+                        </b-form-group>
                     </b-col>
                 </b-row>
+
+                <div class="d-flex flex-wrap">
+                    <button
+                        v-if="permissions.canTestFetch"
+                        type="button"
+                        class="btn btn-warning btn-sm mr-1 mb-1"
+                        @click="runAutoSourceTestByDate">
+                        Dry Run ตามวันที่
+                    </button>
+                    <button
+                        v-if="permissions.canViewLogs"
+                        type="button"
+                        class="btn btn-secondary btn-sm mb-1"
+                        @click="showAutoSourceLogsByDate">
+                        ดู Log ตามวันที่
+                    </button>
+                </div>
             </b-tab>
         </b-tabs>
 
-        <div class="d-flex justify-content-end mt-3">
-            <button type="submit" class="btn btn-success btn-sm">บันทึก Source</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mt-2">
+            <div class="d-flex flex-wrap">
+                <button type="button" class="btn btn-primary btn-sm mr-1 mb-1" @click="previewAutoSource">พรีวิว</button>
+                <button type="button" class="btn btn-info btn-sm mr-1 mb-1 text-white" @click="validateAutoSource">ตรวจสอบค่า</button>
+                <button type="button" class="btn btn-warning btn-sm mb-1" @click="validateAutoSourceCutover">ตรวจสอบก่อนเปิดใช้งานจริง</button>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm mb-1">บันทึก Source</button>
         </div>
     </b-form>
 </b-modal>
@@ -470,8 +487,15 @@
                     sourceEditorMode: 'add',
                     sourceEditorTitle: 'เพิ่ม Auto Result Source',
                     activeSourceTab: 0,
+                    quickDateFormats: [
+                        { value: 'd/m/Y', text: 'd/m/Y (เช่น 27/03/2026)' },
+                        { value: 'Y-m-d', text: 'Y-m-d (เช่น 2026-03-27)' },
+                        { value: 'd-m-Y', text: 'd-m-Y (เช่น 27-03-2026)' },
+                        { value: 'Y/m/d', text: 'Y/m/d (เช่น 2026/03/27)' },
+                    ],
                     sourceTestDate: '',
                     sourceTestRunId: '',
+                    testRunResult: null,
                     sourceTestLogs: [],
                     autoSourceOptions: {
                         lookupDateModes: [
@@ -514,6 +538,42 @@
                 this.audio = document.getElementById('alertsound');
                 this.autoCnt(false);
             },
+            computed: {
+                selectedMarketText() {
+                    const marketId = Number(this.autoSourceForm.market_id || 0);
+                    if (!marketId) {
+                        return '-';
+                    }
+
+                    const found = (this.autoSourcesItems || []).find((item) => Number(item.market_id || 0) === marketId);
+                    if (found && found.market_name) {
+                        return found.market_name;
+                    }
+
+                    return `Market #${marketId}`;
+                },
+                lookupModeHelpText() {
+                    const mode = String(this.autoSourceForm.lookup_date_mode || 'ROUND_DATE');
+                    const map = {
+                        ROUND_DATE: 'เทียบวันงวดตรง ๆ',
+                        ROUND_DATE_MINUS_DAYS: 'ใช้วันงวดลบจำนวนวันที่ตั้งไว้',
+                        ROUND_DATE_PLUS_DAYS: 'ใช้วันงวดบวกจำนวนวันที่ตั้งไว้',
+                        RESULT_AT_DATE: 'ใช้วันที่ผลประกาศ (result_at)',
+                    };
+
+                    return map[mode] || mode;
+                },
+                testRunSummary() {
+                    if (!this.testRunResult || typeof this.testRunResult !== 'object') {
+                        return '';
+                    }
+
+                    const runId = String(this.testRunResult.run_id || '-');
+                    const drawId = String(this.testRunResult.draw_id || '-');
+                    const output = String(this.testRunResult.output || '').trim();
+                    return `run_id: ${runId}\ndraw_id: ${drawId}\n${output}`;
+                },
+            },
             methods: {
                 defaultAutoSourceForm() {
                     return {
@@ -536,6 +596,15 @@
                         supports_partial: false,
                         requires_browser: false,
                         revision_reason: '',
+                        unified_pipeline_json: '',
+                        quick_endpoint_url: '',
+                        quick_http_method: 'GET',
+                        quick_draw_date_path: '$.date',
+                        quick_draw_date_from_format: 'Y-m-d',
+                        quick_first_prize_paths: '$.lotData.DB',
+                        quick_first_prize_take_right: 3,
+                        quick_last2_paths: '$.lotData.1',
+                        quick_last2_take_right: 2,
                         request_headers_json: '{}',
                         request_query_template_json: '{}',
                         request_body_template_json: '{}',
@@ -619,16 +688,172 @@
                         },
                     };
 
-                    this.autoSourceForm.request_headers_json = JSON.stringify(example.request_headers_json, null, 2);
-                    this.autoSourceForm.request_query_template_json = JSON.stringify(example.request_query_template_json, null, 2);
-                    this.autoSourceForm.request_body_template_json = JSON.stringify(example.request_body_template_json, null, 2);
-                    this.autoSourceForm.fetch_config_json = JSON.stringify(example.fetch_config_json, null, 2);
-                    this.autoSourceForm.parser_config_json = JSON.stringify(example.parser_config_json, null, 2);
-                    this.autoSourceForm.mapping_config_json = JSON.stringify(example.mapping_config_json, null, 2);
-                    this.autoSourceForm.selection_config_json = JSON.stringify(example.selection_config_json, null, 2);
-                    this.autoSourceForm.validation_config_json = JSON.stringify(example.validation_config_json, null, 2);
-                    this.autoSourceForm.readiness_config_json = JSON.stringify(example.readiness_config_json, null, 2);
-                    this.autoSourceForm.retry_policy_json = JSON.stringify(example.retry_policy_json, null, 2);
+                    this.autoSourceForm.unified_pipeline_json = JSON.stringify(example, null, 2);
+                    this.applyUnifiedToForm();
+                },
+                parseJsonSafe(text) {
+                    try {
+                        const raw = String(text || '').trim();
+                        if (!raw) {
+                            return {};
+                        }
+                        const parsed = JSON.parse(raw);
+                        return parsed && typeof parsed === 'object' ? parsed : {};
+                    } catch (_error) {
+                        return {};
+                    }
+                },
+                buildUnifiedConfigObject() {
+                    return {
+                        request_headers_json: this.parseJsonSafe(this.autoSourceForm.request_headers_json),
+                        request_query_template_json: this.parseJsonSafe(this.autoSourceForm.request_query_template_json),
+                        request_body_template_json: this.parseJsonSafe(this.autoSourceForm.request_body_template_json),
+                        fetch_config_json: this.parseJsonSafe(this.autoSourceForm.fetch_config_json),
+                        parser_config_json: this.parseJsonSafe(this.autoSourceForm.parser_config_json),
+                        mapping_config_json: this.parseJsonSafe(this.autoSourceForm.mapping_config_json),
+                        selection_config_json: this.parseJsonSafe(this.autoSourceForm.selection_config_json),
+                        validation_config_json: this.parseJsonSafe(this.autoSourceForm.validation_config_json),
+                        readiness_config_json: this.parseJsonSafe(this.autoSourceForm.readiness_config_json),
+                        retry_policy_json: this.parseJsonSafe(this.autoSourceForm.retry_policy_json),
+                    };
+                },
+                syncUnifiedFromForm() {
+                    const unified = this.buildUnifiedConfigObject();
+                    this.autoSourceForm.unified_pipeline_json = JSON.stringify(unified, null, 2);
+                    this.populateQuickFromUnified(unified);
+                },
+                applyUnifiedToForm() {
+                    const unified = this.parseJsonSafe(this.autoSourceForm.unified_pipeline_json);
+                    this.autoSourceForm.request_headers_json = JSON.stringify(unified.request_headers_json || {}, null, 2);
+                    this.autoSourceForm.request_query_template_json = JSON.stringify(unified.request_query_template_json || {}, null, 2);
+                    this.autoSourceForm.request_body_template_json = JSON.stringify(unified.request_body_template_json || {}, null, 2);
+                    this.autoSourceForm.fetch_config_json = JSON.stringify(unified.fetch_config_json || {}, null, 2);
+                    this.autoSourceForm.parser_config_json = JSON.stringify(unified.parser_config_json || {}, null, 2);
+                    this.autoSourceForm.mapping_config_json = JSON.stringify(unified.mapping_config_json || {}, null, 2);
+                    this.autoSourceForm.selection_config_json = JSON.stringify(unified.selection_config_json || {}, null, 2);
+                    this.autoSourceForm.validation_config_json = JSON.stringify(unified.validation_config_json || {}, null, 2);
+                    this.autoSourceForm.readiness_config_json = JSON.stringify(unified.readiness_config_json || {}, null, 2);
+                    this.autoSourceForm.retry_policy_json = JSON.stringify(unified.retry_policy_json || {}, null, 2);
+                    this.populateQuickFromUnified(unified);
+                },
+                populateQuickFromUnified(unified) {
+                    const fetchConfig = (unified.fetch_config_json && typeof unified.fetch_config_json === 'object') ? unified.fetch_config_json : {};
+                    const parserConfig = (unified.parser_config_json && typeof unified.parser_config_json === 'object') ? unified.parser_config_json : {};
+                    const mappingConfig = (unified.mapping_config_json && typeof unified.mapping_config_json === 'object') ? unified.mapping_config_json : {};
+                    const fields = (parserConfig.fields && typeof parserConfig.fields === 'object') ? parserConfig.fields : {};
+                    const mapFields = (mappingConfig.fields && typeof mappingConfig.fields === 'object') ? mappingConfig.fields : {};
+
+                    this.autoSourceForm.quick_endpoint_url = String(fetchConfig.endpoint_url || this.autoSourceForm.quick_endpoint_url || '');
+                    this.autoSourceForm.quick_http_method = String(fetchConfig.http_method || this.autoSourceForm.quick_http_method || 'GET').toUpperCase();
+                    this.autoSourceForm.quick_draw_date_path = String((fields.draw_date_raw || {}).path || this.autoSourceForm.quick_draw_date_path || '$.date');
+
+                    const firstRule = mapFields.first_prize || {};
+                    const last2Rule = mapFields.last_2_digits || {};
+
+                    const firstPath = firstRule.from && fields[firstRule.from] ? String(fields[firstRule.from].path || '') : '';
+                    const last2Path = last2Rule.from && fields[last2Rule.from] ? String(fields[last2Rule.from].path || '') : '';
+                    if (firstPath) {
+                        this.autoSourceForm.quick_first_prize_paths = firstPath;
+                    }
+                    if (last2Path) {
+                        this.autoSourceForm.quick_last2_paths = last2Path;
+                    }
+
+                    const firstRight = (Array.isArray(firstRule.transforms) ? firstRule.transforms : []).find((t) => String((t || {}).op || '').toLowerCase() === 'right');
+                    const last2Right = (Array.isArray(last2Rule.transforms) ? last2Rule.transforms : []).find((t) => String((t || {}).op || '').toLowerCase() === 'right');
+                    this.autoSourceForm.quick_first_prize_take_right = Number((firstRight || {}).length || this.autoSourceForm.quick_first_prize_take_right || 3);
+                    this.autoSourceForm.quick_last2_take_right = Number((last2Right || {}).length || this.autoSourceForm.quick_last2_take_right || 2);
+                },
+                splitQuickPaths(text) {
+                    return String(text || '').split(',').map((v) => v.trim()).filter((v) => v !== '');
+                },
+                applyQuickPresetLaosVip() {
+                    this.autoSourceForm.quick_endpoint_url = 'https://laosviplot.com/result';
+                    this.autoSourceForm.quick_http_method = 'GET';
+                    this.autoSourceForm.quick_draw_date_path = '$.date';
+                    this.autoSourceForm.quick_draw_date_from_format = 'd/m/Y';
+                    this.autoSourceForm.quick_first_prize_paths = '$.lotto_2';
+                    this.autoSourceForm.quick_first_prize_take_right = 3;
+                    this.autoSourceForm.quick_last2_paths = '$.lotto_1';
+                    this.autoSourceForm.quick_last2_take_right = 2;
+                },
+                generateQuickPipelineJson() {
+                    const endpointUrl = String(this.autoSourceForm.quick_endpoint_url || '').trim();
+                    if (!endpointUrl) {
+                        this.showApiError(null, 'กรุณาใส่ URL ผลหวย');
+                        return;
+                    }
+
+                    const firstPrizePaths = this.splitQuickPaths(this.autoSourceForm.quick_first_prize_paths);
+                    const last2Paths = this.splitQuickPaths(this.autoSourceForm.quick_last2_paths);
+                    if (firstPrizePaths.length === 0 || last2Paths.length === 0) {
+                        this.showApiError(null, 'กรุณาระบุ Path ของรางวัลที่ 1 และเลขท้าย 2 ตัว');
+                        return;
+                    }
+
+                    const firstKey = 'first_prize_raw_1';
+                    const last2Key = 'last_2_raw_1';
+                    const unified = {
+                        request_headers_json: {},
+                        request_query_template_json: {},
+                        request_body_template_json: {},
+                        fetch_config_json: {
+                            fetch_strategy: 'JSON_HTTP',
+                            endpoint_url: endpointUrl,
+                            http_method: String(this.autoSourceForm.quick_http_method || 'GET').toUpperCase(),
+                            headers: {},
+                            query: {},
+                            timeout_seconds: Number(this.autoSourceForm.timeout_seconds || 10),
+                        },
+                        parser_config_json: {
+                            version: 2,
+                            mode: 'single_payload',
+                            parser_type: 'JSON_PATH',
+                            fields: {
+                                draw_date_raw: { type: 'JSON_PATH', path: String(this.autoSourceForm.quick_draw_date_path || '$.date') },
+                                [firstKey]: { type: 'JSON_PATH', path: firstPrizePaths[0] },
+                                [last2Key]: { type: 'JSON_PATH', path: last2Paths[0] },
+                            },
+                        },
+                        mapping_config_json: {
+                            fields: {
+                                draw_date: {
+                                    from: 'draw_date_raw',
+                                    transforms: [
+                                        { op: 'trim' },
+                                        { op: 'date', from: String(this.autoSourceForm.quick_draw_date_from_format || 'Y-m-d'), to: 'Y-m-d' },
+                                    ],
+                                },
+                                first_prize: {
+                                    from: firstKey,
+                                    transforms: [{ op: 'digits_only' }, { op: 'right', length: Number(this.autoSourceForm.quick_first_prize_take_right || 3) }],
+                                },
+                                last_2_digits: {
+                                    from: last2Key,
+                                    transforms: [{ op: 'digits_only' }, { op: 'right', length: Number(this.autoSourceForm.quick_last2_take_right || 2) }],
+                                },
+                            },
+                        },
+                        selection_config_json: {
+                            selection_stage: 'PRE_MAPPING',
+                            strategy: 'strict_single_match',
+                            date_field: 'draw_date_raw',
+                            required_fields: [],
+                            meta: { candidate_draw_date_offset_days: 0, expected_draw_date_offset_days: 0 },
+                        },
+                        validation_config_json: { required_fields: ['draw_date', 'first_prize', 'last_2_digits'] },
+                        readiness_config_json: { enabled: true, minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'] },
+                        retry_policy_json: { max_attempts: 3, backoff_seconds: [10, 30, 60] },
+                    };
+
+                    this.autoSourceForm.unified_pipeline_json = JSON.stringify(unified, null, 2);
+                    this.applyUnifiedToForm();
+                    this.autoSourceForm.endpoint_url = endpointUrl;
+                    this.autoSourceForm.http_method = String(this.autoSourceForm.quick_http_method || 'GET').toUpperCase();
+                    this.autoSourceForm.parser_type = 'JSON_PATH';
+                    this.autoSourceForm.fetch_strategy = 'JSON_HTTP';
+                    this.autoSourceForm.selection_stage = 'PRE_MAPPING';
+                    this.activeSourceTab = 2;
                 },
                 parseJsonInput(text, fieldName) {
                     const raw = String(text || '').trim();
@@ -643,24 +868,28 @@
                     }
                 },
                 makeSourcePayload() {
+                    this.applyUnifiedToForm();
                     const form = this.autoSourceForm;
+                    const fetchConfig = this.parseJsonSafe(form.fetch_config_json);
+                    const parserConfig = this.parseJsonSafe(form.parser_config_json);
+                    const selectionConfig = this.parseJsonSafe(form.selection_config_json);
                     return {
                         id: form.id || null,
                         market_id: Number(form.market_id || 0),
                         is_active: !!form.is_active,
                         priority: Number(form.priority || 100),
                         source_type: form.source_type || 'api',
-                        endpoint_url: String(form.endpoint_url || '').trim(),
-                        http_method: String(form.http_method || 'GET').toUpperCase(),
+                        endpoint_url: String(fetchConfig.endpoint_url || form.endpoint_url || form.quick_endpoint_url || '').trim(),
+                        http_method: String(fetchConfig.http_method || form.http_method || form.quick_http_method || 'GET').toUpperCase(),
                         lookup_date_mode: form.lookup_date_mode || 'ROUND_DATE',
                         lookup_date_offset_days: Number(form.lookup_date_offset_days || 0),
-                        parser_type: String(form.parser_type || 'JSON_PATH').toUpperCase(),
+                        parser_type: String(parserConfig.parser_type || form.parser_type || 'JSON_PATH').toUpperCase(),
                         timeout_seconds: Number(form.timeout_seconds || 10),
                         effective_from: String(form.effective_from || '').trim(),
                         effective_to: String(form.effective_to || '').trim(),
                         pipeline_version: 'V2_CUTOVER',
-                        fetch_strategy: String(form.fetch_strategy || 'JSON_HTTP').toUpperCase(),
-                        selection_stage: String(form.selection_stage || 'POST_MAPPING').toUpperCase(),
+                        fetch_strategy: String(fetchConfig.fetch_strategy || form.fetch_strategy || 'JSON_HTTP').toUpperCase(),
+                        selection_stage: String(selectionConfig.selection_stage || form.selection_stage || 'POST_MAPPING').toUpperCase(),
                         supports_partial: !!form.supports_partial,
                         requires_browser: !!form.requires_browser,
                         revision_reason: String(form.revision_reason || '').trim(),
@@ -775,6 +1004,9 @@
                     this.autoSourceForm = this.defaultAutoSourceForm();
                     this.autoSourceForm.market_id = Number(this.autoSourcesModal.marketId || 0);
                     this.applyAutoSourceExample();
+                    this.sourceTestDate = '{{ now()->format('Y-m-d') }}';
+                    this.sourceTestRunId = '';
+                    this.testRunResult = null;
                     this.$refs.sourceEditorModal.show();
                 },
                 async editAutoSource(sourceId) {
@@ -801,8 +1033,12 @@
                             selection_config_json: JSON.stringify(d.selection_config_json || {}, null, 2),
                             readiness_config_json: JSON.stringify(d.readiness_config_json || {}, null, 2),
                         };
-                        this.sourceTestDate = '';
+                        this.syncUnifiedFromForm();
+                        this.autoSourceForm.quick_endpoint_url = this.autoSourceForm.endpoint_url || this.autoSourceForm.quick_endpoint_url;
+                        this.autoSourceForm.quick_http_method = this.autoSourceForm.http_method || this.autoSourceForm.quick_http_method;
+                        this.sourceTestDate = '{{ now()->format('Y-m-d') }}';
                         this.sourceTestRunId = '';
+                        this.testRunResult = null;
                         this.$refs.sourceEditorModal.show();
                     } catch (error) {
                         this.showApiError(error, 'โหลดข้อมูล source ไม่สำเร็จ');
@@ -911,6 +1147,7 @@
 
                         const data = ((res || {}).data || {}).data || {};
                         this.sourceTestRunId = data.run_id || '';
+                        this.testRunResult = data;
                         const output = String(data.output || '').trim() || 'Dry-run สำเร็จ';
                         this.$bvModal.msgBoxOk(output, {
                             title: 'Dry-run Result',
