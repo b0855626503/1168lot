@@ -35,6 +35,57 @@
 
 ---
 
+## 🧪 Lotto Parser Check Command Contract (MANDATORY)
+
+เมื่อ user พิมพ์คำสั่งรูปแบบนี้:
+
+- `check <url> <draw_date> <first_prize> <last_2_raw>`
+
+ให้ถือว่าเป็นคำสั่งของ skill `lotto-parser-config-generator` ทันที และต้องตอบตาม output contract ของ skill เท่านั้น
+(ห้ามตอบแบบสรุปข้อความธุรกิจอย่างเดียว)
+และต้องยึด schema ตามไฟล์:
+
+- `docs/internal/00_RULES/lotto_check_output_contract.md`
+
+### Output Rules (Strict)
+
+- positional ครบ 4 ค่า ต้องเข้าโหมด `EXHAUSTIVE`
+- ต้องส่ง `config` แยกคนละ code block ตามหัวข้อ:
+  - `PAGE JSON`
+  - `PAGE DOM (CSS)`
+  - `PAGE REGEX`
+  - `ENDPOINT JSON`
+  - `ENDPOINT DOM (CSS)`
+  - `ENDPOINT REGEX`
+- ถ้าแบบใดไม่ feasible ต้องส่ง block ของแบบนั้นเป็น JSON error object:
+  - `feasible=false`
+  - `error_code`
+  - `message`
+- หลัง config ครบแล้ว ต้องส่ง self-test summary รวมอีก 1 code block
+- ใน self-test ต้องมีอย่างน้อย:
+  - `raw_result`
+  - `transformed_result`
+  - `validation_result`
+  - `passed`
+
+### Reject Rule
+
+- ถ้า output ไม่ครบ 6 config blocks + 1 self-test summary block ให้ถือว่า "ผิด format" และต้องแก้ให้ถูกก่อนจบคำตอบ
+- ถ้า shape ของ `json หลัก` ไม่ตรง "Minimum Required Schema" ใน contract file ให้ถือว่า "ผิด schema" และต้อง regenerate ก่อนส่ง
+- อนุญาตเพิ่ม nested fields ได้เมื่อระบบรองรับจริง แต่ห้ามเพิ่ม top-level key ใหม่เอง
+
+### Preflight Checklist (Before Send)
+
+ก่อนส่งผลคำสั่ง `check` ทุกครั้ง ต้อง verify ให้ครบ:
+
+1. block ครบตามลำดับใน contract file
+2. top-level keys ครบทั้ง 10 keys ในทุก config block
+3. `request_headers_json/request_query_template_json/request_body_template_json` เป็น array
+4. `mapping_config_json.fields` เป็น object
+5. มี `raw_result/transformed_result/validation_result/passed` ใน self-test summary
+
+---
+
 ## 🎯 Goal
 
 ทำให้ agent สามารถทำงานต่อได้โดยไม่ต้องมี context จากแชตก่อนหน้า
