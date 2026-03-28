@@ -914,6 +914,13 @@
                         centered: true,
                     });
                 },
+                assertApiSuccess(res, fallbackMessage = 'ดำเนินการไม่สำเร็จ') {
+                    const data = (res && res.data) ? res.data : {};
+                    const isSuccess = data && (data.success === true || data.status === true);
+                    if (!isSuccess) {
+                        throw new Error(String(data.message || fallbackMessage));
+                    }
+                },
                 showApiError(error, fallback = 'เกิดข้อผิดพลาด') {
                     let message = fallback;
                     if (error && error.response && error.response.data) {
@@ -1073,6 +1080,7 @@
                             : "{{ route('admin.lotto.result_sources.update') }}";
 
                         const res = await axios.post(url, { id: payload.id, data: payload });
+                        this.assertApiSuccess(res, 'บันทึก source ไม่สำเร็จ');
                         this.showApiMessage(res, 'บันทึกสำเร็จ');
                         this.$refs.sourceEditorModal.hide();
                         await this.loadAutoSources();
