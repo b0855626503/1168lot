@@ -72,5 +72,10 @@ class LotteryMarket extends Model implements LotteryMarketContract
     {
         return $this->hasMany(MemberLottoMarketPolicy::class, 'market_id');
     }
+
+    public function resultSources()
+    {
+        return $this->hasMany(LottoResultSource::class, 'market_id');
+    }
 }
 

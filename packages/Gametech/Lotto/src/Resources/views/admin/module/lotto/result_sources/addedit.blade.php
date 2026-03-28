@@ -1,3 +1,8 @@
+@php
+    $canAutoResultTestFetch = function_exists('bouncer') ? bouncer()->hasPermission('lotto_draws.auto_result_test_fetch') : false;
+    $canAutoResultLogs = function_exists('bouncer') ? bouncer()->hasPermission('lotto_draws.auto_result_metrics') : false;
+@endphp
+
 <b-modal ref="addeditSource" id="addeditSource" centered size="lg" title="ตั้งค่า Auto Result Source" :hide-footer="true" @shown="onModalShown" @hidden="onModalHidden">
     <b-form v-if="showSourceForm" @submit.prevent="submitSourceForm">
         <b-tabs v-model="activeSourceTab" content-class="pt-3">
@@ -246,6 +251,35 @@
                     </b-col>
                 </b-row>
             </b-tab>
+
+            <b-tab title="ทดสอบตามวันที่">
+                <b-row>
+                    <b-col md="6">
+                        <b-form-group label="วันที่งวดที่ใช้ทดสอบ">
+                            <b-form-input size="sm" type="date" v-model="sourceForm.test_draw_date"></b-form-input>
+                            <small class="text-muted d-block mt-1">ระบบจะหา draw ของตลาดนี้ตามวันที่ แล้วยิง dry-run ให้ทันที</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6">
+                        <b-form-group label="สรุปผลการทดสอบล่าสุด">
+                            <b-form-textarea size="sm" rows="4" :value="testRunSummary" readonly></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <div class="d-flex flex-wrap">
+                    @if($canAutoResultTestFetch)
+                        <button type="button" class="btn btn-warning btn-sm mr-2 mb-2" @click="runTestFetchByDate">
+                            <i class="fas fa-vial"></i> ทดสอบ Dry-run ตามวันที่
+                        </button>
+                    @endif
+                    @if($canAutoResultLogs)
+                        <button type="button" class="btn btn-secondary btn-sm mb-2" @click="showTestLogsByDate">
+                            <i class="fas fa-stream"></i> ดู Log ตามวันที่
+                        </button>
+                    @endif
+                </div>
+            </b-tab>
         </b-tabs>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center action-bar">
@@ -257,6 +291,25 @@
             <button type="submit" class="btn btn-success btn-sm mb-2 action-bar-save action-main-btn">บันทึก</button>
         </div>
     </b-form>
+</b-modal>
+
+<b-modal ref="sourceTestLogsModal" id="sourceTestLogsModal" centered size="xl" title="Auto Result Test Logs" ok-only ok-title="ปิด">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="text-muted small">Draw ID: @{{ testLogsData.draw_id || '-' }}</div>
+        <div class="text-muted small">จำนวน @{{ (testLogsData.items || []).length }} รายการ</div>
+    </div>
+    <b-table
+        small
+        striped
+        hover
+        responsive
+        :fields="testLogsFields"
+        :items="testLogsData.items"
+        empty-text="ไม่พบ fetch logs">
+        <template #cell(detail)="{ item }">
+            <button type="button" class="btn btn-xs btn-outline-primary" @click="showTestLogDetail(item)">ดูรายละเอียด</button>
+        </template>
+    </b-table>
 </b-modal>
 
 @push('styles')
@@ -387,6 +440,20 @@
                     jsonExamples: this.buildJsonExamples(),
                     sourceForm: this.newSourceForm(),
                     isSyncingMarketSelect: false,
+                    testRunResult: null,
+                    testLogsData: {
+                        draw_id: null,
+                        items: [],
+                    },
+                    testLogsFields: [
+                        { key: 'id', label: '#', class: 'text-center' },
+                        { key: 'created_at', label: 'เวลา' },
+                        { key: 'status', label: 'สถานะ', class: 'text-center' },
+                        { key: 'pipeline_stage', label: 'Stage', class: 'text-center' },
+                        { key: 'run_id', label: 'Run ID' },
+                        { key: 'error_message', label: 'Error' },
+                        { key: 'detail', label: 'รายละเอียด', class: 'text-center' },
+                    ],
                 };
             },
             computed: {
@@ -517,6 +584,16 @@
                 },
                 derivedSelectionStage() {
                     return String(this.parsedSelectionConfig.selection_stage || this.sourceForm.selection_stage || 'POST_MAPPING').toUpperCase();
+                },
+                testRunSummary() {
+                    if (!this.testRunResult || typeof this.testRunResult !== 'object') {
+                        return '';
+                    }
+
+                    const runId = String(this.testRunResult.run_id || '-');
+                    const drawId = String(this.testRunResult.draw_id || '-');
+                    const output = String(this.testRunResult.output || '').trim();
+                    return `run_id: ${runId}\ndraw_id: ${drawId}\n${output}`;
                 },
             },
             methods: {
@@ -689,6 +766,7 @@
                         quick_first_prize_take_right: 3,
                         quick_last2_paths: '',
                         quick_last2_take_right: 2,
+                        test_draw_date: '{{ now()->format('Y-m-d') }}',
                     };
                 },
                 toJsonText(value) {
@@ -1031,6 +1109,8 @@
                     this.sourceFormMethod = 'add';
                     this.activeSourceTab = 0;
                     this.sourceForm = this.newSourceForm();
+                    this.testRunResult = null;
+                    this.testLogsData = { draw_id: null, items: [] };
                     this.showSourceForm = true;
                     this.syncUnifiedFromForm();
 
@@ -1042,6 +1122,8 @@
                     this.sourceId = id;
                     this.sourceFormMethod = 'edit';
                     this.activeSourceTab = 0;
+                    this.testRunResult = null;
+                    this.testLogsData = { draw_id: null, items: [] };
 
                     const response = await axios.post("{{ route('admin.lotto.result_sources.loaddata') }}", { id });
                     const item = response?.data?.data || {};
@@ -1337,6 +1419,107 @@
                 },
                 async validateSourceCutover() {
                     await this.callConfigAction("{{ route('admin.lotto.result_sources.validate_cutover') }}", 'ตรวจสอบก่อนเปิดใช้งานจริงสำเร็จ');
+                },
+                async runTestFetchByDate() {
+                    const marketId = this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : 0;
+                    const drawDate = String(this.sourceForm.test_draw_date || '').trim();
+                    if (!marketId) {
+                        await this.$bvModal.msgBoxOk('กรุณาเลือกตลาดก่อนทดสอบ', {
+                            title: 'ข้อมูลไม่ครบ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                        return;
+                    }
+
+                    if (drawDate === '') {
+                        await this.$bvModal.msgBoxOk('กรุณาเลือกวันที่งวดที่ต้องการทดสอบ', {
+                            title: 'ข้อมูลไม่ครบ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                        return;
+                    }
+
+                    try {
+                        const response = await axios.post("{{ route('admin.lotto.result_sources.test_fetch_by_date') }}", {
+                            market_id: marketId,
+                            draw_date: drawDate,
+                        });
+                        this.testRunResult = response?.data?.data || null;
+
+                        await this.$bvModal.msgBoxOk(response?.data?.message || 'ดำเนินการ Dry-run สำเร็จ', {
+                            title: 'Auto Result Dry-run',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'Dry-run ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'Auto Result Dry-run',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
+                },
+                async showTestLogsByDate() {
+                    const marketId = this.sourceForm.market_id ? parseInt(this.sourceForm.market_id, 10) : 0;
+                    const drawDate = String(this.sourceForm.test_draw_date || '').trim();
+                    if (!marketId || drawDate === '') {
+                        await this.$bvModal.msgBoxOk('กรุณาเลือกตลาดและวันที่ก่อนดู Logs', {
+                            title: 'ข้อมูลไม่ครบ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                        return;
+                    }
+
+                    try {
+                        const response = await axios.get("{{ route('admin.lotto.result_sources.test_fetch_logs_by_date') }}", {
+                            params: {
+                                market_id: marketId,
+                                draw_date: drawDate,
+                                run_id: this.testRunResult?.run_id || '',
+                                limit: 100,
+                            },
+                        });
+
+                        const payload = response?.data?.data || {};
+                        this.testLogsData = {
+                            draw_id: payload.draw_id || null,
+                            items: Array.isArray(payload.items) ? payload.items : [],
+                        };
+                        this.$refs.sourceTestLogsModal.show();
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'โหลด fetch logs ไม่สำเร็จ';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'เกิดข้อผิดพลาด',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
+                },
+                async showTestLogDetail(item) {
+                    const detail = JSON.stringify(item || {}, null, 2);
+                    await this.$bvModal.msgBoxOk(detail, {
+                        title: `Log #${item?.id || ''}`,
+                        size: 'lg',
+                        buttonSize: 'sm',
+                        okVariant: 'primary',
+                        centered: true,
+                    });
                 },
                 editSourceStatus(id, status) {
                     this.$bvModal.msgBoxConfirm('ต้องการเปลี่ยนสถานะ source หรือไม่?', {

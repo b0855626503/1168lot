@@ -137,6 +137,12 @@ Route::domain(
             Route::post('auto-result-sources/validate-cutover', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@validateCutover')
                 ->name('admin.lotto.result_sources.validate_cutover');
 
+            Route::post('auto-result-sources/test-fetch-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@testFetchByDate')
+                ->name('admin.lotto.result_sources.test_fetch_by_date');
+
+            Route::get('auto-result-sources/test-fetch-logs-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@testFetchLogsByDate')
+                ->name('admin.lotto.result_sources.test_fetch_logs_by_date');
+
             Route::post('draws/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@create')
                 ->name('admin.lotto.draws.create');
 

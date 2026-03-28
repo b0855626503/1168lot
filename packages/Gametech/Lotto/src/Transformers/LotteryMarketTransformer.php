@@ -22,6 +22,7 @@ class LotteryMarketTransformer extends TransformerAbstract
             'result_url' => $model->result_url
                 ? '<a href="' . e($model->result_url) . '" target="_blank">ลิงก์ผล</a>'
                 : '-',
+            'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->result_sources_count ?? 0)),
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
                 . ($model->is_enabled ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>')
@@ -63,5 +64,14 @@ class LotteryMarketTransformer extends TransformerAbstract
         }
 
         return '<img src="' . e($src) . '" alt="market" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">';
+    }
+
+    private function renderAutoResultSourceStatus(int $count): string
+    {
+        if ($count > 0) {
+            return '<span class="badge badge-success">ผูกแล้ว (' . $count . ')</span>';
+        }
+
+        return '<span class="badge badge-secondary">ยังไม่ผูก</span>';
     }
 }

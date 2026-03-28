@@ -106,6 +106,20 @@
     </b-form>
 </b-modal>
 
+<b-modal ref="autoSourcesModal" id="autoSourcesModal" centered size="xl" :title="autoSourcesModal.title" hide-footer>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted">จัดการ Auto Result Sources ของรายการหวยนี้</small>
+        <button type="button" class="btn btn-outline-secondary btn-sm" @click="reloadAutoSourcesFrame">
+            <i class="fas fa-sync-alt"></i> รีโหลด
+        </button>
+    </div>
+    <iframe
+        v-if="autoSourcesModal.src"
+        :src="autoSourcesModal.src"
+        style="width:100%;height:70vh;border:1px solid #dee2e6;border-radius:4px;background:#fff;"
+    ></iframe>
+</b-modal>
+
 @push('scripts')
     <script type="module">
         window.app = new Vue({
@@ -144,6 +158,11 @@
                             { value: 'daily', text: 'Auto ทุกวัน' },
                             { value: 'weekdays', text: 'Auto จันทร์-ศุกร์' },
                         ],
+                    },
+                    autoSourcesModal: {
+                        marketId: null,
+                        title: 'Auto Result Sources',
+                        src: '',
                     },
                 };
             },
@@ -186,6 +205,31 @@
                         this.show = true;
                         this.$refs.addedit.show();
                     });
+                },
+                openAutoSourcesModal(marketId) {
+                    const id = parseInt(marketId, 10);
+                    if (!id) {
+                        return;
+                    }
+
+                    const sourceUrl = "{{ route('admin.lotto.result_sources.index') }}"
+                        + `?market_id=${id}&lock_market=1`;
+
+                    this.autoSourcesModal = {
+                        marketId: id,
+                        title: `Auto Result Sources: Market #${id}`,
+                        src: sourceUrl,
+                    };
+
+                    this.$refs.autoSourcesModal.show();
+                },
+                reloadAutoSourcesFrame() {
+                    if (!this.autoSourcesModal.src) {
+                        return;
+                    }
+
+                    const base = this.autoSourcesModal.src.split('&_ts=')[0];
+                    this.autoSourcesModal.src = `${base}&_ts=${Date.now()}`;
                 },
                 async loadData() {
                     const response = await axios.post("{{ route('admin.lotto.markets.loaddata') }}", { id: this.code });
@@ -284,5 +328,6 @@
 
         window.addModal = function () { window.app.addModal(); };
         window.editModal = function (id) { window.app.editModal(id); };
+        window.openAutoSourcesModal = function (marketId) { window.app.openAutoSourcesModal(marketId); };
     </script>
 @endpush

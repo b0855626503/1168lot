@@ -12,6 +12,9 @@
             const tableKey = 'dataTableBuilder';
             const $groupSelect = $('#source_group_filter');
             const $marketSelect = $('#source_market_filter');
+            const searchParams = new URLSearchParams(window.location.search || '');
+            const initialMarketId = String(searchParams.get('market_id') || '');
+            const lockMarket = String(searchParams.get('lock_market') || '') === '1';
 
             const redrawTable = function () {
                 if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
@@ -74,7 +77,26 @@
                 redrawTable();
             });
 
+            if (initialMarketId !== '') {
+                const $initialMarketOption = $marketSelect.find('option[value="' + initialMarketId + '"]');
+                if ($initialMarketOption.length) {
+                    const optionGroupId = String($initialMarketOption.data('group-id') || '');
+                    if (optionGroupId !== '') {
+                        $groupSelect.val(optionGroupId);
+                    }
+                }
+            }
+
             rebuildMarketFilterOptions($groupSelect.val() || '');
+
+            if (initialMarketId !== '') {
+                $marketSelect.val(initialMarketId);
+            }
+
+            if (lockMarket) {
+                $groupSelect.prop('disabled', true);
+                $marketSelect.prop('disabled', true);
+            }
         });
     </script>
 @endpush

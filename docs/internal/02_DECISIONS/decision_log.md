@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-03-28 — Lotto Markets Inline Auto Result Sources Management (APPROVED)
+
+- เพิ่มปุ่ม `Auto` ในเมนู `lotto/markets` (วางหลังปุ่ม `แก้ไข`) และดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
+- ปุ่ม `Auto` เปิด modal เพื่อจัดการ `Auto Result Sources` ของตลาดนั้นโดยตรง (filter lock ตาม `market_id`)
+- เพิ่มความสามารถทดสอบจากหน้าแก้ไข source:
+  - เลือก `draw_date` แล้วกด dry-run โดย resolve draw จาก `market_id + draw_date` (ไม่ต้องไปกดจากเมนูงวดหวย)
+  - มีปุ่มดู logs ของผลทดสอบจากวันที่ที่เลือกใน modal เดียวกัน
+- เพิ่มคอลัมน์ในเมนู `lotto/markets` หลัง `ลิงก์ออกผล` เพื่อแสดงสถานะว่า market นี้ผูก Auto Result Source แล้วหรือยัง
+
+## 2026-03-28 — Hide Dry-run/Logs Actions on Admin Lotto Draws (APPROVED)
+
+- ปรับหน้าเมนู `lotto/draws` (action column) ให้ซ่อนปุ่ม `Dry-run` และ `Logs`
+- คงปุ่ม action อื่นไว้ตามสิทธิ์เดิม (เช่น edit/open/close/settle/retry)
+
 ## 2026-03-28 — Frontend Lotto Critical Path Endpoints (`/api/frontend`) (APPROVED)
 
 - เพิ่ม endpoint public สำหรับ frontend หน้าแทงโดยตรงที่ `/api/frontend/lotto/markets/{marketId}/betting-context`

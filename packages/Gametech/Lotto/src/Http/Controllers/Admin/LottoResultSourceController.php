@@ -7,6 +7,7 @@ use Gametech\Lotto\DataTables\LottoResultSourceDataTable;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Models\LottoResultSourceRevision;
 use Gametech\Lotto\Services\AutoResultV2\Config\SourcePipelineConfigCompiler;
@@ -15,6 +16,7 @@ use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -425,6 +427,124 @@ class LottoResultSourceController extends AppBaseController
         ]);
 
         return $this->toggleActive($request);
+    }
+
+    public function testFetchByDate(Request $request): JsonResponse
+    {
+        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_draws.auto_result_test_fetch')) {
+            return $this->sendError('ไม่มีสิทธิ์ทดสอบ Dry-run Auto Result', 403);
+        }
+
+        $validated = validator($request->all(), [
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+            'draw_date' => ['required', 'date_format:Y-m-d'],
+        ])->validate();
+
+        $draw = LottoDraw::query()
+            ->where('market_id', (int) $validated['market_id'])
+            ->whereDate('draw_date', (string) $validated['draw_date'])
+            ->whereIn('status', ['closed', 'resulted'])
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบงวดสถานะ closed/resulted ตามวันที่ที่เลือก', 404);
+        }
+
+        $runId = sprintf('source_test_%s_%d', now()->format('YmdHisv'), (int) $draw->id);
+        $params = [
+            '--draw-id' => (int) $draw->id,
+            '--limit' => 1,
+            '--dry-run' => true,
+            '--manual-retry' => true,
+            '--run-id' => $runId,
+            '--expected-draw-date' => (string) $validated['draw_date'],
+        ];
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
+        $output = trim((string) Artisan::output());
+
+        if ($exitCode !== 0) {
+            return $this->sendError('Dry-run Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+        }
+
+        return $this->sendResponse([
+            'run_id' => $runId,
+            'draw_id' => (int) $draw->id,
+            'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+            'market_id' => (int) $draw->market_id,
+            'mode' => 'dry_run',
+            'command' => 'lotto:fetch-auto-results',
+            'params' => $params,
+            'output' => $output !== '' ? $output : null,
+        ], 'ดำเนินการ Dry-run Auto Result เรียบร้อยแล้ว');
+    }
+
+    public function testFetchLogsByDate(Request $request): JsonResponse
+    {
+        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_draws.auto_result_metrics')) {
+            return $this->sendError('ไม่มีสิทธิ์ดู Logs Auto Result', 403);
+        }
+
+        $validated = validator($request->all(), [
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+            'draw_date' => ['required', 'date_format:Y-m-d'],
+            'run_id' => ['nullable', 'string', 'max:64'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ])->validate();
+
+        $draw = LottoDraw::query()
+            ->where('market_id', (int) $validated['market_id'])
+            ->whereDate('draw_date', (string) $validated['draw_date'])
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบงวดตามวันที่ที่เลือก', 404);
+        }
+
+        $limit = (int) ($validated['limit'] ?? 100);
+        $query = LottoResultFetchLog::query()
+            ->where('draw_id', (int) $draw->id)
+            ->orderByDesc('id')
+            ->limit($limit);
+
+        if (! empty($validated['run_id'])) {
+            $query->where('run_id', (string) $validated['run_id']);
+        }
+
+        $items = $query->get()->map(static function (LottoResultFetchLog $log): array {
+            return [
+                'id' => (int) $log->id,
+                'draw_id' => (int) ($log->draw_id ?? 0),
+                'source_id' => $log->source_id !== null ? (int) $log->source_id : null,
+                'attempt_no' => (int) ($log->attempt_no ?? 1),
+                'status' => (string) $log->status,
+                'pipeline_stage' => (string) ($log->pipeline_stage ?? ''),
+                'run_id' => (string) ($log->run_id ?? ''),
+                'request_url' => (string) ($log->request_url ?? ''),
+                'response_http_status' => $log->response_http_status,
+                'duration_ms' => $log->duration_ms,
+                'error_message' => (string) ($log->error_message ?? ''),
+                'is_dry_run' => (bool) ($log->is_dry_run ?? false),
+                'is_manual_retry' => (bool) ($log->is_manual_retry ?? false),
+                'created_at' => $log->created_at ? $log->created_at->format('Y-m-d H:i:s') : null,
+                'response_body_preview' => $log->response_body !== null
+                    ? mb_substr((string) $log->response_body, 0, 5000)
+                    : null,
+                'parsed_payload_json' => $log->parsed_payload_json,
+                'normalized_result_json' => $log->normalized_result_json,
+                'selection_debug_json' => $log->selection_debug_json,
+            ];
+        })->values()->all();
+
+        return $this->sendResponse([
+            'market_id' => (int) $validated['market_id'],
+            'draw_id' => (int) $draw->id,
+            'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+            'items' => $items,
+            'count' => count($items),
+        ], 'ดึง fetch log สำเร็จ');
     }
 
     /**

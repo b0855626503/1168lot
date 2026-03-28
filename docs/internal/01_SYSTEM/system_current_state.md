@@ -24,7 +24,7 @@
 
 - ปุ่มในตาราง `draws` ถูกเช็กสิทธิ์รายปุ่มด้วย `bouncer()->hasPermission(...)`
 - ผู้ใช้ `superadmin` ผ่านการตรวจสิทธิ์ทั้งหมดตามกลไก bouncer เดิม
-- เคส `resulted` ยังคงแสดงปุ่ม `Logs` และ `Dry-run` ได้เมื่อมีสิทธิ์ที่เกี่ยวข้อง
+- ปัจจุบันหน้าเมนู `lotto/draws` ซ่อนปุ่ม `Dry-run` และ `Logs` ออกจาก action column
 
 ## นโยบายการเรียงข้อมูลแหล่งผลอัตโนมัติ (Admin UI)
 
@@ -52,6 +52,15 @@
   - `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
+
+## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
+
+- เพิ่มปุ่ม `Auto` ต่อแถว (หลังปุ่ม `แก้ไข`) เพื่อเปิด modal จัดการ `Auto Result Sources` ของตลาดนั้นแบบ inline
+- ปุ่ม `Auto` ถูกดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
+- ตาราง `รายการหวย` เพิ่มคอลัมน์สถานะผูก source (`ผูกแล้ว` / `ยังไม่ผูก`) ถัดจากคอลัมน์ `ลิงก์ออกผล`
+- ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
+  - เลือก `draw_date` แล้วกด dry-run โดย resolve draw จาก `market_id + draw_date`
+  - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
 
 ## นโยบาย Auto Result Parser/Selector v2
 

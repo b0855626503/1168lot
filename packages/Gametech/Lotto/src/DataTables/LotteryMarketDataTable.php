@@ -22,6 +22,7 @@ class LotteryMarketDataTable extends DataTable
     {
         $query = $model->newQuery()
             ->with('group')
+            ->withCount('resultSources')
             ->select('lotto_markets.*');
 
         if ($groupId = (int) request('group_id')) {
@@ -74,6 +75,7 @@ class LotteryMarketDataTable extends DataTable
             ['data' => 'auto_close_time',  'name' => 'auto_close_time',  'title' => 'ปิดรับ',  'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'auto_result_time', 'name' => 'auto_result_time', 'title' => 'ออกผล',   'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'result_url', 'name' => 'result_url',  'title' => 'ลิงก์ออกผล',     'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
+            ['data' => 'auto_result_source_status', 'name' => 'result_sources_count', 'title' => 'Auto Source', 'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'is_enabled', 'name' => 'is_enabled',  'title' => 'สถานะ',         'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '100px'],
             ['data' => 'action',     'name' => 'action',      'title' => 'จัดการ',        'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '80px'],
         ];
