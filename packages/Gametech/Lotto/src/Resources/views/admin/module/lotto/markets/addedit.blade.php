@@ -1201,6 +1201,7 @@
                         parsed_payload_json: log.parsed_payload_json,
                         normalized_result_json: log.normalized_result_json,
                         selection_debug_json: log.selection_debug_json,
+                        trace_json: log.trace_json,
                     };
 
                     this.$bvModal.msgBoxOk(JSON.stringify(detail, null, 2), {
