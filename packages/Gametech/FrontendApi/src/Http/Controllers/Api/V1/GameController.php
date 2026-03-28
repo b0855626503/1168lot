@@ -97,6 +97,13 @@ class GameController extends BaseController
             }
 
             $providerId = strtoupper($provider);
+            $gameMethod = (string) ($providerModel->method ?? 'seamless');
+            if ($gameMethod === '') {
+                $gameMethod = 'seamless';
+            }
+
+            $this->warmGameListFromSource($providerId, $gameMethod);
+
             $gameList = GameListProxy::query()
                 ->where('product', $providerId)
                 ->where('enable', true)
@@ -133,6 +140,19 @@ class GameController extends BaseController
             return $this->sendResponse($gameList, 'ดึงรายการเกมสำเร็จ');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการเกมได้ในขณะนี้', 422);
+        }
+    }
+
+    private function warmGameListFromSource(string $providerId, string $method): void
+    {
+        try {
+            $this->gameUserRepository->getGameList($providerId, $method);
+        } catch (\Throwable $e) {
+            Log::channel('api')->warning('frontend.game.list.warmup.failed', [
+                'provider' => $providerId,
+                'method' => $method,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

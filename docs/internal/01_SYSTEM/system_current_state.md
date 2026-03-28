@@ -39,6 +39,11 @@
 - ฝั่ง UI ของปุ่มดังกล่าวต้องแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว (ห้าม silent failure)
 - รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
 
+## นโยบาย Frontend API v1 Game List
+
+- endpoint `GET /api/v1/games/{type}/{provider}` จะ trigger provider `gamelist` ก่อนทุกครั้ง
+- จากนั้นระบบจะอ่านและคืนข้อมูลจาก `GameListProxy` เป็นหลัก (คง response contract v1 เดิม)
+
 ## นโยบาย Auto Result Parser/Selector v2
 
 - parser v2 เป็น `context-aware` และแยกบทบาทชัดเจน:

@@ -380,6 +380,7 @@ Response ตัวอย่าง (ย่อ)
 #### 4.3 รายการเกม
 - `GET /games/{type}/{provider}`
 - Auth: ไม่ต้องใช้ token
+- ก่อนอ่านข้อมูลจาก `GameListProxy` ระบบจะ trigger `gamelist` ของ provider ก่อนทุกครั้งเพื่อ refresh/sync ข้อมูลล่าสุด
 
 Path param
 - `type`: เช่น `slot`

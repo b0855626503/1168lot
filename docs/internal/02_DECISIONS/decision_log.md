@@ -1,5 +1,11 @@
 # Decision Log
 
+## 2026-03-28 — Frontend API v1 Game List Warmup Before Proxy Read (APPROVED)
+
+- สำหรับ endpoint `GET /api/v1/games/{type}/{provider}` ให้ trigger provider `gamelist` ก่อนทุกครั้ง
+- หลัง warmup แล้วให้คืนผลจาก `GameListProxy` เป็นหลักตาม contract v1 เดิม
+- วัตถุประสงค์: ลดเคสข้อมูลค่ายเกมใน v1 ไม่อัปเดต/ไม่ครบเมื่อ cache/proxy ยังไม่ทัน sync
+
 ## 2026-03-27 — Document Standardization (LOCKED)
 
 - รวมเอกสารเข้าโครงสร้างมาตรฐานเดียวภายใต้ `docs/`
