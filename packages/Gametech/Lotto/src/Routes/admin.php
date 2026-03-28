@@ -149,6 +149,12 @@ Route::domain(
             Route::get('auto-result-sources/test-fetch-logs-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@testFetchLogsByDate')
                 ->name('admin.lotto.result_sources.test_fetch_logs_by_date');
 
+            Route::post('auto-result-sources/browser-test-dispatch', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@browserTestDispatch')
+                ->name('admin.lotto.result_sources.browser_test_dispatch');
+
+            Route::get('auto-result-sources/browser-test-status', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@browserTestStatus')
+                ->name('admin.lotto.result_sources.browser_test_status');
+
             Route::post('draws/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@create')
                 ->name('admin.lotto.draws.create');
 

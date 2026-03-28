@@ -35,6 +35,7 @@ class JsonHttpFetchDriver
                 'response_content_type' => (string) $response->header('Content-Type', 'application/json'),
                 'duration_ms' => (int) round((microtime(true) - $start) * 1000),
                 'error_message' => $response->successful() ? null : 'HTTP status not successful',
+                'error_code' => $response->successful() ? null : ('HTTP_STATUS_' . (string) $response->status()),
             ];
         } catch (ConnectionException $e) {
             return [
@@ -45,6 +46,7 @@ class JsonHttpFetchDriver
                 'response_content_type' => null,
                 'duration_ms' => (int) round((microtime(true) - $start) * 1000),
                 'error_message' => $e->getMessage(),
+                'error_code' => 'NETWORK_ERROR',
             ];
         } catch (\Throwable $e) {
             return [
@@ -55,6 +57,7 @@ class JsonHttpFetchDriver
                 'response_content_type' => null,
                 'duration_ms' => (int) round((microtime(true) - $start) * 1000),
                 'error_message' => $e->getMessage(),
+                'error_code' => 'FETCH_EXCEPTION',
             ];
         }
     }

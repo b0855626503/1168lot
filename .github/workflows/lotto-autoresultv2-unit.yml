@@ -1,0 +1,83 @@
+name: lotto-autoresultv2-unit
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'packages/**'
+      - 'config/**'
+      - 'tests/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/lotto-autoresultv2-unit.yml'
+  push:
+    paths:
+      - 'app/**'
+      - 'packages/**'
+      - 'config/**'
+      - 'tests/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/lotto-autoresultv2-unit.yml'
+
+jobs:
+  autoresultv2-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, curl, json, pdo_sqlite, sqlite3, redis, mongodb-1.21.0
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache
+            vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Prepare Runtime Directories
+        run: |
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/cache
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/logs
+          mkdir -p build/test-logs
+          mkdir -p game
+          if [ ! -f game/game.php ]; then
+            printf '%s\n' '<?php' 'return [];' > game/game.php
+          fi
+
+      - name: Run AutoResultV2 Unit Tests
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+        run: |
+          set -o pipefail
+          ./vendor/bin/phpunit tests/Unit/Lotto/AutoResultV2 \
+            --testsuite=Unit \
+            --log-junit build/test-logs/junit-autoresultv2.xml \
+            2>&1 | tee build/test-logs/autoresultv2-unit.log
+
+      - name: Upload Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoresultv2-unit-logs
+          path: |
+            build/test-logs/**
+            storage/logs/*.log
+          if-no-files-found: warn

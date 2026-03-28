@@ -140,6 +140,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // Non hot-path retention cleanup for browser-runtime artifacts.
+        $schedule->command('lotto:cleanup-browser-runtime-artifacts')
+            ->dailyAt('03:55')
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Non hot-path retention cleanup for detailed lotto risk snapshots.
         $schedule->command('dashboard:lotto-risk-retention --days=90')
             ->dailyAt('03:40')

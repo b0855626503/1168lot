@@ -106,8 +106,14 @@ class AutoResultPipelineService
             ]);
 
             if ((string) ($v2Result['status'] ?? '') !== 'VALID') {
+                $failure = $this->resolveV2CutoverFailureOutcome(
+                    (string) ($v2Result['status'] ?? ''),
+                    (string) ($v2Result['error_code'] ?? ''),
+                    (string) ($v2Result['error_message'] ?? '')
+                );
+
                 return $this->markAndLog($draw, [
-                    'status' => 'VALIDATION_ERROR',
+                    'status' => $failure['status'],
                     'attempt_no' => $attemptNo,
                     'run_id' => $runId,
                     'pipeline_stage' => 'v2_cutover',
@@ -117,8 +123,8 @@ class AutoResultPipelineService
                     'trace_json' => $v2Result['trace_json'] ?? null,
                     'error_code' => (string) ($v2Result['error_code'] ?? 'VALIDATION_ERROR'),
                     'error_stage' => (string) ($v2Result['error_stage'] ?? 'READINESS'),
-                    'error_message' => (string) ($v2Result['error_message'] ?? 'V2 cutover validation failed'),
-                ]);
+                    'error_message' => $failure['error_message'],
+                ], (string) ($failure['draw_status_override'] ?? null));
             }
 
             $validated = (array) ($v2Result['validated'] ?? []);
@@ -308,7 +314,8 @@ class AutoResultPipelineService
         }
 
         $attempts = (int) ($draw->result_fetch_attempts ?? 0);
-        if ($attempts >= 27) {
+        $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
+        if ($attempts >= $maxAttempts) {
             return false;
         }
 
@@ -317,7 +324,10 @@ class AutoResultPipelineService
             return true;
         }
 
-        $next = $attempts < 15 ? $last->copy()->addMinute() : $last->copy()->addMinutes(5);
+        $baseSeconds = max(5, (int) config('lotto_auto_result.retry.base_backoff_seconds', 10));
+        $maxSeconds = max(60, (int) config('lotto_auto_result.retry.max_backoff_seconds', 300));
+        $pow = min(6, max(0, $attempts - 1));
+        $next = $last->copy()->addSeconds(min($maxSeconds, $baseSeconds * (2 ** $pow)));
 
         return $now->gte($next);
     }
@@ -408,5 +418,58 @@ class AutoResultPipelineService
     private function normalizeStatus(string $status): string
     {
         return in_array($status, self::CANONICAL_STATUSES, true) ? $status : 'VALIDATION_ERROR';
+    }
+
+    /**
+     * @return array{status:string,draw_status_override:?string,error_message:string}
+     */
+    private function resolveV2CutoverFailureOutcome(string $status, string $errorCode, string $errorMessage): array
+    {
+        $status = strtoupper(trim($status));
+        $errorCode = strtoupper(trim($errorCode));
+        $message = trim($errorMessage) !== '' ? trim($errorMessage) : 'V2 cutover validation failed';
+
+        if ($status === 'FETCH_DEFERRED' || $this->isRetryableNetworkErrorCode($errorCode)) {
+            return [
+                'status' => 'NOT_READY',
+                'draw_status_override' => 'NOT_READY',
+                'error_message' => $message,
+            ];
+        }
+
+        if ($status === 'APP_SHELL_ONLY' || $errorCode === 'APP_SHELL_ONLY') {
+            return [
+                'status' => 'VALIDATION_ERROR',
+                'draw_status_override' => 'VALIDATION_ERROR',
+                'error_message' => $message !== '' ? $message : 'APP_SHELL_ONLY',
+            ];
+        }
+
+        return [
+            'status' => 'VALIDATION_ERROR',
+            'draw_status_override' => 'VALIDATION_ERROR',
+            'error_message' => $message,
+        ];
+    }
+
+    private function isRetryableNetworkErrorCode(string $errorCode): bool
+    {
+        if ($errorCode === '') {
+            return false;
+        }
+
+        if (str_starts_with($errorCode, 'HTTP_STATUS_')) {
+            $statusCode = (int) str_replace('HTTP_STATUS_', '', $errorCode);
+
+            return $statusCode >= 500 || $statusCode === 429;
+        }
+
+        return in_array($errorCode, [
+            'FETCH_DEFERRED',
+            'NETWORK_ERROR',
+            'FETCH_EXCEPTION',
+            'BROWSER_TIMEOUT',
+            'BROWSER_RUNTIME_EXCEPTION',
+        ], true);
     }
 }
