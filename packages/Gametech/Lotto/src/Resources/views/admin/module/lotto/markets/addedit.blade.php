@@ -167,192 +167,198 @@
 
 <b-modal ref="sourceEditorModal" id="sourceEditorModal" centered size="xl" :title="sourceEditorTitle" hide-footer>
     <b-form @submit.prevent="submitAutoSourceForm">
-        <b-row>
-            <b-col cols="12" md="3">
-                <b-form-group label="Market ID">
-                    <b-form-input size="sm" :value="autoSourceForm.market_id" readonly></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="3">
-                <b-form-group label="Priority">
-                    <b-form-input size="sm" type="number" min="1" max="9999" v-model="autoSourceForm.priority"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="3">
-                <b-form-group label="HTTP Method">
-                    <b-form-select size="sm" :options="autoSourceOptions.httpMethods" v-model="autoSourceForm.http_method"></b-form-select>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="3">
-                <b-form-group label="Parser Type">
-                    <b-form-select size="sm" :options="autoSourceOptions.parserTypes" v-model="autoSourceForm.parser_type"></b-form-select>
-                </b-form-group>
-            </b-col>
-        </b-row>
+        <b-tabs v-model="activeSourceTab" content-class="pt-3">
+            <b-tab title="ทั่วไป">
+                <b-row>
+                    <b-col cols="12" md="3">
+                        <b-form-group label="Market ID">
+                            <b-form-input size="sm" :value="autoSourceForm.market_id" readonly></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="3">
+                        <b-form-group label="Priority">
+                            <b-form-input size="sm" type="number" min="1" max="9999" v-model="autoSourceForm.priority"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="3">
+                        <b-form-group label="HTTP Method">
+                            <b-form-select size="sm" :options="autoSourceOptions.httpMethods" v-model="autoSourceForm.http_method"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="3">
+                        <b-form-group label="Parser Type">
+                            <b-form-select size="sm" :options="autoSourceOptions.parserTypes" v-model="autoSourceForm.parser_type"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-row>
-            <b-col cols="12" md="4">
-                <b-form-group label="Source Type">
-                    <b-form-select size="sm" :options="autoSourceOptions.sourceTypes" v-model="autoSourceForm.source_type"></b-form-select>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4">
-                <b-form-group label="Lookup Date Mode">
-                    <b-form-select size="sm" :options="autoSourceOptions.lookupDateModes" v-model="autoSourceForm.lookup_date_mode"></b-form-select>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4">
-                <b-form-group label="Lookup Offset (days)">
-                    <b-form-input size="sm" type="number" min="-365" max="365" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
-                </b-form-group>
-            </b-col>
-        </b-row>
+                <b-row>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Source Type">
+                            <b-form-select size="sm" :options="autoSourceOptions.sourceTypes" v-model="autoSourceForm.source_type"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Lookup Date Mode">
+                            <b-form-select size="sm" :options="autoSourceOptions.lookupDateModes" v-model="autoSourceForm.lookup_date_mode"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Lookup Offset (days)">
+                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-row>
-            <b-col cols="12" md="4">
-                <b-form-group label="Timeout (seconds)">
-                    <b-form-input size="sm" type="number" min="1" max="60" v-model="autoSourceForm.timeout_seconds"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4">
-                <b-form-group label="Fetch Strategy">
-                    <b-form-select size="sm" :options="autoSourceOptions.fetchStrategies" v-model="autoSourceForm.fetch_strategy"></b-form-select>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4">
-                <b-form-group label="Selection Stage">
-                    <b-form-select size="sm" :options="autoSourceOptions.selectionStages" v-model="autoSourceForm.selection_stage"></b-form-select>
-                </b-form-group>
-            </b-col>
-        </b-row>
+                <b-row>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Timeout (seconds)">
+                            <b-form-input size="sm" type="number" min="1" max="60" v-model="autoSourceForm.timeout_seconds"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Fetch Strategy">
+                            <b-form-select size="sm" :options="autoSourceOptions.fetchStrategies" v-model="autoSourceForm.fetch_strategy"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Selection Stage">
+                            <b-form-select size="sm" :options="autoSourceOptions.selectionStages" v-model="autoSourceForm.selection_stage"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
 
-        <b-form-group label="Endpoint URL">
-            <b-form-input size="sm" v-model="autoSourceForm.endpoint_url" placeholder="https://..."></b-form-input>
-        </b-form-group>
+                <b-form-group label="Endpoint URL">
+                    <b-form-input size="sm" v-model="autoSourceForm.endpoint_url" placeholder="https://..."></b-form-input>
+                </b-form-group>
 
-        <b-row>
-            <b-col cols="12" md="4">
-                <b-form-group label="Effective From (Y-m-d H:i:s)">
-                    <b-form-input size="sm" v-model="autoSourceForm.effective_from"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4">
-                <b-form-group label="Effective To (Y-m-d H:i:s)">
-                    <b-form-input size="sm" v-model="autoSourceForm.effective_to"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="4" class="pt-3">
-                <b-form-checkbox v-model="autoSourceForm.is_active" switch>เปิดใช้งาน</b-form-checkbox>
-                <b-form-checkbox v-model="autoSourceForm.supports_partial" switch>supports_partial</b-form-checkbox>
-                <b-form-checkbox v-model="autoSourceForm.requires_browser" switch>requires_browser</b-form-checkbox>
-            </b-col>
-        </b-row>
+                <b-row>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Effective From (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="autoSourceForm.effective_from"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="Effective To (Y-m-d H:i:s)">
+                            <b-form-input size="sm" v-model="autoSourceForm.effective_to"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="4" class="pt-3">
+                        <b-form-checkbox v-model="autoSourceForm.is_active" switch>เปิดใช้งาน</b-form-checkbox>
+                        <b-form-checkbox v-model="autoSourceForm.supports_partial" switch>supports_partial</b-form-checkbox>
+                        <b-form-checkbox v-model="autoSourceForm.requires_browser" switch>requires_browser</b-form-checkbox>
+                    </b-col>
+                </b-row>
 
-        <b-form-group label="เหตุผลการเปลี่ยนแปลง">
-            <b-form-input size="sm" v-model="autoSourceForm.revision_reason" placeholder="optional"></b-form-input>
-        </b-form-group>
+                <b-form-group label="เหตุผลการเปลี่ยนแปลง">
+                    <b-form-input size="sm" v-model="autoSourceForm.revision_reason" placeholder="optional"></b-form-input>
+                </b-form-group>
+            </b-tab>
 
-        <div class="d-flex flex-wrap mb-2">
-            <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyAutoSourceExample">ใส่ตัวอย่าง JSON</button>
-            <button type="button" class="btn btn-outline-primary btn-xs mr-1 mb-1" @click="previewAutoSource">Preview</button>
-            <button type="button" class="btn btn-outline-info btn-xs mr-1 mb-1" @click="validateAutoSource">Validate</button>
-            <button type="button" class="btn btn-outline-warning btn-xs mr-1 mb-1" @click="validateAutoSourceCutover">Validate Cutover</button>
-        </div>
-
-        <b-row>
-            <b-col cols="12" md="6">
-                <b-form-group label="request_headers_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.request_headers_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="6">
-                <b-form-group label="request_query_template_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.request_query_template_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-        </b-row>
-
-        <b-row>
-            <b-col cols="12" md="6">
-                <b-form-group label="request_body_template_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.request_body_template_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="6">
-                <b-form-group label="fetch_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.fetch_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-        </b-row>
-
-        <b-row>
-            <b-col cols="12" md="6">
-                <b-form-group label="parser_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.parser_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="6">
-                <b-form-group label="mapping_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.mapping_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-        </b-row>
-
-        <b-row>
-            <b-col cols="12" md="6">
-                <b-form-group label="selection_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.selection_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="6">
-                <b-form-group label="validation_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.validation_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-        </b-row>
-
-        <b-row>
-            <b-col cols="12" md="6">
-                <b-form-group label="readiness_config_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.readiness_config_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="6">
-                <b-form-group label="retry_policy_json">
-                    <b-form-textarea rows="4" v-model="autoSourceForm.retry_policy_json"></b-form-textarea>
-                </b-form-group>
-            </b-col>
-        </b-row>
-
-        <hr>
-
-        <b-row>
-            <b-col cols="12" md="4">
-                <b-form-group label="วันที่ทดสอบ">
-                    <b-form-input size="sm" type="date" v-model="sourceTestDate"></b-form-input>
-                </b-form-group>
-            </b-col>
-            <b-col cols="12" md="8">
-                <label class="d-block">ทดสอบ</label>
-                <div class="d-flex flex-wrap">
-                    <button
-                        v-if="permissions.canTestFetch"
-                        type="button"
-                        class="btn btn-warning btn-sm mr-1 mb-1"
-                        @click="runAutoSourceTestByDate">
-                        Dry Run ตามวันที่
-                    </button>
-                    <button
-                        v-if="permissions.canViewLogs"
-                        type="button"
-                        class="btn btn-secondary btn-sm mb-1"
-                        @click="showAutoSourceLogsByDate">
-                        ดู Log ตามวันที่
-                    </button>
+            <b-tab title="JSON หลัก">
+                <div class="d-flex flex-wrap mb-2">
+                    <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyAutoSourceExample">ใส่ตัวอย่าง JSON</button>
+                    <button type="button" class="btn btn-outline-primary btn-xs mr-1 mb-1" @click="previewAutoSource">Preview</button>
+                    <button type="button" class="btn btn-outline-info btn-xs mr-1 mb-1" @click="validateAutoSource">Validate</button>
+                    <button type="button" class="btn btn-outline-warning btn-xs mr-1 mb-1" @click="validateAutoSourceCutover">Validate Cutover</button>
                 </div>
-                <small class="text-muted">ใช้แทนปุ่ม dry run / log จากเมนูงวดหวย โดยเลือกวันที่ที่นี่ได้ทันที</small>
-            </b-col>
-        </b-row>
+
+                <b-row>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="request_headers_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.request_headers_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="request_query_template_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.request_query_template_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="request_body_template_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.request_body_template_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="fetch_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.fetch_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="parser_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.parser_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="mapping_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.mapping_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="selection_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.selection_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="validation_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.validation_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="readiness_config_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.readiness_config_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="6">
+                        <b-form-group label="retry_policy_json">
+                            <b-form-textarea rows="4" v-model="autoSourceForm.retry_policy_json"></b-form-textarea>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+            </b-tab>
+
+            <b-tab title="ทดสอบตามวันที่">
+                <b-row>
+                    <b-col cols="12" md="4">
+                        <b-form-group label="วันที่ทดสอบ">
+                            <b-form-input size="sm" type="date" v-model="sourceTestDate"></b-form-input>
+                        </b-form-group>
+                    </b-col>
+                    <b-col cols="12" md="8">
+                        <label class="d-block">ทดสอบ</label>
+                        <div class="d-flex flex-wrap">
+                            <button
+                                v-if="permissions.canTestFetch"
+                                type="button"
+                                class="btn btn-warning btn-sm mr-1 mb-1"
+                                @click="runAutoSourceTestByDate">
+                                Dry Run ตามวันที่
+                            </button>
+                            <button
+                                v-if="permissions.canViewLogs"
+                                type="button"
+                                class="btn btn-secondary btn-sm mb-1"
+                                @click="showAutoSourceLogsByDate">
+                                ดู Log ตามวันที่
+                            </button>
+                        </div>
+                        <small class="text-muted">ใช้แทนปุ่ม dry run / log จากเมนูงวดหวย โดยเลือกวันที่ที่นี่ได้ทันที</small>
+                    </b-col>
+                </b-row>
+            </b-tab>
+        </b-tabs>
 
         <div class="d-flex justify-content-end mt-3">
             <button type="submit" class="btn btn-success btn-sm">บันทึก Source</button>
@@ -393,6 +399,23 @@
         </table>
     </div>
 </b-modal>
+
+@push('styles')
+    <style>
+        #sourceEditorModal .nav-tabs .nav-link {
+            border-radius: .4rem .4rem 0 0;
+            font-weight: 600;
+            color: #4b5563;
+            padding: .45rem .75rem;
+        }
+
+        #sourceEditorModal .nav-tabs .nav-link.active {
+            color: #0f4c81;
+            background: #eef6ff;
+            border-color: #bfdcff #bfdcff #eef6ff;
+        }
+    </style>
+@endpush
 
 @push('scripts')
     <script type="module">
@@ -446,6 +469,7 @@
                     autoSourcesItems: [],
                     sourceEditorMode: 'add',
                     sourceEditorTitle: 'เพิ่ม Auto Result Source',
+                    activeSourceTab: 0,
                     sourceTestDate: '',
                     sourceTestRunId: '',
                     sourceTestLogs: [],
@@ -747,6 +771,7 @@
                 addAutoSource() {
                     this.sourceEditorMode = 'add';
                     this.sourceEditorTitle = 'เพิ่ม Auto Result Source';
+                    this.activeSourceTab = 0;
                     this.autoSourceForm = this.defaultAutoSourceForm();
                     this.autoSourceForm.market_id = Number(this.autoSourcesModal.marketId || 0);
                     this.applyAutoSourceExample();
@@ -758,6 +783,7 @@
                         const d = ((res || {}).data || {}).data || {};
                         this.sourceEditorMode = 'edit';
                         this.sourceEditorTitle = `แก้ไข Auto Result Source #${d.id || sourceId}`;
+                        this.activeSourceTab = 0;
                         this.autoSourceForm = {
                             ...this.defaultAutoSourceForm(),
                             ...d,
