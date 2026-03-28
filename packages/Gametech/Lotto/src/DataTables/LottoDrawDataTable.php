@@ -70,7 +70,7 @@ class LottoDrawDataTable extends DataTable
                 'stateSave'   => true,
                 'scrollX'     => true,
                 'paging'      => true,
-                'searching'   => false,
+                'searching'   => true,
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
@@ -89,7 +89,7 @@ class LottoDrawDataTable extends DataTable
     {
         return [
             ['data' => 'id', 'name' => 'id', 'title' => 'ID', 'width' => '50px'],
-            ['data' => 'market_name', 'name' => 'market.name', 'title' => 'ตลาด'],
+            ['data' => 'market_name', 'name' => 'market.name', 'title' => 'ตลาด', 'className' => 'text-left'],
             ['data' => 'draw_date', 'name' => 'draw_date', 'title' => 'วันงวด'],
             ['data' => 'open_at', 'name' => 'open_at', 'title' => 'เปิดรับ'],
             ['data' => 'close_at', 'name' => 'close_at', 'title' => 'ปิดรับ'],

@@ -13,7 +13,7 @@
 
     @if($status === 'closed' && $canSettle)
         <button type="button" class="btn btn-success btn-xs btn-block mr-1 mb-1" onclick="settleModal({{ $id }})">
-            <i class="fas fa-check-circle"></i> ประกาศผล
+            <i class="fas fa-check-circle"></i> ออกผล
         </button>
     @endif
 
