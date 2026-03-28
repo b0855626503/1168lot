@@ -32,8 +32,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, curl, json, pdo_sqlite, sqlite3, redis, mongodb
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, curl, json, pdo_sqlite, sqlite3, redis, mongodb-1.21.0
           coverage: none
 
       - name: Cache Composer
@@ -57,8 +57,14 @@ jobs:
           mkdir -p storage/framework/views
           mkdir -p storage/logs
           mkdir -p build/test-logs
+          mkdir -p game
+          if [ ! -f game/game.php ]; then
+            printf '%s\n' '<?php' 'return [];' > game/game.php
+          fi
 
       - name: Run AutoResultV2 Unit Tests
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: |
           set -o pipefail
           ./vendor/bin/phpunit tests/Unit/Lotto/AutoResultV2 \
