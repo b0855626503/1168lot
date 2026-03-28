@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-03-27
+อัปเดตล่าสุด: 2026-03-29
 
 ## ภาพรวมระบบ
 
@@ -154,6 +154,93 @@
   - strict date-check ตาม `expected_draw_date` (ไม่ fallback แบบข้ามเงื่อนไขวันที่)
 - `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
   - main fetch path ห้าม block รอ browser execution แบบ synchronous
+
+## นโยบาย Browser Worker (Auto Result JS-delayed Sources)
+
+- ใช้ deterministic `receipt_key` จาก normalized config + stable context (`source_id`, `draw_id`, `endpoint_url`, `strategy`, `parser_type`, `expected_draw_date`)
+- ตัด volatile runtime fields ออกจาก receipt hashing เพื่อให้ input เดิมได้ key เดิมเสมอ
+- dispatch gate ใช้ atomic lock (`SETNX + TTL`) ต่อ `receipt_key` เพื่อกัน dispatch ซ้ำ
+- cache payload มาตรฐาน key `lotto:auto-result:browser-fetch:{receipt_key}`:
+  - `status`: `success|failed|app_shell_only`
+  - `response_body`
+  - `selected_endpoint`
+  - `error_code`
+  - `meta` (`duration_ms`, `content_type`, `captured_count`, etc.)
+- fetch selection priority แบบ strict:
+  1. captured endpoint JSON (valid)
+  2. rendered HTML
+  3. `APP_SHELL_ONLY`
+- retry policy:
+  - retry เฉพาะ deferred/network-class failures
+  - `APP_SHELL_ONLY` = terminal reject (no retry)
+- หน้า admin auto source มี Browser Worker config fields และ async test API:
+  - `wait_for_selector`, `wait_until`, `timeout_ms`, `capture_url_patterns`, `block_resource_types`
+  - serialize/deserialize ผ่าน `fetch_config_json.meta.browser_worker`
+
+## นโยบาย Browser Runtime Phase 2 (Locked)
+
+- Runtime baseline:
+  - ใช้ `Playwright Node Worker` เป็น browser executor หลัก
+  - transport เฟสแรก: PHP queue job เรียก local Node process (JSON in/out + exit/stderr summary)
+- Capability policy ต่อ source:
+  - `http_only`
+  - `prefer_browser_runtime`
+  - `require_browser_runtime`
+- Fallback policy (`prefer_browser_runtime`) แบบ allowlist เท่านั้น:
+  - `BROWSER_RUNTIME_UNAVAILABLE`
+  - `BROWSER_LAUNCH_FAILED`
+  - `BROWSER_EXECUTOR_TIMEOUT`
+  - `BROWSER_EXECUTOR_IO_ERROR`
+- Non-fallback policy:
+  - `NO_NETWORK_MATCH` (เมื่อ source declare network path เป็นหลัก)
+  - `DOM_SELECTOR_NOT_FOUND` (เมื่อ source declare browser path เป็นหลัก)
+  - invalid capture/wait/predicate config
+- Schema governance:
+  - PHP เป็น owner ของ runtime output schema
+  - Node worker ต้อง emit ตาม version ที่ PHP กำหนด (ห้าม ad hoc shape)
+- Selection determinism:
+  - `selection_mode=best` ใช้ deterministic tie-break
+  - tie ไม่แตกต้อง reject ด้วย `CAPTURE_AMBIGUOUS_MATCH`
+- DOM fallback:
+  - ใช้ได้เฉพาะ source ที่ `allow_dom_fallback=true`
+  - trace ต้องระบุ `payload_origin` ชัด
+- Admin/test fetch ของ browser runtime:
+  - async only (dispatch + polling status)
+  - ห้าม sync browser execution ใน request lifecycle
+- Artifact governance:
+  - deterministic storage path + filename convention
+  - redaction policy สำหรับ secret/cookie/auth/token
+  - truncation/retention/size cap ต่อ run
+  - มี command cleanup ตาม retention policy: `lotto:cleanup-browser-runtime-artifacts` (รองรับ `--days`, `--dry-run`)
+  - scheduler รัน cleanup รายวันเวลา `03:55` (non hot-path, `withoutOverlapping`)
+- Rollout:
+  - source เดิม default = `http_only`
+  - browser runtime เปิดใช้แบบ opt-in + whitelist
+  - มี global feature flag ปิดระบบ browser runtime ได้ทั้งระบบ
+- Resource budget:
+  - global/per-source/per-domain concurrency caps
+  - overall timeout cap
+  - artifact write cap ต่อ run
+- Source capability/rollout config (ใช้งานจริงผ่าน `fetch_config_json.meta.runtime`):
+  - `fetch_capability`: `http_only|prefer_browser_runtime|require_browser_runtime`
+  - `allow_dom_fallback`: เปิด/ปิด DOM fallback ราย source
+  - รองรับ `http_fallback_strategy` สำหรับ route แบบ `http_only`
+- Admin Auto Source form รองรับตั้งค่า:
+  - capability policy
+  - DOM fallback
+  - browser `selection_mode` (`first|best|all`)
+- Browser test status/dispatch payload แสดง debug เพิ่ม:
+  - `selected_driver`
+  - `phase_timing`
+  - `payload_origin`
+  - `selected_capture`
+  - `artifact_refs`
+- มี CI guardrail สำหรับ AutoResultV2:
+  - GitHub Actions workflow `lotto-autoresultv2-unit` รัน `tests/Unit/Lotto/AutoResultV2`
+  - อัปโหลด artifact (`autoresultv2-unit.log`, `junit-autoresultv2.xml`) ทุกครั้ง
+- มี incident runbook สำหรับ on-call:
+  - `docs/internal/03_DOMAINS/lotto-browser-runtime-incident-runbook.md`
+  - ครอบคลุม reason code triage + rollback decision tree + evidence checklist
 
 ## โครงสร้างเอกสาร
 
