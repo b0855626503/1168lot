@@ -128,6 +128,9 @@ Route::domain(
             Route::post('auto-result-sources/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@edit')
                 ->name('admin.lotto.result_sources.edit');
 
+            Route::post('auto-result-sources/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@delete')
+                ->name('admin.lotto.result_sources.delete');
+
             Route::post('auto-result-sources/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@update')
                 ->name('admin.lotto.result_sources.update');
 

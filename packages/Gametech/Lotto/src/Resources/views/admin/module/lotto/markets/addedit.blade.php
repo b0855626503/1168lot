@@ -158,6 +158,9 @@
                             @click="toggleAutoSource(item)">
                         @{{ item.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน' }}
                     </button>
+                    <button type="button" class="btn btn-outline-danger btn-xs ml-1" @click="deleteAutoSource(item)">
+                        ลบ
+                    </button>
                 </td>
             </tr>
             </tbody>
@@ -1064,6 +1067,35 @@
                     } catch (error) {
                         this.showApiError(error, 'เปลี่ยนสถานะ source ไม่สำเร็จ');
                     }
+                },
+                deleteAutoSource(item) {
+                    const sourceId = Number(item && item.id ? item.id : 0);
+                    if (!sourceId) {
+                        return;
+                    }
+
+                    this.$bvModal.msgBoxConfirm('ต้องการลบ Auto Result Source นี้หรือไม่?', {
+                        title: 'ยืนยันการลบ',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'danger',
+                        okTitle: 'ลบ',
+                        cancelTitle: 'ยกเลิก',
+                        centered: true,
+                    }).then(async (confirmed) => {
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        try {
+                            const res = await axios.post("{{ route('admin.lotto.result_sources.delete') }}", { id: sourceId });
+                            this.showApiMessage(res, 'ลบสำเร็จ');
+                            await this.loadAutoSources();
+                            window.LaravelDataTables['dataTableBuilder'].draw(false);
+                        } catch (error) {
+                            this.showApiError(error, 'ลบ source ไม่สำเร็จ');
+                        }
+                    });
                 },
                 async submitAutoSourceForm() {
                     try {

@@ -1,5 +1,13 @@
 # Decision Log
 
+## 2026-03-28 — Markets Status Toggle Label + Auto Source Delete in Modal (APPROVED)
+
+- ตาราง `lotto/markets` ปรับปุ่มคอลัมน์ `สถานะ` ให้แสดงคำ `ถูก/ผิด` พร้อม icon และกดสลับสถานะได้เหมือนเดิม
+- คอลัมน์ `จัดการ` ของ `lotto/markets` คงปุ่ม `แก้ไข` + `Auto` (ไม่เพิ่มปุ่มลบตลาดในตารางหลัก)
+- เพิ่มปุ่ม `ลบ` เฉพาะใน modal รายการ `Auto Result Sources` ของ market
+- เพิ่ม endpoint `POST /lotto/auto-result-sources/delete` สำหรับลบ source
+- guard การลบ: ถ้า source ถูกอ้างอิงโดย `lotto_draws.result_source_id` จะ reject
+
 ## 2026-03-28 — Markets Auto Sources Uses Native Modal (No iframe) (APPROVED)
 
 - ปรับ modal `Auto` ในหน้า `lotto/markets` ให้จัดการ source แบบ native ทั้งหมด (ไม่ใช้ iframe/embed)

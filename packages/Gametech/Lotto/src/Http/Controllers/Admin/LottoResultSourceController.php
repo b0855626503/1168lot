@@ -429,6 +429,30 @@ class LottoResultSourceController extends AppBaseController
         return $this->toggleActive($request);
     }
 
+    public function delete(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'id' => ['required', 'integer', 'exists:lotto_result_sources,id'],
+        ])->validate();
+
+        $source = LottoResultSource::query()->find((int) $validated['id']);
+        if (! $source instanceof LottoResultSource) {
+            return $this->sendError('ไม่พบ source ดังกล่าว', 404);
+        }
+
+        $isUsedByDraw = LottoDraw::query()
+            ->where('result_source_id', (int) $source->id)
+            ->exists();
+
+        if ($isUsedByDraw) {
+            return $this->sendError('ไม่สามารถลบ source นี้ได้ เนื่องจากมีงวดที่อ้างอิงอยู่', 422);
+        }
+
+        $source->delete();
+
+        return $this->sendSuccess('ลบ Auto Result Source สำเร็จ');
+    }
+
     public function testFetchByDate(Request $request): JsonResponse
     {
         if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_draws.auto_result_test_fetch')) {
