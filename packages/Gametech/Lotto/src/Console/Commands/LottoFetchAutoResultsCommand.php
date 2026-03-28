@@ -118,7 +118,8 @@ class LottoFetchAutoResultsCommand extends Command
             $summary['processed']++;
 
             $draw->refresh();
-            if ((string) $draw->result_fetch_status === 'NOT_READY' && (int) ($draw->result_fetch_attempts ?? 0) >= 27) {
+            $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
+            if ((string) $draw->result_fetch_status === 'NOT_READY' && (int) ($draw->result_fetch_attempts ?? 0) >= $maxAttempts) {
                 $pipeline->markExhausted($draw);
                 $summary['marked_exhausted']++;
             }
@@ -150,7 +151,8 @@ class LottoFetchAutoResultsCommand extends Command
             return false;
         }
 
-        if ((int) ($draw->result_fetch_attempts ?? 0) >= 27) {
+        $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
+        if ((int) ($draw->result_fetch_attempts ?? 0) >= $maxAttempts) {
             return false;
         }
 

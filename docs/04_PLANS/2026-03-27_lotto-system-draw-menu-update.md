@@ -1,4 +1,4 @@
-> สถานะ: ACTIVE
+> สถานะ: DONE
 > วันที่: 2026-03-27
 > โดเมน/เรื่อง: Lotto / Draw Lifecycle Hardening
 > แทนแผนเก่า: docs/internal/05_ARCHIVE/lotto-system-draw-menu-update-plan-base.md

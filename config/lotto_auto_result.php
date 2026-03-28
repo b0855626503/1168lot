@@ -8,6 +8,51 @@ return [
         'max_window_minutes' => (int) env('LOTTO_AUTO_RESULT_MAX_WINDOW_MINUTES', 1440),
     ],
 
+    'retry' => [
+        'max_attempts' => (int) env('LOTTO_AUTO_RESULT_RETRY_MAX_ATTEMPTS', 27),
+        'base_backoff_seconds' => (int) env('LOTTO_AUTO_RESULT_RETRY_BASE_BACKOFF_SECONDS', 10),
+        'max_backoff_seconds' => (int) env('LOTTO_AUTO_RESULT_RETRY_MAX_BACKOFF_SECONDS', 300),
+    ],
+
+    'browser_worker' => [
+        'enabled' => (bool) env('LOTTO_AUTO_RESULT_BROWSER_WORKER_ENABLED', false),
+        'lock_ttl_seconds' => (int) env('LOTTO_AUTO_RESULT_BROWSER_LOCK_TTL_SECONDS', 120),
+        'cache_ttl_seconds' => (int) env('LOTTO_AUTO_RESULT_BROWSER_CACHE_TTL_SECONDS', 180),
+        'hard_timeout_seconds' => (int) env('LOTTO_AUTO_RESULT_BROWSER_HARD_TIMEOUT_SECONDS', 60),
+        'max_captured_responses' => (int) env('LOTTO_AUTO_RESULT_BROWSER_MAX_CAPTURED_RESPONSES', 3),
+    ],
+
+    'browser_runtime' => [
+        'enabled' => (bool) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_ENABLED', (bool) env('LOTTO_AUTO_RESULT_BROWSER_WORKER_ENABLED', false)),
+        'node_binary' => (string) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_NODE_BINARY', 'node'),
+        'worker_script' => (string) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_WORKER_SCRIPT', base_path('scripts/lotto/browser_runtime_worker.js')),
+        'schema_version' => 1,
+
+        'rollout' => [
+            'whitelist_source_ids' => array_values(array_filter(array_map(
+                static fn (string $id): int => (int) trim($id),
+                explode(',', (string) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_WHITELIST_SOURCE_IDS', ''))
+            ), static fn (int $id): bool => $id > 0)),
+        ],
+
+        'concurrency' => [
+            'global' => max(1, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_GLOBAL_CONCURRENCY', 5)),
+            'per_source' => max(1, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_PER_SOURCE_CONCURRENCY', 1)),
+            'per_domain' => max(1, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_PER_DOMAIN_CONCURRENCY', 2)),
+        ],
+
+        'timeouts' => [
+            'overall_seconds' => max(10, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_OVERALL_TIMEOUT_SECONDS', 60)),
+        ],
+
+        'artifacts' => [
+            'base_dir' => (string) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_ARTIFACT_BASE_DIR', storage_path('app/lotto/browser-runtime')),
+            'retention_days' => max(1, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_ARTIFACT_RETENTION_DAYS', 7)),
+            'max_bytes_per_run' => max(1024, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_ARTIFACT_MAX_BYTES', 5 * 1024 * 1024)),
+            'preview_bytes' => max(256, (int) env('LOTTO_AUTO_RESULT_BROWSER_RUNTIME_PREVIEW_BYTES', 16 * 1024)),
+        ],
+    ],
+
     'hardening' => [
         'alerts' => [
             'enabled' => (bool) env('LOTTO_AUTO_RESULT_ALERT_ENABLED', true),

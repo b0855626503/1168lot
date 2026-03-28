@@ -4,7 +4,7 @@
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
 ## ACTIVE
-- `2026-03-27_lotto-system-draw-menu-update.md`
+- `2026-03-28_lotto-browser-worker-hardening.md`
 
 ## PENDING
 - `2026-03-21_frontend-api-v1.md`
@@ -18,6 +18,7 @@
 - `2026-03-27_lotto-auto-result-execution-tracker.md` (implementation memory only; merged plan is source of truth)
 
 ## DONE
+- `2026-03-27_lotto-system-draw-menu-update.md`
 - `2026-03-27_lotto-auto-result-integration.md`
 - `2026-03-21_admin-query-audit-2026.md`
 - `2026-03-21_admin-team-menu-active.md`

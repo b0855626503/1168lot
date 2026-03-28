@@ -12,6 +12,8 @@ use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Models\LottoResultSourceRevision;
 use Gametech\Lotto\Services\AutoResultV2\Config\SourcePipelineConfigCompiler;
 use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
+use Gametech\Lotto\Services\AutoResultV2\Browser\BrowserFetchDispatchService;
+use Gametech\Lotto\Services\AutoResultV2\Executors\FetchExecutor;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -570,6 +572,100 @@ class LottoResultSourceController extends AppBaseController
             'items' => $items,
             'count' => count($items),
         ], 'ดึง fetch log สำเร็จ');
+    }
+
+    public function browserTestDispatch(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+            'draw_date' => ['required', 'date_format:Y-m-d'],
+            'data' => ['required', 'array'],
+        ])->validate();
+
+        try {
+            $payload = (array) $validated['data'];
+            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
+            $source = $this->buildSourceForLiveValidation($payload, (int) ($payload['id'] ?? 0));
+            $draw = LottoDraw::query()
+                ->where('market_id', (int) $validated['market_id'])
+                ->whereDate('draw_date', (string) $validated['draw_date'])
+                ->whereIn('status', ['open', 'closed', 'resulted'])
+                ->orderByDesc('id')
+                ->first();
+            if (! $draw instanceof LottoDraw) {
+                $draw = $this->resolveValidationDraw((int) $validated['market_id'], $source);
+            }
+            $fetch = (new FetchExecutor())->execute($compiled->fetch(), [
+                'run_id' => 'browser_test_' . now()->format('YmdHisv'),
+                'draw_id' => (int) $draw->id,
+                'source_id' => (int) ($source->id ?? 0),
+                'strategy' => $compiled->fetch()->strategy(),
+                'endpoint_url' => $compiled->fetch()->endpointUrl(),
+                'parser_type' => $compiled->parser()->type(),
+                'expected_draw_date' => (string) $validated['draw_date'],
+            ]);
+
+            $receipt = (string) ($fetch['receipt_key'] ?? '');
+
+            return $this->sendResponse([
+                'receipt_key' => $receipt !== '' ? $receipt : null,
+                'status' => (string) ($fetch['status'] ?? 'FETCH_DEFERRED'),
+                'selected_driver' => $this->stringValue($fetch['selected_driver'] ?? null),
+                'error_code' => $this->stringValue($fetch['error_code'] ?? null),
+                'error_message' => $this->stringValue($fetch['error_message'] ?? null),
+                'selected_endpoint' => $this->stringValue($fetch['selected_endpoint'] ?? null),
+                'preview' => mb_substr($this->stringValue($fetch['response_body'] ?? ''), 0, 1000),
+                'phase_timing' => is_array($fetch['meta']['phase_timing'] ?? null) ? $fetch['meta']['phase_timing'] : [],
+                'payload_origin' => $this->stringValue($fetch['meta']['payload_origin'] ?? null),
+                'selected_capture' => $fetch['meta']['selected_capture'] ?? null,
+                'artifact_refs' => $fetch['meta']['artifact_refs'] ?? null,
+            ], 'ส่ง Browser test ไปที่ worker แล้ว');
+        } catch (\Throwable $e) {
+            return $this->sendError('Browser test dispatch ไม่สำเร็จ: ' . $e->getMessage(), 422);
+        }
+    }
+
+    public function browserTestStatus(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'receipt_key' => ['required', 'string', 'max:128'],
+        ])->validate();
+
+        $receipt = trim((string) $validated['receipt_key']);
+        $cached = (new BrowserFetchDispatchService())->getCachedPayload($receipt);
+
+        if (! is_array($cached)) {
+            return $this->sendResponse([
+                'receipt_key' => $receipt,
+                'status' => 'FETCH_DEFERRED',
+                'error_code' => 'FETCH_DEFERRED',
+                'error_message' => 'ยังไม่พบผลจาก worker',
+                'selected_endpoint' => null,
+                'preview' => null,
+            ], 'กำลังรอผลจาก worker');
+        }
+
+        $status = strtolower((string) ($cached['status'] ?? 'failed'));
+        $mappedStatus = match ($status) {
+            'success' => 'SUCCESS',
+            'app_shell_only' => 'APP_SHELL_ONLY',
+            default => 'FETCH_FAILED',
+        };
+
+        return $this->sendResponse([
+            'receipt_key' => $receipt,
+            'status' => $mappedStatus,
+            'error_code' => $this->stringValue($cached['error_code'] ?? null),
+            'error_message' => $this->stringValue($cached['error_message'] ?? null),
+            'selected_endpoint' => $this->stringValue($cached['selected_endpoint'] ?? null),
+            'preview' => mb_substr($this->stringValue($cached['response_body'] ?? ''), 0, 1000),
+            'meta' => is_array($cached['meta'] ?? null) ? $cached['meta'] : [],
+            'selected_driver' => $this->stringValue($cached['meta']['selected_driver'] ?? null),
+            'phase_timing' => is_array($cached['meta']['phase_timing'] ?? null) ? $cached['meta']['phase_timing'] : [],
+            'payload_origin' => $this->stringValue($cached['meta']['payload_origin'] ?? null),
+            'selected_capture' => $cached['meta']['selected_capture'] ?? null,
+            'artifact_refs' => $cached['meta']['artifact_refs'] ?? null,
+        ], 'ดึงสถานะ Browser test สำเร็จ');
     }
 
     /**

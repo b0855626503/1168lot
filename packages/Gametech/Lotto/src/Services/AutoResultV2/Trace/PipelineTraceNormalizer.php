@@ -38,6 +38,11 @@ final class PipelineTraceNormalizer
         'error_code',
         'error_stage',
         'status',
+        'selected_driver',
+        'payload_origin',
+        'phase_timing',
+        'selected_capture',
+        'artifact_refs',
     ];
 
     /**
@@ -72,6 +77,9 @@ final class PipelineTraceNormalizer
         $normalized['selection_result'] = is_array($normalized['selection_result']) ? $normalized['selection_result'] : [];
         $normalized['validation_result'] = is_array($normalized['validation_result']) ? $normalized['validation_result'] : [];
         $normalized['readiness_result'] = is_array($normalized['readiness_result']) ? $normalized['readiness_result'] : [];
+        $normalized['phase_timing'] = is_array($normalized['phase_timing']) ? $normalized['phase_timing'] : [];
+        $normalized['selected_capture'] = is_array($normalized['selected_capture']) ? $normalized['selected_capture'] : [];
+        $normalized['artifact_refs'] = is_array($normalized['artifact_refs']) ? $normalized['artifact_refs'] : [];
 
         $normalized['status'] = (string) $normalized['status'];
         $normalized['final_decision'] = (string) $normalized['final_decision'];
@@ -79,6 +87,8 @@ final class PipelineTraceNormalizer
         $normalized['error_stage'] = self::stringOrNull($normalized['error_stage']);
         $normalized['fetched_url'] = self::stringOrNull($normalized['fetched_url']);
         $normalized['response_content_type'] = self::stringOrNull($normalized['response_content_type']);
+        $normalized['selected_driver'] = self::stringOrNull($normalized['selected_driver']);
+        $normalized['payload_origin'] = self::stringOrNull($normalized['payload_origin']);
 
         ksort($normalized);
 
@@ -90,6 +100,7 @@ final class PipelineTraceNormalizer
         return match ($key) {
             'record_selector_match_count' => 0,
             'parsed_raw_fields', 'mapped_fields', 'selection_result', 'validation_result', 'readiness_result' => [],
+            'phase_timing', 'selected_capture', 'artifact_refs' => [],
             'pipeline_version' => CompiledSourcePipelineData::VERSION_LEGACY,
             'pipeline_stage' => PipelineStage::FETCH,
             'fetch_strategy' => 'JSON_HTTP',

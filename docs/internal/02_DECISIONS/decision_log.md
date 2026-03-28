@@ -1,5 +1,102 @@
 # Decision Log
 
+## 2026-03-29 — AutoResultV2 CI Guardrail Workflow (APPROVED)
+
+- เพิ่ม GitHub Actions workflow `lotto-autoresultv2-unit`
+- รัน test scope `tests/Unit/Lotto/AutoResultV2` ในทุก push/pull_request ที่กระทบโค้ดหลัก
+- บังคับเก็บ test artifacts (`autoresultv2-unit.log`, `junit-autoresultv2.xml`) เพื่อ debug regression
+
+## 2026-03-29 — Browser Runtime Incident Runbook Adoption (APPROVED)
+
+- เพิ่ม runbook มาตรฐานสำหรับ on-call ที่ `docs/internal/03_DOMAINS/lotto-browser-runtime-incident-runbook.md`
+- ล็อกให้ triage อิง `reason_code` + trace fields (`selected_driver`, `phase_timing`, `payload_origin`, `selected_capture`, `artifact_refs`)
+- ล็อก rollback policy ตาม capability (`prefer_browser_runtime` fallback allowlist only, `require_browser_runtime` no HTTP fallback)
+
+## 2026-03-29 — Browser Runtime Artifact Retention Cleanup Scheduling (APPROVED)
+
+- เพิ่ม command `lotto:cleanup-browser-runtime-artifacts` สำหรับลบ artifact ที่เกิน retention
+- command รองรับ `--days` override และ `--dry-run` เพื่อ rollout อย่างปลอดภัย
+- เพิ่ม scheduler รันทุกวันเวลา `03:55` แบบ non hot-path (`withoutOverlapping`)
+- retention default ยังคงอิง `lotto_auto_result.browser_runtime.artifacts.retention_days`
+
+## 2026-03-29 — Browser Runtime Phase 2 Implementation Alignment (APPROVED)
+
+- เพิ่ม runtime policy ที่บังคับใช้จาก source config (`fetch_config_json.meta.runtime`):
+  - `fetch_capability`: `http_only|prefer_browser_runtime|require_browser_runtime`
+  - `allow_dom_fallback`
+  - optional `http_fallback_strategy` สำหรับเส้นทาง `http_only`
+- เพิ่ม global runtime config สำหรับ rollout + budget + artifact:
+  - whitelist source ids
+  - global/per-source/per-domain concurrency caps
+  - overall timeout cap
+  - artifact max bytes + preview truncate
+- ล็อก fallback classifier ให้ `prefer_browser_runtime` fallback ได้เฉพาะ allowlist reason codes
+- เพิ่ม trace/debug visibility ฝั่ง fetch/runtime:
+  - `selected_driver`, `payload_origin`, `phase_timing`, `selected_capture`, `artifact_refs`
+- เพิ่ม Node worker script baseline (`scripts/lotto/browser_runtime_worker.js`) สำหรับ Playwright execution contract (JSON in/out)
+
+## 2026-03-29 — Browser Runtime Phase 2 Locked Decisions (APPROVED)
+
+- Runtime baseline ล็อกเป็น `Playwright Node Worker`
+- Capability policy ล็อกเป็น `http_only|prefer_browser_runtime|require_browser_runtime`
+- Transport เฟสแรกล็อกเป็น:
+  - PHP queue job เรียก local Node process
+  - input/output JSON
+  - บันทึก `exit_code` และ `stderr_summary`
+- Fallback ของ `prefer_browser_runtime` อนุญาตเฉพาะ:
+  - `BROWSER_RUNTIME_UNAVAILABLE`
+  - `BROWSER_LAUNCH_FAILED`
+  - `BROWSER_EXECUTOR_TIMEOUT`
+  - `BROWSER_EXECUTOR_IO_ERROR`
+- ห้าม fallback ไป HTTP ในเคส:
+  - `NO_NETWORK_MATCH` (เมื่อ source declare network capture เป็นหลัก)
+  - `DOM_SELECTOR_NOT_FOUND` (เมื่อ source declare browser path เป็นหลัก)
+  - invalid capture/wait/predicate config
+- ล็อกว่า PHP เป็น runtime schema authority:
+  - Node worker ต้อง emit ตาม schema/version ที่ PHP กำหนด
+  - schema change ต้อง bump version
+- `selection_mode=best` ต้อง deterministic tie-break:
+  1) exact URL > wildcard  
+  2) exact method > any  
+  3) exact content-type > generic  
+  4) rule priority สูงกว่า  
+  5) latest response  
+  6) ถ้ายัง tie ให้ reject `CAPTURE_AMBIGUOUS_MATCH`
+- DOM fallback เป็น optional เท่านั้น (`allow_dom_fallback=true`) และต้องระบุ `payload_origin` ใน trace
+- Browser runtime test ใน admin ล็อกเป็น async only (dispatch + polling) ห้าม sync execution ใน request lifecycle
+- Artifact policy ล็อก:
+  - deterministic storage path
+  - redaction, truncation, retention
+  - size cap ต่อ run
+- Rollout policy ล็อก:
+  - source เดิม default = `http_only`
+  - browser runtime ใช้แบบ opt-in + whitelist
+  - มี global feature flag ปิด browser runtime ได้ทั้งระบบ
+- Concurrency/time budget ล็อกตั้งแต่ implementation แรก:
+  - global / per-source / per-domain concurrency caps
+  - overall runtime timeout cap
+  - artifact write cap ต่อ run
+
+## 2026-03-28 — Browser Worker Hardening for Auto Result JS-delayed Sources (APPROVED)
+
+- ยืนยัน runtime model เป็น `Async + Retry` บน dedicated worker สำหรับ `RENDERED_BROWSER`
+- เพิ่ม deterministic `receipt_key` (normalized config + stable context) และตัด volatile fields ออกจาก hash
+- dispatch ป้องกันงานซ้ำด้วย atomic lock (`SETNX + TTL`) key ตาม `receipt_key`
+- กำหนด structured cache payload สำหรับ browser fetch result:
+  - `status` (`success|failed|app_shell_only`)
+  - `response_body`, `selected_endpoint`, `error_code`, `meta`
+- กำหนดลำดับเลือกผลแบบ strict:
+  1) captured endpoint JSON
+  2) rendered HTML
+  3) `APP_SHELL_ONLY`
+- ปรับ cutover semantics:
+  - `FETCH_DEFERRED`/network-class errors -> `NOT_READY` (retryable)
+  - `APP_SHELL_ONLY` -> terminal reject (no retry)
+- เพิ่ม Browser Worker settings ใน Auto Source form และ serialize/deserialize ผ่าน `fetch_config_json.meta.browser_worker`
+- เพิ่ม async browser test endpoints:
+  - `POST /lotto/auto-result-sources/browser-test-dispatch`
+  - `GET /lotto/auto-result-sources/browser-test-status`
+
 ## 2026-03-28 — Number Blocks Table Supports Filters + Bulk Delete (APPROVED)
 
 - หน้า `lotto/number-blocks` เพิ่มคอลัมน์ checkbox เป็นคอลัมน์แรกสุด

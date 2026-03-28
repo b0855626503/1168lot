@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Providers;
 
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
+use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
@@ -85,6 +86,7 @@ class LottoServiceProvider extends ServiceProvider
         $this->commands([
             BootstrapMemberMarketPoliciesCommand::class,
             BackfillLottoPayoutCommand::class,
+            CleanupBrowserRuntimeArtifactsCommand::class,
             GenerateAutoLottoDrawsCommand::class,
             LottoFetchAutoResultsCommand::class,
             LottoAutoResultMetricsCommand::class,

@@ -64,24 +64,46 @@ class V2ResultPipelineRunner
             'final_decision' => 'PENDING',
             'error_code' => null,
             'error_stage' => null,
+            'selected_driver' => null,
+            'payload_origin' => null,
+            'phase_timing' => [],
+            'selected_capture' => null,
+            'artifact_refs' => null,
         ];
 
-        $fetch = $this->fetchExecutor->execute($compiled->fetch());
+        $fetch = $this->fetchExecutor->execute($compiled->fetch(), [
+            'run_id' => $runId,
+            'draw_id' => (int) $draw->id,
+            'source_id' => (int) $source->id,
+            'strategy' => $compiled->fetch()->strategy(),
+            'endpoint_url' => $compiled->fetch()->endpointUrl(),
+            'parser_type' => $compiled->parser()->type(),
+            'expected_draw_date' => is_string($expectedDrawDate) ? $expectedDrawDate : null,
+        ]);
         $trace['response_content_type'] = $this->stringValue($fetch['response_content_type'] ?? '');
         $trace['response_preview'] = mb_substr($this->stringValue($fetch['response_body'] ?? ''), 0, 1000);
+        $trace['selected_driver'] = $this->stringValue($fetch['selected_driver'] ?? '');
+        $trace['payload_origin'] = $this->stringValue($fetch['meta']['payload_origin'] ?? '');
+        $trace['phase_timing'] = is_array($fetch['meta']['phase_timing'] ?? null) ? $fetch['meta']['phase_timing'] : [];
+        $trace['selected_capture'] = is_array($fetch['meta']['selected_capture'] ?? null) ? $fetch['meta']['selected_capture'] : [];
+        $trace['artifact_refs'] = is_array($fetch['meta']['artifact_refs'] ?? null) ? $fetch['meta']['artifact_refs'] : [];
 
         if (! (bool) ($fetch['ok'] ?? false)) {
             $status = $this->stringValue($fetch['status'] ?? 'FETCH_FAILED');
             $trace['pipeline_stage'] = PipelineStage::FETCH;
             $trace['status'] = $status;
             $trace['final_decision'] = 'REJECTED';
-            $trace['error_code'] = in_array($status, ['APP_SHELL_ONLY', 'FETCH_DEFERRED'], true) ? $status : 'FETCH_FAILED';
+            $fetchErrorCode = $this->stringValue($fetch['error_code'] ?? '');
+            $trace['error_code'] = $fetchErrorCode !== ''
+                ? $fetchErrorCode
+                : (in_array($status, ['APP_SHELL_ONLY', 'FETCH_DEFERRED'], true) ? $status : 'FETCH_FAILED');
             $trace['error_stage'] = PipelineStage::FETCH;
 
             return [
                 'status' => $status,
                 'error_code' => $this->stringValue($trace['error_code']),
                 'error_stage' => $this->stringValue($trace['error_stage']),
+                'error_message' => $this->stringValue($fetch['error_message'] ?? ''),
                 'trace_json' => PipelineTraceNormalizer::normalize($trace),
                 'fetch' => $fetch,
             ];
