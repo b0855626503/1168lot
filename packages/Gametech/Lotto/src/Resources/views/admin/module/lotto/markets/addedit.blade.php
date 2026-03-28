@@ -125,14 +125,14 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-sm mb-0 align-middle">
+        <table class="table table-striped table-sm dataTable no-footer mb-0 align-middle">
             <thead class="thead-light">
             <tr>
                 <th class="text-center" style="width:80px;">#</th>
                 <th class="text-center" style="width:90px;">Priority</th>
-                <th class="text-center" style="width:90px;">สถานะ</th>
                 <th>Endpoint</th>
                 <th class="text-center" style="width:160px;">อัปเดตล่าสุด</th>
+                <th class="text-center" style="width:90px;">สถานะ</th>
                 <th class="text-center" style="width:220px;">จัดการ</th>
             </tr>
             </thead>
@@ -146,6 +146,8 @@
             <tr v-else v-for="item in autoSourcesItems" :key="item.id">
                 <td class="text-center">@{{ item.id }}</td>
                 <td class="text-center">@{{ item.priority }}</td>
+                <td class="text-break">@{{ item.endpoint_url || '-' }}</td>
+                <td class="text-center">@{{ item.updated_at || '-' }}</td>
                 <td class="text-center">
                     <button type="button"
                             class="btn btn-xs"
@@ -155,14 +157,12 @@
                         <i class="fas" :class="item.is_active ? 'fa-check' : 'fa-times'"></i>
                     </button>
                 </td>
-                <td class="text-break">@{{ item.endpoint_url || '-' }}</td>
-                <td class="text-center">@{{ item.updated_at || '-' }}</td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-warning btn-xs mr-1" title="แก้ไข" @click="editAutoSource(item.id)">
-                        <i class="fas fa-edit"></i>
+                    <button type="button" class="btn-xs btn btn-info mr-1" title="แก้ไข" @click="editAutoSource(item.id)">
+                        <i class="fa fa-edit"></i> แก้ไข
                     </button>
-                    <button type="button" class="btn btn-danger btn-xs" title="ลบ" @click="deleteAutoSource(item)">
-                        <i class="fas fa-trash"></i>
+                    <button type="button" class="btn-xs btn btn-danger" title="ลบ" @click="deleteAutoSource(item)">
+                        <i class="fa fa-trash"></i> ลบ
                     </button>
                 </td>
             </tr>

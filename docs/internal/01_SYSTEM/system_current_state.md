@@ -82,8 +82,8 @@
 - คอลัมน์ `จัดการ` ของตาราง `lotto/markets` คงปุ่ม `แก้ไข` และ `Auto`
 - ปุ่ม `ลบ` ของ `Auto Result Source` แสดงเฉพาะใน modal รายการ source ของ market นั้น และเรียก endpoint `POST /lotto/auto-result-sources/delete`
 - ตารางใน modal `Auto Result Sources`:
-  - คอลัมน์ `สถานะ` แสดงเป็นปุ่ม icon-only และเป็นจุดกดสลับสถานะ
-  - คอลัมน์ `จัดการ` แสดงเฉพาะปุ่ม `แก้ไข/ลบ` (ตัดปุ่มเปิดใช้งาน/ปิดใช้งานออก)
+  - คอลัมน์ `สถานะ` ถูกวางไว้ก่อน `จัดการ` และแสดงเป็นปุ่ม icon-only สำหรับกดสลับสถานะ
+  - คอลัมน์ `จัดการ` แสดงเฉพาะปุ่ม `แก้ไข/ลบ` แบบมาตรฐาน (`btn-info`/`btn-danger`) พร้อม icon+ข้อความ
   - หัว modal แสดงชื่อรายการหวยร่วมกับ `market id`
 
 ## นโยบาย Auto Result Parser/Selector v2
