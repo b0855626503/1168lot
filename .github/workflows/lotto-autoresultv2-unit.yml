@@ -63,6 +63,8 @@ jobs:
           fi
 
       - name: Run AutoResultV2 Unit Tests
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: |
           set -o pipefail
           ./vendor/bin/phpunit tests/Unit/Lotto/AutoResultV2 \
