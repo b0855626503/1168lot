@@ -32,8 +32,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, curl, json, pdo_sqlite, sqlite3, redis, mongodb
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, curl, json, pdo_sqlite, sqlite3, redis, mongodb-1.21.0
           coverage: none
 
       - name: Cache Composer
