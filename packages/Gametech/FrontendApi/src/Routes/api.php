@@ -112,3 +112,16 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.wheel.history');
         });
     });
+
+Route::domain($apiSubdomain . '.' . $apiDomain)
+    ->prefix('api/frontend')
+    ->group(function () {
+        Route::middleware(['api', ResolveFrontendLanguage::class])->group(function () {
+            Route::get('lotto/markets/{marketId}/betting-context', [LottoController::class, 'bettingContext'])
+                ->name('frontend.api.frontend.lotto.betting_context');
+            Route::get('lotto/markets/{marketId}/results', [LottoController::class, 'marketResults'])
+                ->name('frontend.api.frontend.lotto.market_results');
+            Route::get('lotto/markets/{marketId}/draws/{drawId}/result', [LottoController::class, 'drawResult'])
+                ->name('frontend.api.frontend.lotto.draw_result');
+        });
+    });

@@ -1,5 +1,14 @@
 # Decision Log
 
+## 2026-03-28 — Frontend Lotto Critical Path Endpoints (`/api/frontend`) (APPROVED)
+
+- เพิ่ม endpoint public สำหรับ frontend หน้าแทงโดยตรงที่ `/api/frontend/lotto/markets/{marketId}/betting-context`
+- payload ต้องรวม market/current draw/blocked numbers/limits/number exposure/version/server_time ในเส้นเดียว
+- เพิ่ม endpoint ผลย้อนหลัง:
+  - `GET /api/frontend/lotto/markets/{marketId}/results`
+  - `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- เป้าหมาย: ลดการเรียกหลายเส้นใน critical path ของหน้าแทงและทำให้ผลย้อนหลังมี contract ชัดเจนแบบ pagination-friendly
+
 ## 2026-03-28 — Frontend API v1 Game List Warmup Before Proxy Read (APPROVED)
 
 - สำหรับ endpoint `GET /api/v1/games/{type}/{provider}` ให้ trigger provider `gamelist` ก่อนทุกครั้ง

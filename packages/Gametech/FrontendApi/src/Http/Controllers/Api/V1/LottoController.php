@@ -6,11 +6,16 @@ use Gametech\Lotto\Http\Controllers\Api\BetController as LottoBetController;
 use Gametech\Lotto\Http\Controllers\Api\DrawController as LottoDrawController;
 use Gametech\Lotto\Http\Controllers\Api\TicketController as LottoTicketController;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoDrawBetSetting;
+use Gametech\Lotto\Models\LottoMarketBetSetting;
+use Gametech\Lotto\Models\LottoNumberBlock;
+use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class LottoController extends BaseController
@@ -221,6 +226,272 @@ class LottoController extends BaseController
             return $this->normalizeJsonResponseImages($response);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถยกเลิกโพยได้ในขณะนี้', 422);
+        }
+    }
+
+    public function bettingContext(Request $request, int $marketId): JsonResponse
+    {
+        try {
+            $language = $this->requestLanguage($request);
+            $marketMap = $this->marketMapByIds([$marketId]);
+            $market = $marketMap[$marketId] ?? null;
+            if (! is_array($market)) {
+                return $this->sendError('ไม่พบหวยที่ระบุ', 404);
+            }
+
+            $draw = LottoDraw::query()
+                ->select(['id', 'market_id', 'draw_date', 'open_at', 'close_at', 'result_at', 'status', 'updated_at'])
+                ->where('market_id', $marketId)
+                ->orderByRaw("
+                    CASE status
+                        WHEN 'open' THEN 0
+                        WHEN 'draft' THEN 1
+                        WHEN 'closed' THEN 2
+                        WHEN 'resulted' THEN 3
+                        ELSE 4
+                    END
+                ")
+                ->orderByDesc('draw_date')
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $draw) {
+                return $this->sendError('ยังไม่มีงวดสำหรับหวยที่ระบุ', 404);
+            }
+
+            $betSettings = LottoDrawBetSetting::query()
+                ->select(['draw_id', 'bet_type', 'min_bet', 'max_bet', 'max_per_number', 'payout', 'discount_percent', 'is_enabled'])
+                ->where('draw_id', (int) $draw->id)
+                ->where('is_enabled', true)
+                ->orderBy('bet_type')
+                ->get();
+
+            if ($betSettings->isEmpty()) {
+                $betSettings = LottoMarketBetSetting::query()
+                    ->select(['market_id', 'bet_type', 'min_bet', 'max_bet', 'max_per_number', 'payout', 'discount_percent', 'is_enabled'])
+                    ->where('market_id', $marketId)
+                    ->where('is_enabled', true)
+                    ->orderBy('bet_type')
+                    ->get()
+                    ->map(static function (LottoMarketBetSetting $setting) use ($draw) {
+                        return new LottoDrawBetSetting([
+                            'draw_id' => (int) $draw->id,
+                            'bet_type' => (string) $setting->bet_type,
+                            'min_bet' => $setting->min_bet,
+                            'max_bet' => $setting->max_bet,
+                            'max_per_number' => $setting->max_per_number,
+                            'payout' => $setting->payout,
+                            'discount_percent' => $setting->discount_percent,
+                            'is_enabled' => true,
+                        ]);
+                    });
+            }
+
+            $blockedNumbers = LottoNumberBlock::query()
+                ->select(['draw_id', 'bet_type', 'number', 'mode', 'reason', 'blocked_at'])
+                ->where('draw_id', (int) $draw->id)
+                ->orderBy('bet_type')
+                ->orderBy('number')
+                ->get();
+
+            $exposureScope = strtolower((string) $request->query('exposure_scope', 'blocked'));
+            $exposureQuery = LottoNumberExposure::query()
+                ->select(['draw_id', 'bet_type', 'number', 'sold_amount'])
+                ->where('draw_id', (int) $draw->id);
+
+            if ($exposureScope !== 'all') {
+                $blockedPairs = $blockedNumbers
+                    ->map(static fn (LottoNumberBlock $row): string => (string) $row->bet_type . ':' . (string) $row->number)
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (empty($blockedPairs)) {
+                    $exposures = collect();
+                } else {
+                    $exposureQuery->whereIn(DB::raw("CONCAT(bet_type, ':', number)"), $blockedPairs);
+                    $exposures = $exposureQuery
+                        ->orderBy('bet_type')
+                        ->orderBy('number')
+                        ->get();
+                }
+            } else {
+                $exposures = $exposureQuery
+                    ->orderByDesc('sold_amount')
+                    ->orderBy('bet_type')
+                    ->orderBy('number')
+                    ->get();
+            }
+
+            $limitRows = $betSettings->map(static fn (LottoDrawBetSetting $setting): array => [
+                'bet_type' => (string) $setting->bet_type,
+                'min_bet' => (float) $setting->min_bet,
+                'max_bet' => (float) $setting->max_bet,
+                'max_per_number' => (float) $setting->max_per_number,
+                'payout' => (float) $setting->payout,
+                'discount_percent' => (float) ($setting->discount_percent ?? 0),
+            ])->values();
+
+            $minBet = $limitRows->isNotEmpty() ? (float) $limitRows->min('min_bet') : 0.0;
+            $maxBet = $limitRows->isNotEmpty() ? (float) $limitRows->max('max_bet') : 0.0;
+            $maxPerNumber = $limitRows->isNotEmpty() ? (float) $limitRows->max('max_per_number') : 0.0;
+
+            $blockedRows = $blockedNumbers->map(static fn (LottoNumberBlock $row): array => [
+                'bet_type' => (string) $row->bet_type,
+                'number' => (string) $row->number,
+                'mode' => (string) $row->mode,
+                'reason' => (string) ($row->reason ?? ''),
+                'blocked_at' => $row->blocked_at ? $row->blocked_at->format('Y-m-d H:i:s') : null,
+            ])->values();
+
+            $exposureRows = $exposures->map(static fn (LottoNumberExposure $row): array => [
+                'bet_type' => (string) $row->bet_type,
+                'number' => (string) $row->number,
+                'sold_amount' => (float) $row->sold_amount,
+            ])->values();
+
+            $status = (string) $draw->status;
+            $version = sha1(implode('|', [
+                (string) $marketId,
+                (string) $draw->id,
+                $status,
+                (string) optional($draw->updated_at)->timestamp,
+                (string) $blockedRows->count(),
+                (string) $exposureRows->count(),
+                (string) $exposureRows->sum('sold_amount'),
+            ]));
+
+            return $this->sendResponse([
+                'market' => [
+                    'id' => (int) $market['id'],
+                    'name' => $this->localizedMarketName($market, $language),
+                    'group_id' => (int) $market['group_id'],
+                    'group_name' => $this->localizedGroupName($market, $language),
+                    'logo' => (string) ($market['logo'] ?? ''),
+                    'icon' => (string) ($market['icon'] ?? ''),
+                ],
+                'draw' => [
+                    'id' => (int) $draw->id,
+                    'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+                    'open_at' => optional($draw->open_at)->format('Y-m-d H:i:s'),
+                    'close_at' => optional($draw->close_at)->format('Y-m-d H:i:s'),
+                    'result_at' => optional($draw->result_at)->format('Y-m-d H:i:s'),
+                    'status' => $status,
+                    'status_label' => $this->drawStatusLabel($status),
+                    'is_open_bet' => $status === 'open',
+                ],
+                'limits' => [
+                    'min_bet' => $minBet,
+                    'max_bet' => $maxBet,
+                    'max_per_number' => $maxPerNumber,
+                    'bet_types' => $limitRows->all(),
+                ],
+                'blocked_numbers' => [
+                    'count' => $blockedRows->count(),
+                    'items' => $blockedRows->all(),
+                ],
+                'number_exposure' => [
+                    'scope' => $exposureScope === 'all' ? 'all' : 'blocked',
+                    'count' => $exposureRows->count(),
+                    'items' => $exposureRows->all(),
+                ],
+                'version' => $version,
+                'server_time' => now()->format('Y-m-d H:i:s'),
+                'language' => $language,
+            ], 'ดึง betting context สำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึง betting context ได้ในขณะนี้', 422);
+        }
+    }
+
+    public function marketResults(Request $request, int $marketId): JsonResponse
+    {
+        try {
+            $language = $this->requestLanguage($request);
+            $marketMap = $this->marketMapByIds([$marketId]);
+            $market = $marketMap[$marketId] ?? null;
+            if (! is_array($market)) {
+                return $this->sendError('ไม่พบหวยที่ระบุ', 404);
+            }
+
+            $limit = $this->resolveResultsLimit($request);
+            $page = max(1, (int) $request->query('page', 1));
+
+            $query = LottoDraw::query()
+                ->select(['id', 'market_id', 'draw_date', 'result_at', 'status', 'result_number'])
+                ->where('market_id', $marketId)
+                ->where('status', 'resulted')
+                ->orderByDesc('draw_date')
+                ->orderByDesc('id');
+
+            $total = (clone $query)->count();
+            $rows = $query->forPage($page, $limit)->get();
+            $history = $rows->map(fn (LottoDraw $draw): array => $this->mapResultDraw($draw))->values();
+            $latest = $history->first();
+
+            return $this->sendResponse([
+                'market' => [
+                    'id' => (int) $market['id'],
+                    'name' => $this->localizedMarketName($market, $language),
+                    'group_id' => (int) $market['group_id'],
+                    'group_name' => $this->localizedGroupName($market, $language),
+                    'logo' => (string) ($market['logo'] ?? ''),
+                    'icon' => (string) ($market['icon'] ?? ''),
+                ],
+                'latest_result' => is_array($latest) ? $latest : null,
+                'history' => $history->all(),
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'count' => $history->count(),
+                    'total' => $total,
+                    'has_more' => ($page * $limit) < $total,
+                ],
+                'language' => $language,
+            ], 'ดึงผลย้อนหลังสำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงผลย้อนหลังได้ในขณะนี้', 422);
+        }
+    }
+
+    public function drawResult(Request $request, int $marketId, int $drawId): JsonResponse
+    {
+        try {
+            $language = $this->requestLanguage($request);
+            $marketMap = $this->marketMapByIds([$marketId]);
+            $market = $marketMap[$marketId] ?? null;
+            if (! is_array($market)) {
+                return $this->sendError('ไม่พบหวยที่ระบุ', 404);
+            }
+
+            $draw = LottoDraw::query()
+                ->select(['id', 'market_id', 'draw_date', 'result_at', 'status', 'result_number'])
+                ->where('id', $drawId)
+                ->where('market_id', $marketId)
+                ->first();
+
+            if (! $draw) {
+                return $this->sendError('ไม่พบงวดที่ระบุ', 404);
+            }
+
+            if ((string) $draw->status !== 'resulted') {
+                return $this->sendError('งวดยังไม่ออกผล', 422);
+            }
+
+            return $this->sendResponse([
+                'market' => [
+                    'id' => (int) $market['id'],
+                    'name' => $this->localizedMarketName($market, $language),
+                    'group_id' => (int) $market['group_id'],
+                    'group_name' => $this->localizedGroupName($market, $language),
+                    'logo' => (string) ($market['logo'] ?? ''),
+                    'icon' => (string) ($market['icon'] ?? ''),
+                ],
+                'result' => $this->mapResultDraw($draw),
+                'language' => $language,
+            ], 'ดึงผลรางวัลงวดสำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงผลรางวัลงวดได้ในขณะนี้', 422);
         }
     }
 
@@ -555,5 +826,30 @@ class LottoController extends BaseController
             'resulted' => 'ออกผลแล้ว',
             default => 'ร่าง',
         };
+    }
+
+    private function resolveResultsLimit(Request $request): int
+    {
+        $limit = (int) $request->query('limit', 20);
+
+        return max(1, min($limit, 100));
+    }
+
+    private function mapResultDraw(LottoDraw $draw): array
+    {
+        $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+
+        return [
+            'draw_id' => (int) $draw->id,
+            'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+            'result_at' => optional($draw->result_at)->format('Y-m-d H:i:s'),
+            'status' => (string) $draw->status,
+            'result_number' => $resultNumber,
+            'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
+            'result_top_2' => (string) ($resultNumber['top_2'] ?? ''),
+            'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
+            'first_prize' => (string) ($resultNumber['first_prize'] ?? ''),
+            'last_2_digits' => (string) ($resultNumber['last_2_digits'] ?? ''),
+        ];
     }
 }

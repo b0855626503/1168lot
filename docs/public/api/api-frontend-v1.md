@@ -1123,6 +1123,43 @@ export function connectRealtime({
 
 ---
 
+## 10) Frontend Lotto Critical Path (`/api/frontend`)
+
+> ชุด endpoint นี้ออกแบบให้ frontend หน้าแทงเรียกได้ตรงและเร็ว โดยไม่ต้องประกอบข้อมูลหลายเส้นเอง
+
+### 10.1 Betting Context
+- `GET /api/frontend/lotto/markets/{marketId}/betting-context`
+- Auth: ไม่ต้องใช้ token
+- Query (optional):
+  - `exposure_scope=blocked|all` (default `blocked`)
+
+Response หลัก:
+- `market` (ข้อมูลตลาดหวย)
+- `draw` (current round)
+- `blocked_numbers`
+- `limits` (`min_bet`, `max_bet`, `max_per_number`, แยกตาม `bet_type`)
+- `number_exposure`
+- `version`
+- `server_time`
+
+### 10.2 ผลย้อนหลังตามตลาด
+- `GET /api/frontend/lotto/markets/{marketId}/results?limit=20&page=1`
+- Auth: ไม่ต้องใช้ token
+
+Response หลัก:
+- `latest_result`
+- `history`
+- `pagination` (`page`, `limit`, `count`, `total`, `has_more`)
+
+### 10.3 ผลรางวัลงวดเฉพาะ
+- `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- Auth: ไม่ต้องใช้ token
+
+Response หลัก:
+- `result` ของงวดที่ระบุ
+
+---
+
 ## สรุป endpoint ที่พร้อมใช้งาน (อัปเดต 2026-03-24)
 
 ผ่านและตอบ JSON ถูกต้อง:
@@ -1152,6 +1189,9 @@ export function connectRealtime({
 - `POST /realtime/auth`
 - `POST /member/heartbeat`
 - `GET /meta/online-members`
+- `GET /api/frontend/lotto/markets/{marketId}/betting-context`
+- `GET /api/frontend/lotto/markets/{marketId}/results`
+- `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
 
 ข้อจำกัดที่ยังพบใน environment ทดสอบ:
 - `POST /auth/register` มีโอกาส timeout จาก dependency ภายในระบบเดิม (โดยเฉพาะส่วนที่พึ่งพา queue/redis ของระบบ)

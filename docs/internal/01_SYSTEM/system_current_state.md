@@ -44,6 +44,15 @@
 - endpoint `GET /api/v1/games/{type}/{provider}` จะ trigger provider `gamelist` ก่อนทุกครั้ง
 - จากนั้นระบบจะอ่านและคืนข้อมูลจาก `GameListProxy` เป็นหลัก (คง response contract v1 เดิม)
 
+## นโยบาย Frontend Lotto Critical Path API
+
+- เพิ่ม public routes ชุด `/api/frontend/lotto/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
+  - `GET /api/frontend/lotto/markets/{marketId}/betting-context`
+  - `GET /api/frontend/lotto/markets/{marketId}/results`
+  - `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
+- `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
+
 ## นโยบาย Auto Result Parser/Selector v2
 
 - parser v2 เป็น `context-aware` และแยกบทบาทชัดเจน:
