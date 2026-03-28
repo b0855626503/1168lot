@@ -103,6 +103,18 @@
                 เปิดใช้งาน
             </b-form-checkbox>
         </b-form-group>
+        <b-form-group>
+            <b-form-checkbox v-model="formaddedit.auto_settle_on_result" :value="1" :unchecked-value="0">
+                ออกผลแล้วคำนวณยอดได้เสียอัตโนมัติทันที
+            </b-form-checkbox>
+            <small class="text-muted d-block">ถ้าปิดไว้ ระบบจะดึงและบันทึกผล แต่คงสถานะงวดเป็นปิดรับเพื่อให้ทีมงานกดออกผลเอง</small>
+        </b-form-group>
+        <b-form-group>
+            <b-form-checkbox v-model="formaddedit.notify_result_telegram" :value="1" :unchecked-value="0">
+                ส่งแจ้งเตือน Telegram เมื่อหวยนี้ออกผล
+            </b-form-checkbox>
+            <small class="text-muted d-block">ส่งผ่าน endpoint <code>notify/send</code></small>
+        </b-form-group>
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
@@ -177,7 +189,7 @@
             <b-tab title="ทั่วไป">
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="ตลาด (สรุป)">
+                        <b-form-group label="รายการหวย (สรุป)">
                             <b-form-input size="sm" :value="selectedMarketText" readonly></b-form-input>
                             <small class="text-muted d-block mt-1">แก้ค่าได้ที่แท็บ <code>ตั้งค่าด่วน</code></small>
                         </b-form-group>
@@ -219,13 +231,14 @@
             <b-tab title="ตั้งค่าด่วน">
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="ตลาด">
+                        <b-form-group label="รายการหวย">
                             <b-form-input size="sm" :value="selectedMarketText" readonly></b-form-input>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
                         <b-form-group label="ลำดับความสำคัญ">
                             <b-form-input size="sm" type="number" min="1" v-model="autoSourceForm.priority"></b-form-input>
+                            <small class="text-muted d-block mt-1">เลขน้อยกว่าจะถูกเลือกก่อน (เช่น 1 สำคัญกว่า 2)</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -247,7 +260,8 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="เลื่อนวัน (วัน)">
-                            <b-form-input size="sm" type="number" min="-365" max="365" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
+                            <b-form-input size="sm" type="number" min="0" max="365" :disabled="!isLookupOffsetEditable" v-model="autoSourceForm.lookup_date_offset_days"></b-form-input>
+                            <small class="text-muted d-block mt-1">โหมดตรงวัน/วันที่ประกาศผล จะล็อกค่าเป็น 0 อัตโนมัติ</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
@@ -260,12 +274,33 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="วิธีเรียก API">
-                            <b-form-select size="sm" v-model="autoSourceForm.quick_http_method" :options="autoSourceOptions.httpMethods"></b-form-select>
+                            <b-form-select size="sm" :disabled="!isQuickHttpMethodEditable" v-model="autoSourceForm.quick_http_method" :options="autoSourceOptions.httpMethods"></b-form-select>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Path ของวันที่">
-                            <b-form-input size="sm" v-model="autoSourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
+                        <b-form-group label="รูปแบบวันที่ต้นทาง">
+                            <b-form-select size="sm" :disabled="!isQuickJsonPathMode" v-model="autoSourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                </b-row>
+
+                <b-row>
+                    <b-col md="4">
+                        <b-form-group label="รูปแบบการดึงข้อมูล">
+                            <b-form-select size="sm" v-model="autoSourceForm.quick_fetch_strategy" :options="quickFetchStrategies"></b-form-select>
+                            <small class="text-muted d-block mt-1">@{{ quickFetchStrategyHelpText }}</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="รูปแบบตัวแยกข้อมูล (Parser)">
+                            <b-form-select size="sm" v-model="autoSourceForm.quick_parser_type" :options="quickParserTypes"></b-form-select>
+                            <small class="text-muted d-block mt-1">@{{ quickParserTypeHelpText }}</small>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="4">
+                        <b-form-group label="ขั้นเลือกข้อมูล (Selection Stage)">
+                            <b-form-select size="sm" v-model="autoSourceForm.quick_selection_stage" :options="quickSelectionStages"></b-form-select>
+                            <small class="text-muted d-block mt-1">@{{ quickSelectionStageHelpText }}</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -285,13 +320,13 @@
 
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="รูปแบบวันที่ต้นทาง">
-                            <b-form-select size="sm" v-model="autoSourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
+                        <b-form-group label="Path ของวันที่">
+                            <b-form-input size="sm" :disabled="!isQuickJsonPathMode" v-model="autoSourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
                         <b-form-group label="Path ของรางวัลที่ 1">
-                            <b-form-input size="sm" v-model="autoSourceForm.quick_first_prize_paths" placeholder="$.lotData.DB"></b-form-input>
+                            <b-form-input size="sm" :disabled="!isQuickJsonPathMode" v-model="autoSourceForm.quick_first_prize_paths" placeholder="$.lotData.DB"></b-form-input>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -299,12 +334,13 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="เก็บท้ายกี่หลัก (รางวัลที่ 1)">
-                            <b-form-input size="sm" type="number" min="1" max="10" v-model="autoSourceForm.quick_first_prize_take_right"></b-form-input>
+                            <b-form-input size="sm" :disabled="!isQuickJsonPathMode" type="number" min="0" max="10" v-model="autoSourceForm.quick_first_prize_take_right"></b-form-input>
+                            <small class="text-muted d-block mt-1">ใส่ 0 = ไม่ตัดท้าย (ไม่ใส่ right transform)</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
                         <b-form-group label="Path ของเลขท้าย 2 ตัว">
-                            <b-form-input size="sm" v-model="autoSourceForm.quick_last2_paths" placeholder="$.lotData.1"></b-form-input>
+                            <b-form-input size="sm" :disabled="!isQuickJsonPathMode" v-model="autoSourceForm.quick_last2_paths" placeholder="$.lotData.1"></b-form-input>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -312,7 +348,7 @@
                 <b-row>
                     <b-col md="6">
                         <b-form-group label="เก็บท้ายกี่หลัก (เลขท้าย)">
-                            <b-form-input size="sm" type="number" min="1" max="10" v-model="autoSourceForm.quick_last2_take_right"></b-form-input>
+                            <b-form-input size="sm" :disabled="!isQuickJsonPathMode" type="number" min="1" max="10" v-model="autoSourceForm.quick_last2_take_right"></b-form-input>
                         </b-form-group>
                     </b-col>
                     <b-col md="6" class="pt-2">
@@ -324,49 +360,24 @@
 
                 <b-row class="mt-1">
                     <b-col md="6">
-                        <b-form-group label="Fetch Capability Policy">
+                        <b-form-group label="นโยบายการใช้ Browser Runtime">
                             <b-form-select size="sm" v-model="autoSourceForm.fetch_capability" :options="fetchCapabilityOptions"></b-form-select>
+                            <small class="text-muted d-block mt-1">@{{ fetchCapabilityHelpText }}</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6" class="pt-4">
-                        <b-form-checkbox v-model="autoSourceForm.allow_dom_fallback" switch>
+                        <b-form-checkbox :disabled="!canToggleDomFallback" v-model="autoSourceForm.allow_dom_fallback" switch>
                             อนุญาต DOM fallback
                         </b-form-checkbox>
                     </b-col>
                 </b-row>
 
-                <div v-if="autoSourceForm.requires_browser || String(autoSourceForm.fetch_strategy).toUpperCase() === 'RENDERED_BROWSER'" class="border rounded p-2 mb-2">
+                <div v-if="shouldShowBrowserSettings" class="border rounded p-2 mb-2">
                     <h6 class="mb-2">Browser Worker Settings</h6>
-                    <b-row>
-                        <b-col md="6">
-                            <b-form-group label="wait_for_selector">
-                                <b-form-input size="sm" v-model="autoSourceForm.browser_wait_for_selector" placeholder="#result-table"></b-form-input>
-                            </b-form-group>
-                        </b-col>
-                        <b-col md="6">
-                            <b-form-group label="wait_until">
-                                <b-form-select size="sm" v-model="autoSourceForm.browser_wait_until" :options="browserWaitUntilOptions"></b-form-select>
-                            </b-form-group>
-                        </b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col md="6">
-                            <b-form-group label="timeout_ms">
-                                <b-form-input size="sm" type="number" min="1000" max="120000" v-model="autoSourceForm.browser_timeout_ms"></b-form-input>
-                            </b-form-group>
-                        </b-col>
-                        <b-col md="6">
-                            <b-form-group label="block_resource_types (comma)">
-                                <b-form-input size="sm" v-model="autoSourceForm.browser_block_resource_types" placeholder="image,font,media"></b-form-input>
-                            </b-form-group>
-                        </b-col>
-                    </b-row>
-                    <b-form-group label="capture_url_patterns (one per line)">
-                        <b-form-textarea rows="3" v-model="autoSourceForm.browser_capture_url_patterns" placeholder="/mlnhngoc&#10;https://example.com/result-api"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="selection_mode">
-                        <b-form-select size="sm" v-model="autoSourceForm.browser_selection_mode" :options="browserSelectionModes"></b-form-select>
-                    </b-form-group>
+                    <b-alert show variant="light" class="mb-0 py-2">
+                        ระบบจะกำหนดค่า Browser Worker ที่เหมาะสมให้อัตโนมัติจากรูปแบบการดึงข้อมูลและ timeout ที่ตั้งไว้
+                        โดยไม่ต้องปรับค่ารายละเอียดเอง
+                    </b-alert>
                 </div>
 
                 <b-form-group label="เหตุผลการเปลี่ยนแปลง">
@@ -375,7 +386,6 @@
 
                 <div class="d-flex flex-wrap">
                     <button type="button" class="btn btn-primary btn-sm mr-2 mb-2" @click="generateQuickPipelineJson">สร้าง JSON อัตโนมัติ</button>
-                    <button type="button" class="btn btn-secondary btn-sm mb-2" @click="applyQuickPresetLaosVip">ตั้งค่าอัตโนมัติ: Laos VIP</button>
                 </div>
             </b-tab>
 
@@ -384,11 +394,14 @@
                     <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="applyAutoSourceExample">ใส่ตัวอย่าง</button>
                     <button type="button" class="btn btn-outline-secondary btn-xs mr-1 mb-1" @click="syncUnifiedFromForm">รีเฟรชค่าปัจจุบัน</button>
                 </div>
-                <b-form-group label="Pipeline Config JSON">
+                <b-form-group label="Pipeline Config JSON (Single Source of Truth)">
                     <b-form-textarea rows="14" v-model="autoSourceForm.unified_pipeline_json"></b-form-textarea>
                 </b-form-group>
                 <b-alert show variant="light" class="py-2">
                     ระบบจะ map ค่าใน JSON ก้อนนี้ไปยัง field ย่อยก่อน preview/validate/save อัตโนมัติ
+                </b-alert>
+                <b-alert show variant="warning" class="py-2 mb-0">
+                    รูปแบบที่ต้องมี: <code>fetch_config_json</code>, <code>parser_config_json</code>, <code>mapping_config_json</code>, <code>selection_config_json</code>, <code>validation_config_json</code>, <code>readiness_config_json</code>
                 </b-alert>
             </b-tab>
 
@@ -496,6 +509,21 @@
             background: #eef6ff;
             border-color: #bfdcff #bfdcff #eef6ff;
         }
+
+        #sourceEditorModal .form-group > label {
+            min-height: 36px;
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: .25rem;
+        }
+
+        #sourceEditorModal small.text-muted.d-block.mt-1 {
+            display: block;
+            min-height: 34px;
+            line-height: 1.25;
+            margin-top: .35rem !important;
+            word-break: break-word;
+        }
     </style>
 @endpush
 
@@ -524,6 +552,8 @@
                         auto_close_time: '',
                         auto_result_time: '',
                         result_url: '',
+                        auto_settle_on_result: 1,
+                        notify_result_telegram: 1,
                         is_enabled: 1,
                     },
                     option: {
@@ -545,6 +575,7 @@
                     },
                     autoSourcesModal: {
                         marketId: null,
+                        marketName: '',
                         title: 'Auto Result Sources',
                     },
                     autoSourcesLoading: false,
@@ -570,9 +601,22 @@
                         { value: 'all', text: 'all' },
                     ],
                     fetchCapabilityOptions: [
-                        { value: 'http_only', text: 'http_only' },
-                        { value: 'prefer_browser_runtime', text: 'prefer_browser_runtime' },
-                        { value: 'require_browser_runtime', text: 'require_browser_runtime' },
+                        { value: 'http_only', text: 'ใช้ HTTP เท่านั้น (http_only)' },
+                        { value: 'prefer_browser_runtime', text: 'ลอง Browser ก่อน ถ้าเจอเหตุที่อนุญาตค่อย fallback (prefer_browser_runtime)' },
+                        { value: 'require_browser_runtime', text: 'บังคับ Browser เท่านั้น (require_browser_runtime)' },
+                    ],
+                    quickFetchStrategies: [
+                        { value: 'JSON_HTTP', text: 'ดึง JSON โดยตรง (JSON_HTTP)' },
+                        { value: 'HTML_HTTP', text: 'ดึง HTML แล้วค่อย parse (HTML_HTTP)' },
+                        { value: 'RENDERED_BROWSER', text: 'เปิดหน้าเว็บด้วย Browser Runtime (RENDERED_BROWSER)' },
+                        { value: 'EMBEDDED_JSON', text: 'ดึง JSON ที่ฝังในหน้า (EMBEDDED_JSON)' },
+                    ],
+                    quickParserTypes: [
+                        { value: 'JSON_PATH', text: 'อ่านค่าแบบเส้นทาง JSON (JSON_PATH)' },
+                    ],
+                    quickSelectionStages: [
+                        { value: 'PRE_MAPPING', text: 'คัดเลือกก่อนแปลงค่า (PRE_MAPPING)' },
+                        { value: 'POST_MAPPING', text: 'คัดเลือกหลังแปลงค่า (POST_MAPPING)' },
                     ],
                     sourceTestDate: '',
                     sourceTestRunId: '',
@@ -628,12 +672,75 @@
                         return '-';
                     }
 
+                    const modalMarketName = String(this.autoSourcesModal.marketName || '').trim();
+                    if (modalMarketName !== '') {
+                        return modalMarketName;
+                    }
+
                     const found = (this.autoSourcesItems || []).find((item) => Number(item.market_id || 0) === marketId);
                     if (found && found.market_name) {
                         return found.market_name;
                     }
 
                     return `Market #${marketId}`;
+                },
+                isLookupOffsetEditable() {
+                    const mode = String(this.autoSourceForm.lookup_date_mode || 'ROUND_DATE');
+                    return mode === 'ROUND_DATE_MINUS_DAYS' || mode === 'ROUND_DATE_PLUS_DAYS';
+                },
+                isQuickHttpMethodEditable() {
+                    return String(this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase() !== 'MANUAL_INPUT';
+                },
+                isQuickJsonPathMode() {
+                    return String(this.autoSourceForm.quick_parser_type || 'JSON_PATH').toUpperCase() === 'JSON_PATH';
+                },
+                shouldShowBrowserSettings() {
+                    const strategy = String(this.autoSourceForm.quick_fetch_strategy || this.autoSourceForm.fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    return !!this.autoSourceForm.requires_browser || strategy === 'RENDERED_BROWSER';
+                },
+                canToggleDomFallback() {
+                    return this.normalizedFetchCapability !== 'http_only';
+                },
+                normalizedFetchCapability() {
+                    return String(this.autoSourceForm.fetch_capability || 'http_only').trim().toLowerCase();
+                },
+                quickFetchStrategyHelpText() {
+                    const strategy = String(this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    const map = {
+                        JSON_HTTP: 'เหมาะกับปลายทางที่ตอบ JSON โดยตรง เร็วและเสถียรกว่าแบบ Browser',
+                        HTML_HTTP: 'เหมาะกับหน้าผลที่เป็น HTML แล้วดึงข้อมูลจากโครงสร้างหน้าเว็บ',
+                        RENDERED_BROWSER: 'ใช้เมื่อหน้าเว็บต้องรัน JavaScript ก่อนข้อมูลจะแสดง ระบบจะใช้ Browser Worker',
+                        EMBEDDED_JSON: 'ใช้เมื่อหน้า HTML มี JSON ฝังอยู่ใน script หรือ payload ภายใน',
+                    };
+
+                    return map[strategy] || strategy;
+                },
+                quickParserTypeHelpText() {
+                    const parserType = String(this.autoSourceForm.quick_parser_type || 'JSON_PATH').toUpperCase();
+                    const map = {
+                        JSON_PATH: 'ระบุ path เช่น $.lotData.DB เพื่อดึงค่าจาก JSON',
+                    };
+
+                    return map[parserType] || parserType;
+                },
+                quickSelectionStageHelpText() {
+                    const stage = String(this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase();
+                    const map = {
+                        PRE_MAPPING: 'คัดเลือกรายการก่อนแปลงข้อมูล เหมาะกับกรณี source ส่งหลาย candidate',
+                        POST_MAPPING: 'คัดเลือกหลังแปลงข้อมูล เหมาะเมื่อเงื่อนไขอิงค่าที่ normalize แล้ว',
+                    };
+
+                    return map[stage] || stage;
+                },
+                fetchCapabilityHelpText() {
+                    const capability = String(this.autoSourceForm.fetch_capability || 'http_only');
+                    const map = {
+                        http_only: 'วิ่ง HTTP อย่างเดียว ไม่ใช้ browser runtime',
+                        prefer_browser_runtime: 'ลอง browser runtime ก่อน และ fallback ตาม reason code ที่อนุญาต',
+                        require_browser_runtime: 'บังคับ browser runtime เท่านั้น หาก browser ใช้ไม่ได้จะ fail',
+                    };
+
+                    return map[capability] || capability;
                 },
                 lookupModeHelpText() {
                     const mode = String(this.autoSourceForm.lookup_date_mode || 'ROUND_DATE');
@@ -663,7 +770,7 @@
                         id: null,
                         market_id: '',
                         is_active: true,
-                        priority: 100,
+                        priority: 1,
                         source_type: 'api',
                         endpoint_url: '',
                         http_method: 'GET',
@@ -682,10 +789,13 @@
                         unified_pipeline_json: '',
                         quick_endpoint_url: '',
                         quick_http_method: 'GET',
+                        quick_fetch_strategy: 'JSON_HTTP',
+                        quick_parser_type: 'JSON_PATH',
+                        quick_selection_stage: 'PRE_MAPPING',
                         quick_draw_date_path: '$.date',
                         quick_draw_date_from_format: 'Y-m-d',
                         quick_first_prize_paths: '$.lotData.DB',
-                        quick_first_prize_take_right: 3,
+                        quick_first_prize_take_right: 0,
                         quick_last2_paths: '$.lotData.1',
                         quick_last2_take_right: 2,
                         browser_wait_for_selector: '',
@@ -838,23 +948,31 @@
                     this.populateQuickFromUnified(unified);
                 },
                 buildBrowserWorkerMetaFromForm() {
-                    const capturePatterns = String(this.autoSourceForm.browser_capture_url_patterns || '')
-                        .split('\n')
-                        .map((line) => String(line || '').trim())
-                        .filter((line) => line !== '');
-                    const blockTypes = String(this.autoSourceForm.browser_block_resource_types || '')
-                        .split(',')
-                        .map((line) => String(line || '').trim())
-                        .filter((line) => line !== '');
+                    const strategy = String(this.autoSourceForm.quick_fetch_strategy || this.autoSourceForm.fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    const timeoutSeconds = Number(this.autoSourceForm.timeout_seconds || 10);
+                    const timeoutMs = Math.max(5000, Math.min(120000, timeoutSeconds * 1500));
+
+                    if (strategy !== 'RENDERED_BROWSER' && !this.autoSourceForm.requires_browser) {
+                        return {
+                            wait_for_selector: '',
+                            wait_until: 'networkidle',
+                            timeout_ms: timeoutMs,
+                            capture_url_patterns: [],
+                            block_resource_types: ['image', 'font', 'media'],
+                            capture: {
+                                selection_mode: 'best',
+                            },
+                        };
+                    }
 
                     return {
-                        wait_for_selector: String(this.autoSourceForm.browser_wait_for_selector || '').trim(),
-                        wait_until: String(this.autoSourceForm.browser_wait_until || 'networkidle').trim().toLowerCase() || 'networkidle',
-                        timeout_ms: Number(this.autoSourceForm.browser_timeout_ms || 15000),
-                        capture_url_patterns: capturePatterns,
-                        block_resource_types: blockTypes,
+                        wait_for_selector: '',
+                        wait_until: 'networkidle',
+                        timeout_ms: timeoutMs,
+                        capture_url_patterns: [],
+                        block_resource_types: ['image', 'font', 'media'],
                         capture: {
-                            selection_mode: String(this.autoSourceForm.browser_selection_mode || 'best').trim().toLowerCase() || 'best',
+                            selection_mode: 'best',
                         },
                     };
                 },
@@ -881,11 +999,15 @@
                     const fetchConfig = (unified.fetch_config_json && typeof unified.fetch_config_json === 'object') ? unified.fetch_config_json : {};
                     const parserConfig = (unified.parser_config_json && typeof unified.parser_config_json === 'object') ? unified.parser_config_json : {};
                     const mappingConfig = (unified.mapping_config_json && typeof unified.mapping_config_json === 'object') ? unified.mapping_config_json : {};
+                    const selectionConfig = (unified.selection_config_json && typeof unified.selection_config_json === 'object') ? unified.selection_config_json : {};
                     const fields = (parserConfig.fields && typeof parserConfig.fields === 'object') ? parserConfig.fields : {};
                     const mapFields = (mappingConfig.fields && typeof mappingConfig.fields === 'object') ? mappingConfig.fields : {};
 
                     this.autoSourceForm.quick_endpoint_url = String(fetchConfig.endpoint_url || this.autoSourceForm.quick_endpoint_url || '');
                     this.autoSourceForm.quick_http_method = String(fetchConfig.http_method || this.autoSourceForm.quick_http_method || 'GET').toUpperCase();
+                    this.autoSourceForm.quick_fetch_strategy = String(fetchConfig.fetch_strategy || this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    this.autoSourceForm.quick_parser_type = String(parserConfig.parser_type || this.autoSourceForm.quick_parser_type || 'JSON_PATH').toUpperCase();
+                    this.autoSourceForm.quick_selection_stage = String(selectionConfig.selection_stage || this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase();
                     this.autoSourceForm.quick_draw_date_path = String((fields.draw_date_raw || {}).path || this.autoSourceForm.quick_draw_date_path || '$.date');
 
                     const firstRule = mapFields.first_prize || {};
@@ -902,8 +1024,11 @@
 
                     const firstRight = (Array.isArray(firstRule.transforms) ? firstRule.transforms : []).find((t) => String((t || {}).op || '').toLowerCase() === 'right');
                     const last2Right = (Array.isArray(last2Rule.transforms) ? last2Rule.transforms : []).find((t) => String((t || {}).op || '').toLowerCase() === 'right');
-                    this.autoSourceForm.quick_first_prize_take_right = Number((firstRight || {}).length || this.autoSourceForm.quick_first_prize_take_right || 3);
+                    this.autoSourceForm.quick_first_prize_take_right = firstRight && Number((firstRight || {}).length || 0) > 0
+                        ? Number((firstRight || {}).length || 0)
+                        : 0;
                     this.autoSourceForm.quick_last2_take_right = Number((last2Right || {}).length || this.autoSourceForm.quick_last2_take_right || 2);
+                    this.enforceQuickDependencyRules();
                     this.populateBrowserWorkerFromFetchConfig(fetchConfig);
                 },
                 splitQuickPaths(text) {
@@ -912,6 +1037,9 @@
                 applyQuickPresetLaosVip() {
                     this.autoSourceForm.quick_endpoint_url = 'https://laosviplot.com/result';
                     this.autoSourceForm.quick_http_method = 'GET';
+                    this.autoSourceForm.quick_fetch_strategy = 'JSON_HTTP';
+                    this.autoSourceForm.quick_parser_type = 'JSON_PATH';
+                    this.autoSourceForm.quick_selection_stage = 'PRE_MAPPING';
                     this.autoSourceForm.quick_draw_date_path = '$.date';
                     this.autoSourceForm.quick_draw_date_from_format = 'd/m/Y';
                     this.autoSourceForm.quick_first_prize_paths = '$.lotto_2';
@@ -919,7 +1047,42 @@
                     this.autoSourceForm.quick_last2_paths = '$.lotto_1';
                     this.autoSourceForm.quick_last2_take_right = 2;
                 },
+                enforceQuickDependencyRules() {
+                    const mode = String(this.autoSourceForm.lookup_date_mode || 'ROUND_DATE');
+                    if (mode === 'ROUND_DATE' || mode === 'RESULT_AT_DATE') {
+                        this.autoSourceForm.lookup_date_offset_days = 0;
+                    } else {
+                        this.autoSourceForm.lookup_date_offset_days = Math.abs(Number(this.autoSourceForm.lookup_date_offset_days || 0));
+                    }
+
+                    const strategy = String(this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    let capability = String(this.autoSourceForm.fetch_capability || 'http_only').trim().toLowerCase();
+                    if (!['http_only', 'prefer_browser_runtime', 'require_browser_runtime'].includes(capability)) {
+                        capability = 'http_only';
+                    }
+                    this.autoSourceForm.fetch_capability = capability;
+
+                    if (strategy === 'RENDERED_BROWSER') {
+                        this.autoSourceForm.requires_browser = true;
+                        if (capability === 'http_only') {
+                            this.autoSourceForm.fetch_capability = 'prefer_browser_runtime';
+                            capability = 'prefer_browser_runtime';
+                        }
+                    }
+
+                    if (capability === 'http_only') {
+                        this.autoSourceForm.allow_dom_fallback = false;
+                        if (strategy !== 'RENDERED_BROWSER') {
+                            this.autoSourceForm.requires_browser = false;
+                        }
+                    }
+
+                    if (capability === 'require_browser_runtime') {
+                        this.autoSourceForm.requires_browser = true;
+                    }
+                },
                 generateQuickPipelineJson() {
+                    this.enforceQuickDependencyRules();
                     const endpointUrl = String(this.autoSourceForm.quick_endpoint_url || '').trim();
                     if (!endpointUrl) {
                         this.showApiError(null, 'กรุณาใส่ URL ผลหวย');
@@ -928,6 +1091,7 @@
 
                     const firstPrizePaths = this.splitQuickPaths(this.autoSourceForm.quick_first_prize_paths);
                     const last2Paths = this.splitQuickPaths(this.autoSourceForm.quick_last2_paths);
+                    const mode = String(this.autoSourceForm.lookup_date_mode || 'ROUND_DATE');
                     if (firstPrizePaths.length === 0 || last2Paths.length === 0) {
                         this.showApiError(null, 'กรุณาระบุ Path ของรางวัลที่ 1 และเลขท้าย 2 ตัว');
                         return;
@@ -940,7 +1104,7 @@
                         request_query_template_json: {},
                         request_body_template_json: {},
                         fetch_config_json: {
-                            fetch_strategy: 'JSON_HTTP',
+                            fetch_strategy: String(this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase(),
                             endpoint_url: endpointUrl,
                             http_method: String(this.autoSourceForm.quick_http_method || 'GET').toUpperCase(),
                             headers: {},
@@ -956,7 +1120,7 @@
                         parser_config_json: {
                             version: 2,
                             mode: 'single_payload',
-                            parser_type: 'JSON_PATH',
+                            parser_type: String(this.autoSourceForm.quick_parser_type || 'JSON_PATH').toUpperCase(),
                             fields: {
                                 draw_date_raw: { type: 'JSON_PATH', path: String(this.autoSourceForm.quick_draw_date_path || '$.date') },
                                 [firstKey]: { type: 'JSON_PATH', path: firstPrizePaths[0] },
@@ -972,10 +1136,17 @@
                                         { op: 'date', from: String(this.autoSourceForm.quick_draw_date_from_format || 'Y-m-d'), to: 'Y-m-d' },
                                     ],
                                 },
-                                first_prize: {
-                                    from: firstKey,
-                                    transforms: [{ op: 'digits_only' }, { op: 'right', length: Number(this.autoSourceForm.quick_first_prize_take_right || 3) }],
-                                },
+                                first_prize: (() => {
+                                    const transforms = [{ op: 'digits_only' }];
+                                    const rightDigits = Math.max(0, Number(this.autoSourceForm.quick_first_prize_take_right || 0));
+                                    if (rightDigits > 0) {
+                                        transforms.push({ op: 'right', length: rightDigits });
+                                    }
+                                    return {
+                                        from: firstKey,
+                                        transforms,
+                                    };
+                                })(),
                                 last_2_digits: {
                                     from: last2Key,
                                     transforms: [{ op: 'digits_only' }, { op: 'right', length: Number(this.autoSourceForm.quick_last2_take_right || 2) }],
@@ -983,11 +1154,16 @@
                             },
                         },
                         selection_config_json: {
-                            selection_stage: 'PRE_MAPPING',
+                            selection_stage: String(this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase(),
                             strategy: 'strict_single_match',
                             date_field: 'draw_date_raw',
                             required_fields: [],
-                            meta: { candidate_draw_date_offset_days: 0, expected_draw_date_offset_days: 0 },
+                            meta: {
+                                candidate_draw_date_offset_days: mode === 'ROUND_DATE_MINUS_DAYS'
+                                    ? Math.abs(Number(this.autoSourceForm.lookup_date_offset_days || 0))
+                                    : (mode === 'ROUND_DATE_PLUS_DAYS' ? (-1 * Math.abs(Number(this.autoSourceForm.lookup_date_offset_days || 0))) : 0),
+                                expected_draw_date_offset_days: 0,
+                            },
                         },
                         validation_config_json: { required_fields: ['draw_date', 'first_prize', 'last_2_digits'] },
                         readiness_config_json: { enabled: true, minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'] },
@@ -998,9 +1174,9 @@
                     this.applyUnifiedToForm();
                     this.autoSourceForm.endpoint_url = endpointUrl;
                     this.autoSourceForm.http_method = String(this.autoSourceForm.quick_http_method || 'GET').toUpperCase();
-                    this.autoSourceForm.parser_type = 'JSON_PATH';
-                    this.autoSourceForm.fetch_strategy = 'JSON_HTTP';
-                    this.autoSourceForm.selection_stage = 'PRE_MAPPING';
+                    this.autoSourceForm.parser_type = String(this.autoSourceForm.quick_parser_type || 'JSON_PATH').toUpperCase();
+                    this.autoSourceForm.fetch_strategy = String(this.autoSourceForm.quick_fetch_strategy || 'JSON_HTTP').toUpperCase();
+                    this.autoSourceForm.selection_stage = String(this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase();
                     this.activeSourceTab = 2;
                 },
                 parseJsonInput(text, fieldName) {
@@ -1025,7 +1201,7 @@
                         id: form.id || null,
                         market_id: Number(form.market_id || 0),
                         is_active: !!form.is_active,
-                        priority: Number(form.priority || 100),
+                        priority: Number(form.priority || 1),
                         source_type: form.source_type || 'api',
                         endpoint_url: String(fetchConfig.endpoint_url || form.endpoint_url || form.quick_endpoint_url || '').trim(),
                         http_method: String(fetchConfig.http_method || form.http_method || form.quick_http_method || 'GET').toUpperCase(),
@@ -1098,7 +1274,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1110,7 +1286,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1126,6 +1302,7 @@
 
                     this.autoSourcesModal.marketId = id;
                     const label = String(marketName || '').trim();
+                    this.autoSourcesModal.marketName = label;
                     this.autoSourcesModal.title = label !== ''
                         ? `Auto Result Sources: ${label} (#${id})`
                         : `Auto Result Sources: Market #${id}`;
@@ -1162,6 +1339,7 @@
                     this.autoSourceForm = this.defaultAutoSourceForm();
                     this.autoSourceForm.market_id = Number(this.autoSourcesModal.marketId || 0);
                     this.applyAutoSourceExample();
+                    this.enforceQuickDependencyRules();
                     this.sourceTestDate = '{{ now()->format('Y-m-d') }}';
                     this.sourceTestRunId = '';
                     this.testRunResult = null;
@@ -1194,6 +1372,7 @@
                         this.syncUnifiedFromForm();
                         this.autoSourceForm.quick_endpoint_url = this.autoSourceForm.endpoint_url || this.autoSourceForm.quick_endpoint_url;
                         this.autoSourceForm.quick_http_method = this.autoSourceForm.http_method || this.autoSourceForm.quick_http_method;
+                        this.enforceQuickDependencyRules();
                         this.sourceTestDate = '{{ now()->format('Y-m-d') }}';
                         this.sourceTestRunId = '';
                         this.testRunResult = null;
@@ -1460,6 +1639,8 @@
                         auto_close_time: d.auto_close_time ? String(d.auto_close_time).substring(0, 5) : '',
                         auto_result_time: d.auto_result_time ? String(d.auto_result_time).substring(0, 5) : '',
                         result_url: d.result_url || '',
+                        auto_settle_on_result: d.auto_settle_on_result === undefined || d.auto_settle_on_result === null ? 1 : (d.auto_settle_on_result ? 1 : 0),
+                        notify_result_telegram: d.notify_result_telegram === undefined || d.notify_result_telegram === null ? 1 : (d.notify_result_telegram ? 1 : 0),
                         is_enabled: d.is_enabled ? 1 : 0,
                     };
                 },
@@ -1532,6 +1713,20 @@
                     }
 
                     return '';
+                },
+            },
+            watch: {
+                'autoSourceForm.lookup_date_mode'() {
+                    this.enforceQuickDependencyRules();
+                },
+                'autoSourceForm.lookup_date_offset_days'() {
+                    this.enforceQuickDependencyRules();
+                },
+                'autoSourceForm.quick_fetch_strategy'() {
+                    this.enforceQuickDependencyRules();
+                },
+                'autoSourceForm.fetch_capability'() {
+                    this.enforceQuickDependencyRules();
                 },
             },
         });

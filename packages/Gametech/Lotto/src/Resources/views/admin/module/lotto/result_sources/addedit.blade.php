@@ -157,18 +157,18 @@
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
-                        <b-form-group label="Path ของวันที่">
-                            <b-form-input size="sm" v-model="sourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
-                            <small class="text-muted d-block mt-1">JSONPath ของวันที่ในผลลัพธ์</small>
+                        <b-form-group label="รูปแบบวันที่ต้นทาง">
+                            <b-form-select size="sm" v-model="sourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
+                            <small class="text-muted d-block mt-1">เช่น <code>d/m/Y</code> หรือ <code>Y-m-d</code></small>
                         </b-form-group>
                     </b-col>
                 </b-row>
 
                 <b-row>
                     <b-col md="6">
-                        <b-form-group label="รูปแบบวันที่ต้นทาง">
-                            <b-form-select size="sm" v-model="sourceForm.quick_draw_date_from_format" :options="quickDateFormats"></b-form-select>
-                            <small class="text-muted d-block mt-1">เช่น <code>d/m/Y</code> หรือ <code>Y-m-d</code></small>
+                        <b-form-group label="Path ของวันที่">
+                            <b-form-input size="sm" v-model="sourceForm.quick_draw_date_path" placeholder="$.date"></b-form-input>
+                            <small class="text-muted d-block mt-1">JSONPath ของวันที่ในผลลัพธ์</small>
                         </b-form-group>
                     </b-col>
                     <b-col md="6">
@@ -191,8 +191,8 @@
                     </b-col>
                     <b-col md="6">
                         <b-form-group label="เก็บท้ายกี่หลัก (รางวัลที่ 1)">
-                            <b-form-input size="sm" type="number" min="1" max="10" v-model="sourceForm.quick_first_prize_take_right"></b-form-input>
-                            <small class="text-muted d-block mt-1">ปกติใช้ 3</small>
+                            <b-form-input size="sm" type="number" min="0" max="10" v-model="sourceForm.quick_first_prize_take_right"></b-form-input>
+                            <small class="text-muted d-block mt-1">ใส่ 0 = ไม่ตัดท้าย (ไม่ใส่ right transform)</small>
                         </b-form-group>
                     </b-col>
                 </b-row>
@@ -763,7 +763,7 @@
                         quick_draw_date_path: '$.date',
                         quick_draw_date_from_format: 'd/m/Y',
                         quick_first_prize_paths: '',
-                        quick_first_prize_take_right: 3,
+                        quick_first_prize_take_right: 0,
                         quick_last2_paths: '',
                         quick_last2_take_right: 2,
                         test_draw_date: '{{ now()->format('Y-m-d') }}',
@@ -907,7 +907,10 @@
                         this.sourceForm.quick_last2_paths = last2Paths.join(',');
                     }
 
-                    this.sourceForm.quick_first_prize_take_right = resolveRightDigits(firstPrizeRule, this.sourceForm.quick_first_prize_take_right || 3);
+                    this.sourceForm.quick_first_prize_take_right = resolveRightDigits(
+                        firstPrizeRule,
+                        Number(this.sourceForm.quick_first_prize_take_right ?? 0)
+                    );
                     this.sourceForm.quick_last2_take_right = resolveRightDigits(last2Rule, this.sourceForm.quick_last2_take_right || 2);
                 },
                 splitQuickPaths(text) {

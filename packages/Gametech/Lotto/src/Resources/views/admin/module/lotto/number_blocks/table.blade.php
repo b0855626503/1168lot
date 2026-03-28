@@ -9,7 +9,8 @@
 		$(function () {
 			const tableSelector = '#dataTableBuilder';
 			const tableKey = 'dataTableBuilder';
-			const $drawSelect = $('#filter_draw_id');
+			const $drawDateInput = $('#filter_draw_date');
+			const $marketSelect = $('#filter_market_id');
 			const $betTypeSelect = $('#filter_bet_type');
 			const $numberInput = $('#filter_number_search');
 			const $bulkDeleteBtn = $('#bulk-delete-number-blocks-btn');
@@ -48,12 +49,20 @@
 			};
 
 			$(document).off('preXhr.dt.lottoNumberBlocksFilter', tableSelector).on('preXhr.dt.lottoNumberBlocksFilter', tableSelector, function (_event, _settings, data) {
-				data.draw_id = $drawSelect.val() || '';
+				const marketValue = String($marketSelect.val() || '');
+				const isGroupValue = marketValue.indexOf('group:') === 0;
+				data.draw_date = $drawDateInput.val() || '';
+				data.market_id = isGroupValue ? '' : marketValue;
+				data.group_id = isGroupValue ? marketValue.replace('group:', '') : '';
 				data.bet_type = $betTypeSelect.val() || '';
 				data.number_search = ($numberInput.val() || '').trim();
 			});
 
-			$drawSelect.off('change.lottoNumberBlocksFilter').on('change.lottoNumberBlocksFilter', function () {
+			$drawDateInput.off('change.lottoNumberBlocksFilter').on('change.lottoNumberBlocksFilter', function () {
+				redrawTable();
+			});
+
+			$marketSelect.off('change.lottoNumberBlocksFilter').on('change.lottoNumberBlocksFilter', function () {
 				redrawTable();
 			});
 

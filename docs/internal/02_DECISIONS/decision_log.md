@@ -1,5 +1,81 @@
 # Decision Log
 
+## 2026-03-29 — Markets Table: Result Mode Toggle + Source Light Indicator (APPROVED)
+
+- หน้า `lotto/markets` เพิ่มคอลัมน์ `ออกผล` (หลัง `ลิงก์ออกผล`) เป็นปุ่ม toggle `Auto/Manual`
+- ปุ่มดังกล่าวผูกกับฟิลด์ `auto_settle_on_result` และใช้ endpoint toggle เดิม (`edit`) ผ่าน `method=auto_settle_on_result`
+- ปรับชื่อคอลัมน์ `Auto Source` เป็น `Source`
+- สถานะผูก source เปลี่ยนจาก badge ข้อความ เป็นไอคอนไฟ:
+  - ผูกแล้ว = ไฟเขียวมี pulse effect + แสดงจำนวน source
+  - ยังไม่ผูก = ไฟสีเทา
+
+## 2026-03-29 — Dry-run By Date Persists Full Fetch Log Snapshot (APPROVED)
+
+- ปรับ endpoint `test_fetch_by_date` ให้ persist log ลง `lotto_result_fetch_logs` แบบใกล้เคียง production run
+- บันทึกเพิ่ม: `request_url`, `request_meta_json`, `response_http_status`, `response_body`, `parsed_payload_json`, `normalized_result_json`, `selection_debug_json`, `trace_json`, `duration_ms`
+- สำหรับ dry-run by date ให้ใช้ `draw_id = null` และอ้างอิงด้วย `run_id` เป็นหลัก
+
+## 2026-03-29 — Quick Setup First Prize Right-Digits Supports Zero (APPROVED)
+
+- ตั้งค่า default ของ `เก็บท้ายกี่หลัก (รางวัลที่ 1)` เป็น `0`
+- semantics ใหม่: ถ้าค่าเป็น `0` ระบบจะไม่ generate `right` transform ให้ `first_prize`
+- ใช้กติกาเดียวกันทั้งหน้า `/lotto/markets` popup และ `/lotto/auto-result-sources`
+
+## 2026-03-29 — Per-Market Auto Settle Toggle + Result Telegram Notify (APPROVED)
+
+- เพิ่มค่าระดับ `lotto_markets`:
+  - `auto_settle_on_result` (default `true`)
+  - `notify_result_telegram` (default `true`)
+- นโยบาย apply ผลอัตโนมัติ:
+  - ถ้า `auto_settle_on_result=true` ระบบทำงานเดิม: settle ทันทีและเปลี่ยน draw เป็น `resulted`
+  - ถ้า `auto_settle_on_result=false` ระบบจะบันทึกผลที่ดึงได้ไว้ใน draw แต่คงสถานะ `closed` ให้ทีมงานกดประกาศผลเอง
+- เมื่อ draw เปลี่ยนเป็น `resulted` จะส่ง Telegram ไป `notify/send` ตาม pattern เดียวกับ observer ฝั่ง payment
+- การส่ง Telegram ถูกควบคุมรายตลาดด้วย `notify_result_telegram`
+- เปลี่ยนเส้น exhausted alert ของ auto-result ให้ส่งผ่าน `TelegramBot` (queue job `SendTelegramBot`) แทน `SendTelegramAlert/TelegramFailedBot`
+- ปรับข้อความแจ้งเตือนเป็นภาษาธุรกิจ:
+  - exhausted: `หวย{ชื่อ} งวดวันที่ {date} เวลาออกผล {time} ไม่สามารถดึงผลรางวัลได้`
+  - resulted/fetched: แสดงเลขผล + สถานะ `คำนวนเงินรางวัลแล้ว` หรือ `รอทีมงานอนุมัติการคำนวน`
+
+## 2026-03-29 — Auto Result Per-Source Retry Exhaustion Fallback Chain (APPROVED)
+
+- ปรับ pipeline ให้รองรับ fallback chain เมื่อมีหลาย source ใน market เดียวกัน
+- retry policy ถูกประเมินแบบราย `draw + source` โดยดูสถานะ `NOT_READY` จาก fetch logs
+- เมื่อ source แรกครบ retry limit (`max_attempts`) ระบบจะ mark exhausted เฉพาะ source และเลื่อนไปลอง source ถัดไปตาม priority
+- ถ้า source ยังอยู่ใน backoff window และยังไม่ exhausted ระบบยังคงรอ source เดิม (ไม่สลับ source ก่อนเวลา)
+- draw จะถูก mark `EXHAUSTED` ก็ต่อเมื่อ source ที่ active ทั้งหมด exhausted แล้ว
+
+## 2026-03-29 — Markets Popup Quick Setup Aligns to Effective JSON Contract (APPROVED)
+
+- popup `/lotto/markets` ของ `Auto Result Sources` ปรับ label `ตลาด` เป็น `รายการหวย` ทั้งโหมดเพิ่มและแก้ไข
+- แท็บ `ตั้งค่าด่วน` เพิ่มตัวเลือกที่ผูกกับ JSON จริง: `fetch_strategy`, `parser_type`, `selection_stage`
+- เพิ่ม dependency reset ใน quick setup ให้สอดคล้องกับ runtime policy:
+  - โหมด lookup ที่ไม่ใช้ offset บังคับ offset = 0
+  - `http_only` ปิด `allow_dom_fallback` และปิด `requires_browser` เมื่อไม่ใช้ rendered browser
+  - `RENDERED_BROWSER` บังคับเปิด browser capability ที่เกี่ยวข้อง
+- แท็บ `JSON หลัก` ระบุโครงสร้าง key หลักที่ต้องมีอย่างชัดเจน
+- เอาปุ่ม preset `ตั้งค่าอัตโนมัติ` ออกจาก quick setup เพื่อลดความสับสน
+- `Browser Worker Settings` ในแท็บ quick setup ถูกเปลี่ยนเป็น auto-generated defaults (ไม่ให้ปรับรายช่อง)
+- ปุ่ม `Dry Run ตามวันที่` ใน popup `/lotto/markets` รองรับ draw สถานะ `open/closed/resulted` (ไม่จำกัดเฉพาะ `closed/resulted`)
+- ปรับโหมดทดสอบตามวันที่ให้ไม่ต้องพึ่งงวดจริง: ถ้าไม่พบ draw ของวันนั้น ระบบจะใช้ virtual draw context แทนทั้ง Dry Run และ Browser Test
+
+## 2026-03-29 — Number Blocks Table Splits Draw/Market Columns with Market Logo (APPROVED)
+
+- ตาราง `lotto/number-blocks` แยกคอลัมน์ `งวด` และ `รายการหวย` ออกจากกัน
+- คอลัมน์ `รายการหวย` แสดงโลโก้หน้าชื่อรายการเมื่อ market มี `logo`/`icon`
+- โครงสร้าง filter เดิม (draw_date/market/group/bet_type/number_search) ไม่เปลี่ยน
+
+## 2026-03-29 — Number Blocks Market Filter Supports Whole Group Selection (APPROVED)
+
+- ใน filter `รายการหวย` ของหน้า `lotto/number-blocks` เพิ่มตัวเลือก `ทั้งกลุ่ม: {group}`
+- เมื่อเลือกทั้งกลุ่ม ระบบจะส่งและใช้ `group_id` filter กับ query แทน `market_id`
+- ยังคงรองรับการเลือกแบบราย `market_id` ตามเดิมใน select เดียวกัน
+
+## 2026-03-29 — Number Blocks Filter Uses Draw Date + Grouped Market (APPROVED)
+
+- หน้า `lotto/number-blocks` เปลี่ยน filter จาก `งวดหวย (draw_id)` เป็น `วันที่งวด (draw_date)`
+- เพิ่ม filter `รายการหวย (market_id)` แบบ grouped options ตามกลุ่มหวย
+- filter เดิม `ประเภทเดิมพัน` และ `ค้นหาเลข` ยังคงเดิม
+
 ## 2026-03-29 — AutoResultV2 CI Guardrail Workflow (APPROVED)
 
 - เพิ่ม GitHub Actions workflow `lotto-autoresultv2-unit`

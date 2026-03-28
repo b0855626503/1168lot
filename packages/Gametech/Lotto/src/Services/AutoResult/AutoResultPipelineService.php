@@ -6,6 +6,7 @@ use Gametech\Lotto\Exceptions\ResultParseException;
 use Gametech\Lotto\Exceptions\ResultValidationException;
 use Gametech\Lotto\Exceptions\TemplateRenderException;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Gametech\Lotto\Services\AutoResultHardeningService;
@@ -54,16 +55,13 @@ class AutoResultPipelineService
     ): array {
         $draw = $draw->fresh(['market']);
         $runId = $runId ?: ('run_' . $draw->id . '_' . now()->format('YmdHisv'));
-        $attemptNo = max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1);
         $expectedDrawDate = $expectedDrawDate ?: ($draw->draw_date ? $draw->draw_date->format('Y-m-d') : null);
 
-        $this->incrementAttempt($draw);
-
-        $source = $this->resolver->resolve($draw);
-        if (! $source) {
+        $sources = $this->resolver->resolveAll($draw);
+        if ($sources === []) {
             return $this->markAndLog($draw, [
                 'status' => 'NO_SOURCE',
-                'attempt_no' => $attemptNo,
+                'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
                 'run_id' => $runId,
                 'pipeline_stage' => 'resolve',
                 'is_dry_run' => $dryRun,
@@ -72,16 +70,154 @@ class AutoResultPipelineService
             ]);
         }
 
-        if (! $this->hardening->acquireSourceRateLimit((int) $source->id)) {
-            $this->hardening->recordRateLimited($draw, (int) $source->id, $attemptNo, 'RATE_LIMITED by source policy');
+        $fallbackTried = false;
+        foreach ($sources as $source) {
+            $this->resolver->persistSnapshot($draw, $source);
+            $state = $this->sourceRetryState($draw, $source);
+            if ($state['exhausted']) {
+                $fallbackTried = true;
+                $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $state['attempts']);
+                continue;
+            }
+
+            if (! $state['retry_due']) {
+                return $this->markAndLog($draw, [
+                    'status' => 'NOT_READY',
+                    'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
+                    'run_id' => $runId,
+                    'pipeline_stage' => 'retry_policy_source',
+                    'source_id' => (int) $source->id,
+                    'is_dry_run' => $dryRun,
+                    'is_manual_retry' => $isManualRetry,
+                    'error_message' => 'source backoff pending',
+                ]);
+            }
+
+            $this->incrementAttempt($draw);
+            $attemptNo = max(1, (int) ($draw->result_fetch_attempts ?? 1));
+
+            if (! $this->hardening->acquireSourceRateLimit((int) $source->id)) {
+                $this->hardening->recordRateLimited($draw, (int) $source->id, $attemptNo, 'RATE_LIMITED by source policy');
+                continue;
+            }
+
+            $result = $this->processSourceAttempt(
+                $draw,
+                $source,
+                $attemptNo,
+                $dryRun,
+                $isManualRetry,
+                $runId,
+                $expectedDrawDate
+                );
+
+            if ((string) ($result['status'] ?? '') === self::RETRYABLE_STATUS) {
+                $stateAfter = $this->sourceRetryState($draw->fresh(), $source);
+                if ($stateAfter['exhausted']) {
+                    $fallbackTried = true;
+                    $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $stateAfter['attempts']);
+                    continue;
+                }
+            }
+
+            return $result;
+        }
+
+        if ($fallbackTried) {
+            $this->markExhausted($draw->fresh());
 
             return [
-                'status' => 'RATE_LIMITED',
+                'status' => 'EXHAUSTED',
                 'run_id' => $runId,
-                'attempt_no' => $attemptNo,
+                'attempt_no' => (int) ($draw->result_fetch_attempts ?? 0),
+                'error_message' => 'all active sources exhausted retry policy',
             ];
         }
 
+        return $this->markAndLog($draw, [
+            'status' => 'NO_SOURCE',
+            'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
+            'run_id' => $runId,
+            'pipeline_stage' => 'resolve',
+            'is_dry_run' => $dryRun,
+            'is_manual_retry' => $isManualRetry,
+            'error_message' => 'ไม่พบ source ที่พร้อม retry ตาม policy',
+        ]);
+    }
+
+    /**
+     * @return array{attempts:int,retry_due:bool,exhausted:bool}
+     */
+    private function sourceRetryState(LottoDraw $draw, LottoResultSource $source): array
+    {
+        $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
+        $query = LottoResultFetchLog::query()
+            ->where('draw_id', (int) $draw->id)
+            ->where('source_id', (int) $source->id)
+            ->where('is_dry_run', false)
+            ->where('status', self::RETRYABLE_STATUS);
+
+        $attempts = (int) (clone $query)->count();
+        $exhausted = $attempts >= $maxAttempts;
+        if ($exhausted) {
+            return ['attempts' => $attempts, 'retry_due' => false, 'exhausted' => true];
+        }
+
+        $last = (clone $query)->orderByDesc('id')->first();
+        if (! $last || ! $last->created_at instanceof Carbon) {
+            return ['attempts' => $attempts, 'retry_due' => true, 'exhausted' => false];
+        }
+
+        $baseSeconds = max(5, (int) config('lotto_auto_result.retry.base_backoff_seconds', 10));
+        $maxSeconds = max(60, (int) config('lotto_auto_result.retry.max_backoff_seconds', 300));
+        $pow = min(6, max(0, $attempts - 1));
+        $next = $last->created_at->copy()->addSeconds(min($maxSeconds, $baseSeconds * (2 ** $pow)));
+
+        return [
+            'attempts' => $attempts,
+            'retry_due' => now()->gte($next),
+            'exhausted' => false,
+        ];
+    }
+
+    private function logSourceExhaustedIfNeeded(LottoDraw $draw, LottoResultSource $source, string $runId, int $attempts): void
+    {
+        $exists = LottoResultFetchLog::query()
+            ->where('draw_id', (int) $draw->id)
+            ->where('source_id', (int) $source->id)
+            ->where('status', 'EXHAUSTED')
+            ->where('pipeline_stage', 'retry_policy_source')
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $this->hardening->insertFetchLog([
+            'draw_id' => (int) $draw->id,
+            'market_id' => (int) $draw->market_id,
+            'source_id' => (int) $source->id,
+            'attempt_no' => max(1, $attempts),
+            'status' => 'EXHAUSTED',
+            'run_id' => $runId,
+            'pipeline_stage' => 'retry_policy_source',
+            'error_message' => 'source retries exhausted; fallback to next source',
+            'created_at' => now()->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function processSourceAttempt(
+        LottoDraw $draw,
+        LottoResultSource $source,
+        int $attemptNo,
+        bool $dryRun,
+        bool $isManualRetry,
+        string $runId,
+        ?string $expectedDrawDate
+    ): array {
         $shadowResult = null;
         if ($this->isV2ShadowEnabled($source)) {
             try {

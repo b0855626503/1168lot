@@ -32,6 +32,8 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'auto_close_time',
         'auto_result_time',
         'result_url',
+        'auto_settle_on_result',
+        'notify_result_telegram',
         'is_enabled',
         'affect_existing_members',
         'policy_version',
@@ -39,6 +41,8 @@ class LotteryMarket extends Model implements LotteryMarketContract
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'auto_settle_on_result' => 'boolean',
+        'notify_result_telegram' => 'boolean',
         'affect_existing_members' => 'boolean',
         'policy_version' => 'integer',
     ];

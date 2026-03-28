@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Observers;
 
 use App\Events\LottoDrawStatusChanged;
 use App\Events\RealtimePublicActivityUpdated;
+use App\Jobs\SendTelegramBot;
 use Gametech\Lotto\Models\LottoDraw;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,7 @@ class LottoDrawRealtimeObserver
             return;
         }
 
-        $draw->loadMissing('market:id,name');
+        $draw->loadMissing('market:id,name,notify_result_telegram');
 
         $marketName = (string) ($draw->market->name ?? '-');
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
@@ -67,6 +68,10 @@ class LottoDrawRealtimeObserver
                     'changed_at' => $changedAt,
                 ]
             ));
+
+            if ($toStatus === 'resulted') {
+                $this->sendResultTelegramIfEnabled($draw, $marketName, $drawDate);
+            }
         });
     }
 
@@ -123,5 +128,34 @@ class LottoDrawRealtimeObserver
             ->copy()
             ->timezone((string) config('app.timezone', 'Asia/Bangkok'))
             ->format('Y-m-d H:i:s');
+    }
+
+    private function sendResultTelegramIfEnabled(LottoDraw $draw, string $marketName, string $drawDate): void
+    {
+        $market = $draw->market;
+        if ($market && ! (bool) ($market->notify_result_telegram ?? true)) {
+            return;
+        }
+
+        $result = is_array($draw->result_number) ? $draw->result_number : [];
+        $firstPrize = preg_replace('/\D+/', '', (string) ($result['first_prize'] ?? ''));
+        $last2 = preg_replace('/\D+/', '', (string) ($result['last_2_digits'] ?? ''));
+        $firstLabel = strlen((string) $firstPrize) <= 3 ? 'เลข 3 ตัวบน' : 'รางวัลที่ 1';
+        $lastLabel = strlen((string) $firstPrize) <= 3 ? 'เลข 2 ตัวล่าง' : 'รางวัล เลข 2 ตัว';
+
+        $message = sprintf(
+            'หวย%s งวดวันที่ %s' . PHP_EOL .
+            '%s : %s' . PHP_EOL .
+            '%s : %s' . PHP_EOL .
+            'คำนวนเงินรางวัลแล้ว',
+            $marketName,
+            $drawDate,
+            $firstLabel,
+            $firstPrize !== '' ? $firstPrize : '-',
+            $lastLabel,
+            $last2 !== '' ? $last2 : '-'
+        );
+
+        SendTelegramBot::dispatch('notify/send', $message)->onQueue('cashback');
     }
 }

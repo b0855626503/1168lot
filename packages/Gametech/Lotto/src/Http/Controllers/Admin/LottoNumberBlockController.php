@@ -5,8 +5,8 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoNumberBlockDataTable;
 use Gametech\Lotto\Enums\BetType;
-use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
+use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,17 +24,27 @@ class LottoNumberBlockController extends AppBaseController
 
     public function index(LottoNumberBlockDataTable $dataTable)
     {
-        $drawOptions = LottoDraw::query()
-            ->with('market')
-            ->orderByDesc('draw_date')
-            ->get(['id', 'market_id', 'draw_date'])
-            ->map(function (LottoDraw $draw) {
-                $date = $draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-';
-                $market = $draw->market->name ?? '-';
+        $marketOptionsGrouped = LotteryMarket::query()
+            ->with('group:id,name')
+            ->orderBy('group_id')
+            ->orderBy('name')
+            ->get(['id', 'group_id', 'name'])
+            ->groupBy(static function (LotteryMarket $market): int {
+                return (int) ($market->group_id ?? 0);
+            })
+            ->map(static function ($markets, $groupId): array {
+                $first = $markets->first();
+                $label = (string) optional(optional($first)->group)->name ?: 'ไม่ระบุกลุ่ม';
 
                 return [
-                    'value' => (int) $draw->id,
-                    'text' => $date . ' (' . $market . ')',
+                    'group_id' => (int) $groupId,
+                    'label' => $label,
+                    'options' => $markets->map(static function (LotteryMarket $market): array {
+                        return [
+                            'value' => (int) $market->id,
+                            'text' => (string) $market->name,
+                        ];
+                    })->values()->toArray(),
                 ];
             })
             ->values()
@@ -49,7 +59,7 @@ class LottoNumberBlockController extends AppBaseController
             ->toArray();
 
         return $dataTable->render($this->_config['view'], [
-            'drawOptions' => $drawOptions,
+            'marketOptionsGrouped' => $marketOptionsGrouped,
             'betTypeOptions' => $betTypeOptions,
         ]);
     }

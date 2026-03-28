@@ -15,10 +15,10 @@ use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
 use Gametech\Lotto\Services\AutoResultV2\Browser\BrowserFetchDispatchService;
 use Gametech\Lotto\Services\AutoResultV2\Executors\FetchExecutor;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
+use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -466,43 +466,112 @@ class LottoResultSourceController extends AppBaseController
             'draw_date' => ['required', 'date_format:Y-m-d'],
         ])->validate();
 
+        $source = $this->resolveActiveSourceForMarket((int) $validated['market_id']);
+        if (! $source instanceof LottoResultSource) {
+            return $this->sendError('ไม่พบ Auto Result Source ที่พร้อมใช้งานของรายการหวยนี้', 404);
+        }
+
         $draw = LottoDraw::query()
             ->where('market_id', (int) $validated['market_id'])
             ->whereDate('draw_date', (string) $validated['draw_date'])
-            ->whereIn('status', ['closed', 'resulted'])
+            ->whereIn('status', ['open', 'closed', 'resulted'])
             ->orderByDesc('id')
             ->first();
-
-        if (! $draw instanceof LottoDraw) {
-            return $this->sendError('ไม่พบงวดสถานะ closed/resulted ตามวันที่ที่เลือก', 404);
+        $usingVirtualDraw = ! $draw instanceof LottoDraw;
+        if ($usingVirtualDraw) {
+            $draw = $this->buildVirtualDrawForDate((int) $validated['market_id'], (string) $validated['draw_date']);
         }
 
-        $runId = sprintf('source_test_%s_%d', now()->format('YmdHisv'), (int) $draw->id);
-        $params = [
-            '--draw-id' => (int) $draw->id,
-            '--limit' => 1,
-            '--dry-run' => true,
-            '--manual-retry' => true,
-            '--run-id' => $runId,
-            '--expected-draw-date' => (string) $validated['draw_date'],
+        $runId = sprintf('source_test_%s_%d', now()->format('YmdHisv'), (int) ($source->id ?: 0));
+        $result = (new LottoResultPipelineRunner())->run($draw, $source, [
+            'run_id' => $runId,
+            'expected_draw_date' => (string) $validated['draw_date'],
+        ]);
+
+        $status = strtoupper($this->stringValue($result['status'] ?? 'UNKNOWN'));
+        $errorCode = $this->stringValue($result['error_code'] ?? '');
+        $errorMessage = $this->stringValue($result['error_message'] ?? '');
+        $normalized = $result['validated'] ?? [];
+        $fetch = is_array($result['fetch'] ?? null) ? (array) $result['fetch'] : [];
+        $trace = is_array($result['trace_json'] ?? null) ? (array) $result['trace_json'] : [];
+        $extract = is_array($result['extract'] ?? null) ? (array) $result['extract'] : [];
+
+        $requestUrl = $this->stringValue($fetch['selected_endpoint'] ?? '');
+        if ($requestUrl === '') {
+            $requestUrl = $this->stringValue($trace['fetched_url'] ?? '');
+        }
+
+        $responseBody = $this->stringValue($fetch['response_body'] ?? '');
+        $responseHttpStatus = isset($fetch['http_status']) ? (int) $fetch['http_status'] : null;
+        $durationMs = isset($fetch['duration_ms']) ? (int) $fetch['duration_ms'] : null;
+        $selectionDebug = [];
+        if (is_array($result['selection'] ?? null)) {
+            $selectionDebug['selection'] = (array) $result['selection'];
+        }
+        if (is_array($extract['candidates'] ?? null)) {
+            $selectionDebug['extract_candidates'] = (array) $extract['candidates'];
+        }
+
+        app(AutoResultHardeningService::class)->insertFetchLog([
+            'draw_id' => null,
+            'market_id' => (int) $validated['market_id'],
+            'source_id' => (int) ($source->id ?? 0),
+            'attempt_no' => 1,
+            'status' => $status,
+            'run_id' => $runId,
+            'pipeline_stage' => 'v2_dry_run_by_date',
+            'request_url' => $requestUrl !== '' ? $requestUrl : null,
+            'request_meta_json' => [
+                'http_method' => $this->stringValue($fetch['http_method'] ?? ($source->http_method ?? 'GET')),
+                'request_url' => $requestUrl,
+                'selected_driver' => $this->stringValue($fetch['selected_driver'] ?? ''),
+                'payload_origin' => $this->stringValue($fetch['meta']['payload_origin'] ?? ''),
+            ],
+            'response_http_status' => $responseHttpStatus,
+            'response_body' => $responseBody !== '' ? $responseBody : null,
+            'parsed_payload_json' => $extract,
+            'is_dry_run' => true,
+            'is_manual_retry' => false,
+            'error_code' => $errorCode !== '' ? $errorCode : null,
+            'error_stage' => 'DRY_RUN',
+            'error_message' => $errorMessage !== '' ? $errorMessage : null,
+            'duration_ms' => $durationMs,
+            'normalized_result_json' => is_array($normalized) ? $normalized : [],
+            'selection_debug_json' => $selectionDebug,
+            'trace_json' => $trace,
+            'created_at' => now()->toDateTimeString(),
+        ]);
+
+        $lines = [
+            'mode: dry-run (pipeline v2)',
+            'source_id: ' . (int) ($source->id ?? 0),
+            'draw_context: ' . ($usingVirtualDraw ? 'virtual (ไม่ผูกงวดจริง)' : ('draw_id=' . (int) ($draw->id ?? 0))),
+            'expected_draw_date: ' . (string) $validated['draw_date'],
+            'status: ' . $status,
         ];
-
-        $exitCode = Artisan::call('lotto:fetch-auto-results', $params);
-        $output = trim((string) Artisan::output());
-
-        if ($exitCode !== 0) {
-            return $this->sendError('Dry-run Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+        if ($errorCode !== '') {
+            $lines[] = 'error_code: ' . $errorCode;
+        }
+        if ($errorMessage !== '') {
+            $lines[] = 'error_message: ' . $errorMessage;
+        }
+        if (is_array($normalized) && $normalized !== []) {
+            $lines[] = 'normalized: ' . json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
         return $this->sendResponse([
             'run_id' => $runId,
-            'draw_id' => (int) $draw->id,
-            'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
-            'market_id' => (int) $draw->market_id,
+            'draw_id' => $usingVirtualDraw ? null : (int) ($draw->id ?? 0),
+            'draw_date' => (string) $validated['draw_date'],
+            'market_id' => (int) $validated['market_id'],
             'mode' => 'dry_run',
-            'command' => 'lotto:fetch-auto-results',
-            'params' => $params,
-            'output' => $output !== '' ? $output : null,
+            'source_id' => (int) ($source->id ?? 0),
+            'using_virtual_draw' => $usingVirtualDraw,
+            'status' => $status,
+            'error_code' => $errorCode !== '' ? $errorCode : null,
+            'error_message' => $errorMessage !== '' ? $errorMessage : null,
+            'normalized_result' => is_array($normalized) ? $normalized : [],
+            'output' => implode("\n", $lines),
         ], 'ดำเนินการ Dry-run Auto Result เรียบร้อยแล้ว');
     }
 
@@ -519,24 +588,34 @@ class LottoResultSourceController extends AppBaseController
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
         ])->validate();
 
-        $draw = LottoDraw::query()
-            ->where('market_id', (int) $validated['market_id'])
-            ->whereDate('draw_date', (string) $validated['draw_date'])
-            ->orderByDesc('id')
-            ->first();
-
-        if (! $draw instanceof LottoDraw) {
-            return $this->sendError('ไม่พบงวดตามวันที่ที่เลือก', 404);
-        }
-
         $limit = (int) ($validated['limit'] ?? 100);
-        $query = LottoResultFetchLog::query()
-            ->where('draw_id', (int) $draw->id)
-            ->orderByDesc('id')
-            ->limit($limit);
+        $query = LottoResultFetchLog::query()->orderByDesc('id')->limit($limit);
+        $marketId = (int) $validated['market_id'];
+        $runId = $this->stringValue($validated['run_id'] ?? '');
 
-        if (! empty($validated['run_id'])) {
-            $query->where('run_id', (string) $validated['run_id']);
+        if ($runId !== '') {
+            $sourceIds = LottoResultSource::query()
+                ->where('market_id', $marketId)
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->values()
+                ->all();
+            $query->where('run_id', $runId);
+            if ($sourceIds !== []) {
+                $query->whereIn('source_id', $sourceIds);
+            }
+        } else {
+            $draw = LottoDraw::query()
+                ->where('market_id', $marketId)
+                ->whereDate('draw_date', (string) $validated['draw_date'])
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $draw instanceof LottoDraw) {
+                return $this->sendError('ไม่พบงวดตามวันที่ที่เลือก และยังไม่ได้ระบุ run_id สำหรับดู log', 404);
+            }
+
+            $query->where('draw_id', (int) $draw->id);
         }
 
         $items = $query->get()->map(static function (LottoResultFetchLog $log): array {
@@ -567,8 +646,8 @@ class LottoResultSourceController extends AppBaseController
 
         return $this->sendResponse([
             'market_id' => (int) $validated['market_id'],
-            'draw_id' => (int) $draw->id,
-            'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
+            'draw_id' => isset($draw) && $draw instanceof LottoDraw ? (int) $draw->id : null,
+            'draw_date' => isset($draw) && $draw instanceof LottoDraw ? optional($draw->draw_date)->format('Y-m-d') : (string) $validated['draw_date'],
             'items' => $items,
             'count' => count($items),
         ], 'ดึง fetch log สำเร็จ');
@@ -593,7 +672,7 @@ class LottoResultSourceController extends AppBaseController
                 ->orderByDesc('id')
                 ->first();
             if (! $draw instanceof LottoDraw) {
-                $draw = $this->resolveValidationDraw((int) $validated['market_id'], $source);
+                $draw = $this->buildVirtualDrawForDate((int) $validated['market_id'], (string) $validated['draw_date']);
             }
             $fetch = (new FetchExecutor())->execute($compiled->fetch(), [
                 'run_id' => 'browser_test_' . now()->format('YmdHisv'),
@@ -828,6 +907,42 @@ class LottoResultSourceController extends AppBaseController
         if (! $draw instanceof LottoDraw) {
             throw new InvalidArgumentException('ยังไม่พบ draw ของ market นี้สำหรับ live validate cutover');
         }
+
+        return $draw;
+    }
+
+    private function resolveActiveSourceForMarket(int $marketId): ?LottoResultSource
+    {
+        if ($marketId <= 0) {
+            return null;
+        }
+
+        $now = now((string) config('lotto_auto_result.timezone', (string) config('app.timezone', 'Asia/Bangkok')));
+
+        return LottoResultSource::query()
+            ->where('market_id', $marketId)
+            ->where('is_active', true)
+            ->where(function ($q) use ($now): void {
+                $q->whereNull('effective_from')->orWhere('effective_from', '<=', $now);
+            })
+            ->where(function ($q) use ($now): void {
+                $q->whereNull('effective_to')->orWhere('effective_to', '>=', $now);
+            })
+            ->orderBy('priority')
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function buildVirtualDrawForDate(int $marketId, string $drawDate): LottoDraw
+    {
+        $date = Carbon::parse($drawDate)->startOfDay();
+        $draw = new LottoDraw();
+        $draw->forceFill([
+            'market_id' => $marketId,
+            'draw_date' => $date->copy(),
+            'result_at' => $date->copy()->endOfDay(),
+            'status' => 'open',
+        ]);
 
         return $draw;
     }

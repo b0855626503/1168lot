@@ -10,9 +10,21 @@ class ResultSourceResolver
 {
     public function resolve(LottoDraw $draw): ?LottoResultSource
     {
+        $sources = $this->resolveAll($draw);
+        $source = $sources[0] ?? null;
+        $this->persistSnapshot($draw, $source);
+
+        return $source;
+    }
+
+    /**
+     * @return array<int,LottoResultSource>
+     */
+    public function resolveAll(LottoDraw $draw): array
+    {
         $now = now((string) config('lotto_auto_result.timezone', (string) config('app.timezone', 'Asia/Bangkok')));
 
-        $source = LottoResultSource::query()
+        return LottoResultSource::query()
             ->where('market_id', (int) $draw->market_id)
             ->where('is_active', true)
             ->where(function ($q) use ($now): void {
@@ -23,14 +35,11 @@ class ResultSourceResolver
             })
             ->orderBy('priority')
             ->orderBy('id')
-            ->first();
-
-        $this->persistSnapshot($draw, $source);
-
-        return $source;
+            ->get()
+            ->all();
     }
 
-    private function persistSnapshot(LottoDraw $draw, ?LottoResultSource $source): void
+    public function persistSnapshot(LottoDraw $draw, ?LottoResultSource $source): void
     {
         $updates = [];
 

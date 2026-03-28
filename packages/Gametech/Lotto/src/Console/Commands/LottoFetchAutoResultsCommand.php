@@ -95,11 +95,6 @@ class LottoFetchAutoResultsCommand extends Command
                     $summary['marked_exhausted']++;
                     continue;
                 }
-
-                if ($this->mustSkipByRetryPolicy($pipeline, $draw, $now)) {
-                    $summary['skipped_backoff']++;
-                    continue;
-                }
             }
 
             $result = $pipeline->processDraw(
@@ -118,11 +113,6 @@ class LottoFetchAutoResultsCommand extends Command
             $summary['processed']++;
 
             $draw->refresh();
-            $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
-            if ((string) $draw->result_fetch_status === 'NOT_READY' && (int) ($draw->result_fetch_attempts ?? 0) >= $maxAttempts) {
-                $pipeline->markExhausted($draw);
-                $summary['marked_exhausted']++;
-            }
         }
 
         ksort($summary['statuses']);
@@ -143,20 +133,6 @@ class LottoFetchAutoResultsCommand extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    private function mustSkipByRetryPolicy(AutoResultPipelineService $pipeline, LottoDraw $draw, Carbon $now): bool
-    {
-        if ((string) $draw->result_fetch_status !== 'NOT_READY') {
-            return false;
-        }
-
-        $maxAttempts = max(1, (int) config('lotto_auto_result.retry.max_attempts', 27));
-        if ((int) ($draw->result_fetch_attempts ?? 0) >= $maxAttempts) {
-            return false;
-        }
-
-        return ! $pipeline->shouldRetryNow($draw, $now);
     }
 
     private function isWindowExpired(LottoDraw $draw, Carbon $now): bool

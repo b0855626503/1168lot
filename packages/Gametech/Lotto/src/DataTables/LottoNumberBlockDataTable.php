@@ -32,9 +32,25 @@ class LottoNumberBlockDataTable extends DataTable
             ->orderByDesc('blocked_at')
             ->orderByDesc('id');
 
-        $drawId = (int) request('draw_id');
-        if ($drawId > 0) {
-            $query->where('draw_id', $drawId);
+        $marketId = (int) request('market_id');
+        if ($marketId > 0) {
+            $query->whereHas('draw', static function ($q) use ($marketId): void {
+                $q->where('market_id', $marketId);
+            });
+        }
+
+        $groupId = (int) request('group_id');
+        if ($groupId > 0) {
+            $query->whereHas('draw.market', static function ($q) use ($groupId): void {
+                $q->where('group_id', $groupId);
+            });
+        }
+
+        $drawDate = trim((string) request('draw_date', ''));
+        if ($drawDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate) === 1) {
+            $query->whereHas('draw', static function ($q) use ($drawDate): void {
+                $q->whereDate('draw_date', $drawDate);
+            });
         }
 
         $betType = trim((string) request('bet_type', ''));
@@ -70,7 +86,7 @@ class LottoNumberBlockDataTable extends DataTable
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
-                'order'       => [[6, 'desc']],
+                'order'       => [[7, 'desc']],
                 'buttons'     => ['pageLength'],
                 'columnDefs'  => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
@@ -94,7 +110,8 @@ class LottoNumberBlockDataTable extends DataTable
                 'width' => '38px',
             ],
             ['data' => 'id', 'name' => 'id', 'title' => '#', 'orderable' => true, 'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
-            ['data' => 'draw', 'name' => 'draw.draw_date', 'title' => 'งวดหวย', 'orderable' => false, 'searchable' => false, 'className' => 'text-left'],
+            ['data' => 'draw_date', 'name' => 'draw.draw_date', 'title' => 'งวด', 'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
+            ['data' => 'market', 'name' => 'draw.market.name', 'title' => 'รายการหวย', 'orderable' => false, 'searchable' => false, 'className' => 'text-left'],
             ['data' => 'bet_type', 'name' => 'bet_type', 'title' => 'ประเภทเดิมพัน', 'orderable' => true, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'number', 'name' => 'number', 'title' => 'เลข', 'orderable' => true, 'searchable' => true, 'className' => 'text-center'],
             ['data' => 'mode', 'name' => 'mode', 'title' => 'โหมด', 'orderable' => true, 'searchable' => false, 'className' => 'text-center'],

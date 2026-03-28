@@ -59,6 +59,8 @@ class LotteryMarketController extends AppBaseController
             'auto_close_time' => ['nullable', 'date_format:H:i'],
             'auto_result_time' => ['nullable', 'date_format:H:i'],
             'result_url' => ['nullable', 'string', 'max:255'],
+            'auto_settle_on_result' => ['nullable'],
+            'notify_result_telegram' => ['nullable'],
             'is_enabled' => ['nullable'],
         ])->validate();
 
@@ -83,6 +85,8 @@ class LotteryMarketController extends AppBaseController
             'auto_close_time' => $this->normalizeTime($validated['auto_close_time'] ?? null),
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
             'result_url' => $this->nullableString($validated['result_url'] ?? null),
+            'auto_settle_on_result' => (bool) ($validated['auto_settle_on_result'] ?? true),
+            'notify_result_telegram' => (bool) ($validated['notify_result_telegram'] ?? true),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
             'affect_existing_members' => false,
         ];
@@ -100,7 +104,7 @@ class LotteryMarketController extends AppBaseController
 
         try {
             $status = ToggleFieldGuard::resolveBoolean($request->input('status'));
-            $method = ToggleFieldGuard::resolveField((string) $request->input('method'), ['is_enabled']);
+            $method = ToggleFieldGuard::resolveField((string) $request->input('method'), ['is_enabled', 'auto_settle_on_result']);
         } catch (InvalidArgumentException $exception) {
             return $this->sendError($exception->getMessage(), 422);
         }
@@ -141,6 +145,8 @@ class LotteryMarketController extends AppBaseController
             'auto_close_time' => ['nullable', 'date_format:H:i'],
             'auto_result_time' => ['nullable', 'date_format:H:i'],
             'result_url' => ['nullable', 'string', 'max:255'],
+            'auto_settle_on_result' => ['nullable'],
+            'notify_result_telegram' => ['nullable'],
             'is_enabled' => ['nullable'],
         ])->validate();
 
@@ -165,6 +171,8 @@ class LotteryMarketController extends AppBaseController
             'auto_close_time' => $this->normalizeTime($validated['auto_close_time'] ?? null),
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
             'result_url' => $this->nullableString($validated['result_url'] ?? null),
+            'auto_settle_on_result' => (bool) ($validated['auto_settle_on_result'] ?? true),
+            'notify_result_telegram' => (bool) ($validated['notify_result_telegram'] ?? true),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
         ];
 

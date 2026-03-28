@@ -2,7 +2,7 @@
 
 namespace Gametech\Lotto\Services;
 
-use App\Jobs\SendTelegramAlert;
+use App\Jobs\SendTelegramBot;
 use Gametech\Lotto\Models\LottoDraw;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -64,22 +64,29 @@ class AutoResultHardeningService
             'result_fetched_at' => $this->formatDateTime($draw->result_fetched_at),
             'last_error' => (string) ($draw->result_fetch_error ?? ''),
         ];
+        $draw->loadMissing('market:id,name');
 
         $logChannel = (string) config('lotto_auto_result.hardening.alerts.log_channel', 'daily');
         Log::channel($logChannel)->warning('LOTTO_AUTO_RESULT_EXHAUSTED', $payload);
 
+        $marketName = (string) ($draw->market->name ?? ('Market #' . (int) $draw->market_id));
+        $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
+        $resultAt = $draw->result_at ? $draw->result_at->copy()->setTimezone($this->timezone())->format('Y-m-d H:i:s') : '-';
+        $lastError = (string) ($draw->result_fetch_error ?? '-');
+
         $message = sprintf(
-            '[LOTTO][EXHAUSTED] draw_id=%d market_id=%d attempts=%d result_at=%s last_error=%s',
-            (int) $draw->id,
-            (int) $draw->market_id,
+            'หวย%s งวดวันที่ %s เวลาออกผล %s ไม่สามารถดึงผลรางวัลได้' . PHP_EOL .
+            'attempts=%d, error=%s',
+            $marketName,
+            $drawDate,
+            $resultAt,
             (int) ($draw->result_fetch_attempts ?? 0),
-            (string) ($payload['result_at'] ?? '-'),
-            (string) ($draw->result_fetch_error ?? '-')
+            $lastError
         );
 
         $endpoint = (string) config('lotto_auto_result.hardening.alerts.telegram_endpoint', 'notify/send');
         $queue = (string) config('lotto_auto_result.hardening.alerts.telegram_queue', 'cashback');
-        SendTelegramAlert::dispatch($endpoint, $message)->onQueue($queue);
+        SendTelegramBot::dispatch($endpoint, $message)->onQueue($queue);
 
         if (Schema::hasTable('lotto_draws') && Schema::hasColumn('lotto_draws', 'exhausted_alerted_at')) {
             $draw->forceFill(['exhausted_alerted_at' => $this->now()])->saveQuietly();

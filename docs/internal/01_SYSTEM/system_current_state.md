@@ -50,9 +50,11 @@
 
 - ตารางมีคอลัมน์ checkbox เป็นคอลัมน์แรกสุดสำหรับเลือกหลายรายการ
 - หน้า index รองรับ filter ด้วย:
-  - `งวดหวย` (`draw_id`)
+  - `วันที่งวด` (`draw_date`)
+  - `รายการหวย` (`market_id`) แบบจัดกลุ่มตามกลุ่มหวย และเลือก filter ทั้งกลุ่มได้ (`group_id`)
   - `ประเภทเดิมพัน` (`bet_type`)
   - `ค้นหาเลข` (`number_search`)
+- คอลัมน์ตารางแยก `งวด` และ `รายการหวย` ออกจากกัน และคอลัมน์ `รายการหวย` แสดงโลโก้หน้าชื่อรายการเมื่อมีข้อมูลโลโก้
 - เปิด DataTables global searching (`searching=true`) และยังรองรับ filter ด้านบนผ่าน preXhr
 - รองรับลบหลายรายการจาก checkbox ที่เลือกผ่านปุ่ม `ลบที่เลือก`
 - คอลัมน์ `จัดการ` มีปุ่ม `แก้ไข` และ `ลบ` รายรายการ
@@ -63,6 +65,33 @@
 - เป้าหมายคือไม่ผูกกับ worker queue ใน production เพื่อให้คำสั่งถูกประมวลผลทันทีและเห็นผล/log ได้จริง
 - ฝั่ง UI ของปุ่มดังกล่าวต้องแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว (ห้าม silent failure)
 - รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
+
+## นโยบาย Auto Result Apply/Settlement (Per Market)
+
+- ถ้า market ตั้ง `auto_settle_on_result=true`:
+  - เมื่อ source ดึงผลสำเร็จ ระบบจะ settle ทันทีและ draw เปลี่ยนเป็น `resulted`
+- ถ้า market ตั้ง `auto_settle_on_result=false`:
+  - ระบบจะบันทึกผลที่ดึงได้ไว้ใน draw แต่คงสถานะงวดเป็น `closed`
+  - ทีมงานต้องกดประกาศผลเองจากหน้า admin เพื่อคำนวณยอดได้เสีย
+- เมื่อ draw เปลี่ยนเป็น `resulted`:
+  - ถ้า market เปิด `notify_result_telegram=true` ระบบส่ง Telegram ผ่าน `notify/send`
+  - ข้อความแจ้งผลแสดงเลขผลตามรูปแบบหวย และปิดท้าย `คำนวนเงินรางวัลแล้ว`
+  - กรณีตลาดที่ปิด auto settle (`auto_settle_on_result=false`) ระบบส่งข้อความผลพร้อมสถานะ `รอทีมงานอนุมัติการคำนวน`
+
+## นโยบาย Telegram Alert ของ Auto Result
+
+- เส้นแจ้งเตือน `EXHAUSTED` ส่งผ่าน `TelegramBot` (job `SendTelegramBot`) ไม่ใช้ `TelegramFailedBot`
+- รูปแบบข้อความ exhausted:
+  - `หวย{ชื่อ} งวดวันที่ {date} เวลาออกผล {time} ไม่สามารถดึงผลรางวัลได้`
+- `TelegramFailedBot` สงวนไว้สำหรับเส้น dev/failed monitoring
+
+## นโยบาย Retry/Fallback หลาย Source (Auto Result)
+
+- การเลือก source ยังคงเรียงตาม `priority ASC` (เลขน้อยสำคัญกว่า) แล้วตาม `id ASC`
+- ระบบนับ retry แบบราย `draw + source` จาก fetch logs สถานะ `NOT_READY` (ไม่ใช้ draw-level attempts เพียงอย่างเดียว)
+- เมื่อ source แรกครบ `max_attempts` แล้ว ระบบจะ mark ว่า source นั้น exhausted (เฉพาะ source) และ fallback ไป source ถัดไปอัตโนมัติ
+- กรณี source ยังไม่ครบ max แต่ยังติด backoff window ระบบจะคงรอ source เดิม (ยังไม่ข้ามไป source ถัดไป)
+- draw จะถูก mark `EXHAUSTED` เมื่อ source ที่ active ทั้งหมดในช่วงเวลานั้น exhausted ครบแล้วเท่านั้น
 
 ## นโยบาย Frontend API v1 Game List
 
@@ -82,13 +111,22 @@
 
 - เพิ่มปุ่ม `Auto` ต่อแถว (หลังปุ่ม `แก้ไข`) เพื่อเปิด modal จัดการ `Auto Result Sources` ของตลาดนั้นแบบ inline
 - ปุ่ม `Auto` ถูกดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
+- ฟอร์มตลาดรองรับตัวเลือกเพิ่ม:
+  - `ออกผลแล้วคำนวณยอดได้เสียอัตโนมัติทันที` (`auto_settle_on_result`)
+  - `ส่งแจ้งเตือน Telegram เมื่อหวยนี้ออกผล` (`notify_result_telegram`)
 - ปุ่ม `Auto` ของหน้า `lotto/markets` เปิด modal ในหน้าเดิมแบบ native (ไม่ใช้ iframe) และดึงข้อมูลผ่าน API:
   - `GET /lotto/auto-result-sources/list?market_id={id}`
   - `POST /lotto/auto-result-sources/loaddata|create|update|edit`
 - ตาราง `รายการหวย` เพิ่มคอลัมน์สถานะผูก source (`ผูกแล้ว` / `ยังไม่ผูก`) ถัดจากคอลัมน์ `ลิงก์ออกผล`
+- เพิ่มคอลัมน์ `ออกผล` (หลัง `ลิงก์ออกผล`) เป็นปุ่มสลับ `Auto/Manual` สำหรับ `auto_settle_on_result`
+- คอลัมน์สถานะผูก source ปรับ UI เป็นไอคอนไฟ:
+  - ผูกแล้ว = ไฟเขียวมี effect + แสดงจำนวน
+  - ยังไม่ผูก = ไฟสีเทา
 - ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
-  - เลือก `draw_date` แล้วกด dry-run โดย resolve draw จาก `market_id + draw_date`
+  - เลือก `draw_date` แล้วกด dry-run ได้แม้ไม่มีงวดจริงของวันนั้น (ระบบสร้าง virtual draw context ให้ทดสอบ)
+  - Browser test dispatch รองรับโหมดเดียวกัน (ใช้ virtual draw context เมื่อไม่พบงวดจริง)
   - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
+  - dry-run by date จะ persist log แบบเต็มคล้าย production run และใช้ `run_id` เป็นหลัก (`draw_id=null`)
 - คอลัมน์ `สถานะ` ในตาราง `lotto/markets` แสดงเป็นปุ่ม icon-only (`check/times`) และกดสลับ `is_enabled` ได้โดยตรง (มี confirm)
 - คอลัมน์ `จัดการ` ของตาราง `lotto/markets` คงปุ่ม `แก้ไข` และ `Auto`
 - ปุ่ม `ลบ` ของ `Auto Result Source` แสดงเฉพาะใน modal รายการ source ของ market นั้น และเรียก endpoint `POST /lotto/auto-result-sources/delete`
@@ -96,6 +134,17 @@
   - คอลัมน์ `สถานะ` ถูกวางไว้ก่อน `จัดการ` และแสดงเป็นปุ่ม icon-only สำหรับกดสลับสถานะ
   - คอลัมน์ `จัดการ` แสดงเฉพาะปุ่ม `แก้ไข/ลบ` แบบมาตรฐาน (`btn-info`/`btn-danger`) พร้อม icon+ข้อความ
   - หัว modal แสดงชื่อรายการหวยร่วมกับ `market id`
+- ฟอร์มแก้ไข source ใน popup `/lotto/markets`:
+  - label `ตลาด` ถูกปรับเป็น `รายการหวย` เพื่อให้ตรงชื่อเมนูจริง
+  - แท็บ `ตั้งค่าด่วน` รองรับฟิลด์ที่มีผลจริงต่อ `Pipeline Config JSON` ได้แก่ `fetch_strategy`, `parser_type`, `selection_stage`, `lookup_date_mode/offset`, `runtime capability`
+  - ฟิลด์ `เก็บท้ายกี่หลัก (รางวัลที่ 1)` รองรับค่า `0` = ไม่ใส่ `right` transform (ไม่ตัดท้าย)
+  - ส่วน `Browser Worker Settings` ใน quick setup เป็น auto-generated (ไม่เปิดให้ปรับค่าละเอียดใน UI)
+  - มี dependency-reset อัตโนมัติสำหรับค่าที่ไม่เกี่ยวข้อง เช่น:
+    - โหมดวันงวดที่ไม่ใช้ offset จะบังคับ `lookup_date_offset_days=0`
+    - `fetch_capability=http_only` จะปิด `allow_dom_fallback` และถ้าไม่ได้ใช้ browser strategy จะปิด `requires_browser`
+    - `fetch_strategy=RENDERED_BROWSER` จะบังคับเปิด browser capability ที่สัมพันธ์
+  - แท็บ `JSON หลัก` ระบุชุด key บังคับที่ต้องมีใน config ก้อนหลัก
+  - เอาปุ่ม preset `ตั้งค่าอัตโนมัติ` ออกจากแท็บ `ตั้งค่าด่วน`
 
 ## นโยบาย Auto Result Parser/Selector v2
 

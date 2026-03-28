@@ -22,6 +22,7 @@ class LotteryMarketTransformer extends TransformerAbstract
             'result_url' => $model->result_url
                 ? '<a href="' . e($model->result_url) . '" target="_blank">ลิงก์ผล</a>'
                 : '-',
+            'result_apply_mode' => $this->renderResultApplyModeToggle((int) $model->id, (bool) ($model->auto_settle_on_result ?? true)),
             'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->auto_result_sources_count ?? 0)),
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
@@ -70,9 +71,26 @@ class LotteryMarketTransformer extends TransformerAbstract
     private function renderAutoResultSourceStatus(int $count): string
     {
         if ($count > 0) {
-            return '<span class="badge badge-success">ผูกแล้ว (' . $count . ')</span>';
+            return '<span class="market-source-indicator market-source-indicator-on" title="ผูกแล้ว (' . $count . ')">'
+                . '<span class="market-source-light"></span>'
+                . '<span class="market-source-count">' . $count . '</span>'
+                . '</span>';
         }
 
-        return '<span class="badge badge-secondary">ยังไม่ผูก</span>';
+        return '<span class="market-source-indicator market-source-indicator-off" title="ยังไม่ผูก">'
+            . '<span class="market-source-light"></span>'
+            . '</span>';
+    }
+
+    private function renderResultApplyModeToggle(int $id, bool $autoSettleOnResult): string
+    {
+        $next = $autoSettleOnResult ? '0' : '1';
+        $label = $autoSettleOnResult ? 'Auto' : 'Manual';
+        $class = $autoSettleOnResult ? 'btn-success' : 'btn-secondary';
+
+        return '<button type="button" class="btn ' . $class . ' btn-xs"'
+            . ' onclick="editdata(' . $id . ',' . $next . ',\'auto_settle_on_result\')">'
+            . $label
+            . '</button>';
     }
 }
