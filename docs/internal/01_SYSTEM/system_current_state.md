@@ -38,6 +38,7 @@
   - `closed` = เหลืองอ่อน
   - `resulted` = ฟ้าอ่อน
 - ตาราง `lotto/draws` จัดข้อมูลใน cell เป็นแนวตั้งกึ่งกลาง (`vertical-align: middle`) และจัดข้อความกึ่งกลางในส่วนข้อมูลแถว
+- หน้า `lotto/draws` รองรับ filter เพิ่มเติมด้วย `สถานะ` (`draft/open/closed/resulted`) ร่วมกับ group/market/draw_date
 
 ## นโยบายการเรียงข้อมูลแหล่งผลอัตโนมัติ (Admin UI)
 

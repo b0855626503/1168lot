@@ -104,6 +104,7 @@
             const $groupSelect = $('#filter_group_id');
             const $marketSelect = $('#filter_market_id');
             const $drawDateInput = $('#filter_draw_date');
+            const $statusSelect = $('#filter_status');
 
             const initMarketSelect = function () {
                 // temporary: keep list filter as native select.
@@ -196,6 +197,7 @@
                     data.group_id = $groupSelect.val() || '';
                     data.market_id = $marketSelect.val() || '';
                     data.draw_date = $drawDateInput.val() || '';
+                    data.status = $statusSelect.val() || '';
                 });
 
             $groupSelect
@@ -212,6 +214,12 @@
                 });
 
             $drawDateInput
+                .off('change.lottoDrawsFilter')
+                .on('change.lottoDrawsFilter', function () {
+                    redrawTable();
+                });
+
+            $statusSelect
                 .off('change.lottoDrawsFilter')
                 .on('change.lottoDrawsFilter', function () {
                     redrawTable();

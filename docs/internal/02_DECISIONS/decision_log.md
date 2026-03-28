@@ -1,5 +1,11 @@
 # Decision Log
 
+## 2026-03-28 — Add Status Filter on Admin Draws Menu (APPROVED)
+
+- เพิ่มตัวกรอง `สถานะ` ในหน้า `lotto/draws`
+- รองรับค่า `draft`, `open`, `closed`, `resulted`
+- filter นี้ทำงานร่วมกับตัวกรองเดิม (`กลุ่มหวย`, `รายการหวย`, `วันงวด`) และส่งผลถึง query ฝั่ง DataTable จริง
+
 ## 2026-03-28 — Draw Status Column Uses Button + Styled Text (APPROVED)
 
 - คอลัมน์ `สถานะ` ในหน้า `lotto/draws` เลิกใช้ badge แบบเดิม

@@ -9,7 +9,7 @@
         <div class="card card-primary">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-2 mb-2 mb-md-0">
+                    <div class="col-md-3 mb-2 mb-md-0">
                         <label class="mb-1">กลุ่มหวย</label>
                         <select id="filter_group_id" class="form-control form-control-sm">
                             <option value="">ทั้งหมด</option>
@@ -35,17 +35,19 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2 mb-2 mb-md-0">
+                    <div class="col-md-3 mb-2 mb-md-0">
                         <label class="mb-1">วันงวด</label>
                         <input type="date" id="filter_draw_date" class="form-control form-control-sm" value="{{ now(config('app.timezone', 'Asia/Bangkok'))->format('Y-m-d') }}">
                     </div>
-                    <div class="col-md-5 text-md-right text-left">
-                        <button type="button" class="btn bg-gradient-info btn-xs" onclick="generateAutoDraws(true)">
-                            <i class="fa fa-search"></i> Auto งวด (Dry-run)
-                        </button>
-                        <button type="button" class="btn bg-gradient-success btn-xs" onclick="generateAutoDraws(false)">
-                            <i class="fa fa-magic"></i> Auto งวด (Generate)
-                        </button>
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <label class="mb-1">สถานะ</label>
+                        <select id="filter_status" class="form-control form-control-sm">
+                            <option value="">ทั้งหมด</option>
+                            <option value="draft">ร่าง</option>
+                            <option value="open">เปิดรับ</option>
+                            <option value="closed">ปิดรับ</option>
+                            <option value="resulted">ประกาศผล</option>
+                        </select>
                     </div>
                 </div>
             </div>

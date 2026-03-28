@@ -51,6 +51,11 @@ class LottoDrawDataTable extends DataTable
             $query->whereDate('draw_date', $drawDate);
         }
 
+        $status = (string) request('status', '');
+        if (in_array($status, ['draft', 'open', 'closed', 'resulted'], true)) {
+            $query->where('status', $status);
+        }
+
         return $query;
     }
 
