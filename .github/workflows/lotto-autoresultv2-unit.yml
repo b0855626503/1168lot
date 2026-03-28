@@ -57,6 +57,10 @@ jobs:
           mkdir -p storage/framework/views
           mkdir -p storage/logs
           mkdir -p build/test-logs
+          mkdir -p game
+          if [ ! -f game/game.php ]; then
+            printf '%s\n' '<?php' 'return [];' > game/game.php
+          fi
 
       - name: Run AutoResultV2 Unit Tests
         run: |
