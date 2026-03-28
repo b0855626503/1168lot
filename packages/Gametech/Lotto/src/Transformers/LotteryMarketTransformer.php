@@ -25,10 +25,11 @@ class LotteryMarketTransformer extends TransformerAbstract
             'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->auto_result_sources_count ?? 0)),
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
-                . ($model->is_enabled ? '<i class="fa fa-check"></i> ถูก' : '<i class="fa fa-times"></i> ผิด')
+                . ($model->is_enabled ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>')
                 . '</button>',
             'action' => view('admin::module.lotto.markets.datatables_actions', [
                 'id' => $model->id,
+                'market_name' => (string) ($model->name ?? ''),
             ])->render(),
         ];
     }

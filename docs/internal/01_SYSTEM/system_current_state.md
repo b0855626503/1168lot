@@ -78,9 +78,13 @@
 - ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
   - เลือก `draw_date` แล้วกด dry-run โดย resolve draw จาก `market_id + draw_date`
   - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
-- คอลัมน์ `สถานะ` ในตาราง `lotto/markets` แสดงเป็นปุ่ม `ถูก/ผิด` และกดสลับ `is_enabled` ได้โดยตรง (มี confirm)
+- คอลัมน์ `สถานะ` ในตาราง `lotto/markets` แสดงเป็นปุ่ม icon-only (`check/times`) และกดสลับ `is_enabled` ได้โดยตรง (มี confirm)
 - คอลัมน์ `จัดการ` ของตาราง `lotto/markets` คงปุ่ม `แก้ไข` และ `Auto`
 - ปุ่ม `ลบ` ของ `Auto Result Source` แสดงเฉพาะใน modal รายการ source ของ market นั้น และเรียก endpoint `POST /lotto/auto-result-sources/delete`
+- ตารางใน modal `Auto Result Sources`:
+  - คอลัมน์ `สถานะ` แสดงเป็นปุ่ม icon-only และเป็นจุดกดสลับสถานะ
+  - คอลัมน์ `จัดการ` แสดงเฉพาะปุ่ม `แก้ไข/ลบ` (ตัดปุ่มเปิดใช้งาน/ปิดใช้งานออก)
+  - หัว modal แสดงชื่อรายการหวยร่วมกับ `market id`
 
 ## นโยบาย Auto Result Parser/Selector v2
 

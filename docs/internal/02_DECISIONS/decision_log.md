@@ -8,6 +8,14 @@
 - เพิ่ม endpoint `POST /lotto/auto-result-sources/delete` สำหรับลบ source
 - guard การลบ: ถ้า source ถูกอ้างอิงโดย `lotto_draws.result_source_id` จะ reject
 
+## 2026-03-28 — Markets/Auto Source Action Layout Refinement (APPROVED)
+
+- ปุ่มคอลัมน์ `สถานะ` ของ `lotto/markets` เปลี่ยนเป็น icon-only (`check/times`) โดยยังคงกดสลับสถานะได้
+- modal `Auto Result Sources` แสดงชื่อรายการหวยบนหัว modal (ไม่แสดงแค่ id)
+- คอลัมน์ `สถานะ` ในตาราง modal ใช้ปุ่ม icon-only เป็นจุดกดสลับสถานะ
+- คอลัมน์ `จัดการ` ของ modal เหลือเฉพาะ `แก้ไข/ลบ` พร้อม icon และสีมาตรฐาน (`warning/danger`)
+- ตัดปุ่ม `เปิดใช้งาน/ปิดใช้งาน` ออกจากคอลัมน์ `จัดการ` ของ modal
+
 ## 2026-03-28 — Markets Auto Sources Uses Native Modal (No iframe) (APPROVED)
 
 - ปรับ modal `Auto` ในหน้า `lotto/markets` ให้จัดการ source แบบ native ทั้งหมด (ไม่ใช้ iframe/embed)

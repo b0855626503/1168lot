@@ -147,19 +147,22 @@
                 <td class="text-center">@{{ item.id }}</td>
                 <td class="text-center">@{{ item.priority }}</td>
                 <td class="text-center">
-                    <span class="badge" :class="item.is_active ? 'badge-success' : 'badge-secondary'">@{{ item.is_active ? 'Active' : 'Inactive' }}</span>
+                    <button type="button"
+                            class="btn btn-xs"
+                            :class="item.is_active ? 'btn-success' : 'btn-danger'"
+                            :title="item.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'"
+                            @click="toggleAutoSource(item)">
+                        <i class="fas" :class="item.is_active ? 'fa-check' : 'fa-times'"></i>
+                    </button>
                 </td>
                 <td class="text-break">@{{ item.endpoint_url || '-' }}</td>
                 <td class="text-center">@{{ item.updated_at || '-' }}</td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-info btn-xs mr-1" @click="editAutoSource(item.id)">แก้ไข</button>
-                    <button type="button" class="btn btn-xs"
-                            :class="item.is_active ? 'btn-outline-danger' : 'btn-outline-success'"
-                            @click="toggleAutoSource(item)">
-                        @{{ item.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน' }}
+                    <button type="button" class="btn btn-warning btn-xs mr-1" title="แก้ไข" @click="editAutoSource(item.id)">
+                        <i class="fas fa-edit"></i>
                     </button>
-                    <button type="button" class="btn btn-outline-danger btn-xs ml-1" @click="deleteAutoSource(item)">
-                        ลบ
+                    <button type="button" class="btn btn-danger btn-xs" title="ลบ" @click="deleteAutoSource(item)">
+                        <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
@@ -973,14 +976,17 @@
                         this.$refs.addedit.show();
                     });
                 },
-                openAutoSourcesModal(marketId) {
+                openAutoSourcesModal(marketId, marketName = '') {
                     const id = parseInt(marketId, 10);
                     if (!id) {
                         return;
                     }
 
                     this.autoSourcesModal.marketId = id;
-                    this.autoSourcesModal.title = `Auto Result Sources: Market #${id}`;
+                    const label = String(marketName || '').trim();
+                    this.autoSourcesModal.title = label !== ''
+                        ? `Auto Result Sources: ${label} (#${id})`
+                        : `Auto Result Sources: Market #${id}`;
                     this.sourceTestDate = '';
                     this.sourceTestRunId = '';
                     this.$refs.autoSourcesModal.show();
@@ -1340,6 +1346,6 @@
 
         window.addModal = function () { window.app.addModal(); };
         window.editModal = function (id) { window.app.editModal(id); };
-        window.openAutoSourcesModal = function (marketId) { window.app.openAutoSourcesModal(marketId); };
+        window.openAutoSourcesModal = function (marketId, marketName) { window.app.openAutoSourcesModal(marketId, marketName); };
     </script>
 @endpush

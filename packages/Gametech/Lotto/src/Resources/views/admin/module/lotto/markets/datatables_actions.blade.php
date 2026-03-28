@@ -7,7 +7,7 @@
         <i class="fas fa-edit"></i> แก้ไข
     </button>
     @if($canAutoResultSources)
-        <button type="button" class="btn btn-warning btn-xs ml-1" onclick="openAutoSourcesModal({{ $id }})">
+        <button type="button" class="btn btn-warning btn-xs ml-1" onclick='openAutoSourcesModal({{ $id }}, @json((string) ($market_name ?? "")))'>
             <i class="fas fa-bolt"></i> Auto
         </button>
     @endif
