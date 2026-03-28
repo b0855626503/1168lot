@@ -1,26 +1,35 @@
 @section('css')
     @include('admin::layouts.datatables_css')
     <style>
+        #lottoDrawsTable thead th,
+        #lottoDrawsTable tbody td {
+            vertical-align: middle !important;
+        }
+
+        #lottoDrawsTable tbody td {
+            text-align: center;
+        }
+
         #lottoDrawsTable tbody tr.draw-status-draft td {
-            background-color: #f6f7fb !important;
+            background-color: #e9edf5 !important;
         }
 
         #lottoDrawsTable tbody tr.draw-status-open td {
-            background-color: #f1fbf4 !important;
+            background-color: #dff5e7 !important;
         }
 
         #lottoDrawsTable tbody tr.draw-status-closed td {
-            background-color: #fff8ec !important;
+            background-color: #ffecc9 !important;
         }
 
         #lottoDrawsTable tbody tr.draw-status-resulted td {
-            background-color: #eff6ff !important;
+            background-color: #dcecff !important;
         }
     </style>
 @endsection
 
 
-{!! $dataTable->table(['id' => 'lottoDrawsTable', 'width' => '100%', 'class' => 'table table-striped table-sm']) !!}
+{!! $dataTable->table(['id' => 'lottoDrawsTable', 'width' => '100%', 'class' => 'table table-striped table-sm table-border']) !!}
 
 @push('scripts')
     @include('admin::layouts.datatables_js')

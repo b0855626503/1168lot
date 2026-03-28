@@ -1,5 +1,10 @@
 # Decision Log
 
+## 2026-03-28 — Increase Draw Row Tint Contrast + Middle Alignment (APPROVED)
+
+- ปรับสีพื้นหลังแถวในหน้า `lotto/draws` ให้เข้มขึ้นจากเดิม เพื่อแยกสถานะ (`draft/open/closed/resulted`) ได้ชัดเจนขึ้น
+- บังคับการจัดแนวข้อมูลในตารางให้เป็นแนวตั้งกึ่งกลาง (`vertical-align: middle`) และจัดข้อความส่วนข้อมูลให้อยู่กึ่งกลาง
+
 ## 2026-03-28 — Draw Status Toggle via Status Cell + Remove Open Action Button (APPROVED)
 
 - หน้า `lotto/draws` เอาปุ่ม `เปิดรับ/ปิดรับ` ออกจากคอลัมน์ `ดำเนินการ`
@@ -18,6 +23,7 @@
   - `closed` เหลืองอ่อน
   - `resulted` ฟ้าอ่อน
 - ใช้การ tint ที่ฝั่ง DataTable render (ไม่เปลี่ยน domain data/schema)
+- หมายเหตุ: ความเข้มสีถูกปรับเพิ่มภายหลังใน decision `Increase Draw Row Tint Contrast + Middle Alignment`
 
 ## 2026-03-28 — Lotto Markets Inline Auto Result Sources Management (APPROVED)
 
