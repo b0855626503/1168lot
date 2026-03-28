@@ -1546,8 +1546,10 @@
                     }
                 },
                 async showTestLogDetail(item) {
-                    const detail = JSON.stringify(item || {}, null, 2);
-                    await this.$bvModal.msgBoxOk(detail, {
+                    const trace = (item && typeof item.trace_json === 'object' && item.trace_json !== null)
+                        ? item.trace_json
+                        : {};
+                    await this.$bvModal.msgBoxOk(JSON.stringify(trace, null, 2), {
                         title: `Log #${item?.id || ''}`,
                         size: 'lg',
                         buttonSize: 'sm',

@@ -1,5 +1,10 @@
 # Decision Log
 
+## 2026-03-29 — Logs Detail Modal Shows Trace Only (APPROVED)
+
+- ปุ่ม `ดู` ในหน้า logs ตามวันที่ (ทั้ง popup `/lotto/markets` และหน้า `/lotto/auto-result-sources`) ปรับให้แสดงเฉพาะ `trace_json`
+- ตัดการแสดง payload อื่นใน modal รายละเอียด log เพื่อลด noise ตอนวิเคราะห์ pipeline trace
+
 ## 2026-03-29 — Main JSON Is Save-Time Source of Truth for Auto Result Source Forms (APPROVED)
 
 - ทั้งหน้า `/lotto/markets` popup และ `/lotto/auto-result-sources` ปรับให้ตอน save/preview/validate ยึด `JSON หลัก` (`unified_pipeline_json`) เป็น source of truth โดยตรง

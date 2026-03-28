@@ -1616,20 +1616,10 @@
                     }
                 },
                 showLogDetail(log) {
-                    const detail = {
-                        id: log.id,
-                        request_url: log.request_url,
-                        response_http_status: log.response_http_status,
-                        duration_ms: log.duration_ms,
-                        error_message: log.error_message,
-                        response_body_preview: log.response_body_preview,
-                        parsed_payload_json: log.parsed_payload_json,
-                        normalized_result_json: log.normalized_result_json,
-                        selection_debug_json: log.selection_debug_json,
-                        trace_json: log.trace_json,
-                    };
-
-                    this.$bvModal.msgBoxOk(JSON.stringify(detail, null, 2), {
+                    const trace = (log && typeof log.trace_json === 'object' && log.trace_json !== null)
+                        ? log.trace_json
+                        : {};
+                    this.$bvModal.msgBoxOk(JSON.stringify(trace, null, 2), {
                         title: `Log #${log.id}`,
                         size: 'xl',
                         buttonSize: 'sm',

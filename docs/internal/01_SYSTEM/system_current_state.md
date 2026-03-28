@@ -127,6 +127,7 @@
   - Browser test dispatch รองรับโหมดเดียวกัน (ใช้ virtual draw context เมื่อไม่พบงวดจริง)
   - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
   - dry-run by date จะ persist log แบบเต็มคล้าย production run และใช้ `run_id` เป็นหลัก (`draw_id=null`)
+  - ปุ่ม `ดู` ในรายการ logs-by-date แสดงเฉพาะข้อมูล `trace_json` ใน modal รายละเอียด
 - คอลัมน์ `สถานะ` ในตาราง `lotto/markets` แสดงเป็นปุ่ม icon-only (`check/times`) และกดสลับ `is_enabled` ได้โดยตรง (มี confirm)
 - คอลัมน์ `จัดการ` ของตาราง `lotto/markets` คงปุ่ม `แก้ไข` และ `Auto`
 - ปุ่ม `ลบ` ของ `Auto Result Source` แสดงเฉพาะใน modal รายการ source ของ market นั้น และเรียก endpoint `POST /lotto/auto-result-sources/delete`
