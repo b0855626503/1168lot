@@ -788,6 +788,23 @@
                         return {};
                     }
                 },
+                normalizeUnifiedConfig(unified) {
+                    const normalized = (unified && typeof unified === 'object') ? { ...unified } : {};
+                    const selectionConfig = (normalized.selection_config_json && typeof normalized.selection_config_json === 'object')
+                        ? { ...normalized.selection_config_json }
+                        : {};
+                    const topLevelStage = String(normalized.selection_stage || '').trim().toUpperCase();
+                    const selectionStage = String(selectionConfig.selection_stage || '').trim().toUpperCase();
+                    if (!selectionStage && (topLevelStage === 'PRE_MAPPING' || topLevelStage === 'POST_MAPPING')) {
+                        selectionConfig.selection_stage = topLevelStage;
+                    }
+                    normalized.selection_config_json = selectionConfig;
+                    return normalized;
+                },
+                parseUnifiedConfigForPayload() {
+                    const unifiedRaw = this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                    return this.normalizeUnifiedConfig(unifiedRaw);
+                },
                 buildUnifiedConfigObject() {
                     return {
                         request_headers_json: this.parseJsonSafe(this.sourceForm.request_headers_json),
@@ -808,7 +825,7 @@
                     this.populateQuickFromUnified(unified);
                 },
                 applyUnifiedToForm() {
-                    const unified = this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                    const unified = this.normalizeUnifiedConfig(this.parseJsonSafe(this.sourceForm.unified_pipeline_json));
                     if (!unified || typeof unified !== 'object') {
                         return;
                     }
@@ -1060,16 +1077,20 @@
                     }
                 },
                 buildV2Payload() {
-                    this.applyUnifiedToForm();
-
-                    const unifiedConfig = this.parseJsonSafe(this.sourceForm.unified_pipeline_json);
+                    const unifiedConfig = this.parseUnifiedConfigForPayload();
                     if (!unifiedConfig || Object.keys(unifiedConfig).length === 0) {
                         throw new Error('กรุณาใส่ Pipeline Config JSON ให้ถูกต้อง');
                     }
 
-                    const fetchConfig = this.parseJsonSafe(this.sourceForm.fetch_config_json);
-                    const parserConfig = this.parseJsonSafe(this.sourceForm.parser_config_json);
-                    const selectionConfig = this.parseJsonSafe(this.sourceForm.selection_config_json);
+                    const fetchConfig = (unifiedConfig.fetch_config_json && typeof unifiedConfig.fetch_config_json === 'object')
+                        ? unifiedConfig.fetch_config_json
+                        : {};
+                    const parserConfig = (unifiedConfig.parser_config_json && typeof unifiedConfig.parser_config_json === 'object')
+                        ? unifiedConfig.parser_config_json
+                        : {};
+                    const selectionConfig = (unifiedConfig.selection_config_json && typeof unifiedConfig.selection_config_json === 'object')
+                        ? unifiedConfig.selection_config_json
+                        : {};
 
                     const endpointUrl = String(fetchConfig.endpoint_url || this.sourceForm.endpoint_url || '').trim();
                     if (endpointUrl === '') {
@@ -1092,6 +1113,16 @@
                         pipeline_version: 'V2_CUTOVER',
                         fetch_strategy: String(fetchConfig.fetch_strategy || this.sourceForm.fetch_strategy || 'JSON_HTTP').toUpperCase(),
                         selection_stage: String(selectionConfig.selection_stage || this.sourceForm.selection_stage || 'POST_MAPPING').toUpperCase(),
+                        request_headers_json: unifiedConfig.request_headers_json || {},
+                        request_query_template_json: unifiedConfig.request_query_template_json || {},
+                        request_body_template_json: unifiedConfig.request_body_template_json || {},
+                        parser_config_json: unifiedConfig.parser_config_json || {},
+                        mapping_config_json: unifiedConfig.mapping_config_json || {},
+                        validation_config_json: unifiedConfig.validation_config_json || {},
+                        retry_policy_json: unifiedConfig.retry_policy_json || {},
+                        fetch_config_json: unifiedConfig.fetch_config_json || {},
+                        selection_config_json: selectionConfig,
+                        readiness_config_json: unifiedConfig.readiness_config_json || {},
                     };
                 },
                 applyJsonExample(field) {

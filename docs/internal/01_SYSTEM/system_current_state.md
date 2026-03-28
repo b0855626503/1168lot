@@ -139,6 +139,8 @@
   - แท็บ `ตั้งค่าด่วน` รองรับฟิลด์ที่มีผลจริงต่อ `Pipeline Config JSON` ได้แก่ `fetch_strategy`, `parser_type`, `selection_stage`, `lookup_date_mode/offset`, `runtime capability`
   - ฟิลด์ `เก็บท้ายกี่หลัก (รางวัลที่ 1)` รองรับค่า `0` = ไม่ใส่ `right` transform (ไม่ตัดท้าย)
   - ส่วน `Browser Worker Settings` ใน quick setup เป็น auto-generated (ไม่เปิดให้ปรับค่าละเอียดใน UI)
+  - เมื่อผู้ใช้แก้ `JSON หลัก` แล้วบันทึก ระบบยึด `JSON หลัก` เป็น source of truth โดยตรง และไม่ให้ quick setup ทับค่า JSON อัตโนมัติระหว่าง save/edit
+  - กรณีมี `selection_stage` อยู่ top-level ของ `JSON หลัก` แต่ยังไม่มีใน `selection_config_json` ระบบจะ normalize ใส่ใน `selection_config_json.selection_stage` อัตโนมัติ
   - มี dependency-reset อัตโนมัติสำหรับค่าที่ไม่เกี่ยวข้อง เช่น:
     - โหมดวันงวดที่ไม่ใช้ offset จะบังคับ `lookup_date_offset_days=0`
     - `fetch_capability=http_only` จะปิด `allow_dom_fallback` และถ้าไม่ได้ใช้ browser strategy จะปิด `requires_browser`

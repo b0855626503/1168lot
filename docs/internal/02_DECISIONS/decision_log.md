@@ -1,5 +1,11 @@
 # Decision Log
 
+## 2026-03-29 — Main JSON Is Save-Time Source of Truth for Auto Result Source Forms (APPROVED)
+
+- ทั้งหน้า `/lotto/markets` popup และ `/lotto/auto-result-sources` ปรับให้ตอน save/preview/validate ยึด `JSON หลัก` (`unified_pipeline_json`) เป็น source of truth โดยตรง
+- ตัดพฤติกรรมที่เอา quick setup ไป regenerate/overwrite ค่าใน `JSON หลัก` อัตโนมัติตอน submit/edit flow
+- กรณีผู้ใช้วาง `selection_stage` ไว้ระดับ top-level ของ `JSON หลัก` ระบบจะ normalize ไปที่ `selection_config_json.selection_stage` เพื่อกัน fallback ผิดไป `PRE_MAPPING`
+
 ## 2026-03-29 — Markets Table: Result Mode Toggle + Source Light Indicator (APPROVED)
 
 - หน้า `lotto/markets` เพิ่มคอลัมน์ `ออกผล` (หลัง `ลิงก์ออกผล`) เป็นปุ่ม toggle `Auto/Manual`

@@ -904,21 +904,29 @@
                         return {};
                     }
                 },
+                normalizeUnifiedConfig(unified) {
+                    const normalized = (unified && typeof unified === 'object') ? { ...unified } : {};
+                    const selectionConfig = (normalized.selection_config_json && typeof normalized.selection_config_json === 'object')
+                        ? { ...normalized.selection_config_json }
+                        : {};
+                    const topLevelStage = String(normalized.selection_stage || '').trim().toUpperCase();
+                    const selectionStage = String(selectionConfig.selection_stage || '').trim().toUpperCase();
+                    if (!selectionStage && (topLevelStage === 'PRE_MAPPING' || topLevelStage === 'POST_MAPPING')) {
+                        selectionConfig.selection_stage = topLevelStage;
+                    }
+                    normalized.selection_config_json = selectionConfig;
+                    return normalized;
+                },
+                parseUnifiedConfigForPayload() {
+                    const unifiedRaw = this.parseJsonSafe(this.autoSourceForm.unified_pipeline_json);
+                    return this.normalizeUnifiedConfig(unifiedRaw);
+                },
                 buildUnifiedConfigObject() {
-                    const fetchConfig = this.parseJsonSafe(this.autoSourceForm.fetch_config_json);
-                    const browserMeta = this.buildBrowserWorkerMetaFromForm();
-                    fetchConfig.meta = fetchConfig.meta && typeof fetchConfig.meta === 'object' ? fetchConfig.meta : {};
-                    fetchConfig.meta.browser_worker = browserMeta;
-                    fetchConfig.meta.runtime = {
-                        fetch_capability: String(this.autoSourceForm.fetch_capability || 'http_only').trim(),
-                        allow_dom_fallback: !!this.autoSourceForm.allow_dom_fallback,
-                    };
-
                     return {
                         request_headers_json: this.parseJsonSafe(this.autoSourceForm.request_headers_json),
                         request_query_template_json: this.parseJsonSafe(this.autoSourceForm.request_query_template_json),
                         request_body_template_json: this.parseJsonSafe(this.autoSourceForm.request_body_template_json),
-                        fetch_config_json: fetchConfig,
+                        fetch_config_json: this.parseJsonSafe(this.autoSourceForm.fetch_config_json),
                         parser_config_json: this.parseJsonSafe(this.autoSourceForm.parser_config_json),
                         mapping_config_json: this.parseJsonSafe(this.autoSourceForm.mapping_config_json),
                         selection_config_json: this.parseJsonSafe(this.autoSourceForm.selection_config_json),
@@ -933,7 +941,7 @@
                     this.populateQuickFromUnified(unified);
                 },
                 applyUnifiedToForm() {
-                    const unified = this.parseJsonSafe(this.autoSourceForm.unified_pipeline_json);
+                    const unified = this.normalizeUnifiedConfig(this.parseJsonSafe(this.autoSourceForm.unified_pipeline_json));
                     this.autoSourceForm.request_headers_json = JSON.stringify(unified.request_headers_json || {}, null, 2);
                     this.autoSourceForm.request_query_template_json = JSON.stringify(unified.request_query_template_json || {}, null, 2);
                     this.autoSourceForm.request_body_template_json = JSON.stringify(unified.request_body_template_json || {}, null, 2);
@@ -1156,7 +1164,9 @@
                         selection_config_json: {
                             selection_stage: String(this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase(),
                             strategy: 'strict_single_match',
-                            date_field: 'draw_date_raw',
+                            date_field: String(this.autoSourceForm.quick_selection_stage || 'PRE_MAPPING').toUpperCase() === 'POST_MAPPING'
+                                ? 'draw_date'
+                                : 'draw_date_raw',
                             required_fields: [],
                             meta: {
                                 candidate_draw_date_offset_days: mode === 'ROUND_DATE_MINUS_DAYS'
@@ -1192,11 +1202,17 @@
                     }
                 },
                 makeSourcePayload() {
-                    this.applyUnifiedToForm();
                     const form = this.autoSourceForm;
-                    const fetchConfig = this.parseJsonSafe(form.fetch_config_json);
-                    const parserConfig = this.parseJsonSafe(form.parser_config_json);
-                    const selectionConfig = this.parseJsonSafe(form.selection_config_json);
+                    const unified = this.parseUnifiedConfigForPayload();
+                    const fetchConfig = (unified.fetch_config_json && typeof unified.fetch_config_json === 'object')
+                        ? unified.fetch_config_json
+                        : {};
+                    const parserConfig = (unified.parser_config_json && typeof unified.parser_config_json === 'object')
+                        ? unified.parser_config_json
+                        : {};
+                    const selectionConfig = (unified.selection_config_json && typeof unified.selection_config_json === 'object')
+                        ? unified.selection_config_json
+                        : {};
                     return {
                         id: form.id || null,
                         market_id: Number(form.market_id || 0),
@@ -1217,16 +1233,16 @@
                         supports_partial: !!form.supports_partial,
                         requires_browser: !!form.requires_browser,
                         revision_reason: String(form.revision_reason || '').trim(),
-                        request_headers_json: this.parseJsonInput(form.request_headers_json, 'request_headers_json'),
-                        request_query_template_json: this.parseJsonInput(form.request_query_template_json, 'request_query_template_json'),
-                        request_body_template_json: this.parseJsonInput(form.request_body_template_json, 'request_body_template_json'),
-                        parser_config_json: this.parseJsonInput(form.parser_config_json, 'parser_config_json'),
-                        mapping_config_json: this.parseJsonInput(form.mapping_config_json, 'mapping_config_json'),
-                        validation_config_json: this.parseJsonInput(form.validation_config_json, 'validation_config_json'),
-                        retry_policy_json: this.parseJsonInput(form.retry_policy_json, 'retry_policy_json'),
-                        fetch_config_json: this.parseJsonInput(form.fetch_config_json, 'fetch_config_json'),
-                        selection_config_json: this.parseJsonInput(form.selection_config_json, 'selection_config_json'),
-                        readiness_config_json: this.parseJsonInput(form.readiness_config_json, 'readiness_config_json'),
+                        request_headers_json: unified.request_headers_json || {},
+                        request_query_template_json: unified.request_query_template_json || {},
+                        request_body_template_json: unified.request_body_template_json || {},
+                        parser_config_json: unified.parser_config_json || {},
+                        mapping_config_json: unified.mapping_config_json || {},
+                        validation_config_json: unified.validation_config_json || {},
+                        retry_policy_json: unified.retry_policy_json || {},
+                        fetch_config_json: unified.fetch_config_json || {},
+                        selection_config_json: selectionConfig,
+                        readiness_config_json: unified.readiness_config_json || {},
                     };
                 },
                 showApiMessage(res, fallbackTitle = 'ผลการทำงาน') {
