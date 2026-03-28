@@ -108,19 +108,19 @@ class Kernel extends ConsoleKernel
         $schedule->command('migrate --force')->dailyAt('23:28');
         //        $schedule->command('postupdate:work')->everyFiveMinutes();
 
-        $schedule->command('payment:get kbank')->everyMinute()
-            ->after(function () {
-//                $this->call('payment:get scb');
-//                $this->call('payment:get gsb');
-//                $this->call('payment:get ktb');
-                $this->call('payment:check tw 10');
-//                $this->call('payment:check bay 10');
-                $this->call('payment:check scb 10');
-                $this->call('payment:check kbank 10');
-//                $this->call('payment:check ttb 10');
-            });
+//        $schedule->command('payment:get kbank')->everyMinute()
+//            ->after(function () {
+////                $this->call('payment:get scb');
+////                $this->call('payment:get gsb');
+////                $this->call('payment:get ktb');
+//                $this->call('payment:check tw 10');
+////                $this->call('payment:check bay 10');
+//                $this->call('payment:check scb 10');
+//                $this->call('payment:check kbank 10');
+////                $this->call('payment:check ttb 10');
+//            });
 
-        $schedule->command('payment:emp-topup 50')->everyMinute();
+//        $schedule->command('payment:emp-topup 50')->everyMinute();
 
         // Keep draw status in sync even when nobody opens admin draw page.
         $schedule->command('lotto:sync-draw-statuses')
