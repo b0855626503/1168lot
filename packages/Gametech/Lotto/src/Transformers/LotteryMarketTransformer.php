@@ -63,7 +63,7 @@ class LotteryMarketTransformer extends TransformerAbstract
             return '-';
         }
 
-        return '<img src="' . e($src) . '" alt="market" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">';
+        return '<img src="' . e($src) . '" alt="market" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">';
     }
 
     private function renderAutoResultSourceStatus(int $count): string

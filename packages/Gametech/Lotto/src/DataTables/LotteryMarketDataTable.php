@@ -85,7 +85,7 @@ class LotteryMarketDataTable extends DataTable
             ['data' => 'result_url', 'name' => 'result_url',  'title' => 'ลิงก์ออกผล',     'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'auto_result_source_status', 'name' => 'auto_result_sources_count', 'title' => 'Auto Source', 'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'is_enabled', 'name' => 'is_enabled',  'title' => 'สถานะ',         'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '100px'],
-            ['data' => 'action',     'name' => 'action',      'title' => 'จัดการ',        'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '80px'],
+            ['data' => 'action',     'name' => 'action',      'title' => 'จัดการ',        'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '170px'],
         ];
     }
 }
