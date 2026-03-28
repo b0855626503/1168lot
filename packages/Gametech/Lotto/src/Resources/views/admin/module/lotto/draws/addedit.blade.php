@@ -1131,6 +1131,8 @@
 
                     $select.select2({
                         width: '100%',
+                        minimumInputLength: 10,
+                        minimumResultsForSearch: 20,
                         theme: 'bootstrap4',
                         dropdownParent: dropdownParent,
                         placeholder: '-- เลือกรายการหวย --',

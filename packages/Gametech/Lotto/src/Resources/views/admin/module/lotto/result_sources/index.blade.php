@@ -15,3 +15,38 @@
         </div>
     </section>
 @endsection
+
+@if(request()->boolean('embed'))
+    @push('styles')
+        <style>
+            .main-header,
+            .main-sidebar,
+            .main-footer,
+            .content-header,
+            .breadcrumb {
+                display: none !important;
+            }
+
+            .content-wrapper,
+            .right-side,
+            .main-footer {
+                margin-left: 0 !important;
+            }
+
+            .content-wrapper {
+                min-height: auto !important;
+                background: #fff !important;
+            }
+
+            .content {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .card {
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+        </style>
+    @endpush
+@endif

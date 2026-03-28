@@ -71,6 +71,9 @@
 
 - เพิ่มปุ่ม `Auto` ต่อแถว (หลังปุ่ม `แก้ไข`) เพื่อเปิด modal จัดการ `Auto Result Sources` ของตลาดนั้นแบบ inline
 - ปุ่ม `Auto` ถูกดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
+- ปุ่ม `Auto` ของหน้า `lotto/markets` เปิด modal ในหน้าเดิมแบบ native (ไม่ใช้ iframe) และดึงข้อมูลผ่าน API:
+  - `GET /lotto/auto-result-sources/list?market_id={id}`
+  - `POST /lotto/auto-result-sources/loaddata|create|update|edit`
 - ตาราง `รายการหวย` เพิ่มคอลัมน์สถานะผูก source (`ผูกแล้ว` / `ยังไม่ผูก`) ถัดจากคอลัมน์ `ลิงก์ออกผล`
 - ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
   - เลือก `draw_date` แล้วกด dry-run โดย resolve draw จาก `market_id + draw_date`

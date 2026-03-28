@@ -116,6 +116,9 @@ Route::domain(
                 'view' => 'admin::module.lotto.result_sources.index',
             ])->name('admin.lotto.result_sources.index');
 
+            Route::get('auto-result-sources/list', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@list')
+                ->name('admin.lotto.result_sources.list');
+
             Route::post('auto-result-sources/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@loadData')
                 ->name('admin.lotto.result_sources.loaddata');
 

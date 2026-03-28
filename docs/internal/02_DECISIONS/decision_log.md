@@ -1,5 +1,34 @@
 # Decision Log
 
+## 2026-03-28 — Markets Auto Sources Uses Native Modal (No iframe) (APPROVED)
+
+- ปรับ modal `Auto` ในหน้า `lotto/markets` ให้จัดการ source แบบ native ทั้งหมด (ไม่ใช้ iframe/embed)
+- modal แสดงรายการ source ของ market นั้นในตารางเดียวกัน พร้อมปุ่มเพิ่ม/แก้ไข/เปิด-ปิดใช้งาน
+- ฟอร์มแก้ไข source ใน modal รองรับการทดสอบตามวันที่และดู logs ได้ในหน้าเดียวกัน
+- ใช้ endpoint เดิมของ `auto-result-sources` และใช้ `GET /lotto/auto-result-sources/list` สำหรับโหลดรายการ
+- หมายเหตุ: แนวทางนี้แทนที่ decision `Markets Auto Button Restored to In-Page Modal` เฉพาะส่วนที่อ้าง iframe
+
+## 2026-03-28 — Markets Auto Button Restored to In-Page Modal (APPROVED)
+
+- ปรับปุ่ม `Auto` ในหน้า `lotto/markets` กลับมาเปิด modal ในหน้าเดิม (ไม่เปลี่ยนหน้า)
+- modal ยังคงใช้ iframe โหมด embed (`embed=1`) พร้อม `market_id` + `lock_market=1`
+- เหตุผล: ผู้ใช้ต้องการ workflow ที่ไม่ออกจากหน้ารายการหวย
+- หมายเหตุ: ถูกแทนที่ภายหลังด้วย decision `Markets Auto Sources Uses Native Modal (No iframe)`
+
+## 2026-03-28 — Markets Auto Button Switches to Direct Page Navigation (APPROVED)
+
+- ยกเลิกการเปิด `Auto Result Sources` ผ่าน iframe modal จากหน้า `lotto/markets`
+- ปุ่ม `Auto` เปลี่ยนเป็นนำทางไปหน้า `auto-result-sources` โดยตรง พร้อม `market_id` และ `lock_market=1`
+- เหตุผล: ลดความเสี่ยงปัญหา iframe ถูกบล็อกจากนโยบาย web server/security header และลดปัญหา layout ซ้อนใน modal
+- หมายเหตุ: แนวทางนี้ถูกแทนที่ภายหลังด้วย decision `Markets Auto Button Restored to In-Page Modal`
+
+## 2026-03-28 — Embed Mode for Markets Auto Result Sources Modal (APPROVED)
+
+- ปรับลิงก์ที่ปุ่ม `Auto` ในหน้า `lotto/markets` ให้ส่ง `embed=1`
+- หน้า `auto-result-sources` เมื่ออยู่โหมด embed จะซ่อน layout ส่วน global (sidebar/topbar/footer/breadcrumb) เพื่อให้แสดงผลถูกต้องใน iframe modal
+- แก้ปัญหา modal แสดงหน้าเต็มผิดสัดส่วนและอ่านยาก
+- หมายเหตุ: แนวทางนี้ถูกแทนที่ภายหลังด้วยการนำทางตรง (ไม่ใช้ iframe) ใน decision `Markets Auto Button Switches to Direct Page Navigation`
+
 ## 2026-03-28 — Add Status Filter on Admin Draws Menu (APPROVED)
 
 - เพิ่มตัวกรอง `สถานะ` ในหน้า `lotto/draws`
