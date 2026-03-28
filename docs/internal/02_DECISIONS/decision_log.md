@@ -1,5 +1,24 @@
 # Decision Log
 
+## 2026-03-28 — Draw Status Toggle via Status Cell + Remove Open Action Button (APPROVED)
+
+- หน้า `lotto/draws` เอาปุ่ม `เปิดรับ` ออกจากคอลัมน์ `ดำเนินการ`
+- ช่อง `สถานะ` สำหรับงวดที่เป็น `open/closed` ถูกปรับเป็น clickable badge เพื่อสลับสถานะได้ตรงจากคอลัมน์สถานะ
+- ก่อนสลับสถานะต้องแสดง popup ยืนยันทุกครั้ง
+- การคลิกสลับสถานะยังคงดักสิทธิ์ตาม ACL เดิม:
+  - `open -> closed` ต้องมีสิทธิ์ `lotto_draws.close`
+  - `closed -> open` ต้องมีสิทธิ์ `lotto_draws.open`
+
+## 2026-03-28 — Soft Row Tint by Draw Status on Admin Draws Table (APPROVED)
+
+- หน้า `lotto/draws` เพิ่มสีพื้นหลังแถวแบบโทนอ่อนตามสถานะงวดเพื่ออ่านสถานะได้เร็วขึ้น
+- mapping สี:
+  - `draft` เทาอ่อน
+  - `open` เขียวอ่อน
+  - `closed` เหลืองอ่อน
+  - `resulted` ฟ้าอ่อน
+- ใช้การ tint ที่ฝั่ง DataTable render (ไม่เปลี่ยน domain data/schema)
+
 ## 2026-03-28 — Lotto Markets Inline Auto Result Sources Management (APPROVED)
 
 - เพิ่มปุ่ม `Auto` ในเมนู `lotto/markets` (วางหลังปุ่ม `แก้ไข`) และดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`

@@ -4,9 +4,9 @@
 
 ต้องอ่านเอกสารตามลำดับนี้ก่อน:
 
-1. internal/00_RULES/agent-rules.md
-2. internal/01_SYSTEM/system-current-state.md
-3. internal/02_DECISIONS/decision-log.md
+1. internal/00_RULES/agent_rules.md
+2. internal/01_SYSTEM/system_current_state.md
+3. internal/02_DECISIONS/decision_log.md
 4. internal/03_DOMAINS/
 5. 04_PLANS/README.md
 

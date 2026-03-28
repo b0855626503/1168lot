@@ -58,7 +58,7 @@ class LotteryMarketDataTable extends DataTable
                 'stateSave'   => true,
                 'scrollX'     => true,
                 'paging'      => true,
-                'searching'   => false,
+                'searching'   => true,
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,

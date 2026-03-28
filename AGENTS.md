@@ -5,9 +5,9 @@
 ก่อนทำงานทุกครั้ง ต้องทำตามนี้:
 
 1. อ่าน docs/START_HERE.md
-2. อ่าน docs/internal/00_RULES/agent-rules.md
-3. อ่าน docs/internal/01_SYSTEM/system-current-state.md
-4. อ่าน docs/internal/02_DECISIONS/decision-log.md
+2. อ่าน docs/internal/00_RULES/agent_rules.md
+3. อ่าน docs/internal/01_SYSTEM/system_current_state.md
+4. อ่าน docs/internal/02_DECISIONS/decision_log.md
 ห้ามเริ่ม implement จนกว่าจะอ่านเอกสารครบตามลำดับ
 ---
 

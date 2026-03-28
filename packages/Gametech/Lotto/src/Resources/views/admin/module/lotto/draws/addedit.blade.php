@@ -1419,31 +1419,104 @@
                         await this.showSubmitErrorModal(error, 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
                     }
                 },
-                openDraw(id) {
-                    this.$http.post("{{ route('admin.lotto.draws.open') }}", { id })
-                        .then(response => {
-                            this.$bvModal.msgBoxOk(response.data.message, {
-                                title: 'ผลการดำเนินการ',
-                                size: 'sm',
-                                buttonSize: 'sm',
-                                okVariant: 'success',
-                                centered: true,
-                            });
-                            window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                async openDraw(id, options = {}) {
+                    const skipConfirm = Boolean(options && options.skipConfirm);
+
+                    if (!skipConfirm) {
+                        const confirmed = await this.$bvModal.msgBoxConfirm('ต้องการเปิดรับงวดนี้หรือไม่?', {
+                            title: 'ยืนยันการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'primary',
+                            okTitle: 'ยืนยัน',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
                         });
+
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+
+                    try {
+                        const response = await this.$http.post("{{ route('admin.lotto.draws.open') }}", { id });
+                        await this.$bvModal.msgBoxOk(response.data.message, {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'เปิดรับไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
                 },
-                closeDraw(id) {
-                    this.$http.post("{{ route('admin.lotto.draws.close') }}", { id })
-                        .then(response => {
-                            this.$bvModal.msgBoxOk(response.data.message, {
-                                title: 'ผลการดำเนินการ',
-                                size: 'sm',
-                                buttonSize: 'sm',
-                                okVariant: 'success',
-                                centered: true,
-                            });
-                            window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                async closeDraw(id, options = {}) {
+                    const skipConfirm = Boolean(options && options.skipConfirm);
+
+                    if (!skipConfirm) {
+                        const confirmed = await this.$bvModal.msgBoxConfirm('ต้องการปิดรับงวดนี้หรือไม่?', {
+                            title: 'ยืนยันการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'warning',
+                            okTitle: 'ยืนยัน',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
                         });
+
+                        if (!confirmed) {
+                            return;
+                        }
+                    }
+
+                    try {
+                        const response = await this.$http.post("{{ route('admin.lotto.draws.close') }}", { id });
+                        await this.$bvModal.msgBoxOk(response.data.message, {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'ปิดรับไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
+                },
+                async toggleDrawStatus(id, targetAction) {
+                    const action = String(targetAction || '').toLowerCase();
+                    if (action !== 'open' && action !== 'close') {
+                        return;
+                    }
+
+                    const isOpenAction = action === 'open';
+                    const nextLabel = isOpenAction ? 'เปิดรับ' : 'ปิดรับ';
+                    const okVariant = isOpenAction ? 'primary' : 'warning';
+                    const confirmed = await this.$bvModal.msgBoxConfirm(
+                        `ต้องการสลับสถานะเป็น "${nextLabel}" ใช่หรือไม่?`,
+                        {
+                            title: 'ยืนยันการสลับสถานะ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant,
+                            okTitle: 'ยืนยัน',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
+                        }
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    if (isOpenAction) {
+                        await this.openDraw(id, { skipConfirm: true });
+                        return;
+                    }
+
+                    await this.closeDraw(id, { skipConfirm: true });
                 },
                 async generateAutoDraws(dryRun = false) {
                     const confirmed = await this.$bvModal.msgBoxConfirm(
@@ -1614,6 +1687,7 @@
         window.settleModal = function (id) { window.app.settleModal(id); };
         window.openDraw = function (id) { window.app.openDraw(id); };
         window.closeDraw = function (id) { window.app.closeDraw(id); };
+        window.toggleDrawStatus = function (id, targetAction) { window.app.toggleDrawStatus(id, targetAction); };
         window.generateAutoDraws = function (dryRun) { window.app.generateAutoDraws(dryRun); };
         window.showDrawBlockedNumbers = function (id) { window.app.openBlockedNumbersModal(id); };
         window.showDrawTicketList = function (id) { window.app.openTicketsSummaryModal(id); };

@@ -39,7 +39,7 @@ npm run dev
 เริ่มอ่านที่:
 
 * docs/README.md
-* docs/internal/01_SYSTEM/system-current-state.md
+* docs/internal/01_SYSTEM/system_current_state.md
 
 ---
 

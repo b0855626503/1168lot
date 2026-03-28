@@ -1,5 +1,22 @@
 @section('css')
     @include('admin::layouts.datatables_css')
+    <style>
+        #lottoDrawsTable tbody tr.draw-status-draft td {
+            background-color: #f6f7fb !important;
+        }
+
+        #lottoDrawsTable tbody tr.draw-status-open td {
+            background-color: #f1fbf4 !important;
+        }
+
+        #lottoDrawsTable tbody tr.draw-status-closed td {
+            background-color: #fff8ec !important;
+        }
+
+        #lottoDrawsTable tbody tr.draw-status-resulted td {
+            background-color: #eff6ff !important;
+        }
+    </style>
 @endsection
 
 
@@ -69,6 +86,38 @@
                 window.LaravelDataTables[tableKey].draw(false);
             };
 
+            const applyStatusRowBackground = function () {
+                if (!window.LaravelDataTables || !window.LaravelDataTables[tableKey]) {
+                    return;
+                }
+
+                const tableApi = window.LaravelDataTables[tableKey];
+                tableApi.rows({ page: 'current' }).every(function () {
+                    const rowData = this.data() || {};
+                    const statusHtml = String(rowData.status || '');
+                    const $row = $(this.node());
+
+                    $row.removeClass('draw-status-draft draw-status-open draw-status-closed draw-status-resulted');
+
+                    if (statusHtml.includes('เปิดรับ')) {
+                        $row.addClass('draw-status-open');
+                        return;
+                    }
+
+                    if (statusHtml.includes('ปิดรับ')) {
+                        $row.addClass('draw-status-closed');
+                        return;
+                    }
+
+                    if (statusHtml.includes('ประกาศผล')) {
+                        $row.addClass('draw-status-resulted');
+                        return;
+                    }
+
+                    $row.addClass('draw-status-draft');
+                });
+            };
+
             $(document)
                 .off('preXhr.dt.lottoDrawsFilter', tableSelector)
                 .on('preXhr.dt.lottoDrawsFilter', tableSelector, function (_event, _settings, data) {
@@ -98,6 +147,12 @@
 
             initMarketSelect();
             rebuildMarketFilterOptions($groupSelect.val() || '');
+
+            $(tableSelector).off('draw.dt.lottoDrawsStatusTint').on('draw.dt.lottoDrawsStatusTint', function () {
+                applyStatusRowBackground();
+            });
+
+            applyStatusRowBackground();
 
             // DataTable first request may fire before custom filters are attached.
             // Force one redraw so default draw_date filter is applied on initial page load.

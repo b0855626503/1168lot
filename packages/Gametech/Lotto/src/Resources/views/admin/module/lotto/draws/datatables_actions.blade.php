@@ -13,12 +13,6 @@
         </button>
     @endif
 
-    @if(($status === 'draft' || $status === 'closed') && $canOpen)
-        <button type="button" class="btn btn-primary btn-xs btn-block mr-1 mb-1" onclick="openDraw({{ $id }})">
-            <i class="fas fa-play"></i> เปิดรับ
-        </button>
-    @endif
-
     @if($status === 'open' && $canClose)
         <button type="button" class="btn btn-secondary btn-xs btn-block mr-1 mb-1" onclick="closeDraw({{ $id }})">
             <i class="fas fa-stop"></i> ปิดรับ

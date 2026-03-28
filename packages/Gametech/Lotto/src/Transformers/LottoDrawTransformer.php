@@ -9,7 +9,7 @@ class LottoDrawTransformer extends TransformerAbstract
 {
     public function transform(LottoDraw $model): array
     {
-        $statusBadge = $this->getStatusBadge($model->status);
+        $statusBadge = $this->getStatusBadge((string) $model->status, (int) $model->id);
         $top3 = '-';
         $top2 = '-';
         $bottom2 = '-';
@@ -39,16 +39,27 @@ class LottoDrawTransformer extends TransformerAbstract
         ];
     }
 
-    private function getStatusBadge(string $status): string
+    private function getStatusBadge(string $status, int $id): string
     {
+        $canOpen = bouncer()->hasPermission('lotto_draws.open');
+        $canClose = bouncer()->hasPermission('lotto_draws.close');
+
+        if ($status === 'open' && $canClose) {
+            return '<button type="button" class="badge badge-success border-0" style="cursor:pointer;" onclick="toggleDrawStatus(' . $id . ', \'close\')">เปิดรับ</button>';
+        }
+
+        if ($status === 'closed' && $canOpen) {
+            return '<button type="button" class="badge badge-warning border-0" style="cursor:pointer;" onclick="toggleDrawStatus(' . $id . ', \'open\')">ปิดรับ</button>';
+        }
+
         $badges = [
             'draft'    => '<span class="badge badge-secondary">ร่าง</span>',
             'open'     => '<span class="badge badge-success">เปิดรับ</span>',
             'closed'   => '<span class="badge badge-warning">ปิดรับ</span>',
             'resulted' => '<span class="badge badge-info">ประกาศผล</span>',
         ];
-        
-        return $badges[$status] ?? '<span class="badge badge-light">' . $status . '</span>';
+
+        return $badges[$status] ?? '<span class="badge badge-light">' . e($status) . '</span>';
     }
 
     private function renderCountLink(string $handlerName, int $drawId, int $count): string
