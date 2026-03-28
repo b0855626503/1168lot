@@ -46,6 +46,17 @@
 - ระบบใช้ default initial sort เป็น `priority ASC` แล้วตามด้วย `id DESC`
 - ห้าม lock ลำดับด้วย `orderBy(...)` ตายตัวใน query หลัก เพราะจะทำให้ผู้ใช้ sort คอลัมน์อื่นไม่ได้จริง
 
+## นโยบายหน้าเลขอั้น (Admin `/lotto/number-blocks`)
+
+- ตารางมีคอลัมน์ checkbox เป็นคอลัมน์แรกสุดสำหรับเลือกหลายรายการ
+- หน้า index รองรับ filter ด้วย:
+  - `งวดหวย` (`draw_id`)
+  - `ประเภทเดิมพัน` (`bet_type`)
+  - `ค้นหาเลข` (`number_search`)
+- เปิด DataTables global searching (`searching=true`) และยังรองรับ filter ด้านบนผ่าน preXhr
+- รองรับลบหลายรายการจาก checkbox ที่เลือกผ่านปุ่ม `ลบที่เลือก`
+- คอลัมน์ `จัดการ` มีปุ่ม `แก้ไข` และ `ลบ` รายรายการ
+
 ## นโยบาย Auto Result Manual Action (Admin UI)
 
 - ปุ่ม `Retry` และ `Dry-run` ในหน้า `draws` เรียก `lotto:fetch-auto-results` แบบ synchronous (`Artisan::call`)

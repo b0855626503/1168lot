@@ -120,10 +120,95 @@
 							window.LaravelDataTables['dataTableBuilder'].draw(false);
 						});
 				},
+				delModal(id) {
+					const blockId = Number(id || 0);
+					if (!blockId) {
+						return;
+					}
+
+					this.$bvModal.msgBoxConfirm('ต้องการลบรายการเลขอั้นนี้หรือไม่?', {
+						title: 'ยืนยันการลบ',
+						size: 'sm',
+						buttonSize: 'sm',
+						okVariant: 'danger',
+						okTitle: 'ลบ',
+						cancelTitle: 'ยกเลิก',
+						centered: true,
+					}).then((confirmed) => {
+						if (!confirmed) return;
+
+						axios.post("{{ route('admin.lotto.number_blocks.delete') }}", { id: blockId })
+							.then((response) => {
+								this.$bvModal.msgBoxOk(response.data.message, {
+									title: 'ผลการดำเนินการ',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'success',
+									centered: true,
+								});
+								window.LaravelDataTables['dataTableBuilder'].draw(false);
+							})
+							.catch((error) => {
+								const message = (error && error.response && error.response.data && error.response.data.message)
+									? error.response.data.message
+									: 'ลบเลขอั้นไม่สำเร็จ';
+								this.$bvModal.msgBoxOk(message, {
+									title: 'ผิดพลาด',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'danger',
+									centered: true,
+								});
+							});
+					});
+				},
+				bulkDeleteModal(ids) {
+					const blockIds = Array.isArray(ids) ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0) : [];
+					if (!blockIds.length) {
+						return;
+					}
+
+					this.$bvModal.msgBoxConfirm('ต้องการลบรายการที่เลือกทั้งหมดหรือไม่?', {
+						title: 'ยืนยันการลบแบบกลุ่ม',
+						size: 'sm',
+						buttonSize: 'sm',
+						okVariant: 'danger',
+						okTitle: 'ลบ',
+						cancelTitle: 'ยกเลิก',
+						centered: true,
+					}).then((confirmed) => {
+						if (!confirmed) return;
+
+						axios.post("{{ route('admin.lotto.number_blocks.bulk_delete') }}", { ids: blockIds })
+							.then((response) => {
+								this.$bvModal.msgBoxOk(response.data.message, {
+									title: 'ผลการดำเนินการ',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'success',
+									centered: true,
+								});
+								window.LaravelDataTables['dataTableBuilder'].draw(false);
+							})
+							.catch((error) => {
+								const message = (error && error.response && error.response.data && error.response.data.message)
+									? error.response.data.message
+									: 'ลบเลขอั้นแบบกลุ่มไม่สำเร็จ';
+								this.$bvModal.msgBoxOk(message, {
+									title: 'ผิดพลาด',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'danger',
+									centered: true,
+								});
+							});
+					});
+				},
 			},
 		});
 
 		window.addModal = function () { window.app.addModal(); };
 		window.editModal = function (id) { window.app.editModal(id); };
+		window.delModal = function (id) { window.app.delModal(id); };
 	</script>
 @endpush

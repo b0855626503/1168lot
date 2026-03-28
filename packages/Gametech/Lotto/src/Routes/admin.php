@@ -204,6 +204,12 @@ Route::domain(
             Route::post('number-blocks/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@edit')
                 ->name('admin.lotto.number_blocks.edit');
 
+            Route::post('number-blocks/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@delete')
+                ->name('admin.lotto.number_blocks.delete');
+
+            Route::post('number-blocks/bulk-delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@bulkDelete')
+                ->name('admin.lotto.number_blocks.bulk_delete');
+
             Route::post('number-blocks/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNumberBlockController@update')
                 ->name('admin.lotto.number_blocks.update');
 

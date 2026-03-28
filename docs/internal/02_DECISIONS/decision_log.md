@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-03-28 — Number Blocks Table Supports Filters + Bulk Delete (APPROVED)
+
+- หน้า `lotto/number-blocks` เพิ่มคอลัมน์ checkbox เป็นคอลัมน์แรกสุด
+- เพิ่ม filter บนหน้า index สำหรับ `งวดหวย`, `ประเภทเดิมพัน`, และ `ค้นหาเลข`
+- เปิด DataTables `searching=true` สำหรับตารางเลขอั้น
+- เพิ่มปุ่มลบรายรายการในคอลัมน์ `จัดการ`
+- เพิ่มปุ่มลบแบบกลุ่มเมื่อมีการเลือก checkbox หลายรายการ
+- เพิ่ม endpoint:
+  - `POST /lotto/number-blocks/delete`
+  - `POST /lotto/number-blocks/bulk-delete`
+
 ## 2026-03-28 — Markets Status Toggle Label + Auto Source Delete in Modal (APPROVED)
 
 - ตาราง `lotto/markets` ปรับปุ่มคอลัมน์ `สถานะ` ให้แสดงคำ `ถูก/ผิด` พร้อม icon และกดสลับสถานะได้เหมือนเดิม

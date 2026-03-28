@@ -190,6 +190,46 @@ class LottoNumberBlockController extends AppBaseController
         return $this->sendSuccess('อัปเดตเลขอั้นเรียบร้อยแล้ว');
     }
 
+    public function delete(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'id' => ['required', 'integer', 'exists:lotto_number_blocks,id'],
+        ])->validate();
+
+        $deleted = LottoNumberBlock::query()
+            ->where('id', (int) $validated['id'])
+            ->delete();
+
+        if ($deleted < 1) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 404);
+        }
+
+        return $this->sendSuccess('ลบเลขอั้นเรียบร้อยแล้ว');
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = validator($request->all(), [
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct', 'exists:lotto_number_blocks,id'],
+        ])->validate();
+
+        $ids = collect($validated['ids'])
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return $this->sendError('กรุณาเลือกรายการที่ต้องการลบ', 422);
+        }
+
+        $deleted = LottoNumberBlock::query()
+            ->whereIn('id', $ids->all())
+            ->delete();
+
+        return $this->sendSuccess('ลบเลขอั้นเรียบร้อยแล้ว ' . (int) $deleted . ' รายการ');
+    }
+
     /**
      * @return string[]
      */

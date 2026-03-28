@@ -26,11 +26,28 @@ class LottoNumberBlockDataTable extends DataTable
      */
     public function query(LottoNumberBlock $model)
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->select('lotto_number_blocks.*')
             ->with('draw.market')
             ->orderByDesc('blocked_at')
             ->orderByDesc('id');
+
+        $drawId = (int) request('draw_id');
+        if ($drawId > 0) {
+            $query->where('draw_id', $drawId);
+        }
+
+        $betType = trim((string) request('bet_type', ''));
+        if ($betType !== '') {
+            $query->where('bet_type', $betType);
+        }
+
+        $numberSearch = trim((string) request('number_search', ''));
+        if ($numberSearch !== '') {
+            $query->where('number', 'like', '%' . $numberSearch . '%');
+        }
+
+        return $query;
     }
 
     /**
@@ -49,11 +66,11 @@ class LottoNumberBlockDataTable extends DataTable
                 'stateSave'   => true,
                 'scrollX'     => true,
                 'paging'      => true,
-                'searching'   => false,
+                'searching'   => true,
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
-                'order'       => [[5, 'desc']],
+                'order'       => [[6, 'desc']],
                 'buttons'     => ['pageLength'],
                 'columnDefs'  => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
@@ -67,6 +84,15 @@ class LottoNumberBlockDataTable extends DataTable
     protected function getColumns(): array
     {
         return [
+            [
+                'data' => 'select',
+                'name' => 'select',
+                'title' => '<input type="checkbox" class="js-lotto-select-all-number-blocks" />',
+                'orderable' => false,
+                'searchable' => false,
+                'className' => 'text-center',
+                'width' => '38px',
+            ],
             ['data' => 'id', 'name' => 'id', 'title' => '#', 'orderable' => true, 'searchable' => false, 'className' => 'text-center', 'width' => '60px'],
             ['data' => 'draw', 'name' => 'draw.draw_date', 'title' => 'งวดหวย', 'orderable' => false, 'searchable' => false, 'className' => 'text-left'],
             ['data' => 'bet_type', 'name' => 'bet_type', 'title' => 'ประเภทเดิมพัน', 'orderable' => true, 'searchable' => false, 'className' => 'text-center'],
@@ -77,4 +103,3 @@ class LottoNumberBlockDataTable extends DataTable
         ];
     }
 }
-

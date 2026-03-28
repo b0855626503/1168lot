@@ -14,6 +14,7 @@ class LottoNumberBlockTransformer extends TransformerAbstract
         $marketName = $model->draw && $model->draw->market ? $model->draw->market->name : '-';
 
         return [
+            'select'     => '<input type="checkbox" class="js-lotto-row-selector-number-blocks" value="' . (int) $model->id . '">',
             'id'         => (int) $model->id,
             'draw'       => $drawDate . ' (' . $marketName . ')',
             'bet_type'   => $model->bet_type . ' = ' . BetType::label((string) $model->bet_type),
@@ -26,4 +27,3 @@ class LottoNumberBlockTransformer extends TransformerAbstract
         ];
     }
 }
-
