@@ -6,20 +6,14 @@
 
 <div class="d-flex flex-wrap justify-content-center">
     @if($status !== 'resulted' && $canEdit)
-        <button type="button" class="btn btn-info btn-xs btn-block mr-1 mb-1" onclick="editModal({{ $id }})">
+        <button type="button" class="btn btn-info btn-xs  mr-1 mb-1" onclick="editModal({{ $id }})">
             <i class="fas fa-edit"></i> แก้ไข
         </button>
     @endif
 
-    @if($status === 'closed' && $canSettle)
-        <button type="button" class="btn btn-success btn-xs btn-block mr-1 mb-1" onclick="settleModal({{ $id }})">
+    @if($status === 'closed' && ($canSettle || $canRetry))
+        <button type="button" class="btn btn-success btn-xs mr-1 mb-1" onclick="settleModal({{ $id }})">
             <i class="fas fa-check-circle"></i> ออกผล
-        </button>
-    @endif
-
-    @if($status === 'closed' && $canRetry)
-        <button type="button" class="btn btn-dark btn-xs btn-block mr-1 mb-1" onclick="runAutoResultManualRetry({{ $id }})">
-            <i class="fas fa-redo"></i> Retry
         </button>
     @endif
 </div>

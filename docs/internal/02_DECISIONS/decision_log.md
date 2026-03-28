@@ -1,5 +1,20 @@
 # Decision Log
 
+## 2026-03-28 — Draw Status Column Uses Button + Styled Text (APPROVED)
+
+- คอลัมน์ `สถานะ` ในหน้า `lotto/draws` เลิกใช้ badge แบบเดิม
+- สถานะที่สลับได้ (`open/closed` เมื่อมีสิทธิ์) แสดงเป็นปุ่มเพื่อกดสลับสถานะโดยตรง
+- สถานะที่กดไม่ได้ แสดงเป็นข้อความตกแต่งสีพร้อมไอคอน เพื่อให้อ่านชัดกว่า badge เดิม
+
+## 2026-03-28 — Draw Settle Action Uses Manual/Auto Selector Modal (APPROVED)
+
+- ปุ่ม `ออกผล` ในหน้า `lotto/draws` ถูกปรับให้เปิด modal ขนาดเล็กเพื่อเลือกโหมดการทำงาน
+- โหมดใน modal:
+  - `Manual` เปิดฟอร์ม settle เดิมเพื่อกรอกผลเองและคำนวณรางวัล
+  - `Auto` เรียก flow `Retry` เดิม (`auto_result_manual_retry`)
+- ปุ่ม `Retry` แยกจาก action column ถูกยุบเข้าโหมด `Auto` เพื่อลดความซ้ำซ้อนของ action
+- การมองเห็น/การกดแต่ละโหมดใน modal ยังคงเช็กสิทธิ์ ACL ตามเดิม (`lotto_draws.settle`, `lotto_draws.auto_result_manual_retry`)
+
 ## 2026-03-28 — Increase Draw Row Tint Contrast + Middle Alignment (APPROVED)
 
 - ปรับสีพื้นหลังแถวในหน้า `lotto/draws` ให้เข้มขึ้นจากเดิม เพื่อแยกสถานะ (`draft/open/closed/resulted`) ได้ชัดเจนขึ้น

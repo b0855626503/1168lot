@@ -45,21 +45,21 @@ class LottoDrawTransformer extends TransformerAbstract
         $canClose = bouncer()->hasPermission('lotto_draws.close');
 
         if ($status === 'open' && $canClose) {
-            return '<button type="button" class="badge badge-success border-0" style="cursor:pointer;" onclick="toggleDrawStatus(' . $id . ', \'close\')">เปิดรับ</button>';
+            return '<button type="button" class="draw-status-toggle-btn draw-status-toggle-open" onclick="toggleDrawStatus(' . $id . ', \'close\')">เปิดรับ</button>';
         }
 
         if ($status === 'closed' && $canOpen) {
-            return '<button type="button" class="badge badge-warning border-0" style="cursor:pointer;" onclick="toggleDrawStatus(' . $id . ', \'open\')">ปิดรับ</button>';
+            return '<button type="button" class="draw-status-toggle-btn draw-status-toggle-closed" onclick="toggleDrawStatus(' . $id . ', \'open\')">ปิดรับ</button>';
         }
 
-        $badges = [
-            'draft'    => '<span class="badge badge-secondary">ร่าง</span>',
-            'open'     => '<span class="badge badge-success">เปิดรับ</span>',
-            'closed'   => '<span class="badge badge-warning">ปิดรับ</span>',
-            'resulted' => '<span class="badge badge-info">ประกาศผล</span>',
+        $labels = [
+            'draft'    => '<span class="draw-status-static draw-status-static-draft"><i class="fas fa-edit mr-1"></i>ร่าง</span>',
+            'open'     => '<span class="draw-status-static draw-status-static-open"><i class="fas fa-play-circle mr-1"></i>เปิดรับ</span>',
+            'closed'   => '<span class="draw-status-static draw-status-static-closed"><i class="fas fa-stop-circle mr-1"></i>ปิดรับ</span>',
+            'resulted' => '<span class="draw-status-static draw-status-static-resulted"><i class="fas fa-check-circle mr-1"></i>ประกาศผล</span>',
         ];
 
-        return $badges[$status] ?? '<span class="badge badge-light">' . e($status) . '</span>';
+        return $labels[$status] ?? '<span class="draw-status-static draw-status-static-default">' . e($status) . '</span>';
     }
 
     private function renderCountLink(string $handlerName, int $drawId, int $count): string

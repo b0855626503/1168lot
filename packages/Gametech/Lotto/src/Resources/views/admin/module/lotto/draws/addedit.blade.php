@@ -86,6 +86,37 @@
     </b-form>
 </b-modal>
 
+<b-modal
+    ref="settleModeModal"
+    id="settleModeModal"
+    centered
+    size="sm"
+    title="เลือกวิธีออกผล"
+    hide-footer>
+    <div class="settle-mode-actions">
+        <button
+            type="button"
+            class="settle-mode-btn settle-mode-manual"
+            :disabled="!canUseManualSettle"
+            @click="chooseSettleMode('manual')">
+            <i class="fas fa-keyboard"></i>
+            <span>Manual</span>
+        </button>
+
+        <button
+            type="button"
+            class="settle-mode-btn settle-mode-auto"
+            :disabled="!canUseAutoSettle"
+            @click="chooseSettleMode('auto')">
+            <i class="fas fa-robot"></i>
+            <span>Auto</span>
+        </button>
+    </div>
+    <div v-if="!canUseManualSettle || !canUseAutoSettle" class="small text-muted mt-2">
+        บางตัวเลือกถูกปิดตามสิทธิ์ผู้ใช้
+    </div>
+</b-modal>
+
 <b-modal ref="blockedNumbersModal" id="blockedNumbersModal" centered size="xl" title="รายการเลขอั้นในงวด" ok-only ok-title="ปิด" modal-class="lotto-blocked-summary-modal">
     <div class="row no-gutters mb-2 lotto-summary-row">
         <div class="col-4 lotto-blocked-summary-item"><span>งวด :</span><strong>@{{ blockedNumbersData.draw.draw_date || '-' }}</strong></div>
@@ -533,6 +564,43 @@
         .lotto-autogen-summary-modal .modal-dialog {
             max-width: 1220px;
         }
+        .settle-mode-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .settle-mode-btn {
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            background: #fff;
+            color: #111827;
+            padding: 16px 8px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all .15s ease;
+        }
+        .settle-mode-btn i {
+            font-size: 18px;
+        }
+        .settle-mode-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .settle-mode-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+        .settle-mode-manual:not(:disabled) {
+            border-color: #93c5fd;
+            background: #eff6ff;
+        }
+        .settle-mode-auto:not(:disabled) {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
 
         #addedit .select2-container--default .select2-selection--single {
             height: calc(1.5em + .5rem + 2px);
@@ -629,6 +697,9 @@
                         status: '',
                         status_label: '',
                     },
+                    settleModeDrawId: null,
+                    canUseManualSettle: @json((bool) bouncer()->hasPermission('lotto_draws.settle')),
+                    canUseAutoSettle: @json((bool) bouncer()->hasPermission('lotto_draws.auto_result_manual_retry')),
                     blockedNumbersData: {
                         draw: {},
                         count: 0,
@@ -890,7 +961,34 @@
                     this.$refs.addedit.show();
                 },
                 settleModal(id) {
-                    this.openModalWithDrawData('settle', id);
+                    this.settleModeDrawId = id;
+                    this.$refs.settleModeModal.show();
+                },
+                async chooseSettleMode(mode) {
+                    const drawId = Number(this.settleModeDrawId || 0);
+                    if (!drawId) {
+                        return;
+                    }
+
+                    const selectedMode = String(mode || '').toLowerCase();
+                    if (selectedMode === 'manual') {
+                        if (!this.canUseManualSettle) {
+                            return;
+                        }
+
+                        this.$refs.settleModeModal.hide();
+                        this.openModalWithDrawData('settle', drawId);
+                        return;
+                    }
+
+                    if (selectedMode === 'auto') {
+                        if (!this.canUseAutoSettle) {
+                            return;
+                        }
+
+                        this.$refs.settleModeModal.hide();
+                        await this.runAutoResultManualRetry(drawId);
+                    }
                 },
                 async openModalWithDrawData(mode, id) {
                     this.code = id;

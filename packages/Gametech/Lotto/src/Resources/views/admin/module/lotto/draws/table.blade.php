@@ -10,6 +10,69 @@
             text-align: center;
         }
 
+        #lottoDrawsTable .draw-status-toggle-btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #fff;
+            cursor: pointer;
+            transition: transform .12s ease, opacity .12s ease;
+        }
+
+        #lottoDrawsTable .draw-status-toggle-btn:hover {
+            transform: translateY(-1px);
+            opacity: .92;
+        }
+
+        #lottoDrawsTable .draw-status-toggle-open {
+            background: #1d9d57;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .08);
+        }
+
+        #lottoDrawsTable .draw-status-toggle-closed {
+            background: #d97706;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .08);
+        }
+
+        #lottoDrawsTable .draw-status-static {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        #lottoDrawsTable .draw-status-static-draft {
+            color: #4b5563;
+            background: #eef2f7;
+        }
+
+        #lottoDrawsTable .draw-status-static-open {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        #lottoDrawsTable .draw-status-static-closed {
+            color: #92400e;
+            background: #fef3c7;
+        }
+
+        #lottoDrawsTable .draw-status-static-resulted {
+            color: #1d4ed8;
+            background: #dbeafe;
+        }
+
+        #lottoDrawsTable .draw-status-static-default {
+            color: #374151;
+            background: #e5e7eb;
+        }
+
         #lottoDrawsTable tbody tr.draw-status-draft td {
             background-color: #e9edf5 !important;
         }
