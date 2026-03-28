@@ -22,7 +22,7 @@ class LotteryMarketTransformer extends TransformerAbstract
             'result_url' => $model->result_url
                 ? '<a href="' . e($model->result_url) . '" target="_blank">ลิงก์ผล</a>'
                 : '-',
-            'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->result_sources_count ?? 0)),
+            'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->auto_result_sources_count ?? 0)),
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
                 . ($model->is_enabled ? '<i class="fa fa-check"></i>' : '<i class="fa fa-times"></i>')
