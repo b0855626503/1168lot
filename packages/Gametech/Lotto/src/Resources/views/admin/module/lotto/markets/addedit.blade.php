@@ -322,6 +322,53 @@
                     </b-col>
                 </b-row>
 
+                <b-row class="mt-1">
+                    <b-col md="6">
+                        <b-form-group label="Fetch Capability Policy">
+                            <b-form-select size="sm" v-model="autoSourceForm.fetch_capability" :options="fetchCapabilityOptions"></b-form-select>
+                        </b-form-group>
+                    </b-col>
+                    <b-col md="6" class="pt-4">
+                        <b-form-checkbox v-model="autoSourceForm.allow_dom_fallback" switch>
+                            อนุญาต DOM fallback
+                        </b-form-checkbox>
+                    </b-col>
+                </b-row>
+
+                <div v-if="autoSourceForm.requires_browser || String(autoSourceForm.fetch_strategy).toUpperCase() === 'RENDERED_BROWSER'" class="border rounded p-2 mb-2">
+                    <h6 class="mb-2">Browser Worker Settings</h6>
+                    <b-row>
+                        <b-col md="6">
+                            <b-form-group label="wait_for_selector">
+                                <b-form-input size="sm" v-model="autoSourceForm.browser_wait_for_selector" placeholder="#result-table"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col md="6">
+                            <b-form-group label="wait_until">
+                                <b-form-select size="sm" v-model="autoSourceForm.browser_wait_until" :options="browserWaitUntilOptions"></b-form-select>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                    <b-row>
+                        <b-col md="6">
+                            <b-form-group label="timeout_ms">
+                                <b-form-input size="sm" type="number" min="1000" max="120000" v-model="autoSourceForm.browser_timeout_ms"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col md="6">
+                            <b-form-group label="block_resource_types (comma)">
+                                <b-form-input size="sm" v-model="autoSourceForm.browser_block_resource_types" placeholder="image,font,media"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                    <b-form-group label="capture_url_patterns (one per line)">
+                        <b-form-textarea rows="3" v-model="autoSourceForm.browser_capture_url_patterns" placeholder="/mlnhngoc&#10;https://example.com/result-api"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="selection_mode">
+                        <b-form-select size="sm" v-model="autoSourceForm.browser_selection_mode" :options="browserSelectionModes"></b-form-select>
+                    </b-form-group>
+                </div>
+
                 <b-form-group label="เหตุผลการเปลี่ยนแปลง">
                     <b-form-input size="sm" v-model="autoSourceForm.revision_reason" placeholder="optional"></b-form-input>
                 </b-form-group>
@@ -373,6 +420,18 @@
                         class="btn btn-secondary btn-sm mb-1"
                         @click="showAutoSourceLogsByDate">
                         ดู Log ตามวันที่
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-info btn-sm mb-1 ml-1"
+                        @click="dispatchBrowserTest">
+                        Browser Test (Async)
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-outline-info btn-sm mb-1 ml-1"
+                        @click="checkBrowserTestStatus">
+                        Check Browser Status
                     </button>
                 </div>
             </b-tab>
@@ -499,10 +558,28 @@
                         { value: 'd-m-Y', text: 'd-m-Y (เช่น 27-03-2026)' },
                         { value: 'Y/m/d', text: 'Y/m/d (เช่น 2026/03/27)' },
                     ],
+                    browserWaitUntilOptions: [
+                        { value: 'networkidle', text: 'networkidle' },
+                        { value: 'domcontentloaded', text: 'domcontentloaded' },
+                        { value: 'load', text: 'load' },
+                        { value: 'commit', text: 'commit' },
+                    ],
+                    browserSelectionModes: [
+                        { value: 'best', text: 'best' },
+                        { value: 'first', text: 'first' },
+                        { value: 'all', text: 'all' },
+                    ],
+                    fetchCapabilityOptions: [
+                        { value: 'http_only', text: 'http_only' },
+                        { value: 'prefer_browser_runtime', text: 'prefer_browser_runtime' },
+                        { value: 'require_browser_runtime', text: 'require_browser_runtime' },
+                    ],
                     sourceTestDate: '',
                     sourceTestRunId: '',
                     testRunResult: null,
                     sourceTestLogs: [],
+                    browserTestReceiptKey: '',
+                    browserTestResult: null,
                     autoSourceOptions: {
                         lookupDateModes: [
                             { value: 'ROUND_DATE', text: 'ROUND_DATE' },
@@ -611,6 +688,14 @@
                         quick_first_prize_take_right: 3,
                         quick_last2_paths: '$.lotData.1',
                         quick_last2_take_right: 2,
+                        browser_wait_for_selector: '',
+                        browser_wait_until: 'networkidle',
+                        browser_timeout_ms: 15000,
+                        browser_selection_mode: 'best',
+                        browser_capture_url_patterns: '',
+                        browser_block_resource_types: '',
+                        fetch_capability: 'http_only',
+                        allow_dom_fallback: false,
                         request_headers_json: '{}',
                         request_query_template_json: '{}',
                         request_body_template_json: '{}',
@@ -710,11 +795,20 @@
                     }
                 },
                 buildUnifiedConfigObject() {
+                    const fetchConfig = this.parseJsonSafe(this.autoSourceForm.fetch_config_json);
+                    const browserMeta = this.buildBrowserWorkerMetaFromForm();
+                    fetchConfig.meta = fetchConfig.meta && typeof fetchConfig.meta === 'object' ? fetchConfig.meta : {};
+                    fetchConfig.meta.browser_worker = browserMeta;
+                    fetchConfig.meta.runtime = {
+                        fetch_capability: String(this.autoSourceForm.fetch_capability || 'http_only').trim(),
+                        allow_dom_fallback: !!this.autoSourceForm.allow_dom_fallback,
+                    };
+
                     return {
                         request_headers_json: this.parseJsonSafe(this.autoSourceForm.request_headers_json),
                         request_query_template_json: this.parseJsonSafe(this.autoSourceForm.request_query_template_json),
                         request_body_template_json: this.parseJsonSafe(this.autoSourceForm.request_body_template_json),
-                        fetch_config_json: this.parseJsonSafe(this.autoSourceForm.fetch_config_json),
+                        fetch_config_json: fetchConfig,
                         parser_config_json: this.parseJsonSafe(this.autoSourceForm.parser_config_json),
                         mapping_config_json: this.parseJsonSafe(this.autoSourceForm.mapping_config_json),
                         selection_config_json: this.parseJsonSafe(this.autoSourceForm.selection_config_json),
@@ -740,7 +834,48 @@
                     this.autoSourceForm.validation_config_json = JSON.stringify(unified.validation_config_json || {}, null, 2);
                     this.autoSourceForm.readiness_config_json = JSON.stringify(unified.readiness_config_json || {}, null, 2);
                     this.autoSourceForm.retry_policy_json = JSON.stringify(unified.retry_policy_json || {}, null, 2);
+                    this.populateBrowserWorkerFromFetchConfig(unified.fetch_config_json || {});
                     this.populateQuickFromUnified(unified);
+                },
+                buildBrowserWorkerMetaFromForm() {
+                    const capturePatterns = String(this.autoSourceForm.browser_capture_url_patterns || '')
+                        .split('\n')
+                        .map((line) => String(line || '').trim())
+                        .filter((line) => line !== '');
+                    const blockTypes = String(this.autoSourceForm.browser_block_resource_types || '')
+                        .split(',')
+                        .map((line) => String(line || '').trim())
+                        .filter((line) => line !== '');
+
+                    return {
+                        wait_for_selector: String(this.autoSourceForm.browser_wait_for_selector || '').trim(),
+                        wait_until: String(this.autoSourceForm.browser_wait_until || 'networkidle').trim().toLowerCase() || 'networkidle',
+                        timeout_ms: Number(this.autoSourceForm.browser_timeout_ms || 15000),
+                        capture_url_patterns: capturePatterns,
+                        block_resource_types: blockTypes,
+                        capture: {
+                            selection_mode: String(this.autoSourceForm.browser_selection_mode || 'best').trim().toLowerCase() || 'best',
+                        },
+                    };
+                },
+                populateBrowserWorkerFromFetchConfig(fetchConfig) {
+                    const meta = (fetchConfig && typeof fetchConfig === 'object' && fetchConfig.meta && typeof fetchConfig.meta === 'object')
+                        ? fetchConfig.meta
+                        : {};
+                    const browser = (meta.browser_worker && typeof meta.browser_worker === 'object') ? meta.browser_worker : {};
+                    const runtime = (meta.runtime && typeof meta.runtime === 'object') ? meta.runtime : {};
+                    const capturePatterns = Array.isArray(browser.capture_url_patterns) ? browser.capture_url_patterns : [];
+                    const blockTypes = Array.isArray(browser.block_resource_types) ? browser.block_resource_types : [];
+                    const captureObj = (browser.capture && typeof browser.capture === 'object') ? browser.capture : {};
+
+                    this.autoSourceForm.browser_wait_for_selector = String(browser.wait_for_selector || '');
+                    this.autoSourceForm.browser_wait_until = String(browser.wait_until || 'networkidle').toLowerCase();
+                    this.autoSourceForm.browser_timeout_ms = Number(browser.timeout_ms || 15000);
+                    this.autoSourceForm.browser_selection_mode = String(captureObj.selection_mode || 'best').toLowerCase();
+                    this.autoSourceForm.browser_capture_url_patterns = capturePatterns.map((v) => String(v || '').trim()).filter((v) => v !== '').join('\n');
+                    this.autoSourceForm.browser_block_resource_types = blockTypes.map((v) => String(v || '').trim()).filter((v) => v !== '').join(',');
+                    this.autoSourceForm.fetch_capability = String(runtime.fetch_capability || 'http_only');
+                    this.autoSourceForm.allow_dom_fallback = !!runtime.allow_dom_fallback;
                 },
                 populateQuickFromUnified(unified) {
                     const fetchConfig = (unified.fetch_config_json && typeof unified.fetch_config_json === 'object') ? unified.fetch_config_json : {};
@@ -769,6 +904,7 @@
                     const last2Right = (Array.isArray(last2Rule.transforms) ? last2Rule.transforms : []).find((t) => String((t || {}).op || '').toLowerCase() === 'right');
                     this.autoSourceForm.quick_first_prize_take_right = Number((firstRight || {}).length || this.autoSourceForm.quick_first_prize_take_right || 3);
                     this.autoSourceForm.quick_last2_take_right = Number((last2Right || {}).length || this.autoSourceForm.quick_last2_take_right || 2);
+                    this.populateBrowserWorkerFromFetchConfig(fetchConfig);
                 },
                 splitQuickPaths(text) {
                     return String(text || '').split(',').map((v) => v.trim()).filter((v) => v !== '');
@@ -810,6 +946,12 @@
                             headers: {},
                             query: {},
                             timeout_seconds: Number(this.autoSourceForm.timeout_seconds || 10),
+                            meta: {
+                                runtime: {
+                                    fetch_capability: String(this.autoSourceForm.fetch_capability || 'http_only').trim(),
+                                    allow_dom_fallback: !!this.autoSourceForm.allow_dom_fallback,
+                                },
+                            },
                         },
                         parser_config_json: {
                             version: 2,
@@ -1203,6 +1345,56 @@
                         });
                     } catch (error) {
                         this.showApiError(error, 'Dry-run ไม่สำเร็จ');
+                    }
+                },
+                async dispatchBrowserTest() {
+                    if (!this.sourceTestDate) {
+                        this.showApiError(null, 'กรุณาเลือกวันที่ทดสอบ');
+                        return;
+                    }
+
+                    try {
+                        const payload = this.makeSourcePayload();
+                        const res = await axios.post("{{ route('admin.lotto.result_sources.browser_test_dispatch') }}", {
+                            market_id: Number(this.autoSourceForm.market_id || this.autoSourcesModal.marketId || 0),
+                            draw_date: this.sourceTestDate,
+                            data: payload,
+                        });
+                        const data = ((res || {}).data || {}).data || {};
+                        this.browserTestReceiptKey = String(data.receipt_key || '');
+                        this.browserTestResult = data;
+                        this.$bvModal.msgBoxOk(JSON.stringify(data, null, 2), {
+                            title: 'Browser Test Dispatch',
+                            size: 'xl',
+                            buttonSize: 'sm',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        this.showApiError(error, 'ส่ง Browser test ไม่สำเร็จ');
+                    }
+                },
+                async checkBrowserTestStatus() {
+                    if (!this.browserTestReceiptKey) {
+                        this.showApiError(null, 'ยังไม่มี receipt_key จาก Browser test');
+                        return;
+                    }
+
+                    try {
+                        const res = await axios.get("{{ route('admin.lotto.result_sources.browser_test_status') }}", {
+                            params: {
+                                receipt_key: this.browserTestReceiptKey,
+                            },
+                        });
+                        const data = ((res || {}).data || {}).data || {};
+                        this.browserTestResult = data;
+                        this.$bvModal.msgBoxOk(JSON.stringify(data, null, 2), {
+                            title: 'Browser Test Status',
+                            size: 'xl',
+                            buttonSize: 'sm',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        this.showApiError(error, 'ตรวจสอบ Browser test ไม่สำเร็จ');
                     }
                 },
                 async showAutoSourceLogsByDate() {
