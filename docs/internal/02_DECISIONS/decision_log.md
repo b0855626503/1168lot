@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-03-29 — Result Telegram Uses One Async Summary Message Per Resulted Draw (APPROVED)
+
+- เปลี่ยนเส้นแจ้งผล Telegram ให้ trigger ตอน `draw.status` เปลี่ยนเป็น `resulted` เท่านั้น
+- เพิ่ม queue job `SendDrawResultSummaryTelegramJob` สำหรับ:
+  - คำนวณ summary (`บิลรวม/ชนะ/แพ้/ยอดชนะ/ยอดแพ้/กำไรสุทธิ`)
+  - ยิงข้อความผ่าน `SendTelegramBot` แบบ async
+- ปรับ format ข้อความเป็น short + impact-first และเน้น `กำไร/ขาดทุนสุทธิ`
+- เพิ่ม idempotency กันยิงซ้ำด้วยฟิลด์ `lotto_draws.telegram_sent_at`
+- ยกเลิกการยิงข้อความสถานะ fetched ที่ยังไม่ resulted จาก `ResultApplier`
+
 ## 2026-03-29 — Settlement Normalization Accepts 3-digit First Prize for Auto Result (APPROVED)
 
 - ปรับ `SettlementService::normalizeResultNumber` ให้รองรับ `first_prize` ความยาว `3|5|6` หลัก (เดิมรับเฉพาะ `5|6`)

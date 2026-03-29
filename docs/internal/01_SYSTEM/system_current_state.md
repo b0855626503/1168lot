@@ -74,9 +74,10 @@
   - ระบบจะบันทึกผลที่ดึงได้ไว้ใน draw แต่คงสถานะงวดเป็น `closed`
   - ทีมงานต้องกดประกาศผลเองจากหน้า admin เพื่อคำนวณยอดได้เสีย
 - เมื่อ draw เปลี่ยนเป็น `resulted`:
-  - ถ้า market เปิด `notify_result_telegram=true` ระบบส่ง Telegram ผ่าน `notify/send`
-  - ข้อความแจ้งผลแสดงเลขผลตามรูปแบบหวย และปิดท้าย `คำนวนเงินรางวัลแล้ว`
-  - กรณีตลาดที่ปิด auto settle (`auto_settle_on_result=false`) ระบบส่งข้อความผลพร้อมสถานะ `รอทีมงานอนุมัติการคำนวน`
+  - ถ้า market เปิด `notify_result_telegram=true` ระบบ dispatch queue job แยกเพื่อสรุปผลและส่ง Telegram ผ่าน `notify/send`
+  - ข้อความแจ้งผลเป็นแบบสั้น (impact-first) และมีสรุป `บิลทั้งหมด/ชนะ/แพ้/กำไรสุทธิ` ในข้อความเดียว
+  - policy บังคับ `1 message ต่อ 1 draw` โดยใช้ `lotto_draws.telegram_sent_at` กันยิงซ้ำ
+  - trigger เฉพาะตอน status transition เป็น `resulted` เท่านั้น (ไม่ยิงตอนยัง `closed`)
 - `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ 3 หลักร่วมกับ `last_2_digits` 2 หลัก
   - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง (เช่น หุ้น/VIP)
   - ระบบยัง derive `top_3`, `top_2`, `bottom_2` เหมือนเดิมเพื่อให้ settlement bet types เดิมทำงานต่อเนื่อง

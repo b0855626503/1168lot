@@ -2,7 +2,6 @@
 
 namespace Gametech\Lotto\Services\AutoResult;
 
-use App\Jobs\SendTelegramBot;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\SettlementService;
@@ -75,8 +74,6 @@ class ResultApplier
                     'result_fetched_at' => now(),
                 ])->save();
 
-                $this->sendFetchedResultTelegram($locked, $validated, false);
-
                 return [
                     'status' => 'APPLIED',
                     'result_hash' => $resultHash,
@@ -127,44 +124,5 @@ class ResultApplier
         }
 
         return (bool) ($market->auto_settle_on_result ?? true);
-    }
-
-    /**
-     * @param array<string,mixed> $validated
-     */
-    private function sendFetchedResultTelegram(LottoDraw $draw, array $validated, bool $settled): void
-    {
-        $market = LotteryMarket::query()
-            ->select(['id', 'name', 'notify_result_telegram'])
-            ->find((int) $draw->market_id);
-
-        if ($market instanceof LotteryMarket && ! (bool) ($market->notify_result_telegram ?? true)) {
-            return;
-        }
-
-        $marketName = (string) ($market?->name ?? ('Market #' . (int) $draw->market_id));
-        $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
-        $firstPrize = preg_replace('/\D+/', '', (string) ($validated['first_prize'] ?? ''));
-        $last2Digits = preg_replace('/\D+/', '', (string) ($validated['last_2_digits'] ?? ''));
-
-        $firstLabel = strlen((string) $firstPrize) <= 3 ? 'เลข 3 ตัวบน' : 'รางวัลที่ 1';
-        $last2Label = strlen((string) $firstPrize) <= 3 ? 'เลข 2 ตัวล่าง' : 'รางวัล เลข 2 ตัว';
-        $statusLine = $settled ? 'คำนวนเงินรางวัลแล้ว' : 'รอทีมงานอนุมัติการคำนวน';
-
-        $message = sprintf(
-            'หวย%s งวดวันที่ %s' . PHP_EOL .
-            '%s : %s' . PHP_EOL .
-            '%s : %s' . PHP_EOL .
-            '%s',
-            $marketName,
-            $drawDate,
-            $firstLabel,
-            $firstPrize !== '' ? $firstPrize : '-',
-            $last2Label,
-            $last2Digits !== '' ? $last2Digits : '-',
-            $statusLine
-        );
-
-        SendTelegramBot::dispatch('notify/send', $message)->onQueue('cashback');
     }
 }

@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 class LottoDraw extends Model implements LottoDrawContract
 {
     protected $table = 'lotto_draws';
-    protected $dates = ['draw_date', 'open_at', 'opened_at', 'close_at', 'closed_at', 'result_at', 'result_fetched_at', 'result_applied_at', 'result_conflicted_at', 'result_exhausted_at', 'exhausted_alerted_at'];
+    protected $dates = ['draw_date', 'open_at', 'opened_at', 'close_at', 'closed_at', 'result_at', 'result_fetched_at', 'result_applied_at', 'result_conflicted_at', 'result_exhausted_at', 'exhausted_alerted_at', 'telegram_sent_at'];
 
     protected $fillable = [
         'market_id',
@@ -44,6 +44,7 @@ class LottoDraw extends Model implements LottoDrawContract
         'result_conflict_payload_json',
         'result_exhausted_at',
         'exhausted_alerted_at',
+        'telegram_sent_at',
         'created_by',    // user_id
     ];
 
@@ -72,6 +73,7 @@ class LottoDraw extends Model implements LottoDrawContract
         'result_conflict_payload_json' => 'array',
         'result_exhausted_at' => 'datetime',
         'exhausted_alerted_at' => 'datetime',
+        'telegram_sent_at' => 'datetime',
     ];
 
     // Scopes
