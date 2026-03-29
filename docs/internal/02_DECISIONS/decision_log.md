@@ -1,5 +1,10 @@
 # Decision Log
 
+## 2026-03-29 — Draws DataTable Disables Search on withCount Alias Columns (APPROVED)
+
+- ปรับคอลัมน์ `blocked_numbers_count` และ `tickets_count` ใน `LottoDrawDataTable` ให้ `searchable=false`
+- แก้ปัญหา SQL error `Unknown column 'lotto_draws.blocked_numbers_count' in 'where clause'` ที่เกิดจาก DataTables พยายามสร้าง `WHERE` บน alias จาก `withCount(...)`
+
 ## 2026-03-29 — Result Telegram Uses One Async Summary Message Per Resulted Draw (APPROVED)
 
 - เปลี่ยนเส้นแจ้งผล Telegram ให้ trigger ตอน `draw.status` เปลี่ยนเป็น `resulted` เท่านั้น
