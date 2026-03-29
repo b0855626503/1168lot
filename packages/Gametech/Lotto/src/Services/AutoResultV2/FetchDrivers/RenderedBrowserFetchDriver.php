@@ -35,6 +35,8 @@ class RenderedBrowserFetchDriver
         $capability = $this->policyService->normalizeCapability($runtimeMeta['fetch_capability'] ?? null);
         $context['fetch_capability'] = $capability;
         $context['allow_dom_fallback'] = (bool) ($runtimeMeta['allow_dom_fallback'] ?? false);
+        $context['meta'] = $meta;
+        $context['timeout_seconds'] = max(1, (int) ($fetchConfig['timeout_seconds'] ?? 10));
 
         $receipt = $this->dispatchService->buildReceiptKey([
             'request' => $request,
