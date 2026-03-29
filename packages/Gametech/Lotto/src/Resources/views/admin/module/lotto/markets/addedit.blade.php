@@ -1516,6 +1516,45 @@
                         this.showApiError(error, 'Validate cutover ไม่ผ่าน');
                     }
                 },
+                sleepMs(ms) {
+                    const timeout = Math.max(0, Number(ms || 0));
+                    return new Promise((resolve) => setTimeout(resolve, timeout));
+                },
+                isDryRunPending(data) {
+                    const status = String((data && data.status) || '').toUpperCase();
+                    const errorCode = String((data && data.error_code) || '').toUpperCase();
+                    return status === 'FETCH_DEFERRED' || errorCode === 'FETCH_DEFERRED';
+                },
+                async dispatchDryRunByDate(marketId, drawDate) {
+                    const res = await axios.post("{{ route('admin.lotto.result_sources.test_fetch_by_date') }}", {
+                        market_id: Number(marketId || 0),
+                        draw_date: drawDate,
+                    });
+                    return ((res || {}).data || {}).data || {};
+                },
+                async pollBrowserReceipt(receiptKey, maxAttempts = 45, intervalMs = 2000) {
+                    const receipt = String(receiptKey || '').trim();
+                    if (!receipt) {
+                        throw new Error('ยังไม่มี receipt_key สำหรับ polling');
+                    }
+
+                    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+                        const res = await axios.get("{{ route('admin.lotto.result_sources.browser_test_status') }}", {
+                            params: {
+                                receipt_key: receipt,
+                            },
+                        });
+                        const data = ((res || {}).data || {}).data || {};
+                        const status = String(data.status || '').toUpperCase();
+                        this.browserTestResult = data;
+                        if (status !== 'FETCH_DEFERRED' && status !== '') {
+                            return data;
+                        }
+                        await this.sleepMs(intervalMs);
+                    }
+
+                    throw new Error('หมดเวลารอผล Browser worker (dry-run async)');
+                },
                 async runAutoSourceTestByDate() {
                     if (!this.sourceTestDate) {
                         this.showApiError(null, 'กรุณาเลือกวันที่ทดสอบ');
@@ -1523,15 +1562,23 @@
                     }
 
                     try {
-                        const res = await axios.post("{{ route('admin.lotto.result_sources.test_fetch_by_date') }}", {
-                            market_id: Number(this.autoSourceForm.market_id || this.autoSourcesModal.marketId || 0),
-                            draw_date: this.sourceTestDate,
-                        });
+                        const marketId = Number(this.autoSourceForm.market_id || this.autoSourcesModal.marketId || 0);
+                        let data = await this.dispatchDryRunByDate(marketId, this.sourceTestDate);
+                        this.browserTestReceiptKey = String(data.receipt_key || '');
 
-                        const data = ((res || {}).data || {}).data || {};
+                        let asyncPollSummary = '';
+                        let guard = 0;
+                        while (this.isDryRunPending(data) && this.browserTestReceiptKey && guard < 2) {
+                            const browserStatus = await this.pollBrowserReceipt(this.browserTestReceiptKey);
+                            asyncPollSummary = `\nasync_browser_status: ${String(browserStatus.status || '-')}`;
+                            data = await this.dispatchDryRunByDate(marketId, this.sourceTestDate);
+                            this.browserTestReceiptKey = String(data.receipt_key || this.browserTestReceiptKey || '');
+                            guard += 1;
+                        }
+
                         this.sourceTestRunId = data.run_id || '';
                         this.testRunResult = data;
-                        const output = String(data.output || '').trim() || 'Dry-run สำเร็จ';
+                        const output = (String(data.output || '').trim() || 'Dry-run สำเร็จ') + asyncPollSummary;
                         this.$bvModal.msgBoxOk(output, {
                             title: 'Dry-run Result',
                             size: 'xl',

@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-03-29 — Settlement Normalization Accepts 3-digit First Prize for Auto Result (APPROVED)
+
+- ปรับ `SettlementService::normalizeResultNumber` ให้รองรับ `first_prize` ความยาว `3|5|6` หลัก (เดิมรับเฉพาะ `5|6`)
+- สำหรับเคส `first_prize=3 หลัก` + `last_2_digits=2 หลัก`:
+  - ยอมรับผลและ normalize ต่อได้
+  - derive `top_3/top_2/bottom_2` ตามเดิมเพื่อไม่กระทบการคำนวณรางวัลของ bet types เดิม
+- เหตุผล: ป้องกันกรณี dry-run ผ่านแต่ apply จริงล้มที่ settlement สำหรับตลาดหุ้น/VIP ที่ใช้ผล 3 ตัวบน
+
+## 2026-03-29 — Dry-run By Date Supports Single-Click Async Polling in Popup (APPROVED)
+
+- ปรับ response ของ `test_fetch_by_date` ให้ส่ง `receipt_key`, `selected_driver`, `polling_required` เมื่ออยู่เส้น async (`FETCH_DEFERRED`)
+- ปรับหน้า popup ทั้ง `lotto/markets` และ `lotto/auto-result-sources`:
+  - กด dry-run ครั้งเดียวได้
+  - ถ้าได้ `FETCH_DEFERRED` จะ polling `browser_test_status` อัตโนมัติใน popup เดิม
+  - เมื่อ worker จบแล้ว frontend จะยิง dry-run ซ้ำอัตโนมัติรอบสรุปผล เพื่อให้ได้ผล pipeline สุดท้าย
+- เป้าหมาย: ลดขั้นตอนมือ (ไม่บังคับกด Browser Test ก่อนทุกครั้ง) และคง flow async-only ของ browser runtime
+
 ## 2026-03-29 — FetchExecutor Supports endpoint_url Placeholder expected_draw_date (APPROVED)
 
 - เพิ่มการแทนค่า runtime placeholder ใน `fetch_config_json.endpoint_url` ก่อนยิง request:

@@ -103,15 +103,18 @@ class SettlementService
         $last2Digits = preg_replace('/\D+/', '', (string) ($resultNumber['last_2_digits'] ?? ''));
 
         if ($firstPrize !== '' || $last2Digits !== '') {
-            if (! in_array(strlen($firstPrize), [5, 6], true)) {
-                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 5 หรือ 6 หลัก');
+            $firstPrizeLength = strlen($firstPrize);
+            if (! in_array($firstPrizeLength, [3, 5, 6], true)) {
+                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 3, 5 หรือ 6 หลัก');
             }
 
             if (strlen($last2Digits) !== 2) {
                 throw new InvalidArgumentException('เลขท้าย 2 ตัวต้องมี 2 หลัก');
             }
 
-            $top3 = substr($firstPrize, -3);
+            $top3 = $firstPrizeLength === 3
+                ? $firstPrize
+                : substr($firstPrize, -3);
             $top2 = substr($firstPrize, -2);
 
             return [

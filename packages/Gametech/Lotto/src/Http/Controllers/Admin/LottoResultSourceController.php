@@ -495,6 +495,8 @@ class LottoResultSourceController extends AppBaseController
         $fetch = is_array($result['fetch'] ?? null) ? (array) $result['fetch'] : [];
         $trace = is_array($result['trace_json'] ?? null) ? (array) $result['trace_json'] : [];
         $extract = is_array($result['extract'] ?? null) ? (array) $result['extract'] : [];
+        $receiptKey = $this->stringValue($fetch['receipt_key'] ?? '');
+        $selectedDriver = $this->stringValue($fetch['selected_driver'] ?? ($trace['selected_driver'] ?? ''));
 
         $requestUrl = $this->stringValue($fetch['selected_endpoint'] ?? '');
         if ($requestUrl === '') {
@@ -555,6 +557,12 @@ class LottoResultSourceController extends AppBaseController
         if ($errorMessage !== '') {
             $lines[] = 'error_message: ' . $errorMessage;
         }
+        if ($receiptKey !== '') {
+            $lines[] = 'receipt_key: ' . $receiptKey;
+        }
+        if ($selectedDriver !== '') {
+            $lines[] = 'selected_driver: ' . $selectedDriver;
+        }
         if (is_array($normalized) && $normalized !== []) {
             $lines[] = 'normalized: ' . json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
@@ -570,6 +578,9 @@ class LottoResultSourceController extends AppBaseController
             'status' => $status,
             'error_code' => $errorCode !== '' ? $errorCode : null,
             'error_message' => $errorMessage !== '' ? $errorMessage : null,
+            'receipt_key' => $receiptKey !== '' ? $receiptKey : null,
+            'selected_driver' => $selectedDriver !== '' ? $selectedDriver : null,
+            'polling_required' => $status === 'FETCH_DEFERRED' || $errorCode === 'FETCH_DEFERRED',
             'normalized_result' => is_array($normalized) ? $normalized : [],
             'output' => implode("\n", $lines),
         ], 'ดำเนินการ Dry-run Auto Result เรียบร้อยแล้ว');

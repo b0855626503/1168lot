@@ -77,6 +77,9 @@
   - ถ้า market เปิด `notify_result_telegram=true` ระบบส่ง Telegram ผ่าน `notify/send`
   - ข้อความแจ้งผลแสดงเลขผลตามรูปแบบหวย และปิดท้าย `คำนวนเงินรางวัลแล้ว`
   - กรณีตลาดที่ปิด auto settle (`auto_settle_on_result=false`) ระบบส่งข้อความผลพร้อมสถานะ `รอทีมงานอนุมัติการคำนวน`
+- `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ 3 หลักร่วมกับ `last_2_digits` 2 หลัก
+  - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง (เช่น หุ้น/VIP)
+  - ระบบยัง derive `top_3`, `top_2`, `bottom_2` เหมือนเดิมเพื่อให้ settlement bet types เดิมทำงานต่อเนื่อง
 
 ## นโยบาย Telegram Alert ของ Auto Result
 
@@ -125,6 +128,10 @@
 - ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
   - เลือก `draw_date` แล้วกด dry-run ได้แม้ไม่มีงวดจริงของวันนั้น (ระบบสร้าง virtual draw context ให้ทดสอบ)
   - Browser test dispatch รองรับโหมดเดียวกัน (ใช้ virtual draw context เมื่อไม่พบงวดจริง)
+  - ปุ่ม `Dry Run ตามวันที่` รองรับ async orchestration ใน popup:
+    - ผู้ใช้กด dry-run ครั้งเดียวได้
+    - ถ้ารอบแรกได้ `FETCH_DEFERRED` และมี `receipt_key` ระบบ frontend จะ polling `browser_test_status` อัตโนมัติใน popup เดิม
+    - เมื่อ worker จบแล้ว ระบบจะยิง dry-run ซ้ำอัตโนมัติเพื่อเดิน parse/select/map/validate ต่อให้ครบ
   - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
   - dry-run by date จะ persist log แบบเต็มคล้าย production run และใช้ `run_id` เป็นหลัก (`draw_id=null`)
   - ปุ่ม `ดู` ในรายการ logs-by-date แสดงเฉพาะข้อมูล `trace_json` ใน modal รายละเอียด
