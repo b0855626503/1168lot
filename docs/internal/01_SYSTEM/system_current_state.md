@@ -174,6 +174,9 @@
   - `V2_CUTOVER`
 - รองรับ `fetch_strategy` แบบ fixed set:
   - `JSON_HTTP`, `HTML_HTTP`, `RENDERED_BROWSER`, `EMBEDDED_JSON`, `MANUAL_INPUT`
+- รองรับ placeholder ใน `fetch_config_json.endpoint_url` สำหรับ runtime context:
+  - `{{expected_draw_date}}` หรือ `{expected_draw_date}`
+  - ใช้ค่า `expected_draw_date` จาก runtime context ของรอบทดสอบ/รันจริงก่อนยิง fetch
 - รองรับ `selection_stage` แบบ fixed set:
   - `PRE_MAPPING`, `POST_MAPPING`
 - มี shadow compare status แบบ fixed set:

@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-03-29 — FetchExecutor Supports endpoint_url Placeholder expected_draw_date (APPROVED)
+
+- เพิ่มการแทนค่า runtime placeholder ใน `fetch_config_json.endpoint_url` ก่อนยิง request:
+  - รองรับ `{{expected_draw_date}}` และ `{expected_draw_date}`
+- ใช้ค่าจาก `runtimeContext.expected_draw_date` ในรอบ execute ของ pipeline
+- แก้ปัญหาเคส endpoint แบบ dynamic date เช่น `/between-dates/null/{{expected_draw_date}}/1` ที่เดิมไม่ถูก interpolate
+
 ## 2026-03-29 — Logs Detail Modal Shows Trace Only (APPROVED)
 
 - ปุ่ม `ดู` ในหน้า logs ตามวันที่ (ทั้ง popup `/lotto/markets` และหน้า `/lotto/auto-result-sources`) ปรับให้แสดงเฉพาะ `trace_json`

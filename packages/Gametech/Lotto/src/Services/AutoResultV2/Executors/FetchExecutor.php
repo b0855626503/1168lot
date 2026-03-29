@@ -35,9 +35,11 @@ class FetchExecutor
      */
     public function execute(FetchConfigData $config, array $runtimeContext = []): array
     {
+        $resolvedUrl = $this->resolveEndpointUrl($config->endpointUrl(), $runtimeContext);
+
         $fetchConfig = [
             'request' => [
-                'url' => $config->endpointUrl(),
+                'url' => $resolvedUrl,
                 'method' => $config->httpMethod(),
                 'headers' => $config->headers(),
                 'query' => $config->query(),
@@ -103,5 +105,23 @@ class FetchExecutor
         }
 
         return $this->renderedBrowser->fetch($fetchConfig);
+    }
+
+    private function resolveEndpointUrl(?string $endpointUrl, array $runtimeContext): ?string
+    {
+        if ($endpointUrl === null) {
+            return null;
+        }
+
+        $expectedDrawDate = trim((string) ($runtimeContext['expected_draw_date'] ?? ''));
+        if ($expectedDrawDate === '') {
+            return $endpointUrl;
+        }
+
+        return str_replace(
+            ['{{expected_draw_date}}', '{expected_draw_date}'],
+            $expectedDrawDate,
+            $endpointUrl
+        );
     }
 }

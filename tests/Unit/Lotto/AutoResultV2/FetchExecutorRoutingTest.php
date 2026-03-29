@@ -59,5 +59,39 @@ class FetchExecutorRoutingTest extends TestCase
         $this->assertTrue((bool) $result['ok']);
         $this->assertSame('HTTP_ONLY_ROUTE', $result['selected_driver']);
     }
-}
 
+    public function test_json_http_replaces_expected_draw_date_placeholder_in_endpoint_url(): void
+    {
+        $json = new class extends JsonHttpFetchDriver {
+            public array $lastFetchConfig = [];
+
+            public function fetch(array $fetchConfig): array
+            {
+                $this->lastFetchConfig = $fetchConfig;
+
+                return ['ok' => true, 'status' => 'SUCCESS', 'response_body' => '[]', 'response_content_type' => 'application/json', 'duration_ms' => 1];
+            }
+        };
+
+        $executor = new FetchExecutor(
+            $json,
+            new HtmlHttpFetchDriver(),
+            new RenderedBrowserFetchDriver(),
+            new EmbeddedJsonFetchDriver(),
+            new ManualInputFetchDriver()
+        );
+
+        $config = FetchConfigData::fromArray([
+            'fetch_strategy' => 'JSON_HTTP',
+            'endpoint_url' => 'https://example.com/results/{{expected_draw_date}}/1',
+            'http_method' => 'GET',
+        ]);
+
+        $executor->execute($config, ['expected_draw_date' => '2026-03-28']);
+
+        $this->assertSame(
+            'https://example.com/results/2026-03-28/1',
+            (string) ($json->lastFetchConfig['request']['url'] ?? '')
+        );
+    }
+}
