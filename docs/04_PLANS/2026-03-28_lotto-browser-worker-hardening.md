@@ -1,4 +1,4 @@
-> สถานะ: ACTIVE
+> สถานะ: DONE
 > วันที่: 2026-03-28
 > โดเมน/เรื่อง: Lotto / Auto Result Browser Runtime Phase 2
 > แทนแผนเก่า: -
