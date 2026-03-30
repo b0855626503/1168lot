@@ -1,5 +1,63 @@
 # Decision Log
 
+## 2026-03-30 — Internal Result Sources Migration Command + Optional-Date Upstream Mode (APPROVED)
+
+- เพิ่ม command `lotto:migrate-internal-result-endpoints` สำหรับ PR-13:
+  - dry-run/report (`--report-only`)
+  - apply backfill (`--apply`)
+  - filter ราย source (`--source-id=*`)
+- command จะเขียน report ที่:
+  - `storage/app/lotto/internal_result_migration/migration_report_*.json`
+- lock mapping rules:
+  - `exphuay.com/backward/{type}/__data.json` -> `/internal/lottery/results/exphuay/{type}`
+  - `api.dowjones-midnight.com/result` -> `/internal/lottery/results/dowjones-midnight`
+  - `api.dowjonesextra.com/result` -> `/internal/lottery/results/dowjones-extra`
+- ระหว่าง migrate ถ้ามี `fetch_config_json` ให้ sync ทั้ง:
+  - `endpoint_url`, `request.url`, `request.query`, `query`
+- ถ้าเปิด shared-key จะ inject header ตาม config ไปที่ `fetch_config_json` เพื่อไม่ให้ internal auth block รันจริง
+- ปรับ internal result service ให้ `date` เป็น optional จริง:
+  - ถ้าไม่ส่ง `date` จะไม่บังคับส่ง query `date` ไป upstream
+  - `draw_date` จะ resolve จาก upstream payload ก่อน (fallback วันนี้เมื่อไม่พบ)
+- เหตุผล: รักษา compatibility ของ mode “latest” และทำ migration/backfill แบบตรวจสอบได้
+
+## 2026-03-30 — Internal Lotto Result Sources API Baseline Implementation (APPROVED)
+
+- เพิ่ม internal endpoints ตาม contract freeze:
+  - `GET /internal/lottery/results/exphuay/{type}?date=&page=`
+  - `GET /internal/lottery/results/dowjones-midnight?date=`
+  - `GET /internal/lottery/results/dowjones-extra?date=`
+- ล็อก date adapter สำหรับ input `Y-m-d`, `d/m/Y`, `d-m-Y` และ output `draw_date=Y-m-d`
+- บังคับ canonical response key คงที่:
+  - `success`, `source`, `type`, `draw_date`, `raw_result`, `normalized_result`, `meta`, `errors`
+  - `normalized_result` คง key ชุดเดียว (ค่าว่างเป็น `null`)
+  - `errors` เป็น array เสมอ
+- ล็อก policy field เสริม Dowjones:
+  - `start_spin`, `show_result`, `now`, `update` ต้องอยู่ที่ `meta.dowjones_supplemental`
+  - ห้าม map field เสริมเข้า `normalized_result`
+- เพิ่ม middleware `lotto.internal_results`:
+  - เมื่อกำหนด `LOTTO_INTERNAL_RESULT_SHARED_KEY` จะบังคับตรวจ shared-key header
+  - เมื่อไม่กำหนด key จะ allow เพื่อรองรับ migration/transition window
+
+## 2026-03-30 — Internal Result Sources Contract Freeze Baseline (APPROVED)
+
+- ล็อก baseline integration สำหรับ `lottery-php`, `dowjones-midnight`, `dowjones-extra` จาก zip evidence
+- ล็อก internal endpoint targets:
+  - `GET /internal/lottery/results/exphuay/{type}?date=YYYY-MM-DD&page=1`
+  - `GET /internal/lottery/results/dowjones-midnight?date=YYYY-MM-DD`
+  - `GET /internal/lottery/results/dowjones-extra?date=YYYY-MM-DD`
+- ล็อก date policy:
+  - input รองรับ `Y-m-d`, `d/m/Y`, `d-m-Y`
+  - output canonical `draw_date` เป็น `Y-m-d` เท่านั้น
+- ล็อก canonical response keys บังคับ:
+  - `success`, `source`, `type`, `draw_date`, `raw_result`, `normalized_result`, `meta`, `errors`
+  - field ที่ derive ไม่ได้ให้ `null` และ `errors` ต้องเป็น array
+- ล็อกว่า supplemental fields ของ Dowjones (`start_spin`, `show_result`, `now`, `update`) ต้องผ่าน policy ownership ที่ชัดเจนใน metadata/raw (ห้ามปะปนกับผลรางวัลโดยไม่มี rule)
+- ล็อก migration intent:
+  - production path ใหม่ต้องเป็น service-first integration ภายในระบบหลัก
+  - CLI runtime เดิมใช้เป็น reference/transition เท่านั้น
+- เอกสาร source of truth:
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-contract-freeze.md`
+
 ## 2026-03-29 — Draws DataTable Disables Search on withCount Alias Columns (APPROVED)
 
 - ปรับคอลัมน์ `blocked_numbers_count` และ `tickets_count` ใน `LottoDrawDataTable` ให้ `searchable=false`

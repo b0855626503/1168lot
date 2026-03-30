@@ -3,6 +3,7 @@
 namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\AuthenticateLottoInternalResults;
 use App\Http\Middleware\AuthenticateUser;
 use App\Http\Middleware\CheckForMaintenanceMode;
 use App\Http\Middleware\EncryptCookies;
@@ -121,6 +122,7 @@ class Kernel extends HttpKernel
         'loguser' => LogActivityUser::class,
         'customer' => RedirectIfNotCustomer::class,
         'filter' => FilterIps::class,
+        'lotto.internal_results' => AuthenticateLottoInternalResults::class,
     ];
 
     protected $middlewarePriority = [
