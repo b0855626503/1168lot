@@ -8,6 +8,7 @@ use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
+use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
@@ -90,6 +91,7 @@ class LottoServiceProvider extends ServiceProvider
             GenerateAutoLottoDrawsCommand::class,
             LottoFetchAutoResultsCommand::class,
             LottoAutoResultMetricsCommand::class,
+            MigrateInternalResultEndpointsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
             SyncLottoDrawStatusesCommand::class,
         ]);
@@ -148,4 +150,3 @@ class LottoServiceProvider extends ServiceProvider
         LottoTicketItemProxy::observe(LottoDashboardSummaryObserver::class);
     }
 }
-

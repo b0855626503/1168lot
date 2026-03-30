@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-03-29
+อัปเดตล่าสุด: 2026-03-30
 
 ## ภาพรวมระบบ
 
@@ -110,6 +110,33 @@
   - `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
+
+## นโยบาย Internal Lotto Result Sources API
+
+- เพิ่ม internal endpoints สำหรับรวม source จาก mini projects เดิม:
+  - `GET /internal/lottery/results/exphuay/{type}?date=&page=`
+  - `GET /internal/lottery/results/dowjones-midnight?date=`
+  - `GET /internal/lottery/results/dowjones-extra?date=`
+- date input รองรับ 3 format:
+  - `Y-m-d`
+  - `d/m/Y`
+  - `d-m-Y`
+- เมื่อไม่ส่ง `date` ระบบจะไม่บังคับใส่ query `date` ไป upstream (คงโหมด latest)
+- output `draw_date` ถูก normalize เป็น `Y-m-d` เสมอ
+- canonical response บังคับ key คงที่:
+  - `success`, `source`, `type`, `draw_date`, `raw_result`, `normalized_result`, `meta`, `errors`
+  - `normalized_result` คง key: `first_prize`, `top_3`, `top_2`, `bottom_2`, `digit_4`, `digit_5` (ไม่มีค่าใช้ `null`)
+  - `errors` เป็น array เสมอ
+- policy field เสริม Dowjones:
+  - `start_spin`, `show_result`, `now`, `update` ถูกเก็บใน `meta.dowjones_supplemental`
+  - ห้าม map field เสริมเหล่านี้เข้า `normalized_result`
+- security policy:
+  - route ชุดนี้ใช้ middleware `lotto.internal_results`
+  - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
+  - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
+- migration/backfill policy:
+  - ใช้ command `lotto:migrate-internal-result-endpoints` เพื่อ map endpoint เดิม -> internal endpoints
+  - command จะ generate report ทุกครั้งที่รันสำหรับ traceability
 
 ## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
 
@@ -304,6 +331,15 @@
 - มี incident runbook สำหรับ on-call:
   - `docs/internal/03_DOMAINS/lotto-browser-runtime-incident-runbook.md`
   - ครอบคลุม reason code triage + rollback decision tree + evidence checklist
+
+## นโยบาย Internal Result Sources Integration (Contract Freeze)
+
+- policy รายละเอียดของโดเมนนี้ถูกแยกเป็น source-of-truth ที่:
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-contract-freeze.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-compatibility-matrix.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-dowjones-extra-fields-policy.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-migration-backfill.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-rollout-deprecation.md`
 
 ## โครงสร้างเอกสาร
 

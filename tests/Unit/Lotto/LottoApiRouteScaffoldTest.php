@@ -31,6 +31,9 @@ class LottoApiRouteScaffoldTest extends TestCase
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\DrawController@index", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\BetController@store", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\TicketController@cancel", $content);
+        $this->assertStringContainsString("prefix('internal/lottery/results')", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@exphuay", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@dowjonesMidnight", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@dowjonesExtra", $content);
     }
 }
-

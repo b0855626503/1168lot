@@ -35,3 +35,16 @@ Route::middleware(['api', 'authuser:customer'])->prefix('api/lotto')->group(func
 
 });
 
+Route::middleware(['api', 'throttle:120,1', 'lotto.internal_results'])
+    ->prefix('internal/lottery/results')
+    ->group(function () {
+        Route::get('exphuay/{type}', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@exphuay')
+            ->name('lotto.internal.results.exphuay');
+
+        Route::get('dowjones-midnight', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@dowjonesMidnight')
+            ->name('lotto.internal.results.dowjones_midnight');
+
+        Route::get('dowjones-extra', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@dowjonesExtra')
+            ->name('lotto.internal.results.dowjones_extra');
+    });
+

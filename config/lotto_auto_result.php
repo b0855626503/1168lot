@@ -72,4 +72,10 @@ return [
             'default_window_hours' => (int) env('LOTTO_AUTO_RESULT_METRICS_WINDOW_HOURS', 24),
         ],
     ],
+
+    'internal_result_sources' => [
+        'timeout_seconds' => max(1, (int) env('LOTTO_INTERNAL_RESULT_TIMEOUT_SECONDS', 15)),
+        'shared_key' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_KEY', ''),
+        'header_name' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_HEADER', 'X-Lotto-Internal-Key'),
+    ],
 ];
