@@ -123,6 +123,14 @@
   - `d-m-Y`
 - เมื่อไม่ส่ง `date` ระบบจะไม่บังคับใส่ query `date` ไป upstream (คงโหมด latest)
 - output `draw_date` ถูก normalize เป็น `Y-m-d` เสมอ
+- สำหรับ exphuay:
+  - upstream อาจคืน payload หลายงวดแม้ส่ง `date`
+  - ระบบหลักต้อง select record จาก payload เองตาม local draw date (`Asia/Bangkok`) ที่ derive จาก `lottosDate`
+  - เมื่อ match record แล้วจะ derive:
+    - `first_prize` จาก `lottosNumber`
+    - `top_3` จาก 3 หลักท้ายของ `lottosNumber`
+    - `top_2` จาก 2 หลักท้ายของ `lottosNumber`
+    - `bottom_2` จาก `lottosUnder`
 - canonical response บังคับ key คงที่:
   - `success`, `source`, `type`, `draw_date`, `raw_result`, `normalized_result`, `meta`, `errors`
   - `normalized_result` คง key: `first_prize`, `top_3`, `top_2`, `bottom_2`, `digit_4`, `digit_5` (ไม่มีค่าใช้ `null`)
@@ -130,13 +138,33 @@
 - policy field เสริม Dowjones:
   - `start_spin`, `show_result`, `now`, `update` ถูกเก็บใน `meta.dowjones_supplemental`
   - ห้าม map field เสริมเหล่านี้เข้า `normalized_result`
+  - เมื่อ `dowjones-midnight` upstream ให้มาเพียง `digit5`:
+    - `top_3` = 3 หลักท้ายของ `digit5`
+    - `top_2` = 2 หลักท้ายของ `digit5`
+    - `bottom_2` = 2 หลักหน้าของ `digit5`
+  - `dowjones-extra`:
+    - ถ้าขอ “วันปัจจุบัน” ให้ใช้ `https://api.dowjonesextra.com/result` โดยไม่ส่ง `date`
+    - ถ้าขอย้อนหลัง ให้ใช้ `https://api.dowjonesextra.com/history` แล้ว select `lotto_date` ให้ตรงวันที่ขอ
+    - เมื่อได้ `digit5` แล้ว:
+      - `top_3` = 3 หลักท้ายของ `digit5`
+      - `top_2` = 2 หลักท้ายของ `digit5`
+      - `bottom_2` = 2 หลักหน้าของ `digit5`
 - security policy:
   - route ชุดนี้ใช้ middleware `lotto.internal_results`
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
+  - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover
 - migration/backfill policy:
   - ใช้ command `lotto:migrate-internal-result-endpoints` เพื่อ map endpoint เดิม -> internal endpoints
   - command จะ generate report ทุกครั้งที่รันสำหรับ traceability
+  - มี command bootstrap สำหรับ market ที่ยังไม่มี source row:
+    - `lotto:bootstrap-missing-result-sources`
+    - policy เริ่มต้นจะสร้างเป็น `is_active=false` (safe placeholder) เพื่อไม่กระทบ runtime ทันที
+  - มี command insert-only สำหรับ canonical mapping โดยไม่ทับแถวเดิม:
+    - `lotto:insert-internal-result-source-mappings`
+    - policy: insert เฉพาะ endpoint canonical ที่ยังไม่มีใน market นั้น (skip ถ้ามี endpoint เดิมอยู่แล้ว)
+  - V2 fetch runtime ต้อง render placeholders ใน `endpoint_url`, `query`, `headers`, `body` ก่อนยิง request
+    - ถ้าไม่มี `lookup_date` ใน runtime context ให้ fallback ใช้ `expected_draw_date`
 
 ## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
 

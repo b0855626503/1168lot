@@ -35,15 +35,16 @@ class FetchExecutor
      */
     public function execute(FetchConfigData $config, array $runtimeContext = []): array
     {
-        $resolvedUrl = $this->resolveEndpointUrl($config->endpointUrl(), $runtimeContext);
+        $templateContext = $this->buildTemplateContext($runtimeContext);
+        $resolvedUrl = $this->resolveEndpointUrl($config->endpointUrl(), $templateContext);
 
         $fetchConfig = [
             'request' => [
                 'url' => $resolvedUrl,
                 'method' => $config->httpMethod(),
-                'headers' => $config->headers(),
-                'query' => $config->query(),
-                'body' => $config->body(),
+                'headers' => $this->renderTemplateValue($config->headers(), $templateContext),
+                'query' => $this->renderTemplateValue($config->query(), $templateContext),
+                'body' => $this->renderTemplateValue($config->body(), $templateContext),
             ],
             'timeout_seconds' => $config->timeoutSeconds(),
             'manual_payload' => $config->manualInput(),
@@ -107,21 +108,67 @@ class FetchExecutor
         return $this->renderedBrowser->fetch($fetchConfig);
     }
 
-    private function resolveEndpointUrl(?string $endpointUrl, array $runtimeContext): ?string
+    /**
+     * @param array<string,mixed> $templateContext
+     */
+    private function resolveEndpointUrl(?string $endpointUrl, array $templateContext): ?string
     {
         if ($endpointUrl === null) {
             return null;
         }
 
-        $expectedDrawDate = trim((string) ($runtimeContext['expected_draw_date'] ?? ''));
-        if ($expectedDrawDate === '') {
-            return $endpointUrl;
+        $resolved = $this->renderTemplateValue($endpointUrl, $templateContext);
+
+        return is_string($resolved) ? $resolved : $endpointUrl;
+    }
+
+    /**
+     * @param array<string,mixed> $runtimeContext
+     * @return array<string,string>
+     */
+    private function buildTemplateContext(array $runtimeContext): array
+    {
+        $context = [];
+        foreach ($runtimeContext as $key => $value) {
+            if (is_scalar($value) && $value !== null) {
+                $context[(string) $key] = (string) $value;
+            }
         }
 
-        return str_replace(
-            ['{{expected_draw_date}}', '{expected_draw_date}'],
-            $expectedDrawDate,
-            $endpointUrl
-        );
+        if (($context['lookup_date'] ?? '') === '' && ($context['expected_draw_date'] ?? '') !== '') {
+            $context['lookup_date'] = $context['expected_draw_date'];
+        }
+
+        return $context;
+    }
+
+    /**
+     * @param mixed $value
+     * @param array<string,string> $context
+     * @return mixed
+     */
+    private function renderTemplateValue(mixed $value, array $context): mixed
+    {
+        if (is_array($value)) {
+            $rendered = [];
+            foreach ($value as $key => $item) {
+                $rendered[$key] = $this->renderTemplateValue($item, $context);
+            }
+
+            return $rendered;
+        }
+
+        if (! is_string($value) || $value === '') {
+            return $value;
+        }
+
+        return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}|\{([a-zA-Z0-9_]+)\}/', function (array $matches) use ($context): string {
+            $key = (string) ($matches[1] ?: $matches[2] ?: '');
+            if ($key === '' || ! array_key_exists($key, $context)) {
+                return (string) ($matches[0] ?? '');
+            }
+
+            return $context[$key];
+        }, $value) ?? $value;
     }
 }

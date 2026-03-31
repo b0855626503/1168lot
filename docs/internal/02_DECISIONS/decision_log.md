@@ -1,5 +1,83 @@
 # Decision Log
 
+## 2026-03-30 — Internal Result Endpoints Bypass Fixture Gate in Local/Testing (APPROVED)
+
+- source config ที่ชี้ endpoint ภายในระบบหลัก (`/internal/lottery/results/*`) ไม่ต้องถูกบังคับ fixture gate ตอน save/validate cutover ใน `local|testing`
+- เหตุผล:
+  - เป็น first-party integration ภายในระบบเดียวกัน
+  - fixture gate เดิมออกแบบมาสำหรับ external source/parser validation เป็นหลัก
+
+## 2026-03-30 — V2 Fetch Runtime Renders Query/Header/Body Placeholders (APPROVED)
+
+- V2 fetch executor ต้อง render placeholders ไม่เฉพาะ `endpoint_url` แต่รวมถึง `query`, `headers`, `body`
+- policy ที่ล็อก:
+  - รองรับ `{{lookup_date}}` และ `{{expected_draw_date}}` ใน request config
+  - ถ้า runtime context ไม่มี `lookup_date` ให้ fallback ใช้ `expected_draw_date`
+
+## 2026-03-30 — Dowjones `digit5` Derives `bottom_2` from Leading Two Digits (APPROVED)
+
+- สำหรับ `dowjones-midnight` และ `dowjones-extra` เมื่อ business rule ของ source นั้นใช้เลข 5 หลักเป็น canonical result
+- policy ที่ล็อก:
+  - `first_prize` = `digit5`
+  - `top_3` = 3 หลักท้ายของ `digit5`
+  - `top_2` = 2 หลักท้ายของ `digit5`
+  - `bottom_2` = 2 หลักหน้าของ `digit5`
+- เหตุผล:
+  - payload ของ source กลุ่มนี้บางช่วงไม่มี field `bottom_2` แยก แต่ business rule ต้อง derive จากเลข 5 หลักโดยตรง
+
+## 2026-03-30 — Dowjones Extra Uses `result` for Today and `history` for Past Dates (APPROVED)
+
+- สำหรับ `dowjones-extra`
+- policy ที่ล็อก:
+  - ถ้าขอผลของวันปัจจุบัน ให้เรียก `https://api.dowjonesextra.com/result` และไม่ส่ง `date`
+  - ถ้าขอผลย้อนหลัง ให้เรียก `https://api.dowjonesextra.com/history`
+  - หลังได้ payload จาก `history` ต้อง select record จาก `lotto_date` ให้ตรงวันที่ขอเอง
+  - ถ้าไม่พบวันที่ที่ขอ ต้องคืน `DRAW_DATE_NOT_FOUND`
+
+## 2026-03-30 — Exphuay Date Selection Uses Local Draw Date from Payload (APPROVED)
+
+- ปรับ internal result handling ของ `exphuay` ให้ไม่เชื่อว่า upstream `date` query จะ filter งวดให้ตรงเสมอ
+- policy ที่ล็อก:
+  - ต้อง parse payload หลายงวดจาก upstream แล้ว select record เอง
+  - การเทียบวันที่ใช้ local draw date `Asia/Bangkok` ที่ derive จาก `lottosDate`
+  - เมื่อเลือก record สำเร็จ:
+    - `first_prize` = `lottosNumber`
+    - `top_3` = 3 หลักท้ายของ `lottosNumber`
+    - `top_2` = 2 หลักท้ายของ `lottosNumber`
+    - `bottom_2` = `lottosUnder`
+  - `draw_date` ของ canonical response ต้องมาจาก record ที่ match จริง ไม่ใช่ echo input date อย่างเดียว
+
+## 2026-03-30 — Insert-Only Canonical Mapping Command for Result Sources (APPROVED)
+
+- เพิ่ม command `lotto:insert-internal-result-source-mappings`
+- วัตถุประสงค์:
+  - เพิ่ม canonical internal mapping ต่อ market แบบ insert-only
+  - ไม่ update/overwrite แถว `lotto_result_sources` เดิมที่มีอยู่แล้ว
+- command รองรับ:
+  - dry-run (default)
+  - apply (`--apply`)
+  - จำกัดตลาด (`--market-id=*`, `--market-code=*`)
+  - กำหนด priority แถวใหม่ (`--priority=...`)
+  - เปิด active เฉพาะแถวใหม่ (`--activate-new`)
+- policy ที่ล็อก:
+  - ถ้า market นั้นมี endpoint canonical เดียวกันอยู่แล้ว ต้อง `skip(exists)`
+  - แถวเดิมทั้งหมดต้องไม่ถูกแก้ไขโดย command นี้
+  - default แถวใหม่เป็น `is_active=false` เพื่อไม่กระทบ runtime ทันที
+
+## 2026-03-30 — Bootstrap Missing Result Sources as Safe Placeholder Rows (APPROVED)
+
+- เพิ่ม command `lotto:bootstrap-missing-result-sources` เพื่อเติม `lotto_result_sources` ให้ครบสำหรับ market ที่ยังไม่มี source
+- command รองรับ:
+  - dry-run (default)
+  - apply (`--apply`)
+  - จำกัดตลาด (`--market-id=*`)
+- policy ที่ล็อก:
+  - แถวที่ bootstrap ใหม่ต้องเป็น `is_active=false` (safe placeholder)
+  - ไม่บังคับเปิดใช้งานทันที เพื่อลดความเสี่ยงกระทบ auto-result runtime
+  - market code `downjone-midnight` และ `downjone-extra` จะชี้ไป internal endpoints ใหม่โดยตรง
+- evidence local run:
+  - apply สำเร็จ: markets=60, sources=60, missing=0
+
 ## 2026-03-30 — Internal Result Sources Migration Command + Optional-Date Upstream Mode (APPROVED)
 
 - เพิ่ม command `lotto:migrate-internal-result-endpoints` สำหรับ PR-13:

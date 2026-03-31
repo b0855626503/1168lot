@@ -311,7 +311,7 @@ class LottoResultSourceController extends AppBaseController
 
             $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPipelinePayload($source));
 
-            if ($source->cutover_enabled && $this->shouldEnforceFixtureGate() && ! $this->hasFixtureSet($source)) {
+            if ($source->cutover_enabled && $this->shouldEnforceFixtureGate() && ! $this->shouldBypassFixtureGate($source) && ! $this->hasFixtureSet($source)) {
                 throw new InvalidArgumentException('เปิด cutover ไม่ได้: ยังไม่พบ fixture test สำหรับ source นี้ (required only in local/testing)');
             }
 
@@ -374,7 +374,7 @@ class LottoResultSourceController extends AppBaseController
                 if (! $source) {
                     throw new InvalidArgumentException('ไม่พบ source สำหรับ validate cutover');
                 }
-                if ($this->shouldEnforceFixtureGate() && ! $this->hasFixtureSet($source)) {
+                if ($this->shouldEnforceFixtureGate() && ! $this->shouldBypassFixtureGate($source) && ! $this->hasFixtureSet($source)) {
                     throw new InvalidArgumentException('ยังไม่พบ fixture test สำหรับ source นี้ (required only in local/testing)');
                 }
             }
@@ -856,6 +856,31 @@ class LottoResultSourceController extends AppBaseController
     private function shouldEnforceFixtureGate(): bool
     {
         return app()->environment(['local', 'testing']);
+    }
+
+    private function shouldBypassFixtureGate(LottoResultSource $source): bool
+    {
+        $endpoints = [];
+
+        $endpointUrl = trim((string) ($source->endpoint_url ?? ''));
+        if ($endpointUrl !== '') {
+            $endpoints[] = $endpointUrl;
+        }
+
+        $fetchConfig = is_array($source->fetch_config_json ?? null) ? $source->fetch_config_json : [];
+        $fetchEndpoint = trim((string) ($fetchConfig['endpoint_url'] ?? ''));
+        if ($fetchEndpoint !== '') {
+            $endpoints[] = $fetchEndpoint;
+        }
+
+        foreach ($endpoints as $candidate) {
+            $path = (string) (parse_url($candidate, PHP_URL_PATH) ?: '');
+            if (str_starts_with($path, '/internal/lottery/results/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

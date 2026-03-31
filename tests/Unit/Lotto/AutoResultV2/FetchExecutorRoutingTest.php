@@ -94,4 +94,41 @@ class FetchExecutorRoutingTest extends TestCase
             (string) ($json->lastFetchConfig['request']['url'] ?? '')
         );
     }
+
+    public function test_json_http_replaces_lookup_date_placeholder_in_query_templates(): void
+    {
+        $json = new class extends JsonHttpFetchDriver {
+            public array $lastFetchConfig = [];
+
+            public function fetch(array $fetchConfig): array
+            {
+                $this->lastFetchConfig = $fetchConfig;
+
+                return ['ok' => true, 'status' => 'SUCCESS', 'response_body' => '[]', 'response_content_type' => 'application/json', 'duration_ms' => 1];
+            }
+        };
+
+        $executor = new FetchExecutor(
+            $json,
+            new HtmlHttpFetchDriver(),
+            new RenderedBrowserFetchDriver(),
+            new EmbeddedJsonFetchDriver(),
+            new ManualInputFetchDriver()
+        );
+
+        $config = FetchConfigData::fromArray([
+            'fetch_strategy' => 'JSON_HTTP',
+            'endpoint_url' => 'https://example.com/results',
+            'http_method' => 'GET',
+            'query' => [
+                'date' => '{{lookup_date}}',
+                'static' => 'ok',
+            ],
+        ]);
+
+        $executor->execute($config, ['expected_draw_date' => '2026-03-30']);
+
+        $this->assertSame('2026-03-30', (string) ($json->lastFetchConfig['request']['query']['date'] ?? ''));
+        $this->assertSame('ok', (string) ($json->lastFetchConfig['request']['query']['static'] ?? ''));
+    }
 }
