@@ -10,6 +10,7 @@ use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\InsertInternalResultSourceMappingsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
+use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointCommand;
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
@@ -95,6 +96,7 @@ class LottoServiceProvider extends ServiceProvider
             InsertInternalResultSourceMappingsCommand::class,
             LottoFetchAutoResultsCommand::class,
             LottoAutoResultMetricsCommand::class,
+            MigrateExphuaySourcesToExternalEndpointCommand::class,
             MigrateInternalResultEndpointsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
             SyncLottoDrawStatusesCommand::class,

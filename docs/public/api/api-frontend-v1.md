@@ -690,6 +690,7 @@ Response ตัวอย่าง
       "id": 9,
       "group_id": 1,
       "name": "แพ็กเกจมาตรฐาน",
+      "image": "/storage/lotto/media/package-standard.png",
       "is_active": true,
       "bet_settings": [
         {
@@ -767,7 +768,9 @@ Response ตัวอย่าง (เลือกแล้ว)
   "data": {
     "data": {
       "group_id": 1,
-      "package_id": 9
+      "package_id": 9,
+      "name": "แพ็กเกจมาตรฐาน",
+      "image": "/storage/lotto/media/package-standard.png"
     },
     "selected": true
   },

@@ -135,6 +135,7 @@
   - `GET /api/lotto/groups/{groupId}/packages`
   - `POST /api/lotto/groups/{groupId}/select-package`
   - `GET /api/lotto/groups/{groupId}/selected-package`
+  - response ของ package endpoints มี field `image` สำหรับใช้งานหน้า frontend
 - policy ของ helper API:
   - ใช้เพื่อ UI flow assist เท่านั้น (non-authoritative)
   - ห้ามใช้แทน betting validation/auth gate
@@ -256,6 +257,10 @@
   - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover
 - migration/backfill policy:
   - ใช้ command `lotto:migrate-internal-result-endpoints` เพื่อ map endpoint เดิม -> internal endpoints
+  - ใช้ command `lotto:migrate-exphuay-sources-to-get-lottery` เพื่อ migrate แถว exphuay ที่มีอยู่แล้วให้ชี้ `http://203.146.127.170/~anan/get_lottery.php`
+    - resolve `type` จาก endpoint เดิม (`/internal/lottery/results/exphuay/{type}` หรือ `exphuay.com/backward/{type}/__data.json`) หรือจาก query template/config
+    - rewrite parser/query ให้ตรง schema ของ `get_lottery.php`
+    - default จะตั้ง `priority=1` และ `is_active=1` (override ได้ผ่าน option)
   - command จะ generate report ทุกครั้งที่รันสำหรับ traceability
   - มี command bootstrap สำหรับ market ที่ยังไม่มี source row:
     - `lotto:bootstrap-missing-result-sources`

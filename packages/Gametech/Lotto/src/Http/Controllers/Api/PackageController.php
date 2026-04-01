@@ -26,6 +26,7 @@ class PackageController extends AppBaseController
                 'id' => (int) $package->id,
                 'group_id' => (int) $package->group_id,
                 'name' => (string) $package->name,
+                'image' => (string) ($package->image ?? ''),
                 'is_active' => (bool) $package->is_active,
                 'bet_settings' => $package->betSettings->map(static function ($setting): array {
                     return [
@@ -97,6 +98,8 @@ class PackageController extends AppBaseController
             'data' => [
                 'group_id' => $groupId,
                 'package_id' => (int) $package->id,
+                'name' => (string) $package->name,
+                'image' => (string) ($package->image ?? ''),
             ],
             'selected' => true,
         ], 'ดึงสถานะ package ที่เลือกสำเร็จ');

@@ -1,5 +1,28 @@
 # Decision Log
 
+## 2026-04-01 — Frontend Package APIs Include Package Image Field (APPROVED)
+
+- ปรับ API:
+  - `GET /api/lotto/groups/{groupId}/packages` เพิ่ม field `image` ในแต่ละ package
+  - `GET /api/lotto/groups/{groupId}/selected-package` เพิ่ม `name` และ `image` ใน `data`
+- ปรับเอกสาร public API ให้ตรง response contract ล่าสุดของ package endpoints
+- เหตุผล:
+  - frontend ต้องใช้ภาพแพกเกจจาก API โดยตรงเพื่อลดการเรียกข้อมูลซ้ำจาก endpoint อื่น
+
+## 2026-04-01 — Add Command to Migrate Existing Exphuay Source Rows to `get_lottery.php` (APPROVED)
+
+- เพิ่ม command `lotto:migrate-exphuay-sources-to-get-lottery`
+  - รองรับ dry-run / apply
+  - รองรับ filter ด้วย `--source-id` และ `--market-code`
+  - resolve `type` จาก endpoint เดิมหรือ query config ที่มีอยู่
+- ตอน apply ระบบจะ rewrite แถว exphuay เดิมให้:
+  - `endpoint_url` -> `http://203.146.127.170/~anan/get_lottery.php`
+  - `request_query_template_json` -> `type={type}`, `date={{lookup_date}}`, `page=1`
+  - parser -> JSON_PATH ตาม schema ของ `get_lottery.php`
+  - ตั้งค่า default `priority=1` และ `is_active=1` (override ได้ด้วย option)
+- เหตุผล:
+  - รองรับเคสที่มี source แถวเดิมอยู่แล้วและต้องย้ายแบบ bulk โดยไม่ต้องแก้ทีละรายการใน admin
+
 ## 2026-04-01 — Insert-Internal Generator Supports External `get_lottery.php` for All Exphuay-Mapped Markets (APPROVED)
 
 - ปรับ `lotto:insert-internal-result-source-mappings` สำหรับทุก market ที่ map เป็น `exphuay:{type}`:

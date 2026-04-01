@@ -38,6 +38,7 @@ class PackageFrontendApiTest extends TestCase
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', (int) $active->id);
         $response->assertJsonPath('data.0.group_id', 1);
+        $response->assertJsonPath('data.0.image', '/storage/lotto/media/a.png');
         $response->assertJsonPath('data.0.bet_settings.0.bet_type', 'top_3');
         $response->assertJsonCount(1, 'data.0.bet_settings');
     }
@@ -45,7 +46,7 @@ class PackageFrontendApiTest extends TestCase
     public function test_select_package_success_and_selected_endpoint_returns_selected_state(): void
     {
         $this->actingAsCustomer(memberCode: 2001);
-        $package = $this->createPackage(groupId: 10, name: 'VIP-10', isActive: true);
+        $package = $this->createPackage(groupId: 10, name: 'VIP-10', isActive: true, image: '/storage/lotto/media/vip10.png');
 
         $select = $this->postJson('/api/lotto/groups/10/select-package', [
             'package_id' => (int) $package->id,
@@ -62,6 +63,7 @@ class PackageFrontendApiTest extends TestCase
         $selected->assertJsonPath('selected', true);
         $selected->assertJsonPath('data.group_id', 10);
         $selected->assertJsonPath('data.package_id', (int) $package->id);
+        $selected->assertJsonPath('data.image', '/storage/lotto/media/vip10.png');
     }
 
     public function test_select_package_is_idempotent_when_selecting_same_package_twice(): void
@@ -147,12 +149,13 @@ class PackageFrontendApiTest extends TestCase
         $this->actingAs($member, 'customer');
     }
 
-    private function createPackage(int $groupId, string $name, bool $isActive): LottoGroupPackage
+    private function createPackage(int $groupId, string $name, bool $isActive, string $image = '/storage/lotto/media/a.png'): LottoGroupPackage
     {
         return LottoGroupPackage::query()->create([
             'group_id' => $groupId,
             'name' => $name,
             'description' => $name . ' description',
+            'image' => $image,
             'is_active' => $isActive,
             'created_at' => now(),
             'updated_at' => now(),
@@ -183,6 +186,7 @@ class PackageFrontendApiTest extends TestCase
             $table->unsignedBigInteger('group_id');
             $table->string('name');
             $table->string('description')->nullable();
+            $table->string('image')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
