@@ -97,6 +97,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
         $result = is_array($draw->result_number) ? $draw->result_number : [];
         $firstPrize = preg_replace('/\D+/', '', (string) ($result['first_prize'] ?? ''));
+        $top3 = strlen($firstPrize) >= 3 ? substr($firstPrize, -3) : '';
         $last2Digits = preg_replace('/\D+/', '', (string) ($result['last_2_digits'] ?? ''));
         $firstLabel = '3 ตัวบน';
         $lastLabel = '2 ตัวล่าง';
@@ -120,7 +121,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
             $marketName,
             $drawDate,
             $firstLabel,
-            $firstPrize !== '' ? $firstPrize : '-',
+            $top3 !== '' ? $top3 : '-',
             $lastLabel,
             $last2Digits !== '' ? $last2Digits : '-',
             number_format((float) ($summary['ticket_count'] ?? 0), 0),

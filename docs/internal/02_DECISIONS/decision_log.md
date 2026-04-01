@@ -1,5 +1,13 @@
 # Decision Log
 
+## 2026-04-01 — Telegram Result Message Shows Top-3 as Right(3) of First Prize (APPROVED)
+
+- ปรับข้อความแจ้งผล Telegram ตอน draw เป็น `resulted`:
+  - บรรทัด `3 ตัวบน` ต้องแสดงค่า `right(3)` ของ `first_prize`
+  - ไม่แสดงเลข `first_prize` เต็มในบรรทัด `3 ตัวบน`
+- เหตุผล:
+  - ให้ข้อความสอดคล้องกับรูปแบบผลที่ทีมงานใช้งาน (`3 ตัวบน / 2 ตัวล่าง`)
+
 ## 2026-04-01 — Revert Manual Draw Mode Guard on Auto Result Fetch/Apply (APPROVED)
 
 - ยกเลิก policy ที่เคยบล็อก auto-result เมื่อ `draw_mode=manual`
