@@ -1,5 +1,23 @@
 # Decision Log
 
+## 2026-04-01 — Exphuay Adds Python `curl_cffi` Worker Fallback Before Browser Runtime (APPROVED)
+
+- ปรับ fallback chain ใน `ExphuayResultDriver` เป็น:
+  - HTTP ปกติ
+  - ถ้าเจอ Cloudflare challenge (`HTTP 403` หรือ body บ่งชี้ `Just a moment/cf-mitigated`) ให้ลอง Python worker (`curl_cffi`) ก่อน
+  - ถ้า Python worker ไม่สำเร็จ ค่อย fallback ไป browser runtime (`performRuntimeFetch`)
+- เพิ่ม config/env policy สำหรับ Python worker:
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_ENABLED`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_BINARY`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_SCRIPT`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_TIMEOUT_SECONDS`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_IMPERSONATE`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP`
+  - `LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP_URL`
+- เหตุผล:
+  - เพิ่มทางเลือก fetch ที่ stable กว่า plain HTTP ในเคส Cloudflare challenge
+  - คง browser runtime เป็น fallback ชั้นสุดท้ายเพื่อรักษา compatibility
+
 ## 2026-04-01 — Exphuay Driver Uses Browser Runtime Fallback on Cloudflare Challenge (APPROVED)
 
 - ปรับ `ExphuayResultDriver`:

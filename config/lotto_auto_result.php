@@ -78,6 +78,13 @@ return [
         'shared_key' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_KEY', ''),
         'header_name' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_HEADER', 'X-Lotto-Internal-Key'),
         'exphuay' => [
+            'python_worker_enabled' => filter_var((string) env('LOTTO_EXPHUAY_PYTHON_WORKER_ENABLED', 'false'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === true,
+            'python_worker_binary' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_BINARY', 'python3'),
+            'python_worker_script' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_SCRIPT', base_path('scripts/lotto/exphuay_curl_cffi_worker.py')),
+            'python_worker_timeout_seconds' => max(10, (int) env('LOTTO_EXPHUAY_PYTHON_WORKER_TIMEOUT_SECONDS', 20)),
+            'python_worker_impersonate' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_IMPERSONATE', 'chrome124'),
+            'python_worker_warmup_enabled' => filter_var((string) env('LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP', 'true'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== false,
+            'python_worker_warmup_url' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP_URL', 'https://exphuay.com/'),
             'browser_fallback_enabled' => filter_var((string) env('LOTTO_EXPHUAY_BROWSER_FALLBACK', 'true'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== false,
             'browser_fallback_timeout_seconds' => max(10, (int) env('LOTTO_EXPHUAY_BROWSER_FALLBACK_TIMEOUT_SECONDS', 60)),
             'browser_wait_until' => (string) env('LOTTO_EXPHUAY_BROWSER_WAIT_UNTIL', 'domcontentloaded'),

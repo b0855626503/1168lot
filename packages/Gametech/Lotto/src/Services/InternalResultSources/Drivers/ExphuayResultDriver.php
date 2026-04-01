@@ -4,13 +4,17 @@ namespace Gametech\Lotto\Services\InternalResultSources\Drivers;
 
 use Gametech\Lotto\Services\AutoResultV2\FetchDrivers\RenderedBrowserFetchDriver;
 use Gametech\Lotto\Services\InternalResultSources\Contracts\InternalResultSourceDriver;
+use Gametech\Lotto\Services\InternalResultSources\ExphuayPythonWorkerClient;
 use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 
 class ExphuayResultDriver implements InternalResultSourceDriver
 {
     private const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36';
 
-    public function __construct(private HttpResultFetcher $fetcher)
+    public function __construct(
+        private HttpResultFetcher $fetcher,
+        private ExphuayPythonWorkerClient $pythonWorkerClient
+    )
     {
     }
 
@@ -45,6 +49,7 @@ class ExphuayResultDriver implements InternalResultSourceDriver
             (int) config('lotto_auto_result.internal_result_sources.timeout_seconds', 15),
             $headers
         );
+        $fetch = $this->tryPythonWorkerFallback($fetch, $url, $query, $headers);
         $fetch = $this->tryBrowserFallback($fetch, $url, $query, $headers);
 
         return [
@@ -75,6 +80,36 @@ class ExphuayResultDriver implements InternalResultSourceDriver
         }
 
         return $headers;
+    }
+
+    /**
+     * @param array<string,mixed> $fetch
+     * @param array<string,mixed> $query
+     * @param array<string,mixed> $headers
+     * @return array<string,mixed>
+     */
+    private function tryPythonWorkerFallback(array $fetch, string $url, array $query, array $headers): array
+    {
+        if (! $this->shouldUsePythonWorkerFallback($fetch)) {
+            return $fetch;
+        }
+
+        $timeout = max(10, (int) config('lotto_auto_result.internal_result_sources.exphuay.python_worker_timeout_seconds', 20));
+        $workerFetch = $this->pythonWorkerClient->fetch($url, $query, $headers, $timeout);
+
+        if ((bool) ($workerFetch['ok'] ?? false)) {
+            return $workerFetch;
+        }
+
+        $fetch['meta'] = array_merge(
+            is_array($fetch['meta'] ?? null) ? $fetch['meta'] : [],
+            [
+                'python_worker_error_code' => $workerFetch['error_code'] ?? null,
+                'python_worker_error_message' => $workerFetch['error_message'] ?? null,
+            ]
+        );
+
+        return $fetch;
     }
 
     /**
@@ -136,6 +171,27 @@ class ExphuayResultDriver implements InternalResultSourceDriver
             return false;
         }
 
+        return $this->isCloudflareChallenge($fetch);
+    }
+
+    /**
+     * @param array<string,mixed> $fetch
+     */
+    private function shouldUsePythonWorkerFallback(array $fetch): bool
+    {
+        $fallbackEnabled = (bool) config('lotto_auto_result.internal_result_sources.exphuay.python_worker_enabled', false);
+        if (! $fallbackEnabled) {
+            return false;
+        }
+
+        return $this->isCloudflareChallenge($fetch);
+    }
+
+    /**
+     * @param array<string,mixed> $fetch
+     */
+    private function isCloudflareChallenge(array $fetch): bool
+    {
         if ((bool) ($fetch['ok'] ?? false)) {
             return false;
         }

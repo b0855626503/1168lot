@@ -33,3 +33,9 @@ Homestead.json
 !/.github/
 !/.github/workflows/
 !/.github/workflows/*.yml
+
+# Python local runtime
+.venv/
+venv/
+__pycache__/
+*.pyc
