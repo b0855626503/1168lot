@@ -219,6 +219,17 @@
     - fallback เป็น `APP_API_URL + APP_ADMIN_DOMAIN_URL` (กรณีไม่ได้ตั้ง `APP_API_DOMAIN_URL`)
   - canonical URL สำหรับ internal result endpoints ต้องเรียกผ่าน `api.*` เท่านั้น (ไม่เปิดผ่าน `admin.*`)
   - route ชุดนี้ใช้ middleware `lotto.internal_results`
+- นโยบาย generated config จากคำสั่ง `lotto:insert-internal-result-source-mappings`:
+  - JSON หลักที่สร้างใหม่ต้อง inject request headers แบบ browser-like ลงทั้ง:
+    - `request_headers_json`
+    - `fetch_config_json.headers`
+  - header ที่ต้องมี:
+    - `Accept: application/json, text/plain, */*`
+    - `Accept-Language: th-TH,th;q=0.9,en;q=0.8`
+    - `Referer` (exphuay ใช้ `https://exphuay.com/backward/{type}`)
+    - `User-Agent` (Chrome 123)
+    - `x-sveltekit-invalidated: 01`
+    - `Cookie` (ค่า default มาจาก command และรองรับ override ด้วย env `LOTTO_INTERNAL_RESULT_SOURCE_COOKIE`)
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
   - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover

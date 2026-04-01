@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-04-01 — Insert-Internal Mapping Generates Browser-like Headers + Cookie by Default (APPROVED)
+
+- ปรับ command `lotto:insert-internal-result-source-mappings` ให้แถวที่ generate ใหม่มี header ใน JSON หลักอัตโนมัติ
+- policy ที่ล็อก:
+  - inject header ลงทั้ง `request_headers_json` และ `fetch_config_json.headers`
+  - header baseline: `Accept`, `Accept-Language`, `Referer`, `User-Agent`, `x-sveltekit-invalidated`, `Cookie`
+  - `Referer` ของ exphuay ใช้ pattern `https://exphuay.com/backward/{type}`
+  - `Cookie` รองรับ override ผ่าน env `LOTTO_INTERNAL_RESULT_SOURCE_COOKIE`
+- เหตุผล:
+  - ให้ source ที่สร้างจาก command พร้อมใช้งานกับ upstream ที่ต้องการ browser header/cookie โดยไม่ต้องแก้ทีละแถวใน admin
+
 ## 2026-04-01 — Telegram Result Message Shows Top-3 as Right(3) of First Prize (APPROVED)
 
 - ปรับข้อความแจ้งผล Telegram ตอน draw เป็น `resulted`:
