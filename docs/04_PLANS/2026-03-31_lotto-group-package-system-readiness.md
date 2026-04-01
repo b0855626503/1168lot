@@ -1,6 +1,7 @@
 > สถานะ: ACTIVE
 > วันที่: 2026-03-31
 > โดเมน/เรื่อง: Lotto / Group Package System (Pre-Implementation Readiness)
+> แทนแผนเก่า: -
 
 # Lotto Group Package System — Readiness Plan
 
