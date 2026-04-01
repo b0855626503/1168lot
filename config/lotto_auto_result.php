@@ -77,5 +77,11 @@ return [
         'timeout_seconds' => max(1, (int) env('LOTTO_INTERNAL_RESULT_TIMEOUT_SECONDS', 15)),
         'shared_key' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_KEY', ''),
         'header_name' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_HEADER', 'X-Lotto-Internal-Key'),
+        'exphuay' => [
+            'browser_fallback_enabled' => filter_var((string) env('LOTTO_EXPHUAY_BROWSER_FALLBACK', 'true'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== false,
+            'browser_fallback_timeout_seconds' => max(10, (int) env('LOTTO_EXPHUAY_BROWSER_FALLBACK_TIMEOUT_SECONDS', 60)),
+            'browser_wait_until' => (string) env('LOTTO_EXPHUAY_BROWSER_WAIT_UNTIL', 'domcontentloaded'),
+            'browser_timeout_ms' => max(10000, (int) env('LOTTO_EXPHUAY_BROWSER_TIMEOUT_MS', 60000)),
+        ],
     ],
 ];

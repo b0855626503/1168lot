@@ -231,6 +231,10 @@
   - user-agent override ได้ผ่าน `LOTTO_EXPHUAY_USER_AGENT`
   - เมื่อ HTTP fetch เจอ Cloudflare challenge (`403` หรือ body แนว `Just a moment/cf-mitigated`) ให้ fallback ไป browser runtime แบบ sync ใน driver
     - toggle ผ่าน `LOTTO_EXPHUAY_BROWSER_FALLBACK` (default = true)
+    - timeout ของ fallback ผ่าน `LOTTO_EXPHUAY_BROWSER_FALLBACK_TIMEOUT_SECONDS` (default = 60)
+    - browser goto/wait controls ผ่าน:
+      - `LOTTO_EXPHUAY_BROWSER_WAIT_UNTIL` (default = `domcontentloaded`)
+      - `LOTTO_EXPHUAY_BROWSER_TIMEOUT_MS` (default = `60000`)
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
   - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover

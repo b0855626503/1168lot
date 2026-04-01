@@ -89,7 +89,7 @@ class ExphuayResultDriver implements InternalResultSourceDriver
             return $fetch;
         }
 
-        $timeout = max(10, (int) config('lotto_auto_result.internal_result_sources.timeout_seconds', 15));
+        $timeout = max(10, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_fallback_timeout_seconds', 60));
         $runtime = (new RenderedBrowserFetchDriver())->performRuntimeFetch([
             'url' => $url,
             'method' => 'GET',
@@ -101,6 +101,8 @@ class ExphuayResultDriver implements InternalResultSourceDriver
             'allow_dom_fallback' => false,
             'meta' => [
                 'browser_worker' => [
+                    'wait_until' => (string) config('lotto_auto_result.internal_result_sources.exphuay.browser_wait_until', 'domcontentloaded'),
+                    'timeout_ms' => max(10000, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_timeout_ms', 60000)),
                     'capture_url_patterns' => [$url],
                 ],
             ],
@@ -129,12 +131,8 @@ class ExphuayResultDriver implements InternalResultSourceDriver
      */
     private function shouldUseBrowserFallback(array $fetch): bool
     {
-        $fallbackEnabled = filter_var(
-            (string) env('LOTTO_EXPHUAY_BROWSER_FALLBACK', 'true'),
-            FILTER_VALIDATE_BOOLEAN,
-            FILTER_NULL_ON_FAILURE
-        );
-        if ($fallbackEnabled === false) {
+        $fallbackEnabled = (bool) config('lotto_auto_result.internal_result_sources.exphuay.browser_fallback_enabled', true);
+        if (! $fallbackEnabled) {
             return false;
         }
 

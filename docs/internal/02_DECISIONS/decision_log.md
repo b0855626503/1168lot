@@ -9,6 +9,7 @@
   - `LOTTO_EXPHUAY_COOKIE` สำหรับ upstream cookie
   - `LOTTO_EXPHUAY_USER_AGENT` สำหรับ UA override
   - `LOTTO_EXPHUAY_BROWSER_FALLBACK` สำหรับเปิด/ปิด fallback (default=true)
+  - `LOTTO_EXPHUAY_BROWSER_FALLBACK_TIMEOUT_SECONDS`, `LOTTO_EXPHUAY_BROWSER_WAIT_UNTIL`, `LOTTO_EXPHUAY_BROWSER_TIMEOUT_MS` สำหรับควบคุม browser fallback runtime behavior
 - เหตุผล:
   - ลดกรณี `REQUIRED_FIELD_MISSING @ VALIDATE` ที่ root cause มาจาก upstream ถูก Cloudflare block
 
