@@ -8,8 +8,6 @@ use Illuminate\Console\Command;
 
 class InsertInternalResultSourceMappingsCommand extends Command
 {
-    private const DEFAULT_EXPHUAY_COOKIE = '_ga=GA1.1.1480075563.1774775789; cf_clearance=MRoTbNzCh6qlHJgVhnS..j0EzDrnJ0Fs84uYBrn1A2Y-1775040443-1.2.1.1-lZVkZX5YLr._yxOb6MXuL229doRBNuLb0ElgnVMosFuHtOB2Z88vcXOCea_zzeJMu9X8prTt56lRj2HGAGyrcoQbsgYm46xhlN008YIdVFMEov48jePw3YFyzzhEnSJzJ4Ztd7Oqc1gVq_.TvrQ6Tz20ZuvVH2Iy0edp8nkAJYiOc4vMkxfgxhiWVtgGr5_NKLf.KUfDrB4bC.iiYmDyjsEmvVgGD83h5M8Ol5P8BRQ; cfzs_google-analytics_v4=%7B%22nKwN_pageviewCounter%22%3A%7B%22v%22%3A%228%22%7D%7D; cfz_google-analytics_v4=%7B%22nKwN_engagementDuration%22%3A%7B%22v%22%3A%220%22%2C%22e%22%3A1806576743294%7D%2C%22nKwN_engagementStart%22%3A%7B%22v%22%3A%221775040743294%22%2C%22e%22%3A1806576743294%7D%2C%22nKwN_counter%22%3A%7B%22v%22%3A%2212%22%2C%22e%22%3A1806576743294%7D%2C%22nKwN_ga4sid%22%3A%7B%22v%22%3A%22145912870%22%2C%22e%22%3A1775042543294%7D%2C%22nKwN_session_counter%22%3A%7B%22v%22%3A%221%22%2C%22e%22%3A1806576743294%7D%2C%22nKwN_ga4%22%3A%7B%22v%22%3A%22b2d0d36f-dea1-4ced-9f3a-b0ad51185096%22%2C%22e%22%3A1806576743294%7D%2C%22nKwN__z_ga_audiences%22%3A%7B%22v%22%3A%22b2d0d36f-dea1-4ced-9f3a-b0ad51185096%22%2C%22e%22%3A1806576443215%7D%2C%22nKwN_let%22%3A%7B%22v%22%3A%221775040743294%22%2C%22e%22%3A1806576743294%7D%7D; _ga_9PT4LR0F1F=GS2.1.s1775040442$o5$g1$t1775040742$j60$l0$h946580090$dXZKHKxYUhYtf06YxczzuMj_VDjlcBYqmxA';
-
     protected $signature = 'lotto:insert-internal-result-source-mappings
         {--apply : Persist new mapping rows}
         {--market-id=* : Limit to specific market IDs}
@@ -209,8 +207,6 @@ class InsertInternalResultSourceMappingsCommand extends Command
             $endpointUrl = $baseUrl . '/internal/lottery/results/exphuay/' . $type;
             $queryTemplate['page'] = 1;
         }
-        $headers = $this->buildRequestHeaders($target, $endpointUrl);
-
         return [
             'market_id' => (int) $market->id,
             'is_active' => $activateNew,
@@ -218,7 +214,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
             'source_type' => 'api',
             'endpoint_url' => $endpointUrl,
             'http_method' => 'GET',
-            'request_headers_json' => $headers,
+            'request_headers_json' => [],
             'request_query_template_json' => $queryTemplate,
             'request_body_template_json' => [],
             'lookup_date_mode' => 'ROUND_DATE',
@@ -255,7 +251,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
                 'fetch_strategy' => 'JSON_HTTP',
                 'endpoint_url' => $endpointUrl,
                 'http_method' => 'GET',
-                'headers' => $headers,
+                'headers' => [],
                 'query' => $queryTemplate,
                 'timeout_seconds' => 10,
                 'meta' => [
@@ -288,32 +284,6 @@ class InsertInternalResultSourceMappingsCommand extends Command
             'shadow_enabled' => false,
             'cutover_enabled' => true,
         ];
-    }
-
-    /**
-     * @return array<string,string>
-     */
-    private function buildRequestHeaders(string $target, string $endpointUrl): array
-    {
-        return [
-            'Accept' => 'application/json, text/plain, */*',
-            'Accept-Language' => 'th-TH,th;q=0.9,en;q=0.8',
-            'Referer' => $this->resolveRequestReferer($target, $endpointUrl),
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
-            'x-sveltekit-invalidated' => '01',
-            'Cookie' => trim((string) env('LOTTO_INTERNAL_RESULT_SOURCE_COOKIE', self::DEFAULT_EXPHUAY_COOKIE)),
-        ];
-    }
-
-    private function resolveRequestReferer(string $target, string $endpointUrl): string
-    {
-        if (str_starts_with($target, 'exphuay:')) {
-            $type = substr($target, strlen('exphuay:'));
-
-            return 'https://exphuay.com/backward/' . rawurlencode($type);
-        }
-
-        return $endpointUrl;
     }
 
     private function resolveInternalApiBaseUrl(): string

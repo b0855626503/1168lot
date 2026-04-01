@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-04-01 — Move Exphuay Headers/Cookie to Upstream Driver; Keep Inserted Source JSON Clean (APPROVED)
+
+- ยกเลิก policy ที่ให้ command `lotto:insert-internal-result-source-mappings` ฝัง browser headers/cookie ลง JSON หลัก
+- policy ล่าสุด:
+  - source ที่ generate ใหม่คง `request_headers_json=[]` และ `fetch_config_json.headers=[]`
+  - การส่ง header/cookie สำหรับ exphuay ให้ทำใน `ExphuayResultDriver` ตอนเรียก upstream เท่านั้น
+  - cookie อ่านจาก env `LOTTO_EXPHUAY_COOKIE` (ถ้าไม่ตั้งไม่แนบ)
+  - user-agent override ได้ผ่าน env `LOTTO_EXPHUAY_USER_AGENT`
+- เหตุผล:
+  - แก้ปัญหา Cloudflare challenge ที่เกิดที่ upstream driver โดยตรง
+  - ลดความเสี่ยงเก็บ cookie ใน DB/log ของ source config
+- สถานะเอกสาร:
+  - decision `2026-04-01 — Insert-Internal Mapping Generates Browser-like Headers + Cookie by Default` ถูก superseded
+
 ## 2026-04-01 — Insert-Internal Mapping Generates Browser-like Headers + Cookie by Default (APPROVED)
 
 - ปรับ command `lotto:insert-internal-result-source-mappings` ให้แถวที่ generate ใหม่มี header ใน JSON หลักอัตโนมัติ
