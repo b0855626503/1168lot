@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Services;
 
 use Exception;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Exceptions\LottoPackageException;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
@@ -37,6 +38,7 @@ class BetService
     public function __construct(
         private ExposureService $exposureService,
         private LottoConfigResolver $configResolver,
+        private LottoPackageResolver $packageResolver,
         private WalletTransactionService $walletTransactionService
     ) {}
 
@@ -44,9 +46,13 @@ class BetService
      * @param array<int, array{bet_type:string, number:string, amount:numeric}> $items
      * @throws Exception
      */
-    public function placeBet(int $memberId, int $drawId, array $items): LottoTicket
+    public function placeBet(int $memberId, int $drawId, int $packageId, array $items): LottoTicket
     {
-        return DB::transaction(function () use ($memberId, $drawId, $items) {
+        return DB::transaction(function () use ($memberId, $drawId, $packageId, $items) {
+            if ($packageId <= 0) {
+                throw LottoPackageException::packageRequired();
+            }
+
             $draw = $this->findDraw($drawId);
 
             $this->validateDrawIsOpen($draw);
@@ -62,6 +68,7 @@ class BetService
             foreach ($items as $item) {
                 $validated = $this->validateAndPrepareItem(
                     $draw,
+                    $packageId,
                     (string) ($item['bet_type'] ?? ''),
                     (string) ($item['number'] ?? ''),
                     (float) ($item['amount'] ?? 0)
@@ -128,6 +135,7 @@ class BetService
      */
     private function validateAndPrepareItem(
         LottoDraw $draw,
+        int $packageId,
         string $betType,
         string $number,
         float $amount
@@ -158,20 +166,34 @@ class BetService
             throw new Exception("Number {$number} is blocked by future-limit rule");
         }
 
-        $discountPercent = $this->normalizeDiscountPercent((float) ($setting->discount_percent ?? 0));
+        $packagePayload = $this->packageResolver->resolveForBet($draw, $packageId, $betType);
+        $package = $packagePayload['package'];
+        $packageSetting = $packagePayload['setting'];
+
+        $discountPercent = $this->normalizeDiscountPercent((float) ($packageSetting->discount_percent ?? 0));
+        $payout = (float) $packageSetting->payout;
 
         $discountAmount = $this->calculateDiscountAmount($amount, $discountPercent);
         $payableAmount = $this->calculatePayableAmount($amount, $discountAmount);
+        $potentialWinAmount = $this->calculatePotentialWinAmount($amount, $payout);
 
         return [
             'bet_type' => $betType,
             'number' => $number,
             'amount' => $amount,
-            'payout' => (float) $setting->payout,
+            'package_id' => (int) $package->id,
+            'package_name' => (string) $package->name,
+            'payout' => $payout,
             'discount_percent' => $discountPercent,
             'discount_amount' => $discountAmount,
             'payable_amount' => $payableAmount,
-            'potential_win_amount' => $this->calculatePotentialWinAmount($amount, (float) $setting->payout),
+            'potential_win_amount' => $potentialWinAmount,
+            'calculated_values_at_bet_time' => [
+                'bet_amount' => round($amount, 2),
+                'discount_amount' => $discountAmount,
+                'net_amount' => $payableAmount,
+                'payout_amount' => $potentialWinAmount,
+            ],
             'max_per_number' => (float) $setting->max_per_number,
         ];
     }
@@ -270,11 +292,19 @@ class BetService
      *  bet_type:string,
      *  number:string,
      *  amount:float,
+     *  package_id:int,
+     *  package_name:string,
      *  payout:float,
      *  discount_percent:float,
      *  discount_amount:float,
      *  payable_amount:float,
      *  potential_win_amount:float,
+     *  calculated_values_at_bet_time:array{
+     *    bet_amount:float,
+     *    discount_amount:float,
+     *    net_amount:float,
+     *    payout_amount:float
+     *  },
      *  max_per_number:float
      * } $item
      * @throws Exception
@@ -296,11 +326,14 @@ class BetService
             'bet_type' => $item['bet_type'],
             'number' => $item['number'],
             'amount' => $item['amount'],
+            'package_id_at_time' => $item['package_id'],
+            'package_name_at_time' => $item['package_name'],
             'payout_at_time' => $item['payout'],
             'discount_percent_at_time' => $item['discount_percent'],
             'discount_amount_at_time' => $item['discount_amount'],
             'payable_amount_at_time' => $item['payable_amount'],
             'potential_win_amount_at_time' => $item['potential_win_amount'],
+            'calculated_values_at_bet_time' => $item['calculated_values_at_bet_time'],
         ]);
 
         $exposure->increment('sold_amount', $item['amount']);

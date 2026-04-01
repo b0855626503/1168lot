@@ -194,7 +194,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
      */
     private function buildSourceDraft(LotteryMarket $market, string $target, int $priority, bool $activateNew): array
     {
-        $baseUrl = rtrim((string) config('app.url'), '/');
+        $baseUrl = $this->resolveInternalApiBaseUrl();
         $isExphuay = str_starts_with($target, 'exphuay:');
         $queryTemplate = ['date' => '{{lookup_date}}'];
 
@@ -285,5 +285,27 @@ class InsertInternalResultSourceMappingsCommand extends Command
             'shadow_enabled' => false,
             'cutover_enabled' => true,
         ];
+    }
+
+    private function resolveInternalApiBaseUrl(): string
+    {
+        $appUrl = rtrim((string) config('app.url'), '/');
+        $scheme = (string) parse_url($appUrl, PHP_URL_SCHEME);
+        if ($scheme === '') {
+            $scheme = 'http';
+        }
+
+        $apiDomain = trim((string) env('APP_API_DOMAIN_URL', ''));
+        $adminDomain = trim((string) config('app.admin_domain_url', ''));
+        $domain = $apiDomain !== '' ? $apiDomain : $adminDomain;
+        $apiSubdomain = trim((string) config('gametech.api_url', 'api'), '.');
+
+        if ($domain !== '') {
+            $host = $apiSubdomain !== '' ? ($apiSubdomain . '.' . ltrim($domain, '.')) : ltrim($domain, '.');
+
+            return sprintf('%s://%s', $scheme, $host);
+        }
+
+        return $appUrl;
     }
 }

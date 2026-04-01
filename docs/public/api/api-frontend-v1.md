@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-03-26
+อัปเดตล่าสุด: 2026-04-01
 
 ## Base URL
 - `http://api.<domain>/api/v1`
@@ -520,6 +520,7 @@ Request body (ตัวอย่างเบื้องต้น)
 ```json
 {
   "draw_id": 1,
+  "package_id": 9,
   "items": [
     {
       "bet_type": "top_3",
@@ -531,6 +532,13 @@ Request body (ตัวอย่างเบื้องต้น)
 ```
 
 หมายเหตุ `bet_type` ที่รองรับ: `top_3`, `tod_3`, `top_2`, `bottom_2`, `run_top`, `run_bottom`
+หมายเหตุ: `package_id` เป็น field บังคับ
+
+Error code ที่เกี่ยวข้องกับ package:
+- `PACKAGE_REQUIRED` -> HTTP `400`
+- `PACKAGE_NOT_IN_GROUP` -> HTTP `400`
+- `PACKAGE_INACTIVE` -> HTTP `409`
+- `BET_TYPE_NOT_CONFIGURED` -> HTTP `422`
 
 Response จะขึ้นกับกติกาและสถานะงวด ณ ขณะนั้น (ผ่านบริการ Lotto เดิม)
 
@@ -666,6 +674,104 @@ Response ตัวอย่าง
     ]
   },
   "message": "ดึงรายการหวยพร้อมงวดล่าสุดสำเร็จ"
+}
+```
+
+#### 5.8 รายการ Package ตามกลุ่มหวย
+- `GET /lotto/groups/{groupId}/packages`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 9,
+      "group_id": 1,
+      "name": "แพ็กเกจมาตรฐาน",
+      "is_active": true,
+      "bet_settings": [
+        {
+          "bet_type": "top_3",
+          "payout": 900,
+          "discount_percent": 0
+        }
+      ]
+    }
+  ],
+  "message": "ดึง package สำเร็จ"
+}
+```
+
+#### 5.9 เลือก Package สำหรับ flow หน้าแทง (Helper State)
+- `POST /lotto/groups/{groupId}/select-package`
+- Auth: ต้องใช้ token
+
+Request body
+```json
+{
+  "package_id": 9
+}
+```
+
+Response ตัวอย่าง (success)
+```json
+{
+  "success": true,
+  "data": {
+    "group_id": 1,
+    "package_id": 9,
+    "selected": true
+  },
+  "message": "เลือก package สำเร็จ"
+}
+```
+
+Response ตัวอย่าง (ผิด group)
+```json
+{
+  "success": false,
+  "message": "package ไม่อยู่ใน group เดียวกัน",
+  "data": {
+    "error_code": "PACKAGE_NOT_IN_GROUP"
+  }
+}
+```
+
+หมายเหตุ:
+- endpoint นี้เป็น helper state สำหรับ UI เท่านั้น
+- submit bet จริง ระบบจะยึด `package_id` ใน `POST /lotto/bet` เท่านั้น
+- ถ้าเลือก package เดิมซ้ำ ผลลัพธ์ต้อง idempotent (HTTP `200`)
+
+#### 5.10 ดู Package ที่เลือกไว้ล่าสุด (Helper State)
+- `GET /lotto/groups/{groupId}/selected-package`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง (ยังไม่เลือก)
+```json
+{
+  "success": true,
+  "data": {
+    "data": null,
+    "selected": false
+  },
+  "message": "ยังไม่ได้เลือก package"
+}
+```
+
+Response ตัวอย่าง (เลือกแล้ว)
+```json
+{
+  "success": true,
+  "data": {
+    "data": {
+      "group_id": 1,
+      "package_id": 9
+    },
+    "selected": true
+  },
+  "message": "ดึงสถานะ package ที่เลือกสำเร็จ"
 }
 ```
 
@@ -1176,6 +1282,9 @@ Response หลัก:
 - `GET /lotto/draws`
 - `GET /lotto/draws/{id}`
 - `GET /lotto/markets/latest`
+- `GET /lotto/groups/{groupId}/packages`
+- `POST /lotto/groups/{groupId}/select-package`
+- `GET /lotto/groups/{groupId}/selected-package`
 - `GET /deposit/channels`
 - `POST /deposit/loadbank`
 - `GET /wheel/list`

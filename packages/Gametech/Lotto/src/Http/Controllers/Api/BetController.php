@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Http\Controllers\Api;
 
 use Gametech\Admin\Http\Controllers\AppBaseController;
+use Gametech\Lotto\Exceptions\LottoPackageException;
 use Gametech\Lotto\Services\BetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class BetController extends AppBaseController
 
         $validated = validator($request->all(), [
             'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'package_id' => ['required', 'integer', 'exists:lotto_group_packages,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.bet_type' => ['required', 'string'],
             'items.*.number' => ['required', 'string'],
@@ -28,6 +30,7 @@ class BetController extends AppBaseController
             $ticket = $betService->placeBet(
                 (int) $member->code,
                 (int) $validated['draw_id'],
+                (int) $validated['package_id'],
                 (array) $validated['items']
             );
 
@@ -41,6 +44,10 @@ class BetController extends AppBaseController
                 'status' => (string) $ticket->status,
                 'item_count' => $ticket->items->count(),
             ], 'แทงหวยสำเร็จ');
+        } catch (LottoPackageException $exception) {
+            return $this->sendResponseFail([
+                'error_code' => $exception->errorCode(),
+            ], $exception->getMessage(), $exception->httpStatus());
         } catch (\Throwable $exception) {
             return $this->sendError($exception->getMessage(), 422);
         }

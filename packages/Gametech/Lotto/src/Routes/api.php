@@ -21,6 +21,18 @@ Route::middleware(['api', 'authuser:customer'])->prefix('api/lotto')->group(func
     Route::post('bet', 'Gametech\Lotto\Http\Controllers\Api\BetController@store')
         ->name('lotto.api.bet.store');
 
+    // List group packages (active only)
+    Route::get('groups/{groupId}/packages', 'Gametech\Lotto\Http\Controllers\Api\PackageController@available')
+        ->name('lotto.api.packages.available');
+
+    // Helper-only package selection in current flow
+    Route::post('groups/{groupId}/select-package', 'Gametech\Lotto\Http\Controllers\Api\PackageController@select')
+        ->name('lotto.api.packages.select');
+
+    // Helper-only selected package state
+    Route::get('groups/{groupId}/selected-package', 'Gametech\Lotto\Http\Controllers\Api\PackageController@selected')
+        ->name('lotto.api.packages.selected');
+
     // Get member's tickets (history)
     Route::get('tickets', 'Gametech\Lotto\Http\Controllers\Api\TicketController@index')
         ->name('lotto.api.tickets.index');
@@ -35,7 +47,18 @@ Route::middleware(['api', 'authuser:customer'])->prefix('api/lotto')->group(func
 
 });
 
-Route::middleware(['api', 'throttle:120,1', 'lotto.internal_results'])
+$apiDomain = trim((string) config('app.api_domain_url', ''));
+$adminDomain = trim((string) config('app.admin_domain_url', ''));
+$domain = $apiDomain !== '' ? $apiDomain : $adminDomain;
+$apiSubdomain = trim((string) config('gametech.api_url', 'api'), '.');
+
+$internalResultsRoute = Route::middleware(['api', 'throttle:120,1', 'lotto.internal_results']);
+if ($domain !== '') {
+    $host = $apiSubdomain !== '' ? ($apiSubdomain . '.' . ltrim($domain, '.')) : ltrim($domain, '.');
+    $internalResultsRoute = $internalResultsRoute->domain($host);
+}
+
+$internalResultsRoute
     ->prefix('internal/lottery/results')
     ->group(function () {
         Route::get('exphuay/{type}', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@exphuay')
@@ -47,4 +70,3 @@ Route::middleware(['api', 'throttle:120,1', 'lotto.internal_results'])
         Route::get('dowjones-extra', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@dowjonesExtra')
             ->name('lotto.internal.results.dowjones_extra');
     });
-

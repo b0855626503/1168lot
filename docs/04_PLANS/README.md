@@ -4,7 +4,7 @@
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
 ## ACTIVE
-- (none)
+- `2026-03-31_lotto-group-package-system-readiness.md`
 
 ## PENDING
 - `2026-03-21_frontend-api-v1.md`

@@ -50,6 +50,43 @@ Route::domain(
             Route::post('markets/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LotteryMarketController@update')
                 ->name('admin.lotto.markets.update');
 
+            Route::get('group-packages', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageDashboardController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.group_packages.index',
+                'title' => 'แพ็กเกจกลุ่มหวย',
+                'description' => 'จัดการ package ระดับ group',
+                'section' => 'settings.group_packages',
+            ])->name('admin.lotto.group_packages.index');
+
+            Route::post('group-packages/list', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageController@list')
+                ->name('admin.lotto.group_packages.list');
+
+            Route::post('group-packages/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageController@create')
+                ->name('admin.lotto.group_packages.create');
+
+            Route::post('group-packages/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageController@edit')
+                ->name('admin.lotto.group_packages.edit');
+
+            Route::post('group-packages/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageController@update')
+                ->name('admin.lotto.group_packages.update');
+
+            Route::post('group-packages/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageController@delete')
+                ->name('admin.lotto.group_packages.delete');
+
+            Route::post('group-package-bet-settings/list', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageBetSettingController@list')
+                ->name('admin.lotto.group_package_bet_settings.list');
+
+            Route::post('group-package-bet-settings/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageBetSettingController@create')
+                ->name('admin.lotto.group_package_bet_settings.create');
+
+            Route::post('group-package-bet-settings/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageBetSettingController@edit')
+                ->name('admin.lotto.group_package_bet_settings.edit');
+
+            Route::post('group-package-bet-settings/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageBetSettingController@update')
+                ->name('admin.lotto.group_package_bet_settings.update');
+
+            Route::post('group-package-bet-settings/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoGroupPackageBetSettingController@delete')
+                ->name('admin.lotto.group_package_bet_settings.delete');
+
             Route::get('default-settings', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMarketBetSettingController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.default_settings.index',
             ])->name('admin.lotto.default_settings.index');
@@ -288,4 +325,3 @@ Route::domain(
         });
     });
 });
-

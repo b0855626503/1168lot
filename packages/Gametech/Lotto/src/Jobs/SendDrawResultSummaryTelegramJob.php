@@ -98,9 +98,8 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         $result = is_array($draw->result_number) ? $draw->result_number : [];
         $firstPrize = preg_replace('/\D+/', '', (string) ($result['first_prize'] ?? ''));
         $last2Digits = preg_replace('/\D+/', '', (string) ($result['last_2_digits'] ?? ''));
-        $is3DigitMarket = strlen((string) $firstPrize) <= 3;
-        $firstLabel = $is3DigitMarket ? '3 ตัวบน' : 'รางวัลที่ 1';
-        $lastLabel = $is3DigitMarket ? '2 ตัวล่าง' : 'เลข 2 ตัว';
+        $firstLabel = '3 ตัวบน';
+        $lastLabel = '2 ตัวล่าง';
 
         $netAmount = (float) ($summary['net_amount'] ?? 0);
         $netEmoji = $netAmount >= 0 ? '🟢' : '🔴';

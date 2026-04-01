@@ -1,4 +1,4 @@
-> สถานะ: ACTIVE
+> สถานะ: DONE
 > วันที่: 2026-03-30
 > โดเมน/เรื่อง: Lotto / Browser Runtime Operational Follow-ups
 > แทนแผนเก่า: -

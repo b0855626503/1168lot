@@ -156,5 +156,4 @@ class LottoFetchAutoResultsCommand extends Command
             ->where('market_id', $marketId)
             ->exists();
     }
-
 }

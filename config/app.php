@@ -127,6 +127,8 @@ return [
 
     'admin_domain_url' => env('APP_ADMIN_DOMAIN_URL', null),
 
+    'api_domain_url' => env('APP_API_DOMAIN_URL', null),
+
     'user_domain_url' => env('APP_USER_DOMAIN_URL', null),
 
     'user_domain_addon_url' => env('APP_USER_DOMAIN_ADDON_URL', null),

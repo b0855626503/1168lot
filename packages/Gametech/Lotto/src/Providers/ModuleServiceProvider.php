@@ -9,6 +9,8 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoNumberBlock;
+use Gametech\Lotto\Models\LottoGroupPackage;
+use Gametech\Lotto\Models\LottoGroupPackageBetSetting;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Models\LottoResultSource;
@@ -30,6 +32,8 @@ class ModuleServiceProvider extends BaseModuleServiceProvider
         LottoDrawBetSetting::class,
         LottoNumberExposure::class,
         LottoNumberBlock::class,
+        LottoGroupPackage::class,
+        LottoGroupPackageBetSetting::class,
         LottoTicket::class,
         LottoTicketItem::class,
         LottoResultSource::class,

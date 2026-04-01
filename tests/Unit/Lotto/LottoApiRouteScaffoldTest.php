@@ -30,6 +30,9 @@ class LottoApiRouteScaffoldTest extends TestCase
         $this->assertStringContainsString("Route::middleware(['api', 'authuser:customer'])->prefix('api/lotto')->group(function () {", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\DrawController@index", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\BetController@store", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@available", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@select", $content);
+        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@selected", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\TicketController@cancel", $content);
         $this->assertStringContainsString("prefix('internal/lottery/results')", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@exphuay", $content);

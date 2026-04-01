@@ -73,18 +73,21 @@ class LottoMarketBetSettingController extends AppBaseController
             'min_bet'         => ['required', 'numeric', 'min:0'],
             'max_bet'         => ['required', 'numeric', 'min:0', 'gte:min_bet'],
             'max_per_number'  => ['required', 'numeric', 'min:0'],
-            'payout'          => ['required', 'numeric', 'min:0'],
             'is_enabled'      => ['nullable', 'boolean'],
         ], [
             'bet_type.unique' => 'ประเภทเดิมพันนี้มีอยู่แล้วในรายการหวยที่เลือก',
             'bet_type.in' => 'ประเภทเดิมพันไม่ถูกต้อง',
         ])->validate();
 
+        if (array_key_exists('payout', $data) || array_key_exists('discount_percent', $data)) {
+            return $this->sendError('DEPRECATED_PAYOUT_OVERRIDE: ห้ามตั้งค่า payout/discount ระดับ market โปรดใช้ Group Package', 422);
+        }
+
         try {
             LottoMarketBetSetting::query()->create([
                 'market_id'       => $validated['market_id'],
                 'bet_type'        => $validated['bet_type'],
-                'payout'          => $validated['payout'],
+                'payout'          => 0,
                 'min_bet'         => $validated['min_bet'],
                 'max_bet'         => $validated['max_bet'],
                 'max_per_number'  => $validated['max_per_number'],
@@ -147,18 +150,20 @@ class LottoMarketBetSettingController extends AppBaseController
             'min_bet'         => ['required', 'numeric', 'min:0'],
             'max_bet'         => ['required', 'numeric', 'min:0', 'gte:min_bet'],
             'max_per_number'  => ['required', 'numeric', 'min:0'],
-            'payout'          => ['required', 'numeric', 'min:0'],
             'is_enabled'      => ['nullable', 'boolean'],
         ], [
             'bet_type.unique' => 'ประเภทเดิมพันนี้มีอยู่แล้วในรายการหวยที่เลือก',
             'bet_type.in' => 'ประเภทเดิมพันไม่ถูกต้อง',
         ])->validate();
 
+        if (array_key_exists('payout', $data) || array_key_exists('discount_percent', $data)) {
+            return $this->sendError('DEPRECATED_PAYOUT_OVERRIDE: ห้ามตั้งค่า payout/discount ระดับ market โปรดใช้ Group Package', 422);
+        }
+
         try {
             $setting->update([
                 'market_id'       => $validated['market_id'],
                 'bet_type'        => $validated['bet_type'],
-                'payout'          => $validated['payout'],
                 'min_bet'         => $validated['min_bet'],
                 'max_bet'         => $validated['max_bet'],
                 'max_per_number'  => $validated['max_per_number'],

@@ -42,6 +42,11 @@ class LotteryGroup extends Model implements LotteryGroupContract
         return $this->hasMany(LotteryMarket::class, 'group_id');
     }
 
+    public function packages()
+    {
+        return $this->hasMany(LottoGroupPackage::class, 'group_id');
+    }
+
     public function memberMarketPolicies()
     {
         return $this->hasMany(MemberLottoMarketPolicy::class, 'group_id');

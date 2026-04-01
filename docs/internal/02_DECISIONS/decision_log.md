@@ -1,5 +1,83 @@
 # Decision Log
 
+## 2026-04-01 — Revert Manual Draw Mode Guard on Auto Result Fetch/Apply (APPROVED)
+
+- ยกเลิก policy ที่เคยบล็อก auto-result เมื่อ `draw_mode=manual`
+- policy ล่าสุด:
+  - `draw_mode` ใช้กำหนดการสร้างงวดอัตโนมัติเท่านั้น (manual = ทีมงานเพิ่มงวดเอง)
+  - auto-result fetch/apply ให้ยึดสถานะ source และกติกาคำนวณ (`auto_settle_on_result`) ตามเดิม
+  - ถ้ามี source active และงวดเข้าเงื่อนไข ระบบต้องดึงผลอัตโนมัติได้แม้ market เป็น `draw_mode=manual`
+- สถานะเอกสาร:
+  - decision `2026-04-01 — Manual Draw Mode Disables Auto Result Fetch/Apply Regardless of Source/Auto Settle` ถูก superseded
+
+## 2026-04-01 — Manual Draw Mode Disables Auto Result Fetch/Apply Regardless of Source/Auto Settle (APPROVED)
+
+- เพิ่ม policy บังคับสำหรับตลาดที่ `draw_mode=manual`:
+  - ห้าม auto-result fetch ผลเข้าระบบ
+  - ห้าม auto-result apply/settle อัตโนมัติ
+- policy นี้มีผลแม้:
+  - มี source config ผูกไว้แล้ว
+  - ตั้ง `auto_settle_on_result=true`
+- เหตุผล:
+  - โหมด manual ต้องให้ทีมงานควบคุมการออกผลและการคำนวณเองทั้งหมด
+  - ป้องกันระบบอัตโนมัติรันข้ามเจตนาการตั้งค่าโหมดงวด
+
+## 2026-04-01 — Internal Result Endpoints Use API Domain as Single Canonical Host (APPROVED)
+
+- route `/internal/lottery/results/*` ถูก bind ให้รับ request เฉพาะ API host เท่านั้น
+- กติกา resolve host:
+  - ถ้าตั้ง `APP_API_DOMAIN_URL`: ใช้ `APP_API_URL + APP_API_DOMAIN_URL`
+  - ถ้าไม่ตั้ง `APP_API_DOMAIN_URL`: fallback ใช้ `APP_API_URL + APP_ADMIN_DOMAIN_URL`
+- canonical internal endpoint URL ต้องเป็น `api.*` เพียงเส้นเดียว (ไม่เปิดผ่าน `admin.*`)
+- เหตุผล:
+  - ลดความสับสนของ source config ที่มี endpoint ได้หลาย host
+  - ลดความเสี่ยง config drift ระหว่าง environment
+
+## 2026-04-01 — Lotto Admin ACL Split by CRUD Actions with Backward Compatibility (APPROVED)
+
+- ปรับ `packages/Gametech/Lotto/src/Config/acl.php` ให้รองรับ permission key แบบแยก action (`index/create/update/delete`) ในเมนูที่มี route รองรับจริง
+- คง permission key เดิมระดับเมนูไว้ทั้งหมด เพื่อไม่ให้ role เดิมที่ผูก key เก่าใช้งานพังทันที
+- ขอบเขตที่เพิ่ม key แยก action:
+  - `lotto_settings.draws.*`
+  - `lotto_settings.auto_result_sources.*`
+  - `lotto_settings.number_blocks.*`
+  - `lotto_settings.groups.*`
+  - `lotto_settings.markets.*`
+  - `lotto_settings.group_packages.*`
+  - `lotto_settings.payout_settings.*`
+  - `lotto_settings.bet_limit_settings.*`
+- เหตุผล:
+  - ให้ Lotto ACL อยู่มาตรฐานเดียวกับโมดูลที่แยกสิทธิ์ CRUD ชัดเจน
+  - ลดความคลุมเครือของสิทธิ์ “เห็นเมนู” กับสิทธิ์ “เพิ่ม/แก้ไข/ลบ”
+
+## 2026-03-31 — Lotto Group Package Contract + Helper Boundary + Snapshot Ownership (APPROVED)
+
+- ล็อก contract ของ package helper APIs:
+  - `POST /api/lotto/groups/{groupId}/select-package`
+    - success: `HTTP 200`
+    - idempotent เมื่อเลือก package เดิมซ้ำ
+  - `GET /api/lotto/groups/{groupId}/selected-package`
+    - ถ้ายังไม่เลือก: `HTTP 200` + `data=null` + `selected=false`
+- ล็อก boundary:
+  - helper API เป็น non-authoritative state สำหรับ UI เท่านั้น
+  - betting runtime ต้อง validate จาก `package_id` ที่ส่งมาใน bet request เท่านั้น
+  - ห้ามใช้ helper state เป็น auth/permission gate
+- ล็อก betting package error mapping:
+  - `PACKAGE_REQUIRED` -> `400`
+  - `PACKAGE_NOT_IN_GROUP` -> `400`
+  - `PACKAGE_INACTIVE` -> `409`
+  - `BET_TYPE_NOT_CONFIGURED` -> `422`
+- ล็อก snapshot ownership:
+  - authoritative snapshot เก็บที่ `lotto_ticket_items`
+  - ต้องมี `package_id_at_time`, `package_name_at_time`, `calculated_values_at_bet_time`
+  - `calculated_values_at_bet_time` อย่างน้อยมี `bet_amount`, `discount_amount`, `net_amount`, `payout_amount`
+- ล็อก admin package management:
+  - เพิ่ม admin endpoints สำหรับ `group-packages` และ `group-package-bet-settings`
+  - package ที่ถูกใช้งานแล้วห้าม hard delete และต้อง disable แทน
+- ล็อก deprecate market-level payout override:
+  - ปิดการแก้ `payout/discount_percent` ผ่าน `default-settings`
+  - ถ้าพบการส่ง field นี้ให้ reject ด้วย `DEPRECATED_PAYOUT_OVERRIDE`
+
 ## 2026-03-30 — Internal Result Endpoints Bypass Fixture Gate in Local/Testing (APPROVED)
 
 - source config ที่ชี้ endpoint ภายในระบบหลัก (`/internal/lottery/results/*`) ไม่ต้องถูกบังคับ fixture gate ตอน save/validate cutover ใน `local|testing`

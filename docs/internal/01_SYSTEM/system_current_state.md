@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-03-30
+อัปเดตล่าสุด: 2026-04-01
 
 ## ภาพรวมระบบ
 
@@ -39,6 +39,20 @@
   - `resulted` = ฟ้าอ่อน
 - ตาราง `lotto/draws` จัดข้อมูลใน cell เป็นแนวตั้งกึ่งกลาง (`vertical-align: middle`) และจัดข้อความกึ่งกลางในส่วนข้อมูลแถว
 - หน้า `lotto/draws` รองรับ filter เพิ่มเติมด้วย `สถานะ` (`draft/open/closed/resulted`) ร่วมกับ group/market/draw_date
+
+## นโยบาย ACL แยกสิทธิ์ CRUD (Admin Lotto)
+
+- ACL ของเมนูตั้งค่า Lotto รองรับ key แยก action ระดับ `index/create/update/delete` ตาม route ที่มีจริง (pattern เดียวกับโมดูลที่แยกสิทธิ์แบบ CRUD)
+- key เดิมระดับเมนู (เช่น `lotto_settings.markets`, `lotto_settings.number_blocks`) ยังคงอยู่เพื่อรักษา backward compatibility
+- กลุ่มที่มีการแยก action เพิ่มแล้ว:
+  - `lotto_settings.draws.*` (`index/create/update`)
+  - `lotto_settings.auto_result_sources.*` (`index/create/update/delete`)
+  - `lotto_settings.number_blocks.*` (`index/create/update/delete`)
+  - `lotto_settings.groups.*` (`index/create/update`)
+  - `lotto_settings.markets.*` (`index/create/update`)
+  - `lotto_settings.group_packages.*` (`index/create/update/delete`)
+  - `lotto_settings.payout_settings.*` (`index/update`)
+  - `lotto_settings.bet_limit_settings.*` (`index/update`)
 
 ## นโยบายการเรียงข้อมูลแหล่งผลอัตโนมัติ (Admin UI)
 
@@ -111,6 +125,55 @@
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
 
+## นโยบาย Lotto Group Package (Frontend + Betting)
+
+- เพิ่มตารางระดับกลุ่มสำหรับ package:
+  - `lotto_group_packages`
+  - `lotto_group_package_bet_settings`
+- เพิ่ม API สำหรับ package flow assist:
+  - `GET /api/lotto/groups/{groupId}/packages`
+  - `POST /api/lotto/groups/{groupId}/select-package`
+  - `GET /api/lotto/groups/{groupId}/selected-package`
+- policy ของ helper API:
+  - ใช้เพื่อ UI flow assist เท่านั้น (non-authoritative)
+  - ห้ามใช้แทน betting validation/auth gate
+  - ตอน submit bet ต้องยึด `package_id` ใน request เท่านั้น
+- `POST /api/lotto/bet` บังคับรับ `package_id` ทุกครั้ง
+- เพิ่ม Admin endpoints สำหรับจัดการ package ระดับ group:
+  - `POST /lotto/group-packages/list|create|edit|update|delete`
+  - `POST /lotto/group-package-bet-settings/list|create|edit|update|delete`
+- หน้า Admin `/lotto/group-packages` ใช้ flow เดียวกับเมนู `rate-plans`:
+  - เลือก `group` ก่อน
+  - แสดงปุ่ม `เพิ่มแพกเกจ` เมื่ออยู่ใน group นั้น
+  - ถ้า group ไม่มี package จะไม่แสดง panel รายละเอียดเพิ่มเติม
+  - ถ้ามี package จะแสดง tab package และเมื่อเลือก tab จะแสดงตารางแบบ `rate-plans`:
+    - แถว = รายการหวยใน group
+    - คอลัมน์ = bet types
+    - โหมดแสดงผลเลือกได้ `อัตราจ่าย | ส่วนลด(%) | ทั้งคู่`
+    - ไม่มีคอลัมน์จัดการในตารางแสดงผล
+  - modal `เพิ่มแพกเกจ` ต้องกรอก `อัตราจ่าย/ส่วนลด` ราย `bet_type` และบันทึก package + bet settings ใน transaction เดียว
+  - มีปุ่ม `แก้ไขแพกเกจ` สำหรับแก้ชื่อ/คำอธิบาย/สถานะ พร้อม `อัตราจ่าย/ส่วนลด` ราย `bet_type` ใน modal เดียว
+  - modal `เพิ่ม/แก้ไขแพกเกจ` ไม่มีตัวเลือกเปิด-ปิดราย bet type และระบบตั้งค่า `is_enabled=true` ให้ทุกประเภทโดยอัตโนมัติ
+  - endpoint `group-packages/update` รองรับ sync `bet_settings` ใน transaction เดียวกับ package update
+- policy package deletion:
+  - package ที่เคยถูกใช้ใน `lotto_ticket_items.package_id_at_time` ห้าม hard delete
+  - ระบบจะ disable (`is_active=false`) แทน
+- error mapping สำหรับ package flow:
+  - `PACKAGE_REQUIRED` -> `400`
+  - `PACKAGE_NOT_IN_GROUP` -> `400`
+  - `PACKAGE_INACTIVE` -> `409`
+  - `BET_TYPE_NOT_CONFIGURED` -> `422`
+- snapshot package ที่ authoritative อยู่ที่ `lotto_ticket_items`:
+  - `package_id_at_time`
+  - `package_name_at_time`
+  - `calculated_values_at_bet_time` (อย่างน้อยมี `bet_amount`, `discount_amount`, `net_amount`, `payout_amount`)
+
+## นโยบาย Deprecate Payout Override ระดับ Market
+
+- endpoint จัดการ `lotto_market_bet_settings` (`default-settings`) ไม่อนุญาตให้แก้ `payout/discount_percent` อีกต่อไป
+- ถ้าพบ field ดังกล่าวใน request จะ reject ด้วยข้อความ `DEPRECATED_PAYOUT_OVERRIDE`
+- คงไว้เฉพาะการตั้งค่า limits (`min_bet`, `max_bet`, `max_per_number`) และ toggle `is_enabled`
+
 ## นโยบาย Internal Lotto Result Sources API
 
 - เพิ่ม internal endpoints สำหรับรวม source จาก mini projects เดิม:
@@ -150,6 +213,10 @@
       - `top_2` = 2 หลักท้ายของ `digit5`
       - `bottom_2` = 2 หลักหน้าของ `digit5`
 - security policy:
+  - route ชุดนี้ bind domain เฉพาะ API host เท่านั้น:
+    - `APP_API_URL + APP_API_DOMAIN_URL` (ถ้าตั้ง `APP_API_DOMAIN_URL`)
+    - fallback เป็น `APP_API_URL + APP_ADMIN_DOMAIN_URL` (กรณีไม่ได้ตั้ง `APP_API_DOMAIN_URL`)
+  - canonical URL สำหรับ internal result endpoints ต้องเรียกผ่าน `api.*` เท่านั้น (ไม่เปิดผ่าน `admin.*`)
   - route ชุดนี้ใช้ middleware `lotto.internal_results`
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
