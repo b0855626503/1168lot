@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-04-01 — Exphuay Driver Uses Browser Runtime Fallback on Cloudflare Challenge (APPROVED)
+
+- ปรับ `ExphuayResultDriver`:
+  - ยิง HTTP ปกติก่อน
+  - ถ้าเจอ Cloudflare challenge (`HTTP 403` หรือ body บ่งชี้ `Just a moment/cf-mitigated`) ให้ fallback ไป browser runtime (`performRuntimeFetch`) แบบ sync ใน driver
+- env policy:
+  - `LOTTO_EXPHUAY_COOKIE` สำหรับ upstream cookie
+  - `LOTTO_EXPHUAY_USER_AGENT` สำหรับ UA override
+  - `LOTTO_EXPHUAY_BROWSER_FALLBACK` สำหรับเปิด/ปิด fallback (default=true)
+- เหตุผล:
+  - ลดกรณี `REQUIRED_FIELD_MISSING @ VALIDATE` ที่ root cause มาจาก upstream ถูก Cloudflare block
+
 ## 2026-04-01 — Move Exphuay Headers/Cookie to Upstream Driver; Keep Inserted Source JSON Clean (APPROVED)
 
 - ยกเลิก policy ที่ให้ command `lotto:insert-internal-result-source-mappings` ฝัง browser headers/cookie ลง JSON หลัก

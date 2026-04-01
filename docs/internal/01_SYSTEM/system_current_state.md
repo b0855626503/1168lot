@@ -229,6 +229,8 @@
   - header baseline: `Accept`, `Accept-Language`, `Referer`, `User-Agent`, `x-sveltekit-invalidated`
   - cookie อ่านจาก env `LOTTO_EXPHUAY_COOKIE` (ถ้าไม่ตั้งจะไม่แนบ `Cookie`)
   - user-agent override ได้ผ่าน `LOTTO_EXPHUAY_USER_AGENT`
+  - เมื่อ HTTP fetch เจอ Cloudflare challenge (`403` หรือ body แนว `Just a moment/cf-mitigated`) ให้ fallback ไป browser runtime แบบ sync ใน driver
+    - toggle ผ่าน `LOTTO_EXPHUAY_BROWSER_FALLBACK` (default = true)
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
   - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover
