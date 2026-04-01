@@ -82,6 +82,7 @@ class LottoGroupPackageDashboardController extends AppBaseController
                     'group_id' => (int) $package->group_id,
                     'name' => (string) $package->name,
                     'description' => (string) ($package->description ?? ''),
+                    'image' => (string) ($package->image ?? ''),
                     'is_active' => (bool) $package->is_active,
                     'settings' => $settings,
                 ];

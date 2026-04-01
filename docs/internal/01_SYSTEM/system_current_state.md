@@ -154,6 +154,7 @@
     - ไม่มีคอลัมน์จัดการในตารางแสดงผล
   - modal `เพิ่มแพกเกจ` ต้องกรอก `อัตราจ่าย/ส่วนลด` ราย `bet_type` และบันทึก package + bet settings ใน transaction เดียว
   - มีปุ่ม `แก้ไขแพกเกจ` สำหรับแก้ชื่อ/คำอธิบาย/สถานะ พร้อม `อัตราจ่าย/ส่วนลด` ราย `bet_type` ใน modal เดียว
+  - modal `เพิ่ม/แก้ไขแพกเกจ` รองรับอัปโหลดรูปภาพแพกเกจ (`image_file`) และบันทึก path ลง `lotto_group_packages.image`
   - modal `เพิ่ม/แก้ไขแพกเกจ` ไม่มีตัวเลือกเปิด-ปิดราย bet type และระบบตั้งค่า `is_enabled=true` ให้ทุกประเภทโดยอัตโนมัติ
   - endpoint `group-packages/update` รองรับ sync `bet_settings` ใน transaction เดียวกับ package update
 - policy package deletion:
@@ -224,6 +225,11 @@
     - `request_headers_json = []`
     - `fetch_config_json.headers = []`
   - ห้ามฝัง cookie ของ upstream ไว้ใน JSON หลักที่บันทึกลงฐานข้อมูล
+  - สำหรับทุก market ที่ map เป็น `exphuay:{type}`:
+    - generator จะชี้ endpoint เป็น `http://203.146.127.170/~anan/get_lottery.php`
+    - query template เป็น `type={type}`, `date={{lookup_date}}`, `page=1`
+    - parser ใช้ JSON_PATH จาก `$.date`, `$.results[0].lottosNumber`, `$.results[0].lottosUnder`
+    - บังคับค่า row ที่สร้างใหม่เป็น `priority=1` และ `is_active=true`
 - นโยบาย exphuay upstream headers/cookie:
   - ให้ส่งที่ `ExphuayResultDriver` ตอนเรียก upstream โดยตรง (ไม่ส่งผ่าน source JSON หลัก)
   - header baseline: `Accept`, `Accept-Language`, `Referer`, `User-Agent`, `x-sveltekit-invalidated`

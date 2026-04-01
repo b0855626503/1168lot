@@ -196,9 +196,29 @@ class InsertInternalResultSourceMappingsCommand extends Command
     {
         $baseUrl = $this->resolveInternalApiBaseUrl();
         $isExphuay = str_starts_with($target, 'exphuay:');
+        $resolvedPriority = $isExphuay ? 1 : $priority;
+        $resolvedActive = $isExphuay ? true : $activateNew;
         $queryTemplate = ['date' => '{{lookup_date}}'];
+        $parserFields = [
+            'draw_date_raw' => ['type' => 'JSON_PATH', 'path' => '$.draw_date'],
+            'first_prize_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.normalized_result.first_prize'],
+            'last_2_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.normalized_result.bottom_2'],
+        ];
 
-        if ($target === 'dowjones-midnight') {
+        if ($isExphuay) {
+            $type = substr($target, strlen('exphuay:'));
+            $endpointUrl = 'http://203.146.127.170/~anan/get_lottery.php';
+            $queryTemplate = [
+                'type' => $type,
+                'date' => '{{lookup_date}}',
+                'page' => 1,
+            ];
+            $parserFields = [
+                'draw_date_raw' => ['type' => 'JSON_PATH', 'path' => '$.date'],
+                'first_prize_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.results[0].lottosNumber'],
+                'last_2_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.results[0].lottosUnder'],
+            ];
+        } elseif ($target === 'dowjones-midnight') {
             $endpointUrl = $baseUrl . '/internal/lottery/results/dowjones-midnight';
         } elseif ($target === 'dowjones-extra') {
             $endpointUrl = $baseUrl . '/internal/lottery/results/dowjones-extra';
@@ -209,8 +229,8 @@ class InsertInternalResultSourceMappingsCommand extends Command
         }
         return [
             'market_id' => (int) $market->id,
-            'is_active' => $activateNew,
-            'priority' => $priority,
+            'is_active' => $resolvedActive,
+            'priority' => $resolvedPriority,
             'source_type' => 'api',
             'endpoint_url' => $endpointUrl,
             'http_method' => 'GET',
@@ -224,11 +244,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
                 'version' => 2,
                 'mode' => 'single_payload',
                 'parser_type' => 'JSON_PATH',
-                'fields' => [
-                    'draw_date_raw' => ['type' => 'JSON_PATH', 'path' => '$.draw_date'],
-                    'first_prize_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.normalized_result.first_prize'],
-                    'last_2_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.normalized_result.bottom_2'],
-                ],
+                'fields' => $parserFields,
             ],
             'mapping_config_json' => [
                 'fields' => [
@@ -260,7 +276,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
                         'allow_dom_fallback' => false,
                     ],
                     'insert_only_mapping' => true,
-                    'target_family' => $isExphuay ? 'exphuay' : 'dowjones',
+                    'target_family' => $isExphuay ? 'external-get-lottery' : 'dowjones',
                 ],
             ],
             'selection_config_json' => [

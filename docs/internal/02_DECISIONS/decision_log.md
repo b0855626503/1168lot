@@ -1,5 +1,30 @@
 # Decision Log
 
+## 2026-04-01 — Insert-Internal Generator Supports External `get_lottery.php` for All Exphuay-Mapped Markets (APPROVED)
+
+- ปรับ `lotto:insert-internal-result-source-mappings` สำหรับทุก market ที่ map เป็น `exphuay:{type}`:
+  - ใช้ endpoint `http://203.146.127.170/~anan/get_lottery.php`
+  - query template: `type={type}`, `date={{lookup_date}}`, `page=1`
+  - parser fields:
+    - `draw_date_raw` -> `$.date`
+    - `first_prize_raw_1` -> `$.results[0].lottosNumber`
+    - `last_2_raw_1` -> `$.results[0].lottosUnder`
+  - บังคับค่าแถวใหม่เป็น `priority=1` และ `is_active=true` (override ค่า option ปกติของ command สำหรับกลุ่มนี้)
+- เหตุผล:
+  - ให้ auto source ทุกตลาดที่อิง exphuay ดึงข้อมูลจาก endpoint กลางที่ทีมงานกำหนดได้ทันที โดยไม่ต้องแก้มือหลัง generate
+
+## 2026-04-01 — Lotto Group Package Admin Modal Supports Package Image Upload (APPROVED)
+
+- ปรับหน้า admin `/lotto/group-packages`:
+  - modal `เพิ่มแพกเกจ` และ `แก้ไขแพกเกจ` รองรับอัปโหลดไฟล์รูป (`image_file`)
+  - ฝั่ง frontend ส่งข้อมูลแบบ `multipart/form-data` และรองรับ nested payload (`bet_settings`) ผ่าน bracket notation
+- ปรับ backend:
+  - เพิ่มคอลัมน์ `lotto_group_packages.image` (nullable string)
+  - `LottoGroupPackageController` รองรับ validate/upload รูป (`jpeg/png/gif/webp`, max 5MB)
+  - เมื่ออัปโหลดใหม่จะเก็บไฟล์ใน `storage/app/public/lotto/media` และอัปเดต path เป็น `/storage/...`
+- เหตุผล:
+  - ให้ทีมงานกำหนดรูปภาพของแพกเกจได้ตรงจาก modal เพิ่ม/แก้ไข โดยไม่ต้องแก้ข้อมูลผ่าน DB
+
 ## 2026-04-01 — Exphuay Adds Python `curl_cffi` Worker Fallback Before Browser Runtime (APPROVED)
 
 - ปรับ fallback chain ใน `ExphuayResultDriver` เป็น:

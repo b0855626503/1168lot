@@ -62,6 +62,14 @@
             border: 1px solid #dee2e6;
             flex: 0 0 20px;
         }
+
+        .lotto-group-packages-package-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+        }
     </style>
 @endpush
 
@@ -113,6 +121,9 @@
                                 </div>
                             </div>
                             <div class="card-body">
+                                <p class="mb-2" v-if="activePackage.image">
+                                    <img :src="activePackage.image" alt="" class="lotto-group-packages-package-thumb">
+                                </p>
                                 <p class="mb-3" v-if="activePackage.description">@{{ activePackage.description }}</p>
 
                                 <div class="lotto-group-packages-display-mode">
@@ -198,6 +209,17 @@
                         </b-form-textarea>
                     </b-form-group>
 
+                    <b-form-group label="รูปภาพแพกเกจ">
+                        <div v-if="createForm.image" class="mb-2">
+                            <img :src="createForm.image" alt="" class="lotto-group-packages-package-thumb">
+                        </div>
+                        <b-form-file v-model="createForm.image_file"
+                                     accept="image/jpeg,image/png,image/gif,image/webp"
+                                     size="sm"
+                                     placeholder="อัปโหลดรูปภาพแพกเกจ">
+                        </b-form-file>
+                    </b-form-group>
+
                     <b-form-checkbox v-model="createForm.is_active" switch size="sm" class="mb-3">
                         เปิดใช้งานทันที
                     </b-form-checkbox>
@@ -266,6 +288,17 @@
                                          max-rows="5"
                                          size="sm">
                         </b-form-textarea>
+                    </b-form-group>
+
+                    <b-form-group label="รูปภาพแพกเกจ">
+                        <div v-if="editForm.image" class="mb-2">
+                            <img :src="editForm.image" alt="" class="lotto-group-packages-package-thumb">
+                        </div>
+                        <b-form-file v-model="editForm.image_file"
+                                     accept="image/jpeg,image/png,image/gif,image/webp"
+                                     size="sm"
+                                     placeholder="อัปโหลดรูปภาพแพกเกจ">
+                        </b-form-file>
                     </b-form-group>
 
                     <b-form-checkbox v-model="editForm.is_active" switch size="sm" class="mb-3">
@@ -347,6 +380,8 @@
                     createForm: {
                         name: '',
                         description: '',
+                        image: '',
+                        image_file: null,
                         is_active: true,
                         settings: defaultSettings,
                     },
@@ -355,6 +390,8 @@
                         group_id: null,
                         name: '',
                         description: '',
+                        image: '',
+                        image_file: null,
                         is_active: true,
                         settings: JSON.parse(JSON.stringify(defaultSettings)),
                     },
@@ -423,6 +460,8 @@
                     this.createForm = {
                         name: '',
                         description: '',
+                        image: '',
+                        image_file: null,
                         is_active: true,
                         settings,
                     };
@@ -445,6 +484,8 @@
                         group_id: null,
                         name: '',
                         description: '',
+                        image: '',
+                        image_file: null,
                         is_active: true,
                         settings,
                     };
@@ -472,6 +513,8 @@
                         group_id: Number(this.activeGroup.id),
                         name: this.activePackage.name || '',
                         description: this.activePackage.description || '',
+                        image: this.activePackage.image || '',
+                        image_file: null,
                         is_active: Boolean(this.activePackage.is_active),
                         settings,
                     };
@@ -499,6 +542,7 @@
                         group_id: Number(row.group_id || 0),
                         name: row.name || '',
                         description: row.description || '',
+                        image: row.image || '',
                         is_active: Boolean(row.is_active),
                         settings,
                     };
@@ -547,6 +591,39 @@
 
                     return 'เกิดข้อผิดพลาดระหว่างดำเนินการ';
                 },
+                appendFormDataValue(formData, key, value) {
+                    if (Array.isArray(value)) {
+                        value.forEach((item, index) => {
+                            this.appendFormDataValue(formData, `${key}[${index}]`, item);
+                        });
+                        return;
+                    }
+
+                    if (value && typeof value === 'object') {
+                        Object.keys(value).forEach((childKey) => {
+                            this.appendFormDataValue(formData, `${key}[${childKey}]`, value[childKey]);
+                        });
+                        return;
+                    }
+
+                    formData.append(key, value ?? '');
+                },
+                buildPackageFormData(id, payload, imageFile) {
+                    const formData = new FormData();
+                    if (id) {
+                        formData.append('id', id);
+                    }
+
+                    Object.keys(payload).forEach((key) => {
+                        this.appendFormDataValue(formData, `data[${key}]`, payload[key]);
+                    });
+
+                    if (imageFile) {
+                        formData.append('image_file', imageFile);
+                    }
+
+                    return formData;
+                },
                 async submitCreatePackage() {
                     if (!this.activeGroup) {
                         return;
@@ -563,14 +640,17 @@
                     });
 
                     try {
-                        const response = await axios.post("{{ route('admin.lotto.group_packages.create') }}", {
-                            data: {
-                                group_id: this.activeGroup.id,
-                                name: this.createForm.name,
-                                description: this.createForm.description,
-                                is_active: this.createForm.is_active,
-                                bet_settings: betSettings,
-                            },
+                        const payload = {
+                            group_id: this.activeGroup.id,
+                            name: this.createForm.name,
+                            description: this.createForm.description,
+                            image: this.createForm.image,
+                            is_active: this.createForm.is_active,
+                            bet_settings: betSettings,
+                        };
+                        const formData = this.buildPackageFormData(null, payload, this.createForm.image_file);
+                        const response = await axios.post("{{ route('admin.lotto.group_packages.create') }}", formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
                         });
 
                         const createdId = response?.data?.data?.id || null;
@@ -610,15 +690,17 @@
                     });
 
                     try {
-                        const response = await axios.post("{{ route('admin.lotto.group_packages.update') }}", {
-                            id: this.editForm.id,
-                            data: {
-                                group_id: this.editForm.group_id,
-                                name: this.editForm.name,
-                                description: this.editForm.description,
-                                is_active: this.editForm.is_active,
-                                bet_settings: betSettings,
-                            },
+                        const payload = {
+                            group_id: this.editForm.group_id,
+                            name: this.editForm.name,
+                            description: this.editForm.description,
+                            image: this.editForm.image,
+                            is_active: this.editForm.is_active,
+                            bet_settings: betSettings,
+                        };
+                        const formData = this.buildPackageFormData(this.editForm.id, payload, this.editForm.image_file);
+                        const response = await axios.post("{{ route('admin.lotto.group_packages.update') }}", formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
                         });
 
                         await this.reloadGroupPackages(this.activeGroup.id, this.editForm.id);

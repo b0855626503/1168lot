@@ -9,6 +9,7 @@ use Gametech\Lotto\Models\LottoGroupPackageBetSetting;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -48,6 +49,7 @@ class LottoGroupPackageController extends AppBaseController
             'group_id' => ['required', 'integer', 'exists:lotto_groups,id'],
             'name' => ['required', 'string', 'max:191'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'image' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
             'bet_settings' => ['nullable', 'array'],
             'bet_settings.*.bet_type' => ['required_with:bet_settings', Rule::in(BetType::all())],
@@ -55,6 +57,9 @@ class LottoGroupPackageController extends AppBaseController
             'bet_settings.*.discount_percent' => ['required_with:bet_settings', 'numeric', 'min:0', 'max:100'],
             'bet_settings.*.is_enabled' => ['nullable', 'boolean'],
         ])->validate();
+        $request->validate([
+            'image_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+        ]);
 
         $exists = LottoGroupPackage::query()
             ->where('group_id', (int) $validated['group_id'])
@@ -64,12 +69,21 @@ class LottoGroupPackageController extends AppBaseController
             return $this->sendError('ชื่อ package นี้มีอยู่แล้วในกลุ่มหวยดังกล่าว', 422);
         }
 
-        $package = DB::transaction(function () use ($validated) {
-            $created = LottoGroupPackage::query()->create([
+        $package = DB::transaction(function () use ($request, $validated) {
+            $payload = $this->attachUploadedMedia($request, [
                 'group_id' => (int) $validated['group_id'],
                 'name' => (string) $validated['name'],
                 'description' => $validated['description'] ?? null,
+                'image' => $this->nullableString($validated['image'] ?? null),
                 'is_active' => (bool) ($validated['is_active'] ?? true),
+            ]);
+
+            $created = LottoGroupPackage::query()->create([
+                'group_id' => $payload['group_id'],
+                'name' => $payload['name'],
+                'description' => $payload['description'],
+                'image' => $payload['image'],
+                'is_active' => $payload['is_active'],
             ]);
 
             $betSettings = collect((array) ($validated['bet_settings'] ?? []))
@@ -132,6 +146,7 @@ class LottoGroupPackageController extends AppBaseController
             'group_id' => ['required', 'integer', 'exists:lotto_groups,id'],
             'name' => ['required', 'string', 'max:191'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'image' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
             'bet_settings' => ['nullable', 'array'],
             'bet_settings.*.bet_type' => ['required_with:bet_settings', Rule::in(BetType::all())],
@@ -139,6 +154,9 @@ class LottoGroupPackageController extends AppBaseController
             'bet_settings.*.discount_percent' => ['required_with:bet_settings', 'numeric', 'min:0', 'max:100'],
             'bet_settings.*.is_enabled' => ['nullable', 'boolean'],
         ])->validate();
+        $request->validate([
+            'image_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+        ]);
 
         $exists = LottoGroupPackage::query()
             ->where('group_id', (int) $validated['group_id'])
@@ -149,12 +167,23 @@ class LottoGroupPackageController extends AppBaseController
             return $this->sendError('ชื่อ package นี้มีอยู่แล้วในกลุ่มหวยดังกล่าว', 422);
         }
 
-        DB::transaction(function () use ($package, $validated): void {
-            $package->update([
+        DB::transaction(function () use ($package, $request, $validated): void {
+            $payload = $this->attachUploadedMedia($request, [
                 'group_id' => (int) $validated['group_id'],
                 'name' => (string) $validated['name'],
                 'description' => $validated['description'] ?? null,
+                'image' => $this->nullableString($validated['image'] ?? null),
                 'is_active' => (bool) ($validated['is_active'] ?? $package->is_active),
+            ], [
+                'image' => (string) ($package->image ?? ''),
+            ]);
+
+            $package->update([
+                'group_id' => $payload['group_id'],
+                'name' => $payload['name'],
+                'description' => $payload['description'],
+                'image' => $payload['image'],
+                'is_active' => $payload['is_active'],
             ]);
 
             $betSettings = collect((array) ($validated['bet_settings'] ?? []))
@@ -210,5 +239,50 @@ class LottoGroupPackageController extends AppBaseController
         $package->update(['is_active' => false]);
 
         return $this->sendResponse([], 'ปิดใช้งาน package สำเร็จ');
+    }
+
+    private function attachUploadedMedia(Request $request, array $payload, array $oldMedia = []): array
+    {
+        if (! $request->hasFile('image_file')) {
+            return $payload;
+        }
+
+        $file = $request->file('image_file');
+        if (! $file || ! $file->isValid()) {
+            return $payload;
+        }
+
+        $path = $file->store('lotto/media', 'public');
+        $payload['image'] = '/storage/' . $path;
+        $this->deleteOldPublicFile($oldMedia['image'] ?? null);
+
+        return $payload;
+    }
+
+    private function deleteOldPublicFile(?string $oldPath): void
+    {
+        if (! $oldPath || ! str_starts_with($oldPath, '/storage/')) {
+            return;
+        }
+
+        try {
+            $relative = substr($oldPath, strlen('/storage/'));
+            if ($relative !== '') {
+                Storage::disk('public')->delete($relative);
+            }
+        } catch (\Throwable $exception) {
+            // ignore deletion failure to keep update flow stable
+        }
+    }
+
+    private function nullableString($value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 }

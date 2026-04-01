@@ -13,6 +13,7 @@ class LottoGroupPackage extends Model implements LottoGroupPackageContract
         'group_id',
         'name',
         'description',
+        'image',
         'is_active',
     ];
 
@@ -31,4 +32,3 @@ class LottoGroupPackage extends Model implements LottoGroupPackageContract
         return $this->hasMany(LottoGroupPackageBetSetting::class, 'package_id');
     }
 }
-
