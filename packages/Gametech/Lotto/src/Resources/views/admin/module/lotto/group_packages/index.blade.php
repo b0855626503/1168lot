@@ -578,15 +578,15 @@
                 },
                 extractErrorMessage(error) {
                     const data = error?.response?.data || {};
-                    if (data.message) {
-                        return data.message;
-                    }
-
                     if (data.errors && typeof data.errors === 'object') {
                         const first = Object.values(data.errors)[0];
                         if (Array.isArray(first) && first.length > 0) {
                             return first[0];
                         }
+                    }
+
+                    if (data.message) {
+                        return data.message;
                     }
 
                     return 'เกิดข้อผิดพลาดระหว่างดำเนินการ';
@@ -603,6 +603,11 @@
                         Object.keys(value).forEach((childKey) => {
                             this.appendFormDataValue(formData, `${key}[${childKey}]`, value[childKey]);
                         });
+                        return;
+                    }
+
+                    if (typeof value === 'boolean') {
+                        formData.append(key, value ? '1' : '0');
                         return;
                     }
 

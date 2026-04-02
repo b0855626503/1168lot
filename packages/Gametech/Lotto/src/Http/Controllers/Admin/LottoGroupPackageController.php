@@ -58,7 +58,7 @@ class LottoGroupPackageController extends AppBaseController
             'bet_settings.*.is_enabled' => ['nullable', 'boolean'],
         ])->validate();
         $request->validate([
-            'image_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+            'image_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120'],
         ]);
 
         $exists = LottoGroupPackage::query()
@@ -155,7 +155,7 @@ class LottoGroupPackageController extends AppBaseController
             'bet_settings.*.is_enabled' => ['nullable', 'boolean'],
         ])->validate();
         $request->validate([
-            'image_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
+            'image_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120'],
         ]);
 
         $exists = LottoGroupPackage::query()
