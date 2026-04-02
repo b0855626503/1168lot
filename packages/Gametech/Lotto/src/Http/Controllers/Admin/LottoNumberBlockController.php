@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoNumberBlockDataTable;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,27 @@ class LottoNumberBlockController extends AppBaseController
 
     public function index(LottoNumberBlockDataTable $dataTable)
     {
+        $drawOptions = LottoDraw::query()
+            ->with('market:id,name')
+            ->whereIn('status', ['draft', 'open'])
+            ->orderByDesc('draw_date')
+            ->orderByDesc('id')
+            ->get(['id', 'market_id', 'draw_date', 'status'])
+            ->groupBy(static fn (LottoDraw $draw): int => (int) $draw->market_id)
+            ->map(static fn ($draws) => $draws->first())
+            ->filter()
+            ->map(static function (LottoDraw $draw): array {
+                return [
+                    'value' => (int) $draw->id,
+                    'text' => ($draw->market->name ?? '-') . ' | '
+                        . ($draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-')
+                        . ' (' . strtoupper((string) $draw->status) . ')',
+                ];
+            })
+            ->sortBy('text')
+            ->values()
+            ->toArray();
+
         $marketOptionsGrouped = LotteryMarket::query()
             ->with('group:id,name')
             ->orderBy('group_id')
@@ -59,6 +81,7 @@ class LottoNumberBlockController extends AppBaseController
             ->toArray();
 
         return $dataTable->render($this->_config['view'], [
+            'drawOptions' => $drawOptions,
             'marketOptionsGrouped' => $marketOptionsGrouped,
             'betTypeOptions' => $betTypeOptions,
         ]);

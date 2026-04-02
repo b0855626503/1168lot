@@ -1,5 +1,13 @@
 # Decision Log
 
+## 2026-04-02 — Number Block Add Modal Uses Latest Non-Closed Draw per Market (APPROVED)
+
+- ปรับหน้า admin `/lotto/number-blocks`:
+  - ช่อง `งวดหวย` ใน modal `เพิ่มเลขอั้น` ใช้เฉพาะงวดล่าสุดของแต่ละรายการหวย
+  - เลือกจากสถานะที่ยังไม่ปิดเท่านั้น (`draft`, `open`)
+- เหตุผล:
+  - ลดกรณี dropdown ว่างและลดการเลือกงวดที่ปิดรับแล้วโดยไม่ตั้งใจ
+
 ## 2026-04-01 — Frontend Package APIs Include Package Image Field (APPROVED)
 
 - ปรับ API:
