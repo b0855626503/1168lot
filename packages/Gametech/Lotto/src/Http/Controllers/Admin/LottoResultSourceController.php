@@ -383,10 +383,12 @@ class LottoResultSourceController extends AppBaseController
                 $source = $this->buildSourceForLiveValidation($payload, $sourceId);
                 $draw = $this->resolveValidationDraw((int) ($payload['market_id'] ?? 0), $source);
                 $expectedDrawDate = trim((string) ($payload['expected_draw_date'] ?? optional($draw->draw_date)->format('Y-m-d')));
+                $lookupDate = $this->resolveLookupDateForSource($draw, $source);
 
                 $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
                     'run_id' => 'cutover_validate_' . now()->format('YmdHisv'),
                     'expected_draw_date' => $expectedDrawDate !== '' ? $expectedDrawDate : null,
+                    'lookup_date' => $lookupDate,
                 ]);
 
                 if ($this->stringValue($runResult['status'] ?? '') !== 'VALID') {
@@ -483,9 +485,11 @@ class LottoResultSourceController extends AppBaseController
         }
 
         $runId = sprintf('source_test_%s_%d', now()->format('YmdHisv'), (int) ($source->id ?: 0));
+        $lookupDate = $this->resolveLookupDateForSource($draw, $source);
         $result = (new LottoResultPipelineRunner())->run($draw, $source, [
             'run_id' => $runId,
             'expected_draw_date' => (string) $validated['draw_date'],
+            'lookup_date' => $lookupDate,
         ]);
 
         $status = strtoupper($this->stringValue($result['status'] ?? 'UNKNOWN'));
@@ -693,6 +697,7 @@ class LottoResultSourceController extends AppBaseController
                 'endpoint_url' => $compiled->fetch()->endpointUrl(),
                 'parser_type' => $compiled->parser()->type(),
                 'expected_draw_date' => (string) $validated['draw_date'],
+                'lookup_date' => $this->resolveLookupDateForSource($draw, $source),
             ]);
 
             $receipt = (string) ($fetch['receipt_key'] ?? '');
@@ -945,6 +950,24 @@ class LottoResultSourceController extends AppBaseController
         }
 
         return $draw;
+    }
+
+    private function resolveLookupDateForSource(LottoDraw $draw, LottoResultSource $source): string
+    {
+        $drawDate = $draw->draw_date ? Carbon::parse((string) $draw->draw_date) : now();
+        $resultDate = $draw->result_at ? Carbon::parse((string) $draw->result_at) : $drawDate;
+        $mode = (string) ($source->lookup_date_mode ?? 'ROUND_DATE');
+        $offset = (int) ($source->lookup_date_offset_days ?? 0);
+
+        $resolved = match ($mode) {
+            'ROUND_DATE' => $drawDate->copy(),
+            'ROUND_DATE_MINUS_DAYS' => $drawDate->copy()->subDays($offset),
+            'ROUND_DATE_PLUS_DAYS' => $drawDate->copy()->addDays($offset),
+            'RESULT_AT_DATE' => $resultDate->copy(),
+            default => $drawDate->copy(),
+        };
+
+        return $resolved->format('Y-m-d');
     }
 
     private function resolveActiveSourceForMarket(int $marketId): ?LottoResultSource
