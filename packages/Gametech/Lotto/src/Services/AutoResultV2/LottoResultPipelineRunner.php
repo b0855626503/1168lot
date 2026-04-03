@@ -6,6 +6,7 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResultV2\Config\SourcePipelineConfigCompiler;
 use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
+use Illuminate\Support\Carbon;
 
 class LottoResultPipelineRunner
 {
@@ -28,6 +29,7 @@ class LottoResultPipelineRunner
      */
     public function run(LottoDraw $draw, LottoResultSource $source, array $options = [], ?callable $legacyCallback = null): array
     {
+        $options = $this->ensureLookupDateOptions($draw, $source, $options);
         $compiled = $this->compiler->compile($this->buildSourceConfig($source));
 
         if ((bool) $source->cutover_enabled || $compiled->pipelineVersion() === CompiledSourcePipelineData::VERSION_V2_CUTOVER) {
@@ -50,6 +52,38 @@ class LottoResultPipelineRunner
         }
 
         return $this->legacyRunner->run($draw, $source, $options, $legacyCallback);
+    }
+
+    /**
+     * @param array<string,mixed> $options
+     * @return array<string,mixed>
+     */
+    private function ensureLookupDateOptions(LottoDraw $draw, LottoResultSource $source, array $options): array
+    {
+        $lookupDate = trim((string) ($options['lookup_date'] ?? ''));
+        if ($lookupDate !== '') {
+            return $options;
+        }
+
+        $resolved = $this->resolveLookupDate($draw, (string) ($source->lookup_date_mode ?? 'ROUND_DATE'), (int) ($source->lookup_date_offset_days ?? 0));
+        $options['lookup_date'] = $resolved->format('Y-m-d');
+        $options['lookup_date_compact'] = $resolved->format('Ymd');
+
+        return $options;
+    }
+
+    private function resolveLookupDate(LottoDraw $draw, string $mode, int $offsetDays): Carbon
+    {
+        $drawDate = $draw->draw_date ? Carbon::parse((string) $draw->draw_date) : now();
+        $resultDate = $draw->result_at ? Carbon::parse((string) $draw->result_at) : $drawDate;
+
+        return match ($mode) {
+            'ROUND_DATE' => $drawDate->copy(),
+            'ROUND_DATE_MINUS_DAYS' => $drawDate->copy()->subDays($offsetDays),
+            'ROUND_DATE_PLUS_DAYS' => $drawDate->copy()->addDays($offsetDays),
+            'RESULT_AT_DATE' => $resultDate->copy(),
+            default => $drawDate->copy(),
+        };
     }
 
     /**
