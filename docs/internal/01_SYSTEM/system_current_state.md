@@ -148,12 +148,30 @@
   - `first_deposit_amount`
   - `first_deposit_date` (`Y-m-d H:i:s`, nullable)
 
+## นโยบาย Frontend API v1 Member History
+
+- เพิ่ม endpoints สำหรับอ้างอิงหน้า wallet เดิม `/member/history`:
+  - `GET /api/v1/member/history`
+  - `GET /api/v1/member/history/{type}`
+- รองรับ query filter:
+  - `date_start`, `date_stop`
+- รองรับ `type` ดังนี้:
+  - `deposit`, `withdraw`, `transfer`, `spin`, `money`, `cashback`, `memberic`, `bonus`, `other`
+- response รูปแบบ:
+  - `type`, `date_start`, `date_stop`, `items`
+- policy:
+  - mapping ฟิลด์รายการต้องคง semantics เดียวกับ `Wallet HistoryController@store`
+
 ## นโยบาย Frontend Lotto Critical Path API
 
 - เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
   - `GET /api/v1/lotto/markets/{marketId}/betting-context`
   - `GET /api/v1/lotto/markets/{marketId}/results`
   - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- เพิ่ม route รวมผลรางวัลตามวันที่:
+  - `GET /api/v1/lotto/results/by-date?draw_date=YYYY-MM-DD`
+  - แสดงผลแบบ grouped ตาม `lotto_groups`
+  - แสดงเฉพาะ market ที่มี draw ของวันที่เลือกและสถานะ `resulted`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
 
@@ -201,6 +219,16 @@
   - `package_id_at_time`
   - `package_name_at_time`
   - `calculated_values_at_bet_time` (อย่างน้อยมี `bet_amount`, `discount_amount`, `net_amount`, `payout_amount`)
+
+## นโยบายรายงานผลรางวัลทั้งหมด (Admin ทีมงาน)
+
+- เพิ่มเมนูรายงานในหน้า `รายงาน Lotto`:
+  - `ดูผลรางวัลทั้งหมด` (`admin.lotto.reports.results_by_date`)
+- หน้า report รองรับ filter `วันที่งวด` (`draw_date`) และแสดงผลแบบ grouped:
+  - ระดับกลุ่มหวย (`lotto_groups`)
+  - ภายในกลุ่มแสดงรายการหวย (`lotto_markets`) ที่มีงวดตรงวันที่เลือกและสถานะ `resulted`
+- ข้อมูลที่แสดงต่อรายการหวย:
+  - `draw_date`, `result_at`, `first_prize`, `top_3`, `top_2`, `bottom_2`
 
 ## นโยบาย Deprecate Payout Override ระดับ Market
 

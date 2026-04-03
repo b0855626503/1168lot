@@ -322,6 +322,10 @@ Route::domain(
                 'filters' => ['วันงวด', 'ตลาด', 'ประเภท', 'โหมดบล็อก'],
                 'columns' => ['ตลาด', 'ประเภท', 'เลข', 'โหมด', 'เวลาเริ่ม', 'เวลาแก้ไขล่าสุด'],
             ])->name('admin.lotto.reports.blocked_numbers');
+
+            Route::get('reports/results-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultsByDateReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.reports.results_by_date',
+            ])->name('admin.lotto.reports.results_by_date');
         });
     });
 });

@@ -62,6 +62,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.lotto.market_results');
             Route::get('lotto/markets/{marketId}/draws/{drawId}/result', [LottoController::class, 'drawResult'])
                 ->name('frontend.api.v1.lotto.draw_result');
+            Route::get('lotto/results/by-date', [LottoController::class, 'resultsByDate'])
+                ->name('frontend.api.v1.lotto.results_by_date');
         });
 
         Route::middleware(['api', ResolveFrontendLanguage::class, AuthenticateFrontendToken::class])->group(function () {
@@ -76,6 +78,10 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.member.loadbalance');
             Route::get('member/contributor', [MemberController::class, 'contributor'])
                 ->name('frontend.api.v1.member.contributor');
+            Route::get('member/history', [MemberController::class, 'history'])
+                ->name('frontend.api.v1.member.history');
+            Route::get('member/history/{type}', [MemberController::class, 'history'])
+                ->name('frontend.api.v1.member.history.type');
             Route::get('member/realtime-context', [RealtimeController::class, 'memberContext'])
                 ->name('frontend.api.v1.member.realtime_context');
             Route::post('member/heartbeat', [OnlineController::class, 'heartbeat'])

@@ -229,4 +229,10 @@ return [
         'route' => 'admin.lotto.reports.blocked_numbers',
         'sort' => 5,
     ],
+    [
+        'key' => 'lotto_reports.results_by_date',
+        'name' => 'ดูผลรางวัลทั้งหมด',
+        'route' => 'admin.lotto.reports.results_by_date',
+        'sort' => 6,
+    ],
 ];

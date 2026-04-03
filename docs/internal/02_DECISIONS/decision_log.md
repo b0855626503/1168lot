@@ -1,5 +1,44 @@
 # Decision Log
 
+## 2026-04-03 — Add Admin Team Menu “ดูผลรางวัลทั้งหมด” Filtered by Draw Date (APPROVED)
+
+- เพิ่มเมนูใหม่ใต้ `รายงาน Lotto`:
+  - `ดูผลรางวัลทั้งหมด` (`admin.lotto.reports.results_by_date`)
+- เพิ่มหน้า report ทีมงานที่ filter ตาม `draw_date` และแสดงผลแบบ grouped:
+  - group = `lotto_groups`
+  - market = `lotto_markets` ที่มี draw ตรงวันที่เลือกและ `status = resulted`
+- เพิ่ม ACL key:
+  - `lotto_reports.results_by_date`
+- เหตุผล:
+  - ให้ทีมงานดูผลรางวัลรวมทั้งระบบในวันเดียวได้จากหน้าเดียว โดยไม่ต้องไล่ทีละรายการหวย
+
+## 2026-04-03 — Add Frontend API v1 Lotto Results-by-Date Grouped Endpoint (APPROVED)
+
+- เพิ่ม endpoint:
+  - `GET /api/v1/lotto/results/by-date?draw_date=YYYY-MM-DD`
+- behavior:
+  - คืนผลรางวัลทั้งหมดของวันที่เลือกแบบ grouped ตามกลุ่มหวย (`lotto_groups`)
+  - ในแต่ละกลุ่มจะแสดงเฉพาะ market ที่มี draw วันนั้นและสถานะ `resulted`
+  - รองรับ localization ของชื่อกลุ่ม/ชื่อรายการหวยตาม `language`
+- response มี summary:
+  - `group_count`, `market_count`, `result_count`
+- เหตุผล:
+  - รองรับหน้าแสดงผล “ทั้งระบบตามวันที่เดียว” โดยไม่ต้องเรียกทีละ market
+
+## 2026-04-03 — Add Frontend API v1 Member History Endpoints from Wallet `/member/history` (APPROVED)
+
+- เพิ่ม endpoints:
+  - `GET /api/v1/member/history`
+  - `GET /api/v1/member/history/{type}`
+- รองรับประเภทประวัติ:
+  - `deposit`, `withdraw`, `transfer`, `spin`, `money`, `cashback`, `memberic`, `bonus`, `other`
+- รองรับ query filter:
+  - `date_start`, `date_stop`
+- response contract:
+  - `{ type, date_start, date_stop, items }` + envelope มาตรฐาน (`success`, `message`)
+- เหตุผล:
+  - ให้ frontend เรียกประวัติธุรกรรมที่อ้างอิงจากหน้า wallet เดิม `/member/history` ผ่าน `FrontendApi v1` โดยตรง
+
 ## 2026-04-03 — Add Frontend API v1 `GET /member/contributor` for Referral Overview (APPROVED)
 
 - เพิ่ม endpoint ใหม่ใน Frontend API v1:

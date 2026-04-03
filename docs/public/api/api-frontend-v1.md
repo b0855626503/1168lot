@@ -374,6 +374,56 @@ HTTP status
 - token ไม่ถูกต้อง/หมดอายุ: `401`
 - เกิดข้อผิดพลาดภายใน: `422`
 
+#### 2.5 ประวัติธุรกรรมสมาชิก (อ้างอิงหน้า `/member/history`)
+- `GET /member/history`
+- `GET /member/history/{type}`
+- Auth: ต้องใช้ token
+
+Query params
+- `type` (ใช้กับ `/member/history`): ค่าเดียวกับ path `{type}`
+- `date_start` (optional): วันที่เริ่ม filter
+- `date_stop` (optional): วันที่สิ้นสุด filter
+
+ประเภทที่รองรับ (`type`)
+- `deposit` ฝาก
+- `withdraw` ถอน
+- `transfer` โยกเงิน wallet/game
+- `spin` วงล้อ
+- `money` โอนเงินสมาชิก
+- `cashback` คืนยอดเสีย
+- `memberic` ค่าเสียเพื่อน
+- `bonus` โบนัส
+- `other` รายการปรับยอด (`ROLLBACK`, `SETWALLET`)
+
+Response ตัวอย่าง
+```json
+{
+  "type": "deposit",
+  "date_start": "2026-04-01",
+  "date_stop": "2026-04-03",
+  "items": [
+    {
+      "id": "#DP00001234",
+      "date_create": "03/04/2026 14:20",
+      "amount": 100.0,
+      "amount_request": 100.0,
+      "pro_name": null,
+      "credit_bonus": 0,
+      "credit_before": 1000.0,
+      "credit_after": 1100.0,
+      "status": "Y",
+      "image": "ic_success",
+      "transfer_type": "+",
+      "method": "เติมเงิน",
+      "status_color": "bg-success",
+      "status_display": "สำเร็จ"
+    }
+  ],
+  "success": true,
+  "message": "complete"
+}
+```
+
 ---
 
 ### 3) Wallet
@@ -740,6 +790,54 @@ Response ตัวอย่าง
     ]
   },
   "message": "ดึงรายการหวยพร้อมงวดล่าสุดสำเร็จ"
+}
+```
+
+#### 5.7.1 ผลรางวัลทั้งหมดตามวันที่ (จัดกลุ่มตามกลุ่มหวย)
+- `GET /lotto/results/by-date?draw_date=2026-04-03`
+- Auth: ไม่ต้องใช้ token
+- รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- `draw_date` เป็นค่าบังคับ รูปแบบ `YYYY-MM-DD`
+- ระบบจะแสดงเฉพาะรายการหวยที่ “มีงวดในวันที่เลือก และสถานะงวด = resulted”
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": {
+    "draw_date": "2026-04-03",
+    "groups": [
+      {
+        "group_id": 1,
+        "group_code": "thai",
+        "group_name": "หวยไทย",
+        "markets": [
+          {
+            "market_id": 3,
+            "market_name": "ออมสิน",
+            "market_logo": "/storage/lotto/markets/gsb-logo.png",
+            "market_icon": "/storage/lotto/markets/gsb-icon.png",
+            "result": {
+              "draw_id": 120,
+              "draw_date": "2026-04-03",
+              "result_at": "2026-04-03 16:00:00",
+              "status": "resulted",
+              "result_top_3": "123",
+              "result_bottom_2": "45",
+              "first_prize": "12345"
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "group_count": 1,
+      "market_count": 1,
+      "result_count": 1
+    },
+    "language": "th"
+  },
+  "message": "ดึงผลรางวัลตามวันที่สำเร็จ"
 }
 ```
 

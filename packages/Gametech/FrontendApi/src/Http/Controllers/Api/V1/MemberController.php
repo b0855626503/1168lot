@@ -3,6 +3,8 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MemberController extends BaseController
@@ -106,6 +108,273 @@ class MemberController extends BaseController
             return $this->sendResponseNew($payload, 'complete');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงข้อมูลแนะนำเพื่อนได้ในขณะนี้', 422);
+        }
+    }
+
+    public function history(Request $request, ?string $type = null)
+    {
+        try {
+            $member = $request->user();
+            if (! $member) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $historyType = strtolower((string) ($type ?: $request->query('type', 'deposit')));
+            $dateStart = $request->query('date_start');
+            $dateStop = $request->query('date_stop');
+
+            $memberRepository = app('Gametech\Member\Repositories\MemberRepository');
+            $memberCode = (int) $member->code;
+
+            switch ($historyType) {
+                case 'deposit':
+                    $items = collect($memberRepository->loadBillType($memberCode, 'TOPUP', $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
+                            $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel')];
+                            $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
+
+                            return [
+                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
+                                'amount' => $item->amount,
+                                'amount_request' => $item->amount_request,
+                                'pro_name' => $item->pro_name,
+                                'credit_bonus' => $item->credit_bonus,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_after,
+                                'status' => $item->complete,
+                                'image' => $image[$item->complete] ?? '',
+                                'transfer_type' => ($item->transfer_type == 1 ? '+' : '-'),
+                                'method' => Lang::get('app.status.refill'),
+                                'status_color' => $color[$item->complete] ?? '',
+                                'status_display' => $status[$item->complete] ?? '',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'withdraw':
+                    $items = collect($memberRepository->loadBillType($memberCode, 'WITHDRAW', $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
+                            $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel'), 'F' => Lang::get('app.status.cancel')];
+                            $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
+
+                            return [
+                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
+                                'amount' => $item->amount,
+                                'amount_request' => $item->amount_request,
+                                'pro_name' => $item->pro_name,
+                                'credit_bonus' => $item->credit_bonus,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_after,
+                                'status' => $item->complete,
+                                'image' => $image[$item->complete] ?? '',
+                                'transfer_type' => ($item->transfer_type == 1 ? '+' : '-'),
+                                'method' => Lang::get('app.home.withdraw'),
+                                'status_color' => $color[$item->complete] ?? '',
+                                'status_display' => $status[$item->complete] ?? '',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'transfer':
+                    $items = collect($memberRepository->loadBill($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $gameName = data_get($item, 'game.name', '');
+                            $gameFile = data_get($item, 'game.filepic', '');
+
+                            return [
+                                'code' => $item->code,
+                                'id' => '#BL' . Str::of($item->code)->padLeft(8, 0),
+                                'promotion_name' => data_get($item, 'promotion.name_th', 'ไม่มี'),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
+                                'amount' => $item->amount,
+                                'balance_before' => $item->balance_before,
+                                'balance_after' => $item->balance_after,
+                                'credit' => $item->credit,
+                                'credit_bonus' => $item->credit_bonus,
+                                'credit_balance' => $item->credit_balance,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_after,
+                                'game_name' => $gameName,
+                                'filepic' => $item->transfer_type == 1
+                                    ? Storage::url('game_img/' . ltrim((string) $gameFile, '/'))
+                                    : Storage::url('game_img/wallet.png'),
+                                'transfer' => $item->transfer_type == 1 ? 'Wallet -> Game (โยกเข้าเกม)' : 'Wallet <- Game (โยกออกเกม)',
+                                'status' => $item->transfer_type == 1 ? 'text-success' : 'text-danger',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'spin':
+                    $items = collect($memberRepository->loadSpin($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $color = ['0' => 'bg-info', '1' => 'bg-success', '2' => 'bg-danger'];
+
+                            return [
+                                'code' => $item->code,
+                                'id' => '#SP' . Str::of($item->code)->padLeft(8, 0),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
+                                'amount' => $item->amount,
+                                'image' => 'ic_success',
+                                'transfer_type' => '',
+                                'method' => Lang::get('app.home.wheels'),
+                                'status' => 1,
+                                'status_color' => $color[1],
+                                'status_display' => $item->bonus_name,
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'money':
+                    $items = collect($memberRepository->loadMoneyTran($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $status = ['D' => 'รับโอน', 'W' => 'โอน'];
+                            $color = ['D' => 'bg-info', 'W' => 'bg-success'];
+
+                            return [
+                                'code' => $item->code,
+                                'id' => $item->remark,
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
+                                'amount' => $item->amount,
+                                'status' => $item->credit_type,
+                                'status_color' => $color[$item->credit_type] ?? '',
+                                'status_display' => $status[$item->credit_type] ?? '',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'cashback':
+                    $items = collect($memberRepository->loadCashbackNew($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $color = ['0' => 'bg-info', '1' => 'bg-success', '2' => 'bg-danger'];
+
+                            return [
+                                'code' => $item->code,
+                                'id' => 'ยอดเงินคืน จากการคำนวน',
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
+                                'amount' => $item->amount,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_balance,
+                                'image' => 'ic_success',
+                                'transfer_type' => '',
+                                'method' => Lang::get('app.home.cashback'),
+                                'status' => 1,
+                                'status_color' => $color[1],
+                                'status_display' => Lang::get('app.status.success'),
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'memberic':
+                    $items = collect($memberRepository->loadIC($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $color = ['0' => 'bg-info', '1' => 'bg-success', '2' => 'bg-danger'];
+
+                            return [
+                                'code' => $item->code,
+                                'id' => 'ยอดเสียเพื่อน จากการคำนวน',
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
+                                'amount' => $item->amount,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_balance,
+                                'image' => 'ic_success',
+                                'transfer_type' => '',
+                                'method' => Lang::get('app.home.ic'),
+                                'status' => 1,
+                                'status_color' => $color[1],
+                                'status_display' => Lang::get('app.status.success'),
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'bonus':
+                    $items = collect($memberRepository->loadBonus($memberCode, $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
+                            $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel')];
+                            $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
+
+                            return [
+                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
+                                'amount' => ((float) $item->credit_bonus > 0 ? $item->credit_bonus : $item->amount),
+                                'pro_name' => $item->pro_name,
+                                'credit_bonus' => $item->credit_bonus,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_after,
+                                'status' => $item->complete,
+                                'image' => $image[$item->complete] ?? '',
+                                'transfer_type' => ($item->transfer_type == 1 ? '+' : '-'),
+                                'method' => $item->pro_name,
+                                'status_color' => $color[$item->complete] ?? '',
+                                'status_display' => $status[$item->complete] ?? '',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                case 'other':
+                    $items = collect($memberRepository->loadBillTypeArr($memberCode, ['ROLLBACK', 'SETWALLET'], $dateStart, $dateStop)->toArray())
+                        ->map(function ($item) {
+                            $item = (object) $item;
+                            $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
+                            $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel')];
+                            $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
+                            $methodMap = [
+                                'ROLLBACK' => Lang::get('app.status.rollback'),
+                                'SETWALLET' => Lang::get('app.status.setwallet'),
+                                'BONUS' => Lang::get('app.status.bonus'),
+                            ];
+
+                            return [
+                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
+                                'amount' => $item->amount,
+                                'pro_name' => $item->pro_name,
+                                'credit_bonus' => $item->credit_bonus,
+                                'credit_before' => $item->credit_before,
+                                'credit_after' => $item->credit_after,
+                                'status' => $item->complete,
+                                'image' => $image[$item->complete] ?? '',
+                                'transfer_type' => ($item->transfer_type == 1 ? '+' : '-'),
+                                'method' => $methodMap[$item->method] ?? $item->method,
+                                'status_color' => $color[$item->complete] ?? '',
+                                'status_display' => $status[$item->complete] ?? '',
+                            ];
+                        })
+                        ->values();
+                    break;
+
+                default:
+                    return $this->sendError('ไม่รองรับประเภทประวัติที่ร้องขอ', 422);
+            }
+
+            return $this->sendResponseNew([
+                'type' => $historyType,
+                'date_start' => $dateStart,
+                'date_stop' => $dateStop,
+                'items' => $items,
+            ], 'complete');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงข้อมูลประวัติได้ในขณะนี้', 422);
         }
     }
 

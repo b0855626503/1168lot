@@ -537,6 +537,106 @@ class LottoController extends BaseController
         }
     }
 
+    public function resultsByDate(Request $request): JsonResponse
+    {
+        try {
+            $language = $this->requestLanguage($request);
+            $drawDate = trim((string) $request->query('draw_date', $request->query('date', '')));
+            if ($drawDate === '' || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate)) {
+                return $this->sendError('กรุณาระบุ draw_date รูปแบบ YYYY-MM-DD', 422);
+            }
+
+            $resultedRows = LottoDraw::query()
+                ->select(['id', 'market_id', 'draw_date', 'result_at', 'status', 'result_number'])
+                ->whereDate('draw_date', $drawDate)
+                ->where('status', 'resulted')
+                ->orderByDesc('id')
+                ->get();
+
+            if ($resultedRows->isEmpty()) {
+                return $this->sendResponse([
+                    'draw_date' => $drawDate,
+                    'groups' => [],
+                    'summary' => [
+                        'group_count' => 0,
+                        'market_count' => 0,
+                        'result_count' => 0,
+                    ],
+                    'language' => $language,
+                ], 'ดึงผลรางวัลตามวันที่สำเร็จ');
+            }
+
+            $latestByMarket = $resultedRows
+                ->groupBy('market_id')
+                ->map(static fn (Collection $rows): LottoDraw => $rows->sortByDesc('id')->first());
+
+            $marketIds = $latestByMarket->keys()
+                ->map(static fn ($id): int => (int) $id)
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->values()
+                ->all();
+
+            $marketMap = $this->marketMapByIds($marketIds);
+
+            $groups = LotteryGroup::query()
+                ->select(['id', 'code', 'sort', 'name', 'name_en', 'name_kh', 'name_laos'])
+                ->whereIn('id', collect($marketMap)->pluck('group_id')->all())
+                ->orderBy('sort')
+                ->orderBy('name')
+                ->get();
+
+            $groupRows = $groups->map(function (LotteryGroup $group) use ($latestByMarket, $marketMap, $language): array {
+                $markets = collect($marketMap)
+                    ->filter(static fn (array $market): bool => (int) $market['group_id'] === (int) $group->id)
+                    ->sortBy(static fn (array $market): string => (string) ($market['name'] ?? ''))
+                    ->values()
+                    ->map(function (array $market) use ($latestByMarket, $language): ?array {
+                        $draw = $latestByMarket->get((int) $market['id']);
+                        if (! $draw instanceof LottoDraw) {
+                            return null;
+                        }
+
+                        return [
+                            'market_id' => (int) $market['id'],
+                            'market_name' => $this->localizedMarketName($market, $language),
+                            'market_logo' => (string) ($market['logo'] ?? ''),
+                            'market_icon' => (string) ($market['icon'] ?? ''),
+                            'result' => $this->mapResultDraw($draw),
+                        ];
+                    })
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                return [
+                    'group_id' => (int) $group->id,
+                    'group_code' => (string) ($group->code ?? ''),
+                    'group_name' => $this->localizedNameByLanguage([
+                        'name' => (string) $group->name,
+                        'name_en' => (string) ($group->name_en ?? ''),
+                        'name_kh' => (string) ($group->name_kh ?? ''),
+                        'name_laos' => (string) ($group->name_laos ?? ''),
+                    ], $language, 'name'),
+                    'markets' => $markets,
+                ];
+            })->filter(static fn (array $group): bool => ! empty($group['markets']))
+                ->values();
+
+            return $this->sendResponse([
+                'draw_date' => $drawDate,
+                'groups' => $groupRows->all(),
+                'summary' => [
+                    'group_count' => $groupRows->count(),
+                    'market_count' => $groupRows->sum(static fn (array $group): int => count($group['markets'])),
+                    'result_count' => $latestByMarket->count(),
+                ],
+                'language' => $language,
+            ], 'ดึงผลรางวัลตามวันที่สำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงผลรางวัลตามวันที่ได้ในขณะนี้', 422);
+        }
+    }
+
     private function localizeDrawsResponse(JsonResponse $response, string $language): JsonResponse
     {
         $payload = $this->responsePayload($response);

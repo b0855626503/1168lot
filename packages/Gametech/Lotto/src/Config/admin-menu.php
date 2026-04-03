@@ -151,4 +151,14 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
+    [
+        'key' => 'lotto_reports.results_by_date',
+        'name' => 'ดูผลรางวัลทั้งหมด',
+        'route' => 'admin.lotto.reports.results_by_date',
+        'sort' => 6,
+        'icon-class' => 'fa-ticket',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1,
+    ],
 ];
