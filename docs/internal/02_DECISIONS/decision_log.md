@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-04-03 — Add `งดออกผล` Option in Draw Settle Mode Modal (APPROVED)
+
+- ปรับ modal เลือกวิธีออกผลในหน้า `admin/lotto/draws` จากเดิม `Manual/Auto` ให้มีตัวเลือก `งดออกผล`
+- เพิ่ม endpoint:
+  - `POST /lotto/draws/mark-no-result`
+- behavior:
+  - อนุญาตเฉพาะงวดสถานะ `closed`
+  - set draw เป็น `resulted` พร้อม `result_number.no_result=true` และ `result_number.status=no_result`
+- เหตุผล:
+  - ให้ทีมงานระบุเคสงดออกผลได้ทันทีจาก modal เดียวกับปุ่มหลัก `ออกผล` โดยไม่ต้องอ้อมหลายขั้นตอน
+
 ## 2026-04-03 — `GET /api/v1/lotto/markets/latest` Returns Group Images (APPROVED)
 
 - ปรับ response ของ `markets/latest` ให้มีฟิลด์รูปในระดับกลุ่มหวย:

@@ -34,6 +34,10 @@
 - ปุ่ม `ออกผล` (สถานะ `closed`) เปิด modal ขนาดเล็กให้เลือกโหมด `Manual` หรือ `Auto`
   - `Manual` = เปิดฟอร์มกรอกผลและคำนวณรางวัลด้วยมือ
   - `Auto` = เรียก flow เดียวกับ `Retry` (`lotto_draws.auto_result_manual_retry`)
+- modal `ออกผล` รองรับปุ่ม `งดออกผล` เพิ่มเติม
+  - เรียก `POST /lotto/draws/mark-no-result`
+  - ใช้ได้เฉพาะงวดสถานะ `closed`
+  - เมื่อสำเร็จ ระบบ set งวดเป็น `resulted` พร้อม `result_number.no_result=true`
 - ปุ่ม `Retry` แยกใน action column ถูกยุบเข้าในโหมด `Auto` ของ modal `ออกผล`
 - ช่อง `สถานะ` ของงวด `open/closed` แสดงเป็นปุ่ม (button) เพื่อสลับ `เปิดรับ <-> ปิดรับ` ได้เมื่อผู้ใช้มีสิทธิ์ที่เกี่ยวข้อง (`lotto_draws.open`/`lotto_draws.close`) และต้องยืนยันผ่าน popup ก่อนทุกครั้ง
 - สถานะที่กดไม่ได้ (`draft`/`resulted` หรือรายการที่ไม่มีสิทธิ์) แสดงเป็นข้อความตกแต่งสีพร้อมไอคอน (ไม่ใช้ badge เดิม)

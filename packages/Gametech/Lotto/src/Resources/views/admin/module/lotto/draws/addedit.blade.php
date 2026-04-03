@@ -120,8 +120,17 @@
             <i class="fas fa-robot"></i>
             <span>Auto</span>
         </button>
+
+        <button
+            type="button"
+            class="settle-mode-btn settle-mode-no-result"
+            :disabled="!canUseNoResultSettle"
+            @click="chooseSettleMode('no_result')">
+            <i class="fas fa-ban"></i>
+            <span>งดออกผล</span>
+        </button>
     </div>
-    <div v-if="!canUseManualSettle || !canUseAutoSettle" class="small text-muted mt-2">
+    <div v-if="!canUseManualSettle || !canUseAutoSettle || !canUseNoResultSettle" class="small text-muted mt-2">
         บางตัวเลือกถูกปิดตามสิทธิ์ผู้ใช้
     </div>
 </b-modal>
@@ -575,7 +584,7 @@
         }
         .settle-mode-actions {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
         }
         .settle-mode-btn {
@@ -609,6 +618,10 @@
         .settle-mode-auto:not(:disabled) {
             border-color: #86efac;
             background: #f0fdf4;
+        }
+        .settle-mode-no-result:not(:disabled) {
+            border-color: #fcd34d;
+            background: #fffbeb;
         }
 
         #addedit .select2-container--default .select2-selection--single {
@@ -709,6 +722,7 @@
                     settleModeDrawId: null,
                     canUseManualSettle: @json((bool) bouncer()->hasPermission('lotto_draws.settle')),
                     canUseAutoSettle: @json((bool) bouncer()->hasPermission('lotto_draws.auto_result_manual_retry')),
+                    canUseNoResultSettle: @json((bool) bouncer()->hasPermission('lotto_draws.settle')),
                     blockedNumbersData: {
                         draw: {},
                         count: 0,
@@ -997,6 +1011,16 @@
 
                         this.$refs.settleModeModal.hide();
                         await this.runAutoResultManualRetry(drawId);
+                        return;
+                    }
+
+                    if (selectedMode === 'no_result') {
+                        if (!this.canUseNoResultSettle) {
+                            return;
+                        }
+
+                        this.$refs.settleModeModal.hide();
+                        await this.runMarkNoResult(drawId);
                     }
                 },
                 async openModalWithDrawData(mode, id) {
@@ -1725,6 +1749,46 @@
                         const message = error?.response?.data?.message || 'Retry ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
                         await this.$bvModal.msgBoxOk(message, {
                             title: 'Auto Result Retry',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            centered: true,
+                        });
+                    }
+                },
+                async runMarkNoResult(id) {
+                    const confirmed = await this.$bvModal.msgBoxConfirm(
+                        'ยืนยันระบุงวดนี้เป็น "งดออกผล" ใช่หรือไม่?',
+                        {
+                            title: 'ยืนยันงดออกผล',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'warning',
+                            okTitle: 'ยืนยัน',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
+                        }
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    try {
+                        const response = await this.$http.post("{{ route('admin.lotto.draws.mark_no_result') }}", { id });
+                        const message = response?.data?.message || 'ระบุงดออกผลสำเร็จ';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'งดออกผล',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'warning',
+                            centered: true,
+                        });
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        const message = error?.response?.data?.message || 'ระบุงดออกผลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'งดออกผล',
                             size: 'sm',
                             buttonSize: 'sm',
                             okVariant: 'danger',

@@ -373,6 +373,71 @@ class LottoDrawController extends AppBaseController
         }
     }
 
+    public function markNoResult(Request $request): JsonResponse
+    {
+        $drawId = (int) $request->input('id');
+        $draw = LottoDraw::query()->find($drawId);
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        }
+
+        if ((string) $draw->status === 'resulted' && $this->canCancelAllRefundByDraw($draw)) {
+            return $this->sendSuccess('งวดนี้ถูกระบุเป็นงดออกผลไว้แล้ว');
+        }
+
+        if ((string) $draw->status !== 'closed') {
+            return $this->sendError('ระบุงดออกผลได้เฉพาะงวดที่ปิดรับแล้ว', 422);
+        }
+
+        try {
+            $summary = DB::transaction(function () use ($drawId): array {
+                /** @var LottoDraw $lockedDraw */
+                $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail($drawId);
+
+                if ((string) $lockedDraw->status === 'resulted' && $this->canCancelAllRefundByDraw($lockedDraw)) {
+                    return [
+                        'draw_id' => (int) $lockedDraw->id,
+                        'status' => (string) $lockedDraw->status,
+                        'result_no_result' => true,
+                    ];
+                }
+
+                if ((string) $lockedDraw->status !== 'closed') {
+                    throw new InvalidArgumentException('ระบุงดออกผลได้เฉพาะงวดที่ปิดรับแล้ว');
+                }
+
+                $reason = 'งดออกผล';
+                $lockedDraw->forceFill([
+                    'status' => 'resulted',
+                    'result_at' => now(),
+                    'result_number' => [
+                        'no_result' => true,
+                        'status' => 'no_result',
+                        'label' => $reason,
+                        'no_result_reason' => $reason,
+                        'manual_marked_no_result' => true,
+                    ],
+                    'result_fetch_status' => 'APPLIED',
+                    'result_fetch_error' => null,
+                    'result_applied_at' => now(),
+                    'result_fetched_at' => now(),
+                ])->save();
+
+                return [
+                    'draw_id' => (int) $lockedDraw->id,
+                    'status' => (string) $lockedDraw->status,
+                    'result_no_result' => true,
+                ];
+            });
+
+            return $this->sendResponse($summary, 'ระบุงวดเป็นงดออกผลสำเร็จ');
+        } catch (InvalidArgumentException $e) {
+            return $this->sendError($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('ระบุงดออกผลไม่สำเร็จ: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function cancelAllRefund(Request $request, WalletTransactionService $walletTransactionService): JsonResponse
     {
         $drawId = (int) $request->input('id');
