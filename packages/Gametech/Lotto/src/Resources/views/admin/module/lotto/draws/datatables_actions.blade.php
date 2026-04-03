@@ -20,7 +20,7 @@
 
     @if(!empty($can_cancel_all_refund) && $canCancelAllRefund)
         <button type="button" class="btn btn-danger btn-block btn-xs mr-1 mb-1" onclick="cancelAllTicketsAndRefund({{ $id }})">
-            <i class="fas fa-undo-alt"></i> ยกเลิกโพย+คืนเงิน
+            <i class="fas fa-undo-alt"></i> คืนเงิน
         </button>
     @endif
 </div>
