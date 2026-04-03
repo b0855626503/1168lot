@@ -45,6 +45,10 @@ class LotteryMarketTransformer extends TransformerAbstract
             return 'Auto จันทร์-ศุกร์';
         }
 
+        if ($mode === 'wed_sat_sun') {
+            return 'Auto พุธ/เสาร์/อาทิตย์';
+        }
+
         return 'Manual';
     }
 
