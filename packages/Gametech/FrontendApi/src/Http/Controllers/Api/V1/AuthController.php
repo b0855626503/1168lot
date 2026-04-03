@@ -161,6 +161,7 @@ class AuthController extends BaseController
             'has_bank' => $request->filled('bank'),
             'has_acc_no' => $request->filled('acc_no'),
             'has_refer' => $request->filled('refer'),
+            'has_referral_code' => $request->filled('referral_code'),
         ]);
 
         $data = $this->normalizeRegisterPayload((array) $request->all());
@@ -249,6 +250,16 @@ class AuthController extends BaseController
         $referCode = (int) $data['refer'];
         $uplineCode = (int) ($data['upline'] ?? 0);
         $promotion = (string) ($data['promotion'] ?? 'N');
+        $inputReferralCode = $this->normalizeReferralCodeInput((string) ($data['referral_code'] ?? ''));
+        if ($inputReferralCode !== '') {
+            $uplineByReferral = DB::table('members')
+                ->where('referral_code', $inputReferralCode)
+                ->value('code');
+
+            if (is_numeric($uplineByReferral)) {
+                $uplineCode = (int) $uplineByReferral;
+            }
+        }
         $teamId = null;
         $campaignId = null;
 
@@ -287,9 +298,11 @@ class AuthController extends BaseController
                 $teamId,
                 $campaignId
             ) {
+                $referralCode = $this->generateUniqueReferralCode();
                 $memberPayload = [
                     'refer_code' => $referCode,
                     'upline_code' => $uplineCode,
+                    'referral_code' => $referralCode,
                     'bank_code' => $bankCode,
                     'name' => $name,
                     'firstname' => trim(strip_tags((string) $data['firstname'])),
@@ -549,8 +562,46 @@ class AuthController extends BaseController
         $data['bank'] = $data['bank'] ?? null;
         $data['acc_no'] = (string) ($data['acc_no'] ?? $data['account_no'] ?? '');
         $data['refer'] = $data['refer'] ?? ($data['refer_code'] ?? null);
+        $data['referral_code'] = (string) (
+            $data['referral_code']
+            ?? $data['invite_code']
+            ?? $data['recommend_code']
+            ?? ''
+        );
 
         return $data;
+    }
+
+    private function normalizeReferralCodeInput(string $code): string
+    {
+        $normalized = strtoupper(trim($code));
+        $normalized = preg_replace('/[^A-Z0-9]/', '', $normalized) ?? '';
+        $normalized = str_replace('O', '0', $normalized);
+
+        return strlen($normalized) === 8 ? $normalized : '';
+    }
+
+    private function generateUniqueReferralCode(): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+        $maxAttempts = 50;
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+
+            $exists = DB::table('members')
+                ->where('referral_code', $code)
+                ->exists();
+
+            if (! $exists) {
+                return $code;
+            }
+        }
+
+        throw new \RuntimeException('ไม่สามารถสร้างรหัสแนะนำได้');
     }
 
     /**

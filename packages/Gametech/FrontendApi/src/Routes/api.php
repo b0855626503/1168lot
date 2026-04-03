@@ -56,6 +56,12 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.lotto.draw');
             Route::get('lotto/markets/latest', [LottoController::class, 'marketsLatestByGroup'])
                 ->name('frontend.api.v1.lotto.markets.latest');
+            Route::get('lotto/markets/{marketId}/betting-context', [LottoController::class, 'bettingContext'])
+                ->name('frontend.api.v1.lotto.betting_context');
+            Route::get('lotto/markets/{marketId}/results', [LottoController::class, 'marketResults'])
+                ->name('frontend.api.v1.lotto.market_results');
+            Route::get('lotto/markets/{marketId}/draws/{drawId}/result', [LottoController::class, 'drawResult'])
+                ->name('frontend.api.v1.lotto.draw_result');
         });
 
         Route::middleware(['api', ResolveFrontendLanguage::class, AuthenticateFrontendToken::class])->group(function () {
@@ -97,6 +103,12 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
 
             Route::post('lotto/bet', [LottoController::class, 'bet'])
                 ->name('frontend.api.v1.lotto.bet');
+            Route::get('lotto/groups/{groupId}/packages', [LottoController::class, 'packages'])
+                ->name('frontend.api.v1.lotto.packages');
+            Route::post('lotto/groups/{groupId}/select-package', [LottoController::class, 'selectPackage'])
+                ->name('frontend.api.v1.lotto.select_package');
+            Route::get('lotto/groups/{groupId}/selected-package', [LottoController::class, 'selectedPackage'])
+                ->name('frontend.api.v1.lotto.selected_package');
             Route::get('lotto/tickets', [LottoController::class, 'tickets'])
                 ->name('frontend.api.v1.lotto.tickets');
             Route::get('lotto/tickets/{id}', [LottoController::class, 'ticket'])
@@ -110,18 +122,5 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.wheel.spin');
             Route::get('wheel/history', [WheelController::class, 'history'])
                 ->name('frontend.api.v1.wheel.history');
-        });
-    });
-
-Route::domain($apiSubdomain . '.' . $apiDomain)
-    ->prefix('api/frontend')
-    ->group(function () {
-        Route::middleware(['api', ResolveFrontendLanguage::class])->group(function () {
-            Route::get('lotto/markets/{marketId}/betting-context', [LottoController::class, 'bettingContext'])
-                ->name('frontend.api.frontend.lotto.betting_context');
-            Route::get('lotto/markets/{marketId}/results', [LottoController::class, 'marketResults'])
-                ->name('frontend.api.frontend.lotto.market_results');
-            Route::get('lotto/markets/{marketId}/draws/{drawId}/result', [LottoController::class, 'drawResult'])
-                ->name('frontend.api.frontend.lotto.draw_result');
         });
     });

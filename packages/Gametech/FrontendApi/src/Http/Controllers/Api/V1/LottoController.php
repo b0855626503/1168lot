@@ -4,6 +4,7 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Gametech\Lotto\Http\Controllers\Api\BetController as LottoBetController;
 use Gametech\Lotto\Http\Controllers\Api\DrawController as LottoDrawController;
+use Gametech\Lotto\Http\Controllers\Api\PackageController as LottoPackageController;
 use Gametech\Lotto\Http\Controllers\Api\TicketController as LottoTicketController;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
@@ -196,6 +197,47 @@ class LottoController extends BaseController
             return $this->localizeTicketsResponse($response, $language);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการโพยได้ในขณะนี้', 422);
+        }
+    }
+
+    public function packages(int $groupId): JsonResponse
+    {
+        try {
+            return $this->normalizeJsonResponseImages(
+                app(LottoPackageController::class)->available($groupId)
+            );
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึง package ได้ในขณะนี้', 422);
+        }
+    }
+
+    public function selectPackage(Request $request, int $groupId): JsonResponse
+    {
+        try {
+            return $this->normalizeJsonResponseImages(
+                app(LottoPackageController::class)->select(
+                    $groupId,
+                    $request,
+                    app('Gametech\Lotto\Services\LottoPackageSelectionService')
+                )
+            );
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถเลือก package ได้ในขณะนี้', 422);
+        }
+    }
+
+    public function selectedPackage(Request $request, int $groupId): JsonResponse
+    {
+        try {
+            return $this->normalizeJsonResponseImages(
+                app(LottoPackageController::class)->selected(
+                    $groupId,
+                    $request,
+                    app('Gametech\Lotto\Services\LottoPackageSelectionService')
+                )
+            );
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงสถานะ package ที่เลือกได้ในขณะนี้', 422);
         }
     }
 

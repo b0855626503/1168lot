@@ -68,6 +68,10 @@
   - ต้องเป็นจำนวนเต็ม และต้องส่งเสมอ
 - `refer`
   - ต้องเป็นจำนวนเต็ม และต้องส่งเสมอ
+- `referral_code` (หรือ `invite_code` / `recommend_code`)
+  - ไม่บังคับส่ง
+  - ถ้าส่งมาแล้วตรงกับรหัสแนะนำของสมาชิกเดิม ระบบจะ map `upline_code` ให้โดยอัตโนมัติ
+  - ระบบ normalize เป็นตัวพิมพ์ใหญ่ และแทน `O` เป็น `0` ก่อนเทียบ
 
 ##### Field Matrix (POST /auth/register)
 
@@ -82,6 +86,7 @@
 | `bank` | Yes | integer | รหัสธนาคาร |
 | `acc_no` | Yes | string | ตัวเลขเท่านั้น, 1-14 หลัก, ห้ามซ้ำใน `bank` เดียวกัน |
 | `refer` | Yes | integer | รหัสแหล่งที่มา (`refer code`) |
+| `referral_code` | No | string | รหัสแนะนำ 8 หลัก (alias: `invite_code`, `recommend_code`) ใช้ map `upline_code` อัตโนมัติ |
 | `marketing` | No | string | โค้ดลิงก์การตลาด, ถ้ามีจะ map ไป `team_id/campaign_id` |
 | `lineid` | No | string | LINE ID |
 | `upline` | No | integer | รหัส upline (default = `0`) |
@@ -99,6 +104,7 @@ Request body
   "acc_no": "1234567890",
   "bank": 1,
   "refer": 1,
+  "referral_code": "AB12C3D4",
   "marketing": "MK2026ABC"
 }
 ```
@@ -1232,12 +1238,12 @@ export function connectRealtime({
 
 ---
 
-## 10) Frontend Lotto Critical Path (`/api/frontend`)
+## 10) Frontend Lotto Critical Path (`/api/v1/lotto/markets/*`)
 
 > ชุด endpoint นี้ออกแบบให้ frontend หน้าแทงเรียกได้ตรงและเร็ว โดยไม่ต้องประกอบข้อมูลหลายเส้นเอง
 
 ### 10.1 Betting Context
-- `GET /api/frontend/lotto/markets/{marketId}/betting-context`
+- `GET /lotto/markets/{marketId}/betting-context`
 - Auth: ไม่ต้องใช้ token
 - Query (optional):
   - `exposure_scope=blocked|all` (default `blocked`)
@@ -1252,7 +1258,7 @@ Response หลัก:
 - `server_time`
 
 ### 10.2 ผลย้อนหลังตามตลาด
-- `GET /api/frontend/lotto/markets/{marketId}/results?limit=20&page=1`
+- `GET /lotto/markets/{marketId}/results?limit=20&page=1`
 - Auth: ไม่ต้องใช้ token
 
 Response หลัก:
@@ -1261,7 +1267,7 @@ Response หลัก:
 - `pagination` (`page`, `limit`, `count`, `total`, `has_more`)
 
 ### 10.3 ผลรางวัลงวดเฉพาะ
-- `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- `GET /lotto/markets/{marketId}/draws/{drawId}/result`
 - Auth: ไม่ต้องใช้ token
 
 Response หลัก:
@@ -1301,9 +1307,9 @@ Response หลัก:
 - `POST /realtime/auth`
 - `POST /member/heartbeat`
 - `GET /meta/online-members`
-- `GET /api/frontend/lotto/markets/{marketId}/betting-context`
-- `GET /api/frontend/lotto/markets/{marketId}/results`
-- `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- `GET /lotto/markets/{marketId}/betting-context`
+- `GET /lotto/markets/{marketId}/results`
+- `GET /lotto/markets/{marketId}/draws/{drawId}/result`
 
 ข้อจำกัดที่ยังพบใน environment ทดสอบ:
 - `POST /auth/register` มีโอกาส timeout จาก dependency ภายในระบบเดิม (โดยเฉพาะส่วนที่พึ่งพา queue/redis ของระบบ)

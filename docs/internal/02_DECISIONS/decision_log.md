@@ -1,5 +1,58 @@
 # Decision Log
 
+## 2026-04-03 — Frontend Register Adds Unique 8-Char Referral Code and Upline Mapping (APPROVED)
+
+- ปรับ `POST /api/v1/auth/register`:
+  - สร้าง `members.referral_code` อัตโนมัติทุกสมาชิกใหม่
+  - รูปแบบรหัส: 8 ตัวอักษร, ตัวพิมพ์ใหญ่+ตัวเลข, ไม่ใช้ `O`
+  - บังคับ unique ด้วย DB unique index
+- เพิ่มการ map upline จากรหัสแนะนำ:
+  - รับ input field `referral_code` (alias: `invite_code`, `recommend_code`)
+  - normalize input เป็น uppercase และแทน `O` -> `0`
+  - ถ้าพบรหัสตรงกับสมาชิกเดิม ให้ตั้ง `members.upline_code` ของสมาชิกใหม่เป็น `members.code` ของเจ้าของรหัสนั้น
+- เหตุผล:
+  - เพิ่มระบบอ้างอิงแนะนำสมาชิกที่อ่านง่ายและลดความสับสนระหว่างตัวอักษรคล้ายกัน
+
+## 2026-04-03 — Add Backfill Command for Existing Members Referral Code (APPROVED)
+
+- เพิ่มคำสั่ง `php artisan member:backfill-referral-codes`
+  - default เป็น dry-run
+  - ใช้ `--apply` เพื่อเขียน `members.referral_code` จริงให้สมาชิกที่ยังไม่มีรหัส
+  - รองรับ `--chunk`, `--limit`, `--member-code=*`
+- policy ของการ generate ใน command ต้องใช้กติกาเดียวกับ register:
+  - ความยาว 8 ตัวอักษร
+  - ตัวพิมพ์ใหญ่ + ตัวเลข
+  - ไม่ใช้ตัว `O`
+- เหตุผล:
+  - รองรับการ backfill ข้อมูลสมาชิกเดิมหลังเปิดระบบ referral code ใหม่
+
+## 2026-04-03 — Consolidate External Lotto API Paths to `/api/v1` Only (APPROVED)
+
+- ปรับเส้น external lotto API ให้เหลือ canonical prefix เดียวคือ `/api/v1/lotto/*`
+- ย้าย critical path routes เดิมจาก `/api/frontend/lotto/*` ไปอยู่ที่:
+  - `GET /api/v1/lotto/markets/{marketId}/betting-context`
+  - `GET /api/v1/lotto/markets/{marketId}/results`
+  - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- ยกเลิก legacy member routes ใน Lotto module เดิมที่ prefix `/api/lotto/*`
+- ข้อยกเว้นที่ยังคงไว้:
+  - integration route `/api/rb7lotto/*`
+  - internal endpoints `/internal/lottery/results/*`
+- เหตุผล:
+  - ลด route duplication และ ambiguity ของ client integration
+  - บังคับ contract ฝั่ง frontend ให้ยึด `/api/v1` เส้นเดียว
+
+## 2026-04-03 — Frontend API v1 Exposes Lotto Group Package Helper Endpoints (APPROVED)
+
+- เพิ่ม route ใน `FrontendApi` ชุด `/api/v1/lotto/groups/{groupId}/*`:
+  - `GET /api/v1/lotto/groups/{groupId}/packages`
+  - `POST /api/v1/lotto/groups/{groupId}/select-package`
+  - `GET /api/v1/lotto/groups/{groupId}/selected-package`
+- implementation ของ v1 routes ใช้ flow เดียวกับ `Gametech\Lotto\Http\Controllers\Api\PackageController`
+  เพื่อให้ response contract/error mapping ของ package helper คงพฤติกรรมเดียวกัน
+- เหตุผล:
+  - แก้ mismatch ระหว่างเอกสาร Frontend API v1 กับ route ที่ deploy จริง ซึ่งเคยมีเฉพาะ `/api/lotto/*`
+  - ลดกรณี `404 Resource not found` เมื่อลูกค้าเรียก endpoint ตามคู่มือ v1
+
 ## 2026-04-02 — Number Block Add Modal Uses Latest Non-Closed Draw per Market (APPROVED)
 
 - ปรับหน้า admin `/lotto/number-blocks`:

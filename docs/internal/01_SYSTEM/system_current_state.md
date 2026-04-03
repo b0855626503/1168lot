@@ -118,12 +118,25 @@
 - endpoint `GET /api/v1/games/{type}/{provider}` จะ trigger provider `gamelist` ก่อนทุกครั้ง
 - จากนั้นระบบจะอ่านและคืนข้อมูลจาก `GameListProxy` เป็นหลัก (คง response contract v1 เดิม)
 
+## นโยบาย Frontend API v1 Register Referral Code
+
+- ตอนสมัครสมาชิกผ่าน `POST /api/v1/auth/register` ระบบจะสร้าง `members.referral_code` อัตโนมัติทุกบัญชี
+  - format: ยาว 8 ตัวอักษร
+  - charset: ตัวพิมพ์ใหญ่ + ตัวเลข (`A-Z`, `0-9`) โดยไม่ใช้ `O`
+  - ต้องไม่ซ้ำกันทั้งระบบ (unique)
+- ฝั่ง request รองรับรหัสแนะนำใน field `referral_code` (alias: `invite_code`, `recommend_code`)
+  - ระบบ normalize เป็นตัวพิมพ์ใหญ่ และแทน `O` เป็น `0` ก่อนเทียบ
+  - ถ้าเทียบแล้วตรงกับ `members.referral_code` ของสมาชิกใด ให้ set `members.upline_code` ของผู้สมัครเป็น `members.code` ของสมาชิกนั้น
+- สำหรับสมาชิกเก่าที่ยังไม่มี `referral_code` ใช้คำสั่ง:
+  - `php artisan member:backfill-referral-codes` (dry-run)
+  - `php artisan member:backfill-referral-codes --apply` (เขียนจริง)
+
 ## นโยบาย Frontend Lotto Critical Path API
 
-- เพิ่ม public routes ชุด `/api/frontend/lotto/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
-  - `GET /api/frontend/lotto/markets/{marketId}/betting-context`
-  - `GET /api/frontend/lotto/markets/{marketId}/results`
-  - `GET /api/frontend/lotto/markets/{marketId}/draws/{drawId}/result`
+- เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
+  - `GET /api/v1/lotto/markets/{marketId}/betting-context`
+  - `GET /api/v1/lotto/markets/{marketId}/results`
+  - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
 
@@ -133,15 +146,15 @@
   - `lotto_group_packages`
   - `lotto_group_package_bet_settings`
 - เพิ่ม API สำหรับ package flow assist:
-  - `GET /api/lotto/groups/{groupId}/packages`
-  - `POST /api/lotto/groups/{groupId}/select-package`
-  - `GET /api/lotto/groups/{groupId}/selected-package`
+  - `GET /api/v1/lotto/groups/{groupId}/packages` (frontend contract)
+  - `POST /api/v1/lotto/groups/{groupId}/select-package` (frontend contract)
+  - `GET /api/v1/lotto/groups/{groupId}/selected-package` (frontend contract)
   - response ของ package endpoints มี field `image` สำหรับใช้งานหน้า frontend
 - policy ของ helper API:
   - ใช้เพื่อ UI flow assist เท่านั้น (non-authoritative)
   - ห้ามใช้แทน betting validation/auth gate
   - ตอน submit bet ต้องยึด `package_id` ใน request เท่านั้น
-- `POST /api/lotto/bet` บังคับรับ `package_id` ทุกครั้ง
+- `POST /api/v1/lotto/bet` บังคับรับ `package_id` ทุกครั้ง
 - เพิ่ม Admin endpoints สำหรับจัดการ package ระดับ group:
   - `POST /lotto/group-packages/list|create|edit|update|delete`
   - `POST /lotto/group-package-bet-settings/list|create|edit|update|delete`
