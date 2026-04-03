@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-04-04 — `selected-package` Returns Bet Settings for Client Betting Preview (APPROVED)
+
+- ปรับ `GET /api/v1/lotto/groups/{groupId}/selected-package` ให้คืนข้อมูล package ที่เลือกพร้อม:
+  - `group_id`
+  - `package_id`
+  - `name`
+  - `image`
+  - `bet_settings[]` โดยแต่ละรายการมี `bet_type`, `payout`, `discount_percent`
+- เหตุผล:
+  - ให้หน้า client แสดง preview ก่อนส่งโพยได้ใน call เดียวหลังผู้ใช้เลือก package
+  - ลดการต้อง merge ข้อมูลจาก `selected-package` กับ `packages` เองทุกครั้ง
+  - ยังรักษา boundary เดิม: submit bet จริงต้องยึด `package_id` แล้ว resolve server-side ใหม่เสมอ
+
 ## 2026-04-04 — Single-Page Admin Async Menu Pattern Reuses Dashboard Root Vue Bootstrap (APPROVED)
 
 - สำหรับเมนู admin แบบหน้าเดียวที่ต้อง render UI แบบ Vue component ทั้งหน้าและ fetch ข้อมูล async ในหน้าเดิม:

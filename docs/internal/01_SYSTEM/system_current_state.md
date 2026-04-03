@@ -205,6 +205,9 @@
   - `POST /api/v1/lotto/groups/{groupId}/select-package` (frontend contract)
   - `GET /api/v1/lotto/groups/{groupId}/selected-package` (frontend contract)
   - response ของ package endpoints มี field `image` สำหรับใช้งานหน้า frontend
+  - `selected-package` คืน `bet_settings[]` ของ package ที่ถูกเลือกด้วย
+    - แต่ละรายการมี `bet_type`, `payout`, `discount_percent`
+    - ใช้เพื่อให้หน้าแทงคำนวณ preview ยอดลด/ยอดจ่ายจริงได้ก่อน submit
 - policy ของ helper API:
   - ใช้เพื่อ UI flow assist เท่านั้น (non-authoritative)
   - ห้ามใช้แทน betting validation/auth gate

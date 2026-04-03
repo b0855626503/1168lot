@@ -47,6 +47,8 @@ class PackageFrontendApiTest extends TestCase
     {
         $this->actingAsCustomer(memberCode: 2001);
         $package = $this->createPackage(groupId: 10, name: 'VIP-10', isActive: true, image: '/storage/lotto/media/vip10.png');
+        $this->createSetting((int) $package->id, 'top_3', 650, 27, true);
+        $this->createSetting((int) $package->id, 'bottom_2', 69, 27, true);
 
         $select = $this->postJson('/api/lotto/groups/10/select-package', [
             'package_id' => (int) $package->id,
@@ -64,6 +66,13 @@ class PackageFrontendApiTest extends TestCase
         $selected->assertJsonPath('data.group_id', 10);
         $selected->assertJsonPath('data.package_id', (int) $package->id);
         $selected->assertJsonPath('data.image', '/storage/lotto/media/vip10.png');
+        $selected->assertJsonPath('data.bet_settings.0.bet_type', 'bottom_2');
+        $selected->assertJsonPath('data.bet_settings.0.payout', 69.0);
+        $selected->assertJsonPath('data.bet_settings.0.discount_percent', 27.0);
+        $selected->assertJsonPath('data.bet_settings.1.bet_type', 'top_3');
+        $selected->assertJsonPath('data.bet_settings.1.payout', 650.0);
+        $selected->assertJsonPath('data.bet_settings.1.discount_percent', 27.0);
+        $selected->assertJsonCount(2, 'data.bet_settings');
     }
 
     public function test_select_package_is_idempotent_when_selecting_same_package_twice(): void

@@ -920,10 +920,8 @@ Response ตัวอย่าง (ยังไม่เลือก)
 ```json
 {
   "success": true,
-  "data": {
-    "data": null,
-    "selected": false
-  },
+  "data": null,
+  "selected": false,
   "message": "ยังไม่ได้เลือก package"
 }
 ```
@@ -933,14 +931,24 @@ Response ตัวอย่าง (เลือกแล้ว)
 {
   "success": true,
   "data": {
-    "data": {
-      "group_id": 1,
-      "package_id": 9,
-      "name": "แพ็กเกจมาตรฐาน",
-      "image": "/storage/lotto/media/package-standard.png"
-    },
-    "selected": true
+    "group_id": 1,
+    "package_id": 9,
+    "name": "แพ็กเกจมาตรฐาน",
+    "image": "/storage/lotto/media/package-standard.png",
+    "bet_settings": [
+      {
+        "bet_type": "top_3",
+        "payout": 650,
+        "discount_percent": 27
+      },
+      {
+        "bet_type": "bottom_2",
+        "payout": 69,
+        "discount_percent": 27
+      }
+    ]
   },
+  "selected": true,
   "message": "ดึงสถานะ package ที่เลือกสำเร็จ"
 }
 ```

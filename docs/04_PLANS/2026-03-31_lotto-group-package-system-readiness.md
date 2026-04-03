@@ -25,7 +25,13 @@
   - response: `data { group_id, package_id, selected: true }`
   - ยิงซ้ำ package เดิม: `HTTP 200` response shape เดิม (idempotent)
 - `GET /groups/{groupId}/selected-package`
-  - มีการเลือกแล้ว: `HTTP 200` + `data { group_id, package_id, selected: true }`
+  - มีการเลือกแล้ว: `HTTP 200` + top-level `selected: true`
+  - payload `data` ต้องมีอย่างน้อย:
+    - `group_id`
+    - `package_id`
+    - `name`
+    - `image`
+    - `bet_settings[] { bet_type, payout, discount_percent }`
   - ยังไม่เลือก: `HTTP 200` + `data: null` + `selected: false`
 
 ### 2) Helper Boundary + Mismatch Policy

@@ -86,7 +86,11 @@ class PackageController extends AppBaseController
             ], 'ยังไม่ได้เลือก package');
         }
 
-        $package = LottoGroupPackage::query()->find($selectedPackageId);
+        $package = LottoGroupPackage::query()
+            ->with(['betSettings' => static function ($query) {
+                $query->where('is_enabled', true)->orderBy('bet_type');
+            }])
+            ->find($selectedPackageId);
         if (! $package || (int) $package->group_id !== $groupId || ! (bool) $package->is_active) {
             return $this->sendResponseNew([
                 'data' => null,
@@ -100,6 +104,13 @@ class PackageController extends AppBaseController
                 'package_id' => (int) $package->id,
                 'name' => (string) $package->name,
                 'image' => (string) ($package->image ?? ''),
+                'bet_settings' => $package->betSettings->map(static function ($setting): array {
+                    return [
+                        'bet_type' => (string) $setting->bet_type,
+                        'payout' => (float) $setting->payout,
+                        'discount_percent' => (float) $setting->discount_percent,
+                    ];
+                })->values(),
             ],
             'selected' => true,
         ], 'ดึงสถานะ package ที่เลือกสำเร็จ');
