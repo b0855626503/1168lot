@@ -177,9 +177,12 @@
 ## นโยบาย Frontend Lotto Critical Path API
 
 - เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
+  - `GET /api/v1/lotto/markets/latest`
   - `GET /api/v1/lotto/markets/{marketId}/betting-context`
   - `GET /api/v1/lotto/markets/{marketId}/results`
   - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- endpoint `GET /api/v1/lotto/markets/latest` ส่งรูประดับกลุ่มหวยเพิ่ม:
+  - `group_logo`, `group_icon`, `group_image` (fallback logo -> icon)
 - เพิ่ม route รวมผลรางวัลตามวันที่:
   - `GET /api/v1/lotto/results/by-date?draw_date=YYYY-MM-DD`
   - แสดงผลแบบ grouped ตาม `lotto_groups`
@@ -241,6 +244,8 @@
   - ภายในกลุ่มแสดงรายการหวย (`lotto_markets`) ที่มีงวดตรงวันที่เลือกและสถานะ `resulted`
 - ข้อมูลที่แสดงต่อรายการหวย:
   - `draw_date`, `result_at`, `first_prize`, `top_3`, `top_2`, `bottom_2`
+- กรณีงวดมีผลแบบ `งดออกผล` (`result_number.no_result=true` หรือ `status=no_result`)
+  - ตารางรายงานจะแสดงคำว่า `งดออกผล` ในคอลัมน์ผลรางวัลแทน `-`
 
 ## นโยบายยกเลิกโพยทั้งงวดและคืนเงิน (Admin Draws)
 

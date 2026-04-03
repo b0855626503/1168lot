@@ -52,7 +52,7 @@ class LottoController extends BaseController
                 });
             }
 
-            $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'description', 'code']);
+            $groups = $groupsQuery->get(['id', 'name', 'name_en', 'name_kh', 'name_laos', 'description', 'code', 'logo', 'icon']);
 
             $marketsQuery = LotteryMarket::query()
                 ->where('is_enabled', true)
@@ -108,6 +108,9 @@ class LottoController extends BaseController
                         'name_laos' => (string) ($group->name_laos ?? ''),
                     ], $language, 'name'),
                     'description' => $groupDescription,
+                    'group_logo' => (string) ($group->logo ?? ''),
+                    'group_icon' => (string) ($group->icon ?? ''),
+                    'group_image' => (string) (($group->logo ?: $group->icon) ?? ''),
                     'markets' => $groupMarkets->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
                         $draw = $latestDrawMap->get((int) $market->id);
                         $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];

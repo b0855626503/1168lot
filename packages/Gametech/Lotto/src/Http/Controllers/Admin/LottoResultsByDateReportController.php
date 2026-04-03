@@ -57,6 +57,8 @@ class LottoResultsByDateReportController extends AppBaseController
                     'markets' => collect($groupRows)
                         ->map(function ($draw) {
                             $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+                            $noResult = (bool) ($resultNumber['no_result'] ?? false)
+                                || (string) ($resultNumber['status'] ?? '') === 'no_result';
 
                             return [
                                 'market_id' => (int) $draw->market->id,
@@ -65,6 +67,7 @@ class LottoResultsByDateReportController extends AppBaseController
                                 'draw_id' => (int) $draw->id,
                                 'draw_date' => optional($draw->draw_date)->format('Y-m-d'),
                                 'result_at' => optional($draw->result_at)->format('Y-m-d H:i:s'),
+                                'no_result' => $noResult,
                                 'first_prize' => (string) ($resultNumber['first_prize'] ?? ''),
                                 'top_3' => (string) ($resultNumber['top_3'] ?? ''),
                                 'top_2' => (string) ($resultNumber['top_2'] ?? ''),
@@ -91,4 +94,3 @@ class LottoResultsByDateReportController extends AppBaseController
         ]);
     }
 }
-

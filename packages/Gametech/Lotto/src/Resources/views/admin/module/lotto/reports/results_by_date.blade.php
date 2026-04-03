@@ -65,6 +65,7 @@
                                         </thead>
                                         <tbody>
                                         @foreach($group['markets'] as $market)
+                                            @php($displayNoResult = (bool) ($market['no_result'] ?? false))
                                             <tr>
                                                 <td>
                                                     @if(!empty($market['market_logo']))
@@ -78,10 +79,10 @@
                                                 </td>
                                                 <td>{{ $market['draw_date'] }}</td>
                                                 <td>{{ $market['result_at'] }}</td>
-                                                <td>{{ $market['first_prize'] !== '' ? $market['first_prize'] : '-' }}</td>
-                                                <td>{{ $market['top_3'] !== '' ? $market['top_3'] : '-' }}</td>
-                                                <td>{{ $market['top_2'] !== '' ? $market['top_2'] : '-' }}</td>
-                                                <td>{{ $market['bottom_2'] !== '' ? $market['bottom_2'] : '-' }}</td>
+                                                <td>{{ $displayNoResult ? 'งดออกผล' : ($market['first_prize'] !== '' ? $market['first_prize'] : '-') }}</td>
+                                                <td>{{ $displayNoResult ? 'งดออกผล' : ($market['top_3'] !== '' ? $market['top_3'] : '-') }}</td>
+                                                <td>{{ $displayNoResult ? 'งดออกผล' : ($market['top_2'] !== '' ? $market['top_2'] : '-') }}</td>
+                                                <td>{{ $displayNoResult ? 'งดออกผล' : ($market['bottom_2'] !== '' ? $market['bottom_2'] : '-') }}</td>
                                             </tr>
                                         @endforeach
                                         </tbody>
@@ -99,4 +100,3 @@
         </div>
     </section>
 @endsection
-

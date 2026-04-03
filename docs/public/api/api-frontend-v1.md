@@ -737,7 +737,7 @@ Response ตัวอย่างเมื่อไม่พบโพย
 - `GET /lotto/markets/latest`
 - Auth: ไม่ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
-- ฟิลด์รูปใน response (`market_logo`, `market_icon`) จะถูกแปลงเป็น **Full URL (absolute URL)** เช่น `https://api.1168lot.com/storage/...`
+- ฟิลด์รูปใน response (`group_logo`, `group_icon`, `group_image`, `market_logo`, `market_icon`) จะถูกแปลงเป็น **Full URL (absolute URL)** เช่น `https://api.1168lot.com/storage/...`
 
 Query ที่รองรับ:
 - `code` (แนะนำ) เช่น `thai` เพื่อขอเฉพาะกลุ่มนั้น
@@ -765,6 +765,9 @@ Response ตัวอย่าง
         "group_code": "thai",
         "group_name": "หวยไทย",
         "description": "หวยรัฐบาลไทย อัปเดตผลไว",
+        "group_logo": "/storage/lotto/groups/thai-logo.png",
+        "group_icon": "/storage/lotto/groups/thai-icon.png",
+        "group_image": "/storage/lotto/groups/thai-logo.png",
         "markets": [
           {
             "market_id": 3,

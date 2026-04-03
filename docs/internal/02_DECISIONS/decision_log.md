@@ -1,5 +1,21 @@
 # Decision Log
 
+## 2026-04-03 — `GET /api/v1/lotto/markets/latest` Returns Group Images (APPROVED)
+
+- ปรับ response ของ `markets/latest` ให้มีฟิลด์รูปในระดับกลุ่มหวย:
+  - `group_logo`
+  - `group_icon`
+  - `group_image` (fallback `logo` -> `icon`)
+- เหตุผล:
+  - ให้ frontend แสดงรูปของกลุ่มหวยได้โดยไม่ต้องเรียก endpoint เพิ่ม
+
+## 2026-04-03 — Results-by-Date Report Shows `งดออกผล` Instead of `-` (APPROVED)
+
+- หน้า `admin/lotto/reports/results-by-date` ตรวจ `result_number.no_result` หรือ `result_number.status=no_result`
+- เมื่อเป็นเคส `งดออกผล` ให้แสดงค่า `งดออกผล` ในคอลัมน์ผลรางวัลทั้งหมด (`รางวัลที่ 1`, `3 ตัวบน`, `2 ตัวบน`, `2 ตัวล่าง`) แทน `-`
+- เหตุผล:
+  - ทำให้ทีมงานแยกเคส “ไม่มีข้อมูลผล” ออกจาก “งดออกผล” ได้ชัดเจนในหน้ารายงานรวม
+
 ## 2026-04-03 — Add Auto Draw Mode `wed_sat_sun` for Markets (APPROVED)
 
 - เพิ่มโหมดงวดใหม่ใน `lotto_markets.draw_mode`:
