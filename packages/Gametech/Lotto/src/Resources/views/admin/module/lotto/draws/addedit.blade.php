@@ -1129,32 +1129,11 @@
                     }
 
                     const $select = window.jQuery(selectEl);
-                    if (!$select.length || typeof $select.select2 !== 'function') {
+                    if (!$select.length) {
                         return;
                     }
 
-                    this.destroyMarketSelect2();
-
-                    const dropdownParent = this.getMarketDropdownParent(selectEl);
-                    const self = this;
-
-                    $select.select2({
-                        width: '100%',
-                        theme: 'bootstrap4',
-                        dropdownParent: dropdownParent,
-                        placeholder: '-- เลืึอกรายการหวย --',
-                        allowClear: false,
-                        templateResult(state) {
-                            return self.renderMarketOption(state, $select);
-                        },
-                        templateSelection(state) {
-                            return self.renderMarketOption(state, $select);
-                        },
-                        escapeMarkup(markup) {
-                            return markup;
-                        },
-                    });
-
+                    $select.off('.drawMarket');
                     $select.on('change.drawMarket', () => {
                         const value = $select.val();
                         const normalizedValue = value ? parseInt(value, 10) : null;
@@ -1186,10 +1165,6 @@
                     }
 
                     $select.off('.drawMarket');
-
-                    if ($select.hasClass('select2-hidden-accessible') && typeof $select.select2 === 'function') {
-                        $select.select2('destroy');
-                    }
                 },
                 syncMarketSelectValue() {
                     const selectEl = this.$refs.marketSelect;
@@ -1214,10 +1189,7 @@
 
                     this.isSyncingMarketSelect = true;
                     $select.val(value);
-
-                    if ($select.hasClass('select2-hidden-accessible')) {
-                        $select.trigger('change');
-                    }
+                    $select.trigger('change');
 
                     this.$nextTick(() => {
                         this.isSyncingMarketSelect = false;
@@ -1233,10 +1205,6 @@
                     const $select = window.jQuery(selectEl);
 
                     $select.prop('disabled', shouldDisable);
-
-                    if ($select.hasClass('select2-hidden-accessible')) {
-                        $select.trigger('change.select2');
-                    }
                 },
                 statusLabel(status) {
                     const map = {

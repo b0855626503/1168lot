@@ -32,6 +32,9 @@ class LottoDrawDataTable extends DataTable
             ->withCount([
                 'blockedNumbers as blocked_numbers_count',
                 'tickets as tickets_count',
+                'tickets as active_tickets_count' => function ($query): void {
+                    $query->where('status', 'active');
+                },
             ])
             ->orderByDesc('draw_date')
             ->orderByDesc('id');

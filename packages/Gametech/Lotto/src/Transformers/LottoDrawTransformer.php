@@ -14,6 +14,7 @@ class LottoDrawTransformer extends TransformerAbstract
         $top2 = '-';
         $bottom2 = '-';
         $isNoResult = false;
+        $hasActiveTickets = (int) ($model->active_tickets_count ?? 0) > 0;
 
         if (is_array($model->result_number) && ! empty($model->result_number)) {
             if ($this->isNoResultOutcome($model->result_number)) {
@@ -45,7 +46,7 @@ class LottoDrawTransformer extends TransformerAbstract
                 'id' => $model->id,
                 'status' => (string) $model->status,
                 'is_no_result' => $isNoResult,
-                'can_cancel_all_refund' => $this->canCancelAllRefundAction((string) $model->status, $isNoResult),
+                'can_cancel_all_refund' => $this->canCancelAllRefundAction((string) $model->status, $isNoResult, $hasActiveTickets),
             ])->render(),
         ];
     }
@@ -107,10 +108,10 @@ class LottoDrawTransformer extends TransformerAbstract
         return (string) ($resultNumber['status'] ?? '') === 'no_result';
     }
 
-    private function canCancelAllRefundAction(string $status, bool $isNoResult): bool
+    private function canCancelAllRefundAction(string $status, bool $isNoResult, bool $hasActiveTickets): bool
     {
-        if (in_array($status, ['open', 'closed'], true)) {
-            return true;
+        if (! $hasActiveTickets) {
+            return false;
         }
 
         return $status === 'resulted' && $isNoResult;

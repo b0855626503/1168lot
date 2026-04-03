@@ -382,7 +382,7 @@ class LottoDrawController extends AppBaseController
         }
 
         if (! $this->canCancelAllRefundByDraw($draw)) {
-            return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดเปิดรับ/ปิดรับ หรือ งวดที่งดออกผล', 422);
+            return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดที่ประกาศเป็น งดออกผล เท่านั้น', 422);
         }
 
         if (! Schema::hasTable('wallet_transactions')) {
@@ -959,10 +959,6 @@ class LottoDrawController extends AppBaseController
     private function canCancelAllRefundByDraw(LottoDraw $draw): bool
     {
         $status = (string) $draw->status;
-        if (in_array($status, ['open', 'closed'], true)) {
-            return true;
-        }
-
         if ($status !== 'resulted') {
             return false;
         }

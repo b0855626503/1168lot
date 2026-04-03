@@ -240,15 +240,14 @@
 - เพิ่ม action ในเมนู `งวดหวย`:
   - `POST /lotto/draws/cancel-all-refund`
 - เงื่อนไข:
-  - ใช้ได้กับ draw สถานะ `open` หรือ `closed`
-  - และใช้ได้กับ draw สถานะ `resulted` เฉพาะกรณี `งดออกผล` (`result_number.no_result=true` หรือ `result_number.status=no_result`)
+  - ใช้ได้เฉพาะ draw สถานะ `resulted` ที่เป็น `งดออกผล` (`result_number.no_result=true` หรือ `result_number.status=no_result`)
 - behavior:
   - ยกเลิก ticket สถานะ `active` ทั้งหมดของงวด
   - คืนเงินตาม `total_net_amount` (fallback `total_amount`) ให้สมาชิกแต่ละโพย
   - ปรับ exposure (`lotto_number_exposures.sold_amount`) ลงตามจำนวนที่ยกเลิก
   - mark draw เป็น `resulted` พร้อมผล `งดออกผล` (`result_number.no_result=true`)
 - policy การแสดงปุ่มในหน้า `งวดหวย`:
-  - ปุ่ม `ยกเลิกโพย+คืนเงิน` แสดงเมื่อสถานะเป็น `open`, `closed`, หรือ `resulted+งดออกผล`
+  - ปุ่ม `ยกเลิกโพย+คืนเงิน` แสดงเฉพาะสถานะ `resulted+งดออกผล`
 
 ## นโยบาย Deprecate Payout Override ระดับ Market
 
