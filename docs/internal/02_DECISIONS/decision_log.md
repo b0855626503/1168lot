@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-04-04 — `BetService` Container Binding Must Include `LottoPackageResolver` Before `WalletTransactionService` (APPROVED)
+
+- แก้ binding ของ `Gametech\Lotto\Services\BetService` ใน `LottoServiceProvider`
+- constructor dependency order ที่ถูกต้อง:
+  - `ExposureService`
+  - `LottoConfigResolver`
+  - `LottoPackageResolver`
+  - `WalletTransactionService`
+- เพิ่ม regression test ให้ container resolve `BetService` ได้จริง
+- เหตุผล:
+  - ปิด bug ที่ทำให้ `POST /api/v1/lotto/bet` ล้มตั้งแต่ service construction
+  - ฝั่ง `FrontendApi` จะกลบ exception นี้เป็นข้อความ generic ทำให้ production debug ยาก ถ้าไม่มี test คุม binding
+
 ## 2026-04-04 — Frontend API v1 Adds Authenticated Member Change-Password Without Current Password (APPROVED)
 
 - เพิ่ม endpoint `POST /api/v1/member/change-password`

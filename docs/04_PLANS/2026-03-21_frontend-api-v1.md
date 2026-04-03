@@ -95,3 +95,8 @@
 - ตรวจ `exp` และ `jti` ทุกครั้ง
 - บังคับใช้ token middleware กับ route ที่ต้อง auth เท่านั้น
 - blacklist token ตอน logout
+
+## Implementation Notes
+
+- `POST /api/v1/lotto/bet` ใน `FrontendApi` เป็น wrapper ที่ delegate ไป `Gametech\Lotto\Services\BetService`
+- ต้องมี regression test คุมว่า container resolve `BetService` ได้จริง เพราะถ้า binding dependency ผิดลำดับ route จะตอบ generic error แม้ request ถูกต้อง

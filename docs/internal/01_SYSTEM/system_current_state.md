@@ -211,6 +211,13 @@
   - แสดงเฉพาะ market ที่มี draw ของวันที่เลือกและสถานะ `resulted`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
+- `POST /api/v1/lotto/bet` ผ่าน `FrontendApi` ไปยัง `Gametech\Lotto\Services\BetService`
+  - container binding ของ `BetService` ต้อง inject 4 dependencies ตามลำดับ:
+    - `ExposureService`
+    - `LottoConfigResolver`
+    - `LottoPackageResolver`
+    - `WalletTransactionService`
+  - ถ้า bind ผิดลำดับ route จะตอบ generic error `ไม่สามารถส่งโพยได้ในขณะนี้` จาก `FrontendApi` แม้ข้อมูล bet ถูกต้อง
 
 ## นโยบาย Lotto Group Package (Frontend + Betting)
 

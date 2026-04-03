@@ -33,6 +33,7 @@ use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\ExposureService;
 use Gametech\Lotto\Services\LottoConfigResolver;
+use Gametech\Lotto\Services\LottoPackageResolver;
 use Gametech\Lotto\Services\MemberMarketPolicyService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\WalletTransactionService;
@@ -53,6 +54,7 @@ class LottoServiceProvider extends ServiceProvider
             return new BetService(
                 $app->make(ExposureService::class),
                 $app->make(LottoConfigResolver::class),
+                $app->make(LottoPackageResolver::class),
                 $app->make(WalletTransactionService::class)
             );
         });
@@ -73,6 +75,10 @@ class LottoServiceProvider extends ServiceProvider
 
         $this->app->singleton(LottoConfigResolver::class, function ($app) {
             return new LottoConfigResolver();
+        });
+
+        $this->app->singleton(LottoPackageResolver::class, function ($app) {
+            return new LottoPackageResolver();
         });
 
         $this->app->singleton(MemberMarketPolicyService::class, function ($app) {
