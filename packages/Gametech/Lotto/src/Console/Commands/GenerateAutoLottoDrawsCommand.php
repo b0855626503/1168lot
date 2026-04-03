@@ -35,7 +35,11 @@ class GenerateAutoLottoDrawsCommand extends Command
 
         $marketQuery = LotteryMarket::query()
             ->with('group')
-            ->whereIn('draw_mode', [LotteryMarket::DRAW_MODE_DAILY, LotteryMarket::DRAW_MODE_WEEKDAYS])
+            ->whereIn('draw_mode', [
+                LotteryMarket::DRAW_MODE_DAILY,
+                LotteryMarket::DRAW_MODE_WEEKDAYS,
+                LotteryMarket::DRAW_MODE_WED_SAT_SUN,
+            ])
             ->where('is_enabled', true);
 
         if ($marketId !== null && $marketId !== '') {
@@ -180,6 +184,10 @@ class GenerateAutoLottoDrawsCommand extends Command
 
         if ((string) $market->draw_mode === LotteryMarket::DRAW_MODE_WEEKDAYS) {
             return $date->dayOfWeekIso >= 1 && $date->dayOfWeekIso <= 5;
+        }
+
+        if ((string) $market->draw_mode === LotteryMarket::DRAW_MODE_WED_SAT_SUN) {
+            return in_array($date->dayOfWeekIso, [3, 6, 7], true);
         }
 
         return false;

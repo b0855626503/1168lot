@@ -1,5 +1,14 @@
 # Decision Log
 
+## 2026-04-03 — Add Auto Draw Mode `wed_sat_sun` for Markets (APPROVED)
+
+- เพิ่มโหมดงวดใหม่ใน `lotto_markets.draw_mode`:
+  - `wed_sat_sun` = ออกอัตโนมัติเฉพาะวันพุธ/เสาร์/อาทิตย์
+- ปรับ command `lotto:generate-auto-draws` ให้รวมตลาดโหมดนี้และสร้างงวดเฉพาะ `dayOfWeekIso` = 3, 6, 7
+- ปรับหน้า admin `/lotto/markets` และ label สรุปใน `/lotto/draws` ให้แสดงโหมดนี้
+- เหตุผล:
+  - รองรับ requirement ตลาดที่มีรอบออกงวดเฉพาะ พุธ/เสาร์/อาทิตย์ โดยไม่ต้องใช้ manual ทุกครั้ง
+
 ## 2026-04-03 — Fix V2 Fetch Context to Propagate `lookup_date` from Source Policy (APPROVED)
 
 - ปรับ `V2ResultPipelineRunner` ให้ส่ง `lookup_date` และ `lookup_date_compact` เข้า `FetchExecutor` ทุกครั้ง

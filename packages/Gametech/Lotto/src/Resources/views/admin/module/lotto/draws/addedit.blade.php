@@ -1386,6 +1386,7 @@
                     const map = {
                         daily: 'ทุกวัน',
                         weekdays: 'จ.-ศ.',
+                        wed_sat_sun: 'พุธ/ส./อา.',
                         manual: 'แมนนวล',
                     };
 

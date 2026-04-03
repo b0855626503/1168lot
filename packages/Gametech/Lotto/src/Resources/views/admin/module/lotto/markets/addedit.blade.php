@@ -59,7 +59,7 @@
                 </b-form-group>
             </b-col>
         </b-row>
-        <b-form-group label="โหมดงวด:" label-for="draw_mode" description="manual = ทีมงานสร้างงวดเอง, daily = ทุกวัน, weekdays = จันทร์-ศุกร์">
+        <b-form-group label="โหมดงวด:" label-for="draw_mode" description="manual = ทีมงานสร้างงวดเอง, daily = ทุกวัน, weekdays = จันทร์-ศุกร์, wed_sat_sun = พุธ/เสาร์/อาทิตย์">
             <b-form-select id="draw_mode" v-model="formaddedit.draw_mode" :options="option.drawModes" size="sm"></b-form-select>
         </b-form-group>
         <b-row>
@@ -567,6 +567,7 @@
                             { value: 'manual', text: 'Manual (เพิ่มงวดเอง)' },
                             { value: 'daily', text: 'Auto ทุกวัน' },
                             { value: 'weekdays', text: 'Auto จันทร์-ศุกร์' },
+                            { value: 'wed_sat_sun', text: 'Auto พุธ/เสาร์/อาทิตย์' },
                         ],
                     },
                     permissions: {

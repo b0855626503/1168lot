@@ -14,6 +14,7 @@ class LotteryMarket extends Model implements LotteryMarketContract
     public const DRAW_MODE_MANUAL = 'manual';
     public const DRAW_MODE_DAILY = 'daily';
     public const DRAW_MODE_WEEKDAYS = 'weekdays';
+    public const DRAW_MODE_WED_SAT_SUN = 'wed_sat_sun';
 
     public $timestamps = false;
     protected $table = 'lotto_markets';
@@ -53,6 +54,7 @@ class LotteryMarket extends Model implements LotteryMarketContract
             self::DRAW_MODE_MANUAL,
             self::DRAW_MODE_DAILY,
             self::DRAW_MODE_WEEKDAYS,
+            self::DRAW_MODE_WED_SAT_SUN,
         ];
     }
 
