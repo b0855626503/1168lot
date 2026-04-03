@@ -95,11 +95,20 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
     {
         $marketName = (string) ($draw->market->name ?? ('Market #' . (int) $draw->market_id));
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
-        $resultTime = $draw->result_at ? $draw->result_at->format('H:i') : '-';
+        $resultTime = $draw->result_at
+            ? $draw->result_at->format('H:i')
+            : now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
         $result = is_array($draw->result_number) ? $draw->result_number : [];
+        $isNoResult = (bool) ($result['no_result'] ?? false)
+            || (string) ($result['status'] ?? '') === 'no_result';
         $firstPrize = preg_replace('/\D+/', '', (string) ($result['first_prize'] ?? ''));
-        $top3 = strlen($firstPrize) >= 3 ? substr($firstPrize, -3) : '';
+        $top3 = $isNoResult
+            ? 'งดออกผล'
+            : (strlen($firstPrize) >= 3 ? substr($firstPrize, -3) : '');
         $last2Digits = preg_replace('/\D+/', '', (string) ($result['last_2_digits'] ?? ''));
+        if ($isNoResult) {
+            $last2Digits = 'งดออกผล';
+        }
         $firstLabel = '3 ตัวบน';
         $lastLabel = '2 ตัวล่าง';
 
@@ -109,8 +118,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
 
         return sprintf(
             '🚨 ออกผลแล้ว! หวย%s' . PHP_EOL .
-            'งวดวันที่ %s' . PHP_EOL .
-            'เวลาออกผล %s' . PHP_EOL . PHP_EOL .
+            'งวดวันที่ %s เวลาออกผล %s' . PHP_EOL . PHP_EOL .
             '🎯 %s: %s' . PHP_EOL .
             '🎯 %s: %s' . PHP_EOL . PHP_EOL .
             '━━━━━━━━━━━━━━━' . PHP_EOL .
