@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-04-03 — Add Frontend API v1 `GET /member/contributor` for Referral Overview (APPROVED)
+
+- เพิ่ม endpoint ใหม่ใน Frontend API v1:
+  - `GET /api/v1/member/contributor` (ต้องใช้ Bearer token)
+- ล็อกโครงข้อมูลหลักที่ต้องคืน:
+  - `summary.referred_members` = จำนวนสมาชิกที่แนะนำ
+  - `summary.referral_code` = รหัสแนะนำ 8 หลักของสมาชิก
+  - `summary.referral_income` = รายได้แนะนำจาก `members.faststart`
+  - `summary.promotion_bonus_income` และ `summary.promotion_bonus_count` = สรุปโบนัสแนะนำจาก `payments_promotion`
+- เพิ่ม metadata กติกาแนะนำจากโปรโมชั่นระบบ `pro_faststart`:
+  - `rule.length_type`, `rule.bonus_percent`, `rule.bonus_price`, `rule.display_value`
+- เพิ่มข้อมูล config จาก wallet เพื่อให้ frontend แสดงรายละเอียดการแนะนำได้ครบ:
+  - `wallet.faststart_open`, `wallet.contributor_base_url`, `wallet.contributor_register_url`
+- เหตุผล:
+  - รองรับหน้าแนะนำเพื่อนบน frontend ใหม่ให้เรียกข้อมูลในเส้นเดียวผ่าน `/api/v1`
+  - ลดการพึ่ง endpoint เก่าจาก wallet module (`/member/contributor/api`)
+
 ## 2026-04-03 — Frontend Register Adds Unique 8-Char Referral Code and Upline Mapping (APPROVED)
 
 - ปรับ `POST /api/v1/auth/register`:

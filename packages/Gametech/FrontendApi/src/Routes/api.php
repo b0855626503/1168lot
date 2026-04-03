@@ -74,6 +74,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.member.balance');
             Route::get('member/loadbalance', [MemberController::class, 'loadBalance'])
                 ->name('frontend.api.v1.member.loadbalance');
+            Route::get('member/contributor', [MemberController::class, 'contributor'])
+                ->name('frontend.api.v1.member.contributor');
             Route::get('member/realtime-context', [RealtimeController::class, 'memberContext'])
                 ->name('frontend.api.v1.member.realtime_context');
             Route::post('member/heartbeat', [OnlineController::class, 'heartbeat'])

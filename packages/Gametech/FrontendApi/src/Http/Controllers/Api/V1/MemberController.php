@@ -28,6 +28,72 @@ class MemberController extends BaseController
         return $this->buildBalanceResponse($request, false);
     }
 
+    public function contributor(Request $request)
+    {
+        try {
+            $member = $request->user();
+            if (! $member) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $memberRepository = app('Gametech\Member\Repositories\MemberRepository');
+            $promotionRepository = app('Gametech\Promotion\Repositories\PromotionRepository');
+            $config = collect(core()->getConfigData());
+
+            $member = $memberRepository->findOrFail($member->code);
+            $affProfile = $memberRepository->getAff($member->code);
+            $promotion = $promotionRepository->findOneWhere(['id' => 'pro_faststart']);
+
+            $promotionLengthType = $promotion ? strtoupper((string) $promotion->length_type) : null;
+            $bonusPercent = $promotion ? (float) $promotion->bonus_percent : null;
+            $bonusPrice = $promotion ? (float) $promotion->bonus_price : null;
+            $ruleDisplay = null;
+
+            if ($promotion) {
+                $ruleDisplay = $promotionLengthType === 'PERCENT'
+                    ? number_format((float) $bonusPercent, 2, '.', '') . ' %'
+                    : number_format((float) $bonusPrice, 2, '.', '');
+            }
+
+            $promotionBonusIncome = (float) data_get(
+                $affProfile,
+                'payments_promotion_credit_bonus_sum',
+                data_get($affProfile, 'payments_promotion_sum_credit_bonus', 0)
+            );
+
+            $contributorBaseUrl = trim((string) ($config['contributor'] ?? ''));
+            $contributorRegisterUrl = $contributorBaseUrl !== ''
+                ? rtrim($contributorBaseUrl, '/') . '/contributor/' . $member->code
+                : route('customer.contributor.register', $member->code);
+
+            $payload = [
+                'summary' => [
+                    'referred_members' => (int) data_get($affProfile, 'downs_count', 0),
+                    'referral_code' => (string) ($member->referral_code ?? ''),
+                    'referral_income' => (float) ($member->faststart ?? 0),
+                    'promotion_bonus_income' => $promotionBonusIncome,
+                    'promotion_bonus_count' => (int) data_get($affProfile, 'payments_promotion_count', 0),
+                ],
+                'rule' => [
+                    'promotion_id' => 'pro_faststart',
+                    'length_type' => $promotion ? (string) $promotion->length_type : null,
+                    'bonus_percent' => $bonusPercent,
+                    'bonus_price' => $bonusPrice,
+                    'display_value' => $ruleDisplay,
+                ],
+                'wallet' => [
+                    'faststart_open' => ($config['faststart_open'] ?? 'N') === 'Y',
+                    'contributor_base_url' => $contributorBaseUrl,
+                    'contributor_register_url' => $contributorRegisterUrl,
+                ],
+            ];
+
+            return $this->sendResponseNew($payload, 'complete');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงข้อมูลแนะนำเพื่อนได้ในขณะนี้', 422);
+        }
+    }
+
     private function buildBalanceResponse(Request $request, bool $includeSpin)
     {
         try {

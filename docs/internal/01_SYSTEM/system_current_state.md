@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-01
+อัปเดตล่าสุด: 2026-04-03
 
 ## ภาพรวมระบบ
 
@@ -130,6 +130,21 @@
 - สำหรับสมาชิกเก่าที่ยังไม่มี `referral_code` ใช้คำสั่ง:
   - `php artisan member:backfill-referral-codes` (dry-run)
   - `php artisan member:backfill-referral-codes --apply` (เขียนจริง)
+
+## นโยบาย Frontend API v1 Member Contributor
+
+- เพิ่ม endpoint `GET /api/v1/member/contributor` (ต้องใช้ token)
+- response จะรวมข้อมูลสำคัญสำหรับหน้าแนะนำเพื่อน:
+  - จำนวนสมาชิกที่แนะนำ (`referred_members`)
+  - รหัสแนะนำของสมาชิก (`referral_code`)
+  - รายได้จากการแนะนำในกระเป๋าสมาชิก (`referral_income` จาก `members.faststart`)
+  - ยอดโบนัสแนะนำสะสมและจำนวนรายการจาก `payments_promotion` (`promotion_bonus_income`, `promotion_bonus_count`)
+- response มีข้อมูลกติกาโปรโมชั่นแนะนำจาก `promotions.id = pro_faststart`:
+  - `length_type`, `bonus_percent`, `bonus_price`, `display_value`
+- response มีข้อมูล config ที่หน้า wallet ใช้อ้างอิง:
+  - `wallet.faststart_open`
+  - `wallet.contributor_base_url`
+  - `wallet.contributor_register_url`
 
 ## นโยบาย Frontend Lotto Critical Path API
 

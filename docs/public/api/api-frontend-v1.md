@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-04-01
+อัปเดตล่าสุด: 2026-04-03
 
 ## Base URL
 - `http://api.<domain>/api/v1`
@@ -313,6 +313,37 @@ Response ตัวอย่าง (ย่อ)
 - `GET /member/loadbalance`
 - Auth: ต้องใช้ token
 - response เต็ม เท่ากับ route `customer.home.credit` (`HomeController@loadCredit`)
+
+#### 2.4 ข้อมูลแนะนำเพื่อน
+- `GET /member/contributor`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "summary": {
+    "referred_members": 3,
+    "referral_code": "AB12C3D4",
+    "referral_income": 250.0,
+    "promotion_bonus_income": 120.0,
+    "promotion_bonus_count": 2
+  },
+  "rule": {
+    "promotion_id": "pro_faststart",
+    "length_type": "PERCENT",
+    "bonus_percent": 1.5,
+    "bonus_price": 0,
+    "display_value": "1.50 %"
+  },
+  "wallet": {
+    "faststart_open": true,
+    "contributor_base_url": "https://example.com",
+    "contributor_register_url": "https://example.com/contributor/12345"
+  },
+  "success": true,
+  "message": "complete"
+}
+```
 
 ---
 
