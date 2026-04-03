@@ -1,4 +1,4 @@
-> สถานะ: PENDING
+> สถานะ: ACTIVE
 > วันที่: 2026-03-21
 > โดเมน/เรื่อง: Frontend API / V1
 > แทนแผนเก่า: -
@@ -35,6 +35,10 @@
   - ส่งข้อมูลสมาชิก
 - `GET /api/v1/member/balance` (ต้องมี token)
   - ส่งยอดเงินคงเหลือ
+- `POST /api/v1/member/change-password` (ต้องมี token)
+  - เปลี่ยนรหัสผ่านของสมาชิกที่ login อยู่
+  - รับเฉพาะ `password`, `password_confirmation`
+  - ไม่ต้องส่งรหัสผ่านเดิม
 
 ### Wallet
 - `POST /api/v1/wallet/withdraw` (ต้องมี token)
@@ -91,4 +95,3 @@
 - ตรวจ `exp` และ `jti` ทุกครั้ง
 - บังคับใช้ token middleware กับ route ที่ต้อง auth เท่านั้น
 - blacklist token ตอน logout
-

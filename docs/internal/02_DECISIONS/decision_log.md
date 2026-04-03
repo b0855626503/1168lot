@@ -1,5 +1,20 @@
 # Decision Log
 
+## 2026-04-04 — Frontend API v1 Adds Authenticated Member Change-Password Without Current Password (APPROVED)
+
+- เพิ่ม endpoint `POST /api/v1/member/change-password`
+- request รับเฉพาะ:
+  - `password`
+  - `password_confirmation`
+- รองรับ alias `password_confirm`
+- ไม่ต้องส่งรหัสผ่านเดิม เพราะ route นี้ถูกป้องกันด้วย Bearer token middleware อยู่แล้ว
+- implementation จะ update ทั้ง:
+  - `members.password` เป็น hash
+  - `members.user_pass` เพื่อรักษา legacy compatibility ชั่วคราว
+- เหตุผล:
+  - ลด friction ฝั่ง client ที่ login อยู่แล้ว
+  - คง compatibility กับ flow เกม/legacy ที่ยังอ้าง `user_pass`
+
 ## 2026-04-04 — `selected-package` Returns Bet Settings for Client Betting Preview (APPROVED)
 
 - ปรับ `GET /api/v1/lotto/groups/{groupId}/selected-package` ให้คืนข้อมูล package ที่เลือกพร้อม:

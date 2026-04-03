@@ -4,10 +4,10 @@
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
 ## ACTIVE
+- `2026-03-21_frontend-api-v1.md`
 - `2026-03-31_lotto-group-package-system-readiness.md`
 
 ## PENDING
-- `2026-03-21_frontend-api-v1.md`
 - `2026-03-21_lotto-concord-proxy-cleanup.md`
 - `2026-03-21_lotto-dashboard.md`
 - `2026-03-21_lotto-execution-phases.md`

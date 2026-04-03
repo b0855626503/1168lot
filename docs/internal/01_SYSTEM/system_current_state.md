@@ -179,6 +179,23 @@
 - policy:
   - mapping ฟิลด์รายการต้องคง semantics เดียวกับ `Wallet HistoryController@store`
 
+## นโยบาย Frontend API v1 Member Change Password
+
+- เพิ่ม endpoint `POST /api/v1/member/change-password` (ต้องใช้ Bearer token)
+- request รับเฉพาะ:
+  - `password`
+  - `password_confirmation`
+- รองรับ alias `password_confirm` โดย normalize เป็น `password_confirmation` ก่อน validate
+- ไม่ต้องส่งรหัสผ่านเดิม เพราะถือว่า endpoint นี้เรียกหลังผ่าน token auth แล้ว
+- validation:
+  - `password` ต้องยาว `6-10` ตัวอักษร
+  - `password_confirmation` ต้องตรงกับ `password`
+- implementation ปัจจุบัน update ทั้ง:
+  - `members.password` (hash)
+  - `members.user_pass` (legacy plain text)
+- policy:
+  - การเก็บ `user_pass` ยังจำเป็นในช่วงนี้เพื่อรักษา compatibility กับ flow เดิมที่ยังพึ่ง password แบบ legacy
+
 ## นโยบาย Frontend Lotto Critical Path API
 
 - เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:

@@ -76,6 +76,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.member.balance');
             Route::get('member/loadbalance', [MemberController::class, 'loadBalance'])
                 ->name('frontend.api.v1.member.loadbalance');
+            Route::post('member/change-password', [MemberController::class, 'changePassword'])
+                ->name('frontend.api.v1.member.change_password');
             Route::get('member/contributor', [MemberController::class, 'contributor'])
                 ->name('frontend.api.v1.member.contributor');
             Route::get('member/history', [MemberController::class, 'history'])

@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-04-03
+อัปเดตล่าสุด: 2026-04-04
 
 ## Base URL
 - `http://api.<domain>/api/v1`
@@ -314,7 +314,41 @@ Response ตัวอย่าง (ย่อ)
 - Auth: ต้องใช้ token
 - response เต็ม เท่ากับ route `customer.home.credit` (`HomeController@loadCredit`)
 
-#### 2.4 ข้อมูลแนะนำเพื่อน
+#### 2.4 เปลี่ยนรหัสผ่าน
+- `POST /member/change-password`
+- Auth: ต้องใช้ token
+- ไม่ต้องส่งรหัสผ่านเดิม
+
+Request body
+```json
+{
+  "password": "654321",
+  "password_confirmation": "654321"
+}
+```
+
+หมายเหตุ:
+- รองรับ `password_confirm` เป็น alias ของ `password_confirmation`
+- `password` ต้องยาว `6-10` ตัวอักษร
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "member_code": 1,
+  "message": "เปลี่ยนรหัสผ่านสำเร็จ"
+}
+```
+
+Response ตัวอย่างเมื่อ validation ไม่ผ่าน
+```json
+{
+  "success": false,
+  "message": "The password confirmation and password must match."
+}
+```
+
+#### 2.5 ข้อมูลแนะนำเพื่อน
 - `GET /member/contributor`
 - Auth: ต้องใช้ token
 
@@ -1451,6 +1485,7 @@ Response หลัก:
 - `POST /auth/logout`
 - `GET /member/profile`
 - `GET /member/balance`
+- `POST /member/change-password`
 - `POST /wallet/withdraw`
 - `GET /games/types`
 - `GET /games/providers/{type}`

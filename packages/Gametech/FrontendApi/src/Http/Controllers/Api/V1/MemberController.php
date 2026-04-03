@@ -3,6 +3,7 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -28,6 +29,39 @@ class MemberController extends BaseController
     public function loadBalance(Request $request)
     {
         return $this->buildBalanceResponse($request, false);
+    }
+
+    public function changePassword(Request $request)
+    {
+        try {
+            $member = $request->user();
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $payload = (array) $request->all();
+            if (! array_key_exists('password_confirmation', $payload) && array_key_exists('password_confirm', $payload)) {
+                $payload['password_confirmation'] = $payload['password_confirm'];
+            }
+
+            $validated = validator($payload, [
+                'password' => ['required', 'string', 'min:6', 'max:10'],
+                'password_confirmation' => ['required', 'same:password'],
+            ])->validate();
+
+            app('Gametech\Member\Repositories\MemberRepository')->update([
+                'user_pass' => (string) $validated['password'],
+                'password' => Hash::make((string) $validated['password']),
+            ], (int) $member->code);
+
+            return $this->sendResponseNew([
+                'member_code' => (int) $member->code,
+            ], 'เปลี่ยนรหัสผ่านสำเร็จ');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->sendError($e->validator->errors()->first() ?: 'ข้อมูลเปลี่ยนรหัสผ่านไม่ถูกต้อง', 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้', 422);
+        }
     }
 
     public function contributor(Request $request)
