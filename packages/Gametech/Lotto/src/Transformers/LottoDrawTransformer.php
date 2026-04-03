@@ -42,6 +42,7 @@ class LottoDrawTransformer extends TransformerAbstract
             'action'         => view('admin::module.lotto.draws.datatables_actions', [
                 'id' => $model->id,
                 'status' => (string) $model->status,
+                'is_no_result' => is_array($model->result_number) ? $this->isNoResultOutcome($model->result_number) : false,
             ])->render(),
         ];
     }

@@ -381,8 +381,8 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
-        if (! in_array((string) $draw->status, ['open', 'closed'], true)) {
-            return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดที่เปิดรับหรือปิดรับเท่านั้น', 422);
+        if (! $this->canCancelAllRefundByDraw($draw)) {
+            return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดเปิดรับ/ปิดรับ หรือ งวดที่งดออกผล', 422);
         }
 
         if (! Schema::hasTable('wallet_transactions')) {
@@ -397,7 +397,7 @@ class LottoDrawController extends AppBaseController
                 /** @var LottoDraw $lockedDraw */
                 $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail($drawId);
 
-                if (! in_array((string) $lockedDraw->status, ['open', 'closed'], true)) {
+                if (! $this->canCancelAllRefundByDraw($lockedDraw)) {
                     throw new InvalidArgumentException('สถานะงวดไม่อนุญาตให้ยกเลิกโพยทั้งงวด');
                 }
 
@@ -954,6 +954,23 @@ class LottoDrawController extends AppBaseController
         }
 
         return $resultAtCarbon->format('Y-m-d H:i:s');
+    }
+
+    private function canCancelAllRefundByDraw(LottoDraw $draw): bool
+    {
+        $status = (string) $draw->status;
+        if (in_array($status, ['open', 'closed'], true)) {
+            return true;
+        }
+
+        if ($status !== 'resulted') {
+            return false;
+        }
+
+        $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+
+        return (bool) ($resultNumber['no_result'] ?? false)
+            || (string) ($resultNumber['status'] ?? '') === 'no_result';
     }
 
 }

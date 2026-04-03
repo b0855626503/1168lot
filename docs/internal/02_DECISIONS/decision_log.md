@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-04-03 — Draws Cancel-All+Refund Button Visible on `resulted + งดออกผล` (APPROVED)
+
+- ขยาย policy ปุ่ม `ยกเลิกโพย+คืนเงิน` ในเมนู `งวดหวย`:
+  - เดิมแสดงเฉพาะ `open/closed`
+  - ใหม่แสดงเพิ่มในสถานะ `resulted` เมื่อผลเป็น `งดออกผล` (`no_result`)
+- ขยาย backend guard ของ endpoint `POST /lotto/draws/cancel-all-refund` ให้รับเคสเดียวกัน:
+  - อนุญาต `resulted` เฉพาะกรณี `result_number.no_result=true` หรือ `result_number.status=no_result`
+- เหตุผล:
+  - ให้ทีมงานสามารถกดคืนเงินซ้ำเพื่อปิดงานเคสงวดที่งดออกผลได้จากเมนูเดิมโดยไม่ต้องเปลี่ยนสถานะงวดกลับ
+
 ## 2026-04-03 — Auto Result Supports “งดออกผล” and Admin Draws Can Cancel-All+Refund (APPROVED)
 
 - ปรับ auto-result validation (legacy + v2 cutover) ให้ตรวจ marker ประเภท `งดออกผล`:
