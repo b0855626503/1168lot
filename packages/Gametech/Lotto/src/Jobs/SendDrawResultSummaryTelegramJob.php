@@ -32,7 +32,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
     public function handle(): void
     {
         $draw = LottoDraw::query()
-            ->with('market:id,name,notify_result_telegram')
+            ->with('market:id,name,notify_result_telegram,auto_result_time')
             ->find($this->drawId);
 
         if (! $draw instanceof LottoDraw) {
@@ -95,9 +95,8 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
     {
         $marketName = (string) ($draw->market->name ?? ('Market #' . (int) $draw->market_id));
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
-        $resultTime = $draw->result_at
-            ? $draw->result_at->format('H:i')
-            : now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
+        $scheduledResultTime = $this->resolveScheduledResultTime($draw);
+        [$announceOriginLabel, $announceTime] = $this->resolveAnnounceOriginAndTime($draw);
         $result = is_array($draw->result_number) ? $draw->result_number : [];
         $isNoResult = (bool) ($result['no_result'] ?? false)
             || (string) ($result['status'] ?? '') === 'no_result';
@@ -119,6 +118,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         return sprintf(
             '🚨 ออกผลแล้ว! หวย%s' . PHP_EOL .
             'งวดวันที่ %s เวลาออกผล %s' . PHP_EOL . PHP_EOL .
+            '🕒 ออกผลโดย%s เวลา %s' . PHP_EOL . PHP_EOL .
             '🎯 %s: %s' . PHP_EOL .
             '🎯 %s: %s' . PHP_EOL . PHP_EOL .
             '━━━━━━━━━━━━━━━' . PHP_EOL .
@@ -130,7 +130,9 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
             '💵 กำไร/ขาดทุนสุทธิ: %s %s%s บาท',
             $marketName,
             $drawDate,
-            $resultTime,
+            $scheduledResultTime,
+            $announceOriginLabel,
+            $announceTime,
             $firstLabel,
             $top3 !== '' ? $top3 : '-',
             $lastLabel,
@@ -144,6 +146,49 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
             $netPrefix,
             number_format(abs($netAmount), 2),
         );
+    }
+
+    private function resolveScheduledResultTime(LottoDraw $draw): string
+    {
+        $autoResultTime = trim((string) ($draw->market->auto_result_time ?? ''));
+        if ($autoResultTime !== '') {
+            return substr($autoResultTime, 0, 5);
+        }
+
+        if ($draw->result_at) {
+            return $draw->result_at->format('H:i');
+        }
+
+        return now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
+    }
+
+    /**
+     * @return array{0:string,1:string}
+     */
+    private function resolveAnnounceOriginAndTime(LottoDraw $draw): array
+    {
+        $result = is_array($draw->result_number) ? $draw->result_number : [];
+
+        $isAuto = false;
+        if ((int) ($draw->result_source_id ?? 0) > 0) {
+            $isAuto = true;
+        }
+
+        if ((string) ($draw->result_fetch_status ?? '') === 'APPLIED' && (int) ($draw->result_source_id ?? 0) > 0) {
+            $isAuto = true;
+        }
+
+        if ((bool) ($result['manual_marked_no_result'] ?? false)) {
+            $isAuto = false;
+        }
+
+        $originLabel = $isAuto ? 'ระบบออโต้' : 'ทีมงาน';
+        $announceAt = $draw->result_at ?: $draw->result_applied_at;
+        $announceTime = $announceAt
+            ? $announceAt->format('H:i')
+            : now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
+
+        return [$originLabel, $announceTime];
     }
 
     private function claimNotificationSlot(int $drawId): bool

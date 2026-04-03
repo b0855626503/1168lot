@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-04-03 — Telegram Result Message Uses Market `auto_result_time` and Adds Origin Line (APPROVED)
+
+- ปรับ `SendDrawResultSummaryTelegramJob`:
+  - บรรทัด `เวลาออกผล` ใน header ใช้ `lotto_markets.auto_result_time` เป็นหลัก
+  - fallback เป็น `draw.result_at` เมื่อ market ไม่มี `auto_result_time`
+- เพิ่มบรรทัดใหม่ในข้อความ:
+  - `ออกผลโดยระบบออโต้ เวลา HH:mm`
+  - หรือ `ออกผลโดยทีมงาน เวลา HH:mm`
+- เหตุผล:
+  - ให้ header สอดคล้องเวลาออกผลตามรอบตลาด
+  - ให้ทีมงานแยกได้ทันทีว่าเป็นผลจากระบบอัตโนมัติหรือจากการดำเนินการโดยทีมงาน
+
 ## 2026-04-03 — Add `งดออกผล` Option in Draw Settle Mode Modal (APPROVED)
 
 - ปรับ modal เลือกวิธีออกผลในหน้า `admin/lotto/draws` จากเดิม `Manual/Auto` ให้มีตัวเลือก `งดออกผล`
