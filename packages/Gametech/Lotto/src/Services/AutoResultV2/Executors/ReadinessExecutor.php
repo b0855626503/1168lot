@@ -12,6 +12,16 @@ class ReadinessExecutor
      */
     public function execute(array $normalized, ReadinessConfigData $config, bool $supportsPartial = false): array
     {
+        if ((bool) ($normalized['no_result'] ?? false)) {
+            return [
+                'ready' => true,
+                'state' => 'READY',
+                'supports_partial' => $supportsPartial,
+                'missing_fields' => [],
+                'reason' => 'NO_RESULT_MARKER',
+            ];
+        }
+
         $missing = [];
         foreach ($config->minimumRequiredKeys() as $field) {
             $value = $normalized[$field] ?? null;
