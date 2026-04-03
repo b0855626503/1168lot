@@ -14,12 +14,14 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
+use Gametech\Lotto\Services\WalletTransactionService;
 use Gametech\Lotto\Support\DrawStatusFlow;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -368,6 +370,138 @@ class LottoDrawController extends AppBaseController
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
             return $this->sendError('ประกาศผลไม่สำเร็จ: ' . $e->getMessage());
+        }
+    }
+
+    public function cancelAllRefund(Request $request, WalletTransactionService $walletTransactionService): JsonResponse
+    {
+        $drawId = (int) $request->input('id');
+        $draw = LottoDraw::query()->find($drawId);
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        }
+
+        if (! in_array((string) $draw->status, ['open', 'closed'], true)) {
+            return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดที่เปิดรับหรือปิดรับเท่านั้น', 422);
+        }
+
+        if (! Schema::hasTable('wallet_transactions')) {
+            return $this->sendError('ไม่พบตาราง wallet_transactions สำหรับคืนเงิน', 422);
+        }
+
+        $adminId = auth('admin')->id();
+        $groupCode = 'LOTTO_DRAW_CANCEL_' . $drawId . '_' . now()->format('YmdHis');
+
+        try {
+            $summary = DB::transaction(function () use ($drawId, $walletTransactionService, $groupCode, $adminId): array {
+                /** @var LottoDraw $lockedDraw */
+                $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail($drawId);
+
+                if (! in_array((string) $lockedDraw->status, ['open', 'closed'], true)) {
+                    throw new InvalidArgumentException('สถานะงวดไม่อนุญาตให้ยกเลิกโพยทั้งงวด');
+                }
+
+                $tickets = LottoTicket::query()
+                    ->with(['items:id,ticket_id,bet_type,number,amount'])
+                    ->where('draw_id', (int) $lockedDraw->id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->get();
+
+                $cancelledTickets = 0;
+                $totalRefund = 0.0;
+
+                foreach ($tickets as $ticket) {
+                    $refundAmount = round((float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0), 2);
+                    if ($refundAmount > 0) {
+                        $debitTxn = DB::table('wallet_transactions')
+                            ->where('member_id', (int) $ticket->member_id)
+                            ->where('ref_type', 'LOTTO_BET')
+                            ->where('ref_id', (int) $ticket->id)
+                            ->orderByDesc('id')
+                            ->first(['id']);
+
+                        $walletTransactionService->creditMemberBalance(
+                            memberId: (int) $ticket->member_id,
+                            amount: $refundAmount,
+                            refType: 'LOTTO_CANCEL',
+                            refId: (int) $ticket->id,
+                            refCode: (string) $ticket->id,
+                            groupCode: $groupCode,
+                            relatedTxnId: isset($debitTxn->id) ? (int) $debitTxn->id : null,
+                            meta: [
+                                'draw_id' => (int) $ticket->draw_id,
+                                'ticket_id' => (int) $ticket->id,
+                                'cancel_scope' => 'draw',
+                            ],
+                            createdByType: 'admin',
+                            createdById: $adminId ? (int) $adminId : null,
+                            description: 'คืนเงินจากการยกเลิกโพยทั้งงวด'
+                        );
+                    }
+
+                    foreach ($ticket->items as $item) {
+                        $exposure = DB::table('lotto_number_exposures')
+                            ->where('draw_id', (int) $ticket->draw_id)
+                            ->where('bet_type', (string) $item->bet_type)
+                            ->where('number', (string) $item->number)
+                            ->lockForUpdate()
+                            ->first(['id', 'sold_amount']);
+
+                        if (! $exposure) {
+                            continue;
+                        }
+
+                        $nextAmount = max(0, round((float) ($exposure->sold_amount ?? 0) - (float) ($item->amount ?? 0), 2));
+                        DB::table('lotto_number_exposures')
+                            ->where('id', (int) $exposure->id)
+                            ->update([
+                                'sold_amount' => $nextAmount,
+                                'updated_at' => now(),
+                            ]);
+                    }
+
+                    $ticket->update([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                        'cancelled_by' => $adminId ? (int) $adminId : null,
+                        'refund_amount' => $refundAmount,
+                        'total_win_amount' => 0,
+                    ]);
+
+                    $cancelledTickets++;
+                    $totalRefund += $refundAmount;
+                }
+
+                $reason = 'งดออกผล';
+                $lockedDraw->forceFill([
+                    'status' => 'resulted',
+                    'result_at' => now(),
+                    'result_number' => [
+                        'no_result' => true,
+                        'status' => 'no_result',
+                        'label' => $reason,
+                        'no_result_reason' => $reason,
+                        'manual_cancelled_all_tickets' => true,
+                    ],
+                    'result_fetch_status' => 'APPLIED',
+                    'result_fetch_error' => null,
+                    'result_applied_at' => now(),
+                    'result_fetched_at' => now(),
+                ])->save();
+
+                return [
+                    'draw_id' => (int) $lockedDraw->id,
+                    'cancelled_tickets' => $cancelledTickets,
+                    'refunded_amount' => round($totalRefund, 2),
+                ];
+            });
+
+            return $this->sendResponse($summary, 'ยกเลิกโพยทั้งงวดและคืนเงินสำเร็จ');
+        } catch (InvalidArgumentException $e) {
+            return $this->sendError($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('ยกเลิกโพยทั้งงวดไม่สำเร็จ: ' . $e->getMessage(), 500);
         }
     }
 

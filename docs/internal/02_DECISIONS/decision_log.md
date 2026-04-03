@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-04-03 — Auto Result Supports “งดออกผล” and Admin Draws Can Cancel-All+Refund (APPROVED)
+
+- ปรับ auto-result validation (legacy + v2 cutover) ให้ตรวจ marker ประเภท `งดออกผล`:
+  - เมื่อพบ marker จะ normalize payload เป็นผลแบบ `no_result=true` พร้อม `no_result_reason`
+  - apply จะข้าม settlement และบันทึก draw เป็น `resulted` พร้อม `result_number.status=no_result`
+  - หน้า admin `งวดหวย` แสดงค่า `งดออกผล` ในคอลัมน์ผลรางวัล
+- เพิ่ม endpoint ฝั่ง admin:
+  - `POST /lotto/draws/cancel-all-refund`
+- behavior ของ endpoint:
+  - ยกเลิก ticket `active` ทั้งหมดใน draw
+  - คืนเงินสมาชิกทุกรายการผ่าน `wallet_transactions` (`ref_type=LOTTO_CANCEL`)
+  - ปรับ exposure ตามยอดที่ยกเลิก
+  - mark draw เป็น `resulted` พร้อมผล `งดออกผล`
+- เหตุผล:
+  - รองรับเคส upstream ประกาศงดออกผลโดยไม่ให้ pipeline ติด `NOT_READY` ซ้ำ
+  - ให้ทีมงานมีปุ่มงานเดียวสำหรับยกเลิกโพยทั้งงวดและคืนเงินครบถ้วน
+
 ## 2026-04-03 — Telegram Draw Result Message Adds Result Time Line (APPROVED)
 
 - ปรับข้อความแจ้งผล Telegram ของ job `SendDrawResultSummaryTelegramJob`:

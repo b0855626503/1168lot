@@ -98,6 +98,10 @@
 - `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ 3 หลักร่วมกับ `last_2_digits` 2 หลัก
   - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง (เช่น หุ้น/VIP)
   - ระบบยัง derive `top_3`, `top_2`, `bottom_2` เหมือนเดิมเพื่อให้ settlement bet types เดิมทำงานต่อเนื่อง
+- ถ้า source ส่งข้อความลักษณะ `งดออกผล` (หรือ marker เทียบเท่า) ในฟิลด์ผล:
+  - pipeline จะ normalize เป็นผลแบบ `no_result=true`
+  - apply จะไม่ยิง settlement และบันทึก draw เป็น `resulted` พร้อม `result_number.status=no_result`
+  - หน้า `งวดหวย` จะแสดงค่า `งดออกผล` ในคอลัมน์ผลรางวัลแทนตัวเลข
 
 ## นโยบาย Telegram Alert ของ Auto Result
 
@@ -230,6 +234,18 @@
   - ภายในกลุ่มแสดงรายการหวย (`lotto_markets`) ที่มีงวดตรงวันที่เลือกและสถานะ `resulted`
 - ข้อมูลที่แสดงต่อรายการหวย:
   - `draw_date`, `result_at`, `first_prize`, `top_3`, `top_2`, `bottom_2`
+
+## นโยบายยกเลิกโพยทั้งงวดและคืนเงิน (Admin Draws)
+
+- เพิ่ม action ในเมนู `งวดหวย`:
+  - `POST /lotto/draws/cancel-all-refund`
+- เงื่อนไข:
+  - ใช้ได้เฉพาะ draw สถานะ `open` หรือ `closed`
+- behavior:
+  - ยกเลิก ticket สถานะ `active` ทั้งหมดของงวด
+  - คืนเงินตาม `total_net_amount` (fallback `total_amount`) ให้สมาชิกแต่ละโพย
+  - ปรับ exposure (`lotto_number_exposures.sold_amount`) ลงตามจำนวนที่ยกเลิก
+  - mark draw เป็น `resulted` พร้อมผล `งดออกผล` (`result_number.no_result=true`)
 
 ## นโยบาย Deprecate Payout Override ระดับ Market
 

@@ -12,6 +12,22 @@ class ValidationExecutor
      */
     public function execute(array $mapped, ValidationConfigData $config): array
     {
+        $noResultReason = $this->detectNoResultReason($mapped);
+        if ($noResultReason !== null) {
+            $normalized = $mapped;
+            $normalized['first_prize'] = '';
+            $normalized['last_2_digits'] = '';
+            $normalized['no_result'] = true;
+            $normalized['no_result_reason'] = $noResultReason;
+
+            return [
+                'valid' => true,
+                'error_code' => null,
+                'missing_fields' => [],
+                'normalized' => $normalized,
+            ];
+        }
+
         $missing = [];
         foreach ($config->requiredFields() as $field) {
             $value = $mapped[$field] ?? null;
@@ -35,6 +51,46 @@ class ValidationExecutor
             'missing_fields' => [],
             'normalized' => $mapped,
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     */
+    private function detectNoResultReason(array $payload): ?string
+    {
+        foreach (['first_prize', 'last_2_digits', 'top_3', 'bottom_2', 'status', 'result_status', 'message'] as $key) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            $value = $payload[$key];
+            if (! is_scalar($value)) {
+                continue;
+            }
+
+            $text = trim((string) $value);
+            if ($text === '') {
+                continue;
+            }
+
+            $normalized = mb_strtolower(preg_replace('/\s+/', '', $text));
+            foreach ([
+                'งดออกผล',
+                'งดออก',
+                'ไม่ออกผล',
+                'noresult',
+                'cancelled',
+                'canceled',
+                'cancel',
+                'void',
+            ] as $marker) {
+                if (str_contains($normalized, $marker)) {
+                    return 'งดออกผล';
+                }
+            }
+        }
+
+        return null;
     }
 
     private function isBlank(mixed $value): bool

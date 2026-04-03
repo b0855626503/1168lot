@@ -13,6 +13,23 @@ class ResultValidator
      */
     public function validate(array $mapped, array $validationConfig = [], ?string $expectedDrawDate = null): array
     {
+        $normalized = $mapped;
+        $noResultReason = $this->detectNoResultReason($normalized);
+        if ($noResultReason !== null) {
+            $normalized['first_prize'] = '';
+            $normalized['last_2_digits'] = '';
+            $normalized['no_result'] = true;
+            $normalized['no_result_reason'] = $noResultReason;
+
+            $expectedDateRule = is_array($validationConfig['expected_draw_date'] ?? null)
+                ? $validationConfig['expected_draw_date']
+                : [];
+            $drawDateField = (string) ($expectedDateRule['field'] ?? 'draw_date');
+            $this->validateExpectedDrawDate($normalized, $drawDateField, $expectedDrawDate);
+
+            return $normalized;
+        }
+
         $required = $validationConfig['required'] ?? ['first_prize', 'last_2_digits'];
         if (! is_array($required) || $required === []) {
             $required = ['first_prize', 'last_2_digits'];
@@ -27,8 +44,6 @@ class ResultValidator
                 throw new ResultValidationException('VALIDATION_ERROR: required field missing: ' . $field);
             }
         }
-
-        $normalized = $mapped;
 
         if (array_key_exists('first_prize', $normalized)) {
             $normalized['first_prize'] = preg_replace('/\D+/', '', (string) $normalized['first_prize']);
@@ -74,6 +89,72 @@ class ResultValidator
         $this->validateExpectedDrawDate($normalized, $drawDateField, $expectedDrawDate);
 
         return $normalized;
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     */
+    private function detectNoResultReason(array $payload): ?string
+    {
+        $candidates = [];
+        foreach (['first_prize', 'last_2_digits', 'top_3', 'bottom_2', 'status', 'result_status', 'message'] as $key) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            $raw = $this->toScalarString($payload[$key]);
+            if ($raw !== null && trim($raw) !== '') {
+                $candidates[] = trim($raw);
+            }
+        }
+
+        foreach ($candidates as $text) {
+            if ($this->containsNoResultMarker($text)) {
+                return 'งดออกผล';
+            }
+        }
+
+        return null;
+    }
+
+    private function containsNoResultMarker(string $text): bool
+    {
+        $normalized = mb_strtolower(trim($text));
+        $normalized = preg_replace('/\s+/', '', $normalized);
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        foreach ([
+            'งดออกผล',
+            'งดออก',
+            'ไม่ออกผล',
+            'noresult',
+            'cancelled',
+            'canceled',
+            'cancel',
+            'void',
+        ] as $marker) {
+            if (str_contains($normalized, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function toScalarString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return null;
     }
 
     /**

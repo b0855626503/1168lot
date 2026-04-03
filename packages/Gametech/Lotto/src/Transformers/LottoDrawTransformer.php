@@ -15,9 +15,16 @@ class LottoDrawTransformer extends TransformerAbstract
         $bottom2 = '-';
 
         if (is_array($model->result_number) && ! empty($model->result_number)) {
-            $top3 = (string) ($model->result_number['top_3'] ?? '-');
-            $top2 = (string) ($model->result_number['top_2'] ?? '-');
-            $bottom2 = (string) ($model->result_number['bottom_2'] ?? ($model->result_number['last_2_digits'] ?? '-'));
+            if ($this->isNoResultOutcome($model->result_number)) {
+                $label = trim((string) ($model->result_number['no_result_reason'] ?? '')) ?: 'งดออกผล';
+                $top3 = $label;
+                $top2 = $label;
+                $bottom2 = $label;
+            } else {
+                $top3 = (string) ($model->result_number['top_3'] ?? '-');
+                $top2 = (string) ($model->result_number['top_2'] ?? '-');
+                $bottom2 = (string) ($model->result_number['bottom_2'] ?? ($model->result_number['last_2_digits'] ?? '-'));
+            }
         }
         
         return [
@@ -82,5 +89,17 @@ class LottoDrawTransformer extends TransformerAbstract
             . '<img src="' . e($src) . '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
             . '<span>' . e($name) . '</span>'
             . '</span>';
+    }
+
+    /**
+     * @param array<string,mixed> $resultNumber
+     */
+    private function isNoResultOutcome(array $resultNumber): bool
+    {
+        if ((bool) ($resultNumber['no_result'] ?? false)) {
+            return true;
+        }
+
+        return (string) ($resultNumber['status'] ?? '') === 'no_result';
     }
 }

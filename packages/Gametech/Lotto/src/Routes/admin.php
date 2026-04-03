@@ -218,6 +218,8 @@ Route::domain(
 
             Route::post('draws/settle', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@settle')
                 ->name('admin.lotto.draws.settle');
+            Route::post('draws/cancel-all-refund', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@cancelAllRefund')
+                ->name('admin.lotto.draws.cancel_all_refund');
 
             Route::post('draws/generate-auto', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@generateAuto')
                 ->name('admin.lotto.draws.generate_auto');

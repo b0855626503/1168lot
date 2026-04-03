@@ -68,4 +68,23 @@ class AutoResultValidatorTest extends TestCase
         $this->assertSame('54', $result['last_2_digits']);
         $this->assertSame('27/03/2026', $result['draw_date']);
     }
+
+    public function test_validator_accepts_no_result_marker_payload(): void
+    {
+        $validator = new ResultValidator();
+
+        $result = $validator->validate([
+            'first_prize' => 'งดออกผล',
+            'last_2_digits' => '-',
+            'draw_date' => '2026-04-03',
+        ], [
+            'required' => ['first_prize', 'last_2_digits', 'draw_date'],
+            'expected_draw_date' => ['field' => 'draw_date'],
+        ], '2026-04-03');
+
+        $this->assertTrue((bool) ($result['no_result'] ?? false));
+        $this->assertSame('งดออกผล', $result['no_result_reason']);
+        $this->assertSame('', $result['first_prize']);
+        $this->assertSame('', $result['last_2_digits']);
+    }
 }

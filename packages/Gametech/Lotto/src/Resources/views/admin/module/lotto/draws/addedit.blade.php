@@ -1190,6 +1190,14 @@
 
                     const value = this.formaddedit.market_id ? String(this.formaddedit.market_id) : '';
                     const $select = window.jQuery(selectEl);
+                    const hasOption = value === '' || $select.find('option[value="' + value + '"]').length > 0;
+
+                    if (!hasOption && value !== '') {
+                        const fallbackLabel = String(this.currentDraw?.market_name || '').trim() || ('Market #' + value);
+                        const option = new Option(fallbackLabel, value, true, true);
+                        option.setAttribute('data-fallback-option', '1');
+                        selectEl.add(option);
+                    }
 
                     if (String($select.val() || '') === value) {
                         return;
@@ -1199,7 +1207,7 @@
                     $select.val(value);
 
                     if ($select.hasClass('select2-hidden-accessible')) {
-                        $select.trigger('change.select2');
+                        $select.trigger('change');
                     }
 
                     this.$nextTick(() => {
@@ -1583,6 +1591,46 @@
                         await this.showSubmitErrorModal(error, 'ปิดรับไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
                     }
                 },
+                async cancelAllTicketsAndRefund(id) {
+                    const confirmed = await this.$bvModal.msgBoxConfirm(
+                        'ยืนยันยกเลิกโพยทั้งหมดของงวดนี้ และคืนเงินให้สมาชิกทั้งหมดใช่หรือไม่? ระบบจะตั้งผลงวดเป็น "งดออกผล" อัตโนมัติ',
+                        {
+                            title: 'ยืนยันการยกเลิกโพยทั้งงวด',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            okTitle: 'ยืนยัน',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
+                        }
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    try {
+                        const response = await this.$http.post("{{ route('admin.lotto.draws.cancel_all_refund') }}", { id });
+                        const summary = response?.data?.data || {};
+                        const message = [
+                            response.data.message || 'ดำเนินการสำเร็จ',
+                            `จำนวนโพยที่ยกเลิก: ${summary.cancelled_tickets || 0}`,
+                            `ยอดคืนเงินรวม: ${this.formatMoney(summary.refunded_amount || 0)} บาท`,
+                        ].join('\n');
+
+                        await this.$bvModal.msgBoxOk(message, {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'ยกเลิกโพยทั้งงวดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
+                },
                 async toggleDrawStatus(id, targetAction) {
                     const action = String(targetAction || '').toLowerCase();
                     if (action !== 'open' && action !== 'close') {
@@ -1786,6 +1834,7 @@
         window.openDraw = function (id) { window.app.openDraw(id); };
         window.closeDraw = function (id) { window.app.closeDraw(id); };
         window.toggleDrawStatus = function (id, targetAction) { window.app.toggleDrawStatus(id, targetAction); };
+        window.cancelAllTicketsAndRefund = function (id) { window.app.cancelAllTicketsAndRefund(id); };
         window.generateAutoDraws = function (dryRun) { window.app.generateAutoDraws(dryRun); };
         window.showDrawBlockedNumbers = function (id) { window.app.openBlockedNumbersModal(id); };
         window.showDrawTicketList = function (id) { window.app.openTicketsSummaryModal(id); };

@@ -2,6 +2,7 @@
     $canEdit = bouncer()->hasPermission('lotto_draws.edit');
     $canSettle = bouncer()->hasPermission('lotto_draws.settle');
     $canRetry = bouncer()->hasPermission('lotto_draws.auto_result_manual_retry');
+    $canCancelAllRefund = bouncer()->hasPermission('lotto_draws.settle') || bouncer()->hasPermission('lotto_settings.draws.settle');
 @endphp
 
 <div class="d-flex flex-wrap justify-content-center">
@@ -14,6 +15,12 @@
     @if($status === 'closed' && ($canSettle || $canRetry))
         <button type="button" class="btn btn-success btn-block btn-xs mr-1 mb-1" onclick="settleModal({{ $id }})">
             <i class="fas fa-check-circle"></i> ออกผล
+        </button>
+    @endif
+
+    @if(in_array($status, ['open', 'closed']) && $canCancelAllRefund)
+        <button type="button" class="btn btn-danger btn-block btn-xs mr-1 mb-1" onclick="cancelAllTicketsAndRefund({{ $id }})">
+            <i class="fas fa-undo-alt"></i> ยกเลิกโพย+คืนเงิน
         </button>
     @endif
 </div>

@@ -16,7 +16,7 @@ class ResultApplier
     }
 
     /**
-     * @param array{first_prize:string,last_2_digits:string} $validated
+     * @param array<string,mixed> $validated
      * @param array<string,mixed> $rawPayload
      * @return array<string,mixed>
      */
@@ -60,6 +60,36 @@ class ResultApplier
 
             if ((string) $locked->status !== 'closed') {
                 throw new InvalidArgumentException('apply ได้เฉพาะ draw สถานะ closed');
+            }
+
+            if ($this->isNoResultPayload($validated)) {
+                $reason = trim((string) ($validated['no_result_reason'] ?? '')) ?: 'งดออกผล';
+                $resultNumber = [
+                    'no_result' => true,
+                    'status' => 'no_result',
+                    'label' => $reason,
+                    'no_result_reason' => $reason,
+                ];
+
+                $locked->forceFill([
+                    'result_number' => $resultNumber,
+                    'status' => 'resulted',
+                    'result_at' => now(),
+                    'result_fetch_status' => 'APPLIED',
+                    'result_fetch_error' => null,
+                    'result_hash' => $resultHash,
+                    'result_raw_payload_json' => $rawPayload,
+                    'result_normalized_payload_json' => $validated,
+                    'result_applied_at' => now(),
+                    'result_fetched_at' => now(),
+                ])->save();
+
+                return [
+                    'status' => 'APPLIED',
+                    'result_hash' => $resultHash,
+                    'no_result' => true,
+                    'deferred_settlement' => false,
+                ];
             }
 
             if (! $this->shouldAutoSettleOnResult($locked)) {
@@ -124,5 +154,13 @@ class ResultApplier
         }
 
         return (bool) ($market->auto_settle_on_result ?? true);
+    }
+
+    /**
+     * @param array<string,mixed> $validated
+     */
+    private function isNoResultPayload(array $validated): bool
+    {
+        return (bool) ($validated['no_result'] ?? false);
     }
 }
