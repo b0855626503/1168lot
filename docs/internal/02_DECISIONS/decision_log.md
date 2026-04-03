@@ -1,5 +1,13 @@
 # Decision Log
 
+## 2026-04-03 — Telegram Draw Result Message Adds Result Time Line (APPROVED)
+
+- ปรับข้อความแจ้งผล Telegram ของ job `SendDrawResultSummaryTelegramJob`:
+  - เดิม: แสดง `งวดวันที่ {date}`
+  - ใหม่: แสดงทั้ง `งวดวันที่ {date}` และ `เวลาออกผล {HH:mm}`
+- เหตุผล:
+  - ให้ทีมงานเห็นเวลาประกาศผลในข้อความเดียวกับหัวข้อผลรางวัล โดยไม่ต้องเปิดหน้ารายละเอียดเพิ่ม
+
 ## 2026-04-03 — Add Admin Team Menu “ดูผลรางวัลทั้งหมด” Filtered by Draw Date (APPROVED)
 
 - เพิ่มเมนูใหม่ใต้ `รายงาน Lotto`:

@@ -91,6 +91,7 @@
 - เมื่อ draw เปลี่ยนเป็น `resulted`:
   - ถ้า market เปิด `notify_result_telegram=true` ระบบ dispatch queue job แยกเพื่อสรุปผลและส่ง Telegram ผ่าน `notify/send`
   - ข้อความแจ้งผลเป็นแบบสั้น (impact-first) และมีสรุป `บิลทั้งหมด/ชนะ/แพ้/กำไรสุทธิ` ในข้อความเดียว
+  - ส่วน header ของข้อความ Telegram แสดงทั้ง `งวดวันที่` และ `เวลาออกผล`
   - บรรทัด `3 ตัวบน` ในข้อความ Telegram derive จาก `first_prize` แบบ `right(3)` เสมอ
   - policy บังคับ `1 message ต่อ 1 draw` โดยใช้ `lotto_draws.telegram_sent_at` กันยิงซ้ำ
   - trigger เฉพาะตอน status transition เป็น `resulted` เท่านั้น (ไม่ยิงตอนยัง `closed`)
