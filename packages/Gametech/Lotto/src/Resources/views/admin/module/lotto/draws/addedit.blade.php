@@ -11,19 +11,28 @@
             <b-row>
                 <b-col cols="12" md="6">
                     <b-form-group label="ตลาด">
-                        <select ref="marketSelect" class="form-control form-control-sm" required :disabled="!canEditMarketField">
-                            <option value="">-- เลือกตลาด --</option>
-                            @foreach(($marketOptions ?? []) as $group)
-                                <optgroup label="{{ $group['label'] ?? '-' }}">
-                                    @foreach(($group['options'] ?? []) as $market)
-                                        <option value="{{ (string) ($market['value'] ?? '') }}"
-                                                data-logo="{{ $market['logo'] ?? '' }}">
-                                            {{ $market['text'] ?? '-' }}
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                            @endforeach
-                        </select>
+                        <template v-if="canEditMarketField">
+                            <select ref="marketSelect" class="form-control form-control-sm" required :disabled="!canEditMarketField">
+                                <option value="">-- เลือกตลาด --</option>
+                                @foreach(($marketOptions ?? []) as $group)
+                                    <optgroup label="{{ $group['label'] ?? '-' }}">
+                                        @foreach(($group['options'] ?? []) as $market)
+                                            <option value="{{ (string) ($market['value'] ?? '') }}"
+                                                    data-logo="{{ $market['logo'] ?? '' }}">
+                                                {{ $market['text'] ?? '-' }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
+                        </template>
+                        <template v-else>
+                            <b-form-input
+                                size="sm"
+                                readonly
+                                :value="currentDraw.market_name || '-'">
+                            </b-form-input>
+                        </template>
                     </b-form-group>
                 </b-col>
                 <b-col cols="12" md="6">
@@ -1265,6 +1274,7 @@
                     this.$nextTick(() => {
                         this.syncMarketSelectValue();
                         this.applyMarketSelectDisabledState();
+                        setTimeout(() => this.syncMarketSelectValue(), 50);
                     });
                 },
                 validateDrawWindow() {
