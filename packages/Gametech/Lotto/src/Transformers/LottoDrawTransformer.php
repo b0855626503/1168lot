@@ -13,9 +13,11 @@ class LottoDrawTransformer extends TransformerAbstract
         $top3 = '-';
         $top2 = '-';
         $bottom2 = '-';
+        $isNoResult = false;
 
         if (is_array($model->result_number) && ! empty($model->result_number)) {
             if ($this->isNoResultOutcome($model->result_number)) {
+                $isNoResult = true;
                 $label = trim((string) ($model->result_number['no_result_reason'] ?? '')) ?: 'งดออกผล';
                 $top3 = $label;
                 $top2 = $label;
@@ -42,7 +44,8 @@ class LottoDrawTransformer extends TransformerAbstract
             'action'         => view('admin::module.lotto.draws.datatables_actions', [
                 'id' => $model->id,
                 'status' => (string) $model->status,
-                'is_no_result' => is_array($model->result_number) ? $this->isNoResultOutcome($model->result_number) : false,
+                'is_no_result' => $isNoResult,
+                'can_cancel_all_refund' => $this->canCancelAllRefundAction((string) $model->status, $isNoResult),
             ])->render(),
         ];
     }
@@ -102,5 +105,14 @@ class LottoDrawTransformer extends TransformerAbstract
         }
 
         return (string) ($resultNumber['status'] ?? '') === 'no_result';
+    }
+
+    private function canCancelAllRefundAction(string $status, bool $isNoResult): bool
+    {
+        if (in_array($status, ['open', 'closed'], true)) {
+            return true;
+        }
+
+        return $status === 'resulted' && $isNoResult;
     }
 }

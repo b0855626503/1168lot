@@ -18,7 +18,7 @@
         </button>
     @endif
 
-    @if((in_array($status, ['open', 'closed']) || ($status === 'resulted' && !empty($is_no_result))) && $canCancelAllRefund)
+    @if(!empty($can_cancel_all_refund) && $canCancelAllRefund)
         <button type="button" class="btn btn-danger btn-block btn-xs mr-1 mb-1" onclick="cancelAllTicketsAndRefund({{ $id }})">
             <i class="fas fa-undo-alt"></i> ยกเลิกโพย+คืนเงิน
         </button>
