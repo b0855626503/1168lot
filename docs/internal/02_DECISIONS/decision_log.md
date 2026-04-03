@@ -12,7 +12,9 @@
 - เพิ่ม metadata กติกาแนะนำจากโปรโมชั่นระบบ `pro_faststart`:
   - `rule.length_type`, `rule.bonus_percent`, `rule.bonus_price`, `rule.display_value`
 - เพิ่มข้อมูล config จาก wallet เพื่อให้ frontend แสดงรายละเอียดการแนะนำได้ครบ:
-  - `wallet.faststart_open`, `wallet.contributor_base_url`, `wallet.contributor_register_url`
+  - `wallet.faststart_open`, `wallet.contributor_base_url`
+- เพิ่มรายการผู้ถูกแนะนำใน response:
+  - `referrals[]` มี `username`, `name`, `regis_date`, `first_deposit_amount`, `first_deposit_date`
 - เหตุผล:
   - รองรับหน้าแนะนำเพื่อนบน frontend ใหม่ให้เรียกข้อมูลในเส้นเดียวผ่าน `/api/v1`
   - ลดการพึ่ง endpoint เก่าจาก wallet module (`/member/contributor/api`)

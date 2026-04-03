@@ -144,7 +144,12 @@
 - response มีข้อมูล config ที่หน้า wallet ใช้อ้างอิง:
   - `wallet.faststart_open`
   - `wallet.contributor_base_url`
-  - `wallet.contributor_register_url`
+- response มีรายการผู้ถูกแนะนำใน field `referrals`:
+  - `username`
+  - `name`
+  - `regis_date` (`Y-m-d`)
+  - `first_deposit_amount`
+  - `first_deposit_date` (`Y-m-d H:i:s`, nullable)
 
 ## นโยบาย Frontend Lotto Critical Path API
 

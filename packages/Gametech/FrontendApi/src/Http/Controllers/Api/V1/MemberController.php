@@ -61,10 +61,32 @@ class MemberController extends BaseController
                 data_get($affProfile, 'payments_promotion_sum_credit_bonus', 0)
             );
 
+            $downlines = $memberRepository
+                ->without('bank')
+                ->select(['code', 'upline_code', 'user_name', 'name', 'date_regis'])
+                ->where('upline_code', $member->code)
+                ->where('enable', 'Y')
+                ->with(['payment_first' => function ($query) {
+                    $query->select(['code', 'member_topup', 'value', 'date_approve', 'date_create']);
+                }])
+                ->orderByDesc('date_regis')
+                ->get();
+
+            $referrals = $downlines->map(function ($downline) {
+                $firstDepositAt = $downline->payment_first->date_approve
+                    ?? $downline->payment_first->date_create
+                    ?? null;
+
+                return [
+                    'username' => (string) ($downline->user_name ?? ''),
+                    'name' => (string) ($downline->name ?? ''),
+                    'regis_date' => optional($downline->date_regis)->format('Y-m-d'),
+                    'first_deposit_amount' => (float) ($downline->payment_first->value ?? 0),
+                    'first_deposit_date' => $firstDepositAt ? $firstDepositAt->format('Y-m-d H:i:s') : null,
+                ];
+            })->values();
+
             $contributorBaseUrl = trim((string) ($config['contributor'] ?? ''));
-            $contributorRegisterUrl = $contributorBaseUrl !== ''
-                ? rtrim($contributorBaseUrl, '/') . '/contributor/' . $member->code
-                : route('customer.contributor.register', $member->code);
 
             $payload = [
                 'summary' => [
@@ -81,10 +103,10 @@ class MemberController extends BaseController
                     'bonus_price' => $bonusPrice,
                     'display_value' => $ruleDisplay,
                 ],
+                'referrals' => $referrals,
                 'wallet' => [
                     'faststart_open' => ($config['faststart_open'] ?? 'N') === 'Y',
                     'contributor_base_url' => $contributorBaseUrl,
-                    'contributor_register_url' => $contributorRegisterUrl,
                 ],
             ];
 

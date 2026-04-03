@@ -335,10 +335,18 @@ Response ตัวอย่าง
     "bonus_price": 0,
     "display_value": "1.50 %"
   },
+  "referrals": [
+    {
+      "username": "0900000012",
+      "name": "Ref User One",
+      "regis_date": "2026-04-01",
+      "first_deposit_amount": 300.0,
+      "first_deposit_date": "2026-04-01 12:33:21"
+    }
+  ],
   "wallet": {
     "faststart_open": true,
-    "contributor_base_url": "https://example.com",
-    "contributor_register_url": "https://example.com/contributor/12345"
+    "contributor_base_url": "https://example.com"
   },
   "success": true,
   "message": "complete"
