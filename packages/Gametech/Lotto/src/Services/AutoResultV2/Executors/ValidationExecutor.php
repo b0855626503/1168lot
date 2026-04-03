@@ -58,12 +58,7 @@ class ValidationExecutor
      */
     private function detectNoResultReason(array $payload): ?string
     {
-        foreach (['first_prize', 'last_2_digits', 'top_3', 'bottom_2', 'status', 'result_status', 'message'] as $key) {
-            if (! array_key_exists($key, $payload)) {
-                continue;
-            }
-
-            $value = $payload[$key];
+        foreach ($payload as $value) {
             if (! is_scalar($value)) {
                 continue;
             }

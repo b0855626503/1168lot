@@ -115,6 +115,11 @@ class ResultComposer
                     continue;
                 }
 
+                if ($this->containsNoResultMarker($scalar)) {
+                    $canonical[$field] = trim($scalar);
+                    continue;
+                }
+
                 $canonical[$field] = preg_replace('/\D+/', '', $scalar);
             }
         }
@@ -179,6 +184,33 @@ class ResultComposer
         }
 
         return null;
+    }
+
+    private function containsNoResultMarker(string $text): bool
+    {
+        $normalized = mb_strtolower(trim($text));
+        $normalized = preg_replace('/\s+/', '', $normalized);
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        foreach ([
+            'งดออกผล',
+            'งดออก',
+            'ไม่ออกผล',
+            'noresult',
+            'cancelled',
+            'canceled',
+            'cancel',
+            'void',
+        ] as $marker) {
+            if (str_contains($normalized, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

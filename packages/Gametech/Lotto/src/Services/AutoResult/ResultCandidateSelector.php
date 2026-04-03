@@ -93,6 +93,10 @@ class ResultCandidateSelector
      */
     private function missingRequiredFields(array $fields, array $requiredFields): array
     {
+        if ($this->containsNoResultMarker($fields)) {
+            return [];
+        }
+
         $missing = [];
         foreach ($requiredFields as $field) {
             $value = $fields[$field] ?? null;
@@ -185,6 +189,40 @@ class ResultCandidateSelector
         }
 
         return trim((string) $value) !== '';
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     */
+    private function containsNoResultMarker(array $fields): bool
+    {
+        foreach ($fields as $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+
+            $normalized = mb_strtolower(preg_replace('/\s+/', '', trim((string) $value)));
+            if ($normalized === '') {
+                continue;
+            }
+
+            foreach ([
+                'งดออกผล',
+                'งดออก',
+                'ไม่ออกผล',
+                'noresult',
+                'cancelled',
+                'canceled',
+                'cancel',
+                'void',
+            ] as $marker) {
+                if (str_contains($normalized, $marker)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

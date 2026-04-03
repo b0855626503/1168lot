@@ -99,6 +99,10 @@ class SelectionExecutor
      */
     private function hasRequired(array $fields, array $required): bool
     {
+        if ($this->containsNoResultMarker($fields)) {
+            return true;
+        }
+
         foreach ($required as $field) {
             $value = $fields[$field] ?? null;
             if ($this->isBlank($value)) {
@@ -143,6 +147,40 @@ class SelectionExecutor
         }
 
         return trim((string) $value) === '';
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     */
+    private function containsNoResultMarker(array $fields): bool
+    {
+        foreach ($fields as $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+
+            $normalized = mb_strtolower(preg_replace('/\s+/', '', trim((string) $value)));
+            if ($normalized === '') {
+                continue;
+            }
+
+            foreach ([
+                'งดออกผล',
+                'งดออก',
+                'ไม่ออกผล',
+                'noresult',
+                'cancelled',
+                'canceled',
+                'cancel',
+                'void',
+            ] as $marker) {
+                if (str_contains($normalized, $marker)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function scalarToTrimmedString(mixed $value): string
