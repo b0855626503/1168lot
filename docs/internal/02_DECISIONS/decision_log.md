@@ -1,5 +1,51 @@
 # Decision Log
 
+## 2026-04-04 — Single-Page Admin Async Menu Pattern Reuses Dashboard Root Vue Bootstrap (APPROVED)
+
+- สำหรับเมนู admin แบบหน้าเดียวที่ต้อง render UI แบบ Vue component ทั้งหน้าและ fetch ข้อมูล async ในหน้าเดิม:
+  - ให้ Blade วาง custom component tag ใน `@section('content')` โดยตรง
+  - ให้ layout ทั้งหน้าอยู่ใน `script type="text/x-template"`
+  - ให้ register component ผ่าน `Vue.component(...)` ใน `script type="module"`
+  - ให้ helper functions ที่ component ใช้จริงอยู่ใน module scope เดียวกัน ห้ามแยกไว้คนละ script ถ้า component ต้องเรียกตรง
+  - ให้แยก root bootstrap เป็น `new Vue({ el: '#app' ... })` อีก script ตาม pattern ของ dashboard
+- สำหรับ input ที่เปลี่ยนค่าแล้วต้องยิง fetch ทันที:
+  - ให้ handler รับค่าจาก `$event.target.value` โดยตรง แทนการอ้าง state ที่เพิ่ง bind เพื่อหลีกเลี่ยงจังหวะ model ยังไม่ sync
+- scope exclusion:
+  - ไม่รวมเมนูที่ใช้ DataTables เป็นแกนหลักของหน้า เพราะหน้าเหล่านั้นมี lifecycle/filter/reload คนละแบบและต้องใช้ pattern ของ DataTables โดยตรง
+- เหตุผล:
+  - ทำให้ custom component ถูก compile แน่นอนใน layout admin ปัจจุบัน
+  - ลดเคส component หา helper ไม่เจอเพราะอยู่คนละ script scope
+  - ลดเคส change event ยิงด้วยค่าเก่าหรือไม่ยิง request ใหม่ตามค่าที่ผู้ใช้เพิ่งเลือก
+
+## 2026-04-03 — Results-by-Date Page Auto-Fetches Initial Date on Mount (APPROVED)
+
+- หน้า `admin/lotto/reports/results-by-date` จะ trigger `GET /lotto/reports/results-by-date/loaddata` ตอน mount ทันที
+- policy การเลือกวันที่เริ่มต้น:
+  - ถ้า URL มี `?draw_date=YYYY-MM-DD` ที่ valid ให้ใช้ค่านั้น
+  - ถ้าไม่มี ให้ใช้วันที่ปัจจุบันของ browser
+- เมื่อ mounted แล้ว input `draw_date` และข้อมูลในตารางต้องอิงวันเดียวกันเสมอ
+- เหตุผล:
+  - ปิดช่อง mismatch ที่หน้าแสดง input เป็นวันปัจจุบัน แต่ข้อมูลในตารางยังเป็น payload เดิมก่อน mount
+  - คงความสามารถเปิดลิงก์พร้อม `draw_date` เพื่อดูย้อนหลังได้โดยไม่ถูกทับเป็นวันปัจจุบัน
+
+## 2026-04-03 — Split Results-by-Date Page Route and LoadData Route (APPROVED)
+
+- แยกหน้า `admin/lotto/reports/results-by-date` ออกเป็น 2 เส้นชัดเจน:
+  - `GET /lotto/reports/results-by-date` = render หน้า report
+  - `GET /lotto/reports/results-by-date/loaddata` = คืนข้อมูล JSON ตาม `draw_date`
+- หน้า Vue ของ report จะเรียกเส้น `loaddata` โดยตรงตอนเลือกวันที่ และอัปเดตตารางแบบ async
+- เหตุผล:
+  - ให้โครง route สอดคล้อง pattern เมนู dashboard (หน้าแสดงผลแยกจาก data endpoint)
+  - ลดความสับสนในการ debug ว่า request ไหนคือ page render และ request ไหนคือ data load
+
+## 2026-04-03 — Results-by-Date Admin Report Uses Vue x-template Async Search (APPROVED)
+
+- หน้า `admin/lotto/reports/results-by-date` refactor เป็น Vue component (`script type="text/x-template"`)
+- กดค้นหา (`draw_date`) แล้วเรียก endpoint เดิมแบบ AJAX (`Accept: application/json`) และอัปเดตตารางในหน้าเดิม
+- URL query (`?draw_date=...`) ยังถูกอัปเดตผ่าน `history.replaceState`
+- เหตุผล:
+  - ให้ UX ค้นหาเร็วขึ้นโดยไม่ reload หน้า และทำโครงหน้าให้ maintain ง่ายขึ้นใน pattern Vue
+
 ## 2026-04-03 — Telegram Result Message Uses Market `auto_result_time` and Adds Origin Line (APPROVED)
 
 - ปรับ `SendDrawResultSummaryTelegramJob`:

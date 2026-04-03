@@ -330,6 +330,8 @@ Route::domain(
             Route::get('reports/results-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultsByDateReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.reports.results_by_date',
             ])->name('admin.lotto.reports.results_by_date');
+            Route::get('reports/results-by-date/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultsByDateReportController@loadData')
+                ->name('admin.lotto.reports.results_by_date.loaddata');
         });
     });
 });

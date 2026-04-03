@@ -19,11 +19,21 @@ class LottoResultsByDateReportController extends AppBaseController
 
     public function index(Request $request)
     {
-        $drawDate = trim((string) $request->query('draw_date', now()->toDateString()));
-        $isValidDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate) === 1;
-        if (! $isValidDate) {
-            $drawDate = now()->toDateString();
-        }
+        $payload = $this->buildPayload($request);
+
+        return view($this->_config['view'], $payload);
+    }
+
+    public function loadData(Request $request)
+    {
+        $payload = $this->buildPayload($request);
+
+        return response()->json($payload);
+    }
+
+    private function buildPayload(Request $request): array
+    {
+        $drawDate = $this->resolveDrawDate($request);
 
         $rows = LottoDraw::query()
             ->with([
@@ -82,15 +92,27 @@ class LottoResultsByDateReportController extends AppBaseController
             ->sortBy('sort')
             ->values();
 
-        return view($this->_config['view'], [
+        return [
             'drawDate' => $drawDate,
-            'groups' => $groups,
+            'groups' => $groups->values()->all(),
             'summary' => [
                 'group_count' => $groups->count(),
                 'market_count' => $groups->sum(static fn (array $group): int => count($group['markets'])),
                 'result_count' => $latestByMarket->count(),
             ],
             'serverTime' => Carbon::now()->format('Y-m-d H:i:s'),
-        ]);
+        ];
+    }
+
+    private function resolveDrawDate(Request $request): string
+    {
+        $drawDate = trim((string) $request->query('draw_date', now()->toDateString()));
+        $isValidDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate) === 1;
+
+        if (! $isValidDate) {
+            return now()->toDateString();
+        }
+
+        return $drawDate;
     }
 }

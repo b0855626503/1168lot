@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-03
+อัปเดตล่าสุด: 2026-04-04
 
 ## ภาพรวมระบบ
 
@@ -251,6 +251,18 @@
   - `draw_date`, `result_at`, `first_prize`, `top_3`, `top_2`, `bottom_2`
 - กรณีงวดมีผลแบบ `งดออกผล` (`result_number.no_result=true` หรือ `status=no_result`)
   - ตารางรายงานจะแสดงคำว่า `งดออกผล` ในคอลัมน์ผลรางวัลแทน `-`
+- หน้า `/lotto/reports/results-by-date` ใช้ Vue (`x-template`) สำหรับค้นหาแบบ async
+  - route หน้าแสดงผล (`GET /lotto/reports/results-by-date`) แยกจาก route โหลดข้อมูล (`GET /lotto/reports/results-by-date/loaddata`)
+  - ตอนเปิดหน้า ถ้า URL ไม่มี `draw_date` ระบบจะตั้ง input เป็นวันที่ปัจจุบันของ browser และเรียก `loaddata` อัตโนมัติ
+  - ถ้า URL มี `?draw_date=...` ที่ valid ระบบจะคงวันที่นั้นไว้และเรียก `loaddata` ของวันนั้นตอนเปิดหน้า
+  - เมื่อเลือก `draw_date` ระบบจะเรียก `loaddata` และอัปเดตผลลัพธ์ในหน้าเดิมโดยไม่ reload ทั้งหน้า
+  - pattern implementation มาตรฐานนี้ใช้เฉพาะเมนู admin แบบหน้าเดียวที่ render component และ fetch ข้อมูลในหน้าเดียว:
+    - ใน Blade วาง custom tag ของหน้าไว้ตรง `@section('content')` โดยตรง เช่น `<result-app ref="resultApp"></result-app>`
+    - วาง layout ทั้งหน้าไว้ใน `script type="text/x-template"`
+    - register component ด้วย `Vue.component(...)` ภายใน `script type="module"` และให้ helper functions ที่ component ใช้ (`validate/filter/init`) อยู่ใน module scope เดียวกัน
+    - bootstrap `new Vue({ el: '#app' ... })` แยกอีก script ตาม pattern เดียวกับ dashboard เพื่อให้ root Vue compile custom component หลัง register เสร็จ
+    - event ที่ต้อง fetch ตามค่าจากฟอร์มทันที ให้ส่งค่าจริงจาก `$event.target.value` เข้า method โดยตรง แทนการพึ่ง state ที่อาจยัง sync ไม่ทัน
+    - ไม่ใช้กับเมนูที่ขับด้วย DataTables (`window.LaravelDataTables`, `preXhr`, server-side table actions`) เพราะเมนูกลุ่มนั้นต้องใช้ pattern ของ DataTables แยกต่างหาก
 
 ## นโยบายยกเลิกโพยทั้งงวดและคืนเงิน (Admin Draws)
 
