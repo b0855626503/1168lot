@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-04-03 — Fix V2 Fetch Context to Propagate `lookup_date` from Source Policy (APPROVED)
+
+- ปรับ `V2ResultPipelineRunner` ให้ส่ง `lookup_date` และ `lookup_date_compact` เข้า `FetchExecutor` ทุกครั้ง
+- เหตุผล:
+  - ปิดช่องโหว่ที่ dry-run/auto-result บางเคส fallback ไปใช้ `expected_draw_date` ทำให้ query `{{lookup_date}}` ไม่เลื่อนวันตาม `lookup_date_mode`
+  - รองรับตลาดที่ต้องยิง upstream ด้วยวันก่อนหน้า (เช่น `ROUND_DATE_MINUS_DAYS`)
+
 ## 2026-04-03 — Draws Cancel-All+Refund จำกัดเฉพาะ `resulted + งดออกผล` เท่านั้น (APPROVED)
 
 - policy ล่าสุดของปุ่ม `ยกเลิกโพย+คืนเงิน`:

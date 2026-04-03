@@ -79,6 +79,8 @@ class V2ResultPipelineRunner
             'endpoint_url' => $compiled->fetch()->endpointUrl(),
             'parser_type' => $compiled->parser()->type(),
             'expected_draw_date' => is_string($expectedDrawDate) ? $expectedDrawDate : null,
+            'lookup_date' => is_string($options['lookup_date'] ?? null) ? (string) $options['lookup_date'] : null,
+            'lookup_date_compact' => is_string($options['lookup_date_compact'] ?? null) ? (string) $options['lookup_date_compact'] : null,
         ]);
         $trace['response_content_type'] = $this->stringValue($fetch['response_content_type'] ?? '');
         $trace['response_preview'] = mb_substr($this->stringValue($fetch['response_body'] ?? ''), 0, 1000);

@@ -553,6 +553,7 @@ class LottoResultSourceController extends AppBaseController
             'source_id: ' . (int) ($source->id ?? 0),
             'draw_context: ' . ($usingVirtualDraw ? 'virtual (ไม่ผูกงวดจริง)' : ('draw_id=' . (int) ($draw->id ?? 0))),
             'expected_draw_date: ' . (string) $validated['draw_date'],
+            'lookup_date: ' . $lookupDate,
             'status: ' . $status,
         ];
         if ($errorCode !== '') {

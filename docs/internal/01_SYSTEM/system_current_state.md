@@ -80,6 +80,8 @@
 - เป้าหมายคือไม่ผูกกับ worker queue ใน production เพื่อให้คำสั่งถูกประมวลผลทันทีและเห็นผล/log ได้จริง
 - ฝั่ง UI ของปุ่มดังกล่าวต้องแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว (ห้าม silent failure)
 - รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
+- pipeline v2 ส่ง `lookup_date` (และ `lookup_date_compact`) ต่อเข้า `FetchExecutor` โดยตรง
+  - ถ้าตั้ง source เป็น `ROUND_DATE_MINUS_DAYS` ระบบ dry-run/retry จะยิง upstream ด้วยวันที่ที่เลื่อนแล้วจริง (ไม่ fallback เป็น `expected_draw_date`)
 
 ## นโยบาย Auto Result Apply/Settlement (Per Market)
 
