@@ -1133,7 +1133,7 @@
                         width: '100%',
                         theme: 'bootstrap4',
                         dropdownParent: dropdownParent,
-                        placeholder: '-- เลือกรายการหวย --',
+                        placeholder: '-- เลืึอกรายการหวย --',
                         allowClear: false,
                         templateResult(state) {
                             return self.renderMarketOption(state, $select);

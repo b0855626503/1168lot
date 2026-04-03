@@ -64,10 +64,11 @@
         }
 
         .lotto-group-packages-package-thumb {
-            width: 56px;
-            height: 56px;
+            max-width: 250px;
+            width: 100%;
+            height: auto;
             border-radius: 8px;
-            object-fit: cover;
+            object-fit: contain;
             border: 1px solid #dee2e6;
         }
     </style>
@@ -218,6 +219,7 @@
                                      size="sm"
                                      placeholder="อัปโหลดรูปภาพแพกเกจ">
                         </b-form-file>
+                        <small class="form-text text-muted">ขนาดแนะนำ 1366*490 px</small>
                     </b-form-group>
 
                     <b-form-checkbox v-model="createForm.is_active" switch size="sm" class="mb-3">
@@ -299,6 +301,7 @@
                                      size="sm"
                                      placeholder="อัปโหลดรูปภาพแพกเกจ">
                         </b-form-file>
+                        <small class="form-text text-muted">ขนาดแนะนำ 1366*490 px</small>
                     </b-form-group>
 
                     <b-form-checkbox v-model="editForm.is_active" switch size="sm" class="mb-3">
