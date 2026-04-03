@@ -318,6 +318,26 @@ Response ตัวอย่าง (ย่อ)
 - `GET /member/contributor`
 - Auth: ต้องใช้ token
 
+โครง response จริง
+- `summary`
+  - `referred_members` (`integer`) จำนวนสมาชิกที่อยู่ใต้ `upline_code` และ `enable = Y`
+  - `referral_code` (`string`) รหัสแนะนำสมาชิก (ถ้ายังไม่มีจะเป็นค่าว่าง)
+  - `referral_income` (`number`) รายได้แนะนำสะสมจาก `members.faststart`
+  - `promotion_bonus_income` (`number`) ยอดโบนัสแนะนำรวมจาก `payments_promotion.credit_bonus`
+  - `promotion_bonus_count` (`integer`) จำนวนรายการโบนัสแนะนำจาก `payments_promotion`
+- `rule`
+  - `promotion_id` (`string`) ค่าคงที่ `pro_faststart`
+  - `length_type` (`string|null`) เช่น `PERCENT` หรือ `PRICE`
+  - `bonus_percent` (`number|null`)
+  - `bonus_price` (`number|null`)
+  - `display_value` (`string|null`) ค่าที่พร้อมแสดงผล เช่น `1.50 %` หรือ `50.00`
+- `referrals` (`array<object>`) รายชื่อสมาชิกที่แนะนำได้
+  - `username` (`string`)
+  - `name` (`string`)
+  - `regis_date` (`string|null`, format `Y-m-d`)
+  - `first_deposit_amount` (`number`) ยอดฝากแรก (ถ้ายังไม่เคยฝาก = `0`)
+  - `first_deposit_date` (`string|null`, format `Y-m-d H:i:s`)
+
 Response ตัวอย่าง
 ```json
 {
@@ -344,14 +364,15 @@ Response ตัวอย่าง
       "first_deposit_date": "2026-04-01 12:33:21"
     }
   ],
-  "wallet": {
-    "faststart_open": true,
-    "contributor_base_url": "https://example.com"
-  },
   "success": true,
   "message": "complete"
 }
 ```
+
+HTTP status
+- สำเร็จ: `200`
+- token ไม่ถูกต้อง/หมดอายุ: `401`
+- เกิดข้อผิดพลาดภายใน: `422`
 
 ---
 

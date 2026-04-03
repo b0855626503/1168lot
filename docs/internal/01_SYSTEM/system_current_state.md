@@ -141,9 +141,6 @@
   - ยอดโบนัสแนะนำสะสมและจำนวนรายการจาก `payments_promotion` (`promotion_bonus_income`, `promotion_bonus_count`)
 - response มีข้อมูลกติกาโปรโมชั่นแนะนำจาก `promotions.id = pro_faststart`:
   - `length_type`, `bonus_percent`, `bonus_price`, `display_value`
-- response มีข้อมูล config ที่หน้า wallet ใช้อ้างอิง:
-  - `wallet.faststart_open`
-  - `wallet.contributor_base_url`
 - response มีรายการผู้ถูกแนะนำใน field `referrals`:
   - `username`
   - `name`

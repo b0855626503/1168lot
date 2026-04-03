@@ -38,7 +38,6 @@ class MemberController extends BaseController
 
             $memberRepository = app('Gametech\Member\Repositories\MemberRepository');
             $promotionRepository = app('Gametech\Promotion\Repositories\PromotionRepository');
-            $config = collect(core()->getConfigData());
 
             $member = $memberRepository->findOrFail($member->code);
             $affProfile = $memberRepository->getAff($member->code);
@@ -86,8 +85,6 @@ class MemberController extends BaseController
                 ];
             })->values();
 
-            $contributorBaseUrl = trim((string) ($config['contributor'] ?? ''));
-
             $payload = [
                 'summary' => [
                     'referred_members' => (int) data_get($affProfile, 'downs_count', 0),
@@ -104,10 +101,6 @@ class MemberController extends BaseController
                     'display_value' => $ruleDisplay,
                 ],
                 'referrals' => $referrals,
-                'wallet' => [
-                    'faststart_open' => ($config['faststart_open'] ?? 'N') === 'Y',
-                    'contributor_base_url' => $contributorBaseUrl,
-                ],
             ];
 
             return $this->sendResponseNew($payload, 'complete');
