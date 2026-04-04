@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -12,12 +13,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class SyncDashboardSummaryBucket implements ShouldQueue
+class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProcessing
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 5;
     public int $timeout = 120;
+    public int $uniqueFor = 180;
 
     /**
      * @var int[]
@@ -52,12 +54,20 @@ class SyncDashboardSummaryBucket implements ShouldQueue
 
     public function handle(DashboardSummarySyncService $syncService): void
     {
+        $payload = $syncService->consumePendingBucketPayload(
+            summaryDate: $this->summaryDate,
+            webCode: $this->webCode,
+            fallbackUpdatedSections: $this->updatedSections,
+            fallbackSourceType: $this->sourceType,
+            fallbackSourceId: $this->sourceId,
+        );
+
         $syncService->syncBucket(
             summaryDate: $this->summaryDate,
             webCode: $this->webCode,
-            updatedSections: $this->updatedSections,
-            sourceType: $this->sourceType,
-            sourceId: $this->sourceId,
+            updatedSections: (array) ($payload['updated_sections'] ?? $this->updatedSections),
+            sourceType: $payload['source_type'] ?? $this->sourceType,
+            sourceId: $payload['source_id'] ?? $this->sourceId,
         );
     }
 
@@ -76,5 +86,10 @@ class SyncDashboardSummaryBucket implements ShouldQueue
     private function lockKey(): string
     {
         return sprintf('dashboard-summary:%s:%s', $this->webCode, $this->summaryDate);
+    }
+
+    public function uniqueId(): string
+    {
+        return $this->lockKey();
     }
 }

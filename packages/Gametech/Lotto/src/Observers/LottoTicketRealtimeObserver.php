@@ -12,15 +12,18 @@ class LottoTicketRealtimeObserver
     public function created(LottoTicket $ticket): void
     {
         $total = $this->resolveTotalTickets();
+        [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
 
-        DB::afterCommit(function () use ($total): void {
-            broadcast(new LottoTicketListChanged('created', $total));
+        DB::afterCommit(function () use ($total, $marketName, $drawDate): void {
+            broadcast(new LottoTicketListChanged('created', $total, $marketName, $drawDate));
             broadcast(new RealtimePublicActivityUpdated(
                 'lotto',
                 'lotto.ticket.list.changed',
                 [
                     'action' => 'created',
                     'total' => $total,
+                    'market_name' => $marketName,
+                    'draw_date' => $drawDate,
                 ]
             ));
         });
@@ -45,15 +48,18 @@ class LottoTicketRealtimeObserver
 
         $total = $this->resolveTotalTickets();
         $action = $toStatus === 'cancelled' ? 'cancelled' : 'resulted';
+        [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
 
-        DB::afterCommit(function () use ($total, $action): void {
-            broadcast(new LottoTicketListChanged($action, $total));
+        DB::afterCommit(function () use ($total, $action, $marketName, $drawDate): void {
+            broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate));
             broadcast(new RealtimePublicActivityUpdated(
                 'lotto',
                 'lotto.ticket.list.changed',
                 [
                     'action' => $action,
                     'total' => $total,
+                    'market_name' => $marketName,
+                    'draw_date' => $drawDate,
                 ]
             ));
         });
@@ -62,5 +68,21 @@ class LottoTicketRealtimeObserver
     private function resolveTotalTickets(): int
     {
         return (int) LottoTicket::query()->count();
+    }
+
+    /**
+     * @return array{0:?string,1:?string}
+     */
+    private function resolveDrawContext(LottoTicket $ticket): array
+    {
+        $ticket->loadMissing('draw.market');
+
+        $marketName = trim((string) data_get($ticket, 'draw.market.name', ''));
+        $drawDate = $ticket->draw?->draw_date?->format('Y-m-d');
+
+        return [
+            $marketName !== '' ? $marketName : null,
+            $drawDate !== '' ? $drawDate : null,
+        ];
     }
 }

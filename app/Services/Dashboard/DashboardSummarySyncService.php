@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 class DashboardSummarySyncService
 {
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
+    private const PENDING_BUCKET_KEY_PREFIX = 'dashboard:summary:pending';
 
     private DashboardBucketResolver $bucketResolver;
     private DashboardWebCodeResolver $webCodeResolver;
@@ -63,14 +64,86 @@ class DashboardSummarySyncService
                 ? $this->webCodeResolver->resolve($bucketWebCode)
                 : $defaultWebCode;
 
-            SyncDashboardSummaryBucket::dispatch(
+            $pendingPayload = $this->mergePendingBucketPayload(
                 summaryDate: (string) $bucket['summary_date'],
                 webCode: $targetWebCode,
                 updatedSections: (array) ($bucket['updated_sections'] ?? []),
                 sourceType: $sourceType,
                 sourceId: $sourceId,
             );
+
+            SyncDashboardSummaryBucket::dispatch(
+                summaryDate: (string) $pendingPayload['summary_date'],
+                webCode: $targetWebCode,
+                updatedSections: (array) ($pendingPayload['updated_sections'] ?? []),
+                sourceType: $pendingPayload['source_type'] ?? $sourceType,
+                sourceId: $pendingPayload['source_id'] ?? $sourceId,
+            );
         }
+    }
+
+    /**
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,revision:string}
+     */
+    public function mergePendingBucketPayload(
+        string $summaryDate,
+        string $webCode,
+        array $updatedSections,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
+    ): array {
+        $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
+        $existing = Cache::get($cacheKey, []);
+        $existing = is_array($existing) ? $existing : [];
+
+        $resolvedSourceType = $this->normalizeNullableString($sourceType)
+            ?? $this->normalizeNullableString($existing['source_type'] ?? null);
+        $resolvedSourceId = $this->normalizeNullableString($sourceId)
+            ?? $this->normalizeNullableString($existing['source_id'] ?? null);
+
+        $payload = [
+            'summary_date' => $summaryDate,
+            'web_code' => $webCode,
+            'updated_sections' => $this->normalizeUpdatedSections(array_merge(
+                (array) ($existing['updated_sections'] ?? []),
+                $updatedSections
+            )),
+            'source_type' => $resolvedSourceType,
+            'source_id' => $resolvedSourceId,
+            'revision' => sprintf('%.6f', microtime(true)),
+        ];
+
+        Cache::put($cacheKey, $payload, now()->addMinutes(10));
+
+        return $payload;
+    }
+
+    /**
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string}
+     */
+    public function consumePendingBucketPayload(
+        string $summaryDate,
+        string $webCode,
+        array $fallbackUpdatedSections = [],
+        ?string $fallbackSourceType = null,
+        ?string $fallbackSourceId = null,
+    ): array {
+        $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
+        $existing = Cache::pull($cacheKey, []);
+        $existing = is_array($existing) ? $existing : [];
+
+        return [
+            'summary_date' => $summaryDate,
+            'web_code' => $webCode,
+            'updated_sections' => $this->normalizeUpdatedSections(array_merge(
+                $fallbackUpdatedSections,
+                (array) ($existing['updated_sections'] ?? [])
+            )),
+            'source_type' => $this->normalizeNullableString($existing['source_type'] ?? null)
+                ?? $this->normalizeNullableString($fallbackSourceType),
+            'source_id' => $this->normalizeNullableString($existing['source_id'] ?? null)
+                ?? $this->normalizeNullableString($fallbackSourceId),
+        ];
     }
 
     public function syncBucket(
@@ -312,5 +385,37 @@ class DashboardSummarySyncService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function pendingBucketCacheKey(string $summaryDate, string $webCode): string
+    {
+        return sprintf('%s:%s:%s', self::PENDING_BUCKET_KEY_PREFIX, $webCode, $summaryDate);
+    }
+
+    /**
+     * @param array<int,mixed> $sections
+     * @return array<int,string>
+     */
+    private function normalizeUpdatedSections(array $sections): array
+    {
+        $sections = array_values(array_unique(array_filter(array_map(
+            static fn ($section) => is_string($section) ? trim($section) : '',
+            $sections
+        ))));
+
+        sort($sections);
+
+        return $sections;
+    }
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        if (! is_scalar($value) || $value === null) {
+            return null;
+        }
+
+        $text = trim((string) $value);
+
+        return $text === '' ? null : $text;
     }
 }

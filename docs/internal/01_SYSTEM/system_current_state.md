@@ -48,6 +48,11 @@
   - `resulted` = ฟ้าอ่อน
 - ตาราง `lotto/draws` จัดข้อมูลใน cell เป็นแนวตั้งกึ่งกลาง (`vertical-align: middle`) และจัดข้อความกึ่งกลางในส่วนข้อมูลแถว
 - หน้า `lotto/draws` รองรับ filter เพิ่มเติมด้วย `สถานะ` (`draft/open/closed/resulted`) ร่วมกับ group/market/draw_date
+- realtime toast ของรายการ `โพยหวย` (`lotto.ticket.list.changed`) ต้องส่งข้อความที่อ่านรู้เรื่องใน event เดียว
+  - ถ้ามี context ของ draw ให้แนบ `market_name` และ `draw_date`
+  - ตัวอย่างข้อความ:
+    - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
+    - `มีการคืนโพยหวย: หวยรัฐบาล งวดวันที่ 2026-04-04`
 
 ## นโยบาย ACL แยกสิทธิ์ CRUD (Admin Lotto)
 
@@ -140,6 +145,25 @@
 
 - endpoint `GET /api/v1/games/{type}/{provider}` จะ trigger provider `gamelist` ก่อนทุกครั้ง
 - จากนั้นระบบจะอ่านและคืนข้อมูลจาก `GameListProxy` เป็นหลัก (คง response contract v1 เดิม)
+
+## นโยบาย Dashboard Summary Queue
+
+- queue job `SyncDashboardSummaryBucket` ใช้ bucket key ระดับ:
+  - `web_code + summary_date`
+- ตอน dispatch:
+  - ต้อง merge `updated_sections` ที่ค้างอยู่ใน cache ของ bucket เดียวกันก่อน
+  - แล้วค่อย dispatch job ของ bucket นั้น
+- job ใช้ `ShouldBeUniqueUntilProcessing`
+  - กันไม่ให้มีหลาย queued jobs ซ้ำกันของ bucket เดียวก่อนเริ่มรัน
+  - แต่ยังยอมให้มี follow-up job ได้ ถ้ามี event ใหม่เข้ามาระหว่าง job ปัจจุบันกำลังประมวลผล
+- job ยังใช้ `WithoutOverlapping`
+  - กันไม่ให้ bucket เดียวกันประมวลผลพร้อมกันจริงหลายตัว
+- ตอน `handle()`:
+  - job ต้อง consume pending payload ล่าสุดของ bucket จาก cache ก่อน sync
+  - เพื่อให้ recompute ครั้งเดียวครอบคลุม `updated_sections` ล่าสุด ไม่ต้องไล่ทำงานซ้ำด้วยข้อมูลเดิมหลายรอบ
+- policy:
+  - ถ้ามีหลาย model changes เข้ามาเวลาใกล้กันและลง bucket เดียวกัน ระบบควร collapse เป็นงาน sync ที่น้อยที่สุดเท่าที่ทำได้
+  - ห้ามปล่อยให้ duplicate queued jobs ของ bucket เดียวกันเรียงรันต่อกันโดยได้ผลสรุปเดิมซ้ำ ๆ
 
 ## นโยบาย Frontend API v1 Register Referral Code
 

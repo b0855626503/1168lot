@@ -44,6 +44,13 @@ Observer
 
 ห้าม bypass flow นี้
 
+หมายเหตุ implementation:
+- bucket เดียว (`summary_date + web_code`) ต้อง collapse งานซ้ำก่อนเข้าคิว
+- ใช้ pending payload merge สำหรับ `updated_sections`
+- queue runtime ต้องกันทั้ง:
+  - duplicate queued jobs ก่อนเริ่มรัน
+  - concurrent execution ของ bucket เดียวกัน
+
 ---
 
 ## 4. Time Reference (CRITICAL)
@@ -141,6 +148,10 @@ max(exposure)
 5. Projector aggregate
 6. upsert summary tables
 7. broadcast
+
+รายละเอียด queue:
+- dispatch หลายครั้งของ bucket เดียวกันต้อง merge เป็น pending payload เดียวก่อน
+- job ควร consume payload ล่าสุดตอนเริ่มรัน ไม่ใช่ยึด snapshot เก่าจากตอน dispatch อย่างเดียว
 
 ---
 

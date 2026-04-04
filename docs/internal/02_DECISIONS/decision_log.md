@@ -1,5 +1,39 @@
 # Decision Log
 
+## 2026-04-04 — Dashboard Summary Bucket Queue Must Merge Pending Sections and Deduplicate Per Bucket (APPROVED)
+
+- ปรับ `SyncDashboardSummaryBucket`
+  - เปลี่ยนเป็น `ShouldBeUniqueUntilProcessing`
+  - คง `WithoutOverlapping` ต่อ bucket เดิม (`web_code + summary_date`)
+  - ก่อน sync ต้อง consume pending payload ล่าสุดของ bucket จาก cache
+- ปรับ `DashboardSummarySyncService`
+  - ก่อน dispatch job ต้อง merge pending payload ของ bucket เดียวกันใน cache ก่อน
+  - merge อย่างน้อย:
+    - `updated_sections`
+    - `source_type`
+    - `source_id`
+- เหตุผล:
+  - ลดงาน queue ซ้ำที่ recompute bucket เดิมแล้วได้ผลเดิม
+  - ยังรองรับ follow-up sync ได้เมื่อมี event ใหม่เข้ามาระหว่าง job ปัจจุบันกำลังรัน
+  - แยกหน้าที่ชัดเจน:
+    - `ShouldBeUniqueUntilProcessing` = dedupe ตอนยังรอคิว
+    - `WithoutOverlapping` = กันรันชนกันจริง
+
+## 2026-04-04 — Lotto Ticket Realtime Toast Message Must Include Market and Draw Date When Available (APPROVED)
+
+- ปรับ event `LottoTicketListChanged`
+- behavior ใหม่:
+  - event รับ context เพิ่ม:
+    - `market_name`
+    - `draw_date`
+  - field `message` จะ compose จาก action + context ของ draw เมื่อมีข้อมูล
+  - ตัวอย่าง:
+    - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
+- ปรับ observer `LottoTicketRealtimeObserver`
+  - ตอน broadcast create/cancel/result ต้อง load `draw.market` แล้วส่ง context เข้ามาใน event
+- เหตุผล:
+  - ลดความกำกวมของ toast เดิมที่บอกแค่ว่ามีโพยถูกตัดสินแล้ว แต่ไม่รู้ว่าเป็นหวยอะไรและงวดวันไหน
+
 ## 2026-04-04 — Auto Result Empty Upstream Payload Must Be `NOT_READY` and Scheduler Must Survive Per-Draw Exceptions (APPROVED)
 
 - ปรับ `V2ResultPipelineRunner`

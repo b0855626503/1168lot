@@ -15,16 +15,23 @@ class LottoTicketListChanged implements ShouldBroadcast
     public string $action;
     public int $total;
     public string $message;
+    public ?string $marketName;
+    public ?string $drawDate;
 
-    public function __construct(string $action, int $total)
+    public function __construct(string $action, int $total, ?string $marketName = null, ?string $drawDate = null)
     {
         $this->action = $action;
         $this->total = $total;
-        $this->message = match ($action) {
+        $this->marketName = $this->normalizeNullableText($marketName);
+        $this->drawDate = $this->normalizeNullableText($drawDate);
+
+        $baseMessage = match ($action) {
             'cancelled' => 'มีการคืนโพยหวย',
             'resulted' => 'มีโพยหวยถูกตัดสินผลแล้ว',
             default => 'มีรายการโพยหวยใหม่',
         };
+
+        $this->message = $this->buildMessage($baseMessage);
     }
 
     public function broadcastOn(): Channel
@@ -43,10 +50,38 @@ class LottoTicketListChanged implements ShouldBroadcast
             'action' => $this->action,
             'total' => $this->total,
             'message' => $this->message,
+            'market_name' => $this->marketName,
+            'draw_date' => $this->drawDate,
             'datatable_id' => 'lottoTicketsTable',
             'menu_badge_key' => 'lotto_tickets',
             'badge_id' => 'badge_lotto_tickets',
             'path' => '/lotto/tickets',
         ];
+    }
+
+    private function buildMessage(string $baseMessage): string
+    {
+        $segments = [];
+
+        if ($this->marketName !== null) {
+            $segments[] = $this->marketName;
+        }
+
+        if ($this->drawDate !== null) {
+            $segments[] = 'งวดวันที่ ' . $this->drawDate;
+        }
+
+        if ($segments === []) {
+            return $baseMessage;
+        }
+
+        return $baseMessage . ': ' . implode(' ', $segments);
+    }
+
+    private function normalizeNullableText(?string $value): ?string
+    {
+        $text = trim((string) $value);
+
+        return $text === '' ? null : $text;
     }
 }
