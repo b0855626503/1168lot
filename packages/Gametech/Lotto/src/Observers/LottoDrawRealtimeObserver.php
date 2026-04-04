@@ -2,10 +2,12 @@
 
 namespace Gametech\Lotto\Observers;
 
+use App\Events\LottoTicketListChanged;
 use App\Events\LottoDrawStatusChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Jobs\SendDrawResultSummaryTelegramJob;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoTicket;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,8 +39,8 @@ class LottoDrawRealtimeObserver
         $actor = $this->resolveActor();
         $changedAt = $this->resolveChangedAt($draw);
 
-        DB::afterCommit(function () use ($draw, $marketName, $drawDate, $toStatus, $statusLabel, $actor, $changedAt): void {
-            broadcast(new LottoDrawStatusChanged(
+        $this->afterCommit(function () use ($draw, $marketName, $drawDate, $toStatus, $statusLabel, $actor, $changedAt): void {
+            $this->broadcastDrawStatusChanged(
                 (int) $draw->id,
                 $marketName,
                 $drawDate,
@@ -46,7 +48,7 @@ class LottoDrawRealtimeObserver
                 $statusLabel,
                 $actor,
                 $changedAt
-            ));
+            );
 
             $activityEvent = 'lotto.draw_status_changed';
             if ($toStatus === 'closed') {
@@ -55,7 +57,7 @@ class LottoDrawRealtimeObserver
                 $activityEvent = 'lotto.draw_resulted';
             }
 
-            broadcast(new RealtimePublicActivityUpdated(
+            $this->broadcastDrawPublicActivityUpdated(
                 'lotto',
                 $activityEvent,
                 [
@@ -67,12 +69,11 @@ class LottoDrawRealtimeObserver
                     'actor' => $actor,
                     'changed_at' => $changedAt,
                 ]
-            ));
+            );
 
             if ($toStatus === 'resulted') {
-                SendDrawResultSummaryTelegramJob::dispatch((int) $draw->id)
-                    ->delay(now()->addSeconds(2))
-                    ->onQueue('cashback');
+                $this->broadcastResultedTicketListChanged($draw, $marketName, $drawDate);
+                $this->dispatchResultSummaryTelegram((int) $draw->id);
             }
         });
     }
@@ -130,5 +131,67 @@ class LottoDrawRealtimeObserver
             ->copy()
             ->timezone((string) config('app.timezone', 'Asia/Bangkok'))
             ->format('Y-m-d H:i:s');
+    }
+
+    protected function afterCommit(callable $callback): void
+    {
+        DB::afterCommit($callback);
+    }
+
+    protected function broadcastDrawStatusChanged(
+        int $drawId,
+        string $marketName,
+        string $drawDate,
+        string $status,
+        string $statusLabel,
+        string $actor,
+        string $changedAt
+    ): void {
+        broadcast(new LottoDrawStatusChanged(
+            $drawId,
+            $marketName,
+            $drawDate,
+            $status,
+            $statusLabel,
+            $actor,
+            $changedAt
+        ));
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     */
+    protected function broadcastDrawPublicActivityUpdated(string $method, string $event, array $data): void
+    {
+        broadcast(new RealtimePublicActivityUpdated($method, $event, $data));
+    }
+
+    protected function broadcastResultedTicketListChanged(LottoDraw $draw, string $marketName, string $drawDate): void
+    {
+        $total = $this->resolveTotalTickets();
+
+        broadcast(new LottoTicketListChanged('resulted', $total, $marketName, $drawDate));
+        broadcast(new RealtimePublicActivityUpdated(
+            'lotto',
+            'lotto.ticket.list.changed',
+            [
+                'action' => 'resulted',
+                'total' => $total,
+                'market_name' => $marketName,
+                'draw_date' => $drawDate,
+            ]
+        ));
+    }
+
+    protected function dispatchResultSummaryTelegram(int $drawId): void
+    {
+        SendDrawResultSummaryTelegramJob::dispatch($drawId)
+            ->delay(now()->addSeconds(2))
+            ->onQueue('cashback');
+    }
+
+    protected function resolveTotalTickets(): int
+    {
+        return (int) LottoTicket::query()->count();
     }
 }

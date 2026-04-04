@@ -14,18 +14,9 @@ class LottoTicketRealtimeObserver
         $total = $this->resolveTotalTickets();
         [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
 
-        DB::afterCommit(function () use ($total, $marketName, $drawDate): void {
-            broadcast(new LottoTicketListChanged('created', $total, $marketName, $drawDate));
-            broadcast(new RealtimePublicActivityUpdated(
-                'lotto',
-                'lotto.ticket.list.changed',
-                [
-                    'action' => 'created',
-                    'total' => $total,
-                    'market_name' => $marketName,
-                    'draw_date' => $drawDate,
-                ]
-            ));
+        $this->afterCommit(function () use ($total, $marketName, $drawDate): void {
+            $this->broadcastTicketListChanged('created', $total, $marketName, $drawDate);
+            $this->broadcastPublicActivityUpdated('created', $total, $marketName, $drawDate);
         });
     }
 
@@ -38,7 +29,7 @@ class LottoTicketRealtimeObserver
         $toStatus = (string) $ticket->status;
         $fromStatus = (string) $ticket->getOriginal('status');
 
-        if (!in_array($toStatus, ['cancelled', 'resulted'], true)) {
+        if ($toStatus !== 'cancelled') {
             return;
         }
 
@@ -47,27 +38,42 @@ class LottoTicketRealtimeObserver
         }
 
         $total = $this->resolveTotalTickets();
-        $action = $toStatus === 'cancelled' ? 'cancelled' : 'resulted';
+        $action = 'cancelled';
         [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
 
-        DB::afterCommit(function () use ($total, $action, $marketName, $drawDate): void {
-            broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate));
-            broadcast(new RealtimePublicActivityUpdated(
-                'lotto',
-                'lotto.ticket.list.changed',
-                [
-                    'action' => $action,
-                    'total' => $total,
-                    'market_name' => $marketName,
-                    'draw_date' => $drawDate,
-                ]
-            ));
+        $this->afterCommit(function () use ($total, $action, $marketName, $drawDate): void {
+            $this->broadcastTicketListChanged($action, $total, $marketName, $drawDate);
+            $this->broadcastPublicActivityUpdated($action, $total, $marketName, $drawDate);
         });
     }
 
-    private function resolveTotalTickets(): int
+    protected function resolveTotalTickets(): int
     {
         return (int) LottoTicket::query()->count();
+    }
+
+    protected function afterCommit(callable $callback): void
+    {
+        DB::afterCommit($callback);
+    }
+
+    protected function broadcastTicketListChanged(string $action, int $total, ?string $marketName, ?string $drawDate): void
+    {
+        broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate));
+    }
+
+    protected function broadcastPublicActivityUpdated(string $action, int $total, ?string $marketName, ?string $drawDate): void
+    {
+        broadcast(new RealtimePublicActivityUpdated(
+            'lotto',
+            'lotto.ticket.list.changed',
+            [
+                'action' => $action,
+                'total' => $total,
+                'market_name' => $marketName,
+                'draw_date' => $drawDate,
+            ]
+        ));
     }
 
     /**

@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-04-04 — Ticket Resulted Realtime Notification Must Broadcast Once Per Draw (APPROVED)
+
+- ปรับ `LottoTicketRealtimeObserver`
+  - คงการ broadcast สำหรับ `created` และ `cancelled`
+  - ยกเลิกการ broadcast `resulted` ระดับ ticket
+- ปรับ `LottoDrawRealtimeObserver`
+  - เมื่อ `draw.status` เปลี่ยนเป็น `resulted`
+  - ให้ broadcast `lotto.ticket.list.changed` (`action=resulted`) เพิ่มอีก 1 ครั้งในระดับ draw
+- เหตุผล:
+  - settlement 1 งวดจะ update ticket หลายใบ
+  - ถ้ายิง noti จาก ticket observer จะซ้ำตามจำนวน ticket ในงวดเดียวกัน
+  - business event ที่ถูกต้องคือ “งวดนี้ถูกตัดสินผลแล้ว” จึงต้องยิงครั้งเดียวต่อ draw
+
 ## 2026-04-04 — Settlement and Validator Must Accept 4-digit First Prize for 4D Markets (APPROVED)
 
 - ปรับ `SettlementService::normalizeResultNumber`
