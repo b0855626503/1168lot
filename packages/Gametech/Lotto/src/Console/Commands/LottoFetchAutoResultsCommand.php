@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Console\Commands;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResult\AutoResultPipelineService;
+use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +23,7 @@ class LottoFetchAutoResultsCommand extends Command
 
     protected $description = 'Fetch and apply lotto auto-results for eligible closed draws';
 
-    public function handle(AutoResultPipelineService $pipeline): int
+    public function handle(AutoResultPipelineService $pipeline, AutoResultHardeningService $hardening): int
     {
         $now = now((string) config('lotto_auto_result.timezone', (string) config('app.timezone', 'Asia/Bangkok')));
         $runId = (string) ($this->option('run-id') ?: sprintf('cmd_%s', $now->format('YmdHisv')));
@@ -110,6 +111,22 @@ class LottoFetchAutoResultsCommand extends Command
                 $status = (string) ($result['status'] ?? 'VALIDATION_ERROR');
             } catch (\Throwable $e) {
                 $summary['unhandled_draw_exceptions']++;
+
+                try {
+                    $draw->refresh();
+                } catch (\Throwable $refreshException) {
+                    // Keep best-effort DB trace even if refresh fails.
+                }
+
+                $hardening->recordUnhandledException($draw, [
+                    'run_id' => $runId,
+                    'source_id' => $draw->result_source_id,
+                    'attempt_no' => (int) ($draw->result_fetch_attempts ?? 1),
+                    'pipeline_stage' => 'process_draw_exception',
+                    'error_stage' => 'COMMAND',
+                    'exception_class' => get_class($e),
+                    'error_message' => $e->getMessage(),
+                ]);
 
                 Log::error('LOTTO_AUTO_RESULT_DRAW_EXCEPTION', [
                     'run_id' => $runId,

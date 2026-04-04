@@ -65,6 +65,7 @@
 - `NO_SOURCE` ต้อง explicit
 - ถ้า draw ใด throw unhandled exception ระหว่าง orchestration:
   - command ต้อง log draw-level exception แล้ว continue draw ถัดไป
+  - command ต้อง persist แถวใน `lotto_result_fetch_logs` ด้วย
   - ห้าม abort ทั้ง batch
 
 ### PR-09 Retry + Backoff
@@ -91,6 +92,9 @@
   - `retry_count` (execution-level attempt_no > 1)
 - optional rate limit: per-source per-minute
 - `RATE_LIMITED` ต้อง log-level เสมอ และ draw-level ห้ามทับ terminal states
+- unhandled exception หลัง increment attempt:
+  - ต้องไม่หายไปใน app log อย่างเดียว
+  - ต้องมี DB trace ใน `lotto_result_fetch_logs` และ draw fetch fields ทุกครั้ง
 
 ## Status Taxonomy (Locked)
 - `NO_SOURCE`

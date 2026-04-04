@@ -236,10 +236,26 @@ class AutoResultPipelineService
         }
 
         if ($this->isV2CutoverEnabled($source)) {
-            $v2Result = (new LottoResultPipelineRunner())->run($draw, $source, [
-                'run_id' => $runId,
-                'expected_draw_date' => $expectedDrawDate,
-            ]);
+            try {
+                $v2Result = $this->runV2CutoverPipeline($draw, $source, $runId, $expectedDrawDate);
+            } catch (\Throwable $e) {
+                return $this->markAndLog($draw, [
+                    'status' => 'VALIDATION_ERROR',
+                    'attempt_no' => $attemptNo,
+                    'run_id' => $runId,
+                    'pipeline_stage' => 'v2_cutover',
+                    'source_id' => (int) $source->id,
+                    'is_dry_run' => $dryRun,
+                    'is_manual_retry' => $isManualRetry,
+                    'trace_json' => [
+                        'exception_class' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ],
+                    'error_code' => 'UNHANDLED_EXCEPTION',
+                    'error_stage' => 'PIPELINE',
+                    'error_message' => $e->getMessage() !== '' ? $e->getMessage() : 'Unhandled V2 cutover exception',
+                ], 'VALIDATION_ERROR');
+            }
 
             if ((string) ($v2Result['status'] ?? '') !== 'VALID') {
                 $failure = $this->resolveV2CutoverFailureOutcome(
@@ -479,7 +495,7 @@ class AutoResultPipelineService
             'result_fetch_error' => 'retry attempts exhausted',
             'result_exhausted_at' => now(),
             'result_fetched_at' => now(),
-        ])->save();
+        ])->saveQuietly();
 
         $this->hardening->insertFetchLog([
             'draw_id' => (int) $draw->id,
@@ -512,7 +528,7 @@ class AutoResultPipelineService
                 'result_fetch_status' => $this->normalizeStatus((string) ($drawStatusOverride ?? $status)),
                 'result_fetch_error' => $logPayload['error_message'] ?? null,
                 'result_fetched_at' => now(),
-            ])->save();
+            ])->saveQuietly();
         }
 
         return [
@@ -531,7 +547,7 @@ class AutoResultPipelineService
 
         $draw->forceFill([
             'result_fetch_attempts' => ((int) ($draw->result_fetch_attempts ?? 0)) + 1,
-        ])->save();
+        ])->saveQuietly();
     }
 
     private function canWriteDrawFetchFields(): bool
@@ -549,6 +565,21 @@ class AutoResultPipelineService
     private function isV2CutoverEnabled(LottoResultSource $source): bool
     {
         return true;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    protected function runV2CutoverPipeline(
+        LottoDraw $draw,
+        LottoResultSource $source,
+        string $runId,
+        ?string $expectedDrawDate
+    ): array {
+        return (new LottoResultPipelineRunner())->run($draw, $source, [
+            'run_id' => $runId,
+            'expected_draw_date' => $expectedDrawDate,
+        ]);
     }
 
     private function normalizeStatus(string $status): string

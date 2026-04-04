@@ -140,6 +140,23 @@
 - เมื่อ source แรกครบ `max_attempts` แล้ว ระบบจะ mark ว่า source นั้น exhausted (เฉพาะ source) และ fallback ไป source ถัดไปอัตโนมัติ
 - กรณี source ยังไม่ครบ max แต่ยังติด backoff window ระบบจะคงรอ source เดิม (ยังไม่ข้ามไป source ถัดไป)
 - draw จะถูก mark `EXHAUSTED` เมื่อ source ที่ active ทั้งหมดในช่วงเวลานั้น exhausted ครบแล้วเท่านั้น
+- ถ้าเกิด unhandled exception หลัง `result_fetch_attempts` ถูก increment แล้ว:
+  - ต้องมีแถวใน `lotto_result_fetch_logs` เสมอ
+  - ใช้ `status=VALIDATION_ERROR`, `error_code=UNHANDLED_EXCEPTION`
+  - draw-level fields (`result_fetch_status`, `result_fetch_error`, `result_fetched_at`) ต้องถูกอัปเดตด้วย
+- runtime metadata ของ auto-result เช่น:
+  - `result_source_snapshot_json`
+  - `result_source_id`
+  - `result_fetch_attempts`
+  - `result_fetch_status/result_fetch_error/result_fetched_at`
+  - ห้ามเขียนซ้ำลงตาราง audit `logs`
+  - source of truth สำหรับ execution trace ให้ยึด `lotto_result_fetch_logs`
+- สำหรับ V2 cutover:
+  - ถ้า runner throw exception ก่อน `markAndLog()`
+  - pipeline ต้องจับและเขียน fetch log เอง ห้ามปล่อยให้เหลือแค่ app log
+- command `lotto:fetch-auto-results`:
+  - per-draw catch เป็น fallback ชั้นสุดท้าย
+  - เมื่อจับ exception ได้ ต้องบันทึก fetch log แบบ `UNHANDLED_EXCEPTION` เพิ่มเติมด้วย ไม่ใช่ log เฉพาะ `LOTTO_AUTO_RESULT_DRAW_EXCEPTION` ใน Laravel log อย่างเดียว
 
 ## นโยบาย Frontend API v1 Game List
 

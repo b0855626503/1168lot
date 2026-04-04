@@ -23,6 +23,8 @@ class LottoFetchAutoResultsCommandTest extends TestCase
 
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_result_sources');
+        Schema::dropIfExists('lotto_result_fetch_logs');
+        Schema::dropIfExists('logs');
         Schema::dropIfExists('configs');
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -31,6 +33,10 @@ class LottoFetchAutoResultsCommandTest extends TestCase
             $table->dateTime('result_at')->nullable();
             $table->string('status', 32);
             $table->string('result_fetch_status', 32)->nullable();
+            $table->unsignedInteger('result_fetch_attempts')->default(0);
+            $table->dateTime('result_fetched_at')->nullable();
+            $table->text('result_fetch_error')->nullable();
+            $table->unsignedBigInteger('result_source_id')->nullable();
             $table->timestamps();
         });
 
@@ -38,6 +44,39 @@ class LottoFetchAutoResultsCommandTest extends TestCase
             $table->bigIncrements('id');
             $table->unsignedBigInteger('market_id');
             $table->boolean('is_active')->default(true);
+        });
+
+        Schema::create('lotto_result_fetch_logs', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('draw_id')->nullable();
+            $table->unsignedBigInteger('market_id')->nullable();
+            $table->unsignedBigInteger('source_id')->nullable();
+            $table->unsignedInteger('attempt_no')->default(1);
+            $table->string('status', 32);
+            $table->string('pipeline_stage', 64)->nullable();
+            $table->string('run_id', 64)->nullable();
+            $table->string('error_code', 64)->nullable();
+            $table->string('error_stage', 64)->nullable();
+            $table->longText('trace_json')->nullable();
+            $table->mediumText('error_message')->nullable();
+            $table->boolean('is_dry_run')->default(false);
+            $table->boolean('is_manual_settle')->default(false);
+            $table->boolean('is_manual_retry')->default(false);
+            $table->dateTime('created_at')->nullable();
+        });
+
+        Schema::create('logs', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('emp_code')->nullable();
+            $table->string('mode', 32)->nullable();
+            $table->string('menu', 255)->nullable();
+            $table->unsignedBigInteger('record')->nullable();
+            $table->longText('item_before')->nullable();
+            $table->longText('item')->nullable();
+            $table->string('ip', 64)->nullable();
+            $table->string('user_create', 64)->nullable();
+            $table->dateTime('date_update')->nullable();
+            $table->dateTime('date_create')->nullable();
         });
 
         Schema::create('configs', function (Blueprint $table): void {
@@ -90,5 +129,21 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         $this->assertStringContainsString('- APPLIED: 2', $output);
         $this->assertStringContainsString('- UNHANDLED_EXCEPTION: 1', $output);
         $this->assertStringContainsString('- VALIDATION_ERROR: 1', $output);
+
+        $log = DB::table('lotto_result_fetch_logs')
+            ->where('pipeline_stage', 'process_draw_exception')
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame(3, (int) $log->draw_id);
+        $this->assertSame('VALIDATION_ERROR', $log->status);
+        $this->assertSame('UNHANDLED_EXCEPTION', $log->error_code);
+        $this->assertSame('COMMAND', $log->error_stage);
+        $this->assertSame('boom', $log->error_message);
+
+        $draw = DB::table('lotto_draws')->where('id', 3)->first();
+        $this->assertSame('VALIDATION_ERROR', $draw->result_fetch_status);
+        $this->assertSame('boom', $draw->result_fetch_error);
+        $this->assertSame(0, DB::table('logs')->count());
     }
 }

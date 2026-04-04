@@ -70,7 +70,7 @@ class ResultSourceResolver
         }
 
         if ($updates !== []) {
-            $draw->forceFill($updates)->save();
+            $draw->forceFill($updates)->saveQuietly();
         }
     }
 }

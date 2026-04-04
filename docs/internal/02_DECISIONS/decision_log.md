@@ -1,5 +1,24 @@
 # Decision Log
 
+## 2026-04-04 — Auto Result Unhandled Exceptions Must Persist Fetch Logs and Draw Fetch State (APPROVED)
+
+- ปรับ `AutoResultPipelineService`
+  - V2 cutover path ต้องครอบ runner call ด้วย exception guard
+  - ถ้า runner throw ก่อน `markAndLog()` ต้องเขียน fetch log เอง
+  - ใช้ `status=VALIDATION_ERROR`, `error_code=UNHANDLED_EXCEPTION`, `error_stage=PIPELINE`
+- ปรับ `lotto:fetch-auto-results`
+  - command-level per-draw catch ต้องบันทึก fetch log เพิ่มด้วย
+  - ห้ามปล่อยให้มีแค่ Laravel app log (`LOTTO_AUTO_RESULT_DRAW_EXCEPTION`) โดยไม่มีแถวใน `lotto_result_fetch_logs`
+- ปรับ `AutoResultHardeningService`
+  - เพิ่ม helper สำหรับ persist unhandled exception ลง fetch log และ draw fetch fields
+- ปรับ auto-result runtime draw updates
+  - field metadata ภายในเช่น source snapshot / fetch attempts / fetch status ต้อง `saveQuietly()`
+  - ห้ามยิงซ้ำเข้า audit table `logs`
+  - ให้ `lotto_result_fetch_logs` เป็น execution audit หลักของ auto-result
+- เหตุผล:
+  - ปิด blind spot ที่ `result_fetch_attempts`/`updated_at` ขยับแล้ว แต่ไม่มี fetch log ใหม่ให้ trace
+  - ทำให้ debug งวดค้างแบบ `draw 548` บน live ได้จาก DB โดยไม่ต้องพึ่ง app log อย่างเดียว
+
 ## 2026-04-04 — Dashboard Summary Bucket Queue Must Merge Pending Sections and Deduplicate Per Bucket (APPROVED)
 
 - ปรับ `SyncDashboardSummaryBucket`

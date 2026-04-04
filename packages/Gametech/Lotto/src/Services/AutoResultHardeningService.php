@@ -136,7 +136,54 @@ class AutoResultHardeningService
             'result_fetch_status' => self::STATUS_RATE_LIMITED,
             'result_fetch_error' => $errorMessage,
             'result_fetched_at' => $this->now(),
-        ])->save();
+        ])->saveQuietly();
+    }
+
+    /**
+     * @param array<string,mixed> $context
+     */
+    public function recordUnhandledException(LottoDraw $draw, array $context = []): void
+    {
+        $sourceId = isset($context['source_id']) ? (int) $context['source_id'] : (isset($draw->result_source_id) ? (int) $draw->result_source_id : null);
+        $attemptNo = max(1, (int) ($context['attempt_no'] ?? ($draw->result_fetch_attempts ?? 1)));
+        $message = trim((string) ($context['error_message'] ?? 'Unhandled auto-result exception'));
+        $exceptionClass = trim((string) ($context['exception_class'] ?? 'RuntimeException'));
+        $pipelineStage = trim((string) ($context['pipeline_stage'] ?? 'process_draw_exception'));
+        $errorStage = trim((string) ($context['error_stage'] ?? 'PIPELINE'));
+        $runId = isset($context['run_id']) ? (string) $context['run_id'] : null;
+
+        $this->insertFetchLog([
+            'draw_id' => (int) $draw->id,
+            'market_id' => (int) $draw->market_id,
+            'source_id' => $sourceId,
+            'attempt_no' => $attemptNo,
+            'status' => 'VALIDATION_ERROR',
+            'pipeline_stage' => $pipelineStage,
+            'run_id' => $runId,
+            'error_code' => 'UNHANDLED_EXCEPTION',
+            'error_stage' => $errorStage,
+            'trace_json' => [
+                'exception_class' => $exceptionClass,
+                'message' => $message,
+                'source_id' => $sourceId,
+            ],
+            'error_message' => $message,
+            'created_at' => $this->now()->toDateTimeString(),
+        ]);
+
+        if (in_array((string) $draw->result_fetch_status, self::TERMINAL_DRAW_FETCH_STATUSES, true)) {
+            return;
+        }
+
+        if (! $this->canUpdateDrawFetchFields()) {
+            return;
+        }
+
+        $draw->forceFill([
+            'result_fetch_status' => 'VALIDATION_ERROR',
+            'result_fetch_error' => $message,
+            'result_fetched_at' => $this->now(),
+        ])->saveQuietly();
     }
 
     /**
