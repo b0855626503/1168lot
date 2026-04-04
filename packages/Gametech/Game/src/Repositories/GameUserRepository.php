@@ -249,6 +249,8 @@ class GameUserRepository extends Repository
             }
 
             if ($result['success'] === true) {
+                $userCreate = (string) $this->getSourceValue($data, 'user_create', '');
+                $userUpdate = (string) $this->getSourceValue($data, 'user_update', $userCreate);
 
                 $param = [
                     'game_code' => $game_code,
@@ -257,16 +259,15 @@ class GameUserRepository extends Repository
                     'user_pass' => $result['user_pass'],
                     'balance' => '0',
                     'enable' => 'Y',
-                    'user_create' => $data['user_create'],
-                    'user_update' => $data['user_create']
+                    'user_create' => $userCreate,
+                    'user_update' => $userUpdate,
                 ];
 
                 try {
 
                     $result_add = $this->create($param);
                     if ($result_add->code) {
-                        $data->game_user = $result['user_name'];
-                        $data->save();
+                        $this->syncGameUserToSource($data, (string) $result['user_name']);
                         $return['success'] = true;
                         $return['data'] = $result_add;
                     } else {
@@ -284,6 +285,32 @@ class GameUserRepository extends Repository
         }
 
         return $return;
+    }
+
+    private function getSourceValue($source, string $key, $default = null)
+    {
+        if (is_array($source)) {
+            return $source[$key] ?? $default;
+        }
+
+        if ($source instanceof \ArrayAccess && isset($source[$key])) {
+            return $source[$key];
+        }
+
+        return data_get($source, $key, $default);
+    }
+
+    private function syncGameUserToSource($source, string $gameUser): void
+    {
+        if (! is_object($source)) {
+            return;
+        }
+
+        $source->game_user = $gameUser;
+
+        if (method_exists($source, 'save')) {
+            $source->save();
+        }
     }
 
     public function changeGamePass($game_code, $id, $data, $debug = false): array

@@ -147,6 +147,10 @@
 - สำหรับสมาชิกเก่าที่ยังไม่มี `referral_code` ใช้คำสั่ง:
   - `php artisan member:backfill-referral-codes` (dry-run)
   - `php artisan member:backfill-referral-codes --apply` (เขียนจริง)
+- ในโหมด `seamless` ช่วงสร้าง `games_user` จาก flow register:
+  - ต้องรองรับ source payload จาก frontend ที่เป็น `array`
+  - ห้ามล้มเพียงเพราะ side effect หลังสร้าง `games_user` ที่พยายามเขียนกลับไปยัง source object
+  - ถ้าต้นทางเป็น object และมี `save()` ค่อย sync `game_user` กลับไปยัง source นั้น
 
 ## นโยบาย Frontend API v1 Member Contributor
 

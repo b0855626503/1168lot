@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-04-04 — Frontend Register Seamless Flow Must Accept Array Payload Without Post-Create Source Mutation Failure (APPROVED)
+
+- ปรับ `Gametech\Game\Repositories\GameUserRepository::addGameUser`
+- behavior ใหม่:
+  - อ่าน `user_create/user_update` จาก source ได้ทั้งกรณี `array` และ `object`
+  - หลังสร้าง `games_user` สำเร็จแล้ว ถ้า source เป็น `array` ต้องถือว่างานเสร็จได้ทันที
+  - จะ sync `game_user` กลับไปที่ source เฉพาะเมื่อ source เป็น object และรองรับการ `save()`
+- เพิ่ม regression test คุมเคส:
+  - caller ส่ง `array` จาก frontend register
+  - caller ส่ง `object` ที่ยังต้องการรับค่า `game_user`
+- เหตุผล:
+  - ปิด bug ที่ทำให้ `POST /api/v1/auth/register` ล้มใน production หลังสร้าง `games_user` แล้ว
+  - ป้องกัน failure แบบ `Attempt to assign property ... on array` จาก seamless register path
+
 ## 2026-04-04 — `GET /api/v1/lotto/draws` Must Return Latest Non-Draft Draw Per Market (APPROVED)
 
 - ปรับ `FrontendApi LottoController@draws`
