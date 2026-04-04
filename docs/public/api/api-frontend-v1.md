@@ -158,9 +158,24 @@ Response (validation fail)
 }
 ```
 
+Response (runtime fail after validation)
+```json
+{
+  "success": false,
+  "message": "ไม่สามารถเชื่อมต่อระบบเกมเพื่อสร้างบัญชีได้ในขณะนี้",
+  "error_code": "REGISTER_GAME_ACCOUNT_CONNECT_FAILED",
+  "details": {
+    "stage": "game_account_create",
+    "reason": "connect_failed",
+    "upstream_message": "เชื่อมต่อไม่ได้"
+  }
+}
+```
+
 HTTP status
 - สำเร็จ: `200`
 - validation ไม่ผ่าน: `422`
+- fail หลัง validation: `422`
 
 หมายเหตุ: ใน environment ที่ Redis queue มีปัญหา อาจเกิด timeout จาก process ภายในระบบเดิม
 

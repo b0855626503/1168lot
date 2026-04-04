@@ -25,6 +25,7 @@
 ### Auth
 - `POST /api/v1/auth/register`
   - รับข้อมูลสมัครสมาชิก
+  - ถ้า fail หลัง validation ต้องมี `error_code` เพื่อให้ frontend แยกสาเหตุได้
 - `POST /api/v1/auth/login`
   - รับ user/pass และคืน Bearer token
 - `POST /api/v1/auth/logout` (ต้องมี token)

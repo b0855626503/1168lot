@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-04-04 — Frontend Register Must Return Specific Post-Validation Failure Reasons (APPROVED)
+
+- ปรับ `POST /api/v1/auth/register` ให้แยก failure หลัง validation เป็นสาเหตุที่ชัดเจนขึ้น
+- behavior ใหม่:
+  - response failure หลัง validation มี `error_code`
+  - response failure อาจมี `details.stage` และ `details.reason`
+  - ตัวอย่างรหัสที่เพิ่ม:
+    - `REGISTER_MEMBER_CREATE_FAILED`
+    - `REGISTER_GAME_ACCOUNT_CONNECT_FAILED`
+    - `REGISTER_GAME_ACCOUNT_CREATE_FAILED`
+    - `REGISTER_GAME_ACCOUNT_UNAUTHORIZED`
+    - `REGISTER_GAME_ACCOUNT_FALLBACK_FAILED`
+    - `REGISTER_UNKNOWN_FAILURE`
+- เหตุผล:
+  - ให้ frontend แสดงข้อความที่เจาะจงกับสาเหตุได้
+  - ลดการต้อง debug จากข้อความ generic `ไม่สามารถสมัครสมาชิกได้ในขณะนี้`
+
 ## 2026-04-04 — Frontend Register Seamless Flow Must Accept Array Payload Without Post-Create Source Mutation Failure (APPROVED)
 
 - ปรับ `Gametech\Game\Repositories\GameUserRepository::addGameUser`

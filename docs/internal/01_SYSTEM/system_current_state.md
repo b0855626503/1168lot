@@ -151,6 +151,14 @@
   - ต้องรองรับ source payload จาก frontend ที่เป็น `array`
   - ห้ามล้มเพียงเพราะ side effect หลังสร้าง `games_user` ที่พยายามเขียนกลับไปยัง source object
   - ถ้าต้นทางเป็น object และมี `save()` ค่อย sync `game_user` กลับไปยัง source นั้น
+- ถ้า register fail หลังผ่าน validation แล้ว:
+  - response ต้องมี `error_code`
+  - response อาจมี `details.stage` และ `details.reason`
+  - ตัวอย่าง stage ที่ใช้ตอนนี้:
+    - `member_create`
+    - `game_account_create`
+    - `game_account_fallback`
+    - `unknown`
 
 ## นโยบาย Frontend API v1 Member Contributor
 

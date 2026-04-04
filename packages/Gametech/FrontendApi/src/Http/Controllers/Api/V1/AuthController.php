@@ -2,6 +2,7 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
+use Gametech\FrontendApi\Exceptions\RegisterFailureException;
 use Gametech\FrontendApi\Services\FrontendTokenService;
 use Gametech\Member\Models\MemberProxy;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
@@ -276,7 +277,7 @@ class AuthController extends BaseController
 
         $member = null;
         try {
-            $member = MemberProxy::withoutEvents(function () use (
+            $member = $this->createRegisterMember(function () use (
                 $bankCode,
                 $name,
                 $data,
@@ -298,152 +299,193 @@ class AuthController extends BaseController
                 $teamId,
                 $campaignId
             ) {
-                $referralCode = $this->generateUniqueReferralCode();
-                $memberPayload = [
-                    'refer_code' => $referCode,
-                    'upline_code' => $uplineCode,
-                    'referral_code' => $referralCode,
-                    'bank_code' => $bankCode,
-                    'name' => $name,
-                    'firstname' => trim(strip_tags((string) $data['firstname'])),
-                    'lastname' => trim(strip_tags((string) $data['lastname'])),
-                    'user_name' => $username,
-                    'user_pass' => $pass,
-                    'password' => Hash::make($pass),
-                    'acc_no' => $accNo,
-                    'acc_check' => $accCheck,
-                    'acc_bay' => $accBay,
-                    'acc_kbank' => '',
-                    'tel' => $tel,
-                    'wallet_id' => $walletId,
-                    'lineid' => $lineId,
-                    'confirm' => $verify,
-                    'freecredit' => $freecredit,
-                    'check_status' => 'N',
-                    'promotion' => $promotion,
-                    'user_create' => $name,
-                    'user_update' => $name,
-                    'lastlogin' => now(),
-                    'date_regis' => $today,
-                    'birth_day' => $today,
-                    'session_limit' => null,
-                    'payment_limit' => null,
-                    'payment_delay' => null,
-                    'remark' => '',
-                    'gender' => 'M',
-                    'otp' => '',
-                    'ip' => $request->ip(),
-                    'balance' => 0,
-                    'balance_free' => 0,
-                    'credit' => 0,
-                    'point_deposit' => 0,
-                    'diamond' => 0,
-                    'enable' => 'Y',
-                    'team_id' => $teamId,
-                    'campaign_id' => $campaignId,
-                ];
+                return MemberProxy::withoutEvents(function () use (
+                    $bankCode,
+                    $name,
+                    $data,
+                    $username,
+                    $pass,
+                    $accNo,
+                    $accCheck,
+                    $accBay,
+                    $verify,
+                    $freecredit,
+                    $today,
+                    $request,
+                    $referCode,
+                    $uplineCode,
+                    $walletId,
+                    $tel,
+                    $lineId,
+                    $promotion,
+                    $teamId,
+                    $campaignId
+                ) {
+                    $referralCode = $this->generateUniqueReferralCode();
+                    $memberPayload = [
+                        'refer_code' => $referCode,
+                        'upline_code' => $uplineCode,
+                        'referral_code' => $referralCode,
+                        'bank_code' => $bankCode,
+                        'name' => $name,
+                        'firstname' => trim(strip_tags((string) $data['firstname'])),
+                        'lastname' => trim(strip_tags((string) $data['lastname'])),
+                        'user_name' => $username,
+                        'user_pass' => $pass,
+                        'password' => Hash::make($pass),
+                        'acc_no' => $accNo,
+                        'acc_check' => $accCheck,
+                        'acc_bay' => $accBay,
+                        'acc_kbank' => '',
+                        'tel' => $tel,
+                        'wallet_id' => $walletId,
+                        'lineid' => $lineId,
+                        'confirm' => $verify,
+                        'freecredit' => $freecredit,
+                        'check_status' => 'N',
+                        'promotion' => $promotion,
+                        'user_create' => $name,
+                        'user_update' => $name,
+                        'lastlogin' => now(),
+                        'date_regis' => $today,
+                        'birth_day' => $today,
+                        'session_limit' => null,
+                        'payment_limit' => null,
+                        'payment_delay' => null,
+                        'remark' => '',
+                        'gender' => 'M',
+                        'otp' => '',
+                        'ip' => $request->ip(),
+                        'balance' => 0,
+                        'balance_free' => 0,
+                        'credit' => 0,
+                        'point_deposit' => 0,
+                        'diamond' => 0,
+                        'enable' => 'Y',
+                        'team_id' => $teamId,
+                        'campaign_id' => $campaignId,
+                    ];
 
-                return app('Gametech\Member\Repositories\MemberRepository')->create($memberPayload);
+                    return app('Gametech\Member\Repositories\MemberRepository')->create($memberPayload);
+                });
             });
 
-            $isSeamless = ((string) ($config->seamless ?? 'N') === 'Y');
-            $gameRepo = app('Gametech\Game\Repositories\GameRepository');
-            $gameUserRepo = app('Gametech\Game\Repositories\GameUserRepository');
+            $this->provisionRegisterGameAccount((string) ($config->seamless ?? 'N'), $member, $username, $pass, $name);
 
-            if ($isSeamless) {
-                Log::error('frontend_api_register.seamless_branch_entered', [
-                    'member_code' => (int) $member->code,
+            try {
+                Event::dispatch('member.created.after', [$member]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        } catch (RegisterFailureException $e) {
+            Log::error('frontend_api_register.failure', [
+                'user_name' => $username ?? null,
+                'error_code' => $e->errorCodeValue(),
+                'message' => $e->userMessage(),
+                'details' => $e->details(),
+                'previous_class' => $e->getPrevious() ? get_class($e->getPrevious()) : null,
+                'previous_message' => $e->getPrevious()?->getMessage(),
+            ]);
+
+            $this->cleanupRegisterMember($member);
+
+            return $this->registerFailureResponse($e->userMessage(), $e->errorCodeValue(), $e->details());
+        } catch (\Throwable $e) {
+            Log::error('frontend_api_register.exception', [
+                'user_name' => $username ?? null,
+                'exception_class' => get_class($e),
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+            ]);
+
+            $this->cleanupRegisterMember($member);
+
+            return $this->registerFailureResponse(
+                'ไม่สามารถสมัครสมาชิกได้ในขณะนี้',
+                'REGISTER_UNKNOWN_FAILURE',
+                ['stage' => 'unknown']
+            );
+        }
+
+        return $this->sendSuccess('สมัครสมาชิกสำเร็จ');
+    }
+
+    private function createRegisterMember(callable $creator)
+    {
+        try {
+            return $creator();
+        } catch (\Throwable $e) {
+            throw new RegisterFailureException(
+                'ไม่สามารถสร้างข้อมูลสมาชิกได้ในขณะนี้',
+                'REGISTER_MEMBER_CREATE_FAILED',
+                ['stage' => 'member_create'],
+                $e
+            );
+        }
+    }
+
+    private function provisionRegisterGameAccount(string $seamlessConfig, $member, string $username, string $pass, string $name): void
+    {
+        $gameRepo = app('Gametech\Game\Repositories\GameRepository');
+        $gameUserRepo = app('Gametech\Game\Repositories\GameUserRepository');
+
+        if ($seamlessConfig === 'Y') {
+            Log::error('frontend_api_register.seamless_branch_entered', [
+                'member_code' => (int) ($member->code ?? 0),
+                'user_name' => $username,
+                'seamless_config' => $seamlessConfig,
+            ]);
+
+            $game = $gameRepo->findOneWhere([
+                'enable' => 'Y',
+                'status_open' => 'Y',
+                'id' => 'seamless',
+            ]);
+
+            Log::error('frontend_api_register.seamless_game_lookup', [
+                'member_code' => (int) ($member->code ?? 0),
+                'user_name' => $username,
+                'game_found' => (bool) $game,
+                'game_code' => $game ? (int) $game->code : null,
+                'game_id' => $game ? (string) $game->id : null,
+            ]);
+
+            if (! $game) {
+                return;
+            }
+
+            $result = $gameUserRepo->addGameUser((int) $game->code, (int) $member->code, [
+                'username' => $username,
+                'password' => $pass,
+                'name' => $name,
+                'user_create' => $name,
+            ]);
+
+            $resultMessage = $this->normalizeRegisterFailureMessage($result['msg'] ?? null);
+
+            Log::error('frontend_api_register.seamless_add_game_user_result', [
+                'member_code' => (int) ($member->code ?? 0),
+                'user_name' => $username,
+                'game_code' => (int) $game->code,
+                'success' => (bool) ($result['success'] ?? false),
+                'message' => $resultMessage,
+            ]);
+
+            if (($result['success'] ?? false) === true) {
+                return;
+            }
+
+            $isUnauthorizedIp = $this->isRegisterInvalidIpFailure($resultMessage);
+            if ($isUnauthorizedIp) {
+                Log::error('frontend_api_register.seamless_fallback_local_game_user', [
+                    'member_code' => (int) ($member->code ?? 0),
                     'user_name' => $username,
-                    'seamless_config' => (string) ($config->seamless ?? 'N'),
+                    'game_code' => (int) $game->code,
+                    'reason' => 'seamless_401_invalid_ip',
                 ]);
 
-                $game = $gameRepo->findOneWhere([
-                    'enable' => 'Y',
-                    'status_open' => 'Y',
-                    'id' => 'seamless',
-                ]);
-
-                Log::error('frontend_api_register.seamless_game_lookup', [
-                    'member_code' => (int) $member->code,
-                    'user_name' => $username,
-                    'game_found' => (bool) $game,
-                    'game_code' => $game ? (int) $game->code : null,
-                    'game_id' => $game ? (string) $game->id : null,
-                ]);
-
-                if ($game) {
-                    $result = $gameUserRepo->addGameUser((int) $game->code, (int) $member->code, [
-                        'username' => $username,
-                        'password' => $pass,
-                        'name' => $name,
-                        'user_create' => $name,
-                    ]);
-
-                    $resultMessage = $result['msg'] ?? null;
-                    if (is_array($resultMessage) || is_object($resultMessage)) {
-                        $resultMessage = json_encode($resultMessage, JSON_UNESCAPED_UNICODE);
-                    }
-
-                    Log::error('frontend_api_register.seamless_add_game_user_result', [
-                        'member_code' => (int) $member->code,
-                        'user_name' => $username,
-                        'game_code' => (int) $game->code,
-                        'success' => (bool) ($result['success'] ?? false),
-                        'message' => $resultMessage,
-                    ]);
-
-                    if (($result['success'] ?? false) !== true) {
-                        $isUnauthorizedIp = is_string($resultMessage)
-                            && str_contains($resultMessage, '"statusCode":401')
-                            && str_contains(Str::lower($resultMessage), 'invalid ip');
-
-                        if ($isUnauthorizedIp) {
-                            Log::error('frontend_api_register.seamless_fallback_local_game_user', [
-                                'member_code' => (int) $member->code,
-                                'user_name' => $username,
-                                'game_code' => (int) $game->code,
-                                'reason' => 'seamless_401_invalid_ip',
-                            ]);
-
-                            $gameUserRepo->updateOrCreate(
-                                ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
-                                [
-                                    'user_name' => $username,
-                                    'user_pass' => $pass,
-                                    'balance' => 0,
-                                    'enable' => 'Y',
-                                    'user_create' => $name,
-                                    'user_update' => $name,
-                                    'date_create' => now(),
-                                    'date_update' => now(),
-                                    'bill_code' => 0,
-                                    'pro_code' => 0,
-                                    'amount' => 0,
-                                    'bonus' => 0,
-                                    'turnpro' => 0,
-                                    'amount_balance' => 0,
-                                    'withdraw_limit' => 0,
-                                    'withdraw_limit_rate' => 0,
-                                    'withdraw_limit_amount' => 0,
-                                ]
-                            );
-
-                            Log::error('frontend_api_register.seamless_fallback_local_game_user_success', [
-                                'member_code' => (int) $member->code,
-                                'user_name' => $username,
-                                'game_code' => (int) $game->code,
-                            ]);
-                        } else {
-                            $message = $resultMessage ?: 'ไม่สามารถสร้างบัญชีเกมสำหรับโหมด seamless ได้';
-                            throw new \RuntimeException($message);
-                        }
-                    }
-
-                }
-            } else {
-                $game = $gameRepo->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
-
-                if ($game) {
+                try {
                     $gameUserRepo->updateOrCreate(
                         ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
                         [
@@ -466,35 +508,177 @@ class AuthController extends BaseController
                             'withdraw_limit_amount' => 0,
                         ]
                     );
+                } catch (\Throwable $e) {
+                    throw new RegisterFailureException(
+                        'ไม่สามารถสร้างบัญชีเกมสำรองได้ในขณะนี้',
+                        'REGISTER_GAME_ACCOUNT_FALLBACK_FAILED',
+                        ['stage' => 'game_account_fallback', 'reason' => 'invalid_ip_fallback_failed'],
+                        $e
+                    );
                 }
+
+                Log::error('frontend_api_register.seamless_fallback_local_game_user_success', [
+                    'member_code' => (int) ($member->code ?? 0),
+                    'user_name' => $username,
+                    'game_code' => (int) $game->code,
+                ]);
+
+                return;
             }
 
-            try {
-                Event::dispatch('member.created.after', [$member]);
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        } catch (\Throwable $e) {
-            Log::error('frontend_api_register.exception', [
-                'user_name' => $username ?? null,
-                'exception_class' => get_class($e),
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-            ]);
-
-            if ($member && isset($member->code)) {
-                try {
-                    app('Gametech\Member\Repositories\MemberRepository')->delete((int) $member->code);
-                } catch (\Throwable $rollbackError) {
-                    report($rollbackError);
-                }
-            }
-
-            return $this->sendError('ไม่สามารถสมัครสมาชิกได้ในขณะนี้', 422);
+            throw $this->buildGameAccountFailureException($resultMessage);
         }
 
-        return $this->sendSuccess('สมัครสมาชิกสำเร็จ');
+        $game = $gameRepo->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
+        if (! $game) {
+            return;
+        }
+
+        try {
+            $gameUserRepo->updateOrCreate(
+                ['member_code' => (int) $member->code, 'game_code' => (int) $game->code],
+                [
+                    'user_name' => $username,
+                    'user_pass' => $pass,
+                    'balance' => 0,
+                    'enable' => 'Y',
+                    'user_create' => $name,
+                    'user_update' => $name,
+                    'date_create' => now(),
+                    'date_update' => now(),
+                    'bill_code' => 0,
+                    'pro_code' => 0,
+                    'amount' => 0,
+                    'bonus' => 0,
+                    'turnpro' => 0,
+                    'amount_balance' => 0,
+                    'withdraw_limit' => 0,
+                    'withdraw_limit_rate' => 0,
+                    'withdraw_limit_amount' => 0,
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new RegisterFailureException(
+                'ไม่สามารถสร้างบัญชีเกมได้ในขณะนี้',
+                'REGISTER_GAME_ACCOUNT_CREATE_FAILED',
+                ['stage' => 'game_account_create', 'reason' => 'local_game_account_create_failed'],
+                $e
+            );
+        }
+    }
+
+    private function buildGameAccountFailureException(string $resultMessage): RegisterFailureException
+    {
+        $normalized = Str::lower($resultMessage);
+        $details = ['stage' => 'game_account_create'];
+
+        if ($resultMessage !== '') {
+            $details['upstream_message'] = $resultMessage;
+        }
+
+        if (
+            str_contains($normalized, 'เชื่อมต่อไม่ได้')
+            || str_contains($normalized, 'connect')
+            || str_contains($normalized, 'timeout')
+            || str_contains($normalized, 'timed out')
+        ) {
+            $details['reason'] = 'connect_failed';
+
+            return new RegisterFailureException(
+                'ไม่สามารถเชื่อมต่อระบบเกมเพื่อสร้างบัญชีได้ในขณะนี้',
+                'REGISTER_GAME_ACCOUNT_CONNECT_FAILED',
+                $details
+            );
+        }
+
+        if (
+            str_contains($normalized, 'unauthorized')
+            || str_contains($normalized, 'statuscode":401')
+            || str_contains($normalized, '401')
+        ) {
+            $details['reason'] = 'unauthorized';
+
+            return new RegisterFailureException(
+                'ระบบเกมปฏิเสธการสร้างบัญชีสมาชิก',
+                'REGISTER_GAME_ACCOUNT_UNAUTHORIZED',
+                $details
+            );
+        }
+
+        $details['reason'] = 'create_failed';
+
+        return new RegisterFailureException(
+            $resultMessage !== ''
+                ? 'สร้างบัญชีเกมไม่สำเร็จ: ' . $resultMessage
+                : 'ไม่สามารถสร้างบัญชีเกมได้ในขณะนี้',
+            'REGISTER_GAME_ACCOUNT_CREATE_FAILED',
+            $details
+        );
+    }
+
+    private function isRegisterInvalidIpFailure(string $resultMessage): bool
+    {
+        $normalized = Str::lower($resultMessage);
+
+        return str_contains($normalized, 'statuscode":401')
+            && str_contains($normalized, 'invalid ip');
+    }
+
+    private function normalizeRegisterFailureMessage($message): string
+    {
+        if (is_array($message) || is_object($message)) {
+            $message = json_encode($message, JSON_UNESCAPED_UNICODE);
+        }
+
+        $normalized = trim(strip_tags((string) $message));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $decoded = json_decode($normalized, true);
+        if (is_array($decoded)) {
+            foreach (['message', 'msg', 'error'] as $key) {
+                if (! empty($decoded[$key]) && is_string($decoded[$key])) {
+                    $normalized = trim(strip_tags((string) $decoded[$key]));
+                    break;
+                }
+            }
+        }
+
+        $normalized = preg_replace('/\s+/u', ' ', $normalized) ?? '';
+
+        return trim(Str::limit($normalized, 160, '...'));
+    }
+
+    private function cleanupRegisterMember($member): void
+    {
+        if (! $member || ! isset($member->code)) {
+            return;
+        }
+
+        try {
+            app('Gametech\Member\Repositories\MemberRepository')->delete((int) $member->code);
+        } catch (\Throwable $rollbackError) {
+            report($rollbackError);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $details
+     */
+    private function registerFailureResponse(string $message, string $errorCode, array $details = [], int $status = 422): JsonResponse
+    {
+        $payload = [
+            'success' => false,
+            'message' => $message,
+            'error_code' => $errorCode,
+        ];
+
+        if (! empty($details)) {
+            $payload['details'] = $details;
+        }
+
+        return response()->json($payload, $status);
     }
 
     private function validationErrorResponse(ValidatorContract $validator): JsonResponse
