@@ -118,8 +118,8 @@
   - บรรทัด `3 ตัวบน` ในข้อความ Telegram derive จาก `first_prize` แบบ `right(3)` เสมอ
   - policy บังคับ `1 message ต่อ 1 draw` โดยใช้ `lotto_draws.telegram_sent_at` กันยิงซ้ำ
   - trigger เฉพาะตอน status transition เป็น `resulted` เท่านั้น (ไม่ยิงตอนยัง `closed`)
-- `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ 3 หลักร่วมกับ `last_2_digits` 2 หลัก
-  - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง (เช่น หุ้น/VIP)
+- `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ `3|4|5|6` หลักร่วมกับ `last_2_digits` 2 หลัก
+  - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง และตลาด 4D (เช่น หุ้น/VIP/มาเลเซีย)
   - ระบบยัง derive `top_3`, `top_2`, `bottom_2` เหมือนเดิมเพื่อให้ settlement bet types เดิมทำงานต่อเนื่อง
 - ถ้า source ส่งข้อความลักษณะ `งดออกผล` (หรือ marker เทียบเท่า) ในฟิลด์ผล:
   - pipeline จะ normalize เป็นผลแบบ `no_result=true`

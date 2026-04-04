@@ -49,7 +49,7 @@
 ### PR-06 Mapper + Validator
 - mapper: extracted payload -> logical map
 - validator contract:
-  - `first_prize` (5-6 หลัก)
+  - `first_prize` (3-6 หลัก; รวมตลาด 4D)
   - `last_2_digits` (2 หลัก)
 - invalid => `VALIDATION_ERROR`
 

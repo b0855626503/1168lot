@@ -1,5 +1,21 @@
 # Decision Log
 
+## 2026-04-04 — Settlement and Validator Must Accept 4-digit First Prize for 4D Markets (APPROVED)
+
+- ปรับ `SettlementService::normalizeResultNumber`
+  - รองรับ `first_prize` ความยาว `3|4|5|6`
+  - สำหรับค่า 4 หลัก เช่น `2575`:
+    - derive `top_3 = 575`
+    - derive `top_2 = 75`
+    - `bottom_2` ยังมาจาก `last_2_digits` ตามเดิม
+- ปรับ `ResultValidator`
+  - default validation ของ `first_prize` ต้องยอม `3|4|5|6` หลัก
+- ปรับ manual settle ใน admin
+  - ฟอร์ม/validation ต้องยอม `first_prize` 3-6 หลัก
+- เหตุผล:
+  - ให้ตลาด 4D เช่น หวยมาเลเซีย settle ได้จริง
+  - ปิดช่อง mismatch ที่ source test ผ่าน แต่ apply จริงล้มใน settlement ด้วย error ความยาวเลขไม่รองรับ
+
 ## 2026-04-04 — Auto Result Unhandled Exceptions Must Persist Fetch Logs and Draw Fetch State (APPROVED)
 
 - ปรับ `AutoResultPipelineService`
@@ -769,13 +785,13 @@
 - เพิ่ม idempotency กันยิงซ้ำด้วยฟิลด์ `lotto_draws.telegram_sent_at`
 - ยกเลิกการยิงข้อความสถานะ fetched ที่ยังไม่ resulted จาก `ResultApplier`
 
-## 2026-03-29 — Settlement Normalization Accepts 3-digit First Prize for Auto Result (APPROVED)
+## 2026-03-29 — Settlement Normalization Accepts Short First Prize for Auto Result (APPROVED)
 
-- ปรับ `SettlementService::normalizeResultNumber` ให้รองรับ `first_prize` ความยาว `3|5|6` หลัก (เดิมรับเฉพาะ `5|6`)
-- สำหรับเคส `first_prize=3 หลัก` + `last_2_digits=2 หลัก`:
+- ปรับ `SettlementService::normalizeResultNumber` ให้รองรับ `first_prize` ความยาว `3|4|5|6` หลัก (เดิมรับเฉพาะ `5|6`)
+- สำหรับเคส `first_prize=3 หรือ 4 หลัก` + `last_2_digits=2 หลัก`:
   - ยอมรับผลและ normalize ต่อได้
   - derive `top_3/top_2/bottom_2` ตามเดิมเพื่อไม่กระทบการคำนวณรางวัลของ bet types เดิม
-- เหตุผล: ป้องกันกรณี dry-run ผ่านแต่ apply จริงล้มที่ settlement สำหรับตลาดหุ้น/VIP ที่ใช้ผล 3 ตัวบน
+- เหตุผล: ป้องกันกรณี dry-run ผ่านแต่ apply จริงล้มที่ settlement สำหรับตลาดหุ้น/VIP/4D ที่ใช้ผลรางวัลไม่ใช่ 5-6 หลัก
 
 ## 2026-03-29 — Dry-run By Date Supports Single-Click Async Polling in Popup (APPROVED)
 

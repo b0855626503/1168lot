@@ -104,8 +104,8 @@ class SettlementService
 
         if ($firstPrize !== '' || $last2Digits !== '') {
             $firstPrizeLength = strlen($firstPrize);
-            if (! in_array($firstPrizeLength, [3, 5, 6], true)) {
-                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 3, 5 หรือ 6 หลัก');
+            if (! in_array($firstPrizeLength, [3, 4, 5, 6], true)) {
+                throw new InvalidArgumentException('รางวัลที่ 1 ต้องมี 3, 4, 5 หรือ 6 หลัก');
             }
 
             if (strlen($last2Digits) !== 2) {

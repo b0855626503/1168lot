@@ -73,8 +73,8 @@ class ResultValidator
             throw new ResultValidationException('ผลออกยังไม่พร้อม (NOT_READY)');
         }
 
-        if (! in_array(strlen($firstPrize), [5, 6], true)) {
-            throw new ResultValidationException('VALIDATION_ERROR: first_prize ต้องมี 5 หรือ 6 หลัก');
+        if (! in_array(strlen($firstPrize), [3, 4, 5, 6], true)) {
+            throw new ResultValidationException('VALIDATION_ERROR: first_prize ต้องมี 3, 4, 5 หรือ 6 หลัก');
         }
 
         if (strlen($last2Digits) !== 2) {

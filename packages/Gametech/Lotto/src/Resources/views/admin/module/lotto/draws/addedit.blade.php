@@ -74,8 +74,8 @@
 
             <b-row>
                 <b-col cols="12" md="8">
-                    <b-form-group label="รางวัลที่ 1 (5-6 หลัก)" label-for="result_first_prize">
-                        <b-form-input id="result_first_prize" v-model="formaddedit.result_number.first_prize" type="text" maxlength="6" size="sm" placeholder="เช่น 12345 หรือ 123456"></b-form-input>
+                    <b-form-group label="รางวัลที่ 1 (3-6 หลัก)" label-for="result_first_prize">
+                        <b-form-input id="result_first_prize" v-model="formaddedit.result_number.first_prize" type="text" maxlength="6" size="sm" placeholder="เช่น 123, 2575, 12345 หรือ 123456"></b-form-input>
                     </b-form-group>
                 </b-col>
                 <b-col cols="12" md="4">
@@ -859,7 +859,7 @@
 
                     const firstPrizeLen = onlyDigits(this.formaddedit.result_number.first_prize).length;
 
-                    return (firstPrizeLen === 5 || firstPrizeLen === 6)
+                    return firstPrizeLen >= 3 && firstPrizeLen <= 6
                         && onlyDigits(this.formaddedit.result_number.last_2_digits).length === 2;
                 },
                 firstMarketOption() {
