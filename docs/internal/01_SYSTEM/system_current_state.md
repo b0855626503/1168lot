@@ -210,8 +210,8 @@
     - `open` -> `แทงหวย`
     - `closed` -> `รอผล`
     - `resulted` -> `ออกผล`
-    - `no_result` -> `งดออกผล`
-    - `refunded` -> `คืนเงินแล้ว`
+    - `no_result` -> `ยกเลิก`
+    - `refunded` -> `ยกเลิก`
   - ถ้า draw มี `result_number.no_result=true` หรือ `result_number.status=no_result`
     - ต้อง map เป็น `no_result`
   - ถ้า draw มี `result_number.manual_cancelled_all_tickets=true`

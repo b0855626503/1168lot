@@ -647,8 +647,8 @@ Response ตัวอย่าง
     - `open` / `status_label = แทงหวย`
     - `closed` / `status_label = รอผล`
     - `resulted` / `status_label = ออกผล`
-    - `no_result` / `status_label = งดออกผล`
-    - `refunded` / `status_label = คืนเงินแล้ว`
+    - `no_result` / `status_label = ยกเลิก`
+    - `refunded` / `status_label = ยกเลิก`
   - ถ้า draw ถูก mark `no_result` และยังไม่ได้คืนเงินทั้งงวด จะได้ `status = no_result`
   - ถ้า draw มี `manual_cancelled_all_tickets=true` จะได้ `status = refunded`
 

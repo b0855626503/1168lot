@@ -349,9 +349,9 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonFragment(['market_id' => 2]);
         $response->assertJsonFragment(['draw_id' => 40, 'status' => 'resulted', 'status_label' => 'ออกผล']);
         $response->assertJsonFragment(['market_id' => 3]);
-        $response->assertJsonFragment(['draw_id' => 50, 'status' => 'refunded', 'status_label' => 'คืนเงินแล้ว']);
+        $response->assertJsonFragment(['draw_id' => 50, 'status' => 'refunded', 'status_label' => 'ยกเลิก']);
         $response->assertJsonFragment(['market_id' => 4]);
-        $response->assertJsonFragment(['draw_id' => 60, 'status' => 'no_result', 'status_label' => 'งดออกผล']);
+        $response->assertJsonFragment(['draw_id' => 60, 'status' => 'no_result', 'status_label' => 'ยกเลิก']);
         $response->assertJsonFragment(['market_id' => 5]);
         $response->assertJsonFragment(['draw_id' => 69, 'status' => 'open', 'status_label' => 'แทงหวย']);
     }

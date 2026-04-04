@@ -1043,8 +1043,8 @@ class LottoController extends BaseController
             'open' => 'แทงหวย',
             'closed' => 'รอผล',
             'resulted' => 'ออกผล',
-            'no_result' => 'งดออกผล',
-            'refunded' => 'คืนเงินแล้ว',
+            'no_result' => 'ยกเลิก',
+            'refunded' => 'ยกเลิก',
             default => 'ร่าง',
         };
     }

@@ -26,11 +26,11 @@
     - `open` -> `แทงหวย`
     - `closed` -> `รอผล`
     - `resulted` -> `ออกผล`
-    - `no_result` -> `งดออกผล`
-    - `refunded` -> `คืนเงินแล้ว`
+    - `no_result` -> `ยกเลิก`
+    - `refunded` -> `ยกเลิก`
 - เหตุผล:
   - หน้าเลือกรายการหวยต้องพา user ไปงวดที่ใช้งานได้ก่อน
-  - แยกเคส `งดออกผล` กับ `คืนเงินแล้ว` ให้ client render ได้ชัดเจน
+  - frontend ยังแยก machine-readable `status` ได้ชัดเจน แต่ข้อความที่โชว์ผู้ใช้ควรรวมเป็น `ยกเลิก`
 
 ## 2026-04-04 — `BetService` Container Binding Must Include `LottoPackageResolver` Before `WalletTransactionService` (APPROVED)
 

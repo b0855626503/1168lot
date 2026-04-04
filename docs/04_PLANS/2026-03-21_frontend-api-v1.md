@@ -59,6 +59,7 @@
   - ส่งงวดล่าสุดต่อรายการหวย โดยข้ามงวด `draft`
 - `GET /api/v1/lotto/markets/latest`
   - ส่งรายการหวยพร้อม `latest_draw` โดยเลือก `open` ล่าสุดก่อน และห้ามคืน `draft`
+  - `latest_draw.status_label` ของ `no_result` และ `refunded` ใช้คำว่า `ยกเลิก`
 - `GET /api/v1/lotto/draws/{id}`
   - ส่งรายละเอียดงวด
 - `POST /api/v1/lotto/bet` (ต้องมี token)
