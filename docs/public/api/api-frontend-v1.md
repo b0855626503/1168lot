@@ -639,8 +639,18 @@ Response ตัวอย่าง
 - `GET /lotto/markets/latest`
 - Auth: ไม่ต้องใช้ token
 - policy:
-  - ฟิลด์ `latest_draw` ของแต่ละ market จะคืนงวดล่าสุดที่ `status != draft`
-  - ถ้ามี `draft` ใหม่กว่า แต่ market เดียวกันยังมี `open/closed/resulted` อยู่ ระบบจะคืน non-draft ล่าสุดแทน
+  - ฟิลด์ `latest_draw` ของแต่ละ market จะเลือกตามลำดับ:
+    - `open` ล่าสุด
+    - ถ้าไม่มี `open` ค่อยใช้ non-draft ล่าสุด
+  - ห้ามคืนงวด `draft`
+  - สถานะที่ frontend จะได้รับ:
+    - `open` / `status_label = แทงหวย`
+    - `closed` / `status_label = รอผล`
+    - `resulted` / `status_label = ออกผล`
+    - `no_result` / `status_label = งดออกผล`
+    - `refunded` / `status_label = คืนเงินแล้ว`
+  - ถ้า draw ถูก mark `no_result` และยังไม่ได้คืนเงินทั้งงวด จะได้ `status = no_result`
+  - ถ้า draw มี `manual_cancelled_all_tickets=true` จะได้ `status = refunded`
 
 #### 5.2 รายละเอียดงวด
 - `GET /lotto/draws/{id}`

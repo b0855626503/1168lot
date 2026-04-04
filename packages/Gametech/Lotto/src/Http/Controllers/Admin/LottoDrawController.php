@@ -1030,8 +1030,14 @@ class LottoDrawController extends AppBaseController
 
         $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
 
-        return (bool) ($resultNumber['no_result'] ?? false)
+        $isNoResult = (bool) ($resultNumber['no_result'] ?? false)
             || (string) ($resultNumber['status'] ?? '') === 'no_result';
+
+        if (! $isNoResult) {
+            return false;
+        }
+
+        return ! (bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false);
     }
 
 }

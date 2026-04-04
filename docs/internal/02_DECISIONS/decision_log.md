@@ -15,11 +15,22 @@
 
 - ปรับ `FrontendApi LottoController@marketsLatestByGroup`
 - behavior ใหม่:
-  - `latest_draw` ของแต่ละ `market` ต้องเลือกจากงวดล่าสุดที่ `status != draft`
-  - ถ้ามี `draft` ใหม่กว่า แต่ market เดียวกันมี `open/closed/resulted` อยู่ ให้คืน non-draft ล่าสุดแทน
+  - `latest_draw` ของแต่ละ `market` ต้องเลือกตาม priority:
+    - `open` ล่าสุด
+    - ถ้าไม่มี `open` ค่อยใช้ non-draft ล่าสุด
+  - ห้ามคืน `draft`
+  - แยกสถานะหน้า frontend เพิ่ม:
+    - `no_result`
+    - `refunded`
+  - mapping label:
+    - `open` -> `แทงหวย`
+    - `closed` -> `รอผล`
+    - `resulted` -> `ออกผล`
+    - `no_result` -> `งดออกผล`
+    - `refunded` -> `คืนเงินแล้ว`
 - เหตุผล:
-  - หน้าเลือกรายการหวยต้องไม่ชี้งวดร่างเป็นงวดล่าสุด
-  - ให้ contract ของ `markets/latest` สอดคล้องกับ `GET /api/v1/lotto/draws`
+  - หน้าเลือกรายการหวยต้องพา user ไปงวดที่ใช้งานได้ก่อน
+  - แยกเคส `งดออกผล` กับ `คืนเงินแล้ว` ให้ client render ได้ชัดเจน
 
 ## 2026-04-04 — `BetService` Container Binding Must Include `LottoPackageResolver` Before `WalletTransactionService` (APPROVED)
 
@@ -167,10 +178,13 @@
 
 - policy ล่าสุดของปุ่ม `ยกเลิกโพย+คืนเงิน`:
   - แสดงเฉพาะงวดสถานะ `resulted` ที่ผลเป็น `งดออกผล` (`no_result`)
+- ถ้าระบบเคยคืนเงินทั้งงวดสำเร็จแล้วและตั้ง `result_number.manual_cancelled_all_tickets=true`
+  - ต้องซ่อนปุ่ม `ยกเลิกโพย+คืนเงิน`
 - backend guard ของ endpoint `POST /lotto/draws/cancel-all-refund`:
   - อนุญาตเฉพาะ `resulted` ที่ `result_number.no_result=true` หรือ `result_number.status=no_result`
 - เหตุผล:
   - ตรงตาม requirement ทีมงานว่า action นี้ต้องใช้เฉพาะเคสงวดงดออกผลเท่านั้น
+  - ป้องกันการกดซ้ำจาก UI หลังคืนเงินครบทั้งงวดแล้ว
 
 ## 2026-04-03 — Auto Result Supports “งดออกผล” and Admin Draws Can Cancel-All+Refund (APPROVED)
 

@@ -54,6 +54,7 @@ class LottoDrawsControllerTest extends TestCase
             $table->dateTime('open_at')->nullable();
             $table->dateTime('close_at')->nullable();
             $table->string('status')->default('draft');
+            $table->text('result_number')->nullable();
             $table->timestamps();
         });
     }
@@ -90,6 +91,27 @@ class LottoDrawsControllerTest extends TestCase
                 'group_id' => 1,
                 'name' => 'หวยรัฐบาล',
                 'code' => 'government',
+                'is_enabled' => 1,
+            ],
+            [
+                'id' => 3,
+                'group_id' => 1,
+                'name' => 'หวยคืนเงิน',
+                'code' => 'refunded-market',
+                'is_enabled' => 1,
+            ],
+            [
+                'id' => 4,
+                'group_id' => 1,
+                'name' => 'หวยงดออกผล',
+                'code' => 'no-result-market',
+                'is_enabled' => 1,
+            ],
+            [
+                'id' => 5,
+                'group_id' => 1,
+                'name' => 'หวยเปิดก่อนผล',
+                'code' => 'prefer-open-market',
                 'is_enabled' => 1,
             ],
         ]);
@@ -190,6 +212,27 @@ class LottoDrawsControllerTest extends TestCase
                 'code' => 'government',
                 'is_enabled' => 1,
             ],
+            [
+                'id' => 3,
+                'group_id' => 1,
+                'name' => 'หวยคืนเงิน',
+                'code' => 'refunded-market',
+                'is_enabled' => 1,
+            ],
+            [
+                'id' => 4,
+                'group_id' => 1,
+                'name' => 'หวยงดออกผล',
+                'code' => 'no-result-market',
+                'is_enabled' => 1,
+            ],
+            [
+                'id' => 5,
+                'group_id' => 1,
+                'name' => 'หวยเปิดก่อนผล',
+                'code' => 'prefer-open-market',
+                'is_enabled' => 1,
+            ],
         ]);
 
         DB::table('lotto_draws')->insert([
@@ -200,6 +243,7 @@ class LottoDrawsControllerTest extends TestCase
                 'open_at' => '2026-04-04 09:00:00',
                 'close_at' => '2026-04-04 15:00:00',
                 'status' => 'open',
+                'result_number' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -210,6 +254,7 @@ class LottoDrawsControllerTest extends TestCase
                 'open_at' => '2026-04-05 09:00:00',
                 'close_at' => '2026-04-05 15:00:00',
                 'status' => 'draft',
+                'result_number' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -220,6 +265,7 @@ class LottoDrawsControllerTest extends TestCase
                 'open_at' => '2026-04-03 09:00:00',
                 'close_at' => '2026-04-03 15:00:00',
                 'status' => 'resulted',
+                'result_number' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -230,6 +276,58 @@ class LottoDrawsControllerTest extends TestCase
                 'open_at' => '2026-04-04 09:00:00',
                 'close_at' => '2026-04-04 15:00:00',
                 'status' => 'draft',
+                'result_number' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 50,
+                'market_id' => 3,
+                'draw_date' => '2026-04-04',
+                'open_at' => '2026-04-04 09:00:00',
+                'close_at' => '2026-04-04 15:00:00',
+                'status' => 'resulted',
+                'result_number' => json_encode([
+                    'no_result' => true,
+                    'status' => 'no_result',
+                    'manual_cancelled_all_tickets' => true,
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 60,
+                'market_id' => 4,
+                'draw_date' => '2026-04-04',
+                'open_at' => '2026-04-04 09:00:00',
+                'close_at' => '2026-04-04 15:00:00',
+                'status' => 'resulted',
+                'result_number' => json_encode([
+                    'no_result' => true,
+                    'status' => 'no_result',
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 69,
+                'market_id' => 5,
+                'draw_date' => '2026-04-04',
+                'open_at' => '2026-04-04 09:00:00',
+                'close_at' => '2026-04-04 15:00:00',
+                'status' => 'open',
+                'result_number' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 70,
+                'market_id' => 5,
+                'draw_date' => '2026-04-05',
+                'open_at' => '2026-04-05 09:00:00',
+                'close_at' => '2026-04-05 15:00:00',
+                'status' => 'resulted',
+                'result_number' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -245,12 +343,16 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.groups.0.group_id', 1);
-
-        $markets = collect($response->json('data.groups.0.markets'))->keyBy('market_id');
-
-        $this->assertSame(30, data_get($markets->get(1), 'latest_draw.draw_id'));
-        $this->assertSame('open', data_get($markets->get(1), 'latest_draw.status'));
-        $this->assertSame(40, data_get($markets->get(2), 'latest_draw.draw_id'));
-        $this->assertSame('resulted', data_get($markets->get(2), 'latest_draw.status'));
+        $response->assertJsonCount(5, 'data.groups.0.markets');
+        $response->assertJsonFragment(['market_id' => 1]);
+        $response->assertJsonFragment(['draw_id' => 30, 'status' => 'open', 'status_label' => 'แทงหวย']);
+        $response->assertJsonFragment(['market_id' => 2]);
+        $response->assertJsonFragment(['draw_id' => 40, 'status' => 'resulted', 'status_label' => 'ออกผล']);
+        $response->assertJsonFragment(['market_id' => 3]);
+        $response->assertJsonFragment(['draw_id' => 50, 'status' => 'refunded', 'status_label' => 'คืนเงินแล้ว']);
+        $response->assertJsonFragment(['market_id' => 4]);
+        $response->assertJsonFragment(['draw_id' => 60, 'status' => 'no_result', 'status_label' => 'งดออกผล']);
+        $response->assertJsonFragment(['market_id' => 5]);
+        $response->assertJsonFragment(['draw_id' => 69, 'status' => 'open', 'status_label' => 'แทงหวย']);
     }
 }

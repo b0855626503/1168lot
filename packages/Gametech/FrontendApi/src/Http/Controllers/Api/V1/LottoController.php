@@ -77,12 +77,26 @@ class LottoController extends BaseController
                 'is_enabled',
             ]);
 
-            $latestDrawIds = LottoDraw::query()
+            $latestNonDraftByMarket = LottoDraw::query()
                 ->where('status', '!=', 'draft')
-                ->selectRaw('MAX(id) as id')
+                ->selectRaw('market_id, MAX(id) as id')
                 ->groupBy('market_id')
-                ->pluck('id')
-                ->map(static fn ($id) => (int) $id)
+                ->get()
+                ->mapWithKeys(static fn ($row): array => [(int) $row->market_id => (int) $row->id])
+                ->all();
+
+            $latestOpenByMarket = LottoDraw::query()
+                ->where('status', 'open')
+                ->selectRaw('market_id, MAX(id) as id')
+                ->groupBy('market_id')
+                ->get()
+                ->mapWithKeys(static fn ($row): array => [(int) $row->market_id => (int) $row->id])
+                ->all();
+
+            $latestDrawIds = collect($latestNonDraftByMarket)
+                ->map(static function (int $drawId, int $marketId) use ($latestOpenByMarket): int {
+                    return (int) ($latestOpenByMarket[$marketId] ?? $drawId);
+                })
                 ->filter(static fn (int $id) => $id > 0)
                 ->values()
                 ->all();
@@ -115,7 +129,7 @@ class LottoController extends BaseController
                     'markets' => $groupMarkets->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
                         $draw = $latestDrawMap->get((int) $market->id);
                         $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
-                        $status = (string) ($draw?->status ?? 'draft');
+                        $status = $draw ? $this->latestDrawStatus($draw) : 'draft';
 
                         return [
                             'market_id' => (int) $market->id,
@@ -135,7 +149,7 @@ class LottoController extends BaseController
                                 'close_at' => $draw?->close_at ? $draw->close_at->format('Y-m-d H:i:s') : null,
                                 'result_at' => $draw?->result_at ? $draw->result_at->format('Y-m-d H:i:s') : null,
                                 'status' => $status,
-                                'status_label' => $this->drawStatusLabel($status),
+                                'status_label' => $this->latestDrawStatusLabel($status),
                                 'is_open_bet' => $status === 'open',
                                 'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
                                 'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
@@ -1004,6 +1018,33 @@ class LottoController extends BaseController
             'open' => 'เปิดรับแทง',
             'closed' => 'รอออกผล',
             'resulted' => 'ออกผลแล้ว',
+            default => 'ร่าง',
+        };
+    }
+
+    private function latestDrawStatus(LottoDraw $draw): string
+    {
+        $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+
+        if ((bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false)) {
+            return 'refunded';
+        }
+
+        if ((bool) ($resultNumber['no_result'] ?? false) || (string) ($resultNumber['status'] ?? '') === 'no_result') {
+            return 'no_result';
+        }
+
+        return (string) $draw->status;
+    }
+
+    private function latestDrawStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'open' => 'แทงหวย',
+            'closed' => 'รอผล',
+            'resulted' => 'ออกผล',
+            'no_result' => 'งดออกผล',
+            'refunded' => 'คืนเงินแล้ว',
             default => 'ร่าง',
         };
     }

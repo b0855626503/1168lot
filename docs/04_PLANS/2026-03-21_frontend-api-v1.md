@@ -58,7 +58,7 @@
 - `GET /api/v1/lotto/draws`
   - ส่งงวดล่าสุดต่อรายการหวย โดยข้ามงวด `draft`
 - `GET /api/v1/lotto/markets/latest`
-  - ส่งรายการหวยพร้อม `latest_draw` ที่ข้ามงวด `draft`
+  - ส่งรายการหวยพร้อม `latest_draw` โดยเลือก `open` ล่าสุดก่อน และห้ามคืน `draft`
 - `GET /api/v1/lotto/draws/{id}`
   - ส่งรายละเอียดงวด
 - `POST /api/v1/lotto/bet` (ต้องมี token)

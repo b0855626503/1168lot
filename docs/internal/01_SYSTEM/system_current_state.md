@@ -202,8 +202,20 @@
   - คืน “งวดล่าสุดต่อรายการหวย” ที่ `status != draft`
   - ถ้า market มีทั้ง `draft` และ `open/closed/resulted` พร้อมกัน ให้ข้าม `draft` และเลือก non-draft ล่าสุดแทน
 - `GET /api/v1/lotto/markets/latest`
-  - ฟิลด์ `latest_draw` ของแต่ละ market ต้องอ้างอิงงวดล่าสุดที่ `status != draft`
-  - ถ้ามี `draft` ใหม่กว่า แต่มี non-draft อยู่แล้ว ให้คืน non-draft ล่าสุดแทน
+  - ฟิลด์ `latest_draw` ของแต่ละ market ต้องเลือกตามลำดับความสำคัญ:
+    - `open` ล่าสุด
+    - ถ้าไม่มี `open` ค่อยใช้ non-draft ล่าสุด
+  - ห้ามชี้ไปที่ `draft`
+  - `latest_draw.status/status_label` สำหรับหน้าเลือกหวยใช้ mapping:
+    - `open` -> `แทงหวย`
+    - `closed` -> `รอผล`
+    - `resulted` -> `ออกผล`
+    - `no_result` -> `งดออกผล`
+    - `refunded` -> `คืนเงินแล้ว`
+  - ถ้า draw มี `result_number.no_result=true` หรือ `result_number.status=no_result`
+    - ต้อง map เป็น `no_result`
+  - ถ้า draw มี `result_number.manual_cancelled_all_tickets=true`
+    - ต้อง map เป็น `refunded`
 - เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
   - `GET /api/v1/lotto/markets/latest`
   - `GET /api/v1/lotto/markets/{marketId}/betting-context`
@@ -308,8 +320,10 @@
   - คืนเงินตาม `total_net_amount` (fallback `total_amount`) ให้สมาชิกแต่ละโพย
   - ปรับ exposure (`lotto_number_exposures.sold_amount`) ลงตามจำนวนที่ยกเลิก
   - mark draw เป็น `resulted` พร้อมผล `งดออกผล` (`result_number.no_result=true`)
+  - หลังคืนเงินสำเร็จ ระบบบันทึก marker `result_number.manual_cancelled_all_tickets=true`
 - policy การแสดงปุ่มในหน้า `งวดหวย`:
   - ปุ่ม `ยกเลิกโพย+คืนเงิน` แสดงเฉพาะสถานะ `resulted+งดออกผล`
+  - ถ้าเคยคืนเงินทั้งงวดแล้ว (`manual_cancelled_all_tickets=true`) ปุ่มต้องไม่แสดงซ้ำ
 
 ## นโยบาย Deprecate Payout Override ระดับ Market
 

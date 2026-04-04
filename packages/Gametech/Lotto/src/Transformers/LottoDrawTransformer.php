@@ -45,7 +45,11 @@ class LottoDrawTransformer extends TransformerAbstract
                 'id' => $model->id,
                 'status' => (string) $model->status,
                 'is_no_result' => $isNoResult,
-                'can_cancel_all_refund' => $this->canCancelAllRefundAction((string) $model->status, $isNoResult),
+                'can_cancel_all_refund' => $this->canCancelAllRefundAction(
+                    (string) $model->status,
+                    $isNoResult,
+                    is_array($model->result_number) ? $model->result_number : []
+                ),
             ])->render(),
         ];
     }
@@ -107,8 +111,15 @@ class LottoDrawTransformer extends TransformerAbstract
         return (string) ($resultNumber['status'] ?? '') === 'no_result';
     }
 
-    private function canCancelAllRefundAction(string $status, bool $isNoResult): bool
+    /**
+     * @param array<string,mixed> $resultNumber
+     */
+    private function canCancelAllRefundAction(string $status, bool $isNoResult, array $resultNumber): bool
     {
-        return $status === 'resulted' && $isNoResult;
+        if ($status !== 'resulted' || ! $isNoResult) {
+            return false;
+        }
+
+        return ! (bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false);
     }
 }
