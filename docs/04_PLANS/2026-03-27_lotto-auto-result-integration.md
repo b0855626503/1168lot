@@ -63,12 +63,16 @@
 - flow: resolver -> builder -> fetch -> parse -> map -> validate -> apply
 - eligibility: closed, due result_at, not resulted
 - `NO_SOURCE` ต้อง explicit
+- ถ้า draw ใด throw unhandled exception ระหว่าง orchestration:
+  - command ต้อง log draw-level exception แล้ว continue draw ถัดไป
+  - ห้าม abort ทั้ง batch
 
 ### PR-09 Retry + Backoff
 - retry policy:
   - ทุก 1 นาที x 15
   - ทุก 5 นาที x 12
 - `NOT_READY` = retryable
+- payload ที่ match งวดแล้วแต่ผลหลักยังว่าง/ไม่ครบ (เช่น upstream ส่ง `results: []`) ต้องถูกจัดเป็น `NOT_READY`
 - `TEMPLATE_ERROR` = non-retryable by scheduler
 - exceeded => `EXHAUSTED`
 

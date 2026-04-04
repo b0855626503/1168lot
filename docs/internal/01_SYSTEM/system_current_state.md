@@ -91,6 +91,12 @@
 - รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
 - pipeline v2 ส่ง `lookup_date` (และ `lookup_date_compact`) ต่อเข้า `FetchExecutor` โดยตรง
   - ถ้าตั้ง source เป็น `ROUND_DATE_MINUS_DAYS` ระบบ dry-run/retry จะยิง upstream ด้วยวันที่ที่เลื่อนแล้วจริง (ไม่ fallback เป็น `expected_draw_date`)
+- ถ้า upstream ตอบ payload ของงวดตรงวันแล้ว แต่ฟิลด์ผลหลักยังว่าง/ไม่มีรายการ (เช่น `results: []`) และ readiness config ระบุว่าผลยังไม่ครบ:
+  - v2 pipeline ต้อง classify เป็น `NOT_READY`
+  - ห้ามตกเป็น `VALIDATION_ERROR` ทันที เพราะจะทำให้ scheduler retry ถี่เกินไปและไม่เข้า backoff policy
+- command `lotto:fetch-auto-results` ต้องจับ exception ราย draw แล้ววิ่งต่อ draw ถัดไป
+  - เมื่อเกิด unhandled exception ระหว่างรัน ต้อง log `LOTTO_AUTO_RESULT_DRAW_EXCEPTION`
+  - ห้ามปล่อยให้ draw เดียวทำให้รอบ cron ทั้งก้อนหยุดกลางทาง
 
 ## นโยบาย Auto Result Apply/Settlement (Per Market)
 

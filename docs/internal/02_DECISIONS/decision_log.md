@@ -1,5 +1,21 @@
 # Decision Log
 
+## 2026-04-04 — Auto Result Empty Upstream Payload Must Be `NOT_READY` and Scheduler Must Survive Per-Draw Exceptions (APPROVED)
+
+- ปรับ `V2ResultPipelineRunner`
+- behavior ใหม่:
+  - ถ้า validation fail ด้วย `REQUIRED_FIELD_MISSING`
+  - และ readiness ประเมินแล้วพบว่าฟิลด์ผลหลักยังไม่ครบ
+  - ให้ reclassify outcome เป็น `NOT_READY` ที่ stage `READINESS`
+  - ห้ามตอบ `VALIDATION_ERROR` ทันทีในเคส payload ตรงวันแต่ผลยังว่าง เช่น `results: []`
+- ปรับ `lotto:fetch-auto-results`
+  - ครอบ `processDraw()` ด้วย per-draw exception guard
+  - เมื่อ draw ใด throw exception ต้อง log `LOTTO_AUTO_RESULT_DRAW_EXCEPTION`
+  - command ต้อง continue ไป draw ถัดไปและสรุป `unhandled_draw_exceptions`
+- เหตุผล:
+  - ให้ draw ที่ upstream ยังไม่ออกผลจริงเข้า retry/backoff policy ตาม design
+  - ป้องกัน scheduler ตันทั้งรอบจาก draw เดียวและลด blind spot ที่ไม่มี fetch log
+
 ## 2026-04-04 — Frontend Register Must Return Specific Post-Validation Failure Reasons (APPROVED)
 
 - ปรับ `POST /api/v1/auth/register` ให้แยก failure หลัง validation เป็นสาเหตุที่ชัดเจนขึ้น

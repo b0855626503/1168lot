@@ -7,6 +7,7 @@ use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResult\AutoResultPipelineService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class LottoFetchAutoResultsCommand extends Command
 {
@@ -74,6 +75,7 @@ class LottoFetchAutoResultsCommand extends Command
             'skipped_not_due' => 0,
             'skipped_backoff' => 0,
             'marked_exhausted' => 0,
+            'unhandled_draw_exceptions' => 0,
             'statuses' => [],
         ];
 
@@ -97,14 +99,28 @@ class LottoFetchAutoResultsCommand extends Command
                 }
             }
 
-            $result = $pipeline->processDraw(
-                $draw,
-                $dryRun,
-                $manualRetry,
-                $runId,
-                is_string($expectedDrawDate) && trim($expectedDrawDate) !== '' ? trim($expectedDrawDate) : null
-            );
-            $status = (string) ($result['status'] ?? 'VALIDATION_ERROR');
+            try {
+                $result = $pipeline->processDraw(
+                    $draw,
+                    $dryRun,
+                    $manualRetry,
+                    $runId,
+                    is_string($expectedDrawDate) && trim($expectedDrawDate) !== '' ? trim($expectedDrawDate) : null
+                );
+                $status = (string) ($result['status'] ?? 'VALIDATION_ERROR');
+            } catch (\Throwable $e) {
+                $summary['unhandled_draw_exceptions']++;
+
+                Log::error('LOTTO_AUTO_RESULT_DRAW_EXCEPTION', [
+                    'run_id' => $runId,
+                    'draw_id' => (int) $draw->id,
+                    'market_id' => (int) $draw->market_id,
+                    'message' => $e->getMessage(),
+                    'exception' => get_class($e),
+                ]);
+
+                $status = 'UNHANDLED_EXCEPTION';
+            }
 
             if (! isset($summary['statuses'][$status])) {
                 $summary['statuses'][$status] = 0;
@@ -118,14 +134,15 @@ class LottoFetchAutoResultsCommand extends Command
         ksort($summary['statuses']);
 
         $this->info(sprintf(
-            'Auto result run=%s selected=%d processed=%d skipped_no_source_config=%d skipped_not_due=%d skipped_backoff=%d marked_exhausted=%d',
+            'Auto result run=%s selected=%d processed=%d skipped_no_source_config=%d skipped_not_due=%d skipped_backoff=%d marked_exhausted=%d unhandled_draw_exceptions=%d',
             $summary['run_id'],
             $summary['selected'],
             $summary['processed'],
             $summary['skipped_no_source_config'],
             $summary['skipped_not_due'],
             $summary['skipped_backoff'],
-            $summary['marked_exhausted']
+            $summary['marked_exhausted'],
+            $summary['unhandled_draw_exceptions']
         ));
 
         foreach ($summary['statuses'] as $status => $count) {

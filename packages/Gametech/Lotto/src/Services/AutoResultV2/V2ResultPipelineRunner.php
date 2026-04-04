@@ -155,6 +155,34 @@ class V2ResultPipelineRunner
         $validation = $this->validationExecutor->execute($mapped, $compiled->validation());
         $trace['validation_result'] = $validation;
         if (! (bool) ($validation['valid'] ?? false)) {
+            $readiness = $this->readinessExecutor->execute(
+                (array) ($validation['normalized'] ?? $mapped),
+                $compiled->readiness(),
+                (bool) ($source->supports_partial ?? false)
+            );
+            $trace['readiness_result'] = $readiness;
+
+            if (
+                $this->stringValue($validation['error_code'] ?? '') === 'REQUIRED_FIELD_MISSING'
+                && ! (bool) ($readiness['ready'] ?? false)
+            ) {
+                $trace['pipeline_stage'] = PipelineStage::READINESS;
+                $trace['status'] = 'NOT_READY';
+                $trace['final_decision'] = 'REJECTED';
+                $trace['error_code'] = $this->stringValue($readiness['error_code'] ?? 'NOT_READY_PARTIAL_RESULT');
+                $trace['error_stage'] = PipelineStage::READINESS;
+
+                return [
+                    'status' => 'NOT_READY',
+                    'error_code' => $this->stringValue($trace['error_code']),
+                    'error_stage' => PipelineStage::READINESS,
+                    'trace_json' => PipelineTraceNormalizer::normalize($trace),
+                    'validation' => $validation,
+                    'readiness' => $readiness,
+                    'mapped' => $mapped,
+                ];
+            }
+
             $trace['pipeline_stage'] = PipelineStage::VALIDATE;
             $trace['status'] = 'VALIDATION_ERROR';
             $trace['final_decision'] = 'REJECTED';
