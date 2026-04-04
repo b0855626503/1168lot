@@ -607,6 +607,10 @@ Response ตัวอย่างกรณีเข้าเกมไม่ไ�
 - `GET /lotto/draws`
 - Auth: ไม่ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- policy:
+  - คืนงวดล่าสุดต่อรายการหวย
+  - ข้ามงวดที่ `status = draft`
+  - ถ้า market เดียวกันมีงวด `draft` ใหม่กว่า แต่ยังมี `open/closed/resulted` อยู่ ระบบจะคืน non-draft ล่าสุดแทน
 
 Response ตัวอย่าง
 ```json
@@ -630,6 +634,13 @@ Response ตัวอย่าง
   "message": "ดึงรายการงวดสำเร็จ"
 }
 ```
+
+#### 5.1.1 รายการหวยพร้อมงวดล่าสุด
+- `GET /lotto/markets/latest`
+- Auth: ไม่ต้องใช้ token
+- policy:
+  - ฟิลด์ `latest_draw` ของแต่ละ market จะคืนงวดล่าสุดที่ `status != draft`
+  - ถ้ามี `draft` ใหม่กว่า แต่ market เดียวกันยังมี `open/closed/resulted` อยู่ ระบบจะคืน non-draft ล่าสุดแทน
 
 #### 5.2 รายละเอียดงวด
 - `GET /lotto/draws/{id}`

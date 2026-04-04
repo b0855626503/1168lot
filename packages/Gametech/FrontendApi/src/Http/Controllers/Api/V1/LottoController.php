@@ -78,6 +78,7 @@ class LottoController extends BaseController
             ]);
 
             $latestDrawIds = LottoDraw::query()
+                ->where('status', '!=', 'draft')
                 ->selectRaw('MAX(id) as id')
                 ->groupBy('market_id')
                 ->pluck('id')
@@ -162,9 +163,43 @@ class LottoController extends BaseController
     {
         try {
             $language = $this->requestLanguage($request);
-            $response = app(LottoDrawController::class)->index($request);
+            $limit = max(1, min((int) $request->input('limit', 20), 100));
 
-            return $this->localizeDrawsResponse($response, $language);
+            $latestDrawIds = LottoDraw::query()
+                ->where('status', '!=', 'draft')
+                ->selectRaw('MAX(id) as id')
+                ->groupBy('market_id')
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id) => $id > 0)
+                ->values()
+                ->all();
+
+            $rows = LottoDraw::query()
+                ->with('market:id,name')
+                ->whereIn('id', $latestDrawIds)
+                ->orderByDesc('draw_date')
+                ->orderByDesc('id')
+                ->limit($limit)
+                ->get()
+                ->map(static function (LottoDraw $draw): array {
+                    return [
+                        'id' => (int) $draw->id,
+                        'market_id' => (int) $draw->market_id,
+                        'market_name' => $draw->market?->name,
+                        'draw_date' => optional($draw->draw_date)->toDateString(),
+                        'open_at' => optional($draw->open_at)->toDateTimeString(),
+                        'close_at' => optional($draw->close_at)->toDateTimeString(),
+                        'status' => (string) $draw->status,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            return $this->localizeDrawsResponse(
+                $this->sendResponse($rows, 'ดึงรายการงวดสำเร็จ'),
+                $language
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการงวดได้ในขณะนี้', 422);
         }

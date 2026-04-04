@@ -1,5 +1,26 @@
 # Decision Log
 
+## 2026-04-04 — `GET /api/v1/lotto/draws` Must Return Latest Non-Draft Draw Per Market (APPROVED)
+
+- ปรับ `FrontendApi LottoController@draws`
+- behavior ใหม่:
+  - เลือกงวดล่าสุดต่อ `market_id`
+  - ใช้เฉพาะแถวที่ `status != draft`
+  - ถ้ามี `draft` ที่ใหม่กว่า แต่ market เดียวกันมี `open/closed/resulted` อยู่ ให้คืน non-draft ล่าสุดแทน
+- เหตุผล:
+  - หน้า frontend ต้องได้งวดที่ใช้งาน/อ้างอิงได้จริง ไม่ใช่งวดร่าง
+  - ลด mismatch ระหว่างรายการงวดกับ flow หน้าแทง/ผลรางวัล
+
+## 2026-04-04 — `GET /api/v1/lotto/markets/latest` Must Use Latest Non-Draft Draw Per Market (APPROVED)
+
+- ปรับ `FrontendApi LottoController@marketsLatestByGroup`
+- behavior ใหม่:
+  - `latest_draw` ของแต่ละ `market` ต้องเลือกจากงวดล่าสุดที่ `status != draft`
+  - ถ้ามี `draft` ใหม่กว่า แต่ market เดียวกันมี `open/closed/resulted` อยู่ ให้คืน non-draft ล่าสุดแทน
+- เหตุผล:
+  - หน้าเลือกรายการหวยต้องไม่ชี้งวดร่างเป็นงวดล่าสุด
+  - ให้ contract ของ `markets/latest` สอดคล้องกับ `GET /api/v1/lotto/draws`
+
 ## 2026-04-04 — `BetService` Container Binding Must Include `LottoPackageResolver` Before `WalletTransactionService` (APPROVED)
 
 - แก้ binding ของ `Gametech\Lotto\Services\BetService` ใน `LottoServiceProvider`

@@ -198,6 +198,12 @@
 
 ## นโยบาย Frontend Lotto Critical Path API
 
+- `GET /api/v1/lotto/draws`
+  - คืน “งวดล่าสุดต่อรายการหวย” ที่ `status != draft`
+  - ถ้า market มีทั้ง `draft` และ `open/closed/resulted` พร้อมกัน ให้ข้าม `draft` และเลือก non-draft ล่าสุดแทน
+- `GET /api/v1/lotto/markets/latest`
+  - ฟิลด์ `latest_draw` ของแต่ละ market ต้องอ้างอิงงวดล่าสุดที่ `status != draft`
+  - ถ้ามี `draft` ใหม่กว่า แต่มี non-draft อยู่แล้ว ให้คืน non-draft ล่าสุดแทน
 - เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
   - `GET /api/v1/lotto/markets/latest`
   - `GET /api/v1/lotto/markets/{marketId}/betting-context`
