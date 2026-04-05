@@ -33,6 +33,7 @@ class LottoTicketCancelPolicyTest extends TestCase
 
         Schema::dropIfExists('wallet_transactions');
         Schema::dropIfExists('logs');
+        Schema::dropIfExists('banks');
         Schema::dropIfExists('lotto_number_exposures');
         Schema::dropIfExists('lotto_ticket_items');
         Schema::dropIfExists('lotto_tickets');
@@ -56,7 +57,7 @@ class LottoTicketCancelPolicyTest extends TestCase
 
         $response = $this->cancelResponse($member, 3001);
 
-        $response->assertStatus(200);
+        $this->assertSame(200, $response->getStatusCode(), $response->getContent());
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('message', 'ยกเลิกโพยสำเร็จ');
 
@@ -84,6 +85,13 @@ class LottoTicketCancelPolicyTest extends TestCase
                 status: 'cancelled',
                 cancelledAt: '2026-04-05 09:00:00'
             );
+            $this->seedCancelWalletTransaction(
+                memberId: 9002,
+                ticketId: $ticketId,
+                createdByType: 'member',
+                createdById: 9002,
+                createdAt: '2026-04-05 09:00:00'
+            );
         }
 
         $response = $this->cancelResponse($member, 3002);
@@ -110,6 +118,40 @@ class LottoTicketCancelPolicyTest extends TestCase
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('message', 'ยกเลิกโพยได้ก่อนเวลาปิดรับอย่างน้อย 10 นาทีเท่านั้น');
         $this->assertSame('active', DB::table('lotto_tickets')->where('id', 3003)->value('status'));
+    }
+
+    public function test_cancel_does_not_count_admin_or_system_cancellations_toward_member_daily_quota(): void
+    {
+        Carbon::setTestNow('2026-04-05 12:00:00');
+
+        $member = $this->seedMember(9004, 100);
+        $this->seedOpenDraw(drawId: 2004, marketId: 304, closeAt: '2026-04-05 13:00:00');
+        $this->seedTicket(ticketId: 3004, memberId: 9004, drawId: 2004, status: 'active');
+        $this->seedTicketItem(ticketId: 3004, betType: 'top_2', number: '49', amount: 20);
+        $this->seedExposure(drawId: 2004, betType: 'top_2', number: '49', soldAmount: 20);
+        $this->seedBetWalletTransaction(memberId: 9004, ticketId: 3004, amount: 20);
+
+        foreach ([4101, 4102, 4103, 4104] as $ticketId) {
+            $this->seedTicket(
+                ticketId: $ticketId,
+                memberId: 9004,
+                drawId: 2004,
+                status: 'cancelled',
+                cancelledAt: '2026-04-05 09:00:00'
+            );
+        }
+
+        $this->seedCancelWalletTransaction(memberId: 9004, ticketId: 4101, createdByType: 'admin', createdById: 7001, createdAt: '2026-04-05 09:00:00');
+        $this->seedCancelWalletTransaction(memberId: 9004, ticketId: 4102, createdByType: 'admin', createdById: 7001, createdAt: '2026-04-05 09:05:00');
+        $this->seedCancelWalletTransaction(memberId: 9004, ticketId: 4103, createdByType: 'system', createdById: null, createdAt: '2026-04-05 09:10:00');
+        $this->seedCancelWalletTransaction(memberId: 9004, ticketId: 4104, createdByType: 'admin', createdById: 7001, createdAt: '2026-04-05 09:15:00');
+
+        $response = $this->cancelResponse($member, 3004);
+
+        $this->assertSame(200, $response->getStatusCode(), $response->getContent());
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('message', 'ยกเลิกโพยสำเร็จ');
+        $this->assertSame('cancelled', DB::table('lotto_tickets')->where('id', 3004)->value('status'));
     }
 
     private function cancelResponse(Member $member, int $ticketId)
@@ -234,10 +276,41 @@ class LottoTicketCancelPolicyTest extends TestCase
         ]);
     }
 
+    private function seedCancelWalletTransaction(
+        int $memberId,
+        int $ticketId,
+        string $createdByType,
+        ?int $createdById,
+        string $createdAt
+    ): void {
+        DB::table('wallet_transactions')->insert([
+            'member_id' => $memberId,
+            'scope' => 'MEMBER',
+            'game_user_id' => null,
+            'direction' => 'CREDIT',
+            'amount' => 50,
+            'balance_before' => 450,
+            'balance_after' => 500,
+            'ref_type' => 'LOTTO_CANCEL',
+            'ref_id' => $ticketId,
+            'ref_code' => (string) $ticketId,
+            'group_code' => 'LOTTO_CANCEL_' . $ticketId,
+            'related_txn_id' => null,
+            'status' => 'SUCCESS',
+            'description' => 'คืนเงินจากการยกเลิกโพยหวย',
+            'meta' => null,
+            'created_by_type' => $createdByType,
+            'created_by_id' => $createdById,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
+    }
+
     private function prepareSchema(): void
     {
         Schema::dropIfExists('wallet_transactions');
         Schema::dropIfExists('logs');
+        Schema::dropIfExists('banks');
         Schema::dropIfExists('lotto_number_exposures');
         Schema::dropIfExists('lotto_ticket_items');
         Schema::dropIfExists('lotto_tickets');
@@ -251,6 +324,11 @@ class LottoTicketCancelPolicyTest extends TestCase
             $table->decimal('balance', 12, 2)->default(0);
             $table->dateTime('date_create')->nullable();
             $table->dateTime('date_update')->nullable();
+        });
+
+        Schema::create('banks', function (Blueprint $table): void {
+            $table->unsignedBigInteger('code')->primary();
+            $table->string('name')->nullable();
         });
 
         Schema::create('lotto_markets', function (Blueprint $table): void {

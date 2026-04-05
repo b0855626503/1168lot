@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TicketController extends AppBaseController
 {
@@ -142,12 +143,17 @@ class TicketController extends AppBaseController
                     description: 'คืนเงินจากการยกเลิกโพยหวย'
                 );
 
-                $ticket->update([
+                $updatePayload = [
                     'status' => 'cancelled',
-                    'cancelled_by' => $memberId,
                     'cancelled_at' => now(),
                     'refund_amount' => $refundAmount,
-                ]);
+                ];
+
+                if (Schema::hasColumn('lotto_tickets', 'cancelled_by')) {
+                    $updatePayload['cancelled_by'] = $memberId;
+                }
+
+                $ticket->update($updatePayload);
             });
 
             return $this->sendSuccess('ยกเลิกโพยสำเร็จ');
@@ -277,10 +283,12 @@ class TicketController extends AppBaseController
     {
         $today = now()->toDateString();
 
-        $dailyCancelledCount = LottoTicket::query()
+        $dailyCancelledCount = DB::table('wallet_transactions')
             ->where('member_id', $memberId)
-            ->where('status', 'cancelled')
-            ->whereDate('cancelled_at', $today)
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('created_by_type', 'member')
+            ->where('created_by_id', $memberId)
+            ->whereDate('created_at', $today)
             ->count();
 
         if ($dailyCancelledCount >= self::DAILY_CANCEL_LIMIT) {

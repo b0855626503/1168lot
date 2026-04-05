@@ -10,6 +10,7 @@ use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -161,6 +162,10 @@ class AdminLottoReportsDataTableTest extends TestCase
 
     public function test_tickets_cancel_report_reads_financial_package_and_member_canceller_columns(): void
     {
+        $createdAt = now()->subMinutes(5);
+        $cancelledAt = now()->subMinute();
+        $updatedAt = now();
+
         DB::table('lotto_tickets')->insert([
             'id' => 1003,
             'member_id' => 52,
@@ -172,10 +177,10 @@ class AdminLottoReportsDataTableTest extends TestCase
             'total_win_amount' => 450,
             'status' => 'cancelled',
             'reason' => 'งดออกผล',
-            'cancelled_at' => now(),
+            'cancelled_at' => $cancelledAt,
             'refund_amount' => 100,
-            'created_at' => now()->subMinute(),
-            'updated_at' => now(),
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
         ]);
 
         DB::table('lotto_ticket_items')->insert([
@@ -222,6 +227,10 @@ class AdminLottoReportsDataTableTest extends TestCase
         $this->assertEquals(100.0, (float) $row->total_net_amount);
         $this->assertEquals(450.0, (float) $row->total_win_amount);
         $this->assertSame('ลด 17%', $row->items->pluck('package_name_at_time')->filter()->implode(', '));
+
+        $payload = (new LottoTicketsCancelReportTransformer())->transform($row);
+        $this->assertSame($createdAt->format('d/m/Y H:i'), $payload['created_at']);
+        $this->assertSame($cancelledAt->format('d/m/Y H:i'), $payload['latest_updated_at']);
     }
 
     public function test_blocked_numbers_report_reads_real_blocks(): void

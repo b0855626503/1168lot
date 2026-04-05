@@ -51,9 +51,10 @@
 - realtime toast ของรายการ `โพยหวย` (`lotto.ticket.list.changed`) ต้องส่งข้อความที่อ่านรู้เรื่องใน event เดียว
   - ถ้ามี context ของ draw ให้แนบ `market_name` และ `draw_date`
   - ถ้าเป็น action `created` ต้องแนบผู้ทำรายการ (`actor_id`) และยอดเงิน (`amount`) ด้วย
+  - ถ้าเป็น action `cancelled` ต้องแนบทั้งเจ้าของโพย (`owner_id`) และผู้ทำรายการ (`actor_id`) เมื่อ resolve ได้
   - ตัวอย่างข้อความ:
     - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
-    - `มีการคืนโพยหวย: หวยรัฐบาล งวดวันที่ 2026-04-04`
+    - `มีการคืนโพยหวย: หวย ธกส. งวดวันที่ 2026-04-16 ของ xxx โดย xxxx`
     - `มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200`
   - trigger policy:
     - `created` = ยิงตอนสร้าง ticket ใหม่
@@ -169,6 +170,12 @@
   - อ่าน ticket ทุกสถานะ ไม่ lock แค่ active
   - filter: `date_start/date_stop` (อิง `COALESCE(cancelled_at, created_at)`), `market_id`, `status`
   - แสดง `แพกเกจ`, `ส่วนลด`, `สุทธิ`, `ยอดถูก`, `สาเหตุ` ระดับ ticket
+  - คอลัมน์เวลา:
+    - คอลัมน์แรก `เวลาสร้างรายการ` ใช้ `created_at`
+    - คอลัมน์หลัง `ผู้ยกเลิก` ใช้ `เวลาอัปเดทล่าสุด`
+      - `cancelled_at` ถ้ามี
+      - fallback เป็น `updated_at`
+      - fallback สุดท้ายเป็น `created_at`
   - แสดง `ผู้ยกเลิก` และ `เวลา` โดย resolve จาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
     - ถ้าเป็นลูกค้ายกเลิกเอง ให้แสดงข้อมูล member จาก `created_by_type=member`
     - ถ้าเป็นทีมงานยกเลิก/คืนโพยทั้งงวด ให้แสดงข้อมูล admin จาก `created_by_type=admin`
@@ -404,7 +411,12 @@
   - ใช้ได้เฉพาะ ticket ของสมาชิกคนนั้นที่ `status=active`
   - draw ต้องยัง `open`
   - ต้องยกเลิกก่อน `draw.close_at` อย่างน้อย `10` นาที
-  - จำกัดสิทธิ์ยกเลิกของสมาชิกไม่เกิน `4` ครั้งต่อวัน (นับจาก ticket ที่ `status=cancelled` และ `cancelled_at` อยู่ในวันปัจจุบัน)
+  - จำกัดสิทธิ์ยกเลิกของสมาชิกไม่เกิน `4` ครั้งต่อวัน
+    - นับเฉพาะ `wallet_transactions(ref_type=LOTTO_CANCEL)` ที่เกิดจาก self-cancel
+    - ต้องเป็น `created_by_type=member`
+    - ต้องเป็น `created_by_id=memberId`
+    - ใช้ `created_at` ของ transaction อยู่ในวันปัจจุบัน
+    - ไม่นับเคสทีมงานยกเลิกหรือระบบคืนโพย
   - เมื่อยกเลิกสำเร็จ ระบบ:
     - rollback `lotto_number_exposure.sold_amount`
     - คืนเงินเข้ากระเป๋าสมาชิกผ่าน `wallet_transactions` (`ref_type=LOTTO_CANCEL`)

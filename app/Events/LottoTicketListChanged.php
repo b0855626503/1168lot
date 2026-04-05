@@ -17,6 +17,7 @@ class LottoTicketListChanged implements ShouldBroadcast
     public string $message;
     public ?string $marketName;
     public ?string $drawDate;
+    public ?string $ownerId;
     public ?string $actorId;
     public ?string $amount;
 
@@ -25,6 +26,7 @@ class LottoTicketListChanged implements ShouldBroadcast
         int $total,
         ?string $marketName = null,
         ?string $drawDate = null,
+        ?string $ownerId = null,
         ?string $actorId = null,
         $amount = null
     )
@@ -33,6 +35,7 @@ class LottoTicketListChanged implements ShouldBroadcast
         $this->total = $total;
         $this->marketName = $this->normalizeNullableText($marketName);
         $this->drawDate = $this->normalizeNullableText($drawDate);
+        $this->ownerId = $this->normalizeNullableText($ownerId);
         $this->actorId = $this->normalizeNullableText($actorId);
         $this->amount = $this->normalizeAmount($amount);
 
@@ -63,6 +66,7 @@ class LottoTicketListChanged implements ShouldBroadcast
             'message' => $this->message,
             'market_name' => $this->marketName,
             'draw_date' => $this->drawDate,
+            'owner_id' => $this->ownerId,
             'actor_id' => $this->actorId,
             'amount' => $this->amount,
             'datatable_id' => 'lottoTicketsTable',
@@ -89,6 +93,18 @@ class LottoTicketListChanged implements ShouldBroadcast
         }
 
         $message = $baseMessage . ': ' . implode(' ', $segments);
+
+        if ($this->action === 'cancelled') {
+            if ($this->ownerId !== null) {
+                $message .= ' ของ ' . $this->ownerId;
+            }
+
+            if ($this->actorId !== null) {
+                $message .= ' โดย ' . $this->actorId;
+            }
+
+            return $message;
+        }
 
         if ($this->action === 'created') {
             if ($this->actorId !== null) {

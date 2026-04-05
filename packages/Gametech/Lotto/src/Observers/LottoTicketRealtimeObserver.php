@@ -6,6 +6,7 @@ use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoTicket;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LottoTicketRealtimeObserver
 {
@@ -13,11 +14,11 @@ class LottoTicketRealtimeObserver
     {
         $total = $this->resolveTotalTickets();
         [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
-        [$actorId, $amount] = $this->resolveTicketRealtimeContext($ticket);
+        [$ownerId, $amount] = $this->resolveTicketRealtimeContext($ticket);
 
-        $this->afterCommit(function () use ($total, $marketName, $drawDate, $actorId, $amount): void {
-            $this->broadcastTicketListChanged('created', $total, $marketName, $drawDate, $actorId, $amount);
-            $this->broadcastPublicActivityUpdated('created', $total, $marketName, $drawDate, $actorId, $amount);
+        $this->afterCommit(function () use ($total, $marketName, $drawDate, $ownerId, $amount): void {
+            $this->broadcastTicketListChanged('created', $total, $marketName, $drawDate, null, $ownerId, $amount);
+            $this->broadcastPublicActivityUpdated('created', $total, $marketName, $drawDate, null, $ownerId, $amount);
         });
     }
 
@@ -41,10 +42,11 @@ class LottoTicketRealtimeObserver
         $total = $this->resolveTotalTickets();
         $action = 'cancelled';
         [$marketName, $drawDate] = $this->resolveDrawContext($ticket);
+        [$ownerId, $actorId] = $this->resolveCancelledRealtimeContext($ticket);
 
-        $this->afterCommit(function () use ($total, $action, $marketName, $drawDate): void {
-            $this->broadcastTicketListChanged($action, $total, $marketName, $drawDate, null, null);
-            $this->broadcastPublicActivityUpdated($action, $total, $marketName, $drawDate, null, null);
+        $this->afterCommit(function () use ($total, $action, $marketName, $drawDate, $ownerId, $actorId): void {
+            $this->broadcastTicketListChanged($action, $total, $marketName, $drawDate, $ownerId, $actorId, null);
+            $this->broadcastPublicActivityUpdated($action, $total, $marketName, $drawDate, $ownerId, $actorId, null);
         });
     }
 
@@ -63,11 +65,12 @@ class LottoTicketRealtimeObserver
         int $total,
         ?string $marketName,
         ?string $drawDate,
+        ?string $ownerId,
         ?string $actorId,
         ?float $amount
     ): void
     {
-        broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate, $actorId, $amount));
+        broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate, $ownerId, $actorId, $amount));
     }
 
     protected function broadcastPublicActivityUpdated(
@@ -75,6 +78,7 @@ class LottoTicketRealtimeObserver
         int $total,
         ?string $marketName,
         ?string $drawDate,
+        ?string $ownerId,
         ?string $actorId,
         ?float $amount
     ): void
@@ -87,6 +91,7 @@ class LottoTicketRealtimeObserver
                 'total' => $total,
                 'market_name' => $marketName,
                 'draw_date' => $drawDate,
+                'owner_id' => $ownerId,
                 'actor_id' => $actorId,
                 'amount' => $amount,
             ]
@@ -132,5 +137,81 @@ class LottoTicketRealtimeObserver
             $actorId !== '' ? $actorId : null,
             $amount !== null ? (float) $amount : null,
         ];
+    }
+
+    /**
+     * @return array{0:?string,1:?string}
+     */
+    private function resolveCancelledRealtimeContext(LottoTicket $ticket): array
+    {
+        $ticket->loadMissing('member');
+
+        $ownerId = trim((string) (
+            $ticket->member->user_name
+            ?? $ticket->member->tel
+            ?? $ticket->member->name
+            ?? $ticket->member_id
+            ?? ''
+        ));
+
+        $actorId = $this->resolveCancellationActorId($ticket);
+
+        return [
+            $ownerId !== '' ? $ownerId : null,
+            $actorId !== '' ? $actorId : null,
+        ];
+    }
+
+    private function resolveCancellationActorId(LottoTicket $ticket): string
+    {
+        if (Schema::hasTable('wallet_transactions')) {
+            $cancelTxn = DB::table('wallet_transactions')
+                ->where('ref_type', 'LOTTO_CANCEL')
+                ->where('ref_id', (int) $ticket->id)
+                ->orderByDesc('id')
+                ->first(['created_by_type', 'created_by_id']);
+
+            if ($cancelTxn) {
+                $resolved = $this->resolveActorName(
+                    (string) ($cancelTxn->created_by_type ?? ''),
+                    (int) ($cancelTxn->created_by_id ?? 0)
+                );
+
+                if ($resolved !== '') {
+                    return $resolved;
+                }
+            }
+        }
+
+        $cancelledBy = (int) ($ticket->cancelled_by ?? 0);
+        if ($cancelledBy <= 0) {
+            return '';
+        }
+
+        $adminName = $this->resolveActorName('admin', $cancelledBy);
+        if ($adminName !== '') {
+            return $adminName;
+        }
+
+        return $this->resolveActorName('member', $cancelledBy);
+    }
+
+    private function resolveActorName(string $actorType, int $actorId): string
+    {
+        if ($actorId <= 0) {
+            return '';
+        }
+
+        return match ($actorType) {
+            'admin' => Schema::hasTable('employees')
+                ? trim((string) (DB::table('employees')->where('code', $actorId)->value('user_name')
+                    ?: DB::table('employees')->where('code', $actorId)->value('name')))
+                : '',
+            'member' => Schema::hasTable('members')
+                ? trim((string) (DB::table('members')->where('code', $actorId)->value('user_name')
+                    ?: DB::table('members')->where('code', $actorId)->value('name')))
+                : '',
+            default => '',
+        };
     }
 }

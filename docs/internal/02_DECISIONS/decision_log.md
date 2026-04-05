@@ -1,5 +1,32 @@
 # Decision Log
 
+## 2026-04-05 — Tickets-Cancel Report Splits Created Time from Latest Update Time (APPROVED)
+
+- ปรับรายงาน `admin /lotto/reports/tickets-cancel`
+- behavior ใหม่:
+  - คอลัมน์แรกเปลี่ยนเป็น `เวลาสร้างรายการ` และแสดงจาก `lotto_tickets.created_at` เสมอ
+  - เพิ่มคอลัมน์ `เวลาอัปเดทล่าสุด` หลัง `ผู้ยกเลิก`
+    - ใช้ `cancelled_at` ถ้ามี
+    - fallback เป็น `updated_at`
+    - fallback สุดท้ายเป็น `created_at`
+- เหตุผล:
+  - แยกเวลา “ตอนสร้างโพย” ออกจากเวลา “ตอนมี action ล่าสุด” ให้ทีมงานอ่านย้อนหลังได้ชัดเจนขึ้น
+  - ครอบคลุมทั้งเคสยกเลิกโพยและเคสออกผลโดยไม่ทำให้คอลัมน์เวลาแรกคลุมเครือ
+
+## 2026-04-05 — Lotto Cancelled Toast Must Show Ticket Owner and Actor (APPROVED)
+
+- ปรับ realtime event `lotto.ticket.list.changed` สำหรับ action `cancelled`
+- behavior ใหม่:
+  - payload ต้องส่ง `owner_id` และ `actor_id` เมื่อ resolve ได้
+  - message ของ toast คืนโพยต้องอ่านได้ใน event เดียว เช่น
+    - `มีการคืนโพยหวย: หวย ธกส. งวดวันที่ 2026-04-16 ของ xxx โดย xxxx`
+  - `owner_id` = เจ้าของโพย
+  - `actor_id` = คนที่กดยกเลิก/คืนโพย
+    - resolve จาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
+    - fallback ไปที่ `lotto_tickets.cancelled_by` ถ้ายังไม่พบ
+- เหตุผล:
+  - ให้ทีมงานรู้ทันทีว่าโพยของใครถูกคืน และใครเป็นผู้ดำเนินการ โดยไม่ต้องเปิดรายละเอียดเพิ่ม
+
 ## 2026-04-05 — Admin Ticket Cancel Must Capture Reason and Surface Cancel Context (APPROVED)
 
 - ปรับหน้า `admin /lotto/tickets` และรายงาน `admin /lotto/reports/tickets-cancel`
@@ -116,7 +143,8 @@
     - ต้องยกเลิกก่อน `draw.close_at` อย่างน้อย `10` นาที
   - เพิ่ม daily quota:
     - สมาชิกยกเลิกโพยได้ไม่เกิน `4` ครั้งต่อวัน
-    - นับจาก ticket ที่ `status=cancelled` และ `cancelled_at` อยู่ในวันปัจจุบัน
+    - นับเฉพาะ self-cancel จาก `wallet_transactions(ref_type=LOTTO_CANCEL, created_by_type=member, created_by_id=memberId)`
+    - ไม่รวมเคสทีมงานยกเลิกโพยหรือระบบคืนโพย
 - เหตุผล:
   - ป้องกันการยกเลิกตอนใกล้ปิดรับมากเกินไป
   - จำกัด abuse จากการยกเลิกโพยซ้ำจำนวนมากในวันเดียวกัน

@@ -115,7 +115,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
     protected function getColumns(): array
     {
         return [
-            ['data' => 'event_at', 'name' => 'created_at', 'title' => 'เวลา', 'className' => 'text-center'],
+            ['data' => 'created_at', 'name' => 'created_at', 'title' => 'เวลาสร้างรายการ', 'className' => 'text-center'],
             ['data' => 'id', 'name' => 'id', 'title' => 'เลขโพย', 'className' => 'text-center'],
             ['data' => 'member_display', 'name' => 'member_user_name', 'title' => 'สมาชิก', 'className' => 'text-left'],
             ['data' => 'market_name', 'name' => 'market_name', 'title' => 'รายการหวย', 'className' => 'text-left'],
@@ -128,6 +128,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ', 'className' => 'text-center'],
             ['data' => 'reason', 'name' => 'id', 'title' => 'สาเหตุ', 'className' => 'text-left', 'orderable' => false],
             ['data' => 'cancelled_by_name', 'name' => 'cancel_tx_admin_user_name', 'title' => 'ผู้ยกเลิก', 'className' => 'text-left'],
+            ['data' => 'latest_updated_at', 'name' => 'updated_at', 'title' => 'เวลาอัปเดทล่าสุด', 'className' => 'text-center'],
         ];
     }
 }

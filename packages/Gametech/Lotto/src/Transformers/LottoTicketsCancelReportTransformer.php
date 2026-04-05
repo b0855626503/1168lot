@@ -8,7 +8,8 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
 {
     public function transform($row): array
     {
-        $eventAt = $row->cancelled_at ?: $row->created_at;
+        $createdAt = $row->created_at;
+        $latestUpdatedAt = $row->cancelled_at ?: $row->updated_at ?: $row->created_at;
         $drawDate = $row->draw_date ? date('d/m/Y', strtotime((string) $row->draw_date)) : '-';
         $memberName = trim((string) ($row->member_user_name ?? $row->member_name ?? ''));
         $packageNames = collect($row->items ?? [])
@@ -20,7 +21,7 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         $cancelledBy = $this->resolveCancelledByName($row);
 
         return [
-            'event_at' => $eventAt ? date('d/m/Y H:i', strtotime((string) $eventAt)) : '-',
+            'created_at' => $createdAt ? date('d/m/Y H:i', strtotime((string) $createdAt)) : '-',
             'id' => (int) ($row->id ?? 0),
             'member_display' => e(($memberName !== '' ? $memberName : ('MEM-' . (int) ($row->member_id ?? 0))) . ' (' . (int) ($row->member_id ?? 0) . ')'),
             'market_name' => $this->formatMarket((string) ($row->market_name ?? '-'), (string) ($row->market_logo ?? ''), (string) ($row->market_icon ?? '')),
@@ -33,6 +34,7 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'status' => $this->statusBadge((string) ($row->status ?? '')),
             'reason' => e($this->resolveReason($row)),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
+            'latest_updated_at' => $latestUpdatedAt ? date('d/m/Y H:i', strtotime((string) $latestUpdatedAt)) : '-',
         ];
     }
 
