@@ -204,8 +204,9 @@
   - ใช้ `select2` แบบ grouped ตาม group ของรายการหวย
   - แสดง `logo/icon` หน้าชื่อรายการเมื่อมีข้อมูล
   - filter bar ใช้ immediate apply:
-    - select/date เปลี่ยนค่าแล้ว redraw ทันที
-    - text search ใช้ debounce สั้นก่อน redraw
+    - หน้า DataTables: select/date เปลี่ยนค่าแล้ว redraw ทันที
+    - หน้า Vue single-page: เปลี่ยนค่าแล้ว fetch async ทันทีเมื่อ filter ครบ
+    - text search ใช้ debounce สั้นก่อน redraw/fetch
     - ไม่ใช้ปุ่ม `ค้นหา`
   - ตอน reset filter ต้อง sync ค่าใน UI ของ `select2` ให้กลับเป็นค่าว่างด้วย
 - เมนูรายงานที่เป็นของจริงแล้ว:
@@ -219,8 +220,21 @@
   - `revenue`
 - `profit-loss-forecast`
   - อ่านจาก `lotto_draw_bet_settings` + `lotto_number_exposures` + `lotto_ticket_items`
-  - filter: `draw_date`, `market_id`, `bet_type`
-  - แสดง `ยอดแทงรวม`, `ความเสี่ยงจ่าย`, `คาดการณ์ได้/เสีย` ระดับ `draw + bet_type`
+  - ใช้ Vue (`x-template`) แบบ single-page async menu ตาม pattern เดียวกับ `results-by-date`
+  - แยก route เป็น:
+    - `GET /lotto/reports/profit-loss-forecast` = render หน้า
+    - `GET /lotto/reports/profit-loss-forecast/draw-options?market_id=` = คืนรายการงวดของตลาดที่เลือก
+    - `GET /lotto/reports/profit-loss-forecast/loaddata?market_id=&draw_id=` = คืน payload รายงานของงวดที่เลือก
+  - filter บังคับ:
+    - `market_id`
+    - `draw_id`
+  - ยังไม่แสดงผลรายงานจนกว่าจะเลือกทั้ง `ตลาด` และ `งวดหวย`
+  - ส่วนสรุปด้านบนเป็น matrix:
+    - แถวสรุป `ยอดแทง`, `ส่วนลด`, `รับสุทธิ`, `ยอดถูก`, `ยอดสูงสุดต่อเลข`
+    - คอลัมน์ = bet types ที่เปิดในงวดนั้น
+  - ส่วนล่างเป็นตารางรายหมายเลข:
+    - แสดงหมายเลขตามรูปแบบของแต่ละ bet type
+    - แสดงยอดแทงสะสมของหมายเลขนั้นจาก `lotto_number_exposures.sold_amount`
 - `member-bet-types`
   - aggregate จาก `lotto_ticket_items` ที่ ticket ไม่ถูกยกเลิก
   - filter: `member_keyword`, `date_start/date_stop` (อิง `draw_date`), `market_id`, `bet_type`

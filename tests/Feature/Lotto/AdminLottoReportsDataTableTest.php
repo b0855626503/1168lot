@@ -4,12 +4,12 @@ namespace Tests\Feature\Lotto;
 
 use Gametech\Lotto\DataTables\LottoBlockedNumbersReportDataTable;
 use Gametech\Lotto\DataTables\LottoMemberBetTypesReportDataTable;
-use Gametech\Lotto\DataTables\LottoProfitLossForecastReportDataTable;
 use Gametech\Lotto\DataTables\LottoTicketsCancelReportDataTable;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Services\LottoProfitLossForecastReportService;
 use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class AdminLottoReportsDataTableTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_profit_loss_forecast_report_uses_real_draw_and_exposure_data(): void
+    public function test_profit_loss_forecast_report_service_builds_summary_and_number_rows_from_real_data(): void
     {
         DB::table('lotto_draw_bet_settings')->insert([
             'id' => 1,
@@ -93,15 +93,26 @@ class AdminLottoReportsDataTableTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $row = app(LottoProfitLossForecastReportDataTable::class)
-            ->query(new LottoDrawBetSetting())
-            ->first();
+        $payload = app(LottoProfitLossForecastReportService::class)->build(1, 101);
 
-        $this->assertNotNull($row);
-        $this->assertSame('หวยมาเลเซีย', $row->market_name);
-        $this->assertSame('top_2', $row->bet_type);
-        $this->assertEquals(200.0, (float) $row->total_bet_amount);
-        $this->assertEquals(18000.0, (float) $row->max_risk_amount);
+        $this->assertSame('หวยมาเลเซีย', $payload['draw']['market_name']);
+        $this->assertSame('2026-04-05', $payload['draw']['draw_date']);
+        $this->assertCount(1, $payload['columns']);
+        $this->assertSame('top_2', $payload['columns'][0]['bet_type']);
+        $this->assertEquals(200.0, (float) $payload['columns'][0]['total_bet_amount']);
+        $this->assertEquals(1000.0, (float) $payload['columns'][0]['max_per_number']);
+
+        $summaryRows = collect($payload['summary_rows'])->keyBy('metric');
+        $this->assertEquals(200.0, (float) $summaryRows['total_bet_amount']['overall']);
+        $this->assertEquals(0.0, (float) $summaryRows['total_win_amount']['overall']);
+        $this->assertEquals(1000.0, (float) $summaryRows['max_per_number']['overall']);
+
+        $numberRow = collect($payload['number_rows'])->first(static function (array $row): bool {
+            return (string) ($row['cells']['top_2']['number'] ?? '') === '46';
+        });
+
+        $this->assertNotNull($numberRow);
+        $this->assertEquals(200.0, (float) $numberRow['cells']['top_2']['amount']);
     }
 
     public function test_member_bet_types_report_aggregates_by_member_market_and_bet_type(): void

@@ -1,5 +1,27 @@
 # Decision Log
 
+## 2026-04-05 — Profit-Loss Forecast Report Must Use Vue Matrix View by Market and Draw (APPROVED)
+
+- ปรับหน้า `admin /lotto/reports/profit-loss-forecast`
+- behavior ใหม่:
+  - เลิกใช้หน้า DataTable aggregate แบบ `draw_date + market + bet_type`
+  - ใช้ Vue (`x-template`) single-page async menu ตาม pattern เดียวกับ `results-by-date`
+  - filter เหลือเฉพาะ:
+    - `market_id`
+    - `draw_id`
+  - report จะยังไม่แสดงจนกว่าจะเลือกทั้ง `ตลาด` และ `งวดหวย`
+  - route ถูกแยกชัดเจน:
+    - `GET /lotto/reports/profit-loss-forecast` = render หน้า
+    - `GET /lotto/reports/profit-loss-forecast/draw-options?market_id=` = โหลดรายการงวดของตลาดที่เลือก
+    - `GET /lotto/reports/profit-loss-forecast/loaddata?market_id=&draw_id=` = โหลด payload ของรายงาน
+  - layout รายงานใหม่แบ่งเป็น 2 ส่วน:
+    - summary matrix ตาม bet type พร้อมแถว `ยอดแทง`, `ส่วนลด`, `รับสุทธิ`, `ยอดถูก`, `ยอดสูงสุดต่อเลข`
+    - ตารางรายหมายเลข แสดงยอดแทงสะสมของแต่ละหมายเลขจาก exposure จริง
+  - market filter ยังต้องใช้ grouped `select2` พร้อม logo/icon ตามนโยบาย report เดิม
+- เหตุผล:
+  - หน้าเดิมตอบได้แค่ aggregate ระดับแถว ไม่ตรงรูปแบบการอ่านของทีมงานเวลาจะดูความเสี่ยงทั้งงวด
+  - การเลือกตลาดก่อนแล้วค่อยเลือกงวดทำให้ scope ของข้อมูลชัด และไม่แสดงข้อมูลผิดงวดก่อนผู้ใช้เลือกครบ
+
 ## 2026-04-05 — Frontend Wallet Transactions API Must Provide Unified Member Cash History (APPROVED)
 
 - เพิ่ม `GET /api/v1/wallet/transactions`
@@ -126,8 +148,9 @@
     - `blocked-numbers`
     - `exposure`
   - report Lotto ที่มี filter bar ใช้ immediate apply
-    - เปลี่ยน select/date แล้ว redraw ทันที
-    - ช่อง text filter ใช้ debounce สั้นก่อน redraw
+    - หน้า DataTables เปลี่ยน select/date แล้ว redraw ทันที
+    - หน้า Vue single-page fetch async ทันทีเมื่อ filter ครบ
+    - ช่อง text filter ใช้ debounce สั้นก่อน redraw/fetch
     - ยกเลิกปุ่ม `ค้นหา` คงไว้เฉพาะปุ่ม `ล้างค่า`
   - `member-bet-types` aggregate ข้อมูลจริงตาม `member + market + bet_type`
   - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดง `แพกเกจ/ส่วนลด/สุทธิ/ยอดถูก`

@@ -16,12 +16,27 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
 
     public function test_profit_loss_forecast_market_filter_uses_grouped_select2_options(): void
     {
-        $this->assertGroupedMarketFilterUi(
-            '/packages/Gametech/Lotto/src/Http/Controllers/Admin/LottoProfitLossForecastReportController.php',
-            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/create.blade.php',
-            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/table.blade.php',
-            'syncProfitLossForecastFilterUi'
-        );
+        $controller = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Http/Controllers/Admin/LottoProfitLossForecastReportController.php');
+        $view = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/index.blade.php');
+        $routes = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Routes/admin.php');
+
+        $this->assertNotFalse($controller);
+        $this->assertNotFalse($view);
+        $this->assertNotFalse($routes);
+
+        $this->assertStringContainsString("with('group:id,name,sort')", $controller);
+        $this->assertStringContainsString("->groupBy(static function (LotteryMarket \$market): string", $controller);
+        $this->assertStringContainsString("'label' => (string) \$groupName", $controller);
+        $this->assertStringContainsString("reports/profit-loss-forecast/draw-options", $routes);
+        $this->assertStringContainsString("reports/profit-loss-forecast/loaddata", $routes);
+        $this->assertStringContainsString("<profit-loss-forecast-app ref=\"profitLossForecastApp\"></profit-loss-forecast-app>", $view);
+        $this->assertStringContainsString("Vue.component('profit-loss-forecast-app'", $view);
+        $this->assertStringContainsString("<optgroup", $view);
+        $this->assertStringContainsString(":data-logo=\"option.logo || ''\"", $view);
+        $this->assertStringContainsString("typeof \$marketSelect.select2 !== 'function'", $view);
+        $this->assertStringContainsString("\$marketSelect.select2({", $view);
+        $this->assertStringContainsString('this.loadDrawOptions(this.selectedMarketId', $view);
+        $this->assertStringContainsString('this.fetchReport()', $view);
     }
 
     public function test_all_lotto_reports_with_market_filter_use_grouped_select2_options(): void
@@ -45,16 +60,6 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
                 'redraw' => 'redrawTicketTable',
                 'events' => [
                     'change.lottoTicketsFilter',
-                ],
-                'has_search_button' => false,
-                'has_search_function' => false,
-            ],
-            [
-                'create' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/create.blade.php',
-                'table' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/table.blade.php',
-                'redraw' => 'redrawProfitLossForecastTable',
-                'events' => [
-                    'change.profitLossForecastFilter',
                 ],
                 'has_search_button' => false,
                 'has_search_function' => false,
@@ -131,6 +136,14 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
                 $this->assertStringContainsString('window.clearTimeout', $tableView, $page['table']);
             }
         }
+
+        $profitLossView = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/index.blade.php');
+
+        $this->assertNotFalse($profitLossView);
+        $this->assertStringNotContainsString('fa-search', $profitLossView);
+        $this->assertStringContainsString('this.loadDrawOptions(this.selectedMarketId', $profitLossView);
+        $this->assertStringContainsString('this.fetchReport()', $profitLossView);
+        $this->assertStringContainsString('if (!this.hasCompleteFilters)', $profitLossView);
     }
 
     private function groupedMarketFilterPages(): array
@@ -141,12 +154,6 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
                 'create' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets/create.blade.php',
                 'table' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets/table.blade.php',
                 'sync' => null,
-            ],
-            [
-                'controller' => '/packages/Gametech/Lotto/src/Http/Controllers/Admin/LottoProfitLossForecastReportController.php',
-                'create' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/create.blade.php',
-                'table' => '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/table.blade.php',
-                'sync' => 'syncProfitLossForecastFilterUi',
             ],
             [
                 'controller' => '/packages/Gametech/Lotto/src/Http/Controllers/Admin/LottoMemberBetTypesReportController.php',
