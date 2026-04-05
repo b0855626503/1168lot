@@ -2,6 +2,7 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
+use Gametech\Core\Core;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,12 @@ class WalletController extends BaseController
 {
     private const DEFAULT_LIMIT = 20;
     private const MAX_LIMIT = 100;
+    private const CLAIMABLE_TYPES = [
+        'bonus' => 'BONUS',
+        'faststart' => 'FASTSTART',
+        'cashback' => 'CASHBACK',
+        'ic' => 'IC',
+    ];
 
     /**
      * @var string[]
@@ -33,6 +40,71 @@ class WalletController extends BaseController
         'rollback',
         'other',
     ];
+
+    public function claim(Request $request): JsonResponse
+    {
+        try {
+            $member = $request->user();
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $type = strtolower(trim((string) $request->input('type')));
+            if (! array_key_exists($type, self::CLAIMABLE_TYPES)) {
+                return $this->sendError('ไม่รองรับประเภทโบนัสที่ร้องขอ', 422);
+            }
+
+            /** @var Core $core */
+            $core = app(Core::class);
+            $config = (object) $core->getConfigData();
+            $memberCode = (int) $member->code;
+            $targetWallet = (($config->freecredit_open ?? 'N') === 'Y') ? 'balance_free' : 'balance';
+            $currentWalletBalance = (float) ($targetWallet === 'balance_free'
+                ? ($member->balance_free ?? 0)
+                : ($member->balance ?? 0));
+            $proReset = (float) ($config->pro_reset ?? 0);
+
+            if ($currentWalletBalance > $proReset) {
+                return $this->sendError(
+                    'ไม่สามารถทำรายการได้ โยกเข้าได้เมื่อยอดเครดิต น้อยกว่าหรือเท่ากับ ' . $proReset,
+                    422
+                );
+            }
+
+            $repositoryKey = $targetWallet === 'balance_free'
+                ? 'Gametech\Member\Repositories\MemberCreditFreeLogRepository'
+                : 'Gametech\Member\Repositories\MemberCreditLogRepository';
+
+            $legacyType = self::CLAIMABLE_TYPES[$type];
+            $claimSourceAmount = (float) ($member->{$type} ?? 0);
+            $claimed = app($repositoryKey)->tranBonus([
+                'member_code' => $memberCode,
+            ], $legacyType);
+
+            if (! $claimed) {
+                return $this->sendError('ไม่สามารถทำรายการได้ โปรดลองใหม่ในภายหลัง', 422);
+            }
+
+            $freshMember = app('Gametech\Member\Repositories\MemberRepository')->findOrFail($memberCode);
+
+            return $this->sendResponse([
+                'type' => $type,
+                'legacy_type' => $legacyType,
+                'claimed_amount' => $claimSourceAmount,
+                'target_wallet' => $targetWallet,
+                'profile' => [
+                    'balance' => (float) ($freshMember->balance ?? 0),
+                    'balance_free' => (float) ($freshMember->balance_free ?? 0),
+                    'bonus' => (float) ($freshMember->bonus ?? 0),
+                    'cashback' => (float) ($freshMember->cashback ?? 0),
+                    'ic' => (float) ($freshMember->ic ?? 0),
+                    'faststart' => (float) ($freshMember->faststart ?? 0),
+                ],
+            ], 'ดำเนินการโยก เข้ากระเป๋าสำเร็จแล้ว');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถทำรายการได้ โปรดลองใหม่ในภายหลัง', 422);
+        }
+    }
 
     public function transactions(Request $request): JsonResponse
     {

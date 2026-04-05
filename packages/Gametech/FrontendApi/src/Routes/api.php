@@ -95,6 +95,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
 
             Route::post('wallet/withdraw', [WithdrawController::class, 'store'])
                 ->name('frontend.api.v1.wallet.withdraw');
+            Route::post('wallet/claim', [WalletController::class, 'claim'])
+                ->name('frontend.api.v1.wallet.claim');
             Route::get('wallet/transactions', [WalletController::class, 'transactions'])
                 ->name('frontend.api.v1.wallet.transactions');
             Route::post('coupon/redeem', [CouponController::class, 'redeem'])

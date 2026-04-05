@@ -243,6 +243,40 @@
   - `type` สำหรับ frontend ใช้ค่าอ่านง่าย เช่น:
     - `deposit`
     - `withdraw`
+
+## 2026-04-06 — Frontend Wallet Claim API Must Reuse Domain Repositories Without Controller Delegation (APPROVED)
+
+- เพิ่ม `POST /api/v1/wallet/claim`
+- intent:
+  - ให้ frontend รับยอด `bonus|faststart|cashback|ic` ได้ผ่าน API ใหม่
+  - แต่ต้องไม่ delegate ไป `Gametech\Wallet\Http\Controllers\TransferWalletController`
+- decision:
+  - `FrontendApi` รับ `type`
+  - map ไป legacy id เดิม `BONUS|FASTSTART|CASHBACK|IC`
+  - เรียก `MemberCreditLogRepository::tranBonus()` หรือ `MemberCreditFreeLogRepository::tranBonus()` ตรงตาม config ระบบ
+  - response ต้องคืนยอดหลังทำรายการกลับไปด้วยเพื่อให้ frontend sync state ได้ทันที
+- consequence:
+  - contract ฝั่งลูกค้าอยู่ใน `FrontendApi` ตาม boundary ที่กำหนด
+  - ยังรักษา business rule เดิมของระบบ wallet/bonus transfer ไว้
+
+## 2026-04-06 — Agent Startup Must Use Lean Core Docs First (APPROVED)
+
+- ปัญหา:
+  - startup เดิมบังคับอ่าน `system_current_state.md` และ `decision_log.md` ทั้งก้อนทุกงาน
+  - งานเล็กเสีย token สูงมากตั้งแต่ก่อนเริ่ม implement
+- decision:
+  - startup default เปลี่ยนเป็นอ่านชุดสั้น:
+    - `START_HERE.md`
+    - `agent_rules.md`
+    - `startup_digest.md`
+    - `adr_baseline.md`
+    - `adr_index_by_domain.md`
+    - `04_PLANS/README.md`
+  - ใช้ domain notes ใน `docs/internal/03_DOMAINS/` เป็นชั้นถัดไป
+  - ให้ `system_current_state.md` และ `decision_log.md` เป็น escalation docs ตาม risk และ scope ของงาน
+- consequence:
+  - startup token ลดลงมากสำหรับงานเล็กและงานกลาง
+  - ยังรักษา source-of-truth และ decision boundary ได้ เพราะ full docs ยังถูกเปิดเมื่อ task ต้องใช้จริง
     - `lotto_bet`
     - `lotto_refund`
     - `referral`

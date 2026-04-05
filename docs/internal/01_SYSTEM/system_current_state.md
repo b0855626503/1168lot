@@ -218,6 +218,56 @@
   - `balance_before/balance_after`
   - `title/detail`
   - `ref_id/ref_code/group_code`
+
+## นโยบาย Frontend API รับยอดโบนัส/ค่าแนะนำเข้ากระเป๋า (`/api/v1/wallet/claim`)
+
+- มี route ใหม่ `POST /api/v1/wallet/claim`
+- ใช้สำหรับรับยอดสะสมประเภท:
+  - `bonus`
+  - `faststart`
+  - `cashback`
+  - `ic`
+- request body:
+  - `type`
+- ต้อง map `type` ไป legacy id เดิมของระบบ:
+  - `bonus` -> `BONUS`
+  - `faststart` -> `FASTSTART`
+  - `cashback` -> `CASHBACK`
+  - `ic` -> `IC`
+- ห้ามเรียก controller เดิมของ package `Wallet` จาก `FrontendApi`
+  - ให้เรียก repository domain โดยตรงแทน
+- behavior ต้องคงตามระบบเดิม:
+  - ถ้า `freecredit_open=Y` ให้ใช้ `MemberCreditFreeLogRepository::tranBonus()`
+  - ถ้า `freecredit_open!=Y` ให้ใช้ `MemberCreditLogRepository::tranBonus()`
+  - ถ้ายอดกระเป๋าเป้าหมายมากกว่า `pro_reset` ต้องปฏิเสธการรับยอด
+- response สำเร็จต้องคืน:
+  - `type`
+  - `legacy_type`
+  - `claimed_amount`
+  - `target_wallet`
+  - `profile.balance`
+  - `profile.balance_free`
+  - `profile.bonus`
+  - `profile.cashback`
+  - `profile.ic`
+  - `profile.faststart`
+
+## นโยบายเริ่มงานของ Agent (Lean Startup Docs)
+
+- startup default ของ agent ต้องใช้ชุดเอกสารสั้นก่อน:
+  - `docs/START_HERE.md`
+  - `docs/internal/00_RULES/agent_rules.md`
+  - `docs/internal/01_SYSTEM/startup_digest.md`
+  - `docs/internal/02_DECISIONS/adr_baseline.md`
+  - `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+  - `docs/04_PLANS/README.md`
+- หลังจากนั้นให้อ่านเฉพาะ domain note ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/`
+- `system_current_state.md` และ `decision_log.md` ใช้เป็น escalation docs:
+  - เปิดเมื่อ task จะเปลี่ยน behavior
+  - เปิดเมื่อ task high-risk
+  - เปิดเมื่อ task แตะ state machine / retry / queue / cron / pipeline
+  - เปิดเมื่อพบ doc/code mismatch
+- เป้าหมายคือคง source-of-truth เดิม แต่ลด startup token ของงานเล็กและงานกลาง
 - ถ้าเป็น `LOTTO_BET` หรือ `LOTTO_CANCEL`
   - ให้ enrich `lotto.ticket_id`, `lotto.market_name`, `lotto.draw_date` จากตาราง Lotto เพื่อให้ frontend แสดงบริบทโพยได้ทันที
 

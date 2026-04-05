@@ -1,25 +1,37 @@
 # จุดเริ่มต้นสำหรับ Agent
 
-## 📌 ห้ามทำงานทันที
+## 📌 Startup แบบประหยัด token
 
-ต้องอ่านเอกสารตามลำดับนี้ก่อน:
+ให้อ่านแค่ core startup set นี้ทุกครั้งก่อน:
 
-1. internal/00_RULES/agent_rules.md
-2. internal/01_SYSTEM/system_current_state.md
-3. internal/02_DECISIONS/decision_log.md
-4. internal/02_DECISIONS/adr_baseline.md
-5. internal/02_DECISIONS/adr_index_by_domain.md
-6. internal/03_DOMAINS/
-7. 04_PLANS/README.md
+1. `internal/00_RULES/agent_rules.md`
+2. `internal/01_SYSTEM/startup_digest.md`
+3. `internal/02_DECISIONS/adr_baseline.md`
+4. `internal/02_DECISIONS/adr_index_by_domain.md`
+5. `04_PLANS/README.md`
 
 ---
 
-## 🧠 สิ่งที่ต้องทำก่อนลงมือ
+## 🧠 อ่านต่อแบบ on-demand
 
-* สรุปความเข้าใจระบบ
-* ตรวจว่า plan ล่าสุดคืออะไร
-* ตรวจว่ามี decision ไหนห้ามฝ่าฝืน
-* ถ้างานอยู่ใน domain เฉพาะ ให้ดู index decision ตาม domain ก่อนลงมือ
+หลังจากนั้นให้อ่านเฉพาะ domain ที่เกี่ยวข้อง:
+
+- `internal/03_DOMAINS/frontend_api.md`
+- `internal/03_DOMAINS/wallet.md`
+- `internal/03_DOMAINS/lotto.md`
+- `internal/03_DOMAINS/admin_lotto.md`
+- `internal/03_DOMAINS/realtime.md`
+
+## 🧭 ค่อยเปิดไฟล์ใหญ่เมื่อจำเป็น
+
+เปิด `system_current_state.md` หรือ `decision_log.md` เพิ่มเฉพาะเมื่อ:
+
+- งานจะเปลี่ยน behavior จริง
+- งานมี state machine / retry / queue / cron / pipeline
+- งานแตะ schema rollout / fallback compatibility
+- งานเป็น financial / settlement / auth / high-risk
+- พบว่า code อาจไม่ตรง doc
+- domain note ยังไม่พอ
 
 ---
 
@@ -33,10 +45,11 @@
 
 ## 🔧 วิธีทำงาน
 
-1. อ่าน doc
-2. เข้าใจ system
-3. ทำตาม plan
-4. update doc ทุกครั้งที่มีการเปลี่ยน behavior
+1. อ่าน core startup
+2. อ่าน domain note ที่เกี่ยวข้อง
+3. ตรวจ plan ที่ active
+4. ค่อยอ่าน full docs เฉพาะจุดที่จำเป็น
+5. update doc ทุกครั้งที่มีการเปลี่ยน behavior
 
 ---
 
@@ -52,8 +65,8 @@
 
 Agent ต้องสามารถ:
 
-* อ่านเอกสาร
-* เข้าใจระบบ
-* ทำงานต่อได้ทันที
+* เริ่มงานได้เร็ว
+* ใช้ token ต่ำลง
+* ยังรักษา source-of-truth และ decision boundary ได้ครบ
 
 โดยไม่ต้องอ่านแชตย้อนหลัง

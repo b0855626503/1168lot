@@ -570,7 +570,46 @@ Response ตัวอย่าง
 
 ### 3) Wallet
 
-#### 3.1 ประวัติการเงินรวม
+#### 3.1 รับยอดโบนัส/ค่าแนะนำเข้ากระเป๋า
+- `POST /wallet/claim`
+- Auth: ต้องใช้ token
+
+Request body
+- `type` (required): `bonus|faststart|cashback|ic`
+
+Behavior
+- map `type` ไป logic เดิมของระบบ:
+  - `bonus` -> `BONUS`
+  - `faststart` -> `FASTSTART`
+  - `cashback` -> `CASHBACK`
+  - `ic` -> `IC`
+- ถ้า `freecredit_open=Y` ระบบจะรับเข้ากระเป๋า `balance_free`
+- ถ้า `freecredit_open!=Y` ระบบจะรับเข้ากระเป๋า `balance`
+- ถ้ายอดกระเป๋าเป้าหมายมากกว่า `pro_reset` ระบบจะปฏิเสธคำขอ
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": {
+    "type": "bonus",
+    "legacy_type": "BONUS",
+    "claimed_amount": 120,
+    "target_wallet": "balance",
+    "profile": {
+      "balance": 120,
+      "balance_free": 0,
+      "bonus": 0,
+      "cashback": 15,
+      "ic": 0,
+      "faststart": 30
+    }
+  },
+  "message": "ดำเนินการโยก เข้ากระเป๋าสำเร็จแล้ว"
+}
+```
+
+#### 3.2 ประวัติการเงินรวม
 - `GET /wallet/transactions`
 - Auth: ต้องใช้ token
 

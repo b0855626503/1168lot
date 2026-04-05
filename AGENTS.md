@@ -6,9 +6,16 @@
 
 1. อ่าน docs/START_HERE.md
 2. อ่าน docs/internal/00_RULES/agent_rules.md
-3. อ่าน docs/internal/01_SYSTEM/system_current_state.md
-4. อ่าน docs/internal/02_DECISIONS/decision_log.md
-ห้ามเริ่ม implement จนกว่าจะอ่านเอกสารครบตามลำดับ
+3. อ่าน docs/internal/01_SYSTEM/startup_digest.md
+4. อ่าน docs/internal/02_DECISIONS/adr_baseline.md
+5. อ่าน docs/internal/02_DECISIONS/adr_index_by_domain.md
+6. อ่าน docs/04_PLANS/README.md
+
+จากนั้นให้อ่านเฉพาะ domain note ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/`
+
+ห้ามเริ่ม implement จนกว่าจะอ่าน core startup ครบตามลำดับ
+ห้ามเปิด `system_current_state.md` และ `decision_log.md` ทั้งก้อนโดยอัตโนมัติทุกงาน
+ให้เปิดเพิ่มเฉพาะเมื่อ task มีความเสี่ยงสูง, จะเปลี่ยน behavior, หรือ domain note ไม่พอ
 ---
 
 ## 📚 Source of Truth
@@ -32,6 +39,7 @@
 * ห้ามเดาระบบ
 * ห้ามแก้ behavior โดยไม่อัปเดต doc
 * ห้ามข้ามการอ่านเอกสาร
+* ห้ามใช้ startup flow แบบ heavy โดยไม่จำเป็น
 
 ---
 

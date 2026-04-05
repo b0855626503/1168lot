@@ -53,6 +53,10 @@
   - รับโบนัสจากรายการคูปองที่เลือก
 
 ### Wallet
+- `POST /api/v1/wallet/claim` (ต้องมี token)
+  - รับยอด `bonus|faststart|cashback|ic` เข้ากระเป๋าหลัก/กระเป๋าฟรีตาม config ระบบเดิม
+  - รับ body `type`
+  - ต้องคืนยอดหลังทำรายการกลับไปด้วยเพื่อให้ frontend refresh state ได้ทันที
 - `GET /api/v1/wallet/transactions` (ต้องมี token)
   - ประวัติการเงินรวมของสมาชิกจาก `wallet_transactions`
   - ต้องรองรับ filter `type`, `date_start`, `date_stop`, `page`, `limit`
