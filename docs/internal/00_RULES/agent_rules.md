@@ -17,8 +17,10 @@
 
 1. อ่าน `docs/internal/01_SYSTEM/system_current_state.md`
 2. อ่าน `docs/internal/02_DECISIONS/decision_log.md`
-3. อ่านเอกสาร domain/plan ที่เกี่ยวข้อง
-4. ถ้าโค้ดจริงไม่ตรงเอกสาร ให้รายงาน mismatch ก่อนลงมือแก้
+3. อ่าน `docs/internal/02_DECISIONS/adr_baseline.md`
+4. อ่าน `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+5. อ่านเอกสาร domain/plan ที่เกี่ยวข้อง
+6. ถ้าโค้ดจริงไม่ตรงเอกสาร ให้รายงาน mismatch ก่อนลงมือแก้
 
 ## กฎการเขียนเอกสาร
 

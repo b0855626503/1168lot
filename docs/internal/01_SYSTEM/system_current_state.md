@@ -218,6 +218,24 @@
 - DataTable หลักดึงเฉพาะ ticket ที่ `status=active`
 - การดูรายละเอียดโพยใน modal ใช้ route รายงานของตัวเอง แต่แสดง payload รายละเอียดโพยรูปแบบเดียวกับหน้า `รายการโพย`
 
+## นโยบาย Dashboard Lotto/Finance (Admin `/dashboard`)
+
+- block `รายการโพยล่าสุด (Recent Lotto Bets)`
+  - คอลัมน์ `สมาชิก` ต้องแสดง `members.user_name` เมื่อ resolve ได้
+  - ถ้าไม่พบสมาชิก ให้ fallback เป็น `member_id`
+- block `คงเหลือสุทธิ`
+  - ใช้ความหมายเป็น cash movement หลักของระบบเท่านั้น
+  - คำนวณจาก `ฝากสำเร็จ - ถอนสำเร็จ`
+  - ห้ามเอา `lotto net cash` มารวมใน block นี้
+  - Lotto cash ต้องอยู่ใน block `Lotto Cash` แยกต่างหาก
+- block `Lotto Risk`
+  - ต้องใช้คำอธิบายภาษาไทยที่อ่านเข้าใจง่ายในหน้า dashboard
+  - ค่าหลักคือ `ยอดเสี่ยงสูงสุดต่อเลข`
+  - รายการรองควรอธิบายเป็น:
+    - `ยอดจ่ายถ้าถูกทั้งหมด`
+    - `ยอดความเสี่ยงรวมทุกเลข`
+    - `จำนวนตลาด/งวด/เลขที่ติดตาม`
+
 ## นโยบายรายงาน Lotto (Admin `/lotto/reports/*`)
 
 - report Lotto ทุกหน้าที่มี filter `market_id`

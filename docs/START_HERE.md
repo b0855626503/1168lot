@@ -7,8 +7,10 @@
 1. internal/00_RULES/agent_rules.md
 2. internal/01_SYSTEM/system_current_state.md
 3. internal/02_DECISIONS/decision_log.md
-4. internal/03_DOMAINS/
-5. 04_PLANS/README.md
+4. internal/02_DECISIONS/adr_baseline.md
+5. internal/02_DECISIONS/adr_index_by_domain.md
+6. internal/03_DOMAINS/
+7. 04_PLANS/README.md
 
 ---
 
@@ -17,6 +19,7 @@
 * สรุปความเข้าใจระบบ
 * ตรวจว่า plan ล่าสุดคืออะไร
 * ตรวจว่ามี decision ไหนห้ามฝ่าฝืน
+* ถ้างานอยู่ใน domain เฉพาะ ให้ดู index decision ตาม domain ก่อนลงมือ
 
 ---
 

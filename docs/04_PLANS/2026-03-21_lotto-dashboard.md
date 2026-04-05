@@ -6,7 +6,7 @@
 # LOTTO DASHBOARD IMPLEMENTATION PLAN (FINAL)
 
 ## 1. Objective
-เพิ่ม Lotto เข้า Dashboard โดยไม่ทำให้ Financial Movement เพี้ยน
+เพิ่ม Lotto เข้า Dashboard โดยไม่ทำให้ Financial Movement หลักเพี้ยน
 
 ระบบต้องตอบได้ 3 มิติ:
 1. Cash Impact (เงินจริงเข้า/ออก)
@@ -206,6 +206,7 @@ Withdraw = date_approve
 Lotto Sales = wallet debit
 Lotto Payout = wallet credit
 
-Net = เงินเข้า - เงินออก + lotto net
+Net Balance = เงินเข้า - เงินออก ของ cash movement หลักเท่านั้น
+Lotto Net = แสดงแยกใน block Lotto Cash
 
-Dashboard นี้ = Cash Movement + Lotto Insight
+Dashboard นี้ = Cash Movement + Lotto Insight โดยแยก block กันชัดเจน

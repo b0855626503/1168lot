@@ -1,5 +1,57 @@
 # Decision Log
 
+อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
+อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+
+## 2026-04-05 — Dashboard Net Balance Must Exclude Lotto Cash and Recent Lotto Bets Must Show `user_name` (APPROVED)
+
+- ปรับหน้า `admin /dashboard`
+- behavior ใหม่:
+  - block `คงเหลือสุทธิ` ใช้เฉพาะ `ฝากสำเร็จ - ถอนสำเร็จ`
+  - ห้ามเอา `lotto net cash` มารวมใน net balance อีก
+  - summary path ทั้งแบบ raw query และ `dashboard_summary_daily` ต้องใช้ semantic เดียวกัน
+  - projector ของ `dashboard_summary_daily` ต้องเขียน `net_amount` ตาม semantic ใหม่ด้วย
+  - block `รายการโพยล่าสุด (Recent Lotto Bets)` ต้องแสดง `members.user_name` เป็นหลัก
+  - ถ้า resolve สมาชิกไม่ได้ ค่อย fallback เป็น `member_id`
+  - block `Lotto Risk` ต้องใช้ copy ภาษาไทยที่อธิบายง่ายขึ้นในหน้า dashboard
+- เหตุผล:
+  - แยก cash movement หลักของระบบออกจาก Lotto insight ให้ชัด
+  - ลดความสับสนเวลาทีมงานอ่านยอดคงเหลือสุทธิเทียบกับ block Lotto Cash
+  - ให้รายการโพยล่าสุดอ่านจากตัวตนสมาชิกจริงได้ง่ายกว่าเลข id
+
+## 2026-04-05 — Admin Lotto Badge Semantics Must Be Centralized in `loadCnt` (APPROVED)
+
+- ปรับกติกาฝั่ง admin Lotto
+- behavior ใหม่:
+  - count/badge ของเมนู Lotto โดยเฉพาะ `รายการโพย` ต้องยึด `DashboardController@loadCnt` เป็น source กลาง
+  - หน้า Lotto ทุกหน้าใน admin ต้อง trigger `loadCnt` ตอนเข้าเมนู ไม่ว่าหน้านั้นจะใช้ DataTable หรือ Vue/custom page
+  - ห้ามใช้ page-local response มานิยาม semantic ของ badge แข่งกับ `loadCnt`
+- เหตุผล:
+  - ให้ความหมายของ badge และ aggregate count ตรงกันทุกเมนู
+  - ลดการเกิด drift ระหว่างหน้า table, toast, realtime และ dashboard aggregate
+
+## 2026-04-05 — FrontendApi Must Own Customer Contracts for Promotion, Wheel, and Game Flows (APPROVED)
+
+- ปรับ boundary ของ `FrontendApi`
+- behavior ใหม่:
+  - route ลูกค้ากลุ่ม `promotion`, `wheel`, และ game-related endpoints ต้อง implement ใน `FrontendApi` เอง
+  - อนุญาตให้ reuse domain service, repository, query, model, และ transaction/service logic จาก package อื่นได้
+  - ห้าม route ฝั่ง `FrontendApi` ผูก contract กับ controller ภายในของ package domain อื่น
+- เหตุผล:
+  - ทำให้ `FrontendApi` เป็น BFF owner ของ customer contract จริง
+  - ลด coupling เวลาย้ายหรือ reuse package domain ภายนอก
+
+## 2026-04-05 — Wallet Evolution Must Preserve Append-Only Ledger Semantics (APPROVED)
+
+- ปรับกติกาสำหรับงาน wallet ถัดไป
+- behavior ใหม่:
+  - ทุก flow ใหม่ที่กระทบ main wallet ต้องเหลือ row ใน `wallet_transactions` สำหรับอธิบายการเปลี่ยนยอด
+  - ห้ามออกแบบ flow ใหม่ที่เปลี่ยน `members.balance` โดยไม่มี transaction context รองรับ
+  - ระหว่างที่แผน `wallet-ledger-implementation` ยัง rollout ไม่ครบทุก flow ให้เติม `ref_type/ref_id/group_code/meta` ใน `wallet_transactions` ให้ครบที่สุด
+- เหตุผล:
+  - รักษา audit trail ของประวัติการเงินรวม
+  - ทำให้ reconciliation และ frontend history ต่อยอดจาก ledger ชุดเดียวได้
+
 ## 2026-04-05 — Existing FrontendApi Controllers Must Stop Delegating to Other Package Controllers (APPROVED)
 
 - ปรับ implementation ภายใน `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1`

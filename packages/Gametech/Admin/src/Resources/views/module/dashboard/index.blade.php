@@ -707,7 +707,7 @@
                                 <div class="kpi-card metric-net">
                                     <div class="kpi-title"><span class="status-dot"></span> คงเหลือสุทธิ</div>
                                     <div class="kpi-value" :class="Number(summary.net.amount_raw || 0) >= 0 ? 'kpi-value--positive' : 'kpi-value--negative'">@{{ uiAnimatedAmount('net') }}</div>
-                                    <div class="kpi-sub">ฝากสำเร็จ - ถอนสำเร็จ + Lotto Net</div>
+                                    <div class="kpi-sub">ฝากสำเร็จ - ถอนสำเร็จ</div>
                                     <div class="kpi-sub">เทียบช่วงก่อนหน้า: @{{ uiAnimatedPercent('net_change_pct') }}</div>
                                 </div>
                             </div>
@@ -763,11 +763,12 @@
                                                 <div class="lotto-block-line"><span>รอตัดสิน/ตัดสินแล้ว</span><strong>@{{ uiCount(summary.lotto_product.pending_tickets) }} / @{{ uiCount(summary.lotto_product.settled_tickets) }}</strong></div>
                                             </div>
                                             <div class="lotto-block">
-                                                <div class="lotto-block-title">Lotto Risk</div>
+                                                <div class="lotto-block-title">Lotto Risk (ความเสี่ยงหวย)</div>
                                                 <div class="lotto-block-main">@{{ uiValue(summary.lotto_risk.liability_max, '0.00') }}</div>
-                                                <div class="lotto-block-line"><span>Exposure รวม</span><strong>@{{ uiValue(summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>Liability รวม</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>ตลาด/งวด/เลข</span><strong>@{{ uiCount(summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.numbers) }}</strong></div>
+                                                <div class="lotto-block-line"><span>ยอดเสี่ยงสูงสุดต่อเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_max, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>ยอดจ่ายถ้าถูกทั้งหมด</span><strong>@{{ uiValue(summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>ยอดความเสี่ยงรวมทุกเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>จำนวนตลาด/งวด/เลขที่ติดตาม</span><strong>@{{ uiCount(summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.numbers) }}</strong></div>
                                             </div>
                                         </div>
                                         <div class="lotto-recent-wrap mt-2">
@@ -833,7 +834,7 @@
                                                     <tbody>
                                                         <tr v-for="row in activity.lotto_recent_bets" :key="'lotto-recent-' + row.ticket_id">
                                                             <td>@{{ uiValue(row.bet_at, '-') }}</td>
-                                                            <td>@{{ uiValue(row.member_code, '-') }}</td>
+                                                            <td>@{{ uiValue(row.member_username, '-') }}</td>
                                                             <td>@{{ uiValue(row.group_name, '-') }} / @{{ uiValue(row.market_name, '-') }}</td>
                                                             <td class="summary-col" :title="uiValue(row.bet_type_summary, '-')">@{{ uiValue(row.bet_type_summary, '-') }}</td>
                                                             <td class="text-right">@{{ uiValue(row.amount, '0.00') }}</td>
@@ -1845,7 +1846,7 @@
                             title: 'คงเหลือสุทธิ',
                             class: 'metric-net',
                             value: this.summary.net.amount,
-                            sub: `ฝากสำเร็จ - ถอนสำเร็จ + Lotto Net`,
+                            sub: `ฝากสำเร็จ - ถอนสำเร็จ`,
                             sub2: `เทียบช่วงก่อนหน้า: ${this.summary.net.change_pct}%`
                         },
                         {

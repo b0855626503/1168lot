@@ -160,7 +160,7 @@ class DashboardService
             $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
             $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
-            $net = $depositSuccessAmount - $withdrawAmount + (float) ($lotto['net_cash'] ?? 0);
+            $net = $depositSuccessAmount - $withdrawAmount;
             $prevNet = $this->netCashflow($filters, $prevStart, $prevEnd);
             $netChangePct = $this->pctChange($prevNet, $net);
 
@@ -799,6 +799,15 @@ class DashboardService
             ->orderByDesc('t.created_at')
             ->orderByDesc('t.id');
 
+        $memberUsernameColumn = $this->memberUsernameColumn();
+        if ($this->hasTable('members') && $this->hasColumn('members', 'id')) {
+            $query->leftJoin('members as member', 'member.id', '=', 't.member_id');
+
+            if ($memberUsernameColumn) {
+                $query->addSelect('member.' . $memberUsernameColumn . ' as member_username');
+            }
+        }
+
         if ($marketId !== null && $marketId > 0) {
             $query->where('d.market_id', $marketId);
         }
@@ -828,6 +837,7 @@ class DashboardService
                 'ticket_id' => (int) ($row->id ?? 0),
                 'bet_at' => $time,
                 'member_code' => (string) ($row->member_id ?? '-'),
+                'member_username' => (string) ($row->member_username ?? $row->member_id ?? '-'),
                 'group_name' => (string) ($row->group_name ?? '-'),
                 'market_name' => (string) ($row->market_name ?? '-'),
                 'bet_type_summary' => (string) ($row->bet_type_summary ?: '-'),
@@ -1438,8 +1448,8 @@ class DashboardService
         $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
         $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
-        $net = (float) ($current['net_amount'] ?? ($depositSuccessAmount - $withdrawAmount + $lottoNetCash));
-        $prevNet = (float) ($previous['net_amount'] ?? 0);
+        $net = $depositSuccessAmount - $withdrawAmount;
+        $prevNet = (float) ($previous['deposit_success_amount'] ?? 0) - (float) ($previous['withdraw_total_amount'] ?? 0);
         $netChangePct = $this->pctChange($prevNet, $net);
 
         $registerTotal = (int) ($current['register_total'] ?? 0);
@@ -2424,9 +2434,7 @@ class DashboardService
             $withdrawAmount += (float) (clone $scoped)->sum('amount');
         }
 
-        $lotto = $this->lottoCashMetrics($startDate, $endDate);
-
-        return $depositAmount - $withdrawAmount + (float) ($lotto['net_cash'] ?? 0);
+        return $depositAmount - $withdrawAmount;
     }
 
     private function lottoCashMetrics(string $startDate, string $endDate): array

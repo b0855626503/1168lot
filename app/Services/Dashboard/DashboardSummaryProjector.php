@@ -28,8 +28,7 @@ class DashboardSummaryProjector
 
         $netAmount = round(
             (float) $deposit['deposit_success_amount']
-            - (float) $withdraw['withdraw_total_amount']
-            + (float) $lottoCash['lotto_net_cash'],
+            - (float) $withdraw['withdraw_total_amount'],
             2
         );
 
