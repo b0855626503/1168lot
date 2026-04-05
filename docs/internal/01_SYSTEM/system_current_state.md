@@ -125,6 +125,10 @@
 - report Lotto ทุกหน้าที่มี filter `market_id`
   - ใช้ `select2` แบบ grouped ตาม group ของรายการหวย
   - แสดง `logo/icon` หน้าชื่อรายการเมื่อมีข้อมูล
+  - filter bar ใช้ immediate apply:
+    - select/date เปลี่ยนค่าแล้ว redraw ทันที
+    - text search ใช้ debounce สั้นก่อน redraw
+    - ไม่ใช้ปุ่ม `ค้นหา`
   - ตอน reset filter ต้อง sync ค่าใน UI ของ `select2` ให้กลับเป็นค่าว่างด้วย
 - เมนูรายงานที่เป็นของจริงแล้ว:
   - `pending-bets`

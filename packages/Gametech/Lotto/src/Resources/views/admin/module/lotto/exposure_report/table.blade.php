@@ -17,26 +17,38 @@
 			}
 		};
 
-		$(document).on('preXhr.dt', '#dataTableBuilder', function (e, settings, data) {
-			data.draw_id = $('#filter_draw_id').val() || '';
-			data.market_id = $('#filter_market_id').val() || '';
-			data.bet_type = $('#filter_bet_type').val() || '';
-		});
-
-		window.applyExposureFilters = function () {
-			window.LaravelDataTables['dataTableBuilder'].draw();
-		};
-
-		window.resetExposureFilters = function () {
-			['filter_draw_id', 'filter_market_id', 'filter_bet_type'].forEach((id) => {
-				const element = document.getElementById(id);
-				if (element) {
-					element.value = '';
-					syncExposureFilterUi(element);
+		$(function () {
+			const redrawExposureTable = function () {
+				if (!window.LaravelDataTables || !window.LaravelDataTables['dataTableBuilder']) {
+					return;
 				}
+
+				window.LaravelDataTables['dataTableBuilder'].draw(false);
+			};
+
+			$(document).off('preXhr.dt.exposureFilter', '#dataTableBuilder').on('preXhr.dt.exposureFilter', '#dataTableBuilder', function (_e, _settings, data) {
+				data.draw_id = $('#filter_draw_id').val() || '';
+				data.market_id = $('#filter_market_id').val() || '';
+				data.bet_type = $('#filter_bet_type').val() || '';
 			});
 
-			window.LaravelDataTables['dataTableBuilder'].draw();
-		};
+			$('#filter_draw_id, #filter_market_id, #filter_bet_type')
+				.off('change.exposureFilter')
+				.on('change.exposureFilter', function () {
+					redrawExposureTable();
+				});
+
+			window.resetExposureFilters = function () {
+				['filter_draw_id', 'filter_market_id', 'filter_bet_type'].forEach((id) => {
+					const element = document.getElementById(id);
+					if (element) {
+						element.value = '';
+						syncExposureFilterUi(element);
+					}
+				});
+
+				redrawExposureTable();
+			};
+		});
 	</script>
 @endpush

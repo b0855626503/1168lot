@@ -34,15 +34,12 @@
         </select>
     </div>
     <div class="col-md-3 text-right">
-        <button type="button" class="btn bg-gradient-primary btn-xs" onclick="applyProfitLossForecastFilters()">
-            <i class="fa fa-search"></i> ค้นหา
-        </button>
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetProfitLossForecastFilters()">
             <i class="fa fa-refresh"></i> ล้างค่า
         </button>
     </div>
     <div class="col-12 mt-2 text-muted">
-        คาดการณ์ความเสี่ยงจ่ายจาก exposure จริงเทียบกับยอดแทงสะสมของแต่ละงวด/ประเภท
+        เลือก filter แล้วระบบจะกรองทันที พร้อมคาดการณ์ความเสี่ยงจ่ายจาก exposure จริงเทียบกับยอดแทงสะสมของแต่ละงวด/ประเภท
     </div>
 </div>
 @push('scripts')

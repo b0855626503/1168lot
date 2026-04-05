@@ -34,15 +34,12 @@
 		</select>
 	</div>
 	<div class="col-md-3 text-right">
-		<button type="button" class="btn bg-gradient-primary btn-xs" onclick="applyExposureFilters()">
-			<i class="fa fa-search"></i> ค้นหา
-		</button>
 		<button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetExposureFilters()">
 			<i class="fa fa-refresh"></i> ล้างค่า
 		</button>
 	</div>
 	<div class="col-12 mt-2 text-muted">
-		แสดงยอดรับสะสมต่อเลขจากข้อมูลจริงในตาราง exposure ของแต่ละงวด
+		เลือก filter แล้วระบบจะกรองทันที และแสดงยอดรับสะสมต่อเลขจากข้อมูลจริงในตาราง exposure ของแต่ละงวด
 	</div>
 </div>
 @push('scripts')

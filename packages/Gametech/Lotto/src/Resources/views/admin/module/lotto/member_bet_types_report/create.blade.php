@@ -37,15 +37,12 @@
         </select>
     </div>
     <div class="col-md-1 text-right">
-        <button type="button" class="btn bg-gradient-primary btn-xs" onclick="applyMemberBetTypesFilters()">
-            <i class="fa fa-search"></i>
-        </button>
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetMemberBetTypesFilters()">
             <i class="fa fa-refresh"></i>
         </button>
     </div>
     <div class="col-12 mt-2 text-muted">
-        สรุปจำนวนโพยและผลสุทธิตามสมาชิก แยกตามตลาดและประเภทเดิมพัน
+        เลือก filter แล้วระบบจะสรุปทันที โดยแยกจำนวนโพยและผลสุทธิตามสมาชิก ตลาด และประเภทเดิมพัน
     </div>
 </div>
 @push('scripts')

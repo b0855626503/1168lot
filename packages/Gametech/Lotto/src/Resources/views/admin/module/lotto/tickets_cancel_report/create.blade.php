@@ -33,15 +33,12 @@
         </select>
     </div>
     <div class="col-md-1 text-right">
-        <button type="button" class="btn bg-gradient-primary btn-xs" onclick="applyTicketsCancelFilters()">
-            <i class="fa fa-search"></i>
-        </button>
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetTicketsCancelFilters()">
             <i class="fa fa-refresh"></i>
         </button>
     </div>
     <div class="col-12 mt-2 text-muted">
-        รายงานโพยทุกสถานะ พร้อมผู้ยกเลิกสำหรับรายการที่ถูกยกเลิก
+        เลือก filter แล้วระบบจะกรองทันที และแสดงรายงานโพยทุกสถานะพร้อมผู้ยกเลิกเมื่อมีข้อมูล
     </div>
 </div>
 @push('scripts')

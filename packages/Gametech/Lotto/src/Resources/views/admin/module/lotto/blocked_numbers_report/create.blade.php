@@ -43,15 +43,12 @@
         </select>
     </div>
     <div class="col-md-2 text-right">
-        <button type="button" class="btn bg-gradient-primary btn-xs" onclick="applyBlockedNumbersReportFilters()">
-            <i class="fa fa-search"></i> ค้นหา
-        </button>
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetBlockedNumbersReportFilters()">
             <i class="fa fa-refresh"></i> ล้างค่า
         </button>
     </div>
     <div class="col-12 mt-2 text-muted">
-        รายงานเลขอั้นและเลขจำกัดอนาคตจากข้อมูลจริง พร้อมวันงวดและเวลาการแก้ไขล่าสุด
+        เลือก filter แล้วระบบจะกรองทันที พร้อมรายงานเลขอั้นและเลขจำกัดอนาคตจากข้อมูลจริง
     </div>
 </div>
 @push('scripts')

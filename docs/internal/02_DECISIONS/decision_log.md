@@ -18,6 +18,10 @@
     - `tickets-cancel`
     - `blocked-numbers`
     - `exposure`
+  - report Lotto ที่มี filter bar ใช้ immediate apply
+    - เปลี่ยน select/date แล้ว redraw ทันที
+    - ช่อง text filter ใช้ debounce สั้นก่อน redraw
+    - ยกเลิกปุ่ม `ค้นหา` คงไว้เฉพาะปุ่ม `ล้างค่า`
   - `member-bet-types` aggregate ข้อมูลจริงตาม `member + market + bet_type`
   - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดงผู้ยกเลิกเมื่อมีข้อมูล
   - `blocked-numbers` อ่านเลขอั้น/จำกัดอนาคตจาก `lotto_number_blocks` โดยตรง

@@ -17,27 +17,39 @@
             }
         };
 
-        $(document).on('preXhr.dt', '#dataTableBuilder', function (_e, _settings, data) {
-            data.date_start = $('#filter_date_start').val() || '';
-            data.date_stop = $('#filter_date_stop').val() || '';
-            data.market_id = $('#filter_market_id').val() || '';
-            data.status = $('#filter_status').val() || '';
-        });
-
-        window.applyTicketsCancelFilters = function () {
-            window.LaravelDataTables['dataTableBuilder'].draw();
-        };
-
-        window.resetTicketsCancelFilters = function () {
-            ['filter_date_start', 'filter_date_stop', 'filter_market_id', 'filter_status'].forEach((id) => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.value = '';
-                    syncTicketsCancelFilterUi(element);
+        $(function () {
+            const redrawTicketsCancelTable = function () {
+                if (!window.LaravelDataTables || !window.LaravelDataTables['dataTableBuilder']) {
+                    return;
                 }
+
+                window.LaravelDataTables['dataTableBuilder'].draw(false);
+            };
+
+            $(document).off('preXhr.dt.ticketsCancelFilter', '#dataTableBuilder').on('preXhr.dt.ticketsCancelFilter', '#dataTableBuilder', function (_e, _settings, data) {
+                data.date_start = $('#filter_date_start').val() || '';
+                data.date_stop = $('#filter_date_stop').val() || '';
+                data.market_id = $('#filter_market_id').val() || '';
+                data.status = $('#filter_status').val() || '';
             });
 
-            window.LaravelDataTables['dataTableBuilder'].draw();
-        };
+            $('#filter_date_start, #filter_date_stop, #filter_market_id, #filter_status')
+                .off('change.ticketsCancelFilter')
+                .on('change.ticketsCancelFilter', function () {
+                    redrawTicketsCancelTable();
+                });
+
+            window.resetTicketsCancelFilters = function () {
+                ['filter_date_start', 'filter_date_stop', 'filter_market_id', 'filter_status'].forEach((id) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = '';
+                        syncTicketsCancelFilterUi(element);
+                    }
+                });
+
+                redrawTicketsCancelTable();
+            };
+        });
     </script>
 @endpush
