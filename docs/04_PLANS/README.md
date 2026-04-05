@@ -4,11 +4,11 @@
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
 ## ACTIVE
-- `2026-03-21_frontend-api-v1.md`
-- `2026-03-31_lotto-group-package-system-readiness.md`
 - `2026-04-06_laravel-8-to-9-upgrade.md` (`Laravel 8 to 10` practical target)
 
 ## PENDING
+- `2026-03-21_frontend-api-v1.md`
+- `2026-03-31_lotto-group-package-system-readiness.md`
 - `2026-03-21_lotto-concord-proxy-cleanup.md`
 - `2026-03-21_lotto-dashboard.md`
 - `2026-03-21_lotto-execution-phases.md`
