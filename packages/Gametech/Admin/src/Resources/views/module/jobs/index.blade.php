@@ -432,6 +432,9 @@
                     document.getElementById('badge_bank_out').textContent = response.data.bank_out;
                     document.getElementById('badge_withdraw').textContent = response.data.withdraw;
                     document.getElementById('badge_withdraw_free').textContent = response.data.withdraw_free;
+                    if (document.getElementById('badge_lotto_tickets')) {
+                        document.getElementById('badge_lotto_tickets').textContent = response.data.lotto_tickets;
+                    }
                     document.getElementById('badge_confirm_wallet').textContent = response.data.payment_waiting;
                     document.getElementById('badge_member_confirm').textContent = response.data.member_confirm;
                     if (this.loopcnts == 0) {
@@ -457,4 +460,3 @@
 
     </script>
 @endpush
-

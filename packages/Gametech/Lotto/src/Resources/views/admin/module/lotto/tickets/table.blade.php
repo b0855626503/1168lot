@@ -9,7 +9,6 @@
         $(function () {
             const tableSelector = '#lottoTicketsTable';
             const tableKey = 'lottoTicketsTable';
-            const menuBadgeKey = @json($menuBadgeKey ?? 'lotto_tickets');
             const $marketSelect = $('#filter_market_id');
             const $drawSelect = $('#filter_draw_id');
             const drawOptionsByMarket = @json($drawOptionsByMarket ?? []);
@@ -92,15 +91,6 @@
 
                 window.LaravelDataTables[tableKey].draw(false);
             };
-
-            $(document).off('xhr.dt.lottoTicketsBadge', tableSelector).on('xhr.dt.lottoTicketsBadge', tableSelector, function (_event, _settings, json) {
-                const total = Number(json && typeof json.recordsTotal !== 'undefined' ? json.recordsTotal : 0);
-                const value = Number.isFinite(total) ? total : 0;
-
-                if (typeof window.update === 'function') {
-                    window.update(menuBadgeKey, value);
-                }
-            });
 
             $(document).off('preXhr.dt.lottoTicketsFilter', tableSelector).on('preXhr.dt.lottoTicketsFilter', tableSelector, function (_event, _settings, data) {
                 data.market_id = $marketSelect.val() || '';

@@ -29,8 +29,8 @@ class LottoPendingBetsReportRouteTest extends TestCase
         $this->assertStringContainsString("Route::get('reports/pending-bets', 'Gametech\\\\Lotto\\\\Http\\\\Controllers\\\\Admin\\\\LottoTicketController@index')", $routes);
         $this->assertStringContainsString("Route::post('reports/pending-bets/loaddata', 'Gametech\\\\Lotto\\\\Http\\\\Controllers\\\\Admin\\\\LottoTicketController@loadData')", $routes);
         $this->assertStringContainsString("'loadDataRouteName' => \$this->_config['load_data_route'] ?? 'admin.lotto.tickets.loaddata'", $ticketController);
-        $this->assertStringContainsString("'menuBadgeKey' => \$this->_config['menu_badge_key'] ?? 'lotto_tickets'", $ticketController);
         $this->assertStringContainsString("route(\$loadDataRouteName ?? 'admin.lotto.tickets.loaddata')", $ticketAddEditView);
-        $this->assertStringContainsString("@json(\$menuBadgeKey ?? 'lotto_tickets')", $ticketTableView);
+        $this->assertStringNotContainsString('menuBadgeKey', $ticketController);
+        $this->assertStringNotContainsString('xhr.dt.lottoTicketsBadge', $ticketTableView);
     }
 }

@@ -105,6 +105,9 @@
 ## นโยบายหน้าโพยหวย (Admin `/lotto/tickets`)
 
 - เมนู `รายการโพย/ยกเลิกโพย` แสดงเฉพาะ ticket ที่ `status=active`
+- badge เมนู `รายการโพย` (`lotto_tickets`) ใช้ค่า count จาก `Admin DashboardController@loadCnt`
+  - นับเฉพาะ `lotto_tickets.status=active`
+  - หน้า `/lotto/tickets` ห้ามดึงค่า badge จาก `DataTable xhr` ของหน้าเอง
 - รายการ `cancelled` และ `resulted` ต้องไม่แสดงใน DataTable หลักของหน้า
 - filter `draw_id/market_id/search` ยังคงทำงานภายใต้ชุดข้อมูล active-only
 - ลำดับคอลัมน์หลักของ DataTable:

@@ -672,6 +672,11 @@
                     }else{
                         update('withdraw', res.withdraw);
                     }
+                    if(res.lotto_tickets > 0){
+                        updateBadge('lotto_tickets', res.lotto_tickets);
+                    }else{
+                        update('lotto_tickets', res.lotto_tickets);
+                    }
                     if(res.withdraw > 0){
                         updateBadge('withdraw_free', res.withdraw_free);
                     }else{

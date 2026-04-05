@@ -251,6 +251,11 @@
                     }else{
                         update('withdraw', res.withdraw);
                     }
+                    if(res.lotto_tickets > 0){
+                        updateBadge('lotto_tickets', res.lotto_tickets);
+                    }else{
+                        update('lotto_tickets', res.lotto_tickets);
+                    }
 
                     // if(document.getElementById('badge_bank_in')){
                     //     document.getElementById('badge_bank_in').textContent = response.data.bank_in_today;
@@ -331,6 +336,5 @@
         });
 
 </script>
-
 
 

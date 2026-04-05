@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends AppBaseController
 {
@@ -204,12 +205,28 @@ class DashboardController extends AppBaseController
         $result['payment_waiting'] = $payment_waiting;
         $result['announce'] = $announce['content'];
         $result['announce_new'] = $announce_new;
+        $result['lotto_tickets'] = $this->countActiveLottoTickets();
 
         //        Artisan::call('migrate --force');
         //        Artisan::call('queue:restart');
 
         return $this->sendResponseNew($result, 'Complete');
 
+    }
+
+    private function countActiveLottoTickets(): int
+    {
+        if (! Schema::hasTable('lotto_tickets')) {
+            return 0;
+        }
+
+        $query = DB::table('lotto_tickets');
+
+        if (Schema::hasColumn('lotto_tickets', 'status')) {
+            $query->where('status', 'active');
+        }
+
+        return (int) $query->count();
     }
 
     public function loadSum(Request $request)

@@ -67,7 +67,6 @@ class LottoTicketController extends AppBaseController
             'marketOptions' => $marketOptions,
             'drawOptionsByMarket' => $drawOptionsByMarket,
             'loadDataRouteName' => $this->_config['load_data_route'] ?? 'admin.lotto.tickets.loaddata',
-            'menuBadgeKey' => $this->_config['menu_badge_key'] ?? 'lotto_tickets',
         ]);
     }
 

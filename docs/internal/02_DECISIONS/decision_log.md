@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-04-05 — Admin Lotto Tickets Menu Badge Must Be Sourced from Dashboard `loadCnt` (APPROVED)
+
+- ปรับ badge เมนู `รายการโพย` (`lotto_tickets`)
+- behavior ใหม่:
+  - ค่า badge ต้องมาจาก `Gametech\Admin\Http\Controllers\DashboardController@loadCnt`
+  - นับเฉพาะ ticket ที่ `lotto_tickets.status=active`
+  - เอา logic ดึงจำนวนจาก `xhr.dt` ของหน้า `admin /lotto/tickets` ออก
+  - หน้า admin ที่เรียก `loadCnt` ต้องอัปเดต badge `lotto_tickets` จาก payload เดียวกัน
+- เหตุผล:
+  - ให้ badge เมนูมี source เดียวและไม่ผูกกับการเปิดหน้า DataTable ของเมนูนั้นก่อน
+  - ลด logic กระจัดกระจายที่หน้าโพยไปดึงข้อมูล badge เอง
+
 ## 2026-04-05 — Profit-Loss Forecast Report Must Use Vue Matrix View by Market and Draw (APPROVED)
 
 - ปรับหน้า `admin /lotto/reports/profit-loss-forecast`

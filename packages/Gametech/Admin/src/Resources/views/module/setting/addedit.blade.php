@@ -208,6 +208,9 @@
                     if(document.getElementById('badge_withdraw_free')){
                         document.getElementById('badge_withdraw_free').textContent = response.data.withdraw_free;
                     }
+                    if(document.getElementById('badge_lotto_tickets')){
+                        document.getElementById('badge_lotto_tickets').textContent = response.data.lotto_tickets;
+                    }
                     if(document.getElementById('badge_confirm_wallet')){
                         document.getElementById('badge_confirm_wallet').textContent = response.data.payment_waiting;
                     }
@@ -237,4 +240,3 @@
 
     </script>
 @endpush
-
