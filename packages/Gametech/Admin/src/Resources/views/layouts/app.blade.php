@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="{{ config('app.locale') }}">
+@php($adminSiteName = data_get($webconfig, 'sitename', config('app.name')))
+@php($adminFavicon = data_get($webconfig, 'favicon'))
 <head>
     <meta charset="UTF-8">
-    <title>{{ ucwords($config->sitename) }} - @yield('title')</title>
+    <title>{{ ucwords($adminSiteName) }} - @yield('title')</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ core()->imgurl($config->favicon,'img') }}">
+    @if($adminFavicon)
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ core()->imgurl($adminFavicon,'img') }}">
+    @endif
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Admin Zone">
     <!-- Google Font: Source Sans Pro -->
@@ -46,7 +50,9 @@
 
 <script src="{{ mix('assets/admin/js/manifest.js') }}"></script>
 <script src="{{ mix('assets/admin/js/vendor.js') }}"></script>
+@include('partials.broadcast-config')
 <script baseUrl="{{ url()->to('/') }}" id="mainscript" src="{{ mix('assets/admin/js/app.js') }}"></script>
+@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/broadcasting/auth'])
 <script type="text/javascript" src="{{ asset('assets/ui/js/ui.js') }}"></script>
 
 @stack('scripts')

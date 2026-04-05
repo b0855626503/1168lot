@@ -12,7 +12,7 @@
 @section('content')
     <div class="container mt-5">
         <h3 class="text-center text-light">ถอนเงิน</h3>
-        @if($config->multigame_open == 'Y')
+        @if($webconfig->multigame_open == 'Y')
             <p class="text-center text-color-fixed"> กรุณาโยกเงินเข้ากระเป๋าหลักก่อนทำการถอนเงิน</p>
         @else
             <p class="text-center text-color-fixed"> เมื่อแจ้งถอน ยอดเงินเครดิตจะถูกหักออกทันที</p>
@@ -27,11 +27,11 @@
                             <div class="card-body p-2">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        @if($config->multigame_open == 'Y')
+                                        @if($webconfig->multigame_open == 'Y')
                                             <h5 class="content-heading text-center"><i class="fal fa-wallet"></i>
                                                 กระเป๋าเงิน
                                             </h5>
-                                        @elseif($config->seamless == 'Y')
+                                        @elseif($webconfig->seamless == 'Y')
                                             <h5 class="content-heading text-center"><i class="fal fa-wallet"></i>
                                                 ยอดเงินของฉัน
                                             </h5>
@@ -53,7 +53,7 @@
                                     <div class="col-sm-12">
                                         <h5 class="content-heading text-center"><i class="fal fa-minus-octagon"></i>
                                             ถอนวันนี้</h5>
-                                        @if($config->seamless == 'Y')
+                                        @if($webconfig->seamless == 'Y')
                                             <h5 class="text-color-fixed text-right">{{ is_null($profile->withdraw_seamless_amount_sum) ? '0.00' : $profile->withdraw_seamless_amount_sum }}</h5>
                                         @else
                                             <h5 class="text-color-fixed text-right">{{ is_null($profile->withdraw_amount_sum) ? '0.00' : $profile->withdraw_amount_sum }}</h5>
@@ -121,7 +121,7 @@
                                             </div>
 
                                             <p class="text-center text-warning">
-                                                ยอดถอนขั้นต่ำ {{ $config->minwithdraw }}
+                                                ยอดถอนขั้นต่ำ {{ $webconfig->minwithdraw }}
                                                 บาท</p>
                                             <button class="btn btn-primary btn-block shadow-box">แจ้งถอน
                                             </button>

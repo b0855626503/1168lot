@@ -2,16 +2,34 @@
 
 namespace Tests\Feature\Lotto;
 
+use Gametech\FrontendApi\Services\FrontendTokenService;
 use Gametech\Lotto\Models\LottoGroupPackage;
 use Gametech\Lotto\Models\LottoGroupPackageBetSetting;
 use Gametech\Member\Models\Member;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class PackageFrontendApiTest extends TestCase
 {
+    private array $frontendApiHeaders = [];
+
+    private function frontendApiGet(string $uri)
+    {
+        return $this->withServerVariables([
+            'HTTP_HOST' => 'api.localhost',
+        ])->withHeaders($this->frontendApiHeaders)->getJson('http://api.localhost/api/v1' . $uri);
+    }
+
+    private function frontendApiPost(string $uri, array $payload = [])
+    {
+        return $this->withServerVariables([
+            'HTTP_HOST' => 'api.localhost',
+        ])->withHeaders($this->frontendApiHeaders)->postJson('http://api.localhost/api/v1' . $uri, $payload);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,13 +50,13 @@ class PackageFrontendApiTest extends TestCase
         $otherGroup = $this->createPackage(groupId: 2, name: 'C', isActive: true);
         $this->createSetting((int) $otherGroup->id, 'top_2', 90, 0, true);
 
-        $response = $this->getJson('/api/lotto/groups/1/packages');
+        $response = $this->frontendApiGet('/lotto/groups/1/packages');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', (int) $active->id);
         $response->assertJsonPath('data.0.group_id', 1);
-        $response->assertJsonPath('data.0.image', '/storage/lotto/media/a.png');
+        $this->assertStringContainsString('/storage/lotto/media/a.png', (string) $response->json('data.0.image'));
         $response->assertJsonPath('data.0.bet_settings.0.bet_type', 'top_3');
         $response->assertJsonCount(1, 'data.0.bet_settings');
     }
@@ -50,7 +68,7 @@ class PackageFrontendApiTest extends TestCase
         $this->createSetting((int) $package->id, 'top_3', 650, 27, true);
         $this->createSetting((int) $package->id, 'bottom_2', 69, 27, true);
 
-        $select = $this->postJson('/api/lotto/groups/10/select-package', [
+        $select = $this->frontendApiPost('/lotto/groups/10/select-package', [
             'package_id' => (int) $package->id,
         ]);
         $select->assertOk();
@@ -59,19 +77,19 @@ class PackageFrontendApiTest extends TestCase
         $select->assertJsonPath('data.package_id', (int) $package->id);
         $select->assertJsonPath('data.selected', true);
 
-        $selected = $this->getJson('/api/lotto/groups/10/selected-package');
+        $selected = $this->frontendApiGet('/lotto/groups/10/selected-package');
         $selected->assertOk();
         $selected->assertJsonPath('success', true);
         $selected->assertJsonPath('selected', true);
         $selected->assertJsonPath('data.group_id', 10);
         $selected->assertJsonPath('data.package_id', (int) $package->id);
-        $selected->assertJsonPath('data.image', '/storage/lotto/media/vip10.png');
+        $this->assertStringContainsString('/storage/lotto/media/vip10.png', (string) $selected->json('data.image'));
         $selected->assertJsonPath('data.bet_settings.0.bet_type', 'bottom_2');
-        $selected->assertJsonPath('data.bet_settings.0.payout', 69.0);
-        $selected->assertJsonPath('data.bet_settings.0.discount_percent', 27.0);
+        $selected->assertJsonPath('data.bet_settings.0.payout', 69);
+        $selected->assertJsonPath('data.bet_settings.0.discount_percent', 27);
         $selected->assertJsonPath('data.bet_settings.1.bet_type', 'top_3');
-        $selected->assertJsonPath('data.bet_settings.1.payout', 650.0);
-        $selected->assertJsonPath('data.bet_settings.1.discount_percent', 27.0);
+        $selected->assertJsonPath('data.bet_settings.1.payout', 650);
+        $selected->assertJsonPath('data.bet_settings.1.discount_percent', 27);
         $selected->assertJsonCount(2, 'data.bet_settings');
     }
 
@@ -80,10 +98,10 @@ class PackageFrontendApiTest extends TestCase
         $this->actingAsCustomer(memberCode: 2002);
         $package = $this->createPackage(groupId: 11, name: 'VIP-11', isActive: true);
 
-        $first = $this->postJson('/api/lotto/groups/11/select-package', [
+        $first = $this->frontendApiPost('/lotto/groups/11/select-package', [
             'package_id' => (int) $package->id,
         ]);
-        $second = $this->postJson('/api/lotto/groups/11/select-package', [
+        $second = $this->frontendApiPost('/lotto/groups/11/select-package', [
             'package_id' => (int) $package->id,
         ]);
 
@@ -100,14 +118,14 @@ class PackageFrontendApiTest extends TestCase
         $wrongGroupPackage = $this->createPackage(groupId: 99, name: 'Wrong', isActive: true);
         $inactiveInGroup = $this->createPackage(groupId: 12, name: 'Inactive', isActive: false);
 
-        $wrongGroup = $this->postJson('/api/lotto/groups/12/select-package', [
+        $wrongGroup = $this->frontendApiPost('/lotto/groups/12/select-package', [
             'package_id' => (int) $wrongGroupPackage->id,
         ]);
         $wrongGroup->assertStatus(400);
         $wrongGroup->assertJsonPath('success', false);
         $wrongGroup->assertJsonPath('error_code', 'PACKAGE_NOT_IN_GROUP');
 
-        $inactive = $this->postJson('/api/lotto/groups/12/select-package', [
+        $inactive = $this->frontendApiPost('/lotto/groups/12/select-package', [
             'package_id' => (int) $inactiveInGroup->id,
         ]);
         $inactive->assertStatus(409);
@@ -120,19 +138,19 @@ class PackageFrontendApiTest extends TestCase
         $this->actingAsCustomer(memberCode: 2004);
         $package = $this->createPackage(groupId: 13, name: 'T-13', isActive: true);
 
-        $initial = $this->getJson('/api/lotto/groups/13/selected-package');
+        $initial = $this->frontendApiGet('/lotto/groups/13/selected-package');
         $initial->assertOk();
         $initial->assertJsonPath('success', true);
         $initial->assertJsonPath('selected', false);
         $initial->assertJsonPath('data', null);
 
-        $this->postJson('/api/lotto/groups/13/select-package', [
+        $this->frontendApiPost('/lotto/groups/13/select-package', [
             'package_id' => (int) $package->id,
         ])->assertOk();
 
         $package->update(['is_active' => false]);
 
-        $afterInactive = $this->getJson('/api/lotto/groups/13/selected-package');
+        $afterInactive = $this->frontendApiGet('/lotto/groups/13/selected-package');
         $afterInactive->assertOk();
         $afterInactive->assertJsonPath('success', true);
         $afterInactive->assertJsonPath('selected', false);
@@ -143,18 +161,29 @@ class PackageFrontendApiTest extends TestCase
     {
         $this->createPackage(groupId: 21, name: 'Auth', isActive: true);
 
-        $this->getJson('/api/lotto/groups/21/packages')->assertStatus(401);
-        $this->postJson('/api/lotto/groups/21/select-package', ['package_id' => 1])->assertStatus(401);
-        $this->getJson('/api/lotto/groups/21/selected-package')->assertStatus(401);
+        $this->frontendApiGet('/lotto/groups/21/packages')->assertStatus(401);
+        $this->frontendApiPost('/lotto/groups/21/select-package', ['package_id' => 1])->assertStatus(401);
+        $this->frontendApiGet('/lotto/groups/21/selected-package')->assertStatus(401);
     }
 
     private function actingAsCustomer(int $memberCode = 1001): void
     {
-        $member = new Member();
-        $member->code = $memberCode;
-        $member->name = 'Test Member';
-        $member->exists = true;
+        $member = Member::query()->updateOrCreate(
+            ['code' => $memberCode],
+            [
+                'bank_code' => 1,
+                'user_name' => 'user' . $memberCode,
+                'name' => 'Test Member',
+                'enable' => 'Y',
+                'date_create' => now(),
+                'date_update' => now(),
+            ]
+        );
 
+        $token = app(FrontendTokenService::class)->issue($member);
+        $this->frontendApiHeaders = [
+            'Authorization' => 'Bearer ' . $token['token'],
+        ];
         $this->actingAs($member, 'customer');
     }
 
@@ -189,6 +218,26 @@ class PackageFrontendApiTest extends TestCase
         Schema::dropIfExists('failed_requests');
         Schema::dropIfExists('lotto_group_package_bet_settings');
         Schema::dropIfExists('lotto_group_packages');
+        Schema::dropIfExists('members');
+        Schema::dropIfExists('banks');
+
+        Schema::create('banks', function (Blueprint $table): void {
+            $table->unsignedBigInteger('code')->primary();
+            $table->string('name_th')->nullable();
+            $table->string('enable')->default('Y');
+            $table->dateTime('date_create')->nullable();
+            $table->dateTime('date_update')->nullable();
+        });
+
+        Schema::create('members', function (Blueprint $table): void {
+            $table->unsignedBigInteger('code')->primary();
+            $table->unsignedBigInteger('bank_code')->nullable();
+            $table->string('user_name')->nullable();
+            $table->string('name')->nullable();
+            $table->string('enable')->default('Y');
+            $table->dateTime('date_create')->nullable();
+            $table->dateTime('date_update')->nullable();
+        });
 
         Schema::create('lotto_group_packages', function (Blueprint $table): void {
             $table->bigIncrements('id');
@@ -226,5 +275,13 @@ class PackageFrontendApiTest extends TestCase
             $table->longText('game_user')->nullable();
             $table->timestamps();
         });
+
+        DB::table('banks')->insert([
+            'code' => 1,
+            'name_th' => 'Test Bank',
+            'enable' => 'Y',
+            'date_create' => now(),
+            'date_update' => now(),
+        ]);
     }
 }

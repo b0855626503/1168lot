@@ -7,59 +7,53 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "ext-mongodb": "*",
         "ext-redis": "*",
         "alexmg86/laravel-sub-query": "^1.9",
         "awobaz/compoships": "^2.0",
         "bacon/bacon-qr-code": "^2.0",
         "bagisto/bagisto-package-generator": "^2.0",
-        "beyondcode/laravel-websockets": "^1.13",
-        "codedge/laravel-selfupdater": "^3.2",
         "doctrine/dbal": "^2.0",
         "endroid/qr-code": "^5.0",
-        "fideloper/proxy": "^4.3.0",
-        "firebase/php-jwt": "^5.5",
-        "fruitcake/laravel-cors": "^3.0",
-        "google/apiclient": "2.12.1",
+        "firebase/php-jwt": "^7.0",
         "guzzlehttp/guzzle": "^7.0.1",
-        "infyomlabs/adminlte-templates": "^3.0",
-        "infyomlabs/laravel-generator": "^3.0",
-        "irazasyed/telegram-bot-sdk": "^3.9",
+        "infyomlabs/adminlte-templates": "^6.0",
+        "infyomlabs/laravel-generator": "^6.0",
         "jaybizzle/laravel-crawler-detect": "^1.2",
         "jenssegers/agent": "^2.6",
-        "jenssegers/mongodb": "^3.8",
         "klevze/online-users": "^0.1.2",
-        "konekt/concord": "^1.8",
-        "laravel/framework": "^8.0",
-        "laravel/horizon": "^5.7",
-        "laravel/octane": "^1.5",
-        "laravel/scout": "^8.3",
+        "konekt/concord": "^1.17",
+        "laravel/framework": "^10.49",
+        "laravel/horizon": "^5.45",
+        "laravel/octane": "^2.17",
+        "laravel/reverb": "^1.0",
         "laravel/tinker": "^2.0",
-        "laravel/ui": "^3.0",
+        "laravel/ui": "^4.6",
+        "league/fractal": "^0.19.2",
         "maatwebsite/excel": "^3.1",
         "minishlink/web-push": "^9.0",
-        "paquettg/php-html-parser": "^3.1",
+        "mongodb/laravel-mongodb": "^4.1",
         "php-curl-class/php-curl-class": "^9.1",
-        "pragmarx/google2fa-laravel": "^1.4",
+        "pragmarx/google2fa-laravel": "^3.0",
         "predis/predis": "^1.1",
         "prettus/l5-repository": "^2.7",
         "pusher/pusher-php-server": "^7.2",
-        "rap2hpoutre/fast-excel": "^2.5",
+        "rap2hpoutre/fast-excel": "^5.7",
         "silviolleite/laravelpwa": "^2.0",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spiritix/lada-cache": "^5.1",
         "voku/simple_html_dom": "^4.7",
-        "yajra/laravel-datatables": "1.5",
-        "yajra/laravel-datatables-oracle": "~9.0"
+        "yajra/laravel-datatables-buttons": "^10.0",
+        "yajra/laravel-datatables-html": "^10.12",
+        "yajra/laravel-datatables-oracle": "^10.11"
     },
     "require-dev": {
-        "barryvdh/laravel-debugbar": "^3.5",
-        "facade/ignition": "^2.5",
+        "spatie/laravel-ignition": "^2.8",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.22",
         "mockery/mockery": "^1.4.2",
-        "nunomaduro/collision": "^5.0",
+        "nunomaduro/collision": "^7.12",
         "phpunit/phpunit": "^9.3.3",
         "thecodingmachine/phpstan-safe-rule": "*"
     },
@@ -81,11 +75,9 @@
         "laravel": {
             "dont-discover": [
                 "laravel/dusk",
-                "facade/ignition",
                 "mockery/mockery",
                 "nunomaduro/collision",
-                "phpunit/phpunit",
-                "barryvdh/laravel-debugbar"
+                "phpunit/phpunit"
             ]
         }
     },
@@ -128,7 +120,11 @@
     "scripts": {
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"php artisan websocket:start\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#fca5a5\" \"php artisan serve\" \"php artisan horizon\" \"php artisan reverb:start --host=0.0.0.0 --port=${REVERB_SERVER_PORT:-8080}\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names=server,horizon,reverb,queue,vite --kill-others"
+        ],
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#fca5a5\" \"php artisan serve\" \"php artisan horizon\" \"php artisan reverb:start --host=0.0.0.0 --port=${REVERB_SERVER_PORT:-8080}\" \"php artisan queue:listen --tries=1\" --names=server,horizon,reverb,queue --kill-others"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

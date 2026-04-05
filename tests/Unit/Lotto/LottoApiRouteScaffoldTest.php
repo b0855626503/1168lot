@@ -22,18 +22,18 @@ class LottoApiRouteScaffoldTest extends TestCase
         $this->assertStringContainsString("loadRoutesFrom(__DIR__ . '/../Routes/api.php')", $content);
     }
 
-    public function test_api_route_file_contains_member_endpoints(): void
+    public function test_api_route_file_contains_only_internal_result_endpoints(): void
     {
         $content = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Routes/api.php');
 
         $this->assertNotFalse($content);
-        $this->assertStringContainsString("Route::middleware(['api', 'authuser:customer'])->prefix('api/lotto')->group(function () {", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\DrawController@index", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\BetController@store", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@available", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@select", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@selected", $content);
-        $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\TicketController@cancel", $content);
+        $this->assertStringNotContainsString("authuser:customer", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\DrawController@index", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\BetController@store", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@available", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@select", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\PackageController@selected", $content);
+        $this->assertStringNotContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\TicketController@cancel", $content);
         $this->assertStringContainsString("prefix('internal/lottery/results')", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@exphuay", $content);
         $this->assertStringContainsString("Gametech\\Lotto\\Http\\Controllers\\Api\\InternalResultController@dowjonesMidnight", $content);

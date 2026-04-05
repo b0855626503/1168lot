@@ -81,9 +81,13 @@ class InternalResultService
 
         $normalized = $this->extractNormalizedResult($source, $rawResult);
         $resolvedDrawDate = $this->resolveDrawDateFromRawResult($rawResult);
-        $drawDate = $resolvedDrawDate !== now()->format('Y-m-d') || $rawResult !== []
-            ? $resolvedDrawDate
-            : ($normalizedInputDate instanceof Carbon ? $normalizedInputDate->format('Y-m-d') : $resolvedDrawDate);
+        $drawDate = $resolvedDrawDate;
+        if (
+            $normalizedInputDate instanceof Carbon
+            && ! $this->rawResultHasResolvableDrawDate($rawResult)
+        ) {
+            $drawDate = $normalizedInputDate->format('Y-m-d');
+        }
         $meta = [
             'remote_url' => (string) ($payload['remote_url'] ?? ''),
             'request_params' => is_array($payload['request_params'] ?? null) ? $payload['request_params'] : [],
@@ -465,6 +469,28 @@ class InternalResultService
         } catch (InvalidArgumentException) {
             return null;
         }
+    }
+
+    /**
+     * @param array<string,mixed> $rawResult
+     */
+    private function rawResultHasResolvableDrawDate(array $rawResult): bool
+    {
+        $candidates = [
+            $this->resolveExphuayDrawDate($rawResult),
+            $this->pullFirst($rawResult, [['data', 'lotto_date']]),
+            $this->pullFirst($rawResult, [['lotto_date']]),
+            $this->pullFirst($rawResult, [['date']]),
+            $this->pullFirst($rawResult, [['draw_date']]),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($this->asDateString($candidate) !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -50,11 +50,11 @@
                                 <div>
                                     <div class="el-input my-1">
                                         <i class="fal fa-user"></i>
-                                        @if($config->contributor)
+                                        @if($webconfig->contributor)
                                             <input id="friendlink" class="inputstyle" outsideclick="true"
                                                    data-popover="คัดลอกสำเร็จ"
                                                    type="text"
-                                                   value="{{ $config->contributor }}/contributor/{{ $profile->code }}">
+                                                   value="{{ $webconfig->contributor }}/contributor/{{ $profile->code }}">
                                         @else
                                             <input id="friendlink" class="inputstyle" outsideclick="true"
                                                    data-popover="คัดลอกสำเร็จ"

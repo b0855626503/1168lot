@@ -93,7 +93,7 @@
                                                 </div>
                                             </div>
                                             <p class="text-center text-warning">
-                                                โยกเงินเข้าเกมส์ขั้นต่ำ {{ intval($config->mintransfer) }} บาท</p>
+                                                โยกเงินเข้าเกมส์ขั้นต่ำ {{ intval($webconfig->mintransfer) }} บาท</p>
                                             @if($promotions)
                                                 <p class="text-center text-warning">
                                                     ต้องกดรับโปรโมชั่นก่อนโยกเงินเข้าเกมนะคะ</p>

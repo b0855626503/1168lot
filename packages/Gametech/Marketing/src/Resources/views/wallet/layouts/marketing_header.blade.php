@@ -11,10 +11,10 @@
 
         <div id="headerBrand">
             <a class="navbar-brand" href="{{ route('customer.home.index') }}">
-                <img alt="{{ $config->description }}" class="-logo -default img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
-                <img alt="{{ $config->description }}" class="-logo -invert img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -default img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -invert img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
             </a>
         </div>
 
@@ -23,9 +23,9 @@
 
 
                 <a class="-menu-link" href="{{ route('customer.promotion.show') }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40" loading="lazy" fetchpriority="low"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40" loading="lazy" fetchpriority="low"
                          height="40" src="/assets\wm356\web\ezl-wm-356\img\ic-menu-promotion.png?v=2"/>
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid" loading="lazy" fetchpriority="low"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid" loading="lazy" fetchpriority="low"
                          width="40" height="40" src="/assets\wm356\web\ezl-wm-356\img\ic-menu-promotion-active.png?v=2"/>
                     <span>{{ __('app.login.promotion') }}</span>
                 </a>
@@ -34,12 +34,12 @@
 
         <div id="headerContent">
             <div class="d-flex">
-{{--                <a href="{{ $config->linelink }}" class="x-header-btn-support -in-anon" target="_blank"--}}
+{{--                <a href="{{ $webconfig->linelink }}" class="x-header-btn-support -in-anon" target="_blank"--}}
 {{--                   rel="noreferrer nofollow">--}}
 {{--                    <picture>--}}
 {{--                        <source type="image/webp" srcset="/assets\wm356\web\ezl-wm-356\img\ic-line-support.webp?v=1"/>--}}
 {{--                        <source type="image/png?v=2" srcset="/assets\wm356\web\ezl-wm-356\img\ic-line-support.png?v=1"/>--}}
-{{--                        <img alt="{{ $config->description }}" class="img-fluid -ic" loading="lazy" fetchpriority="low"--}}
+{{--                        <img alt="{{ $webconfig->description }}" class="img-fluid -ic" loading="lazy" fetchpriority="low"--}}
 {{--                             width="120" height="39" src="/assets\wm356\web\ezl-wm-356\img\ic-line-support.png?v=1"/>--}}
 {{--                    </picture>--}}
 {{--                    <picture>--}}
@@ -47,7 +47,7 @@
 {{--                                srcset="/assets\wm356\web\ezl-wm-356\img\ic-line-support-mobile.webp?v={{ time() }}"/>--}}
 {{--                        <source type="image/png"--}}
 {{--                                srcset="/assets\wm356\web\ezl-wm-356\img\ic-line-support-mobile.png?v={{ time() }}"/>--}}
-{{--                        <img alt="{{ $config->description }}" class="img-fluid -ic -mobile" loading="lazy" fetchpriority="low"--}}
+{{--                        <img alt="{{ $webconfig->description }}" class="img-fluid -ic -mobile" loading="lazy" fetchpriority="low"--}}
 {{--                             width="28" height="28"--}}
 {{--                             src="/assets\wm356\web\ezl-wm-356\img\ic-line-support-mobile.png?v={{ time() }}"/>--}}
 {{--                    </picture>--}}

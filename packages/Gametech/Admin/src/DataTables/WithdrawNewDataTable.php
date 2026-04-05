@@ -134,7 +134,7 @@ class WithdrawNewDataTable extends DataTable
      *
      * @return string
      */
-    protected function filename()
+    protected function filename(): string
     {
         return 'withdraw_datatable_' . time();
     }

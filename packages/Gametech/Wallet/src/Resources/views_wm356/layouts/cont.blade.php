@@ -15,37 +15,37 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <link rel="icon" type="image/x-icon" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <link rel="apple-touch-icon" sizes="60x60" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="apple-mobile-web-app-title" content="{{ ucwords($config->sitename) }}"/>
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <link rel="icon" type="image/x-icon" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="apple-mobile-web-app-title" content="{{ ucwords($webconfig->sitename) }}"/>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="keywords" content="web.meta.keywords"/>
 
-    <meta property="og:title" content="{{ ucwords($config->sitename) }}"/>
+    <meta property="og:title" content="{{ ucwords($webconfig->sitename) }}"/>
     <meta property="og:description"
-          content="{{ $config->description }}"/>
+          content="{{ $webconfig->description }}"/>
     <meta property="og:locale" content="{{ config('app.locale') }}"/>
-    <meta property="og:site_name" content="{{ ucwords($config->sitename) }}"/>
+    <meta property="og:site_name" content="{{ ucwords($webconfig->sitename) }}"/>
     <meta property="og:url" content="{{ url('') }}"/>
-    <meta property="og:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+    <meta property="og:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 
     <link rel="canonical" href=""/>
 
     <meta name="twitter:site" content="@twitter"/>
     <meta name="twitter:card" content="summary"/>
-    <meta name="twitter:title" content="{{ ucwords($config->sitename) }}"/>
+    <meta name="twitter:title" content="{{ ucwords($webconfig->sitename) }}"/>
     <meta name="twitter:description"
-          content="{{ $config->description }}"/>
-    <meta name="twitter:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+          content="{{ $webconfig->description }}"/>
+    <meta name="twitter:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 
 
-    <link preload href="{!! core()->imgurl($config->favicon,'img') !!}" as="style"
+    <link preload href="{!! core()->imgurl($webconfig->favicon,'img') !!}" as="style"
           onload="this.onload=null;this.rel='icon'" crossorigin=""/>
     <noscript>
-        <link rel="icon" href="{!! core()->imgurl($config->favicon,'img') !!}"/>
+        <link rel="icon" href="{!! core()->imgurl($webconfig->favicon,'img') !!}"/>
     </noscript>
     <meta name="msapplication-TileColor" content="#ffffff"/>
     <meta name="msapplication-TileImage" content="/assets/wm356/images/ms-icon-144x144.png"/>

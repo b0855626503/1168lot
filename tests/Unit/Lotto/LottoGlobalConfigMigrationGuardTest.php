@@ -32,6 +32,7 @@ class LottoGlobalConfigMigrationGuardTest extends TestCase
         $this->assertNotFalse($menu);
         $this->assertStringNotContainsString("'lotto.member_rate_plans'", $menu);
         $this->assertStringNotContainsString('admin.lotto.member_rate_plans.index', $menu);
-        $this->assertStringContainsString('admin.lotto.rate_plans.index', $menu);
+        $this->assertStringNotContainsString('admin.lotto.rate_plans.index', $menu);
+        $this->assertStringContainsString('admin.lotto.bet_limits.index', $menu);
     }
 }

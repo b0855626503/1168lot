@@ -14,7 +14,7 @@
                         <span class="text-main"> ถอนเงิน</span>
                     </a>
                 </div>
-                @if($config->freecredit_open === 'Y')
+                @if($webconfig->freecredit_open === 'Y')
                     <div class="col-4 main-menu-item px-0">
                         <a href="{{ route('customer.credit.index') }}"><i
                                 class="fas fa-coins fa-2x"></i><br>
@@ -30,7 +30,7 @@
                     </a>
                 </div>
 
-                @if($config->pro_onoff === 'Y')
+                @if($webconfig->pro_onoff === 'Y')
                     <div class="col-4 main-menu-item px-0">
                         <a href="{{ route('customer.promotion.index') }}"><i
                                 class="fal fa-gift fa-2x"></i><br>
@@ -62,7 +62,7 @@
                         <span class="text-main"> คู่มือ</span>
                     </a>
                 </div>
-                @if($config->wheel_open === 'Y')
+                @if($webconfig->wheel_open === 'Y')
                     <div class="col-4 main-menu-item px-0">
                         <a href="{{ route('customer.spin.index') }}"><i
                                 class="fas fa-bullseye fa-2x"></i><br>
@@ -77,7 +77,7 @@
                     </div>
                 @endif
 
-                @if($config->point_open === 'Y' && $config->reward_open === 'Y')
+                @if($webconfig->point_open === 'Y' && $webconfig->reward_open === 'Y')
                     <div class="col-4 main-menu-item px-0">
                         <a href="{{ route('customer.reward.index') }}"><i
                                 class="fal fa-treasure-chest fa-2x"></i><br>

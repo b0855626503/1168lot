@@ -3,15 +3,13 @@
 namespace Gametech\Admin\Http\Controllers;
 
 
-use Codedge\Updater\Traits\UseVersionFile;
+use Gametech\Admin\Support\SelfUpdateManager;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 
 class CmdController extends AppBaseController
 {
-    use UseVersionFile;
-
     protected $_config;
 
     public function __construct()
@@ -44,14 +42,19 @@ class CmdController extends AppBaseController
 
     public function webServiceStart()
     {
-        Artisan::call('websockets:serve --host=127.0.0.1');
-        return 'Websockets start';
+        Artisan::call('reverb:start', [
+            '--host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
+            '--port' => env('REVERB_SERVER_PORT', 8080),
+        ]);
+
+        return 'Reverb start';
     }
 
     public function webServiceStop()
     {
-        Artisan::call('websockets:restart');
-        return 'Websockets Restart';
+        Artisan::call('reverb:restart');
+
+        return 'Reverb restart';
     }
 
     public function viewCmd()
@@ -93,37 +96,21 @@ class CmdController extends AppBaseController
         return 'ลองใหม่';
     }
 
-    public function updatePatch(\Codedge\Updater\UpdaterManager $updater)
+    public function updatePatch(SelfUpdateManager $updater)
     {
-        $current = $updater->source()->getVersionInstalled();
-
-        if($updater->source()->isNewVersionAvailable($current)) {
-
-            $versionAvailable = $updater->source()->getVersionAvailable();
-
-            $release = $updater->source()->fetch($versionAvailable);
-
-            $updater->source()->update($release);
-
-            Artisan::call('postupdate:work');
-
-        }
+        session()->flash('warning', $updater->getDecommissionedMessage());
 
         return redirect()->route('admin.bank_in.index');
     }
 
-    public function checkPatch(\Codedge\Updater\UpdaterManager $updater)
+    public function checkPatch(SelfUpdateManager $updater)
     {
-        $this->deleteVersionFile();
-
-        $current = $updater->source()->getVersionInstalled();
-        $versionAvailable = $updater->source()->getVersionAvailable();
-        echo 'Current '.$current;
-        echo '<br>';
-        echo 'Last '.$versionAvailable;
-
-
+        return response()->make(
+            'Current '.$updater->getInstalledVersion()
+            .'<br>'
+            .'Last unavailable'
+            .'<br>'
+            .$updater->getDecommissionedMessage()
+        );
     }
-
-
 }

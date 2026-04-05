@@ -92,7 +92,7 @@
                                 </div>
                             </div>
                             <div class="col-6">
-                                @if($config->seamless == 'Y')
+                                @if($webconfig->seamless == 'Y')
                                     <div class="profile-txt mb-3"><p
                                             class=" text-color-fixed mb-0"><i
                                                 class="fas fa-gift"></i> การรับโปรโมชั่น</p>
@@ -100,7 +100,7 @@
                                         <btn-changepro></btn-changepro>
                                     </div>
                                 @else
-                                @if($config->multigame_open == 'N')
+                                @if($webconfig->multigame_open == 'N')
                                     <div class="profile-txt mb-3"><p
                                             class=" text-color-fixed mb-0"><i
                                                 class="fas fa-gift"></i> การรับโปรโมชั่น</p>
@@ -127,10 +127,10 @@
                     </div>
                 </div>
 
-                @if($config->seamless == 'Y')
+                @if($webconfig->seamless == 'Y')
                     @include('wallet::customer.profile.seamless')
                 @else
-                    @if($config->multigame_open == 'Y')
+                    @if($webconfig->multigame_open == 'Y')
                         @include('wallet::customer.profile.multi')
                     @else
                         @include('wallet::customer.profile.single')

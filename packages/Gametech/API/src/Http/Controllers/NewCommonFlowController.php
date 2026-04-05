@@ -53,6 +53,10 @@ class NewCommonFlowController extends AppBaseController
 
         $this->now = now();
 
+        if (app()->runningInConsole()) {
+            return;
+        }
+
         // 🔎 ตรวจสอบค่า session['productId']
         $productId = session('productId'); // หรือจะใช้ $request->session()->get('productId')
         if (in_array($productId, ['UMBET', 'LALIKA', 'AFB1188', 'VIRTUAL_SPORT', 'COCKFIGHT', 'AMBSPORTBOOK', 'SABASPORTS', 'SBO', 'AOG', 'FB_SPORT', 'DB SPORTS'])) {

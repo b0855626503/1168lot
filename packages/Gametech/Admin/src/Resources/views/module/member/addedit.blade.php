@@ -1506,7 +1506,7 @@
                         });
 
                     } else if (this.method === 'deposit') {
-                        @if($config->multigame_open == 'Y')
+                        @if($webconfig->multigame_open == 'Y')
                             this.fields = [
                             {key: 'date_create', label: 'วันที่'},
                             {key: 'id', label: 'บิลเลขที่'},
@@ -1542,7 +1542,7 @@
                         this.items = response.data.list;
                     } else if (this.method === 'setwallet') {
 
-                        @if($config->multigame_open == 'Y')
+                        @if($webconfig->multigame_open == 'Y')
                             this.fields = [
                             {key: 'date_create', label: 'วันที่'},
                             {key: 'credit_type', label: 'ประเภทรายการ'},

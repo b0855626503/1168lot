@@ -2,7 +2,7 @@
     <div class="-inner-wrapper lazyload x-bg-position-center"
          data-bgset="https://asset.cloudigame.co/build/admin/img/wt_theme/ezl/footer-inner-bg.png">
         <div class="container -inner-title-wrapper">
-            {!! $config->content_detail !!}
+            {!! $webconfig->content_detail !!}
         </div>
 
 
@@ -10,7 +10,7 @@
 
     <div class="text-center -copy-right-container">
         <p class="mb-0 -copy-right-text">
-            Copyright © 2023 {{ $config->sitename }}. All Rights Reserved.
+            Copyright © 2023 {{ $webconfig->sitename }}. All Rights Reserved.
         </p>
     </div>
 </footer>
@@ -73,7 +73,7 @@
                 <span class="-item-wrapper">
                   <span class="-ic-img">
                       <span class="-text d-block">{{ __('app.home.contact') }}</span>
-                      <a href="{{ $config->linelink }}">
+                      <a href="{{ $webconfig->linelink }}">
                         <img src="/images/icon/support-mobile.webp?v=2"/>
                       </a>
                     </span>

@@ -74,7 +74,7 @@
                         </tbody></table>
                     <br>
                     <p class="text-center text-warning">
-                        โยกเข้ากระเป๋า ขั้นต่ำ {{ core()->currency($config->mintransferback) }}
+                        โยกเข้ากระเป๋า ขั้นต่ำ {{ core()->currency($webconfig->mintransferback) }}
                         บาท</p>
                     <button class="moneyBtn"> ดำเนินการต่อ </button>
                 </div>
@@ -158,7 +158,7 @@
 {{--                                                </div>--}}
 {{--                                            </div>--}}
 {{--                                            <p class="text-center text-warning">--}}
-{{--                                                โยกเงินออกเกมส์ขั้นต่ำ {{ core()->currency($config->mintransferback) }}--}}
+{{--                                                โยกเงินออกเกมส์ขั้นต่ำ {{ core()->currency($webconfig->mintransferback) }}--}}
 {{--                                                บาท</p>--}}
 
 {{--                                            <button class="btn btn-danger btn-block shadow-box">ดำเนินการต่อ</button>--}}

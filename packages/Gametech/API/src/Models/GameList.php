@@ -3,7 +3,7 @@
 namespace Gametech\API\Models;
 
 use Gametech\API\Contracts\GameList as GameListContract;
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\BSON\UTCDateTime;
 
 class GameList extends Model implements GameListContract
@@ -12,7 +12,7 @@ class GameList extends Model implements GameListContract
 
     protected $connection = 'mongodb';
 
-    protected $collection = 'gamelist';
+    protected $table = 'gamelist';
 
     protected $attributes = [
         'enable' => true,

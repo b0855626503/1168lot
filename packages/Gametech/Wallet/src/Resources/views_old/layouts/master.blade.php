@@ -2,10 +2,10 @@
 <html lang="{{ config('app.locale') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ core()->imgurl($config->favicon,'img') }}">
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ core()->imgurl($webconfig->favicon,'img') }}">
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Prompt&display=swap" rel="stylesheet">
@@ -23,35 +23,35 @@
 
     <style>
         .nav-top {
-                background: {{ ($config->wallet_navbar_color?$config->wallet_navbar_color:'#6f0000') }}            !important;
+                background: {{ ($webconfig->wallet_navbar_color?$webconfig->wallet_navbar_color:'#6f0000') }}            !important;
         }
 
         .nav-footer {
-            background: {{ ($config->wallet_footer_color?$config->wallet_footer_color:'#6f0000') }}            !important;
+            background: {{ ($webconfig->wallet_footer_color?$webconfig->wallet_footer_color:'#6f0000') }}            !important;
         }
 
         .custom-theme {
-            background: linear-gradient(45deg, {{ ($config->wallet_body_start_color?$config->wallet_body_start_color:'#200122') }} 10%, {{ ($config->wallet_body_stop_color?$config->wallet_body_stop_color:'#6f0000') }} 90%) !important;
+            background: linear-gradient(45deg, {{ ($webconfig->wallet_body_start_color?$webconfig->wallet_body_start_color:'#200122') }} 10%, {{ ($webconfig->wallet_body_stop_color?$webconfig->wallet_body_stop_color:'#6f0000') }} 90%) !important;
         }
 
         .exchange {
-            background: {{ ($config->wallet_footer_exchange?$config->wallet_footer_exchange:'#6f0000') }}            !important;
+            background: {{ ($webconfig->wallet_footer_exchange?$webconfig->wallet_footer_exchange:'#6f0000') }}            !important;
         }
 
         .exchange-single {
-            background: {{ ($config->wallet_footer_exchange?$config->wallet_footer_exchange:'#6f0000') }}            !important;
+            background: {{ ($webconfig->wallet_footer_exchange?$webconfig->wallet_footer_exchange:'#6f0000') }}            !important;
         }
 
         a.active, a.active i, a.active p {
-            color: {{ ($config->wallet_footer_active?$config->wallet_footer_active:'#6f0000') }}            !important;
+            color: {{ ($webconfig->wallet_footer_active?$webconfig->wallet_footer_active:'#6f0000') }}            !important;
         }
 
 
     </style>
     @yield('css')
 
-    @if($config->header_code)
-        {!! $config->header_code !!}
+    @if($webconfig->header_code)
+        {!! $webconfig->header_code !!}
     @endif
 </head>
 
@@ -66,7 +66,7 @@
             <div class="container">
                 <div class="row w-100">
                     <div class="col-3 w-40">@yield('back')</div>
-                    {!! core()->showImg($config->logo,'img','','','img-top') !!}
+                    {!! core()->showImg($webconfig->logo,'img','','','img-top') !!}
                     <div class="col-1 offset-8">
                         <a href="{{ route('customer.session.destroy') }}"
                            class="nav-link text-light p-2 signout-btn mx-auto hand-point">

@@ -16,7 +16,7 @@
         <div class="row">
             <div class="col-md-8 offset-md-2 col-sm-12">
 
-                @if($config->seamless == 'Y')
+                @if($webconfig->seamless == 'Y')
                     @include('wallet::customer.promotion.seamless')
                 @else
                     @include('wallet::customer.promotion.normal')

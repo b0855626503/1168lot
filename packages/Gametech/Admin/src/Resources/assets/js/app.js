@@ -21,10 +21,18 @@ import VeeValidate from 'vee-validate';
 import Swal from 'sweetalert2';
 import {BootstrapVue, IconsPlugin} from 'bootstrap-vue';
 
+const broadcastConfig = window.broadcastConfig || {};
+const broadcastScheme = broadcastConfig.scheme || window.location.protocol.replace(':', '') || 'http';
+const broadcastPort = Number(broadcastConfig.port || (broadcastScheme === 'https' ? 443 : 8080));
+
 window.Echo = new Echo({
     broadcaster: 'pusher',
-    key: 'app-key',
-    wsHost: window.location.hostname,
+    key: broadcastConfig.key || 'app-key',
+    wsHost: broadcastConfig.host || window.location.hostname,
+    wsPort: broadcastPort,
+    wssPort: broadcastPort,
+    forceTLS: broadcastScheme === 'https',
+    enabledTransports: ['ws', 'wss'],
     disableStats: true,
     authEndpoint: '/broadcasting/auth'
 });
@@ -284,5 +292,4 @@ $(document).ready(function () {
         }
     });
 });
-
 

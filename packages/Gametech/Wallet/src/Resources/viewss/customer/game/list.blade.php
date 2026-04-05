@@ -11,7 +11,7 @@
             <div class="col-md-8 offset-md-2 col-sm-12">
                 <div class="card text-light card-trans">
                     <div class="card-body py-3 px-2">
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                             <seamless></seamless>
                         @else
                             <credit></credit>

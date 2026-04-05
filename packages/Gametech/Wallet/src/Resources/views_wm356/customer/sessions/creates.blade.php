@@ -31,7 +31,7 @@
                 <img class="ic-lg-01" src="images/icon/chip.png">
                 <img class="ic-lg-02" src="images/icon/card.png">
                 <div class="logologin">
-                    {!! core()->showImg($config->logo,'img','','','') !!}
+                    {!! core()->showImg($webconfig->logo,'img','','','') !!}
                 </div>
                 <div class="inbgbeforelogin">
 
@@ -85,9 +85,9 @@
                         <div class="wantregister">{{ __('app.login.no_username') }} <a class="loginbtn"
                                                                     href="{{ route('customer.session.store') }}">{{ __('app.login.register_now') }}</a>
                         </div>
-                        @if($config->notice)
+                        @if($webconfig->notice)
                             <div class="my-4">
-                        <p class="text-center">{{ $config->notice }}</p>
+                        <p class="text-center">{{ $webconfig->notice }}</p>
                             </div>
                         @endif
                     </div>

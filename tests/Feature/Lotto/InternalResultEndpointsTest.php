@@ -9,6 +9,13 @@ use Tests\TestCase;
 
 class InternalResultEndpointsTest extends TestCase
 {
+    private function getInternalResultJson(string $uri, array $headers = [])
+    {
+        return $this->withServerVariables([
+            'HTTP_HOST' => 'api.localhost',
+        ])->withHeaders($headers)->getJson('http://api.localhost' . $uri);
+    }
+
     public function test_dowjones_midnight_accepts_legacy_date_format_and_normalizes_draw_date(): void
     {
         Http::fake([
@@ -26,7 +33,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/dowjones-midnight?date=30/03/2026');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-midnight?date=30/03/2026');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-30');
@@ -40,7 +47,7 @@ class InternalResultEndpointsTest extends TestCase
 
     public function test_invalid_date_returns_canonical_error_shape(): void
     {
-        $response = $this->getJson('/internal/lottery/results/dowjones-extra?date=2026/03/30');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-extra?date=2026/03/30');
         $response->assertOk();
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('source', 'dowjones-extra');
@@ -85,7 +92,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/dowjones-extra?date=2026-03-30');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-extra?date=2026-03-30');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('normalized_result.first_prize', '94561');
@@ -115,7 +122,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/dowjones-extra?date=2026-03-28');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-extra?date=2026-03-28');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-28');
@@ -145,7 +152,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/dowjones-extra?date=2026-03-28');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-extra?date=2026-03-28');
         $response->assertOk();
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('draw_date', '2026-03-28');
@@ -162,7 +169,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/exphuay/list?date=30-03-2026&page=2');
+        $response = $this->getInternalResultJson('/internal/lottery/results/exphuay/list?date=30-03-2026&page=2');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-30');
@@ -181,7 +188,7 @@ class InternalResultEndpointsTest extends TestCase
             'https://exphuay.com/backward/*' => Http::response($this->fakeExphuayPayload(), 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-28&page=1');
+        $response = $this->getInternalResultJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-28&page=1');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-28');
@@ -200,7 +207,7 @@ class InternalResultEndpointsTest extends TestCase
             'https://exphuay.com/backward/*' => Http::response($this->fakeExphuayPayload(), 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-27&page=1');
+        $response = $this->getInternalResultJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-27&page=1');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-27');
@@ -217,7 +224,7 @@ class InternalResultEndpointsTest extends TestCase
             'https://exphuay.com/backward/*' => Http::response($this->fakeExphuayPayload(), 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-01&page=1');
+        $response = $this->getInternalResultJson('/internal/lottery/results/exphuay/laosvip?date=2026-03-01&page=1');
         $response->assertOk();
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('draw_date', '2026-03-01');
@@ -237,7 +244,7 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->getJson('/internal/lottery/results/dowjones-midnight');
+        $response = $this->getInternalResultJson('/internal/lottery/results/dowjones-midnight');
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('draw_date', '2026-03-29');
@@ -251,7 +258,7 @@ class InternalResultEndpointsTest extends TestCase
     {
         config()->set('lotto_auto_result.internal_result_sources.shared_key', 'secret-key');
 
-        $unauthorized = $this->getJson('/internal/lottery/results/dowjones-midnight');
+        $unauthorized = $this->getInternalResultJson('/internal/lottery/results/dowjones-midnight');
         $unauthorized->assertStatus(401);
         $unauthorized->assertJsonPath('errors.0.code', 'UNAUTHORIZED_INTERNAL_REQUEST');
 
@@ -262,9 +269,10 @@ class InternalResultEndpointsTest extends TestCase
             ], 200),
         ]);
 
-        $authorized = $this->withHeaders([
-            'X-Lotto-Internal-Key' => 'secret-key',
-        ])->getJson('/internal/lottery/results/dowjones-midnight?date=2026-03-30');
+        $authorized = $this->getInternalResultJson(
+            '/internal/lottery/results/dowjones-midnight?date=2026-03-30',
+            ['X-Lotto-Internal-Key' => 'secret-key']
+        );
         $authorized->assertOk();
         $authorized->assertJsonPath('success', true);
     }

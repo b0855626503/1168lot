@@ -13,7 +13,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class MemberDataTable extends DataTable
 {
-    protected $exportClass = UsersExport::class;
+    protected string $exportClass = UsersExport::class;
     //    protected $fastExcel = true;
 
     /**
@@ -349,7 +349,7 @@ class MemberDataTable extends DataTable
      *
      * @return string
      */
-    protected function filename()
+    protected function filename(): string
     {
         return config('app.name').'_member_datatable_'.date('YmdHis');
     }

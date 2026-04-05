@@ -9,7 +9,7 @@
                     <div class="-row-wrapper">
                         <div class="-col-wrapper -first" data-animatable="fadeInModal">
                             <div class="x-cover-typography">
-                                <h1 class="-title">{{ $config->content_header }}</h1>
+                                <h1 class="-title">{{ $webconfig->content_header }}</h1>
 
                             </div>
 

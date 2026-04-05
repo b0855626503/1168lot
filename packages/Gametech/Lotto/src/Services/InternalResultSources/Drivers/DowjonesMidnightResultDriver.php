@@ -2,7 +2,6 @@
 
 namespace Gametech\Lotto\Services\InternalResultSources\Drivers;
 
-use Carbon\Carbon;
 use Gametech\Lotto\Services\InternalResultSources\Contracts\InternalResultSourceDriver;
 use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 
@@ -48,12 +47,11 @@ class DowjonesMidnightResultDriver implements InternalResultSourceDriver
     public function fetch(array $params): array
     {
         $date = (string) ($params['date'] ?? '');
-        $today = Carbon::now('Asia/Bangkok')->format('Y-m-d');
 
         $query = [];
         $url = 'https://api.dowjones-midnight.com/result';
-        if ($date !== '' && $date !== $today) {
-            $url = 'https://api.dowjones-midnight.com/history';
+        if ($date !== '') {
+            $query['date'] = $date;
         }
 
         $fetch = $this->fetcher->get(
@@ -71,4 +69,3 @@ class DowjonesMidnightResultDriver implements InternalResultSourceDriver
         ];
     }
 }
-

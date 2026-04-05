@@ -4,10 +4,10 @@
 @section('title','')
 
 @section('content')
-@if($config->seamless == 'Y')
+@if($webconfig->seamless == 'Y')
     @include('wallet::customer.credit.game.seamless')
 @else
-    @if($config->multigame_open == 'Y')
+    @if($webconfig->multigame_open == 'Y')
         @include('wallet::customer.credit.game.multi')
     @else
         @include('wallet::customer.credit.game.single')

@@ -85,7 +85,7 @@
                                                 </div>
                                             </div>
                                             <p class="text-center text-warning">โยก Cashback
-                                                เข้าเกมส์ขั้นต่ำ {{ core()->currency($config->free_mintransfer) }}
+                                                เข้าเกมส์ขั้นต่ำ {{ core()->currency($webconfig->free_mintransfer) }}
                                                 บาท</p>
                                             @if($promotions)
                                                 <p class="text-center text-warning">

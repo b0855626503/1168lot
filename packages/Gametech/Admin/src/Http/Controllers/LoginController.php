@@ -4,6 +4,7 @@ namespace Gametech\Admin\Http\Controllers;
 
 use App\Providers\RouteServiceProvider;
 use Carbon\Carbon;
+use Gametech\Admin\Support\SelfUpdateManager;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -139,7 +140,7 @@ class LoginController extends AppBaseController
      *
      * @return View
      */
-    public function show(\Codedge\Updater\UpdaterManager $updater)
+    public function show(SelfUpdateManager $updater)
     {
 
         if (Auth::guard('admin')->check()) {
@@ -149,7 +150,7 @@ class LoginController extends AppBaseController
         } else {
 
 
-            $current = $updater->source()->getVersionInstalled();
+            $current = $updater->getInstalledVersion();
 
             $current = 'ขณะนี้ระบบเป็น v '.$current;
 

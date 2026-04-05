@@ -193,7 +193,7 @@
 					</div>
 				</div>
 
-				@if($config->seamless == 'Y')
+				@if($webconfig->seamless == 'Y')
 
 					<div class="form-group my-2 mt-5" style="display:none">
 						<div>
@@ -211,7 +211,7 @@
 
 				@else
 
-					@if($config->multigame_open == 'N')
+					@if($webconfig->multigame_open == 'N')
 
 						<div class="form-group my-2 mt-5" style="display:none">
 							<div>

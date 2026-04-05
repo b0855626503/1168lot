@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
@@ -33,8 +33,8 @@
     <!-- Facebook shared -->
     <meta property="og:url" content=""/>
     <meta property="og:type" content="article"/>
-    <meta property="og:title" content="{{ $config->title }}"/>
-    <meta property="og:description" content="{{ $config->description }}"/>
+    <meta property="og:title" content="{{ $webconfig->title }}"/>
+    <meta property="og:description" content="{{ $webconfig->description }}"/>
     <meta property="og:image" content="img"/>
     <meta name='robots' content='max-image-preview:large'/>
 
@@ -46,7 +46,7 @@
         <!-- Sidebar  -->
         <div class="insidebarleft">
             <a href="{{ route('customer.home.index') }}">
-                {!! core()->showImg($config->logo,'img','','','') !!}
+                {!! core()->showImg($webconfig->logo,'img','','','') !!}
             </a>
             <ul>
                 <li>
@@ -67,7 +67,7 @@
                         {{ __('app.home.changepass') }}
                     </a>
                 </li>
-                @if($config->freecredit_open === 'Y')
+                @if($webconfig->freecredit_open === 'Y')
                     <li>
                         <a href="{{ route('customer.credit.index') }}">
                             <img src="images/icon/return.png">
@@ -81,7 +81,7 @@
                         {{ __('app.home.history') }}
                     </a>
                 </li>
-                @if($config->pro_onoff === 'Y')
+                @if($webconfig->pro_onoff === 'Y')
                     <li>
                         <a href="{{ route('customer.promotion.index') }}">
                             <i class="far fa-gift"></i>
@@ -168,7 +168,7 @@
             <div class="ctscb">
                 <div class="leftscb">
                     <a href="{{ route('customer.home.index') }}">
-                        {!! core()->showImg($config->logo,'img','','','') !!}
+                        {!! core()->showImg($webconfig->logo,'img','','','') !!}
                     </a>
                 </div>
                 <div class="rightscb">
@@ -191,7 +191,7 @@
                                 {{ __('app.home.changepass') }}
                             </a>
                         </li>
-                        @if($config->freecredit_open === 'Y')
+                        @if($webconfig->freecredit_open === 'Y')
                             <li>
                                 <a href="{{ route('customer.credit.index') }}">
                                     <img src="/images/icon/return.png">
@@ -205,7 +205,7 @@
                                 {{ __('app.home.history') }}
                             </a>
                         </li>
-                        @if($config->pro_onoff === 'Y')
+                        @if($webconfig->pro_onoff === 'Y')
                             <li>
                                 <a href="{{ route('customer.promotion.index') }}">
                                     <i class="far fa-gift"></i>

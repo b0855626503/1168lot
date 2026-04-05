@@ -3,7 +3,7 @@
 namespace Gametech\API\Models;
 
 use Gametech\API\Contracts\GameLog as GameLogContract;
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\BSON\UTCDateTime;
 
 class GameLog extends Model implements GameLogContract
@@ -12,7 +12,7 @@ class GameLog extends Model implements GameLogContract
 
     protected $connection = 'mongodb';
 
-    protected $collection = 'gamelog';
+    protected $table = 'gamelog';
 
     protected $fillable = ['input', 'output', 'company', 'game_user', 'method', 'response', 'amount', 'con_1', 'con_2', 'con_3', 'con_4', 'status', 'before_balance', 'after_balance', 'date_create', 'expireAt'];
     //    public $timestamps = false;

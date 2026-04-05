@@ -1,18 +1,19 @@
 <!-- Web Application Manifest -->
 <link rel="manifest" href="{{ route('laravelpwa.manifest') }}">
+@php($manifest = app(\LaravelPWA\Services\ManifestService::class)->generate())
 <!-- Chrome for Android theme color -->
-<meta name="theme-color" content="{{ $config['theme_color'] }}">
+<meta name="theme-color" content="{{ $manifest['theme_color'] }}">
 
 <!-- Add to homescreen for Chrome on Android -->
-<meta name="mobile-web-app-capable" content="{{ $config['display'] == 'standalone' ? 'yes' : 'no' }}">
-<meta name="application-name" content="{{ $config['short_name'] }}">
+<meta name="mobile-web-app-capable" content="{{ $manifest['display'] == 'standalone' ? 'yes' : 'no' }}">
+<meta name="application-name" content="{{ $manifest['short_name'] }}">
 
 
 <!-- Add to homescreen for Safari on iOS -->
-<meta name="apple-mobile-web-app-capable" content="{{ $config['display'] == 'standalone' ? 'yes' : 'no' }}">
-<meta name="apple-mobile-web-app-status-bar-style" content="{{  $config['status_bar'] }}">
-<meta name="apple-mobile-web-app-title" content="{{ $config['short_name'] }}">
-{{--<link rel="apple-touch-icon" href="{{ data_get(end($config['icons']), 'src') }}">--}}
+<meta name="apple-mobile-web-app-capable" content="{{ $manifest['display'] == 'standalone' ? 'yes' : 'no' }}">
+<meta name="apple-mobile-web-app-status-bar-style" content="{{  $manifest['status_bar'] }}">
+<meta name="apple-mobile-web-app-title" content="{{ $manifest['short_name'] }}">
+{{--<link rel="apple-touch-icon" href="{{ data_get(end($manifest['icons']), 'src') }}">--}}
 
 
 <script>

@@ -291,15 +291,15 @@
                             <a class="-link-wrapper" href="{{ route('customer.home.index') }}">
                                 <picture>
                                     <source type="image/webp"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <source type="image/png"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <img
                                             alt="logo image" loading="lazy"
                                             class="img-fluid lazyload -logo"
                                             width="180"
                                             height="42"
-                                            data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                            data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                                             src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                                     />
                                 </picture>
@@ -416,7 +416,7 @@
                             </div>
                             <div class="col-6 -wrapper-box">
                                 <a
-                                        href="{{ $config->linelink }}"
+                                        href="{{ $webconfig->linelink }}"
                                         class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
                                         target="_blank"
                                         rel="noopener nofollow"

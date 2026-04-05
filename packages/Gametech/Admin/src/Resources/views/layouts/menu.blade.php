@@ -5,7 +5,7 @@
 
 @foreach ($menuItems as $menuItem)
 
-@if($isRootLevel && $config->freecredit_open == 'N')
+@if($isRootLevel && $webconfig->freecredit_open == 'N')
     @continue($menuItem['key'] == 'credit')
     @continue($menuItem['key'] == 'withdraw_free')
     @continue($menuItem['key'] == 'mop.rp_cashback')

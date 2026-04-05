@@ -34,7 +34,7 @@
             </div>
 
             <div id="forgot" class="forgot">
-{{--                <a href="{{ $config->linelink }}" target="_blank">ติดต่อทีมงาน</a>--}}
+{{--                <a href="{{ $webconfig->linelink }}" target="_blank">ติดต่อทีมงาน</a>--}}
             </div>
 
             <button id="loginBtn" type="submit" class="login-btn">เข้าสู่ระบบ</button>
@@ -52,7 +52,7 @@
 
         <div class="bottom-buttons">
             <a id="regBtn" href="{{ route('customer.session.store') }}" class="btn-register">📝 สมัครสมาชิก</a>
-{{--            <a id="contactBtn" href="{{ $config->linelink }}" class="btn-contact">📞 ติดต่อ</a>--}}
+{{--            <a id="contactBtn" href="{{ $webconfig->linelink }}" class="btn-contact">📞 ติดต่อ</a>--}}
         </div>
     </div>
 

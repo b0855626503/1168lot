@@ -27,7 +27,7 @@ class ReindexGameLog extends Command
         $mkGlobal = !$this->option('skip-global');
         $mkUser = !$this->option('skip-user-first');
 
-        /** @var \Jenssegers\Mongodb\Connection $conn */
+        /** @var \MongoDB\Laravel\Connection $conn */
         $conn = DB::connection($connName);
         $client = $conn->getMongoClient();
         $dbName = $dbOpt ?: ($conn->getDatabaseName() ?? config("database.connections.$connName.database"));

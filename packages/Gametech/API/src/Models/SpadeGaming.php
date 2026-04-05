@@ -2,13 +2,13 @@
 
 namespace Gametech\API\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use Gametech\API\Contracts\SpadeGaming as SpadeGamingContract;
 
 class SpadeGaming extends Model implements SpadeGamingContract
 {
     protected $connection = 'mongodb';
-    protected $collection = 'spadegaming';
+    protected $table = 'spadegaming';
 
     protected $primaryKey = 'id';
 }

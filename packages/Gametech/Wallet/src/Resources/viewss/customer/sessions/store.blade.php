@@ -218,7 +218,7 @@
                                                type="password">
                                     </div>
                                 </div>
-                                @if($config->seamless == 'Y')
+                                @if($webconfig->seamless == 'Y')
                                     <div class="form-group">
                                         <div class="input-group mb-3">
                                             <div class="input-group-prepend">
@@ -237,7 +237,7 @@
                                     </div>
                                 @else
 
-                                    @if($config->multigame_open == 'N')
+                                    @if($webconfig->multigame_open == 'N')
                                         <div class="form-group">
                                             <div class="input-group mb-3">
                                                 <div class="input-group-prepend">

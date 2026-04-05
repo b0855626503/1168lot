@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Scrollbar Custom CSS -->
@@ -29,9 +29,9 @@
     <!-- Facebook shared -->
     <meta property="og:url" content=""/>
     <meta property="og:type" content="article"/>
-    <meta property="og:title" content="{{ $config->title }}"/>
-    <meta property="og:description" content="{{ $config->description }}"/>
-    <meta property="og:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+    <meta property="og:title" content="{{ $webconfig->title }}"/>
+    <meta property="og:description" content="{{ $webconfig->description }}"/>
+    <meta property="og:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
     <meta name='robots' content='max-image-preview:large'/>
 
 </head>
@@ -42,7 +42,7 @@
         <!-- Sidebar  -->
         <div class="insidebarleft">
             <a href="{{ route('customer.home.index') }}">
-                {!! core()->showImg($config->logo,'img','','','') !!}
+                {!! core()->showImg($webconfig->logo,'img','','','') !!}
 
             </a>
             <ul>
@@ -52,7 +52,7 @@
                         {{ __('app.login.home') }}
                     </a>
                 </li>
-                @if($config->pro_onoff == 'Y')
+                @if($webconfig->pro_onoff == 'Y')
                     <li>
                         <a href="{{ route('customer.promotion.show') }}">
                             <img src="images/icon/icon-promotion.png">
@@ -61,7 +61,7 @@
                     </li>
                 @endif
                 <li>
-                    <a target="_blank" href="{{ $config->linelink }}">
+                    <a target="_blank" href="{{ $webconfig->linelink }}">
                         <img src="images/icon/icon-contact.png">
                         {{ __('app.login.contact') }}
                     </a>
@@ -91,7 +91,7 @@
             <div class="ctscb">
                 <div class="leftscb">
                     <a href="{{ route('customer.home.index') }}">
-                        {!! core()->showImg($config->logo,'img','','','') !!}
+                        {!! core()->showImg($webconfig->logo,'img','','','') !!}
                     </a>
                 </div>
                 <div class="rightscb">
@@ -102,7 +102,7 @@
                                 {{ __('app.login.home') }}
                             </a>
                         </li>
-                        @if($config->pro_onoff == 'Y')
+                        @if($webconfig->pro_onoff == 'Y')
                             <li>
                                 <a href="{{ route('customer.promotion.show') }}">
                                     <img src="images/icon/icon-promotion.png">
@@ -111,7 +111,7 @@
                             </li>
                         @endif
                         <li>
-                            <a target="_blank" href="{{ $config->linelink }}">
+                            <a target="_blank" href="{{ $webconfig->linelink }}">
                                 <img src="images/icon/icon-contact.png">
                                 {{ __('app.login.contact') }}
                             </a>
@@ -179,10 +179,10 @@
 </script>
 <script src="{{ mix('js/manifest.js') }}"></script>
 <script src="{{ mix('js/vendor.js') }}"></script>
+@include('partials.broadcast-config')
 <script src="{{ mix('js/app.js') }}" id="mainscript" baseUrl="{{ url()->to('/') }}"></script>
+@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/member/broadcasting/auth'])
 @stack('scripts')
 <script src="{{ asset('js/js.js?'.time()) }}"></script>
 </body>
 </html>
-
-

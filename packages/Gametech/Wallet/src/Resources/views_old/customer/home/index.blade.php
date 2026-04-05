@@ -35,10 +35,10 @@
             <div class="col-md-8 offset-md-2 col-sm-12">
                 <div class="card text-light card-trans">
                     <div class="card-body py-3 px-2">
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                             <seamless></seamless>
                         @else
-                            @if($config->multigame_open == 'Y')
+                            @if($webconfig->multigame_open == 'Y')
                                 <wallet></wallet>
                             @else
                                 <credit></credit>
@@ -47,10 +47,10 @@
                     </div>
                 </div>
 
-                @if($config->seamless == 'Y')
+                @if($webconfig->seamless == 'Y')
                     @include('wallet::customer.home.seamless')
                 @else
-                    @if($config->multigame_open == 'Y')
+                    @if($webconfig->multigame_open == 'Y')
                         @include('wallet::customer.home.multi')
                     @else
                         @include('wallet::customer.home.single')

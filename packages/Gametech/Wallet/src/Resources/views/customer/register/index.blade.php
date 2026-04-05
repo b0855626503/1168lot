@@ -29,7 +29,7 @@
         <section class="sectionpage login">
             <div class="inbgbeforelogin">
                 <div class="logopopup">
-                    {!! core()->showImg($config->logo,'img','','','') !!}
+                    {!! core()->showImg($webconfig->logo,'img','','','') !!}
                 </div>
                 <h1>สมัครสมาชิก</h1>
 

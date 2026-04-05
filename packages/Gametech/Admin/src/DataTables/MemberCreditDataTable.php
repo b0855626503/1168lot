@@ -239,7 +239,7 @@ class MemberCreditDataTable extends DataTable
      *
      * @return string
      */
-    protected function filename()
+    protected function filename(): string
     {
         return 'member_datatable_' . time();
     }

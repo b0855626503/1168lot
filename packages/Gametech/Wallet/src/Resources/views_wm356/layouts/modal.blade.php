@@ -62,15 +62,15 @@
 							<a class="-link-wrapper" href="{{ route('customer.home.index') }}">
 								<picture>
 									<source type="image/webp"
-									        data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+									        data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 									<source type="image/png?v=2"
-									        data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+									        data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 									<img
 											alt="logo image" loading="lazy" fetchpriority="low"
 											class="img-fluid lazyload -logo lazyload"
 											width="180"
 											height="42"
-											data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
+											data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
 											src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 									/>
 								</picture>
@@ -187,7 +187,7 @@
 							</div>
 							<div class="col-6 -wrapper-box">
 								<a
-										href="{{ $config->linelink }}"
+										href="{{ $webconfig->linelink }}"
 										class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
 										target="_blank"
 										rel="noopener nofollow"
@@ -236,16 +236,16 @@
 							<a class="-link-wrapper" href="{{ route('customer.home.index') }}">
 								<picture>
 									<source type="image/webp"
-									        data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+									        data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 									<source type="image/png?v=2"
-									        data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+									        data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 									<img
 											alt="logo image" loading="lazy" fetchpriority="low"
 											class="img-fluid lazyload -logo lazyload"
 											width="180"
 											height="42"
-											data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
-											src="{{ url(core()->imgurl($config->logo,'img')) }}"
+											data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
+											src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
 									/>
 								</picture>
 							</a>
@@ -368,7 +368,7 @@
 							</div>
 							<div class="col-6 -wrapper-box">
 								<a
-										href="{{ $config->linelink }}"
+										href="{{ $webconfig->linelink }}"
 										class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
 										target="_blank"
 										rel="noopener nofollow"
@@ -421,8 +421,8 @@
 								class="img-fluid lazyload -img" loading="lazy" fetchpriority="low"
 								width="400"
 								height="150"
-								data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
-								src="{{ url(core()->imgurl($config->logo,'img')) }}"
+								data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
+								src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
 						/>
 					</a>
 				
@@ -492,7 +492,7 @@
 								<span class="-text-menu">{{ __('app.home.suggest') }}</span>
 							</a>
 						</li>
-						@if($config->wheel_open === 'Y')
+						@if($webconfig->wheel_open === 'Y')
 							<li class="nav-item -promotion-return-by-user">
 								<a href="{{ route('customer.spin.index') }}" class="nav-link">
 									
@@ -524,7 +524,7 @@
 								</button>
 							</li>
 						@else
-							@if($config->freecredit_open === 'N')
+							@if($webconfig->freecredit_open === 'N')
 								<li class="nav-item -coupon">
 									<button
 											type="button"
@@ -588,7 +588,7 @@
 								</a>
 							</li>
 						@else
-							@if($config->freecredit_open === 'Y')
+							@if($webconfig->freecredit_open === 'Y')
 								<li class="nav-item -promotion-return-by-user">
 									<a href="{{ route('customer.credit.index') }}" class="nav-link">
 										
@@ -661,7 +661,7 @@
 								<div class="x-admin-contact text-center">
                             <span class="x-text-with-link-component">
                                 <label class="-text-message">{{ __('app.home.problem') }}</label>
-                                <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">
+                                <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">
                                     <u>{{ __('app.home.customer_service') }}</u>
                                 </a>
                             </span>
@@ -687,8 +687,8 @@
 											{{ __('app.home.withdraw') }}
 										</button>
 										
-										@if($config->freecredit_open == 'Y')
-											@if($config->wheel_open == 'Y')
+										@if($webconfig->freecredit_open == 'Y')
+											@if($webconfig->wheel_open == 'Y')
 												<button type="button" class="btn btn-secondary"
 												        onclick="LoadHistory2('spin')">
 													{{ __('app.home.wheel') }}
@@ -719,8 +719,8 @@
 										{{--                                                onclick="LoadHistory('transfer')">--}}
 										{{--                                            โยก--}}
 										{{--                                        </button>--}}
-										@if($config->freecredit_open == 'N')
-											@if($config->wheel_open == 'Y')
+										@if($webconfig->freecredit_open == 'N')
+											@if($webconfig->wheel_open == 'Y')
 												<button type="button" class="btn btn-secondary"
 												        onclick="LoadHistory('spin')">
 													{{ __('app.home.wheel') }}
@@ -1031,7 +1031,7 @@
 					{{--                            <div class="x-admin-contact -no-fixed">--}}
 					{{--            <span class="x-text-with-link-component">--}}
 					{{--                <label class="-text-message">ติดปัญหา</label>--}}
-					{{--                <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
+					{{--                <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
 					{{--                    <u>ติดต่อฝ่ายบริการลูกค้า</u>--}}
 					{{--                </a>--}}
 					{{--            </span>--}}
@@ -1112,7 +1112,7 @@
 							<div class="x-admin-contact text-center">
                         <span class="x-text-with-link-component">
                             <label class="-text-message">{{ __('app.home.problem') }}</label>
-                            <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">
+                            <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">
                                 <u>{{ __('app.home.customer_service') }}</u>
                             </a>
                         </span>
@@ -1430,7 +1430,7 @@
 {{--												data-scroll-booster-content=".x-deposit-promotion"--}}
 {{--												style="transform: translate(0px, 0px);"--}}
 {{--										>--}}
-{{--											@if($config->qrscan == 'Y')--}}
+{{--											@if($webconfig->qrscan == 'Y')--}}
 {{--												<div class="-promotion-box-wrapper width50">--}}
 {{--													<button type="button"--}}
 {{--													        onclick="topupSelect('topup_qrscan')"--}}
@@ -1563,7 +1563,7 @@
 {{--										<small>{{ __('app.topup.remark') }}</small>--}}
 {{--									</div>--}}
 {{--								</div>--}}
-{{--								@if($config->qrscan == 'Y')--}}
+{{--								@if($webconfig->qrscan == 'Y')--}}
 {{--									<div id="topup_qrscan" class="-deposit-form-inner-wrapper" style="display:none">--}}
 {{--										--}}
 {{--										<br>--}}
@@ -1598,8 +1598,8 @@
 {{--														--}}
 {{--														--}}{{--                                                        <div class="-spacer">--}}
 {{--														--}}{{--                                                            <div class="js-turnover text-center">--}}
-{{--														--}}{{--                                                                <div class="-turnover-wrapper">Rate : <span>{{ $config->rate }}</span>--}}
-{{--														--}}{{--                                                                <div class="-turnover-wrapper">Last Update : <span>{{ $config->rate_update }}</span>--}}
+{{--														--}}{{--                                                                <div class="-turnover-wrapper">Rate : <span>{{ $webconfig->rate }}</span>--}}
+{{--														--}}{{--                                                                <div class="-turnover-wrapper">Last Update : <span>{{ $webconfig->rate_update }}</span>--}}
 {{--														--}}{{--                                                                </div>--}}
 {{--														--}}{{--                                                            </div>--}}
 {{--														--}}{{--                                                        </div>--}}
@@ -1795,7 +1795,7 @@
 											/
 											{{ __('app.home.withdraw_max') }} {{ number_format($userdata->limitfree,2) }}</p>
 										<p class="text-center text-warning">
-											{{ __('app.home.withdraw_min') }} {{ $config->free_minwithdraw }}
+											{{ __('app.home.withdraw_min') }} {{ $webconfig->free_minwithdraw }}
 											{{ __('app.home.withdraw_baht') }}</p>
 									</div>
 									
@@ -1868,7 +1868,7 @@
 												{{ __('app.home.withdraw_max') }} {{ number_format($userdata->limit,2) }}</p>
 										@endif
 										<p class="text-center text-warning" style="font-size: smaller">
-											{{ __('app.home.withdraw_min') }} {{ $config->minwithdraw }}
+											{{ __('app.home.withdraw_min') }} {{ $webconfig->minwithdraw }}
 											{{ __('app.home.withdraw_baht') }}</p>
 									</div>
 									
@@ -2131,8 +2131,8 @@
 											{{--                                                โยก--}}
 											{{--                                            </button>--}}
 											
-											@if($config->freecredit_open == 'N')
-												@if($config->wheel_open == 'Y')
+											@if($webconfig->freecredit_open == 'N')
+												@if($webconfig->wheel_open == 'Y')
 													<button type="button" class="btn btn-secondary"
 													        onclick="LoadHistory('spin')">
 														{{ __('app.home.wheel') }}

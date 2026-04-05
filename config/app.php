@@ -274,9 +274,8 @@ return [
 //        Rainwater\Active\ActiveServiceProvider::class,
         PragmaRX\Google2FALaravel\ServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
-        Codedge\Updater\UpdaterServiceProvider::class,
         Konekt\Concord\ConcordServiceProvider::class,
-        Jenssegers\Mongodb\MongodbServiceProvider::class,
+        MongoDB\Laravel\MongoDBServiceProvider::class,
 //        Alimranahmed\LaraOCR\LaraOCRServiceProvider::class,
 //        Rap2hpoutre\LaravelLogViewer\LaravelLogViewerServiceProvider::class,
         /*
@@ -372,7 +371,6 @@ return [
         'Google2FA' => PragmaRX\Google2FALaravel\Facade::class,
         'FastExcel' => Rap2hpoutre\FastExcel\Facades\FastExcel::class,
         'Excel' => Maatwebsite\Excel\Facades\Excel::class,
-        'UpdaterFacade' => Codedge\Updater\UpdaterFacade::class,
         'RedisManager' => Illuminate\Support\Facades\Redis::class,
     ],
 

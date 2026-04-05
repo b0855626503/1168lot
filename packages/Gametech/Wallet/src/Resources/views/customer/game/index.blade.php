@@ -9,7 +9,7 @@
     <div class="container">
         <div class="row">
             <div class="col-md-8 offset-md-2 col-sm-12">
-                @if($config->seamless == 'Y')
+                @if($webconfig->seamless == 'Y')
                     <div class="card text-light card-trans">
                         <div class="card-body py-3 px-2">
                             <seamless></seamless>

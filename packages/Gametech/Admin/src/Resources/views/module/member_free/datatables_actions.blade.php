@@ -1,4 +1,4 @@
-@if($config->seamless == 'Y')
+@if($webconfig->seamless == 'Y')
     <div class="btn-group btn-group-sm">
         <button type="button" class="btn btn-primary " onclick="showModalNew({{ $code }},'gameuser')"><i
                 class="fas fa-gamepad"></i> Game

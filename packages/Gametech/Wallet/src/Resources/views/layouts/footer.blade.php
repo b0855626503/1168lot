@@ -101,6 +101,8 @@
 <script type="text/javascript" src="{{ mix('js/vendor.js') }}"></script>
 {{--<script src="https://unpkg.com/vue@2.4.2"></script>--}}
 <script type="text/javascript" src="{{ mix('js/app.js') }}"></script>
+@include('partials.broadcast-config')
+@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/member/broadcasting/auth'])
 <script type="module" id="mainscript" baseUrl="{{ url()->to('/') }}" src="{{ mix('js/web.js') }}"></script>
 @stack('scripts')
 {{--<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>--}}
@@ -122,4 +124,3 @@
 
 </body>
 </html>
-

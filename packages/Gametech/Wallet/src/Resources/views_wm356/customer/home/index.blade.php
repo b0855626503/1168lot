@@ -201,10 +201,10 @@
 
 @section('content')
 
-    @if($config->seamless == 'Y')
+    @if($webconfig->seamless == 'Y')
         @include('wallet::customer.home.seamless')
     @else
-        @if($config->multigame_open == 'Y')
+        @if($webconfig->multigame_open == 'Y')
             @include('wallet::customer.home.multi')
         @else
             @include('wallet::customer.home.single')
@@ -377,12 +377,12 @@
         {{--        const response = await fetch(ipAPI);--}}
         {{--        const data = await response.json();--}}
         {{--        const inputOptions = data.promotions;--}}
-        {{--        const configeweb = {{ Illuminate\Support\Js::from($config) }};--}}
+        {{--        const configeweb = {{ Illuminate\Support\Js::from($webconfig) }};--}}
 
-        {{--        let foottext = '<small class="text-center text-danger">โยกเข้าเกมส์ ขั้นต่ำ {{ core()->currency($config->mintransfer) }}  บาท</small>';--}}
+        {{--        let foottext = '<small class="text-center text-danger">โยกเข้าเกมส์ ขั้นต่ำ {{ core()->currency($webconfig->mintransfer) }}  บาท</small>';--}}
 
         {{--        if (configeweb.mintransfer_pro !== 0) {--}}
-        {{--            foottext += '<p><small class="text-center text-danger">สามารถโยกเข้าเกม ได้เมื่อเงินในเกมเหลือน้อยกว่า {{ core()->currency($config->mintransfer_pro) }} บาท (กรณีมีการรับโปรไปแล้ว)</small></p>';--}}
+        {{--            foottext += '<p><small class="text-center text-danger">สามารถโยกเข้าเกม ได้เมื่อเงินในเกมเหลือน้อยกว่า {{ core()->currency($webconfig->mintransfer_pro) }} บาท (กรณีมีการรับโปรไปแล้ว)</small></p>';--}}
         {{--        }--}}
 
         {{--        var options = {};--}}
