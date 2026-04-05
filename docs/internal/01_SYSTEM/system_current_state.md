@@ -106,12 +106,47 @@
 - เมนู `รายการโพย/ยกเลิกโพย` แสดงเฉพาะ ticket ที่ `status=active`
 - รายการ `cancelled` และ `resulted` ต้องไม่แสดงใน DataTable หลักของหน้า
 - filter `draw_id/market_id/search` ยังคงทำงานภายใต้ชุดข้อมูล active-only
+- ลำดับคอลัมน์หลักของ DataTable:
+  - `สมาชิก`
+  - `งวดหวย` = แสดงเฉพาะวันที่งวด
+  - `รายการหวย` = แยกออกจากงวดหวย และต้องแสดง icon/logo หน้าชื่อหวยเมื่อมีข้อมูล
+  - `แพกเกจ` = ใช้ชื่อ package snapshot จาก `lotto_ticket_items.package_name_at_time`
+  - `ยอดแทง`, `ส่วนลด`, `สุทธิ`, `สถานะ`
+- คอลัมน์ `ยอดถูก` ไม่แสดงในหน้า `รายการโพย/ยกเลิกโพย`
 
 ## นโยบายรายงานรอผลเดิมพัน (Admin `/lotto/reports/pending-bets`)
 
 - เมนู `รอผลเดิมพัน` ใช้หน้า/ชุดข้อมูลเดียวกับ `รายการโพย` ไม่ใช่ mockup แล้ว
 - DataTable หลักดึงเฉพาะ ticket ที่ `status=active`
 - การดูรายละเอียดโพยใน modal ใช้ route รายงานของตัวเอง แต่แสดง payload รายละเอียดโพยรูปแบบเดียวกับหน้า `รายการโพย`
+
+## นโยบายรายงาน Lotto (Admin `/lotto/reports/*`)
+
+- เมนูรายงานที่เป็นของจริงแล้ว:
+  - `pending-bets`
+  - `profit-loss-forecast`
+  - `member-bet-types`
+  - `tickets-cancel`
+  - `blocked-numbers`
+  - `results-by-date`
+  - `exposure`
+  - `revenue`
+- `profit-loss-forecast`
+  - อ่านจาก `lotto_draw_bet_settings` + `lotto_number_exposures` + `lotto_ticket_items`
+  - filter: `draw_date`, `market_id`, `bet_type`
+  - แสดง `ยอดแทงรวม`, `ความเสี่ยงจ่าย`, `คาดการณ์ได้/เสีย` ระดับ `draw + bet_type`
+- `member-bet-types`
+  - aggregate จาก `lotto_ticket_items` ที่ ticket ไม่ถูกยกเลิก
+  - filter: `member_keyword`, `date_start/date_stop` (อิง `draw_date`), `market_id`, `bet_type`
+  - แสดงสรุปตาม `member + market + bet_type`
+- `tickets-cancel`
+  - อ่าน ticket ทุกสถานะ ไม่ lock แค่ active
+  - filter: `date_start/date_stop` (อิง `COALESCE(cancelled_at, created_at)`), `market_id`, `status`
+  - แสดง `ผู้ยกเลิก` เมื่อมีข้อมูลจาก `cancelled_by`
+- `blocked-numbers`
+  - อ่านจาก `lotto_number_blocks`
+  - filter: `draw_date`, `market_id`, `bet_type`, `mode`
+  - แสดง `เวลาเริ่ม` และ `เวลาแก้ไขล่าสุด` จากข้อมูลจริง
 
 ## นโยบาย Auto Result Manual Action (Admin UI)
 

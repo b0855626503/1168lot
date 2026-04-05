@@ -1,5 +1,34 @@
 # Decision Log
 
+## 2026-04-05 — All Lotto Report Menus Must Use Real Data Modules Instead of Mockups (APPROVED)
+
+- ปรับเมนูรายงาน Lotto ที่ยังเป็น mockup:
+  - `admin /lotto/reports/profit-loss-forecast`
+  - `admin /lotto/reports/member-bet-types`
+  - `admin /lotto/reports/tickets-cancel`
+  - `admin /lotto/reports/blocked-numbers`
+- behavior ใหม่:
+  - ทุกเมนูข้างต้นเปลี่ยนจาก `SectionController + reports/mockup.blade.php`
+  - เป็น controller + DataTable + Transformer + index/create/table views แบบโมดูลจริง
+  - `profit-loss-forecast` ใช้ข้อมูลจริงจาก draw bet settings, exposure และ ticket items
+  - `member-bet-types` aggregate ข้อมูลจริงตาม `member + market + bet_type`
+  - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดงผู้ยกเลิกเมื่อมีข้อมูล
+  - `blocked-numbers` อ่านเลขอั้น/จำกัดอนาคตจาก `lotto_number_blocks` โดยตรง
+- เหตุผล:
+  - ให้เมนูรายงาน Lotto ใช้งานปฏิบัติการได้ครบ ไม่เหลือ placeholder ในส่วน reports
+  - รักษา pattern เดียวกับโมดูล admin Lotto ที่ทำเป็นของจริงแล้วก่อนหน้า
+## 2026-04-05 — Admin Ticket Tables Split Draw Date, Market, and Package Columns (APPROVED)
+
+- ปรับ DataTable ของหน้า `admin /lotto/tickets`
+- behavior ใหม่:
+  - คอลัมน์ `งวดหวย` แสดงเฉพาะวันที่งวด ไม่พ่วงชื่อรายการหวย
+  - เพิ่มคอลัมน์ `รายการหวย` แยกออกมาต่างหากและแสดง logo/icon หน้าชื่อหวยเมื่อมีข้อมูล
+  - เพิ่มคอลัมน์ `แพกเกจ` โดยใช้ชื่อจาก snapshot `lotto_ticket_items.package_name_at_time`
+  - เอาคอลัมน์ `ยอดถูก` ออกจากหน้ารายการ
+- เหตุผล:
+  - ให้ทีมงานสแกนรายการโพยได้เร็วขึ้น เพราะวันงวด ชื่อหวย และแพกเกจอยู่คนละคอลัมน์
+  - ใช้ package snapshot เพื่อให้ชื่อแพกเกจสะท้อนข้อมูลตอนแทงจริง ไม่ผูกกับการแก้ package ภายหลัง
+
 ## 2026-04-05 — Lotto Admin Toasts Must Carry Alert Avatar and New Ticket Toast Must Show Actor+Amount (APPROVED)
 
 - ปรับ realtime Lotto notification ฝั่งหน้าแอดมินทีมงาน

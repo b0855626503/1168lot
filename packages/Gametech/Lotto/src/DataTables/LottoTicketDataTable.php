@@ -39,7 +39,11 @@ class LottoTicketDataTable extends DataTable
         $query = $model->newQuery()
             ->select('lotto_tickets.*')
             ->where('lotto_tickets.status', 'active')
-            ->with(['member', 'draw.market'])
+            ->with([
+                'member',
+                'draw.market',
+                'items:id,ticket_id,package_name_at_time',
+            ])
             ->withCount([
                 'items as winning_items_count' => function ($query) {
                     $query->where('result_status', 'win');
@@ -91,11 +95,12 @@ class LottoTicketDataTable extends DataTable
         return [
             ['data' => 'id', 'name' => 'id', 'title' => '#', 'className' => 'text-center', 'width' => '60px'],
             ['data' => 'member_code', 'name' => 'member_id', 'title' => 'สมาชิก', 'className' => 'text-center'],
-            ['data' => 'draw', 'name' => 'draw.draw_date', 'title' => 'งวดหวย', 'className' => 'text-left'],
+            ['data' => 'draw_date', 'name' => 'draw.draw_date', 'title' => 'งวดหวย', 'className' => 'text-center'],
+            ['data' => 'market', 'name' => 'draw.market.name', 'title' => 'รายการหวย', 'className' => 'text-left'],
+            ['data' => 'package_name', 'name' => 'items.package_name_at_time', 'title' => 'แพกเกจ', 'className' => 'text-left'],
             ['data' => 'total_bet_amount', 'name' => 'total_bet_amount', 'title' => 'ยอดแทง', 'className' => 'text-right'],
             ['data' => 'total_discount_amount', 'name' => 'total_discount_amount', 'title' => 'ส่วนลด', 'className' => 'text-right'],
             ['data' => 'total_net_amount', 'name' => 'total_net_amount', 'title' => 'สุทธิ', 'className' => 'text-right'],
-            ['data' => 'total_win_amount', 'name' => 'total_win_amount', 'title' => 'ยอดถูก', 'className' => 'text-right'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ', 'className' => 'text-center'],
             ['data' => 'action', 'name' => 'action', 'title' => 'จัดการ', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '90px'],
         ];

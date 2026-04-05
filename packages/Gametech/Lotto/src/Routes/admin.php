@@ -290,40 +290,20 @@ Route::domain(
             Route::post('reports/pending-bets/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@loadData')
                 ->name('admin.lotto.reports.pending_bets.loaddata');
 
-            Route::get('reports/profit-loss-forecast', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.reports.mockup',
-                'title' => 'ดูของรวม/คาดคะเน ได้-เสีย',
-                'description' => 'Mockup: รายงานภาพรวมและคาดคะเนผลได้-เสีย',
-                'section' => 'reports.profit_loss_forecast',
-                'filters' => ['วันงวด', 'ตลาด', 'ประเภท'],
-                'columns' => ['ตลาด', 'ยอดแทงรวม', 'ความเสี่ยงจ่าย', 'คาดการณ์ได้/เสีย'],
+            Route::get('reports/profit-loss-forecast', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.profit_loss_forecast_report.index',
             ])->name('admin.lotto.reports.profit_loss_forecast');
 
-            Route::get('reports/member-bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.reports.mockup',
-                'title' => 'ดูของสมาชิก/ประเภท',
-                'description' => 'Mockup: รายงานตามสมาชิกและประเภทหวย',
-                'section' => 'reports.member_bet_types',
-                'filters' => ['สมาชิก', 'วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'ประเภท'],
-                'columns' => ['สมาชิก', 'ตลาด', 'ประเภท', 'จำนวนโพย', 'ยอดแทง', 'ได้/เสีย'],
+            Route::get('reports/member-bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.member_bet_types_report.index',
             ])->name('admin.lotto.reports.member_bet_types');
 
-            Route::get('reports/tickets-cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.reports.mockup',
-                'title' => 'รายการโพย/ยกเลิกโพย',
-                'description' => 'Mockup: รายงานรายการโพยและรายการยกเลิกโพย',
-                'section' => 'reports.tickets_cancel',
-                'filters' => ['วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'สถานะโพย'],
-                'columns' => ['เวลา', 'เลขโพย', 'สมาชิก', 'ยอดแทง', 'สถานะ', 'ผู้ยกเลิก'],
+            Route::get('reports/tickets-cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketsCancelReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.tickets_cancel_report.index',
             ])->name('admin.lotto.reports.tickets_cancel');
 
-            Route::get('reports/blocked-numbers', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.reports.mockup',
-                'title' => 'เลขปิดรับ/เลขอั้น',
-                'description' => 'Mockup: รายงานเลขปิดรับและเลขอั้น',
-                'section' => 'reports.blocked_numbers',
-                'filters' => ['วันงวด', 'ตลาด', 'ประเภท', 'โหมดบล็อก'],
-                'columns' => ['ตลาด', 'ประเภท', 'เลข', 'โหมด', 'เวลาเริ่ม', 'เวลาแก้ไขล่าสุด'],
+            Route::get('reports/blocked-numbers', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBlockedNumbersReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.blocked_numbers_report.index',
             ])->name('admin.lotto.reports.blocked_numbers');
 
             Route::get('reports/results-by-date', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultsByDateReportController@index')->defaults('_config', [
