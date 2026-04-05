@@ -7,6 +7,11 @@
         var config = window.broadcastConfig || {};
         var scheme = config.scheme || window.location.protocol.replace(':', '') || 'http';
         var port = Number(config.port || (scheme === 'https' ? 443 : 8080));
+        var path = (config.path || '').toString();
+
+        if (path.length > 0 && path.charAt(0) !== '/') {
+            path = '/' + path;
+        }
 
         if (typeof window.Echo.disconnect === 'function') {
             window.Echo.disconnect();
@@ -18,6 +23,7 @@
             wsHost: config.host || window.location.hostname,
             wsPort: port,
             wssPort: port,
+            wsPath: path,
             forceTLS: scheme === 'https',
             enabledTransports: ['ws', 'wss'],
             disableStats: true,
