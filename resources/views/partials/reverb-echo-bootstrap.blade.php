@@ -7,6 +7,7 @@
         var config = window.broadcastConfig || {};
         var scheme = config.scheme || window.location.protocol.replace(':', '') || 'http';
         var port = Number(config.port || (scheme === 'https' ? 443 : 8080));
+        var host = (config.host || 'websocket.168csn.com').toString();
         var path = (config.path || '').toString();
 
         if (path.length > 0 && path.charAt(0) !== '/') {
@@ -20,7 +21,7 @@
         window.Echo = new window.Echo.constructor({
             broadcaster: 'pusher',
             key: config.key || 'app-key',
-            wsHost: config.host || window.location.hostname,
+            wsHost: host,
             wsPort: port,
             wssPort: port,
             wsPath: path,

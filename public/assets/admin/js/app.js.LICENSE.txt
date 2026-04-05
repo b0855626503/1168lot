@@ -1,6 +1,6 @@
 /*!
-  * Bootstrap v4.6.1 (https://getbootstrap.com/)
-  * Copyright 2011-2021 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
+  * Bootstrap v4.6.2 (https://getbootstrap.com/)
+  * Copyright 2011-2022 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
   */
 
@@ -62,7 +62,7 @@
  */
 
 /*! Bootstrap 4 integration for DataTables' Responsive
- * ©2016 SpryMedia Ltd - datatables.net/license
+ * © SpryMedia Ltd - datatables.net/license
  */
 
 /*! Bootstrap integration for DataTables' Buttons
@@ -73,16 +73,16 @@
  * ©2016-2021 SpryMedia Ltd - datatables.net/license
  */
 
-/*! DataTables 1.12.1
- * ©2008-2022 SpryMedia Ltd - datatables.net/license
+/*! DataTables 1.13.11
+ * ©2008-2024 SpryMedia Ltd - datatables.net/license
  */
 
 /*! DataTables Bootstrap 4 integration
  * ©2011-2017 SpryMedia Ltd - datatables.net/license
  */
 
-/*! Responsive 2.2.9
- * 2014-2021 SpryMedia Ltd - datatables.net/license
+/*! Responsive 2.5.0
+ * © SpryMedia Ltd - datatables.net/license
  */
 
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */

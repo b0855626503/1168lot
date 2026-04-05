@@ -36,10 +36,10 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST', '127.0.0.1'),
-                'port' => env('REVERB_PORT', 8080),
-                'scheme' => env('REVERB_SCHEME', 'http'),
-                'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
+                'host' => env('REVERB_HOST', 'websocket.168csn.com'),
+                'port' => env('REVERB_PORT', 443),
+                'scheme' => env('REVERB_SCHEME', 'https'),
+                'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 'path' => env('REVERB_SERVER_PATH', ''),
             ],
             'client_options' => [
@@ -53,11 +53,11 @@ return [
             'secret' => env('PUSHER_APP_SECRET'),
             'app_id' => env('PUSHER_APP_ID'),
             'options' => [
-                'encrypted' => env('PUSHER_SCHEME', 'http') === 'https',
-                'useTLS' => env('PUSHER_SCHEME', 'http') === 'https',
-                'host' => env('PUSHER_HOST', '127.0.0.1'),
-                'port' => env('PUSHER_PORT', 6001),
-                'scheme' => env('PUSHER_SCHEME', 'http'),
+                'encrypted' => env('PUSHER_SCHEME', 'https') === 'https',
+                'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
+                'host' => env('PUSHER_HOST', 'websocket.168csn.com'),
+                'port' => env('PUSHER_PORT', 443),
+                'scheme' => env('PUSHER_SCHEME', 'https'),
                 'curl_options' => [
                     CURLOPT_SSL_VERIFYHOST => 0,
                     CURLOPT_SSL_VERIFYPEER => 0,
