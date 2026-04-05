@@ -149,6 +149,49 @@
     - อ่าน `lotto_tickets.reason` เป็นหลัก
     - ถ้า environment ยังไม่มีคอลัมน์ `reason` ให้ fallback จาก `wallet_transactions.meta.reason`
 
+## นโยบาย Frontend API ประวัติการเงิน (`/api/v1/wallet/transactions`)
+
+- มี route ใหม่ `GET /api/v1/wallet/transactions`
+- ใช้ `wallet_transactions` เป็น source หลักสำหรับประวัติการเงินรวมของสมาชิก
+- scope ของข้อมูล:
+  - ใช้เฉพาะ `wallet_transactions.scope=MEMBER`
+  - รวมทั้งฝาก ถอน แทงหวย คืนเงินหวย ค่าแนะนำ Cashback ยอดเสียเพื่อน และรายการ wallet อื่นที่เข้ากระเป๋าหลัก
+- รองรับ filter:
+  - `type`
+  - `date_start`
+  - `date_stop`
+  - `page`
+  - `limit`
+- `type` ที่ frontend ใช้ได้:
+  - `all`
+  - `deposit`
+  - `withdraw`
+  - `lotto_bet`
+  - `lotto_refund`
+  - `referral`
+  - `cashback`
+  - `ic`
+  - `bonus`
+  - `game`
+  - `admin_adjust`
+  - `rollback`
+  - `other`
+- response ต้องมี:
+  - `filters`
+  - `summary` (`count`, `total_credit_amount`, `total_debit_amount`, `net_amount`)
+  - `items`
+  - `pagination`
+- รายการระดับ item ต้องส่งทั้ง:
+  - `type/type_label`
+  - `ref_type`
+  - `direction/direction_label`
+  - `amount/signed_amount`
+  - `balance_before/balance_after`
+  - `title/detail`
+  - `ref_id/ref_code/group_code`
+- ถ้าเป็น `LOTTO_BET` หรือ `LOTTO_CANCEL`
+  - ให้ enrich `lotto.ticket_id`, `lotto.market_name`, `lotto.draw_date` จากตาราง Lotto เพื่อให้ frontend แสดงบริบทโพยได้ทันที
+
 ## นโยบายรายงานรอผลเดิมพัน (Admin `/lotto/reports/pending-bets`)
 
 - เมนู `รอผลเดิมพัน` ใช้หน้า/ชุดข้อมูลเดียวกับ `รายการโพย` ไม่ใช่ mockup แล้ว

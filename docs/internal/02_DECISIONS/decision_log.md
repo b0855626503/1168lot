@@ -1,5 +1,41 @@
 # Decision Log
 
+## 2026-04-05 — Frontend Wallet Transactions API Must Provide Unified Member Cash History (APPROVED)
+
+- เพิ่ม `GET /api/v1/wallet/transactions`
+- behavior ใหม่:
+  - ใช้ `wallet_transactions` เป็น source หลักของประวัติการเงินรวม
+  - จำกัดข้อมูลที่ `scope=MEMBER`
+  - response ส่ง:
+    - `filters`
+    - `summary` (`count`, `total_credit_amount`, `total_debit_amount`, `net_amount`)
+    - `items`
+    - `pagination`
+  - รองรับ filter:
+    - `type`
+    - `date_start`
+    - `date_stop`
+    - `page`
+    - `limit`
+  - `type` สำหรับ frontend ใช้ค่าอ่านง่าย เช่น:
+    - `deposit`
+    - `withdraw`
+    - `lotto_bet`
+    - `lotto_refund`
+    - `referral`
+    - `cashback`
+    - `ic`
+    - `bonus`
+    - `game`
+    - `admin_adjust`
+    - `rollback`
+    - `other`
+  - เก็บ `ref_type` เดิมไว้ใน payload เพื่อให้อ่าน audit trace ได้
+  - รายการ `LOTTO_BET` และ `LOTTO_CANCEL` ต้อง enrich บริบทหวย (`ticket_id`, `market_name`, `draw_date`)
+- เหตุผล:
+  - แยกจาก `member/history` แบบ legacy ที่แบ่งรายประเภทและไม่ได้อิง ledger กลาง
+  - ให้ frontend มีเส้นเดียวสำหรับหน้า “ประวัติการเงินรวม” และสามารถกรองดูฝากอย่างเดียว ถอนอย่างเดียว หรือรายการหวยได้จาก route เดียว
+
 ## 2026-04-05 — Frontend Lotto Ticket APIs Must Surface Cancel Context (APPROVED)
 
 - ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`

@@ -477,7 +477,89 @@ Response ตัวอย่าง
 
 ### 3) Wallet
 
-#### 3.1 ส่งคำขอถอนเงิน
+#### 3.1 ประวัติการเงินรวม
+- `GET /wallet/transactions`
+- Auth: ต้องใช้ token
+
+Query params
+- `type` (optional, default=`all`)
+- `date_start` (optional): วันที่เริ่ม filter
+- `date_stop` (optional): วันที่สิ้นสุด filter
+- `page` (optional, default=`1`)
+- `limit` (optional, default=`20`, max=`100`)
+
+ประเภทที่รองรับ (`type`)
+- `all`
+- `deposit`
+- `withdraw`
+- `lotto_bet`
+- `lotto_refund`
+- `referral`
+- `cashback`
+- `ic`
+- `bonus`
+- `game`
+- `admin_adjust`
+- `rollback`
+- `other`
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": {
+    "filters": {
+      "type": "all",
+      "date_start": "2026-04-01",
+      "date_stop": "2026-04-05"
+    },
+    "summary": {
+      "count": 3,
+      "total_credit_amount": 550,
+      "total_debit_amount": 100,
+      "net_amount": 450
+    },
+    "items": [
+      {
+        "id": 9001,
+        "created_at": "2026-04-05 14:00:00",
+        "type": "lotto_refund",
+        "type_label": "คืนเงินหวย",
+        "ref_type": "LOTTO_CANCEL",
+        "direction": "CREDIT",
+        "direction_label": "รับเข้า",
+        "amount": 50,
+        "signed_amount": 50,
+        "balance_before": 1350,
+        "balance_after": 1400,
+        "status": "SUCCESS",
+        "title": "คืนเงินหวย",
+        "detail": "คืนเงินโพยหวยเข้ากระเป๋าหลัก: หวยรัฐบาล งวดวันที่ 2026-04-05",
+        "description": "คืนเงินจากการยกเลิกโพยหวย",
+        "ref_id": 1001,
+        "ref_code": "1001",
+        "group_code": "LOTTO_CANCEL_1001",
+        "lotto": {
+          "ticket_id": 1001,
+          "market_name": "หวยรัฐบาล",
+          "draw_date": "2026-04-05"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "count": 1,
+      "total": 3,
+      "has_more": false
+    },
+    "language": "th"
+  },
+  "message": "ดึงประวัติการเงินสำเร็จ"
+}
+```
+
+#### 3.2 ส่งคำขอถอนเงิน
 - `POST /wallet/withdraw`
 - Auth: ต้องใช้ token
 

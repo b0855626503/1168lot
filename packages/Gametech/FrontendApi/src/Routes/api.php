@@ -11,6 +11,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\RealtimeController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\SlideController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\WalletController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
@@ -93,6 +94,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
 
             Route::post('wallet/withdraw', [WithdrawController::class, 'store'])
                 ->name('frontend.api.v1.wallet.withdraw');
+            Route::get('wallet/transactions', [WalletController::class, 'transactions'])
+                ->name('frontend.api.v1.wallet.transactions');
 
             Route::get('deposit/channels', [DepositController::class, 'channels'])
                 ->name('frontend.api.v1.deposit.channels');

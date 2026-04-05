@@ -42,6 +42,10 @@
   - ไม่ต้องส่งรหัสผ่านเดิม
 
 ### Wallet
+- `GET /api/v1/wallet/transactions` (ต้องมี token)
+  - ประวัติการเงินรวมของสมาชิกจาก `wallet_transactions`
+  - ต้องรองรับ filter `type`, `date_start`, `date_stop`, `page`, `limit`
+  - ต้องส่ง `summary/items/pagination` และคง `ref_type` เดิมไว้ในแต่ละรายการ
 - `POST /api/v1/wallet/withdraw` (ต้องมี token)
   - ส่งคำขอถอนเงิน
 
