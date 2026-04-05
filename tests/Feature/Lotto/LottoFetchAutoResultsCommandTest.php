@@ -147,4 +147,52 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         $this->assertSame('boom', $draw->result_fetch_error);
         $this->assertSame(0, DB::table('logs')->count());
     }
+
+    public function test_manual_retry_processes_single_exhausted_draw(): void
+    {
+        DB::table('lotto_result_sources')->insert([
+            'id' => 1,
+            'market_id' => 1,
+            'is_active' => 1,
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 617,
+            'market_id' => 1,
+            'result_at' => now()->subMinutes(5),
+            'status' => 'closed',
+            'result_fetch_status' => 'EXHAUSTED',
+            'result_fetch_attempts' => 3,
+            'result_fetch_error' => 'retry attempts exhausted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('markExhausted')->never();
+        $pipeline->shouldReceive('processDraw')
+            ->once()
+            ->withArgs(function ($draw, $dryRun, $manualRetry, $runId, $expectedDrawDate): bool {
+                return (int) $draw->id === 617
+                    && $dryRun === false
+                    && $manualRetry === true
+                    && is_string($runId) && str_starts_with($runId, 'cmd_')
+                    && $expectedDrawDate === null;
+            })
+            ->andReturn(['status' => 'APPLIED']);
+
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', [
+            '--draw-id' => 617,
+            '--manual-retry' => true,
+            '--limit' => 1,
+        ]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('selected=1', $output);
+        $this->assertStringContainsString('processed=1', $output);
+        $this->assertStringContainsString('- APPLIED: 1', $output);
+    }
 }

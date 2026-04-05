@@ -73,24 +73,26 @@ class AutoResultPipelineService
         $fallbackTried = false;
         foreach ($sources as $source) {
             $this->resolver->persistSnapshot($draw, $source);
-            $state = $this->sourceRetryState($draw, $source);
-            if ($state['exhausted']) {
-                $fallbackTried = true;
-                $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $state['attempts']);
-                continue;
-            }
+            if (! $isManualRetry) {
+                $state = $this->sourceRetryState($draw, $source);
+                if ($state['exhausted']) {
+                    $fallbackTried = true;
+                    $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $state['attempts']);
+                    continue;
+                }
 
-            if (! $state['retry_due']) {
-                return $this->markAndLog($draw, [
-                    'status' => 'NOT_READY',
-                    'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
-                    'run_id' => $runId,
-                    'pipeline_stage' => 'retry_policy_source',
-                    'source_id' => (int) $source->id,
-                    'is_dry_run' => $dryRun,
-                    'is_manual_retry' => $isManualRetry,
-                    'error_message' => 'source backoff pending',
-                ]);
+                if (! $state['retry_due']) {
+                    return $this->markAndLog($draw, [
+                        'status' => 'NOT_READY',
+                        'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
+                        'run_id' => $runId,
+                        'pipeline_stage' => 'retry_policy_source',
+                        'source_id' => (int) $source->id,
+                        'is_dry_run' => $dryRun,
+                        'is_manual_retry' => $isManualRetry,
+                        'error_message' => 'source backoff pending',
+                    ]);
+                }
             }
 
             $this->incrementAttempt($draw);
@@ -112,11 +114,13 @@ class AutoResultPipelineService
                 );
 
             if ((string) ($result['status'] ?? '') === self::RETRYABLE_STATUS) {
-                $stateAfter = $this->sourceRetryState($draw->fresh(), $source);
-                if ($stateAfter['exhausted']) {
-                    $fallbackTried = true;
-                    $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $stateAfter['attempts']);
-                    continue;
+                if (! $isManualRetry) {
+                    $stateAfter = $this->sourceRetryState($draw->fresh(), $source);
+                    if ($stateAfter['exhausted']) {
+                        $fallbackTried = true;
+                        $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $stateAfter['attempts']);
+                        continue;
+                    }
                 }
             }
 
@@ -527,7 +531,9 @@ class AutoResultPipelineService
             'created_at' => now()->toDateTimeString(),
         ], $logPayload));
 
-        if ($this->canWriteDrawFetchFields() && ! in_array((string) $draw->result_fetch_status, self::TERMINAL_DRAW_STATUSES, true)) {
+        $isManualRetry = (bool) ($logPayload['is_manual_retry'] ?? false);
+
+        if ($this->canWriteDrawFetchFields() && ($isManualRetry || ! in_array((string) $draw->result_fetch_status, self::TERMINAL_DRAW_STATUSES, true))) {
             $draw->forceFill([
                 'result_fetch_status' => $this->normalizeStatus((string) ($drawStatusOverride ?? $status)),
                 'result_fetch_error' => $logPayload['error_message'] ?? null,

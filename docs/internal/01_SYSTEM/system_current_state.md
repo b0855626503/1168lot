@@ -34,6 +34,11 @@
 - ปุ่ม `ออกผล` (สถานะ `closed`) เปิด modal ขนาดเล็กให้เลือกโหมด `Manual` หรือ `Auto`
   - `Manual` = เปิดฟอร์มกรอกผลและคำนวณรางวัลด้วยมือ
   - `Auto` = เรียก flow เดียวกับ `Retry` (`lotto_draws.auto_result_manual_retry`)
+  - `Auto` / `Retry` ของทีมงานต้อง bypass retry gating ของ auto scheduler
+    - bypass source backoff
+    - bypass source exhausted / `max_attempts`
+    - bypass draw fetch status เดิมที่เป็น `EXHAUSTED`
+  - แต่ยังใช้ source resolution / fetch / parse / validate / apply ชุดเดิมเหมือนเดิม
 - modal `ออกผล` รองรับปุ่ม `งดออกผล` เพิ่มเติม
   - เรียก `POST /lotto/draws/mark-no-result`
   - ใช้ได้เฉพาะงวดสถานะ `closed`
@@ -364,6 +369,10 @@
   ต้องถูกบันทึกเป็น `NOT_READY`
   - ห้าม downgrade เป็น `VALIDATION_ERROR`
   - เพื่อให้เข้า retry/backoff/max_attempts policy ถูกต้อง
+- manual retry ของทีมงาน (`--manual-retry`) ใช้คนละ policy กับ scheduler:
+  - ยังใช้ pipeline เดิมและเขียน fetch logs ตามปกติ
+  - แต่ไม่ต้องติด gating ของ `sourceRetryState()` ที่คุม `backoff/exhausted/max_attempts`
+  - ถ้า draw เดิมค้าง `result_fetch_status=EXHAUSTED` แล้ว manual retry สำเร็จ ต้องอัปเดต fetch status ใหม่ได้
 - ถ้าเกิด unhandled exception หลัง `result_fetch_attempts` ถูก increment แล้ว:
   - ต้องมีแถวใน `lotto_result_fetch_logs` เสมอ
   - ใช้ `status=VALIDATION_ERROR`, `error_code=UNHANDLED_EXCEPTION`

@@ -168,4 +168,103 @@ class AutoResultPipelineNotReadyBusinessRuleTest extends TestCase
         $this->assertSame('NOT_READY', $draw->result_fetch_status);
         $this->assertSame('ผลหวยยังไม่ออก', $draw->result_fetch_error);
     }
+
+    public function test_manual_retry_bypasses_exhausted_retry_policy_and_updates_terminal_fetch_state(): void
+    {
+        config()->set('lotto_auto_result.retry.max_attempts', 3);
+
+        DB::table('lotto_draws')
+            ->where('id', 1)
+            ->update([
+                'result_fetch_status' => 'EXHAUSTED',
+                'result_fetch_attempts' => 3,
+                'result_fetch_error' => 'retry attempts exhausted',
+                'updated_at' => now(),
+            ]);
+
+        DB::table('lotto_result_fetch_logs')->insert([
+            ['draw_id' => 1, 'market_id' => 1, 'source_id' => 7, 'attempt_no' => 1, 'status' => 'NOT_READY', 'created_at' => now()->subMinutes(15)],
+            ['draw_id' => 1, 'market_id' => 1, 'source_id' => 7, 'attempt_no' => 2, 'status' => 'NOT_READY', 'created_at' => now()->subMinutes(10)],
+            ['draw_id' => 1, 'market_id' => 1, 'source_id' => 7, 'attempt_no' => 3, 'status' => 'NOT_READY', 'created_at' => now()->subMinutes(5)],
+        ]);
+
+        $source = new LottoResultSource([
+            'market_id' => 1,
+            'is_active' => true,
+            'cutover_enabled' => true,
+            'pipeline_version' => 'V2_CUTOVER',
+            'fetch_strategy' => 'JSON_HTTP',
+            'parser_type' => 'JSON_PATH',
+            'timeout_seconds' => 10,
+        ]);
+        $source->id = 7;
+
+        $resolver = Mockery::mock(ResultSourceResolver::class);
+        $resolver->shouldReceive('resolveAll')->once()->andReturn([$source]);
+        $resolver->shouldReceive('persistSnapshot')->once()->andReturnNull();
+
+        $applier = Mockery::mock(ResultApplier::class);
+        $applier->shouldReceive('apply')
+            ->once()
+            ->andReturn([
+                'status' => 'APPLIED',
+                'result_hash' => 'hash123',
+            ]);
+
+        $service = new class(
+            $resolver,
+            Mockery::mock(ResultRequestBuilder::class),
+            Mockery::mock(ResultFetcher::class),
+            Mockery::mock(ResultParser::class),
+            Mockery::mock(ResultCandidateSelector::class),
+            Mockery::mock(ResultMapper::class),
+            Mockery::mock(ResultValidator::class),
+            $applier,
+            new AutoResultHardeningService()
+        ) extends AutoResultPipelineService {
+            protected function runV2CutoverPipeline(
+                LottoDraw $draw,
+                LottoResultSource $source,
+                string $runId,
+                ?string $expectedDrawDate
+            ): array {
+                return [
+                    'status' => 'VALID',
+                    'validated' => [
+                        'draw_date' => '2026-04-05',
+                        'first_prize' => '95640',
+                        'last_2_digits' => '95',
+                    ],
+                    'selection' => [],
+                    'mapped' => [],
+                    'trace_json' => ['status' => 'VALID'],
+                ];
+            }
+        };
+
+        $result = $service->processDraw(
+            LottoDraw::query()->findOrFail(1),
+            false,
+            true,
+            'run_manual_retry',
+            '2026-04-05'
+        );
+
+        $this->assertSame('APPLIED', $result['status']);
+
+        $log = DB::table('lotto_result_fetch_logs')
+            ->where('run_id', 'run_manual_retry')
+            ->orderByDesc('id')
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame('APPLIED', $log->status);
+        $this->assertSame('apply_v2', $log->pipeline_stage);
+        $this->assertSame(1, (int) $log->is_manual_retry);
+
+        $draw = DB::table('lotto_draws')->where('id', 1)->first();
+        $this->assertSame(4, (int) $draw->result_fetch_attempts);
+        $this->assertSame('APPLIED', $draw->result_fetch_status);
+        $this->assertNull($draw->result_fetch_error);
+    }
 }

@@ -18,6 +18,7 @@ yarn-error.log
 /storage/
 /storage/*.key
 .env
+.env.prod
 Homestead.yaml
 Homestead.json
 /.vagrant

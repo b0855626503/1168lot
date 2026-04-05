@@ -3,6 +3,22 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-05 — Admin Manual Retry Must Bypass Auto Scheduler Retry Gating (APPROVED)
+
+- ปรับ flow `lotto_draws.auto_result_manual_retry` / `--manual-retry`
+- behavior ใหม่:
+  - manual retry ของทีมงานต้อง bypass retry gating ที่ใช้กับ auto scheduler
+  - bypass:
+    - source backoff
+    - source exhausted / `max_attempts`
+    - draw fetch status เดิมที่เป็น `EXHAUSTED`
+  - แต่ยังใช้ source resolution / fetch / parse / validate / apply เดิม และยังเขียน fetch logs ตามปกติ
+  - ถ้า manual retry สำเร็จหลัง draw เคยค้าง `EXHAUSTED` ระบบต้องอัปเดต `result_fetch_status` ใหม่ได้ ไม่ค้าง terminal status เดิม
+- เหตุผล:
+  - หน้าทีมงานมี `Dry-run` ไว้ยืนยันว่าต้นทาง/parser/map พร้อมแล้ว
+  - เมื่อทีมงานกด retry เอง ระบบต้องลอง apply จริงได้ แม้ auto scheduler จะ exhausted draw/source ไปก่อนหน้านั้น
+  - สอดคล้องกับแผนเมนูงวดหวยที่ระบุว่า manual retry ต้อง bypass เงื่อนไขคัดกรองของ auto path
+
 ## 2026-04-05 — Auto Result Business Not-Ready Must Stay `NOT_READY` and Exhausted Alert Must Work Without Full Draw Hardening Columns (APPROVED)
 
 - ปรับ auto-result pipeline:
