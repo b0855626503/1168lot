@@ -89,57 +89,91 @@
 ## 🎯 Goal
 
 ทำให้ agent สามารถทำงานต่อได้โดยไม่ต้องมี context จากแชตก่อนหน้า
-ให้พิจารณา แต่ละครั้งที่ได้รับ ว่า ควรแบ่งงาน ให้ SubAgent ช่วยทำด้วยหรือไม่
-ถ้า แบ่งแล้ว งานไวขึ้น ดีขึ้น ให้ดำเนินการ แบ่งได้เลย
+ให้เน้นความเร็วเป็นหลัก ภายใต้กติกา source of truth เดิม
+ให้พิจารณา แต่ละครั้งที่ได้รับ ว่า การแบ่งงานจะช่วยให้งานเสร็จไวขึ้นจริงหรือไม่
 
-## 🧩 Sub-Agent Decomposition (MANDATORY)
+## ⚡ Speed-First Execution
 
-ก่อนเริ่ม implement ทุก task ต้องประเมินความซับซ้อนของงาน:
+หลักการ:
 
-ถ้าเข้าเงื่อนไขข้อใดข้อหนึ่งต่อไปนี้:
-- มีมากกว่า 1 domain (เช่น backend + UI + infra)
-- มีมากกว่า 3 implementation steps
-- มี dependency ระหว่าง component
-- มี async/queue/job/pipeline involved
-- มี state machine / retry logic
+- งานเล็ก ให้ทำตรง ๆ อย่าเพิ่ม coordination โดยไม่จำเป็น
+- งานกลาง ให้ทำ `Task Plan` สั้น ๆ ก่อนลงมือ
+- งานใหญ่หรือแยก ownership ได้ชัด ค่อยใช้ sub-agent
+- เป้าหมายคือ “เสร็จไวและพลาดน้อย” ไม่ใช่ “แตก agent ให้ครบตามพิธี”
 
-👉 ต้องแตกเป็น Sub-Agents ก่อนทันที
+### 1. งานเล็ก: ทำเองได้เลย
 
----
+เข้ากลุ่มนี้เมื่อ:
 
-### Required Output
+- แก้ไม่เกินประมาณ 3 ไฟล์
+- อยู่ใน domain เดียว
+- ไม่มี async/queue/job/pipeline/state machine
+- ไม่มี prod diagnosis + code change + doc change หลายชั้นพร้อมกัน
 
-ต้องสร้าง "Sub-Agent Plan" ก่อน implement:
+กติกา:
 
-- แบ่งงานเป็นหน่วยย่อย (sub-agents)
-- แต่ละ sub-agent ต้องมี:
-    - name
-    - responsibility
-    - input/output
-    - dependency
+- ไม่ต้อง spawn sub-agent
+- ไม่ต้องทำ Sub-Agent Plan
+- ถ้าไม่ trivial ให้สรุป `Task Plan` สั้น ๆ 1 ชุดก่อนลงมือ
 
-ตัวอย่าง:
+### 2. งานกลาง: ใช้ Task Plan
+
+เข้ากลุ่มนี้เมื่อ:
+
+- มีหลาย step แต่ยังทำคนเดียวได้ไว
+- เช่น code + test + doc ใน scope เดียว
+- หรือมี dependency บางส่วน แต่ write scope ยังซ้อนกันเยอะ
+
+กติกา:
+
+- ต้องมี `Task Plan` ก่อน implement
+- ยังไม่ต้อง spawn sub-agent ถ้า coordination cost สูงกว่าประโยชน์
+
+รูปแบบ:
+
+Task Plan:
+1. อ่านจุดที่เกี่ยวข้อง
+2. แก้ code
+3. รัน test
+4. อัปเดต doc
+
+### 3. งานใหญ่: ค่อยใช้ Sub-Agent Plan
+
+ใช้เมื่อ “แบ่งแล้วเร็วขึ้นจริง” เท่านั้น โดยปกติควรเข้าเงื่อนไขอย่างน้อย 1 ข้อ:
+
+- มีมากกว่า 1 domain และแยก ownership ได้
+- มี async/queue/job/pipeline/state machine
+- ต้องไล่ prod evidence ควบกับการแก้ code
+- มี sidecar work ที่ทำคู่ขนานได้โดยไม่ block critical path
+- มี write scope แยกกันชัดเจน เช่น backend คนละ module / UI คนละหน้า / test คนละชุด
+
+### 4. เกณฑ์ว่าไม่ควรใช้ Sub-Agent
+
+แม้งานจะหลาย step แต่ไม่ควร spawn ถ้า:
+
+- งานหลักยังไม่ชัด
+- จุดแก้หลักอยู่ไฟล์เดียวหรือโมดูลเดียว
+- sub-agent ต้องแตะไฟล์ชุดเดียวกับ main agent
+- ผลลัพธ์ของ sub-agent เป็น blocker ทันทีของ step ถัดไป
+- coordination cost มากกว่าลงมือทำเอง
+
+### 5. ถ้าจะใช้ Sub-Agent ต้องระบุให้ชัด
 
 Sub-Agent Plan:
-1. BrowserRuntimeAgent
-    - responsibility: implement playwright execution
-2. FetchDriverAgent
-    - responsibility: orchestration + receipt cache
-3. PipelineAgent
-    - responsibility: integrate NOT_READY flow
+1. name
+2. responsibility
+3. input/output
+4. dependency
+5. write scope
 
----
+กติกา:
 
-### Execution Rule
+- อย่า spawn เพื่อ “ช่วยอ่านเฉย ๆ” ถ้า main agent อ่านเองได้ไวกว่า
+- spawn เฉพาะ sidecar task ที่ bounded และไม่ซ้อน write scope
+- ถ้างาน coupled มาก ให้ main agent ทำเองพร้อม plan แทน
 
-- ห้าม implement จนกว่าจะมี Sub-Agent Plan
-- ต้อง execute ทีละ sub-agent ตาม dependency
-- ถ้ามี bug → แก้ใน sub-agent scope เท่านั้น
+### 6. Default ที่ต้องใช้ทุกครั้ง
 
----
-
-### Goal
-
-- ลด complexity ต่อ agent
-- เพิ่ม parallel thinking
-- ลด regression ข้าม component
+- ทุกงานต้องประเมินก่อนว่าเป็น `งานเล็ก / งานกลาง / งานใหญ่`
+- ถ้าไม่ trivial อย่างน้อยต้องมี `Task Plan`
+- ใช้ `Sub-Agent Plan` เฉพาะเมื่อมั่นใจว่าเร็วกว่าการทำเอง
