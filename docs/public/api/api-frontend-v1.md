@@ -909,7 +909,7 @@ Response จะขึ้นกับกติกาและสถานะง�
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
 - endpoint นี้คืน `status` แบบพร้อมใช้บน UI:
   - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
-  - `lose` เมื่อ `result_outcome=lose` และ `is_winner=false`
+  - `lost` เมื่อ `result_outcome=lose` และ `is_winner=false`
   - กรณีอื่นคงค่า lifecycle เดิม เช่น `active`, `cancelled`
 - และคืน field สรุปผลที่พร้อมใช้บน UI:
   - `draw_status`, `draw_status_label`

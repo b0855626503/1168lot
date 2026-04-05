@@ -47,7 +47,7 @@ class LottoTicketsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('success', true);
-        $response->assertJsonCount(3, 'data');
+        $response->assertJsonCount(4, 'data');
 
         $response->assertJsonFragment([
             'id' => 1001,
@@ -82,6 +82,23 @@ class LottoTicketsControllerTest extends TestCase
             'losing_item_count' => 0,
             'pending_item_count' => 1,
             'result_message' => 'โพยนี้กำลังรอผล',
+        ]);
+
+        $response->assertJsonFragment([
+            'id' => 1004,
+            'status' => 'lost',
+            'status_label' => 'ไม่ถูกรางวัล',
+            'draw_status' => 'resulted',
+            'draw_status_label' => 'ออกผลแล้ว',
+            'result_outcome' => 'lose',
+            'result_outcome_label' => 'ไม่ถูกรางวัล',
+            'is_final' => true,
+            'is_winner' => false,
+            'item_count' => 1,
+            'winning_item_count' => 0,
+            'losing_item_count' => 1,
+            'pending_item_count' => 0,
+            'result_message' => 'โพยนี้ไม่ถูกรางวัล',
         ]);
 
         $response->assertJsonFragment([
@@ -272,6 +289,23 @@ class LottoTicketsControllerTest extends TestCase
                 'created_at' => '2026-04-06 14:00:00',
                 'updated_at' => '2026-04-06 15:20:00',
             ],
+            [
+                'id' => 1004,
+                'member_id' => 9001,
+                'draw_id' => 101,
+                'total_amount' => 40,
+                'total_bet_amount' => 40,
+                'total_discount_amount' => 0,
+                'total_net_amount' => 40,
+                'total_win_amount' => 0,
+                'status' => 'resulted',
+                'refund_amount' => 0,
+                'cancelled_at' => null,
+                'cancelled_by' => null,
+                'reason' => null,
+                'created_at' => '2026-04-05 13:00:00',
+                'updated_at' => now(),
+            ],
         ]);
 
         \DB::table('lotto_ticket_items')->insert([
@@ -335,6 +369,22 @@ class LottoTicketsControllerTest extends TestCase
                 'payable_amount_at_time' => 75,
                 'potential_win_amount_at_time' => 6750,
                 'result_status' => null,
+                'win_amount' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 5,
+                'ticket_id' => 1004,
+                'bet_type' => 'bottom_2',
+                'number' => '99',
+                'amount' => 40,
+                'payout_at_time' => 90,
+                'discount_percent_at_time' => 0,
+                'discount_amount_at_time' => 0,
+                'payable_amount_at_time' => 40,
+                'potential_win_amount_at_time' => 3600,
+                'result_status' => 'lose',
                 'win_amount' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),

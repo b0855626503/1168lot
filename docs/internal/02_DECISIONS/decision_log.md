@@ -24,7 +24,7 @@
 - ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
 - behavior ใหม่:
   - ถ้า `result_outcome=won` และ `is_winner=true` ให้ส่ง `status=won`
-  - ถ้า `result_outcome=lose` และ `is_winner=false` ให้ส่ง `status=lose`
+  - ถ้า `result_outcome=lose` และ `is_winner=false` ให้ส่ง `status=lost`
   - กรณีอื่นคง status lifecycle เดิม เช่น `active`, `cancelled`
   - `draw_status` ยังเก็บ lifecycle ของ draw แยกตามเดิม
 - เหตุผล:

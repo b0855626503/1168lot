@@ -1197,7 +1197,7 @@ class LottoController extends BaseController
     {
         return match (true) {
             $resultContext['result_outcome'] === 'won' && $resultContext['is_winner'] === true => 'won',
-            $resultContext['result_outcome'] === 'lose' && $resultContext['is_winner'] === false => 'lose',
+            $resultContext['result_outcome'] === 'lose' && $resultContext['is_winner'] === false => 'lost',
             default => $ticketStatus,
         };
     }
@@ -1630,7 +1630,7 @@ class LottoController extends BaseController
                 'cancelled' => 'Cancelled',
                 'resulted' => 'Settled',
                 'won' => 'Won',
-                'lose' => 'Lost',
+                'lost' => 'Lost',
                 default => 'Unknown',
             },
             default => match ($status) {
@@ -1638,7 +1638,7 @@ class LottoController extends BaseController
                 'cancelled' => 'ยกเลิกแล้ว',
                 'resulted' => 'ตัดสินผลแล้ว',
                 'won' => 'ถูกรางวัล',
-                'lose' => 'ไม่ถูกรางวัล',
+                'lost' => 'ไม่ถูกรางวัล',
                 default => 'ไม่ทราบสถานะ',
             },
         };

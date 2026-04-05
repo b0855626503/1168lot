@@ -164,7 +164,7 @@
   - คง field summary เดิมไว้ เช่น `draw_status`, `result_outcome`, `refund_amount`
   - field `status` ฝั่ง customer API ใช้ display status ที่พร้อมใช้บน UI:
     - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
-    - `lose` เมื่อ `result_outcome=lose` และ `is_winner=false`
+    - `lost` เมื่อ `result_outcome=lose` และ `is_winner=false`
     - กรณีอื่นคงค่า lifecycle เดิม เช่น `active`, `cancelled`
   - ส่ง cancel context ระดับโพยเพิ่มทุกครั้งเพื่อให้ frontend แสดงประวัติโพยได้ครบ:
     - `cancelled_at`
