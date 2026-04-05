@@ -144,6 +144,7 @@ class TicketController extends AppBaseController
 
                 $ticket->update([
                     'status' => 'cancelled',
+                    'cancelled_by' => $memberId,
                     'cancelled_at' => now(),
                     'refund_amount' => $refundAmount,
                 ]);

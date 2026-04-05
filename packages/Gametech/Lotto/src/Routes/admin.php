@@ -266,6 +266,8 @@ Route::domain(
 
             Route::post('tickets/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@loadData')
                 ->name('admin.lotto.tickets.loaddata');
+            Route::post('tickets/{id}/cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@cancel')
+                ->name('admin.lotto.tickets.cancel');
 
             Route::get('reports/exposure', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoExposureReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.exposure_report.index',

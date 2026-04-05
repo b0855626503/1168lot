@@ -52,6 +52,7 @@ class LottoTicketTablePresentationTest extends TestCase
         $this->assertStringContainsString('หวยมาเลเซีย', $payload['market']);
         $this->assertStringContainsString('https://example.com/malaysia.png', $payload['market']);
         $this->assertSame('แพกเกจ VIP', $payload['package_name']);
+        $this->assertStringContainsString('ยกเลิกโพย', $payload['action']);
         $this->assertArrayNotHasKey('draw', $payload);
         $this->assertArrayNotHasKey('total_win_amount', $payload);
     }

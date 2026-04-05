@@ -11,6 +11,9 @@
 			<div><strong>ส่วนลด:</strong> @{{ formatMoney(ticket.total_discount_amount) }}</div>
 			<div><strong>สุทธิ:</strong> @{{ formatMoney(ticket.total_net_amount) }}</div>
 			<div><strong>ยอดถูก:</strong> @{{ formatMoney(ticket.total_win_amount) }}</div>
+			<div v-if="ticket.reason"><strong>สาเหตุ:</strong> @{{ ticket.reason }}</div>
+			<div v-if="ticket.cancelled_by_name"><strong>ผู้ยกเลิก:</strong> @{{ ticket.cancelled_by_name }}</div>
+			<div v-if="ticket.cancelled_at"><strong>เวลายกเลิก:</strong> @{{ ticket.cancelled_at }}</div>
 		</div>
 
 		<div class="table-responsive">
@@ -50,15 +53,51 @@
 		</div>
 	</div>
 </b-modal>
+<b-modal ref="cancelTicketModal" id="cancelTicketModal" centered size="md" title="ยกเลิกโพย"
+		 :no-stacking="true"
+		 :no-close-on-backdrop="true"
+		 :ok-disabled="cancelSubmitting || !cancelForm.reason.trim()"
+		 :busy="cancelSubmitting"
+		 ok-title="ยืนยันยกเลิก"
+		 cancel-title="ปิด"
+		 @ok.prevent="submitCancelTicket">
+	<div>
+		<div class="mb-3" v-if="cancelForm.id">
+			<div><strong>เลขโพย:</strong> #@{{ cancelForm.id }}</div>
+			<div><strong>สมาชิก:</strong> @{{ cancelForm.member_name }}</div>
+			<div><strong>งวด:</strong> @{{ cancelForm.draw_label }}</div>
+			<div><strong>ยอดคืน:</strong> @{{ formatMoney(cancelForm.total_net_amount) }}</div>
+		</div>
+		<b-form-group label="สาเหตุการยกเลิก" label-for="cancel-ticket-reason">
+			<b-form-textarea
+				id="cancel-ticket-reason"
+				v-model="cancelForm.reason"
+				rows="3"
+				max-rows="6"
+				placeholder="ระบุสาเหตุที่ต้องยกเลิกโพย"
+			></b-form-textarea>
+			<small class="text-muted">บังคับกรอก และจะถูกเก็บไว้ในรายการโพยที่ถูกยกเลิก</small>
+		</b-form-group>
+	</div>
+</b-modal>
 @push('scripts')
 	<script type="module">
 		const loadDataRoute = @json(route($loadDataRouteName ?? 'admin.lotto.tickets.loaddata'));
+		const cancelRouteTemplate = @json(route('admin.lotto.tickets.cancel', ['id' => '__ID__']));
 
 		window.app = new Vue({
 			el: '#app',
 			data() {
 				return {
 					ticket: null,
+					cancelSubmitting: false,
+					cancelForm: {
+						id: null,
+						reason: '',
+						member_name: '',
+						draw_label: '',
+						total_net_amount: 0,
+					},
 				};
 			},
 			methods: {
@@ -66,6 +105,89 @@
 					const response = await axios.post(loadDataRoute, { id });
 					this.ticket = response.data.data;
 					this.$refs.addedit.show();
+				},
+				async openCancelTicketModal(id) {
+					try {
+						const response = await axios.post(loadDataRoute, { id });
+						const data = response?.data?.data || null;
+
+						if (!data) {
+							await this.showSubmitErrorModal(null, 'ไม่พบข้อมูลโพยดังกล่าว');
+							return;
+						}
+
+						if (!data.can_cancel) {
+							await this.showSubmitErrorModal(null, 'โพยนี้ไม่สามารถยกเลิกได้');
+							return;
+						}
+
+						this.cancelForm = {
+							id: Number(data.id || 0),
+							reason: '',
+							member_name: String(data.member_name || '-'),
+							draw_label: [String(data.draw?.market || '').trim(), String(data.draw?.date || '').trim()].filter(Boolean).join(' / '),
+							total_net_amount: Number(data.total_net_amount || 0),
+						};
+						this.$refs.cancelTicketModal.show();
+					} catch (error) {
+						await this.showSubmitErrorModal(error, 'โหลดข้อมูลโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+					}
+				},
+				resolveCancelRoute(id) {
+					return cancelRouteTemplate.replace('__ID__', String(id));
+				},
+				redrawTicketTable() {
+					const dataTable = window.LaravelDataTables?.lottoTicketsTable;
+					if (dataTable) {
+						dataTable.draw(false);
+					}
+				},
+				resolveApiErrorMessage(error, fallbackMessage) {
+					const backendMessage = error?.response?.data?.message;
+					if (typeof backendMessage === 'string' && backendMessage.trim() !== '') {
+						return backendMessage;
+					}
+
+					return fallbackMessage;
+				},
+				async showSubmitErrorModal(error, fallbackMessage = 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') {
+					const message = this.resolveApiErrorMessage(error, fallbackMessage);
+					await this.$bvModal.msgBoxOk(message, {
+						title: 'เกิดข้อผิดพลาด',
+						size: 'sm',
+						buttonSize: 'sm',
+						okVariant: 'danger',
+						centered: true,
+					});
+				},
+				async submitCancelTicket() {
+					const reason = String(this.cancelForm.reason || '').trim();
+					if (reason === '') {
+						await this.showSubmitErrorModal(null, 'กรุณาระบุสาเหตุการยกเลิกโพย');
+						return;
+					}
+
+					this.cancelSubmitting = true;
+					try {
+						await axios.post(this.resolveCancelRoute(this.cancelForm.id), { reason });
+						this.$refs.cancelTicketModal.hide();
+						if (this.ticket && Number(this.ticket.id || 0) === Number(this.cancelForm.id || 0)) {
+							this.ticket = null;
+							this.$refs.addedit.hide();
+						}
+						this.redrawTicketTable();
+						await this.$bvModal.msgBoxOk('ยกเลิกโพยสำเร็จ', {
+							title: 'สำเร็จ',
+							size: 'sm',
+							buttonSize: 'sm',
+							okVariant: 'success',
+							centered: true,
+						});
+					} catch (error) {
+						await this.showSubmitErrorModal(error, 'ยกเลิกโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+					} finally {
+						this.cancelSubmitting = false;
+					}
 				},
 				formatMoney(value) {
 					return Number(value || 0).toLocaleString('th-TH', {
@@ -77,5 +199,6 @@
 		});
 
 		window.editModal = function (id) { window.app.editModal(id); };
+		window.cancelTicketModal = function (id) { window.app.openCancelTicketModal(id); };
 	</script>
 @endpush

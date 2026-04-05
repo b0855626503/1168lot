@@ -24,6 +24,7 @@ class LottoTicket extends Model implements LottoTicketContract
         'total_win_amount',
         'status',        // active | cancelled | resulted
         'bet_type_summary',
+        'reason',
         'cancelled_at',
         'cancelled_by',  // user_id (admin / member)
         'refund_amount', // ถ้า cancelled
@@ -36,6 +37,7 @@ class LottoTicket extends Model implements LottoTicketContract
         'total_net_amount' => 'decimal:2',
         'total_win_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
+        'reason' => 'string',
         'cancelled_at' => 'datetime',
         'bet_confirmed_at' => 'datetime',
     ];

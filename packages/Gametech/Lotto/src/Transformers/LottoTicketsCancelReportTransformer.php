@@ -11,7 +11,13 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         $eventAt = $row->cancelled_at ?: $row->created_at;
         $drawDate = $row->draw_date ? date('d/m/Y', strtotime((string) $row->draw_date)) : '-';
         $memberName = trim((string) ($row->member_user_name ?? $row->member_name ?? ''));
-        $cancelledBy = trim((string) ($row->cancel_admin_user_name ?? $row->cancel_member_user_name ?? $row->cancel_member_name ?? ''));
+        $packageNames = collect($row->items ?? [])
+            ->pluck('package_name_at_time')
+            ->map(static fn ($name) => trim((string) $name))
+            ->filter()
+            ->unique()
+            ->values();
+        $cancelledBy = $this->resolveCancelledByName($row);
 
         return [
             'event_at' => $eventAt ? date('d/m/Y H:i', strtotime((string) $eventAt)) : '-',
@@ -19,10 +25,30 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'member_display' => e(($memberName !== '' ? $memberName : ('MEM-' . (int) ($row->member_id ?? 0))) . ' (' . (int) ($row->member_id ?? 0) . ')'),
             'market_name' => $this->formatMarket((string) ($row->market_name ?? '-'), (string) ($row->market_logo ?? ''), (string) ($row->market_icon ?? '')),
             'draw_date' => $drawDate,
+            'package_name' => $packageNames->isNotEmpty() ? e($packageNames->implode(', ')) : '-',
             'total_bet_amount' => number_format((float) ($row->total_bet_amount ?? $row->total_amount ?? 0), 2),
+            'total_discount_amount' => number_format((float) ($row->total_discount_amount ?? 0), 2),
+            'total_net_amount' => number_format((float) ($row->total_net_amount ?? $row->total_amount ?? 0), 2),
+            'total_win_amount' => number_format((float) ($row->total_win_amount ?? 0), 2),
             'status' => $this->statusBadge((string) ($row->status ?? '')),
+            'reason' => e(trim((string) ($row->reason ?? '')) !== '' ? (string) $row->reason : '-'),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
         ];
+    }
+
+    private function resolveCancelledByName($row): string
+    {
+        $cancelTxActor = match ((string) ($row->cancel_tx_created_by_type ?? '')) {
+            'admin' => trim((string) ($row->cancel_tx_admin_user_name ?? '')),
+            'member' => trim((string) ($row->cancel_tx_member_user_name ?? $row->cancel_tx_member_name ?? '')),
+            default => '',
+        };
+
+        if ($cancelTxActor !== '') {
+            return $cancelTxActor;
+        }
+
+        return trim((string) ($row->cancel_admin_user_name ?? $row->cancel_member_user_name ?? $row->cancel_member_name ?? ''));
     }
 
     private function formatMarket(string $marketName, string $logo, string $icon): string

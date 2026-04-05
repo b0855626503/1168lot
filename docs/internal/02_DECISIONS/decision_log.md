@@ -1,5 +1,25 @@
 # Decision Log
 
+## 2026-04-05 — Admin Ticket Cancel Must Capture Reason and Surface Cancel Context (APPROVED)
+
+- ปรับหน้า `admin /lotto/tickets` และรายงาน `admin /lotto/reports/tickets-cancel`
+- behavior ใหม่:
+  - หน้า `รายการโพย/ยกเลิกโพย` เพิ่มปุ่ม `ยกเลิกโพย` ในคอลัมน์ `จัดการ`
+  - การยกเลิกโพยรายใบโดยทีมงานต้องกรอก `สาเหตุการยกเลิก` ก่อนส่งทุกครั้ง
+  - endpoint ภายใน `POST /lotto/tickets/{id}/cancel`
+    - อนุญาตเฉพาะ ticket `active`
+    - อนุญาตเฉพาะ draw ที่ยัง `open`
+    - rollback exposure
+    - คืนเงินผ่าน `wallet_transactions(ref_type=LOTTO_CANCEL, created_by_type=admin)`
+    - เก็บ `reason`, `cancelled_at`, `cancelled_by`, `refund_amount`
+  - payload รายละเอียดโพย (`tickets/loaddata`) ส่ง `reason/cancelled_at/cancelled_by_name/refund_amount`
+  - report `tickets-cancel` เพิ่มคอลัมน์ `สาเหตุ`
+  - กรณี draw `งดออกผล` แล้วใช้ flow `cancel-all-refund`
+    - ticket ที่ถูกคืนเงินทั้งงวดต้องถูก stamp `reason = งดออกผล`
+- เหตุผล:
+  - ให้ทีมงาน audit ได้ว่าการยกเลิกหรือคืนเงินเกิดจากอะไร ใครเป็นคนทำ และทำเมื่อไร
+  - ลดกรณีโพยถูกคืนเงินแล้วเหลือเพียงสถานะ `cancelled` แต่ไม่มีบริบทให้อ่านย้อนหลัง
+
 ## 2026-04-05 — All Lotto Report Menus Must Use Real Data Modules Instead of Mockups (APPROVED)
 
 - ปรับเมนูรายงาน Lotto ที่ยังเป็น mockup:
@@ -23,7 +43,9 @@
     - ช่อง text filter ใช้ debounce สั้นก่อน redraw
     - ยกเลิกปุ่ม `ค้นหา` คงไว้เฉพาะปุ่ม `ล้างค่า`
   - `member-bet-types` aggregate ข้อมูลจริงตาม `member + market + bet_type`
-  - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดงผู้ยกเลิกเมื่อมีข้อมูล
+  - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดง `แพกเกจ/ส่วนลด/สุทธิ/ยอดถูก`
+  - `tickets-cancel` resolve ผู้ยกเลิกจาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
+    - เพื่อให้เคสลูกค้ายกเลิกเองแสดงชื่อผู้ยกเลิกได้ แม้ `lotto_tickets.cancelled_by` ว่าง
   - `blocked-numbers` อ่านเลขอั้น/จำกัดอนาคตจาก `lotto_number_blocks` โดยตรง
 - เหตุผล:
   - ให้เมนูรายงาน Lotto ใช้งานปฏิบัติการได้ครบ ไม่เหลือ placeholder ในส่วน reports

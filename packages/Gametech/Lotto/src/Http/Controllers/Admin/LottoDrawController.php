@@ -475,6 +475,7 @@ class LottoDrawController extends AppBaseController
 
                 $cancelledTickets = 0;
                 $totalRefund = 0.0;
+                $reason = 'งดออกผล';
 
                 foreach ($tickets as $ticket) {
                     $refundAmount = round((float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0), 2);
@@ -528,6 +529,7 @@ class LottoDrawController extends AppBaseController
 
                     $ticket->update([
                         'status' => 'cancelled',
+                        'reason' => $reason,
                         'cancelled_at' => now(),
                         'cancelled_by' => $adminId ? (int) $adminId : null,
                         'refund_amount' => $refundAmount,
@@ -538,7 +540,6 @@ class LottoDrawController extends AppBaseController
                     $totalRefund += $refundAmount;
                 }
 
-                $reason = 'งดออกผล';
                 $lockedDraw->forceFill([
                     'status' => 'resulted',
                     'result_at' => now(),

@@ -27,6 +27,7 @@ class AdminLottoReportsDataTableTest extends TestCase
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('wallet_transactions');
         Schema::dropIfExists('lotto_ticket_items');
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('lotto_number_blocks');
@@ -158,33 +159,53 @@ class AdminLottoReportsDataTableTest extends TestCase
         $this->assertEquals(1750.0, (float) $row->net_result);
     }
 
-    public function test_tickets_cancel_report_reads_status_and_canceller_columns(): void
+    public function test_tickets_cancel_report_reads_financial_package_and_member_canceller_columns(): void
     {
-        DB::table('employees')->insert([
-            'code' => 9001,
-            'user_name' => 'staff01',
-            'name' => 'Staff One',
-            'surname' => 'Tester',
-            'enable' => 'Y',
-            'superadmin' => 'N',
-            'role_id' => 1,
-            'date_create' => now(),
-            'date_update' => now(),
-        ]);
-
         DB::table('lotto_tickets')->insert([
             'id' => 1003,
             'member_id' => 52,
             'draw_id' => 101,
             'total_amount' => 120,
             'total_bet_amount' => 120,
-            'total_discount_amount' => 0,
-            'total_net_amount' => 120,
-            'total_win_amount' => 0,
+            'total_discount_amount' => 20,
+            'total_net_amount' => 100,
+            'total_win_amount' => 450,
             'status' => 'cancelled',
+            'reason' => 'งดออกผล',
             'cancelled_at' => now(),
-            'cancelled_by' => 9001,
+            'refund_amount' => 100,
             'created_at' => now()->subMinute(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_ticket_items')->insert([
+            'id' => 5004,
+            'ticket_id' => 1003,
+            'bet_type' => 'top_2',
+            'number' => '48',
+            'amount' => 120,
+            'package_name_at_time' => 'ลด 17%',
+            'payout_at_time' => 79,
+            'result_status' => null,
+            'win_amount' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('wallet_transactions')->insert([
+            'id' => 8001,
+            'member_id' => 52,
+            'scope' => 'MEMBER',
+            'direction' => 'CREDIT',
+            'amount' => 100,
+            'balance_before' => 900,
+            'balance_after' => 1000,
+            'ref_type' => 'LOTTO_CANCEL',
+            'ref_id' => 1003,
+            'status' => 'SUCCESS',
+            'created_by_type' => 'member',
+            'created_by_id' => 52,
+            'created_at' => now(),
             'updated_at' => now(),
         ]);
 
@@ -194,8 +215,13 @@ class AdminLottoReportsDataTableTest extends TestCase
 
         $this->assertNotNull($row);
         $this->assertSame('cancelled', $row->status);
-        $this->assertSame('staff01', $row->cancel_admin_user_name);
+        $this->assertSame('member52', $row->cancel_tx_member_user_name);
         $this->assertSame('หวยมาเลเซีย', $row->market_name);
+        $this->assertSame('งดออกผล', $row->reason);
+        $this->assertEquals(20.0, (float) $row->total_discount_amount);
+        $this->assertEquals(100.0, (float) $row->total_net_amount);
+        $this->assertEquals(450.0, (float) $row->total_win_amount);
+        $this->assertSame('ลด 17%', $row->items->pluck('package_name_at_time')->filter()->implode(', '));
     }
 
     public function test_blocked_numbers_report_reads_real_blocks(): void
@@ -305,8 +331,10 @@ class AdminLottoReportsDataTableTest extends TestCase
             $table->decimal('total_net_amount', 12, 2)->default(0);
             $table->decimal('total_win_amount', 12, 2)->default(0);
             $table->string('status')->default('active');
+            $table->text('reason')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             $table->unsignedBigInteger('cancelled_by')->nullable();
+            $table->decimal('refund_amount', 12, 2)->nullable();
             $table->timestamps();
         });
 
@@ -316,9 +344,34 @@ class AdminLottoReportsDataTableTest extends TestCase
             $table->string('bet_type');
             $table->string('number');
             $table->decimal('amount', 12, 2)->default(0);
+            $table->string('package_name_at_time')->nullable();
             $table->decimal('payout_at_time', 12, 2)->default(0);
             $table->string('result_status')->nullable();
             $table->decimal('win_amount', 12, 2)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('wallet_transactions', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('member_id');
+            $table->string('scope');
+            $table->unsignedBigInteger('game_user_id')->nullable();
+            $table->string('direction');
+            $table->decimal('amount', 15, 2)->default(0);
+            $table->decimal('balance_before', 15, 2)->default(0);
+            $table->decimal('balance_after', 15, 2)->default(0);
+            $table->string('ref_type');
+            $table->unsignedBigInteger('ref_id')->nullable();
+            $table->string('ref_code')->nullable();
+            $table->string('provider_txn_id')->nullable();
+            $table->string('provider_round_id')->nullable();
+            $table->string('group_code')->nullable();
+            $table->unsignedBigInteger('related_txn_id')->nullable();
+            $table->string('status')->default('SUCCESS');
+            $table->string('description')->nullable();
+            $table->longText('meta')->nullable();
+            $table->string('created_by_type')->nullable();
+            $table->unsignedBigInteger('created_by_id')->nullable();
             $table->timestamps();
         });
     }
