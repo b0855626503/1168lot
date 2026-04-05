@@ -737,6 +737,11 @@ Response จะขึ้นกับกติกาและสถานะง�
   - `result_outcome`, `result_outcome_label`, `result_message`
   - `is_final`, `is_winner`
   - `item_count`, `winning_item_count`, `losing_item_count`, `pending_item_count`
+  - cancel context ระดับโพย:
+    - `cancelled_at`
+    - `cancelled_by_name`
+    - `cancelled_by_type`
+    - `cancel_reason`
 
 Response ตัวอย่าง
 ```json
@@ -766,6 +771,10 @@ Response ตัวอย่าง
       "total_net_amount": 90,
       "total_win_amount": 540,
       "refund_amount": 0,
+      "cancelled_at": null,
+      "cancelled_by_name": "",
+      "cancelled_by_type": "",
+      "cancel_reason": "",
       "item_count": 2,
       "winning_item_count": 1,
       "losing_item_count": 1,
@@ -789,6 +798,11 @@ Response ตัวอย่าง
   - `is_winner`
   - `result_status_label`
   - `result_message`
+  - summary ของ detail จะมี cancel context เดียวกับ list:
+    - `cancelled_at`
+    - `cancelled_by_name`
+    - `cancelled_by_type`
+    - `cancel_reason`
 
 Response ตัวอย่างเมื่อไม่พบโพย
 ```json
@@ -825,6 +839,10 @@ Response ตัวอย่าง (พบข้อมูล)
     "total_net_amount": 90,
     "total_win_amount": 540,
     "refund_amount": 0,
+    "cancelled_at": null,
+    "cancelled_by_name": "",
+    "cancelled_by_type": "",
+    "cancel_reason": "",
     "item_count": 2,
     "winning_item_count": 1,
     "losing_item_count": 1,

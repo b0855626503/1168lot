@@ -133,6 +133,22 @@
   - `cancelled_by_name`
   - `refund_amount`
 
+## นโยบาย Frontend API รายการโพยหวย (`/api/v1/lotto/tickets*`)
+
+- `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+  - คง field summary เดิมไว้ เช่น `status`, `draw_status`, `result_outcome`, `refund_amount`
+  - ส่ง cancel context ระดับโพยเพิ่มทุกครั้งเพื่อให้ frontend แสดงประวัติโพยได้ครบ:
+    - `cancelled_at`
+    - `cancelled_by_name`
+    - `cancelled_by_type`
+    - `cancel_reason`
+  - การ resolve ผู้ยกเลิก:
+    - อ่านจาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
+    - ถ้าไม่พบ ค่อย fallback จาก `lotto_tickets.cancelled_by`
+  - การ resolve สาเหตุ:
+    - อ่าน `lotto_tickets.reason` เป็นหลัก
+    - ถ้า environment ยังไม่มีคอลัมน์ `reason` ให้ fallback จาก `wallet_transactions.meta.reason`
+
 ## นโยบายรายงานรอผลเดิมพัน (Admin `/lotto/reports/pending-bets`)
 
 - เมนู `รอผลเดิมพัน` ใช้หน้า/ชุดข้อมูลเดียวกับ `รายการโพย` ไม่ใช่ mockup แล้ว

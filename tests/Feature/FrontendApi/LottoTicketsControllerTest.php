@@ -21,6 +21,8 @@ class LottoTicketsControllerTest extends TestCase
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('wallet_transactions');
+        Schema::dropIfExists('members');
         Schema::dropIfExists('lotto_ticket_items');
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('lotto_draws');
@@ -45,7 +47,7 @@ class LottoTicketsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('success', true);
-        $response->assertJsonCount(2, 'data');
+        $response->assertJsonCount(3, 'data');
 
         $response->assertJsonFragment([
             'id' => 1001,
@@ -80,6 +82,20 @@ class LottoTicketsControllerTest extends TestCase
             'losing_item_count' => 0,
             'pending_item_count' => 1,
             'result_message' => 'โพยนี้กำลังรอผล',
+        ]);
+
+        $response->assertJsonFragment([
+            'id' => 1003,
+            'status' => 'cancelled',
+            'status_label' => 'ยกเลิกแล้ว',
+            'result_outcome' => 'cancelled',
+            'result_outcome_label' => 'ยกเลิกโพย',
+            'refund_amount' => 75.0,
+            'cancelled_at' => '2026-04-06 15:20:00',
+            'cancelled_by_name' => '0855626503',
+            'cancelled_by_type' => 'member',
+            'cancel_reason' => 'สมาชิกกดยกเลิกเอง',
+            'result_message' => 'โพยนี้ถูกยกเลิกแล้ว',
         ]);
     }
 
@@ -117,6 +133,31 @@ class LottoTicketsControllerTest extends TestCase
         $response->assertJsonPath('data.items.1.is_winner', false);
     }
 
+    public function test_ticket_detail_endpoint_returns_cancel_context_for_cancelled_ticket(): void
+    {
+        $member = $this->customer();
+        $this->seedBaseData();
+
+        $request = Request::create('/api/v1/lotto/tickets/1003', 'GET');
+        $request->attributes->set('frontend_language', 'th');
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+
+        $response = TestResponse::fromBaseResponse(
+            app(LottoController::class)->ticket($request, 1003)
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath('data.id', 1003);
+        $response->assertJsonPath('data.status', 'cancelled');
+        $response->assertJsonPath('data.result_outcome', 'cancelled');
+        $response->assertJsonPath('data.cancelled_at', '2026-04-06 15:20:00');
+        $response->assertJsonPath('data.cancelled_by_name', '0855626503');
+        $response->assertJsonPath('data.cancelled_by_type', 'member');
+        $response->assertJsonPath('data.cancel_reason', 'สมาชิกกดยกเลิกเอง');
+        $response->assertJsonPath('data.refund_amount', 75);
+        $response->assertJsonPath('data.result_message', 'โพยนี้ถูกยกเลิกแล้ว');
+    }
+
     private function customer(int $memberCode = 9001): Member
     {
         $member = new Member();
@@ -129,6 +170,12 @@ class LottoTicketsControllerTest extends TestCase
 
     private function seedBaseData(): void
     {
+        \DB::table('members')->insert([
+            'code' => 9001,
+            'user_name' => '0855626503',
+            'name' => 'Ticket Member',
+        ]);
+
         \DB::table('lotto_groups')->insert([
             'id' => 1,
             'name' => 'หวยไทย',
@@ -184,6 +231,9 @@ class LottoTicketsControllerTest extends TestCase
                 'total_win_amount' => 540,
                 'status' => 'resulted',
                 'refund_amount' => 0,
+                'cancelled_at' => null,
+                'cancelled_by' => null,
+                'reason' => null,
                 'created_at' => '2026-04-05 12:00:00',
                 'updated_at' => now(),
             ],
@@ -198,8 +248,28 @@ class LottoTicketsControllerTest extends TestCase
                 'total_win_amount' => 0,
                 'status' => 'active',
                 'refund_amount' => 0,
+                'cancelled_at' => null,
+                'cancelled_by' => null,
+                'reason' => null,
                 'created_at' => '2026-04-06 12:00:00',
                 'updated_at' => now(),
+            ],
+            [
+                'id' => 1003,
+                'member_id' => 9001,
+                'draw_id' => 102,
+                'total_amount' => 75,
+                'total_bet_amount' => 75,
+                'total_discount_amount' => 0,
+                'total_net_amount' => 75,
+                'total_win_amount' => 0,
+                'status' => 'cancelled',
+                'refund_amount' => 75,
+                'cancelled_at' => '2026-04-06 15:20:00',
+                'cancelled_by' => 9001,
+                'reason' => 'สมาชิกกดยกเลิกเอง',
+                'created_at' => '2026-04-06 14:00:00',
+                'updated_at' => '2026-04-06 15:20:00',
             ],
         ]);
 
@@ -252,6 +322,39 @@ class LottoTicketsControllerTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'id' => 4,
+                'ticket_id' => 1003,
+                'bet_type' => 'top_2',
+                'number' => '12',
+                'amount' => 75,
+                'payout_at_time' => 90,
+                'discount_percent_at_time' => 0,
+                'discount_amount_at_time' => 0,
+                'payable_amount_at_time' => 75,
+                'potential_win_amount_at_time' => 6750,
+                'result_status' => null,
+                'win_amount' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        \DB::table('wallet_transactions')->insert([
+            'member_id' => 9001,
+            'amount' => 75,
+            'ref_type' => 'LOTTO_CANCEL',
+            'ref_id' => 1003,
+            'ref_code' => '1003',
+            'group_code' => 'LOTTO_CANCEL_1003',
+            'created_by_type' => 'member',
+            'created_by_id' => 9001,
+            'meta' => json_encode([
+                'ticket_id' => 1003,
+                'reason' => 'สมาชิกกดยกเลิกเอง',
+            ], JSON_UNESCAPED_UNICODE),
+            'created_at' => '2026-04-06 15:20:00',
+            'updated_at' => '2026-04-06 15:20:00',
         ]);
     }
 
@@ -262,6 +365,16 @@ class LottoTicketsControllerTest extends TestCase
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
+        Schema::dropIfExists('wallet_transactions');
+        Schema::dropIfExists('members');
+
+        Schema::create('members', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('code')->unique();
+            $table->string('user_name')->nullable();
+            $table->string('name')->nullable();
+            $table->timestamps();
+        });
 
         Schema::create('lotto_groups', function (Blueprint $table): void {
             $table->bigIncrements('id');
@@ -304,6 +417,9 @@ class LottoTicketsControllerTest extends TestCase
             $table->decimal('total_win_amount', 12, 2)->default(0);
             $table->decimal('refund_amount', 12, 2)->default(0);
             $table->string('status')->default('active');
+            $table->dateTime('cancelled_at')->nullable();
+            $table->unsignedBigInteger('cancelled_by')->nullable();
+            $table->text('reason')->nullable();
             $table->timestamps();
         });
 
@@ -320,6 +436,20 @@ class LottoTicketsControllerTest extends TestCase
             $table->decimal('potential_win_amount_at_time', 12, 2)->default(0);
             $table->string('result_status')->nullable();
             $table->decimal('win_amount', 12, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('wallet_transactions', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('member_id')->nullable();
+            $table->decimal('amount', 12, 2)->default(0);
+            $table->string('ref_type')->nullable();
+            $table->unsignedBigInteger('ref_id')->nullable();
+            $table->string('ref_code')->nullable();
+            $table->string('group_code')->nullable();
+            $table->string('created_by_type')->nullable();
+            $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->text('meta')->nullable();
             $table->timestamps();
         });
     }

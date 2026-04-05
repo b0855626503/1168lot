@@ -1,5 +1,25 @@
 # Decision Log
 
+## 2026-04-05 — Frontend Lotto Ticket APIs Must Surface Cancel Context (APPROVED)
+
+- ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+- behavior ใหม่:
+  - คง field เดิมเช่น `refund_amount`, `status`, `result_outcome` ไว้เหมือนเดิม
+  - เพิ่ม field cancel context ระดับโพย:
+    - `cancelled_at`
+    - `cancelled_by_name`
+    - `cancelled_by_type`
+    - `cancel_reason`
+  - การ resolve ผู้ยกเลิก:
+    - ใช้ `wallet_transactions(ref_type=LOTTO_CANCEL)` เป็น source หลัก
+    - fallback ไป `lotto_tickets.cancelled_by` ถ้าไม่พบ transaction context
+  - การ resolve สาเหตุ:
+    - ใช้ `lotto_tickets.reason` เป็นหลัก
+    - fallback ไป `wallet_transactions.meta.reason` ถ้า environment ยังไม่ migrate คอลัมน์ `reason`
+- เหตุผล:
+  - ให้หน้า history/detail ของสมาชิกแสดงได้ครบว่าโพยถูกยกเลิกเมื่อไร ใครเป็นผู้ยกเลิก และเพราะอะไร
+  - ลดภาระ frontend ที่ต้องไปประกอบข้อมูลยกเลิกจากหลาย endpoint เอง
+
 ## 2026-04-05 — Tickets-Cancel Report Splits Created Time from Latest Update Time (APPROVED)
 
 - ปรับรายงาน `admin /lotto/reports/tickets-cancel`

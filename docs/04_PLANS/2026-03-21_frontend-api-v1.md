@@ -68,9 +68,11 @@
 - `GET /api/v1/lotto/tickets` (ต้องมี token)
   - ประวัติโพย
   - ต้องมี field สรุปผลที่ frontend ใช้ได้ตรง ๆ เช่น `draw_status`, `result_outcome`, `result_message`
+  - ต้องมี cancel context ระดับโพยด้วย เช่น `cancelled_at`, `cancelled_by_name`, `cancelled_by_type`, `cancel_reason`, `refund_amount`
 - `GET /api/v1/lotto/tickets/{id}` (ต้องมี token)
   - รายละเอียดโพย
   - ต้องมีทั้ง summary ระดับโพยและผลระดับ `items[]` ที่อ่านได้ตรง ๆ โดยไม่ต้องเดาเองจาก raw status
+  - summary ระดับโพยต้องรวม cancel context ชุดเดียวกับ list
 - `POST /api/v1/lotto/tickets/{id}/cancel` (ต้องมี token)
   - ยกเลิกโพย (ตามเงื่อนไขระบบ)
   - policy ปัจจุบัน:
