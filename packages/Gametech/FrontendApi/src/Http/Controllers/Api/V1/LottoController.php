@@ -13,6 +13,7 @@ use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -308,7 +309,11 @@ class LottoController extends BaseController
     public function cancel(Request $request, int $id)
     {
         try {
-            $response = app(LottoTicketController::class)->cancel($request, $id);
+            $response = app(LottoTicketController::class)->cancel(
+                $request,
+                $id,
+                app(WalletTransactionService::class)
+            );
             if ($response instanceof JsonResponse) {
                 $payload = json_decode((string) $response->getContent(), true);
                 $message = (string) ($payload['message'] ?? '');

@@ -309,6 +309,15 @@
     - `won` / `lose` เมื่อ ticket ถูก settle แล้ว
     - `betting_open` ถ้างวดยัง `open`
     - `pending_result` ในเคสรอผล/รอประกาศผลที่ยังไม่ settle
+- `POST /api/v1/lotto/tickets/{id}/cancel`
+  - ใช้ได้เฉพาะ ticket ของสมาชิกคนนั้นที่ `status=active`
+  - draw ต้องยัง `open`
+  - ต้องยกเลิกก่อน `draw.close_at` อย่างน้อย `10` นาที
+  - จำกัดสิทธิ์ยกเลิกของสมาชิกไม่เกิน `4` ครั้งต่อวัน (นับจาก ticket ที่ `status=cancelled` และ `cancelled_at` อยู่ในวันปัจจุบัน)
+  - เมื่อยกเลิกสำเร็จ ระบบ:
+    - rollback `lotto_number_exposure.sold_amount`
+    - คืนเงินเข้ากระเป๋าสมาชิกผ่าน `wallet_transactions` (`ref_type=LOTTO_CANCEL`)
+    - update ticket เป็น `cancelled` พร้อม `cancelled_at/refund_amount`
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
 - `POST /api/v1/lotto/bet` ผ่าน `FrontendApi` ไปยัง `Gametech\Lotto\Services\BetService`

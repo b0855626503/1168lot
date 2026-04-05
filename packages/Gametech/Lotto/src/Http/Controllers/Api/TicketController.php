@@ -9,10 +9,14 @@ use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TicketController extends AppBaseController
 {
+    private const DAILY_CANCEL_LIMIT = 4;
+    private const CANCEL_CUTOFF_MINUTES = 10;
+
     public function index(Request $request): JsonResponse
     {
         $memberId = $this->resolveMemberId($request);
@@ -92,6 +96,9 @@ class TicketController extends AppBaseController
                 if ((string) ($ticket->draw->status ?? '') !== 'open') {
                     throw new \RuntimeException('ยกเลิกได้เฉพาะโพยที่อยู่ในงวดเปิดรับเท่านั้น');
                 }
+
+                $this->guardCancelWindow($ticket);
+                $this->guardDailyCancelLimit($memberId);
 
                 foreach ($ticket->items as $item) {
                     $exposure = LottoNumberExposure::query()
@@ -249,5 +256,34 @@ class TicketController extends AppBaseController
             'losing_item_count' => $losingCount,
             'pending_item_count' => max(0, $itemCount - $winningCount - $losingCount),
         ];
+    }
+
+    private function guardCancelWindow(LottoTicket $ticket): void
+    {
+        $closeAt = $ticket->draw?->close_at;
+
+        if (! $closeAt instanceof Carbon) {
+            throw new \RuntimeException('โพยนี้ไม่สามารถยกเลิกได้ เพราะไม่พบเวลาปิดรับ');
+        }
+
+        $cutoffAt = $closeAt->copy()->subMinutes(self::CANCEL_CUTOFF_MINUTES);
+        if (! now()->lt($cutoffAt)) {
+            throw new \RuntimeException('ยกเลิกโพยได้ก่อนเวลาปิดรับอย่างน้อย 10 นาทีเท่านั้น');
+        }
+    }
+
+    private function guardDailyCancelLimit(int $memberId): void
+    {
+        $today = now()->toDateString();
+
+        $dailyCancelledCount = LottoTicket::query()
+            ->where('member_id', $memberId)
+            ->where('status', 'cancelled')
+            ->whereDate('cancelled_at', $today)
+            ->count();
+
+        if ($dailyCancelledCount >= self::DAILY_CANCEL_LIMIT) {
+            throw new \RuntimeException('สมาชิกยกเลิกโพยได้ไม่เกินวันละ 4 ครั้ง');
+        }
     }
 }

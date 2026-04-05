@@ -1,5 +1,20 @@
 # Decision Log
 
+## 2026-04-05 — Member Ticket Cancel Is Limited to 4 Times Per Day and Must Be 10 Minutes Before Close (APPROVED)
+
+- ปรับ `POST /api/v1/lotto/tickets/{id}/cancel`
+- behavior ใหม่:
+  - ยังคงใช้ได้เฉพาะ ticket ของสมาชิกคนนั้นที่ `status=active`
+  - draw ต้องยัง `open`
+  - เพิ่ม time-window guard:
+    - ต้องยกเลิกก่อน `draw.close_at` อย่างน้อย `10` นาที
+  - เพิ่ม daily quota:
+    - สมาชิกยกเลิกโพยได้ไม่เกิน `4` ครั้งต่อวัน
+    - นับจาก ticket ที่ `status=cancelled` และ `cancelled_at` อยู่ในวันปัจจุบัน
+- เหตุผล:
+  - ป้องกันการยกเลิกตอนใกล้ปิดรับมากเกินไป
+  - จำกัด abuse จากการยกเลิกโพยซ้ำจำนวนมากในวันเดียวกัน
+
 ## 2026-04-05 — Frontend Lotto Ticket APIs Must Return Clear Result Summary Fields (APPROVED)
 
 - ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
