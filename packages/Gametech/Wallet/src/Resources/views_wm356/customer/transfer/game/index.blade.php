@@ -77,11 +77,11 @@
                     </table>
                     <br>
                     <p class="text-center text-warning">
-                        โยกเข้าเกมส์ ขั้นต่ำ {{ core()->currency($config->mintransfer) }}
+                        โยกเข้าเกมส์ ขั้นต่ำ {{ core()->currency($webconfig->mintransfer) }}
                         บาท</p>
-                    @if($config->mintransfer_pro != 0)
+                    @if($webconfig->mintransfer_pro != 0)
                         <p class="text-center text-warning">สามารถโยกเข้าเกม
-                            ได้เมื่อเงินในเกมเหลือน้อยกว่า {{ core()->currency($config->mintransfer_pro) }}
+                            ได้เมื่อเงินในเกมเหลือน้อยกว่า {{ core()->currency($webconfig->mintransfer_pro) }}
                             บาท (กรณีมีการรับโปรไปแล้ว)</p>
                     @endif
                     @if($promotions)

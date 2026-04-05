@@ -93,7 +93,7 @@
                                                 </div>
                                             </div>
 
-                                            <p class="text-center text-warning">ยอดถอนขั้นต่ำ {{ $config->minwithdraw }}
+                                            <p class="text-center text-warning">ยอดถอนขั้นต่ำ {{ $webconfig->minwithdraw }}
                                                 บาท</p>
                                             <button class="btn btn-primary btn-block shadow-box">แจ้งถอน</button>
                                         </div>

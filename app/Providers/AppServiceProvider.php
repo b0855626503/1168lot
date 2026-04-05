@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\DataTables\FractalTransformerCompat;
 use Gametech\Core\Core as CoreService;  // resolve ตรง ๆ
 use Gametech\Core\Tree;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -13,18 +14,49 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
+use Yajra\DataTables\DataTableAbstract;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
         $this->registerConfig();
+        $this->registerDataTableTransformerCompat();
     }
 
     protected function registerConfig(): void
     {
         $this->mergeConfigFrom(dirname(__DIR__) . '/../game/game.php',     'game');
 //        $this->mergeConfigFrom(dirname(__DIR__) . '/../game/gamefree.php', 'gamefree');
+    }
+
+    protected function registerDataTableTransformerCompat(): void
+    {
+        if (! class_exists(DataTableAbstract::class)) {
+            return;
+        }
+
+        if (! class_exists('Yajra\DataTables\Transformers\FractalTransformer', false)) {
+            class_alias(FractalTransformerCompat::class, 'Yajra\DataTables\Transformers\FractalTransformer');
+        }
+
+        $this->app->singleton('datatables.transformer', FractalTransformerCompat::class);
+
+        if (! DataTableAbstract::hasMacro('setTransformer')) {
+            DataTableAbstract::macro('setTransformer', function ($transformer) {
+                $this->transformer = $transformer;
+
+                return $this;
+            });
+        }
+
+        if (! DataTableAbstract::hasMacro('setSerializer')) {
+            DataTableAbstract::macro('setSerializer', function ($serializer) {
+                $this->serializer = $serializer;
+
+                return $this;
+            });
+        }
     }
 
     public function boot(): void
@@ -150,7 +182,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if (! $core) {
                     $view->with([
-                        'config'     => null,
+                        'webconfig'  => null,
                         'menu'       => $tree,
                         'notice'     => [],
                         'notice_new' => [],
@@ -170,7 +202,7 @@ class AppServiceProvider extends ServiceProvider
 
                 $bag = $this->rememberRequestValue('front_view_bag', function () use ($core) {
                     try {
-                        $config    = $core->getConfigData();
+                        $webconfig = $core->getConfigData();
                         $contacts  = $core->getContact();
                         $notice    = $core->getNoticeData();
                         $noticeNew = $core->getNoticeNewData();
@@ -179,16 +211,16 @@ class AppServiceProvider extends ServiceProvider
                         $refill = '';
                         $single = null;
 
-                        if (($config->seamless ?? 'N') === 'Y') {
+                        if (($webconfig->seamless ?? 'N') === 'Y') {
                             $refill = $core->getRefill();
-                        } elseif (($config->multigame_open ?? 'N') === 'N') {
+                        } elseif (($webconfig->multigame_open ?? 'N') === 'N') {
                             $single = $core->getGame();
                         }
 
-                        return compact('config', 'contacts', 'notice', 'noticeNew', 'userdata', 'refill', 'single', 'menus');
+                        return compact('webconfig', 'contacts', 'notice', 'noticeNew', 'userdata', 'refill', 'single', 'menus');
                     } catch (\Throwable $e) {
                         return [
-                            'config'    => null,
+                            'webconfig' => null,
                             'contacts'  => [],
                             'notice'    => [],
                             'noticeNew' => [],
@@ -201,7 +233,7 @@ class AppServiceProvider extends ServiceProvider
                 });
 //                dd($bag['userdata']);
 
-                $view->with('config',     $bag['config']);
+                $view->with('webconfig',  $bag['webconfig']);
                 $view->with('menu',       $tree);
                 $view->with('notice',     $bag['notice']);
                 $view->with('notice_new', $bag['noticeNew']);
@@ -225,7 +257,7 @@ class AppServiceProvider extends ServiceProvider
     private function composeAdminViews(): void
     {
         view()->composer(['admin::layouts.*', 'admin::module.*', 'admin::auth.login', 'admin::2fa.*'], function ($view) {
-            $config = $this->rememberRequestValue('admin_view_config', function () {
+            $webconfig = $this->rememberRequestValue('admin_view_config', function () {
                 if ($core = $this->safeCore()) {
                     try {
                         return $core->getConfigData();
@@ -237,7 +269,7 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             });
 
-            $view->with('config', $config);
+            $view->with('webconfig', $webconfig);
         });
     }
 
@@ -266,4 +298,3 @@ class AppServiceProvider extends ServiceProvider
         return $resolver();
     }
 }
-

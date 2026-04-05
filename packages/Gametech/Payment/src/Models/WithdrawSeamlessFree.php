@@ -12,7 +12,7 @@ use Gametech\Payment\Contracts\WithdrawSeamlessFree as WithdrawSeamlessFreeContr
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Jenssegers\Mongodb\Relations\HasOne;
+use MongoDB\Laravel\Relations\HasOne;
 
 class WithdrawSeamlessFree extends Model implements WithdrawSeamlessFreeContract
 {

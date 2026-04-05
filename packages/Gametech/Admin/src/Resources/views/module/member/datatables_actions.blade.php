@@ -1,4 +1,4 @@
-@if($config->seamless == 'Y')
+@if($webconfig->seamless == 'Y')
     <div class="btn-group btn-group-sm">
         <button type="button" class="btn btn-primary " onclick="showModalNew({{ $code }},'gameuser')"><i
                 class="fas fa-gamepad"></i> Game
@@ -33,7 +33,7 @@
     </div>
 @else
 
-    @if($config->multigame_open == 'Y')
+    @if($webconfig->multigame_open == 'Y')
         <div class="btn-group btn-group-sm">
             <button type="button" class="btn btn-primary " onclick="showModalNew({{ $code }},'gameuser')"><i
                     class="fas fa-gamepad"></i> Game

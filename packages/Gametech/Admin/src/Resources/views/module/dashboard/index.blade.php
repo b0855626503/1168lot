@@ -592,7 +592,7 @@
             $permAlerts = bouncer()->hasPermission('dashboard.alert');
             $adminUser = auth()->guard('admin')->user();
             $canSummaryResync = $adminUser && (int) ($adminUser->role_id ?? 0) === 1;
-            $freeCreditOpen = ($config->freecredit_open ?? 'N') === 'Y';
+            $freeCreditOpen = ($webconfig->freecredit_open ?? 'N') === 'Y';
         @endphp
         <section class="content text-xs" id="dashboard-app">
             <div class="container-fluid">

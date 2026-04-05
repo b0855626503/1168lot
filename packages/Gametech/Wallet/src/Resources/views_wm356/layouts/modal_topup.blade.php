@@ -97,7 +97,7 @@
                                                     </div>
                                                 @endif
 
-                                                @if($config->qrscan == 'Y')
+                                                @if($webconfig->qrscan == 'Y')
                                                     <div class="-promotion-box-wrapper">
                                                         <button type="button"
                                                                 onclick="topupSelect('topup_qrscan')"
@@ -223,7 +223,7 @@
                                         </div>
                                     </div>
 
-                                    @if($config->qrscan == 'Y')
+                                    @if($webconfig->qrscan == 'Y')
                                         <div id="topup_qrscan" class="-deposit-form-inner-wrapper" style="display:none">
 
                                             <br>
@@ -259,8 +259,8 @@
 
                                                             {{--                                                        <div class="-spacer">--}}
                                                             {{--                                                            <div class="js-turnover text-center">--}}
-                                                            {{--                                                                <div class="-turnover-wrapper">Rate : <span>{{ $config->rate }}</span>--}}
-                                                            {{--                                                                    --}}{{--                                                                <div class="-turnover-wrapper">Last Update : <span>{{ $config->rate_update }}</span>--}}
+                                                            {{--                                                                <div class="-turnover-wrapper">Rate : <span>{{ $webconfig->rate }}</span>--}}
+                                                            {{--                                                                    --}}{{--                                                                <div class="-turnover-wrapper">Last Update : <span>{{ $webconfig->rate_update }}</span>--}}
                                                             {{--                                                                </div>--}}
                                                             {{--                                                            </div>--}}
                                                             {{--                                                        </div>--}}

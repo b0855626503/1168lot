@@ -15,37 +15,37 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <link rel="icon" type="image/x-icon" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <link rel="apple-touch-icon" sizes="60x60" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="apple-mobile-web-app-title" content="{{ ucwords($config->sitename) }} - {{ $config->title }}"/>
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <link rel="icon" type="image/x-icon" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="apple-mobile-web-app-title" content="{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}"/>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="keywords" content="slot, casino, pgslot, joker, บาคาร่าออนไลน์, พนันออนไลน์, เว็บพนันออนไลน์, คาสิโนออนไลน์, บาคาร่า, บอลออนไลน์, สล็อต, ค่าน้ำดีที่สุด, เว็บพนัน, เกมสล็อต, นักพนัน"/>
 
-    <meta property="og:title" content="{{ ucwords($config->sitename) }} - {{ $config->title }}"/>
+    <meta property="og:title" content="{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}"/>
     <meta property="og:description"
-          content="{{ $config->description }}"/>
+          content="{{ $webconfig->description }}"/>
     <meta property="og:locale" content="{{ config('app.locale') }}"/>
-    <meta property="og:site_name" content="{{ ucwords($config->sitename) }}"/>
+    <meta property="og:site_name" content="{{ ucwords($webconfig->sitename) }}"/>
     <meta property="og:url" content="{{ url('') }}"/>
-    <meta property="og:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+    <meta property="og:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 
     <link rel="canonical" href=""/>
 
     <meta name="twitter:site" content="@twitter"/>
     <meta name="twitter:card" content="summary"/>
-    <meta name="twitter:title" content="{{ ucwords($config->sitename) }} - {{ $config->title }}"/>
+    <meta name="twitter:title" content="{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}"/>
     <meta name="twitter:description"
-          content="{{ $config->description }}"/>
-    <meta name="twitter:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+          content="{{ $webconfig->description }}"/>
+    <meta name="twitter:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
 
 
-    <link preload  href="{!! core()->imgurl($config->favicon,'img') !!}" as="style"
+    <link preload  href="{!! core()->imgurl($webconfig->favicon,'img') !!}" as="style"
           onload="this.onload=null;this.rel='icon'" crossorigin=""/>
     <noscript>
-        <link rel="icon" href="{!! core()->imgurl($config->favicon,'img') !!}"/>
+        <link rel="icon" href="{!! core()->imgurl($webconfig->favicon,'img') !!}"/>
     </noscript>
     <meta name="msapplication-TileColor" content="#ffffff"/>
     <meta name="msapplication-TileImage" content="/assets/wm356/images/ms-icon-144x144.png"/>
@@ -68,27 +68,27 @@
 
     <style>
         .x-header {
-            background: {{ ($config->wallet_navbar_color? $config->wallet_navbar_color :'#1d1d1d') }} !important;
+            background: {{ ($webconfig->wallet_navbar_color? $webconfig->wallet_navbar_color :'#1d1d1d') }} !important;
         }
         .x-footer.-ezl .-copy-right-container {
-            background-color: {{ ($config->wallet_footer_color?$config->wallet_footer_color:'#255b48') }} !important;
+            background-color: {{ ($webconfig->wallet_footer_color?$webconfig->wallet_footer_color:'#255b48') }} !important;
         }
         {{--body, html {--}}
         {{--    height: 100%;--}}
         {{--    font-family: FC Iconic Text, Helvetica Neue, Helvetica, Arial, sans-serif;--}}
-        {{--    background-color: {{ ($config->wallet_body_start_color? $config->wallet_body_start_color :'#0f0f0f') }} !important;--}}
+        {{--    background-color: {{ ($webconfig->wallet_body_start_color? $webconfig->wallet_body_start_color :'#0f0f0f') }} !important;--}}
         {{--}--}}
         {{--.x-provider-category.-provider_casinos {--}}
-        {{--    background: {{ ($config->wallet_body_start_color? $config->wallet_body_start_color :'#0f0f0f') }} !important;--}}
+        {{--    background: {{ ($webconfig->wallet_body_start_color? $webconfig->wallet_body_start_color :'#0f0f0f') }} !important;--}}
         {{--}--}}
 
         {{--#main__content {--}}
-        {{--    background: {{ ($config->wallet_body_start_color? $config->wallet_body_start_color :'#0f0f0f') }} !important;--}}
+        {{--    background: {{ ($webconfig->wallet_body_start_color? $webconfig->wallet_body_start_color :'#0f0f0f') }} !important;--}}
         {{--}--}}
     </style>
 
-    @if($config->header_code)
-        {!! $config->header_code !!}
+    @if($webconfig->header_code)
+        {!! $webconfig->header_code !!}
     @endif
 </head>
 

@@ -61,7 +61,7 @@
 
         <div class="x-index-content-main-container -anon">
 
-            @if($config->verify_sms == 'Y')
+            @if($webconfig->verify_sms == 'Y')
                 @include('wallet::customer.sessions.step')
             @else
                 @include('wallet::customer.sessions.normal')
@@ -173,16 +173,16 @@
                             <a class="-link-wrapper" href="{{ route('customer.home.index') }}">
                                 <picture>
                                     <source type="image/webp"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <source type="image/png?v=2"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <img
                                             alt="logo image"
                                             class="img-fluid lazyload -logo lazyload"
                                             width="180"
                                             height="42"
-                                            data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
-                                            src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                            data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
+                                            src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                                     />
                                 </picture>
                             </a>

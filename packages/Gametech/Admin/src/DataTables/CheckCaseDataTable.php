@@ -17,7 +17,7 @@ use Yajra\DataTables\Services\DataTable;
 class CheckCaseDataTable extends DataTable
 {
 
-    protected $exportClass = CheckCaseExport::class;
+    protected string $exportClass = CheckCaseExport::class;
 
     /**
      * Build DataTable class.
@@ -155,7 +155,7 @@ class CheckCaseDataTable extends DataTable
      *
      * @return string
      */
-    protected function filename()
+    protected function filename(): string
     {
         return 'checkcase_datatable_' . date('Y_M_d_H_i_s');
     }

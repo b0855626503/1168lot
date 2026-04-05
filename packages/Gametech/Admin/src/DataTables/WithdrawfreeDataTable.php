@@ -145,7 +145,7 @@ class WithdrawfreeDataTable extends DataTable
      *
      * @return string
      */
-    protected function filename()
+    protected function filename(): string
     {
         return 'withdraw_free_datatable_' . time();
     }

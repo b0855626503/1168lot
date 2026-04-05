@@ -11,10 +11,10 @@
 
         <div id="headerBrand">
             <a class="navbar-brand" href="{{ route('customer.home.index') }}">
-                <img alt="{{ $config->description }}" class="-logo -default img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
-                <img alt="{{ $config->description }}" class="-logo -invert img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -default img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -invert img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
             </a>
         </div>
 
@@ -22,32 +22,32 @@
             <div class="-menu-container">
 
                 <a class="-menu-link" href="{{ route('customer.cats.list', ['id' => 'slot']) }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-slot.png?v=2') }}">
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-slot-active.png?v=2') }}">
                     <span>{{ __('app.home.slot') }}</span>
                 </a>
 
                 <a class="-menu-link" href="{{ route('customer.cats.list', ['id' => 'casino']) }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-casino.png?v=2') }}">
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-casino-active.png?v=2') }}">
                     <span>{{ __('app.home.casino') }}</span>
                 </a>
 
                 <a class="-menu-link" href="{{ route('customer.cats.list', ['id' => 'sport']) }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-sport.png?v=2') }}">
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid" width="40" height="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid" width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-sport-active.png?v=2') }}">
                     <span>{{ __('app.home.sport') }}</span>
                 </a>
                 <a class="-menu-link" href="{{ route('customer.promotion.index') }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40"
                          height="40" src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-promotion.png?v=2') }}"/>
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid"
                          width="40" height="40"
                          src="{{ url('assets/wm356/web/ezl-wm-356/img/ic-menu-promotion-active.png?v=2') }}"/>
                     <span>{{ __('app.login.promotion') }}</span>
@@ -60,12 +60,12 @@
 
         <div id="headerContent">
             <div class="x-logged">
-{{--                <a href="{{ $config->linelink }}" class="x-header-btn-support -in-anon" target="_blank"--}}
+{{--                <a href="{{ $webconfig->linelink }}" class="x-header-btn-support -in-anon" target="_blank"--}}
 {{--                   rel="noreferrer nofollow">--}}
 {{--                    <picture>--}}
 {{--                        <source type="image/webp" srcset="/assets/wm356/web/ezl-wm-356/img/ic-line-support.webp?v=1"/>--}}
 {{--                        <source type="image/png?v=2" srcset="/assets/wm356/web/ezl-wm-356/img/ic-line-support.png?v=1"/>--}}
-{{--                        <img alt="{{ $config->description }}" class="img-fluid -ic"--}}
+{{--                        <img alt="{{ $webconfig->description }}" class="img-fluid -ic"--}}
 {{--                             width="120" height="39" src="/assets/wm356/web/ezl-wm-356/img/ic-line-support.png?v=1"/>--}}
 {{--                    </picture>--}}
 {{--                    <picture>--}}
@@ -73,7 +73,7 @@
 {{--                                srcset="/assets/wm356/web/ezl-wm-356/img/ic-line-support-mobile.webp?v=2"/>--}}
 {{--                        <source type="image/png?v=2"--}}
 {{--                                srcset="/assets/wm356/web/ezl-wm-356/img/ic-line-support-mobile.png?v=2"/>--}}
-{{--                        <img alt="{{ $config->description }}" class="img-fluid -ic -mobile"--}}
+{{--                        <img alt="{{ $webconfig->description }}" class="img-fluid -ic -mobile"--}}
 {{--                             width="28" height="28"--}}
 {{--                             src="/assets/wm356/web/ezl-wm-356/img/ic-line-support-mobile.png?v=2"/>--}}
 {{--                    </picture>--}}
@@ -295,7 +295,7 @@
                                                 <span class="-text-menu">แนะนำ</span>
                                             </a>
                                         </li>
-                                        @if($config->wheel_open === 'Y')
+                                        @if($webconfig->wheel_open === 'Y')
                                             <li class="nav-item -promotion-return-by-user">
                                                 <a href="{{ route('customer.spin.index') }}" class="nav-link">
 
@@ -322,7 +322,7 @@
                                                 </button>
                                             </li>
                                         @else
-                                            @if($config->freecredit_open === 'N')
+                                            @if($webconfig->freecredit_open === 'N')
                                                 <li class="nav-item -coupon js-account-approve-aware">
                                                     <button type="button"
                                                             class="nav-link js-close-account-sidebar -coupon js-account-approve-aware"
@@ -368,7 +368,7 @@
                                                 </a>
                                             </li>
                                         @else
-                                            @if($config->freecredit_open === 'Y')
+                                            @if($webconfig->freecredit_open === 'Y')
                                                 <li class="nav-item -promotion-return-by-user">
                                                     <a class="nav-link" href="{{ route('customer.credit.index') }}">
                                                         <img

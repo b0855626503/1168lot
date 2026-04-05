@@ -19,15 +19,15 @@ class LottoAclCoverageTest extends TestCase
         $content = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Config/acl.php');
 
         $this->assertNotFalse($content);
-        // ACL must contain only routes that are present in Lotto admin menu.
+        // ACL must follow the current docs-backed CRUD split policy for Lotto admin actions.
         $this->assertStringNotContainsString("admin.lotto.member_permissions.index", $content);
         $this->assertStringNotContainsString("admin.lotto.member_permissions.create", $content);
         $this->assertStringNotContainsString("admin.lotto.member_permissions.update", $content);
-        $this->assertStringNotContainsString("admin.lotto.groups.create", $content);
-        $this->assertStringNotContainsString("admin.lotto.groups.update", $content);
-        $this->assertStringNotContainsString("admin.lotto.markets.create", $content);
-        $this->assertStringNotContainsString("admin.lotto.markets.update", $content);
-        $this->assertStringContainsString("admin.lotto.rate_plans.index", $content);
+        $this->assertStringContainsString("admin.lotto.groups.create", $content);
+        $this->assertStringContainsString("admin.lotto.groups.update", $content);
+        $this->assertStringContainsString("admin.lotto.markets.create", $content);
+        $this->assertStringContainsString("admin.lotto.markets.update", $content);
+        $this->assertStringNotContainsString("admin.lotto.rate_plans.index", $content);
         $this->assertStringNotContainsString("admin.lotto.settings.bet_types", $content);
     }
 }

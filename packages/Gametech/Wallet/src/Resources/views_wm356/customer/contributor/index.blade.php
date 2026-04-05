@@ -212,12 +212,12 @@
                                                 <div>
                                                     <div class="el-input my-1">
 
-                                                        @if($config->contributor)
+                                                        @if($webconfig->contributor)
                                                             <input id="friendlink" class="form-control"
                                                                    outsideclick="true"
                                                                    data-popover="คัดลอกสำเร็จ"
                                                                    type="text"
-                                                                   value="{{ $config->contributor }}/contributor/{{ $profile->code }}">
+                                                                   value="{{ $webconfig->contributor }}/contributor/{{ $profile->code }}">
                                                         @else
                                                             <input id="friendlink" class="form-control"
                                                                    outsideclick="true"

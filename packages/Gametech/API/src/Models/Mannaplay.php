@@ -2,13 +2,13 @@
 
 namespace Gametech\API\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use Gametech\API\Contracts\Mannaplay as MannaplayContract;
 
 class Mannaplay extends Model implements MannaplayContract
 {
     protected $connection = 'mongodb';
-    protected $collection = 'mannaplay';
+    protected $table = 'mannaplay';
 
     protected $primaryKey = 'id';
 }

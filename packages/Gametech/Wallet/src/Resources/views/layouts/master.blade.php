@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
 
@@ -24,12 +24,12 @@
     <!-- Facebook shared -->
     <meta property="og:url" content=""/>
     <meta property="og:type" content="article"/>
-    <meta property="og:title" content="{{ $config->title }}"/>
-    <meta property="og:description" content="{{ $config->description }}"/>
-    <meta property="og:image" content="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+    <meta property="og:title" content="{{ $webconfig->title }}"/>
+    <meta property="og:description" content="{{ $webconfig->description }}"/>
+    <meta property="og:image" content="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
     <meta name='robots' content='max-image-preview:large'/>
-    @if($config->header_code)
-        {!! $config->header_code !!}
+    @if($webconfig->header_code)
+        {!! $webconfig->header_code !!}
     @endif
 </head>
 
@@ -39,7 +39,7 @@
         <!-- Sidebar  -->
         <div class="insidebarleft">
             <a href="{{ route('customer.home.index') }}">
-                {!! core()->showImg($config->logo,'img','','','') !!}
+                {!! core()->showImg($webconfig->logo,'img','','','') !!}
             </a>
             <ul>
 {{--                @if(request()->routeIs('customer.credit.*'))--}}
@@ -69,7 +69,7 @@
                         {{ __('app.home.changepass') }}
                     </a>
                 </li>
-                @if($config->money_tran_open === 'Y')
+                @if($webconfig->money_tran_open === 'Y')
                     <li>
                         <a href="{{ route('customer.money.index') }}">
                             <i class="fas fa-hands-helping"></i>
@@ -86,7 +86,7 @@
                 </li>
                 @endif
                 @if(!request()->routeIs('customer.credit.*'))
-                    @if($config->wheel_open === 'Y')
+                    @if($webconfig->wheel_open === 'Y')
                         <li>
                             <a href="{{ route('customer.spin.index') }}">
                                 <i class="fas fa-bullseye"></i>
@@ -96,7 +96,7 @@
                     @endif
                 @endif
                 @if(!request()->routeIs('customer.credit.*'))
-                    @if($config->freecredit_open === 'Y')
+                    @if($webconfig->freecredit_open === 'Y')
                         <li>
                             <a href="{{ route('customer.credit.index') }}">
                                 <img src="/images/icon/return.png">
@@ -127,7 +127,7 @@
                         </a>
                     </li>
                 @endif
-{{--                @if($config->pro_onoff === 'Y')--}}
+{{--                @if($webconfig->pro_onoff === 'Y')--}}
 {{--                    <li>--}}
 {{--                        <a href="{{ route('customer.promotion.index') }}">--}}
 {{--                            <i class="far fa-gift"></i>--}}
@@ -177,11 +177,11 @@
                 <div class="leftscb">
                     @if(request()->routeIs('customer.credit.*'))
                         <a href="{{ route('customer.credit.index') }}">
-                            {!! core()->showImg($config->logo,'img','','','') !!}
+                            {!! core()->showImg($webconfig->logo,'img','','','') !!}
                         </a>
                     @else
                     <a href="{{ route('customer.home.index') }}">
-                        {!! core()->showImg($config->logo,'img','','','') !!}
+                        {!! core()->showImg($webconfig->logo,'img','','','') !!}
                     </a>
                     @endif
                 </div>
@@ -214,7 +214,7 @@
                                 {{ __('app.home.changepass') }}
                             </a>
                         </li>
-                        @if($config->money_tran_open === 'Y')
+                        @if($webconfig->money_tran_open === 'Y')
                             <li>
                                 <a href="{{ route('customer.money.index') }}">
                                     <i class="fas fa-hands-helping"></i>
@@ -229,7 +229,7 @@
                             </a>
                         </li>
                         {{--                        @if(!request()->routeIs('customer.credit.*'))--}}
-                        @if($config->wheel_open === 'Y')
+                        @if($webconfig->wheel_open === 'Y')
                             <li>
                                 <a href="{{ route('customer.spin.index') }}">
                                     <i class="fas fa-bullseye"></i>
@@ -239,7 +239,7 @@
                         @endif
                         {{--                        @endif--}}
                         @if(!request()->routeIs('customer.credit.*'))
-                        @if($config->freecredit_open === 'Y')
+                        @if($webconfig->freecredit_open === 'Y')
                             <li>
                                 <a href="{{ route('customer.credit.index') }}">
                                     <img src="/images/icon/return.png">
@@ -270,7 +270,7 @@
                                 </a>
                             </li>
                         @endif
-                        @if($config->pro_onoff === 'Y')
+                        @if($webconfig->pro_onoff === 'Y')
                             <li>
                                 <a href="{{ route('customer.promotion.index') }}">
                                     <i class="far fa-gift"></i>
@@ -279,7 +279,7 @@
                             </li>
                         @endif
                             <li>
-                                <a href="{{ $config->linelink }}" target="_blank">
+                                <a href="{{ $webconfig->linelink }}" target="_blank">
                                     <i class="fab fa-line"></i>
                                     {{ __('app.home.contact') }}
                                 </a>
@@ -447,7 +447,7 @@
         <span class="-ic-img">
           <span class="-text d-block">{{ __('app.home.contact') }}</span>
           <a target="_blank" href="
-          {{ $config->linelink }}">
+          {{ $webconfig->linelink }}">
             <img src="/images/icon/support-mobile.webp">
           </a>
         </span>
@@ -478,7 +478,9 @@
 </script>
 <script src="{{ mix('js/manifest.js') }}"></script>
 <script src="{{ mix('js/vendor.js') }}"></script>
+@include('partials.broadcast-config')
 <script src="{{ mix('js/app.js') }}" id="mainscript" baseUrl="{{ url()->to('/') }}"></script>
+@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/member/broadcasting/auth'])
 @stack('scripts')
 <script src="{{ asset('js/js.js?'.time()) }}"></script>
 <script src="{{ asset('lang-').app()->getLocale() }}.js?time={{ time() }}"></script>
@@ -514,5 +516,3 @@
 </script>
 </body>
 </html>
-
-

@@ -2,13 +2,13 @@
 
 namespace Gametech\API\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use Gametech\API\Contracts\PGSoft as PGSoftContract;
 
 class PGSoft extends Model implements PGSoftContract
 {
     protected $connection = 'mongodb';
-    protected $collection = 'pgsoft';
+    protected $table = 'pgsoft';
 
     protected $primaryKey = 'id';
 

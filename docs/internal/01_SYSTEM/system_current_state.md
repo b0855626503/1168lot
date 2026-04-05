@@ -1,13 +1,33 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-05
+อัปเดตล่าสุด: 2026-04-06
 
 ## ภาพรวมระบบ
 
-- Framework: Laravel 8
+- Framework: Laravel 10.50.2
 - Architecture: Modular (Konekt Concord)
 - หลัก domain สำคัญ: Admin, Wallet, Payment, API, Lotto
 - Lotto ใช้สถานะงวดหลัก: `draft -> open -> closed -> resulted`
+- package baseline หลังอัปเกรดรอบนี้:
+  - MongoDB driver ใช้ `mongodb/laravel-mongodb`
+  - DataTables ใช้ชุด `yajra/laravel-datatables-{oracle,html,buttons}` เวอร์ชัน Laravel 10 path
+  - legacy middleware packages `fideloper/proxy` และ `fruitcake/laravel-cors` ถูกถอดออกจาก runtime path แล้ว
+  - package ที่ไม่ได้ใช้งานจริงและถูกถอดออกแล้ว: `google/apiclient`, `irazasyed/telegram-bot-sdk`, `laravel/scout`, `barryvdh/laravel-debugbar`
+- validation baseline หลังอัปเกรด:
+  - `php artisan --version` และ `php artisan about --only=environment` boot ผ่านบน Laravel 10
+  - `php artisan route:list` ไม่ถูก block จาก controller constructor ที่ยิง DB ระหว่าง console bootstrap แล้ว
+
+## Admin Maintenance / Version Display
+
+- admin login และ admin header ยังแสดง installed version ได้จาก config `self-update.version_installed`
+- package `codedge/laravel-selfupdater` ถูกถอดออกจากระบบแล้วในเส้นทาง Laravel 10 upgrade
+- route เดิมของ admin ยังอยู่:
+  - `admin.update.index`
+  - `admin.checkupdate.index`
+- แต่ route ชุดนี้ไม่ทำ in-app auto-update อีกต่อไป:
+  - `update` จะ redirect กลับพร้อมข้อความแจ้งว่า self-update ถูกถอดออกแล้ว
+  - `checkupdate` แสดง current version และแจ้งว่าไม่มี available version ผ่าน in-app updater
+- deployment/update policy ปัจจุบันต้องใช้ external deployment flow แทน self-update ในแอป
 
 ## นโยบายแก้ไขงวดหวย (Admin)
 

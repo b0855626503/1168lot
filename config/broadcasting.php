@@ -11,11 +11,11 @@ return [
     | framework when an event needs to be broadcast. You may set this to
     | any of the connections defined in the "connections" array below.
     |
-    | Supported: "pusher", "redis", "log", "null"
+    | Supported: "reverb", "pusher", "redis", "log", "null"
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'null'),
+    'default' => env('BROADCAST_CONNECTION', env('BROADCAST_DRIVER', 'null')),
 
     /*
     |--------------------------------------------------------------------------
@@ -30,26 +30,39 @@ return [
 
     'connections' => [
 
+        'reverb' => [
+            'driver' => 'reverb',
+            'key' => env('REVERB_APP_KEY'),
+            'secret' => env('REVERB_APP_SECRET'),
+            'app_id' => env('REVERB_APP_ID'),
+            'options' => [
+                'host' => env('REVERB_HOST', '127.0.0.1'),
+                'port' => env('REVERB_PORT', 8080),
+                'scheme' => env('REVERB_SCHEME', 'http'),
+                'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
+                'path' => env('REVERB_SERVER_PATH', ''),
+            ],
+            'client_options' => [
+                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+            ],
+        ],
+
         'pusher' => [
             'driver' => 'pusher',
             'key' => env('PUSHER_APP_KEY'),
             'secret' => env('PUSHER_APP_SECRET'),
             'app_id' => env('PUSHER_APP_ID'),
             'options' => [
-                'encrypted' => false,
-                'useTLS' => false,
-                'host' => '127.0.0.1',
-                'port' => 6001,
-                'scheme' => 'http',
+                'encrypted' => env('PUSHER_SCHEME', 'http') === 'https',
+                'useTLS' => env('PUSHER_SCHEME', 'http') === 'https',
+                'host' => env('PUSHER_HOST', '127.0.0.1'),
+                'port' => env('PUSHER_PORT', 6001),
+                'scheme' => env('PUSHER_SCHEME', 'http'),
                 'curl_options' => [
                     CURLOPT_SSL_VERIFYHOST => 0,
                     CURLOPT_SSL_VERIFYPEER => 0,
                 ]
             ],
-        ],
-        'client_options' => [
-            'verify' => false,
-            // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
         ],
 
         'redis' => [

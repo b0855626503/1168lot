@@ -84,7 +84,7 @@
                     </tbody></table>
                 <br>
                 <p class="text-center text-warning">
-                    {{ __('app.home.withdraw_min') }} {{ $config->minwithdraw }}
+                    {{ __('app.home.withdraw_min') }} {{ $webconfig->minwithdraw }}
                     {{ __('app.home.withdraw_baht') }}</p>
                 <button class="moneyBtn"> {{ __('app.home.withdraw') }} </button>
             </div>

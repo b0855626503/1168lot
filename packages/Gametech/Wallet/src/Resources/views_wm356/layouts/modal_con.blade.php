@@ -61,15 +61,15 @@
                             <a class="-link-wrapper" href="{{ route('customer.home.index') }}">
                                 <picture>
                                     <source type="image/webp"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <source type="image/png?v=2"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <img
                                             alt="logo image" loading="lazy" fetchpriority="low"
                                             class="img-fluid lazyload -logo lazyload"
                                             width="180"
                                             height="42"
-                                            data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                            data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                                             src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                                     />
                                 </picture>
@@ -186,7 +186,7 @@
                             </div>
                             <div class="col-6 -wrapper-box">
                                 <a
-                                        href="{{ $config->linelink }}"
+                                        href="{{ $webconfig->linelink }}"
                                         class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
                                         target="_blank"
                                         rel="noopener nofollow"
@@ -235,16 +235,16 @@
                             <a class="-link-wrapper" href="{{ route('customer.home.index') }}">
                                 <picture>
                                     <source type="image/webp"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <source type="image/png?v=2"
-                                            data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                            data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                     <img
                                             alt="logo image" loading="lazy" fetchpriority="low"
                                             class="img-fluid lazyload -logo lazyload"
                                             width="180"
                                             height="42"
-                                            data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
-                                            src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                            data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
+                                            src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                                     />
                                 </picture>
                             </a>
@@ -367,7 +367,7 @@
                             </div>
                             <div class="col-6 -wrapper-box">
                                 <a
-                                        href="{{ $config->linelink }}"
+                                        href="{{ $webconfig->linelink }}"
                                         class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
                                         target="_blank"
                                         rel="noopener nofollow"
@@ -420,8 +420,8 @@
                                 class="img-fluid lazyload -img" loading="lazy" fetchpriority="low"
                                 width="400"
                                 height="150"
-                                data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
-                                src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
+                                src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                         />
                     </a>
 
@@ -481,7 +481,7 @@
                                 <span class="-text-menu">{{ __('app.home.history') }}</span>
                             </button>
                         </li>
-                        @if($config->faststart_open === 'Y')
+                        @if($webconfig->faststart_open === 'Y')
                         <li class="nav-item -promotion-return-by-user">
                             <a href="{{ route('customer.contributor.index') }}" class="nav-link">
 
@@ -493,7 +493,7 @@
                             </a>
                         </li>
                         @endif
-                        @if($config->wheel_open === 'Y')
+                        @if($webconfig->wheel_open === 'Y')
                             <li class="nav-item -promotion-return-by-user">
                                 <a href="{{ route('customer.spin.index') }}" class="nav-link">
 
@@ -525,7 +525,7 @@
                                 </button>
                             </li>
                         @else
-                            @if($config->freecredit_open === 'N')
+                            @if($webconfig->freecredit_open === 'N')
                                 <li class="nav-item -coupon">
                                     <button
                                             type="button"
@@ -573,7 +573,7 @@
                                 </a>
                             </li>
                         @else
-                            @if($config->freecredit_open === 'Y')
+                            @if($webconfig->freecredit_open === 'Y')
                                 <li class="nav-item -promotion-return-by-user">
                                     <a href="{{ route('customer.credit.index') }}" class="nav-link">
 
@@ -646,7 +646,7 @@
                                 <div class="x-admin-contact text-center">
                             <span class="x-text-with-link-component">
                                 <label class="-text-message">{{ __('app.home.problem') }}</label>
-                                <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">
+                                <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">
                                     <u>{{ __('app.home.customer_service') }}</u>
                                 </a>
                             </span>
@@ -672,8 +672,8 @@
                                             {{ __('app.home.withdraw') }}
                                         </button>
 
-                                        @if($config->freecredit_open == 'Y')
-                                            @if($config->wheel_open == 'Y')
+                                        @if($webconfig->freecredit_open == 'Y')
+                                            @if($webconfig->wheel_open == 'Y')
                                                 <button type="button" class="btn btn-secondary"
                                                         onclick="LoadHistory2('spin')">
                                                     {{ __('app.home.wheel') }}
@@ -704,8 +704,8 @@
                                         {{--                                                onclick="LoadHistory('transfer')">--}}
                                         {{--                                            โยก--}}
                                         {{--                                        </button>--}}
-                                        @if($config->freecredit_open == 'N')
-                                            @if($config->wheel_open == 'Y')
+                                        @if($webconfig->freecredit_open == 'N')
+                                            @if($webconfig->wheel_open == 'Y')
                                                 <button type="button" class="btn btn-secondary"
                                                         onclick="LoadHistory('spin')">
                                                     {{ __('app.home.wheel') }}
@@ -782,7 +782,7 @@
                                                 <i class="fas fa-times"></i>
                                             </a>
                                         </div>
-                                        @if($config->wheel_open == 'Y')
+                                        @if($webconfig->wheel_open == 'Y')
                                             <div class="-promotion-box-wrapper">
                                                 <button type="button"
                                                         onclick="openPopup('BONUS', '{{ __('app.bonus.wheel') }}')"
@@ -810,7 +810,7 @@
                                                 </a>
                                             </div>
                                         @endif
-                                        @if($config->faststart_open == 'Y')
+                                        @if($webconfig->faststart_open == 'Y')
                                             <div class="-promotion-box-wrapper">
                                                 <button type="button"
                                                         onclick="openPopup('FASTSTART','{{ __('app.bonus.faststart') }}')"
@@ -852,7 +852,7 @@
                                             data-scroll-booster-content=".x-deposit-promotion"
                                             style="transform: translate(0px, 0px);"
                                     >
-                                        @if($config->cashback_open == 'Y')
+                                        @if($webconfig->cashback_open == 'Y')
                                             <div class="-promotion-box-wrapper">
                                                 <button type="button"
                                                         onclick="openPopup('CASHBACK','{{ __('app.bonus.cashback') }}')"
@@ -880,7 +880,7 @@
                                                 </a>
                                             </div>
                                         @endif
-                                        @if($config->ic_open == 'Y')
+                                        @if($webconfig->ic_open == 'Y')
                                             <div class="-promotion-box-wrapper">
                                                 <button type="button"
                                                         onclick="openPopup('IC','{{ __('app.bonus.ic') }}')"
@@ -1028,7 +1028,7 @@
                     {{--                            <div class="x-admin-contact -no-fixed">--}}
                     {{--            <span class="x-text-with-link-component">--}}
                     {{--                <label class="-text-message">ติดปัญหา</label>--}}
-                    {{--                <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
+                    {{--                <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
                     {{--                    <u>ติดต่อฝ่ายบริการลูกค้า</u>--}}
                     {{--                </a>--}}
                     {{--            </span>--}}
@@ -1109,7 +1109,7 @@
                             <div class="x-admin-contact text-center">
                         <span class="x-text-with-link-component">
                             <label class="-text-message">{{ __('app.home.problem') }}</label>
-                            <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">
+                            <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">
                                 <u>{{ __('app.home.customer_service') }}</u>
                             </a>
                         </span>
@@ -1271,7 +1271,7 @@
                                             <i class="fas fa-times"></i>
                                         </a>
                                     </div>
-                                    @if($config->wheel_open == 'Y')
+                                    @if($webconfig->wheel_open == 'Y')
                                         <div class="-promotion-box-wrapper">
                                             <button type="button"
                                                     onclick="openPopup('BONUS', '{{ __('app.bonus.wheel') }}')"
@@ -1299,7 +1299,7 @@
                                             </a>
                                         </div>
                                     @endif
-                                    @if($config->faststart_open == 'Y')
+                                    @if($webconfig->faststart_open == 'Y')
                                         <div class="-promotion-box-wrapper">
                                             <button type="button"
                                                     onclick="openPopup('FASTSTART','{{ __('app.bonus.faststart') }}')"
@@ -1340,7 +1340,7 @@
                                         style="transform: translate(0px, 0px);"
                                 >
 
-                                    @if($config->cashback_open == 'Y')
+                                    @if($webconfig->cashback_open == 'Y')
                                         <div class="-promotion-box-wrapper">
                                             <button type="button"
                                                     onclick="openPopup('CASHBACK','{{ __('app.bonus.cashback') }}')"
@@ -1367,7 +1367,7 @@
                                             </a>
                                         </div>
                                     @endif
-                                    @if($config->ic_open == 'Y')
+                                    @if($webconfig->ic_open == 'Y')
                                         <div class="-promotion-box-wrapper">
                                             <button type="button" onclick="openPopup('IC','{{ __('app.bonus.ic') }}')"
                                                     class="btn -promotion-box-apply-btn js-promotion-apply"
@@ -1592,7 +1592,7 @@
                                                     </a>
                                                 </div>
                                             @endif
-                                            @if($config->papayapay == 'Y')
+                                            @if($webconfig->papayapay == 'Y')
                                                 <div class="-promotion-box-wrapper width50">
                                                     <button type="button"
                                                             onclick="topupSelect('topup_papayapay')"
@@ -1628,25 +1628,25 @@
                                     {{--                                        @if(count($topupbanks) > 0)--}}
                                     {{--                                            <option value="topup_bank"--}}
                                     {{--                                                    selected>{{ __('app.home.topup_bank') }}</option>--}}
-                                    {{--                                            @if($config->luckypay == 'Y')--}}
+                                    {{--                                            @if($webconfig->luckypay == 'Y')--}}
                                     {{--                                                <option--}}
                                     {{--                                                    value="topup_luckypay">{{ __('app.home.topup_luckypay') }}</option>--}}
 
                                     {{--                                            @endif--}}
-                                    {{--                                            @if($config->papayapay == 'Y')--}}
+                                    {{--                                            @if($webconfig->papayapay == 'Y')--}}
                                     {{--                                                <option--}}
                                     {{--                                                    value="topup_papayapay"--}}
                                     {{--                                                >{{ __('app.home.topup_papayapay') }}</option>--}}
 
                                     {{--                                            @endif--}}
                                     {{--                                        @else--}}
-                                    {{--                                            @if($config->luckypay == 'Y')--}}
+                                    {{--                                            @if($webconfig->luckypay == 'Y')--}}
                                     {{--                                                <option--}}
                                     {{--                                                    value="topup_luckypay"--}}
                                     {{--                                                    selected>{{ __('app.home.topup_luckypay') }}</option>--}}
 
                                     {{--                                            @endif--}}
-                                    {{--                                            @if($config->papayapay == 'Y')--}}
+                                    {{--                                            @if($webconfig->papayapay == 'Y')--}}
                                     {{--                                                <option--}}
                                     {{--                                                    value="topup_papayapay"--}}
                                     {{--                                                    selected>{{ __('app.home.topup_papayapay') }}</option>--}}
@@ -1690,7 +1690,7 @@
                                     </div>
                                 </div>
 
-                                {{--                                @if($config->luckypay == 'Y')--}}
+                                {{--                                @if($webconfig->luckypay == 'Y')--}}
                                 {{--                                    <div id="topup_luckypay" class="-deposit-form-inner-wrapper" style="display:none">--}}
                                 {{--                                        <br>--}}
                                 {{--                                        <p class="text-center">{{ __('app.topup.hengpay_detail_1') }}</p>--}}
@@ -1815,7 +1815,7 @@
                                 {{--                                        </div>--}}
                                 {{--                                    </div>--}}
                                 {{--                                @endif--}}
-                                @if($config->papayapay == 'Y')
+                                @if($webconfig->papayapay == 'Y')
                                     <div id="topup_papayapay" class="-deposit-form-inner-wrapper" style="display:none">
 
                                         <br>
@@ -2023,7 +2023,7 @@
                                             /
                                             {{ __('app.home.withdraw_max') }} {{ number_format($userdata->limitfree,2) }}</p>
                                         <p class="text-center text-warning">
-                                            {{ __('app.home.withdraw_min') }} {{ $config->free_minwithdraw }}
+                                            {{ __('app.home.withdraw_min') }} {{ $webconfig->free_minwithdraw }}
                                             {{ __('app.home.withdraw_baht') }}</p>
                                     </div>
 
@@ -2085,7 +2085,7 @@
                                             /
                                             {{ __('app.home.withdraw_max') }} {{ number_format($userdata->limit,2) }}</p>
                                         <p class="text-center text-warning">
-                                            {{ __('app.home.withdraw_min') }} {{ $config->minwithdraw }}
+                                            {{ __('app.home.withdraw_min') }} {{ $webconfig->minwithdraw }}
                                             {{ __('app.home.withdraw_baht') }}</p>
                                     </div>
 
@@ -3123,7 +3123,7 @@
 {{--                        <div class="x-admin-contact -no-fixed">--}}
 {{--                        <span class="x-text-with-link-component">--}}
 {{--                            <label class="-text-message">ติดปัญหา</label>--}}
-{{--                            <a href="{{ $config->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
+{{--                            <a href="{{ $webconfig->linelink }}" class="-link-message" target="_blank" rel="noopener">--}}
 {{--                                <u>ติดต่อฝ่ายบริการลูกค้า</u>--}}
 {{--                            </a>--}}
 {{--                        </span>--}}

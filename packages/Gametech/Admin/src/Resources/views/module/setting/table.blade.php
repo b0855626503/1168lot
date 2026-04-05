@@ -201,7 +201,7 @@
                     </b-col>
                 </b-form-row>
 
-                @if(($config->seamless ?? 'N') == 'Y')
+                @if(($webconfig->seamless ?? 'N') == 'Y')
                     <b-form-row>
                         <b-col>
                             <b-card

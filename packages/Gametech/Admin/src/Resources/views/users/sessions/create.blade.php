@@ -14,7 +14,7 @@
 
         <div class="card">
             <div class="card-body login-card-body">
-                {!! core()->showImg($config->logo,'img','','','img-top') !!}
+                {!! core()->showImg($webconfig->logo,'img','','','img-top') !!}
                 <p class="login-box-msg">Sign in to start your session</p>
 
                 <form method="POST" action="{{ route('admin.session.create') }}" @submit.prevent="onSubmit">

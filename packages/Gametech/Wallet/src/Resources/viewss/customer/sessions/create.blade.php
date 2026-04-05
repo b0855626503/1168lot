@@ -73,15 +73,15 @@
                                     <a class="text-light btn-footer" href="{{ route('customer.session.store') }}">สมัครสมาชิก</a>
                                 </div>
                                 <div class="d-flex">
-                                    <a class="text-light btn-footer" target="_blank" href="{{ $config->linelink }}">ลืมรหัสผ่าน?</a>
+                                    <a class="text-light btn-footer" target="_blank" href="{{ $webconfig->linelink }}">ลืมรหัสผ่าน?</a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    @if($config->notice)
+                    @if($webconfig->notice)
                         <div class="card card-trans">
                             <div class="card-body">
-                                <p class="card-title text-warning text-center w-100">{{ $config->notice }} </p>
+                                <p class="card-title text-warning text-center w-100">{{ $webconfig->notice }} </p>
                             </div>
                         </div>
                     @endif

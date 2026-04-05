@@ -86,7 +86,7 @@
                                             </div>
                                             <p class="text-center text-warning">
                                                 โยก Cashback
-                                                ออกเกมส์ขั้นต่ำ {{ core()->currency($config->free_mintransferback) }}
+                                                ออกเกมส์ขั้นต่ำ {{ core()->currency($webconfig->free_mintransferback) }}
                                                 บาท</p>
 
                                             <button class="btn btn-danger btn-block shadow-box">ดำเนินการต่อ</button>

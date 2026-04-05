@@ -219,7 +219,7 @@
         })();
     </script>
     <script>
-        window.LineDefaultAvatar = "{{ asset('storage/img/'.$config->logo) }}";
+        window.LineDefaultAvatar = "{{ asset('storage/img/'.$webconfig->logo) }}";
         window.LineOAEventsChannel = "{{ config('app.name') }}_events";
         window.LineOAEmployee = {
             id: '{{ auth('admin')->user()->code ?? '' }}',

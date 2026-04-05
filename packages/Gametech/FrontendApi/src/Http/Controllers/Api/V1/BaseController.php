@@ -35,6 +35,15 @@ class BaseController extends AppBaseController
         return $this->normalizeJsonResponseImages(parent::sendResponseNew($result, $message, $code));
     }
 
+    public function sendResponseFail($result, $message, $code = 200): JsonResponse
+    {
+        $payload = is_array($result) ? $result : ['data' => $result];
+        $payload['success'] = false;
+        $payload['message'] = $message;
+
+        return $this->normalizeJsonResponseImages(response()->json($payload, $code));
+    }
+
     protected function tokenPayload(Request $request): array
     {
         return (array) $request->attributes->get('frontend_api_token_payload', []);

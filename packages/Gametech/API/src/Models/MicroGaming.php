@@ -2,13 +2,13 @@
 
 namespace Gametech\API\Models;
 
-use Jenssegers\Mongodb\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use Gametech\API\Contracts\MicroGaming as MicroGamingContract;
 
 class MicroGaming extends Model implements MicroGamingContract
 {
     protected $connection = 'mongodb';
-    protected $collection = 'microgaming';
+    protected $table = 'microgaming';
 
     protected $primaryKey = 'id';
 }

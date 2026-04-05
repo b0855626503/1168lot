@@ -3,21 +3,21 @@
 	namespace Gametech\Game\Repositories\Games;
 
 	use Gametech\API\Models\GameListProxy;
-	use Gametech\API\Traits\LogSeamless;
-	use Gametech\Core\Eloquent\Repository;
-	use Gametech\Game\Models\GameSeamlessProxy;
-	use Gametech\Member\Models\MemberCreditLogProxy;
-	use Gametech\Member\Models\MemberProxy;
-	use Illuminate\Container\Container as App;
-	use Illuminate\Support\Facades\Cache;
-	use Illuminate\Support\Facades\DB;
-	use Illuminate\Support\Facades\Http;
-	use Illuminate\Support\Facades\Log;
-	use Illuminate\Support\Facades\Redis;
-	use Illuminate\Support\Str;
-	use Jenssegers\Agent\Agent;
+    use Gametech\API\Traits\LogSeamless;
+    use Gametech\Core\Eloquent\Repository;
+    use Gametech\Game\Models\GameSeamlessProxy;
+    use Gametech\Member\Models\MemberCreditLogProxy;
+    use Gametech\Member\Models\MemberProxy;
+    use Illuminate\Container\Container as App;
+    use Illuminate\Support\Facades\Cache;
+    use Illuminate\Support\Facades\DB;
+    use Illuminate\Support\Facades\Http;
+    use Illuminate\Support\Facades\Log;
+    use Illuminate\Support\Facades\Redis;
+    use Illuminate\Support\Str;
+    use Jenssegers\Agent\Agent;
 
-	class SeamlessRepository extends Repository
+    class SeamlessRepository extends Repository
 	{
 		use LogSeamless;
 
@@ -68,54 +68,6 @@
 			parent::__construct($app);
 		}
 
-		public function GameCurlPg($param, $action)
-		{
-
-			$response = rescue(function () use ($param, $action) {
-
-				$url = 'https://test.ambsuperapi.com/' . $action;
-
-				return Http::timeout(10)->withHeaders([
-					'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey),
-				])->withOptions(['debug' => false])->asJson()->post($url, $param);
-
-			}, function ($e) {
-
-				return false;
-
-			}, true);
-
-			if ($this->debug) {
-				$this->Debug($response);
-			}
-
-			if ($response === false) {
-				//            $result['main'] = false;
-				$result['success'] = false;
-				$result['msg'] = 'เชื่อมต่อไม่ได้';
-
-				return $result;
-			}
-
-			$result = $response->json();
-
-			$result['msg'] = ($result['message'] ?? 'พบปัญหาบางประการ');
-
-			if ($response->successful()) {
-				if ($result['code'] == 0) {
-					$result['success'] = true;
-				} else {
-					$result['success'] = false;
-				}
-
-			} else {
-				$result['success'] = false;
-			}
-
-			return $result;
-
-		}
-
 		public function Debug($response, $custom = false)
 		{
 
@@ -160,7 +112,9 @@
 
 		public function addUser($username, $data): array
 		{
-			$return['success'] = false;
+            $return = [
+                'success' => false
+            ];
 
 			$param = [
 				'username' => $data['username'],
@@ -250,7 +204,9 @@
 
 		public function changePass($data): array
 		{
-			$return['success'] = false;
+			$return = [
+                'success' => false
+            ];
 
 			$param = [
 				'Method' => 'SP',
@@ -467,96 +423,7 @@
 			return $return;
 		}
 
-		public function gameList_($product_id): array
-		{
-			$return['success'] = false;
 
-			$param = ['productId' => $product_id];
-
-			//        dd($product_id);
-
-			$response = $this->GameCurlGet($param, 'seamless/games');
-			if ($response['success'] == true) {
-
-				$return['success'] = true;
-				$return['msg'] = $response['msg'];
-				$return['games'] = $response['data']['games'];
-
-				foreach ($return['games'] as $item) {
-					GameListProxy::updateOrCreate(
-						['product' => $product_id, 'game' => $item['code']],
-						['enable' => true]
-					);
-				}
-
-			} else {
-				$return['msg'] = $response['msg'];
-				$return['success'] = false;
-			}
-
-			//        dd($return);
-
-			return $return;
-		}
-
-		public function gameListAA($product_id): array
-		{
-			$cacheKey = 'game_list_' . $product_id;
-
-			$data = Cache::remember($cacheKey, 600, function () use ($product_id) {
-				$param = ['productId' => $product_id];
-				$response = $this->GameCurlGet($param, 'seamless/games');
-
-				if ($response['success'] !== true) {
-					return [
-						'success' => false,
-						'msg' => $response['msg'] ?? 'Unknown error',
-						'games' => []
-					];
-				}
-
-				$games = $response['data']['games'];
-
-				foreach ($games as &$item) {
-					if ($product_id === 'COCKFIGHT' || $product_id === 'AOG') {
-						$item['category'] = 'COCK';
-					}
-
-					if ($product_id === 'AMBPOKER') {
-						$item['category'] = 'POKER';
-					}
-
-					if ($product_id === 'KINGMAKER') {
-						$item['category'] = 'CARD';
-					}
-
-					GameListProxy::updateOrCreate(
-						['product' => $product_id, 'code' => $item['code']],
-						[
-							'category' => $item['category'],
-							'type' => $item['type'] ?? 'SLOT',
-							'img' => $item['img'],
-							'name' => $item['name'],
-							'rank' => $item['rank'],
-							'game' => $item['code'],
-							'enable' => true,
-						]
-					);
-				}
-
-				return [
-					'success' => true,
-					'msg' => $response['msg'],
-					'games' => $games
-				];
-			});
-
-			return $data;
-		}
-
-        /**
-         * ดึงรายการเกมของ product พร้อม cache, กันค้าง, และซิงก์ DB แบบ bulk
-         */
 		public function gameList(string $productId): array
         {
             $productId = strtoupper(trim($productId));
@@ -906,7 +773,7 @@
 
 					} else {
 						$return['success'] = false;
-                        $return['msg'] = (string) ($response['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้');
+                        $return['msg'] =  ($response['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้');
 					}
 			} else {
 				$return['success'] = false;

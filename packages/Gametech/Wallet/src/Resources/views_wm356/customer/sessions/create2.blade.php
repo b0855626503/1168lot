@@ -131,7 +131,7 @@
         <div class="x-index-content-main-container -anon">
             <div class="x-title-with-tag-header" data-animatable="fadeInUp" data-delay="150">
                 <div class="container">
-                    <h1 class="-title">{{ $config->content_header }}</h1>
+                    <h1 class="-title">{{ $webconfig->content_header }}</h1>
                 </div>
             </div>
 

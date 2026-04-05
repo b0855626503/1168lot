@@ -1,8 +1,12 @@
 <!-- Main Sidebar Container -->
+@php($adminLogo = data_get($webconfig, 'logo'))
+@php($adminBrandColor = data_get($webconfig, 'admin_brand_color', 'navbar-gray-dark'))
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="javascript:void(0)" class="brand-link {{ ($config->admin_brand_color?$config->admin_brand_color:'navbar-gray-dark') }}">
-        {!! core()->showImg($config->logo,'img','','','brand-image img-circle elevation-3') !!}
+    <a href="javascript:void(0)" class="brand-link {{ $adminBrandColor ?: 'navbar-gray-dark' }}">
+        @if($adminLogo)
+            {!! core()->showImg($adminLogo,'img','','','brand-image img-circle elevation-3') !!}
+        @endif
         <span class="brand-text font-weight-light">{{ config('app.name') }}</span>
     </a>
 
@@ -32,4 +36,3 @@
     </div>
     <!-- /.sidebar -->
 </aside>
-

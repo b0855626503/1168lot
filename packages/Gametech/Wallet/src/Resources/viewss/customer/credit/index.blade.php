@@ -16,7 +16,7 @@
             <div class="col-md-8 offset-md-2 col-sm-12">
                 <div class="card text-light card-trans">
                     <div class="card-body py-3 px-2">
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                             <seamlessfree></seamlessfree>
                         @else
                             <cashback></cashback>
@@ -26,7 +26,7 @@
                     </div>
                 </div>
 
-                @if($config->seamless == 'Y')
+                @if($webconfig->seamless == 'Y')
                     @include('wallet::customer.credit.seamless')
                 @else
                     @include('wallet::customer.credit.single')

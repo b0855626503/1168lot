@@ -3,6 +3,45 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-06 — Laravel 10 Is the Current Practical Upgrade Target; Laravel 12 Is Deferred Pending Package Compatibility (APPROVED)
+
+- ปรับ execution target ของงาน framework upgrade:
+  - practical milestone ปัจจุบันคือ Laravel 10 + PHP 8.2
+  - Laravel 12 ยังไม่ถูกอนุมัติเป็น execution target ในรอบนี้
+- เหตุผล:
+  - package ecosystem หลักของระบบยังต้องเปลี่ยน/อัปหลายตัวก่อน เช่น MongoDB, Concord, DataTables, และ legacy middleware packages
+  - Laravel 10 เป็นจุดที่มีเส้นทางอัปเกรดของ package หลักชัดและปิด security/advisory risk ของ Laravel 9 path ได้
+  - ถ้าจะขยับจาก 10 ไป 12 ต้องผ่าน compatibility matrix ใหม่อีกครั้ง ไม่ใช่ข้ามโดยอนุมาน
+
+## 2026-04-06 — Unused or Legacy Upgrade Blockers May Be Removed Instead of Preserved (APPROVED)
+
+- ปรับ package policy สำหรับรอบ Laravel 10 upgrade:
+  - package ที่ abandoned หรือไม่ได้เป็น runtime requirement จริง ให้ remove ได้แทนการฝืน carry forward
+  - package ที่ยังจำเป็นแต่มีเส้นทางใหม่ชัด ให้ replace ไปตัวที่รองรับ Laravel 10 โดยตรง
+- รอบนี้ใช้ policy นี้กับอย่างน้อย:
+  - `mongodb/laravel-mongodb` แทน `jenssegers/mongodb`
+  - built-in framework middleware แทน `fideloper/proxy` และ `fruitcake/laravel-cors`
+  - direct `yajra` packages สำหรับ Laravel 10 แทน meta package ชุดเก่า
+  - remove `google/apiclient`, `irazasyed/telegram-bot-sdk`, `laravel/scout`, `barryvdh/laravel-debugbar` เพราะไม่ใช่ runtime requirement ปัจจุบันของระบบ
+- เหตุผล:
+  - ลด conflict surface ใน dependency graph
+  - ไม่แบก package abandoned/unused เข้าไปใน Laravel 10 path โดยไม่มีประโยชน์ทาง business
+  - ทำให้ Composer security gate และ package compatibility matrix ผ่านได้ด้วยชุด dependency ที่สั้นและตรงกว่าเดิม
+
+## 2026-04-06 — Admin Self-Update Package Is Decommissioned for Laravel 10 Upgrade Path (APPROVED)
+
+- ปรับ admin maintenance flow:
+  - ถอด package `codedge/laravel-selfupdater` ออกจากระบบ
+  - route `admin.update.index` และ `admin.checkupdate.index` ยังคงอยู่เพื่อไม่ให้ UI/route contract แตก
+  - แต่ route ทั้งสองเปลี่ยนบทบาทเป็น decommission notice:
+    - `update` ไม่ทำ auto-update แล้ว และ redirect กลับพร้อมข้อความแจ้ง
+    - `checkupdate` แสดง current version + แจ้งว่าไม่มี in-app updater แล้ว
+  - หน้า login/admin header ยังคงแสดง installed version ได้จาก config ภายใน
+- เหตุผล:
+  - package เดิมรองรับเพียง Laravel 8 path และเป็น blocker ของ dependency resolution สำหรับ Laravel 10
+  - การคง route เดิมไว้ช่วยลดผลกระทบต่อ admin UI ระหว่าง upgrade
+  - deployment/update ต้องย้ายไปใช้ external deployment flow แทน in-app self-update
+
 ## 2026-04-05 — Admin Manual Retry Must Bypass Auto Scheduler Retry Gating (APPROVED)
 
 - ปรับ flow `lotto_draws.auto_result_manual_retry` / `--manual-retry`

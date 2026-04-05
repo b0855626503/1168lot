@@ -65,10 +65,10 @@
                             </div>
                         </div>
                     </div>
-                    @if($config->notice)
+                    @if($webconfig->notice)
                         <div class="card card-trans">
                             <div class="card-body">
-                                <p class="card-title text-warning text-center w-100">{{ $config->notice }} </p>
+                                <p class="card-title text-warning text-center w-100">{{ $webconfig->notice }} </p>
                             </div>
                         </div>
                     @endif

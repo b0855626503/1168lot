@@ -84,7 +84,7 @@
                                                 </div>
                                             </div>
                                             <p class="text-center text-warning">
-                                                โยกเงินออกเกมส์ขั้นต่ำ {{ core()->currency($config->mintransferback) }}
+                                                โยกเงินออกเกมส์ขั้นต่ำ {{ core()->currency($webconfig->mintransferback) }}
                                                 บาท</p>
 
                                             <button class="btn btn-danger btn-block shadow-box">ดำเนินการต่อ</button>

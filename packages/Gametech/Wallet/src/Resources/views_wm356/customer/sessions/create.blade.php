@@ -212,9 +212,9 @@
     
     <link
             rel="preload"
-            href="{{ url(core()->imgurl($config->logo,'img')) }}"
+            href="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
             as="image"
-            type="{{ imageMimeType(Storage::url('img/'.$config->logo)) }}"
+            type="{{ imageMimeType(Storage::url('img/'.$webconfig->logo)) }}"
 
     >
 
@@ -326,7 +326,7 @@
         <div class="x-index-content-main-container -anon">
             <div class="x-title-with-tag-header" data-animatable="fadeInUp" data-delay="150">
                 <div class="container">
-                    <h1 class="-title">{{ $config->content_header }}</h1>
+                    <h1 class="-title">{{ $webconfig->content_header }}</h1>
                 </div>
             </div>
 
@@ -525,15 +525,15 @@
                                 <a class="-link-wrapper" href="{{ route('customer.home.index') }}">
                                     <picture>
                                         <source type="image/webp"
-                                                data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                                data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                         <source type="image/png"
-                                                data-srcset="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                                                data-srcset="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
                                         <img
                                                 alt="logo image" loading="lazy"
                                                 class="img-fluid lazyload -logo"
                                                 width="180"
                                                 height="42"
-                                                data-src="{{ url(core()->imgurl($config->logo,'img')) }}"
+                                                data-src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"
                                                 src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                                         />
                                     </picture>
@@ -646,7 +646,7 @@
                                 </div>
                                 <div class="col-6 -wrapper-box">
                                     <a
-                                            href="{{ $config->linelink }}"
+                                            href="{{ $webconfig->linelink }}"
                                             class="btn -btn-item -line-button -menu-center -horizontal lazyload x-bg-position-center"
                                             target="_blank"
                                             rel="noopener nofollow"

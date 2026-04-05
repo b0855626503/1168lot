@@ -3,6 +3,7 @@
 namespace Gametech\FrontendApi\Services;
 
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Gametech\Member\Models\Member;
 use Gametech\Member\Models\MemberProxy;
 use Illuminate\Support\Facades\Cache;
@@ -38,7 +39,7 @@ class FrontendTokenService
     public function decode(string $token): ?array
     {
         try {
-            $decoded = (array) JWT::decode($token, $this->jwtSecret(), ['HS256']);
+            $decoded = (array) JWT::decode($token, new Key($this->jwtSecret(), 'HS256'));
         } catch (\Throwable $e) {
             return null;
         }
@@ -98,4 +99,3 @@ class FrontendTokenService
         return $key;
     }
 }
-

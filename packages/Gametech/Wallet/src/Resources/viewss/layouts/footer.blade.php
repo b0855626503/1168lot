@@ -9,7 +9,7 @@
                                class="{{ $menu->getFrontActive('customer.home.index') }}"><i
                                     class="fas fa-home mb-0"></i><br>หน้าแรก</a>
                         </div>
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                             <div class="list-inline-item d-flex align-items-end text-center">
                                 <a href="{{ route('customer.credit.index') }}"
                                    class="{{ $menu->getFrontActive('customer.credit.index') }}">
@@ -22,7 +22,7 @@
                                     <i class="fas fa-user mb-0"></i><br>บัญชี</a>
                             </div>
                         @endif
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                             @if(request()->routeIs('customer.credit.*'))
                                 <div class="list-inline-item d-flex align-items-end text-center">
                                     <a class="exchange text-center {{ $menu->getFrontActive('customer.credit.game.index') }}"
@@ -45,7 +45,7 @@
                             @endif
 
                         @else
-                            @if($config->multigame_open == 'Y')
+                            @if($webconfig->multigame_open == 'Y')
                                 <div class="list-inline-item d-flex align-items-end text-center">
                                     <a class="exchange text-center {{ $menu->getFrontActive('customer.transfer.game.index') }}"
                                        href="{{ route('customer.transfer.game.index') }}">
@@ -55,7 +55,7 @@
                                 </div>
                             @else
 
-                                @if($config->onegame == 'Y')
+                                @if($webconfig->onegame == 'Y')
                                     <div class="list-inline-item d-flex align-items-end text-center">
                                         <a class="exchange-single text-center"
                                            href="" onclick="openPopupNew('{{$single->id}}'); return false;">
@@ -88,7 +88,7 @@
                             </div>
                         @endif
                         <div class="list-inline-item d-flex align-items-end text-center">
-                            <a target="_blank" href="{{ $config->linelink }}">
+                            <a target="_blank" href="{{ $webconfig->linelink }}">
                                 <i class="fas fa-comments mb-0"></i>
                                 <br>แชทสด </a>
                         </div>
@@ -98,7 +98,7 @@
         </div>
     </div>
 </footer>
-@if($config->onegame == 'Y')
+@if($webconfig->onegame == 'Y')
     @push('scripts')
         <script>
             var isMobile = false;

@@ -12,8 +12,8 @@
 @section('content')
     <div class="container mt-5">
         <h3 class="text-center text-light">ถอนฟรีเครดิต</h3>
-        @if($config->seamless == 'N')
-            @if($config->multigame_open == 'Y')
+        @if($webconfig->seamless == 'N')
+            @if($webconfig->multigame_open == 'Y')
                 <p class="text-center text-color-fixed"> กรุณาโยกฟรีเครดิตเข้ากระเป๋าหลักก่อนทำการถอนเงิน</p>
             @else
                 <p class="text-center text-color-fixed"> เมื่อแจ้งถอน ยอดเงินเครดิตจะถูกหักออกทันที</p>
@@ -29,7 +29,7 @@
                             <div class="card-body p-2">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        @if($config->seamless == 'Y')
+                                        @if($webconfig->seamless == 'Y')
                                             <h5 class="content-heading text-center"><i class="fal fa-wallet"></i>
                                                 กระเป๋าฟรี</h5>
                                         @else
@@ -50,7 +50,7 @@
                                     <div class="col-sm-12">
                                         <h5 class="content-heading text-center"><i class="fal fa-minus-octagon"></i>
                                             ถอนแล้ว</h5>
-                                        @if($config->seamless == 'Y')
+                                        @if($webconfig->seamless == 'Y')
                                             <h5 class="text-color-fixed text-right">{{ is_null($profile->withdraw_seamless_free_amount_sum) ? '0.00' : $profile->withdraw_seamless_free_amount_sum }}</h5>
                                         @else
                                             <h5 class="text-color-fixed text-right">{{ is_null($profile->withdraw_free_amount_sum) ? '0.00' : $profile->withdraw_free_amount_sum }}</h5>
@@ -115,7 +115,7 @@
                                             </div>
 
                                             <p class="text-center text-warning">
-                                                ยอดถอนขั้นต่ำ {{ $config->free_minwithdraw }} บาท</p>
+                                                ยอดถอนขั้นต่ำ {{ $webconfig->free_minwithdraw }} บาท</p>
                                             <button class="btn btn-primary btn-block shadow-box">แจ้งถอนฟรีเครดิต</button>
                                         </div>
                                     </form>

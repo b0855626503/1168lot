@@ -59,10 +59,10 @@
                         <div class="card card-trans">
                             <div class="card-body">
                                 <h4 class="content-heading">ลิงค์สำหรับแนะนำเพื่อน</h4>
-                                @if($config->contributor)
+                                @if($webconfig->contributor)
                                     <input id="copy" class="form-control w-100" outsideclick="true"
                                            popover="คัดลอกสำเร็จ"
-                                           type="text" value="{{ $config->contributor }}/register/{{ $profile->code }}">
+                                           type="text" value="{{ $webconfig->contributor }}/register/{{ $profile->code }}">
                                 @else
                                     <input id="copy" class="form-control w-100" outsideclick="true"
                                            popover="คัดลอกสำเร็จ"

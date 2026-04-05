@@ -2,10 +2,10 @@
 <html lang="{{ config('app.locale') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ ucwords($config->sitename) }} - {{ $config->title }}</title>
+    <title>{{ ucwords($webconfig->sitename) }} - {{ $webconfig->title }}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($config->favicon,'img') !!}">
-    <meta name="description" content="{{ $config->description }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{!! core()->imgurl($webconfig->favicon,'img') !!}">
+    <meta name="description" content="{{ $webconfig->description }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Prompt&display=swap" rel="stylesheet">
@@ -19,30 +19,30 @@
     <link rel="stylesheet" href="{{ mix('assets/old/css/web.css') }}">
     <style>
         .nav-top {
-            background: {{ ($config->wallet_navbar_color ?? '#6f0000') }}     !important;
+            background: {{ ($webconfig->wallet_navbar_color ?? '#6f0000') }}     !important;
         }
 
         .nav-footer {
-            background: {{ ($config->wallet_footer_color ?? '#6f0000') }}     !important;
+            background: {{ ($webconfig->wallet_footer_color ?? '#6f0000') }}     !important;
         }
 
         .custom-theme {
-            background: linear-gradient(45deg, {{ ($config->wallet_body_start_color ?? '#200122') }} 10%, {{ ($config->wallet_body_stop_color ?? '#6f0000') }} 90%) !important;
+            background: linear-gradient(45deg, {{ ($webconfig->wallet_body_start_color ?? '#200122') }} 10%, {{ ($webconfig->wallet_body_stop_color ?? '#6f0000') }} 90%) !important;
         }
 
         .exchange {
-            background: {{ ($config->wallet_footer_exchange ?? '#6f0000') }}     !important;
+            background: {{ ($webconfig->wallet_footer_exchange ?? '#6f0000') }}     !important;
         }
 
         a.active, a.active i, a.active p {
-            color: {{ ($config->wallet_footer_active ?? '#6f0000') }}     !important;
+            color: {{ ($webconfig->wallet_footer_active ?? '#6f0000') }}     !important;
         }
 
     </style>
     @yield('css')
 
-    @if($config->header_code)
-        {!! $config->header_code !!}
+    @if($webconfig->header_code)
+        {!! $webconfig->header_code !!}
     @endif
 </head>
 
@@ -55,7 +55,7 @@
             <div class="container">
                 <div class="row w-100">
                     <div class="col-3 h-40">&nbsp;</div>
-                    {!! core()->showImg($config->logo,'img','','','img-top') !!}
+                    {!! core()->showImg($webconfig->logo,'img','','','img-top') !!}
                     <div class="col-1 offset-8">&nbsp;</div>
                 </div>
             </div>
@@ -82,7 +82,7 @@
                                     สมัคร</a>
                             </div>
 
-{{--                            @if($config->seamless == 'N')--}}
+{{--                            @if($webconfig->seamless == 'N')--}}
 {{--                                <div class="list-inline-item d-flex align-items-end text-center">--}}
 {{--                                    <a href="{{ route('customer.home.download') }}">--}}
 {{--                                        <i class="fa fa-download m-0"></i><br>ดาวน์โหลด</a>--}}
@@ -90,7 +90,7 @@
 {{--                            @endif--}}
 
 
-                            @if($config->pro_onoff == 'Y')
+                            @if($webconfig->pro_onoff == 'Y')
                                 <div class="list-inline-item d-flex align-items-end text-center">
                                     <a href="{{ route('customer.promotion.show') }}">
                                         <i class="fa fa-download m-0"></i><br>โปรโมชั่น</a>
@@ -100,7 +100,7 @@
 
 
                             <div class="list-inline-item d-flex align-items-end text-center">
-                                <a target="_blank" href="{{ $config->linelink }}">
+                                <a target="_blank" href="{{ $webconfig->linelink }}">
                                     <i class="fa fa-comments mb-0"></i>
                                     <br>ติดต่อ </a>
                             </div>

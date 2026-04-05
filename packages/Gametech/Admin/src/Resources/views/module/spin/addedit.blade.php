@@ -111,7 +111,7 @@
                         types: 'WALLET'
                     },
                     option: {
-                        @if($config->seamless == 'Y')
+                        @if($webconfig->seamless == 'Y')
                         types: [
                             {text: 'Wallet', value: 'WALLET'},
                             {text: 'BONUS', value: 'BONUS'},

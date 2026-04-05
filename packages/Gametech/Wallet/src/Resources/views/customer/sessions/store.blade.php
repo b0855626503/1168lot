@@ -46,11 +46,11 @@
         <section class="sectionpage login">
             <div class="inbgbeforelogin">
                 <div class="logopopup">
-                    {!! core()->showImg($config->logo,'img','','','') !!}
+                    {!! core()->showImg($webconfig->logo,'img','','','') !!}
                 </div>
                 <h1>{{ __('app.register.register') }}</h1>
 
-                @if($config->verify_sms == 'Y')
+                @if($webconfig->verify_sms == 'Y')
                     @include('wallet::customer.sessions.step')
                 @else
                     @include('wallet::customer.sessions.normal')

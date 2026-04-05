@@ -6,10 +6,16 @@
 
 @section('content')
 
+    @php($adminLogo = data_get($webconfig, 'logo'))
+
     <div class="login-box">
 
         <div class="login-logo text-center">
-            {!! core()->showImg($config->logo,'img','100px','100px','img-fluid') !!}
+            @if($adminLogo)
+                {!! core()->showImg($adminLogo,'img','100px','100px','img-fluid') !!}
+            @else
+                <div class="h3 mb-0">{{ ucfirst(config('app.name')) }}</div>
+            @endif
         </div>
 
         <div class="card">

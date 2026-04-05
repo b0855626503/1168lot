@@ -2,8 +2,6 @@
 
 namespace Gametech\Admin\Providers;
 
-use Codedge\Updater\Traits\UseVersionFile;
-use Codedge\Updater\UpdaterFacade;
 use Gametech\Admin\Bouncer;
 use Gametech\Admin\Facades\Bouncer as BouncerFacade;
 use Gametech\Admin\Models\AdminProxy;
@@ -22,8 +20,6 @@ use Illuminate\Support\Str;
 
 class AdminServiceProvider extends ServiceProvider
 {
-    use UseVersionFile;
-
     /**
      * Bootstrap services.
      */
@@ -278,7 +274,6 @@ class AdminServiceProvider extends ServiceProvider
 
         // header: version
         view()->composer(['admin::layouts.header'], function ($view) {
-            $this->deleteVersionFile();
             $newpatch = false;
             $current = config('self-update.version_installed');
             $view->with('version', $current)->with('patch', $newpatch);

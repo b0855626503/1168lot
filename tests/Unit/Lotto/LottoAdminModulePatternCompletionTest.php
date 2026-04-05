@@ -54,10 +54,10 @@ class LottoAdminModulePatternCompletionTest extends TestCase
         $this->assertStringContainsString('filter_draw_id', $createView);
         $this->assertStringContainsString('filter_market_id', $createView);
         $this->assertStringContainsString('filter_bet_type', $createView);
-        $this->assertStringContainsString('applyExposureFilters', $tableView);
+        $this->assertStringContainsString('redrawExposureTable', $tableView);
+        $this->assertStringContainsString('resetExposureFilters', $tableView);
         $this->assertStringContainsString("request('draw_id')", $dataTable);
         $this->assertStringContainsString("request('market_id')", $dataTable);
         $this->assertStringContainsString("request('bet_type')", $dataTable);
     }
 }
-

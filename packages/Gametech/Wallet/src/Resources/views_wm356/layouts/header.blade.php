@@ -12,10 +12,10 @@
 
         <div id="headerBrand">
             <a class="navbar-brand" href="{{ route('customer.home.index') }}">
-                <img alt="{{ $config->description }}" class="-logo -default img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
-                <img alt="{{ $config->description }}" class="-logo -invert img-fluid" width="440"
-                     height="104" src="{{ url(core()->imgurl($config->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -default img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
+                <img alt="{{ $webconfig->description }}" class="-logo -invert img-fluid" width="440"
+                     height="104" src="{{ url(core()->imgurl($webconfig->logo,'img')) }}"/>
             </a>
         </div>
 
@@ -24,9 +24,9 @@
 
 
                 <a class="-menu-link" href="{{ route('customer.promotion.show') }}">
-                    <img alt="{{ $config->description }}" class="-icon img-fluid" width="40"
+                    <img alt="{{ $webconfig->description }}" class="-icon img-fluid" width="40"
                          height="40" src="/assets\wm356\web\ezl-wm-356\img\ic-menu-promotion.png?v=2"/>
-                    <img alt="{{ $config->description }}" class="-icon -active img-fluid"
+                    <img alt="{{ $webconfig->description }}" class="-icon -active img-fluid"
                          width="40" height="40" src="/assets\wm356\web\ezl-wm-356\img\ic-menu-promotion-active.png?v=2"/>
                     <span>{{ __('app.login.promotion') }}</span>
                 </a>

@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Jobs;
 use App\Jobs\SendTelegramBot;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
+use Illuminate\Container\Container;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -159,7 +160,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
             return $draw->result_at->format('H:i');
         }
 
-        return now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
+        return now($this->resolveTimezone())->format('H:i');
     }
 
     /**
@@ -186,9 +187,19 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         $announceAt = $draw->result_at ?: $draw->result_applied_at;
         $announceTime = $announceAt
             ? $announceAt->format('H:i')
-            : now((string) config('app.timezone', 'Asia/Bangkok'))->format('H:i');
+            : now($this->resolveTimezone())->format('H:i');
 
         return [$originLabel, $announceTime];
+    }
+
+    private function resolveTimezone(): string
+    {
+        $container = Container::getInstance();
+        if ($container && $container->bound('config')) {
+            return (string) $container->make('config')->get('app.timezone', 'Asia/Bangkok');
+        }
+
+        return (string) (date_default_timezone_get() ?: 'Asia/Bangkok');
     }
 
     private function claimNotificationSlot(int $drawId): bool

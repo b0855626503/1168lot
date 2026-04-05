@@ -73,7 +73,7 @@
                         </tbody></table>
                     <br>
                     <p class="text-center text-warning">
-                        {{ __('app.home.withdraw_min') }} {{ $config->free_minwithdraw }}
+                        {{ __('app.home.withdraw_min') }} {{ $webconfig->free_minwithdraw }}
                         {{ __('app.home.withdraw_baht') }}</p>
                     <button class="moneyBtn"> {{ __('app.home.withdraw') }} </button>
                 </div>
