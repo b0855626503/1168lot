@@ -1,5 +1,50 @@
 # Decision Log
 
+## 2026-04-05 — Existing FrontendApi Controllers Must Stop Delegating to Other Package Controllers (APPROVED)
+
+- ปรับ implementation ภายใน `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1`
+- behavior ใหม่:
+  - controller ฝั่ง `FrontendApi` ที่เคย delegate ไป controller ของ package อื่น ถูกย้ายมาเขียน native ใน `FrontendApi` เองแล้ว
+  - ครอบคลุมอย่างน้อย:
+    - `MemberController@balance`
+    - `DepositController@loadBank`
+    - `PromotionController@list/select/deselect`
+    - `WheelController@list/spin/history`
+    - `LottoController@draw/bet/packages/selectPackage/selectedPackage/tickets/ticket/cancel`
+  - อนุญาตให้ reuse domain service โดยตรง เช่น `BetService`, `LottoPackageSelectionService`, repository/query/model และ service ภายใน `FrontendApi`
+  - เพิ่ม regression test เชิงสถาปัตยกรรมคุมว่า controller ใน `FrontendApi/Api/V1` ห้าม import controller จาก package อื่น และห้าม resolve ผ่าน `app(...Controller::class)`
+- เหตุผล:
+  - ทำให้กติกา `FrontendApi must not call other package controllers` ถูกใช้จริงกับ endpoint เดิมทั้งหมด ไม่ใช่เฉพาะของใหม่อย่าง coupon
+  - ลด coupling เวลาแยก package Lotto/Wallet ไปใช้ project อื่น
+
+## 2026-04-05 — Frontend Coupon APIs Must Live Inside FrontendApi and Not Call Other Package Controllers (APPROVED)
+
+- เพิ่ม coupon endpoints ใน `FrontendApi`:
+  - `POST /api/v1/coupon/redeem`
+  - `GET /api/v1/coupon/my`
+  - `POST /api/v1/coupon/my/{code}/claim`
+- behavior ใหม่:
+  - flow คูปองของ frontend ถูกเขียนใน controller/service ของ `packages/Gametech/FrontendApi` เอง
+  - ห้าม route ฝั่ง `FrontendApi` เรียก controller ของ package อื่นโดยตรง
+  - `redeem` ต้องตรวจรหัส/สิทธิ์/เงื่อนไขและสร้างรายการโบนัสรอรับ
+  - `my` ต้องส่งรายการโบนัสคูปองที่ยัง `pending_claim`
+  - `claim` ต้องรับโบนัสจากรายการที่เลือกและ mark เป็น `claimed`
+- เหตุผล:
+  - ลด coupling ข้าม package
+  - ทำให้ package domain อื่นถูกย้ายไปใช้ project อื่นได้โดยไม่พังเพราะ `FrontendApi` ไปผูกกับ controller ภายในของ package นั้น
+
+## 2026-04-05 — Frontend Member Contributor API Must Return Localized Rule Description (APPROVED)
+
+- ปรับ `GET /api/v1/member/contributor`
+- behavior ใหม่:
+  - เพิ่ม `rule.more_message`
+  - ค่า field นี้มาจาก translation key `app.con.more`
+  - backend ต้องแทน `:field` ด้วย `rule.display_value` ก่อนส่ง response
+  - locale ต้องอิง `frontend_language` ของ request เช่นเดียวกับ endpoint อื่นใน Frontend API
+- เหตุผล:
+  - ลดภาระ frontend ที่ต้องประกอบข้อความอธิบาย referral rule เอง
+  - ให้ frontend ใช้ข้อความที่ตรงกับหน้าเดิมและตรง locale ได้ทันที
+
 ## 2026-04-05 — Customer Realtime Channel Must Be Separated from Admin Events Channel (APPROVED)
 
 - ปรับ `RealtimePublicActivityUpdated` และ `FrontendApi RealtimeController`

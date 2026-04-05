@@ -17,13 +17,7 @@ class MemberController extends BaseController
 
     public function balance(Request $request)
     {
-        try {
-            return $this->normalizeJsonResponseImages(
-                app(HomeController::class)->loadCreditMin()
-            );
-        } catch (\Throwable $e) {
-            return $this->sendError('ไม่สามารถดึงยอดเงินคงเหลือได้ในขณะนี้', 422);
-        }
+        return $this->buildBalanceResponse($request, false);
     }
 
     public function loadBalance(Request $request)
@@ -34,7 +28,7 @@ class MemberController extends BaseController
     public function changePassword(Request $request)
     {
         try {
-            $member = $request->user();
+            $member = $request->user() ?: $request->user('customer');
             if (! $member || ! isset($member->code)) {
                 return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
@@ -83,11 +77,18 @@ class MemberController extends BaseController
             $bonusPercent = $promotion ? (float) $promotion->bonus_percent : null;
             $bonusPrice = $promotion ? (float) $promotion->bonus_price : null;
             $ruleDisplay = null;
+            $ruleMoreMessage = null;
 
             if ($promotion) {
                 $ruleDisplay = $promotionLengthType === 'PERCENT'
                     ? number_format((float) $bonusPercent, 2, '.', '') . ' %'
                     : number_format((float) $bonusPrice, 2, '.', '');
+
+                $ruleMoreMessage = Lang::get(
+                    'app.con.more',
+                    ['field' => $ruleDisplay],
+                    $this->requestLanguage($request)
+                );
             }
 
             $promotionBonusIncome = (float) data_get(
@@ -135,6 +136,7 @@ class MemberController extends BaseController
                     'bonus_percent' => $bonusPercent,
                     'bonus_price' => $bonusPrice,
                     'display_value' => $ruleDisplay,
+                    'more_message' => $ruleMoreMessage,
                 ],
                 'referrals' => $referrals,
             ];

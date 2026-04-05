@@ -36,10 +36,21 @@
   - ส่งข้อมูลสมาชิก
 - `GET /api/v1/member/balance` (ต้องมี token)
   - ส่งยอดเงินคงเหลือ
+- `GET /api/v1/member/contributor` (ต้องมี token)
+  - ส่ง summary/rule/referrals ของการแนะนำเพื่อน
+  - `rule.more_message` ต้องเป็นข้อความแปลสำเร็จรูปจาก `app.con.more` โดยแทน `:field` ด้วย `rule.display_value`
 - `POST /api/v1/member/change-password` (ต้องมี token)
   - เปลี่ยนรหัสผ่านของสมาชิกที่ login อยู่
   - รับเฉพาะ `password`, `password_confirmation`
   - ไม่ต้องส่งรหัสผ่านเดิม
+
+### Coupon
+- `POST /api/v1/coupon/redeem` (ต้องมี token)
+  - รับรหัสคูปอง ตรวจสิทธิ์/เงื่อนไข และสร้างโบนัสรอรับ
+- `GET /api/v1/coupon/my` (ต้องมี token)
+  - ส่งรายการคูปอง/โบนัสที่ยังรอรับของสมาชิก
+- `POST /api/v1/coupon/my/{code}/claim` (ต้องมี token)
+  - รับโบนัสจากรายการคูปองที่เลือก
 
 ### Wallet
 - `GET /api/v1/wallet/transactions` (ต้องมี token)
@@ -86,9 +97,12 @@
 
 ## แนวทางออกแบบ
 - ไม่เปลี่ยน route เดิมและไม่แก้ payload ของระบบเดิม
-- wrapper controller จะเรียกใช้ logic เดิมจาก Wallet/API/Lotto โดยตรงเพื่อลด regression
+- `FrontendApi` ต้อง reuse business logic เดิมผ่าน repository/query/service ที่อยู่ใน package นี้หรือเรียกใช้ domain service โดยตรง
+- ห้ามเรียก controller ของ package อื่นจาก controller ฝั่ง `FrontendApi`
 - token auth ใหม่ใช้เฉพาะเส้นทาง Frontend API v1
 - logout เป็นการ blacklist token ที่ระดับ cache
+- controller ของ `FrontendApi` ห้ามเรียก controller จาก package อื่นโดยตรง
+- ถ้าต้อง reuse business logic ให้ reuse ผ่าน repository/query/service ภายใน `FrontendApi` แทน
 
 ## ลำดับการทำงาน (Step)
 1. สร้างโครง package `FrontendApi`
@@ -116,6 +130,8 @@
 
 - `POST /api/v1/lotto/bet` ใน `FrontendApi` เป็น wrapper ที่ delegate ไป `Gametech\Lotto\Services\BetService`
 - ต้องมี regression test คุมว่า container resolve `BetService` ได้จริง เพราะถ้า binding dependency ผิดลำดับ route จะตอบ generic error แม้ request ถูกต้อง
+- controller เดิมที่เคย delegate ไป `Wallet/Lotto` controllers ต้องถูก refactor เป็น native implementation ใน `FrontendApi` ทั้งหมด
+- ควรมี architecture regression test คุมว่าไฟล์ใน `FrontendApi/Api/V1` ไม่มี `use Gametech\\*\\Http\\Controllers\\...` และไม่มี `app(...Controller::class)` ของ package อื่น
 - `POST /api/v1/auth/register` ในโหมด `seamless` ต้องคุมว่า `GameUserRepository::addGameUser()` รองรับ source payload แบบ `array` จาก frontend ได้จริง และไม่ล้มหลังสร้าง `games_user`
 - realtime contract ฝั่งสมาชิกต้องแยกจากทีมงาน:
   - shared feed ของสมาชิกใช้ `shared_member_channel = {APP_NAME}_members`

@@ -413,12 +413,46 @@
   - ยอดโบนัสแนะนำสะสมและจำนวนรายการจาก `payments_promotion` (`promotion_bonus_income`, `promotion_bonus_count`)
 - response มีข้อมูลกติกาโปรโมชั่นแนะนำจาก `promotions.id = pro_faststart`:
   - `length_type`, `bonus_percent`, `bonus_price`, `display_value`
+  - `more_message` = ข้อความพร้อมแสดงจาก `app.con.more` โดยแทน `:field` ด้วย `display_value`
 - response มีรายการผู้ถูกแนะนำใน field `referrals`:
   - `username`
   - `name`
   - `regis_date` (`Y-m-d`)
   - `first_deposit_amount`
   - `first_deposit_date` (`Y-m-d H:i:s`, nullable)
+
+## นโยบาย Frontend API v1 Coupon
+
+- เพิ่ม endpoint:
+  - `POST /api/v1/coupon/redeem`
+  - `GET /api/v1/coupon/my`
+  - `POST /api/v1/coupon/my/{code}/claim`
+- implementation policy:
+  - flow คูปองของ frontend ต้องอยู่ใน controller/service ของ `packages/Gametech/FrontendApi` เอง
+  - ห้าม route ฝั่ง `FrontendApi` เรียก controller ของ package อื่นโดยตรง
+  - route หลักที่เคย delegate controller ข้าม package ถูกย้ายมาเป็น native implementation แล้วใน `FrontendApi`
+    - `member/balance`
+    - `deposit/loadbank`
+    - `promotion/*`
+    - `wheel/*`
+    - `lotto/draws/{id}`
+    - `lotto/bet`
+    - `lotto/groups/{groupId}/packages*`
+    - `lotto/tickets*`
+  - มี regression test เชิงสถาปัตยกรรมคุมว่า controller ใน `FrontendApi/Api/V1` ห้าม import หรือ resolve controller จาก package อื่นผ่าน `app(...Controller::class)`
+- `POST /api/v1/coupon/redeem`
+  - request รับ `coupon`
+  - ตรวจรหัสคูปอง, สิทธิ์ใช้งาน, เงื่อนไขฝากเงิน, `newuser`, `norefill`, และการใช้ซ้ำ
+  - ถ้าผ่านเงื่อนไข จะสร้างรายการ `bonus` สถานะรอรับ และ mark `coupons_list.status=Y`
+  - response ส่ง `item.status = pending_claim`
+- `GET /api/v1/coupon/my`
+  - ใช้ `bonus.status = N` เป็น source หลัก
+  - ข้ามรายการที่หมดอายุแล้ว
+  - response ส่ง `items` และ `summary.count`
+- `POST /api/v1/coupon/my/{code}/claim`
+  - รับโบนัสจากรายการที่เลือก
+  - update สถานะ `bonus.status = Y`
+  - response ส่ง `item.status = claimed`
 
 ## นโยบาย Frontend API v1 Member History
 

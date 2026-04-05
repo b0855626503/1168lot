@@ -2,23 +2,26 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
-use Gametech\Lotto\Http\Controllers\Api\BetController as LottoBetController;
-use Gametech\Lotto\Http\Controllers\Api\DrawController as LottoDrawController;
-use Gametech\Lotto\Http\Controllers\Api\PackageController as LottoPackageController;
-use Gametech\Lotto\Http\Controllers\Api\TicketController as LottoTicketController;
+use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Exceptions\LottoPackageException;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
+use Gametech\Lotto\Models\LottoGroupPackage;
 use Gametech\Lotto\Models\LottoMarketBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
+use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\BetService;
+use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
@@ -224,7 +227,35 @@ class LottoController extends BaseController
     {
         try {
             $language = $this->requestLanguage($request);
-            $response = app(LottoDrawController::class)->show($id);
+            $draw = LottoDraw::query()
+                ->with(['market:id,name,group_id', 'betSettings'])
+                ->find($id);
+
+            if (! $draw) {
+                return $this->sendError('ไม่พบงวดที่ระบุ', 404);
+            }
+
+            $response = $this->sendResponse([
+                'id' => (int) $draw->id,
+                'market' => [
+                    'id' => (int) $draw->market_id,
+                    'name' => $draw->market?->name,
+                    'group_id' => (int) ($draw->market?->group_id ?? 0),
+                ],
+                'draw_date' => optional($draw->draw_date)->toDateString(),
+                'open_at' => optional($draw->open_at)->toDateTimeString(),
+                'close_at' => optional($draw->close_at)->toDateTimeString(),
+                'status' => (string) $draw->status,
+                'result_number' => $draw->result_number,
+                'bet_settings' => $draw->betSettings->map(fn ($setting): array => [
+                    'bet_type' => (string) $setting->bet_type,
+                    'bet_type_label' => BetType::label((string) $setting->bet_type),
+                    'is_enabled' => (bool) $setting->is_enabled,
+                    'min_bet' => (float) $setting->min_bet,
+                    'max_bet' => (float) $setting->max_bet,
+                    'max_per_number' => (float) $setting->max_per_number,
+                ])->values()->all(),
+            ], 'ดึงรายละเอียดงวดสำเร็จ');
 
             return $this->localizeDrawResponse($response, $language);
         } catch (\Throwable $e) {
@@ -235,9 +266,43 @@ class LottoController extends BaseController
     public function bet(Request $request)
     {
         try {
-            return app(LottoBetController::class)->store($request, app('Gametech\Lotto\Services\BetService'));
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $validated = validator($request->all(), [
+                'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+                'package_id' => ['required', 'integer', 'exists:lotto_group_packages,id'],
+                'items' => ['required', 'array', 'min:1'],
+                'items.*.bet_type' => ['required', 'string'],
+                'items.*.number' => ['required', 'string'],
+                'items.*.amount' => ['required', 'numeric', 'min:1'],
+            ])->validate();
+
+            $ticket = app(BetService::class)->placeBet(
+                (int) $member->code,
+                (int) $validated['draw_id'],
+                (int) $validated['package_id'],
+                (array) $validated['items']
+            );
+
+            return $this->sendResponse([
+                'ticket_id' => (int) $ticket->id,
+                'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+                'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
+                'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
+                'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+                'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
+                'status' => (string) $ticket->status,
+                'item_count' => $ticket->items->count(),
+            ], 'แทงหวยสำเร็จ');
+        } catch (LottoPackageException $exception) {
+            return $this->sendResponseFail([
+                'error_code' => $exception->errorCode(),
+            ], $exception->getMessage(), $exception->httpStatus());
         } catch (\Throwable $e) {
-            return $this->sendError('ไม่สามารถส่งโพยได้ในขณะนี้', 422);
+            return $this->sendError($e->getMessage(), 422);
         }
     }
 
@@ -245,7 +310,20 @@ class LottoController extends BaseController
     {
         try {
             $language = $this->requestLanguage($request);
-            $response = app(LottoTicketController::class)->index($request);
+            $memberId = $this->resolveMemberId($request);
+            if (! $memberId) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $tickets = $this->ticketQuery($memberId)
+                ->orderByDesc('id')
+                ->limit($this->resolveTicketLimit($request))
+                ->get();
+
+            $response = $this->sendResponse(
+                $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket))->values()->all(),
+                'ดึงประวัติโพยสำเร็จ'
+            );
 
             return $this->localizeTicketsResponse($response, $language);
         } catch (\Throwable $e) {
@@ -256,8 +334,33 @@ class LottoController extends BaseController
     public function packages(int $groupId): JsonResponse
     {
         try {
-            return $this->normalizeJsonResponseImages(
-                app(LottoPackageController::class)->available($groupId)
+            $packages = LottoGroupPackage::query()
+                ->with(['betSettings' => static function ($query) {
+                    $query->where('is_enabled', true)->orderBy('bet_type');
+                }])
+                ->where('group_id', $groupId)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->get();
+
+            return $this->sendResponse(
+                $packages->map(static function (LottoGroupPackage $package): array {
+                    return [
+                        'id' => (int) $package->id,
+                        'group_id' => (int) $package->group_id,
+                        'name' => (string) $package->name,
+                        'image' => (string) ($package->image ?? ''),
+                        'is_active' => (bool) $package->is_active,
+                        'bet_settings' => $package->betSettings->map(static function ($setting): array {
+                            return [
+                                'bet_type' => (string) $setting->bet_type,
+                                'payout' => (float) $setting->payout,
+                                'discount_percent' => (float) $setting->discount_percent,
+                            ];
+                        })->values()->all(),
+                    ];
+                })->values()->all(),
+                'ดึง package สำเร็จ'
             );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึง package ได้ในขณะนี้', 422);
@@ -267,13 +370,31 @@ class LottoController extends BaseController
     public function selectPackage(Request $request, int $groupId): JsonResponse
     {
         try {
-            return $this->normalizeJsonResponseImages(
-                app(LottoPackageController::class)->select(
-                    $groupId,
-                    $request,
-                    app('Gametech\Lotto\Services\LottoPackageSelectionService')
-                )
-            );
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $validated = validator($request->all(), [
+                'package_id' => ['required', 'integer', 'exists:lotto_group_packages,id'],
+            ])->validate();
+
+            $package = LottoGroupPackage::query()->find((int) $validated['package_id']);
+            if (! $package || (int) $package->group_id !== $groupId) {
+                return $this->sendResponseFail(['error_code' => 'PACKAGE_NOT_IN_GROUP'], 'package ไม่อยู่ใน group เดียวกัน', 400);
+            }
+
+            if (! (bool) $package->is_active) {
+                return $this->sendResponseFail(['error_code' => 'PACKAGE_INACTIVE'], 'package ถูกปิดใช้งาน', 409);
+            }
+
+            app(LottoPackageSelectionService::class)->select((int) $member->code, $groupId, (int) $package->id);
+
+            return $this->sendResponse([
+                'group_id' => $groupId,
+                'package_id' => (int) $package->id,
+                'selected' => true,
+            ], 'เลือก package สำเร็จ');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถเลือก package ได้ในขณะนี้', 422);
         }
@@ -282,13 +403,50 @@ class LottoController extends BaseController
     public function selectedPackage(Request $request, int $groupId): JsonResponse
     {
         try {
-            return $this->normalizeJsonResponseImages(
-                app(LottoPackageController::class)->selected(
-                    $groupId,
-                    $request,
-                    app('Gametech\Lotto\Services\LottoPackageSelectionService')
-                )
-            );
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $selectionService = app(LottoPackageSelectionService::class);
+            $selectedPackageId = $selectionService->getSelectedPackageId((int) $member->code, $groupId);
+
+            if ($selectedPackageId === null) {
+                return $this->sendResponseNew([
+                    'data' => null,
+                    'selected' => false,
+                ], 'ยังไม่ได้เลือก package');
+            }
+
+            $package = LottoGroupPackage::query()
+                ->with(['betSettings' => static function ($query) {
+                    $query->where('is_enabled', true)->orderBy('bet_type');
+                }])
+                ->find($selectedPackageId);
+
+            if (! $package || (int) $package->group_id !== $groupId || ! (bool) $package->is_active) {
+                return $this->sendResponseNew([
+                    'data' => null,
+                    'selected' => false,
+                ], 'ยังไม่ได้เลือก package');
+            }
+
+            return $this->sendResponseNew([
+                'data' => [
+                    'group_id' => $groupId,
+                    'package_id' => (int) $package->id,
+                    'name' => (string) $package->name,
+                    'image' => (string) ($package->image ?? ''),
+                    'bet_settings' => $package->betSettings->map(static function ($setting): array {
+                        return [
+                            'bet_type' => (string) $setting->bet_type,
+                            'payout' => (float) $setting->payout,
+                            'discount_percent' => (float) $setting->discount_percent,
+                        ];
+                    })->values()->all(),
+                ],
+                'selected' => true,
+            ], 'ดึงสถานะ package ที่เลือกสำเร็จ');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงสถานะ package ที่เลือกได้ในขณะนี้', 422);
         }
@@ -298,7 +456,41 @@ class LottoController extends BaseController
     {
         try {
             $language = $this->requestLanguage($request);
-            $response = app(LottoTicketController::class)->show($request, $id);
+            $memberId = $this->resolveMemberId($request);
+            if (! $memberId) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $ticket = $this->ticketQuery($memberId)->find($id);
+            if (! $ticket) {
+                return $this->sendError('ไม่พบโพยที่ระบุ', 404);
+            }
+
+            $payload = $this->mapTicketSummary($ticket);
+            $payload['items'] = $ticket->items->map(static function ($item): array {
+                $rawStatus = $item->result_status;
+                $itemResultStatus = in_array($rawStatus, ['win', 'lose'], true)
+                    ? (string) $rawStatus
+                    : 'pending';
+
+                return [
+                    'bet_type' => (string) $item->bet_type,
+                    'bet_type_label' => BetType::label((string) $item->bet_type),
+                    'number' => (string) $item->number,
+                    'amount' => (float) $item->amount,
+                    'payout_at_time' => (float) $item->payout_at_time,
+                    'discount_percent_at_time' => (float) ($item->discount_percent_at_time ?? 0),
+                    'discount_amount_at_time' => (float) ($item->discount_amount_at_time ?? 0),
+                    'payable_amount_at_time' => (float) ($item->payable_amount_at_time ?? 0),
+                    'potential_win_amount_at_time' => (float) ($item->potential_win_amount_at_time ?? 0),
+                    'result_status' => $itemResultStatus,
+                    'raw_result_status' => $rawStatus,
+                    'is_winner' => $itemResultStatus === 'win',
+                    'win_amount' => (float) ($item->win_amount ?? 0),
+                ];
+            })->values()->all();
+
+            $response = $this->sendResponse($payload, 'ดึงรายละเอียดโพยสำเร็จ');
 
             return $this->localizeTicketResponse($response, $language);
         } catch (\Throwable $e) {
@@ -309,22 +501,95 @@ class LottoController extends BaseController
     public function cancel(Request $request, int $id)
     {
         try {
-            $response = app(LottoTicketController::class)->cancel(
-                $request,
-                $id,
-                app(WalletTransactionService::class)
-            );
-            if ($response instanceof JsonResponse) {
-                $payload = json_decode((string) $response->getContent(), true);
-                $message = (string) ($payload['message'] ?? '');
-                if (($payload['success'] ?? false) === false && Str::contains($message, 'No query results for model')) {
-                    return $this->sendError('ไม่พบโพยที่ระบุ', 404);
-                }
+            $memberId = $this->resolveMemberId($request);
+            if (! $memberId) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
-            return $this->normalizeJsonResponseImages($response);
+            DB::transaction(function () use ($id, $memberId): void {
+                $ticket = $this->ticketQuery($memberId)
+                    ->with(['draw', 'items'])
+                    ->lockForUpdate()
+                    ->find($id);
+
+                if (! $ticket) {
+                    throw new \InvalidArgumentException('ticket_not_found');
+                }
+
+                if ((string) $ticket->status !== 'active') {
+                    throw new \RuntimeException('โพยนี้ไม่สามารถยกเลิกได้');
+                }
+
+                if ((string) ($ticket->draw->status ?? '') !== 'open') {
+                    throw new \RuntimeException('ยกเลิกได้เฉพาะโพยที่อยู่ในงวดเปิดรับเท่านั้น');
+                }
+
+                $this->guardCancelWindow($ticket);
+                $this->guardDailyCancelLimit($memberId);
+
+                foreach ($ticket->items as $item) {
+                    $exposure = LottoNumberExposure::query()
+                        ->where('draw_id', (int) $ticket->draw_id)
+                        ->where('bet_type', (string) $item->bet_type)
+                        ->where('number', (string) $item->number)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $exposure) {
+                        continue;
+                    }
+
+                    $nextAmount = max(0, (float) $exposure->sold_amount - (float) $item->amount);
+                    $exposure->update(['sold_amount' => $nextAmount]);
+                }
+
+                $debitTxn = Schema::hasTable('wallet_transactions')
+                    ? DB::table('wallet_transactions')
+                        ->where('member_id', $memberId)
+                        ->where('ref_type', 'LOTTO_BET')
+                        ->where('ref_id', (int) $ticket->id)
+                        ->orderByDesc('id')
+                        ->first(['id'])
+                    : null;
+
+                $refundAmount = (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0);
+                app(WalletTransactionService::class)->creditMemberBalance(
+                    memberId: $memberId,
+                    amount: $refundAmount,
+                    refType: 'LOTTO_CANCEL',
+                    refId: (int) $ticket->id,
+                    refCode: (string) $ticket->id,
+                    groupCode: 'LOTTO_CANCEL_' . $ticket->id . '_' . now()->format('YmdHis'),
+                    relatedTxnId: isset($debitTxn->id) ? (int) $debitTxn->id : null,
+                    meta: [
+                        'draw_id' => (int) $ticket->draw_id,
+                        'ticket_id' => (int) $ticket->id,
+                    ],
+                    createdByType: 'member',
+                    createdById: $memberId,
+                    description: 'คืนเงินจากการยกเลิกโพยหวย'
+                );
+
+                $updatePayload = [
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                    'refund_amount' => $refundAmount,
+                ];
+
+                if (Schema::hasColumn('lotto_tickets', 'cancelled_by')) {
+                    $updatePayload['cancelled_by'] = $memberId;
+                }
+
+                $ticket->update($updatePayload);
+            });
+
+            return $this->sendSuccess('ยกเลิกโพยสำเร็จ');
+        } catch (\InvalidArgumentException $e) {
+            return $this->sendError('ไม่พบโพยที่ระบุ', 404);
+        } catch (\RuntimeException $e) {
+            return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('ไม่สามารถยกเลิกโพยได้ในขณะนี้', 422);
+            return $this->sendError('ยกเลิกโพยไม่สำเร็จ', 500);
         }
     }
 
@@ -830,6 +1095,235 @@ class LottoController extends BaseController
         return $this->normalizeJsonResponseImages(
             response()->json($payload, $response->getStatusCode())
         );
+    }
+
+    private function resolveCustomerMember(Request $request): mixed
+    {
+        return $request->user('customer') ?: $request->user();
+    }
+
+    private function resolveMemberId(Request $request): ?int
+    {
+        $member = $this->resolveCustomerMember($request);
+
+        if (! $member || ! isset($member->code)) {
+            return null;
+        }
+
+        return (int) $member->code;
+    }
+
+    private function resolveTicketLimit(Request $request): int
+    {
+        return max(1, min((int) $request->input('limit', 20), 100));
+    }
+
+    private function ticketQuery(int $memberId)
+    {
+        return LottoTicket::query()
+            ->with(['draw.market', 'items'])
+            ->where('member_id', $memberId);
+    }
+
+    private function mapTicketSummary(LottoTicket $ticket): array
+    {
+        $resultContext = $this->ticketResultContext($ticket);
+        $itemSummary = $this->ticketItemSummary($ticket);
+        $cancellationInfo = $this->resolveCancellationInfo($ticket);
+
+        return [
+            'id' => (int) $ticket->id,
+            'draw_id' => (int) $ticket->draw_id,
+            'draw_date' => optional($ticket->draw?->draw_date)->toDateString(),
+            'market_name' => $ticket->draw?->market?->name,
+            'status' => (string) $ticket->status,
+            'draw_status' => (string) ($ticket->draw?->status ?? ''),
+            'draw_result_at' => optional($ticket->draw?->result_at)->toDateTimeString(),
+            'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+            'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
+            'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
+            'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
+            'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
+            'refund_amount' => (float) ($ticket->refund_amount ?? 0),
+            'cancelled_at' => optional($ticket->cancelled_at)->toDateTimeString(),
+            'cancelled_by_name' => $cancellationInfo['name'],
+            'cancelled_by_type' => $cancellationInfo['type'],
+            'cancel_reason' => $this->resolveTicketReason($ticket),
+            'result_outcome' => $resultContext['result_outcome'],
+            'is_final' => $resultContext['is_final'],
+            'is_winner' => $resultContext['is_winner'],
+            'item_count' => $itemSummary['item_count'],
+            'winning_item_count' => $itemSummary['winning_item_count'],
+            'losing_item_count' => $itemSummary['losing_item_count'],
+            'pending_item_count' => $itemSummary['pending_item_count'],
+            'created_at' => optional($ticket->created_at)->toDateTimeString(),
+        ];
+    }
+
+    /**
+     * @return array{result_outcome:string,is_final:bool,is_winner:bool}
+     */
+    private function ticketResultContext(LottoTicket $ticket): array
+    {
+        $draw = $ticket->draw;
+        $drawStatus = (string) ($draw?->status ?? '');
+        $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
+        $ticketStatus = (string) $ticket->status;
+        $isNoResult = (bool) ($resultNumber['no_result'] ?? false)
+            || (string) ($resultNumber['status'] ?? '') === 'no_result';
+        $isRefunded = (bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false);
+        $isWinner = (float) ($ticket->total_win_amount ?? 0) > 0;
+
+        $resultOutcome = match (true) {
+            $ticketStatus === 'cancelled' => 'cancelled',
+            $isRefunded => 'refunded',
+            $isNoResult => 'no_result',
+            $ticketStatus === 'resulted' || $drawStatus === 'resulted' => $isWinner ? 'won' : 'lose',
+            $drawStatus === 'open' => 'betting_open',
+            default => 'pending_result',
+        };
+
+        return [
+            'result_outcome' => $resultOutcome,
+            'is_final' => in_array($resultOutcome, ['won', 'lose', 'cancelled', 'no_result', 'refunded'], true),
+            'is_winner' => $resultOutcome === 'won',
+        ];
+    }
+
+    /**
+     * @return array{item_count:int,winning_item_count:int,losing_item_count:int,pending_item_count:int}
+     */
+    private function ticketItemSummary(LottoTicket $ticket): array
+    {
+        $items = $ticket->items ?? collect();
+        $winningCount = (int) $items->where('result_status', 'win')->count();
+        $losingCount = (int) $items->where('result_status', 'lose')->count();
+        $itemCount = (int) $items->count();
+
+        return [
+            'item_count' => $itemCount,
+            'winning_item_count' => $winningCount,
+            'losing_item_count' => $losingCount,
+            'pending_item_count' => max(0, $itemCount - $winningCount - $losingCount),
+        ];
+    }
+
+    private function guardCancelWindow(LottoTicket $ticket): void
+    {
+        $closeAt = $ticket->draw?->close_at;
+
+        if (! $closeAt instanceof Carbon) {
+            throw new \RuntimeException('โพยนี้ไม่สามารถยกเลิกได้ เพราะไม่พบเวลาปิดรับ');
+        }
+
+        if (! now()->lt($closeAt->copy()->subMinutes(10))) {
+            throw new \RuntimeException('ยกเลิกโพยได้ก่อนเวลาปิดรับอย่างน้อย 10 นาทีเท่านั้น');
+        }
+    }
+
+    private function guardDailyCancelLimit(int $memberId): void
+    {
+        if (! Schema::hasTable('wallet_transactions')) {
+            return;
+        }
+
+        $dailyCancelledCount = DB::table('wallet_transactions')
+            ->where('member_id', $memberId)
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('created_by_type', 'member')
+            ->where('created_by_id', $memberId)
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
+
+        if ($dailyCancelledCount >= 4) {
+            throw new \RuntimeException('สมาชิกยกเลิกโพยได้ไม่เกินวันละ 4 ครั้ง');
+        }
+    }
+
+    /**
+     * @return array{name:string,type:string}
+     */
+    private function resolveCancellationInfo(LottoTicket $ticket): array
+    {
+        if (Schema::hasTable('wallet_transactions')) {
+            $cancelTxn = DB::table('wallet_transactions')
+                ->where('ref_type', 'LOTTO_CANCEL')
+                ->where('ref_id', (int) $ticket->id)
+                ->orderByDesc('id')
+                ->first(['created_by_type', 'created_by_id']);
+
+            if ($cancelTxn && ! empty($cancelTxn->created_by_type) && ! empty($cancelTxn->created_by_id)) {
+                $name = $this->resolveActorName((string) $cancelTxn->created_by_type, (int) $cancelTxn->created_by_id);
+                if ($name !== '') {
+                    return [
+                        'name' => $name,
+                        'type' => (string) $cancelTxn->created_by_type,
+                    ];
+                }
+            }
+        }
+
+        if (! empty($ticket->cancelled_by)) {
+            $memberName = $this->resolveActorName('member', (int) $ticket->cancelled_by);
+            if ($memberName !== '') {
+                return ['name' => $memberName, 'type' => 'member'];
+            }
+
+            $adminName = $this->resolveActorName('admin', (int) $ticket->cancelled_by);
+            if ($adminName !== '') {
+                return ['name' => $adminName, 'type' => 'admin'];
+            }
+        }
+
+        return ['name' => '', 'type' => ''];
+    }
+
+    private function resolveActorName(string $actorType, int $actorId): string
+    {
+        if ($actorId <= 0) {
+            return '';
+        }
+
+        return match ($actorType) {
+            'admin' => Schema::hasTable('employees')
+                ? trim((string) DB::table('employees')->where('code', $actorId)->value('user_name'))
+                : '',
+            'member' => Schema::hasTable('members')
+                ? trim((string) (DB::table('members')->where('code', $actorId)->value('user_name')
+                    ?: DB::table('members')->where('code', $actorId)->value('name')))
+                : '',
+            default => '',
+        };
+    }
+
+    private function resolveTicketReason(LottoTicket $ticket): string
+    {
+        if ($this->hasTicketReasonColumn()) {
+            return trim((string) ($ticket->reason ?? ''));
+        }
+
+        if (! Schema::hasTable('wallet_transactions')) {
+            return '';
+        }
+
+        $cancelTxnMeta = DB::table('wallet_transactions')
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('ref_id', (int) $ticket->id)
+            ->orderByDesc('id')
+            ->value('meta');
+
+        if (! is_string($cancelTxnMeta) || trim($cancelTxnMeta) === '') {
+            return '';
+        }
+
+        $decoded = json_decode($cancelTxnMeta, true);
+
+        return is_array($decoded) ? trim((string) ($decoded['reason'] ?? '')) : '';
+    }
+
+    private function hasTicketReasonColumn(): bool
+    {
+        return Schema::hasColumn('lotto_tickets', 'reason');
     }
 
     private function responsePayload(JsonResponse $response): array

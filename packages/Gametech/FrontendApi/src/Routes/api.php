@@ -2,6 +2,7 @@
 
 use Gametech\FrontendApi\Http\Controllers\Api\V1\AuthController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\ContactChannelController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\CouponController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
@@ -96,6 +97,12 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.wallet.withdraw');
             Route::get('wallet/transactions', [WalletController::class, 'transactions'])
                 ->name('frontend.api.v1.wallet.transactions');
+            Route::post('coupon/redeem', [CouponController::class, 'redeem'])
+                ->name('frontend.api.v1.coupon.redeem');
+            Route::get('coupon/my', [CouponController::class, 'myCoupons'])
+                ->name('frontend.api.v1.coupon.my');
+            Route::post('coupon/my/{code}/claim', [CouponController::class, 'claim'])
+                ->name('frontend.api.v1.coupon.claim');
 
             Route::get('deposit/channels', [DepositController::class, 'channels'])
                 ->name('frontend.api.v1.deposit.channels');

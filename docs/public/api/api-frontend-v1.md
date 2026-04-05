@@ -380,6 +380,7 @@ Response ตัวอย่างเมื่อ validation ไม่ผ่า�
   - `bonus_percent` (`number|null`)
   - `bonus_price` (`number|null`)
   - `display_value` (`string|null`) ค่าที่พร้อมแสดงผล เช่น `1.50 %` หรือ `50.00`
+  - `more_message` (`string|null`) ข้อความอธิบายจาก `app.con.more` โดย backend แทน `:field` ด้วย `display_value` แล้ว
 - `referrals` (`array<object>`) รายชื่อสมาชิกที่แนะนำได้
   - `username` (`string`)
   - `name` (`string`)
@@ -402,7 +403,8 @@ Response ตัวอย่าง
     "length_type": "PERCENT",
     "bonus_percent": 1.5,
     "bonus_price": 0,
-    "display_value": "1.50 %"
+    "display_value": "1.50 %",
+    "more_message": "ลิ้งค์ช่วยแชร์รับ 1.50 %  ฟรี (แค่ก๊อปปี้ลิ้งค์ไปแชร์ก็ได้เงินแล้ว) ยิ่งแชร์มากยิ่งได้มากท่านสามารถนำลิ้งค์ด้านล่างนี้หรือนำไปแชร์ในช่องทางต่างๆ ไม่ว่าจะเป็น เว็บไชต์ส่วนตัว, Blog, Facebook หรือ Social Network อื่นๆหากมีการสมัครสมาชิกโดยคลิกผ่านลิ้งค์ของท่านเข้ามา ลูกค้าที่สมัครเข้ามาก็จะอยู่ภายใต้การแนะนำของท่านทันที และหากลูกค้าภายใต้การแนะนำของท่านมีการเติมเงินเข้ามาครั้งแรก ท่านจะได้รับส่วนแบ่งในการแนะนำ 1.50 %  ทันทีโดยไม่มีเงื่อนไข"
   },
   "referrals": [
     {
@@ -423,7 +425,98 @@ HTTP status
 - token ไม่ถูกต้อง/หมดอายุ: `401`
 - เกิดข้อผิดพลาดภายใน: `422`
 
-#### 2.5 ประวัติธุรกรรมสมาชิก (อ้างอิงหน้า `/member/history`)
+#### 2.6 คูปองของสมาชิก
+- `POST /coupon/redeem`
+- Auth: ต้องใช้ token
+
+Request body
+```json
+{
+  "coupon": "ABC123"
+}
+```
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "รับคูปองสำเร็จ",
+  "item": {
+    "code": "BONUS001",
+    "name": "โบนัสต้อนรับ",
+    "status": "pending_claim",
+    "status_label": "รอรับโบนัส",
+    "type": "credit",
+    "type_label": "เครดิต",
+    "value": 150,
+    "turnpro": 1,
+    "amount_limit": 2,
+    "rate": "",
+    "date_expire": null,
+    "can_claim": true
+  }
+}
+```
+
+- `GET /coupon/my`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "ดึงรายการคูปองสำเร็จ",
+  "items": [
+    {
+      "code": "BONUS001",
+      "name": "โบนัสต้อนรับ",
+      "status": "pending_claim",
+      "status_label": "รอรับโบนัส",
+      "type": "credit",
+      "type_label": "เครดิต",
+      "value": 150,
+      "turnpro": 1,
+      "amount_limit": 2,
+      "rate": "",
+      "date_expire": null,
+      "can_claim": true
+    }
+  ],
+  "summary": {
+    "count": 1
+  }
+}
+```
+
+- `POST /coupon/my/{code}/claim`
+- Auth: ต้องใช้ token
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "message": "รับโบนัสจากคูปองสำเร็จ",
+  "item": {
+    "code": "BONUS001",
+    "name": "โบนัสต้อนรับ",
+    "status": "claimed",
+    "status_label": "รับโบนัสแล้ว",
+    "type": "credit",
+    "type_label": "เครดิต",
+    "amount": 150,
+    "turnpro": 1,
+    "amount_limit": 2,
+    "balance_after": 150
+  }
+}
+```
+
+HTTP status
+- สำเร็จ: `200`
+- token ไม่ถูกต้อง/หมดอายุ: `401`
+- คูปองไม่ถูกต้อง/หมดอายุ/ผิดเงื่อนไข/รายการรับไม่ได้: `422`
+
+#### 2.7 ประวัติธุรกรรมสมาชิก (อ้างอิงหน้า `/member/history`)
 - `GET /member/history`
 - `GET /member/history/{type}`
 - Auth: ต้องใช้ token
