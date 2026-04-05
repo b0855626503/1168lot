@@ -16,6 +16,10 @@
   - report `tickets-cancel` เพิ่มคอลัมน์ `สาเหตุ`
   - กรณี draw `งดออกผล` แล้วใช้ flow `cancel-all-refund`
     - ticket ที่ถูกคืนเงินทั้งงวดต้องถูก stamp `reason = งดออกผล`
+  - rollout/schema compatibility:
+    - เพิ่ม migration สำหรับ `lotto_tickets.reason`
+    - ระหว่างช่วงที่บาง environment ยังไม่ migrate ระบบต้องไม่พัง
+    - ให้ fallback เก็บ/อ่าน `reason` จาก `wallet_transactions.meta.reason` ชั่วคราว
 - เหตุผล:
   - ให้ทีมงาน audit ได้ว่าการยกเลิกหรือคืนเงินเกิดจากอะไร ใครเป็นคนทำ และทำเมื่อไร
   - ลดกรณีโพยถูกคืนเงินแล้วเหลือเพียงสถานะ `cancelled` แต่ไม่มีบริบทให้อ่านย้อนหลัง

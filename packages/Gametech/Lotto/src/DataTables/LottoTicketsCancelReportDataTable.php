@@ -37,6 +37,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
                 lotto_markets.icon as market_icon,
                 cancel_tx.created_by_type as cancel_tx_created_by_type,
                 cancel_tx.created_by_id as cancel_tx_created_by_id,
+                cancel_tx.meta as cancel_tx_meta,
                 cancel_tx_admin.user_name as cancel_tx_admin_user_name,
                 cancel_tx_member.user_name as cancel_tx_member_user_name,
                 cancel_tx_member.name as cancel_tx_member_name,
@@ -125,7 +126,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ['data' => 'total_net_amount', 'name' => 'total_net_amount', 'title' => 'สุทธิ', 'className' => 'text-right'],
             ['data' => 'total_win_amount', 'name' => 'total_win_amount', 'title' => 'ยอดถูก', 'className' => 'text-right'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ', 'className' => 'text-center'],
-            ['data' => 'reason', 'name' => 'reason', 'title' => 'สาเหตุ', 'className' => 'text-left'],
+            ['data' => 'reason', 'name' => 'id', 'title' => 'สาเหตุ', 'className' => 'text-left', 'orderable' => false],
             ['data' => 'cancelled_by_name', 'name' => 'cancel_tx_admin_user_name', 'title' => 'ผู้ยกเลิก', 'className' => 'text-left'],
         ];
     }

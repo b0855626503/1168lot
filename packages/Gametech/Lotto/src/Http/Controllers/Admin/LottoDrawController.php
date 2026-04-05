@@ -527,14 +527,19 @@ class LottoDrawController extends AppBaseController
                             ]);
                     }
 
-                    $ticket->update([
+                    $updatePayload = [
                         'status' => 'cancelled',
-                        'reason' => $reason,
                         'cancelled_at' => now(),
                         'cancelled_by' => $adminId ? (int) $adminId : null,
                         'refund_amount' => $refundAmount,
                         'total_win_amount' => 0,
-                    ]);
+                    ];
+
+                    if (Schema::hasColumn('lotto_tickets', 'reason')) {
+                        $updatePayload['reason'] = $reason;
+                    }
+
+                    $ticket->update($updatePayload);
 
                     $cancelledTickets++;
                     $totalRefund += $refundAmount;

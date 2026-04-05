@@ -31,7 +31,7 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'total_net_amount' => number_format((float) ($row->total_net_amount ?? $row->total_amount ?? 0), 2),
             'total_win_amount' => number_format((float) ($row->total_win_amount ?? 0), 2),
             'status' => $this->statusBadge((string) ($row->status ?? '')),
-            'reason' => e(trim((string) ($row->reason ?? '')) !== '' ? (string) $row->reason : '-'),
+            'reason' => e($this->resolveReason($row)),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
         ];
     }
@@ -49,6 +49,24 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         }
 
         return trim((string) ($row->cancel_admin_user_name ?? $row->cancel_member_user_name ?? $row->cancel_member_name ?? ''));
+    }
+
+    private function resolveReason($row): string
+    {
+        $ticketReason = trim((string) ($row->reason ?? ''));
+        if ($ticketReason !== '') {
+            return $ticketReason;
+        }
+
+        $meta = $row->cancel_tx_meta ?? null;
+        if (! is_string($meta) || trim($meta) === '') {
+            return '-';
+        }
+
+        $decoded = json_decode($meta, true);
+        $metaReason = is_array($decoded) ? trim((string) ($decoded['reason'] ?? '')) : '';
+
+        return $metaReason !== '' ? $metaReason : '-';
     }
 
     private function formatMarket(string $marketName, string $logo, string $icon): string

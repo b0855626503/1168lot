@@ -100,7 +100,7 @@ class LottoTicketController extends AppBaseController
             'total_net_amount' => (float) ($ticket->total_net_amount ?? 0),
             'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
             'refund_amount' => (float) ($ticket->refund_amount ?? 0),
-            'reason' => (string) ($ticket->reason ?? ''),
+            'reason' => $this->resolveTicketReason($ticket),
             'cancelled_at' => optional($ticket->cancelled_at)->format('d/m/Y H:i:s'),
             'cancelled_by_name' => $cancellationInfo['name'],
             'cancelled_by_type' => $cancellationInfo['type'],
@@ -203,14 +203,19 @@ class LottoTicketController extends AppBaseController
                     );
                 }
 
-                $ticket->update([
+                $updatePayload = [
                     'status' => 'cancelled',
-                    'reason' => $reason,
                     'cancelled_at' => now(),
                     'cancelled_by' => $adminId ? (int) $adminId : null,
                     'refund_amount' => $refundAmount,
                     'total_win_amount' => 0,
-                ]);
+                ];
+
+                if ($this->hasTicketReasonColumn()) {
+                    $updatePayload['reason'] = $reason;
+                }
+
+                $ticket->update($updatePayload);
 
                 $memberDisplay = trim((string) ($ticket->member->user_name ?? $ticket->member->name ?? ''));
 
@@ -289,5 +294,35 @@ class LottoTicketController extends AppBaseController
                 : '',
             default => '',
         };
+    }
+
+    private function resolveTicketReason(LottoTicket $ticket): string
+    {
+        if ($this->hasTicketReasonColumn()) {
+            return trim((string) ($ticket->reason ?? ''));
+        }
+
+        if (! Schema::hasTable('wallet_transactions')) {
+            return '';
+        }
+
+        $cancelTxnMeta = DB::table('wallet_transactions')
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('ref_id', (int) $ticket->id)
+            ->orderByDesc('id')
+            ->value('meta');
+
+        if (! is_string($cancelTxnMeta) || trim($cancelTxnMeta) === '') {
+            return '';
+        }
+
+        $decoded = json_decode($cancelTxnMeta, true);
+
+        return is_array($decoded) ? trim((string) ($decoded['reason'] ?? '')) : '';
+    }
+
+    private function hasTicketReasonColumn(): bool
+    {
+        return Schema::hasColumn('lotto_tickets', 'reason');
     }
 }

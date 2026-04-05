@@ -122,6 +122,10 @@
     - คืนเงินสมาชิกด้วย `wallet_transactions(ref_type=LOTTO_CANCEL, created_by_type=admin)`
     - update ticket เป็น `cancelled`
     - เก็บ `reason`, `cancelled_at`, `cancelled_by`, `refund_amount`
+  - rollout compatibility:
+    - ถ้า DB ยังไม่ migrate คอลัมน์ `lotto_tickets.reason`
+    - flow ยกเลิกยังต้องทำงานได้ และเก็บสาเหตุไว้ใน `wallet_transactions.meta.reason`
+    - หลัง migrate แล้วจึงเก็บลง `lotto_tickets.reason` ตามปกติ
 - modal รายละเอียดโพย (`tickets/loaddata`) ส่งข้อมูล cancel context เพิ่มเมื่อมี:
   - `reason`
   - `cancelled_at`
@@ -169,6 +173,9 @@
     - ถ้าเป็นลูกค้ายกเลิกเอง ให้แสดงข้อมูล member จาก `created_by_type=member`
     - ถ้าเป็นทีมงานยกเลิก/คืนโพยทั้งงวด ให้แสดงข้อมูล admin จาก `created_by_type=admin`
     - fallback สุดท้ายค่อยอ่านจาก `lotto_tickets.cancelled_by`
+  - `สาเหตุ`
+    - อ่านจาก `lotto_tickets.reason` เป็นหลัก
+    - ถ้าระหว่าง rollout DB ยังไม่มีคอลัมน์นี้ ให้ fallback ไปอ่าน `wallet_transactions.meta.reason`
   - กรณี draw ถูก `งดออกผล` แล้วกด `ยกเลิกโพย+คืนเงิน` ทั้งงวด:
     - ticket ที่เกี่ยวข้องถูกเก็บ `reason = งดออกผล`
     - report จึงแสดงได้ครบทั้งสาเหตุ ผู้ทำ และเวลา
