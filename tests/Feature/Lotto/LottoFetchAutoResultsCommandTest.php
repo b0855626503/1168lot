@@ -106,13 +106,14 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         ]);
 
         DB::table('lotto_draws')->insert([
-            ['id' => 1, 'market_id' => 1, 'result_at' => '2026-04-04 10:00:00', 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'market_id' => 2, 'result_at' => '2026-04-04 10:01:00', 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'market_id' => 3, 'result_at' => '2026-04-04 10:02:00', 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'market_id' => 4, 'result_at' => '2026-04-04 10:03:00', 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'market_id' => 1, 'result_at' => now()->subMinutes(4), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'market_id' => 2, 'result_at' => now()->subMinutes(3), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'market_id' => 3, 'result_at' => now()->subMinutes(2), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'market_id' => 4, 'result_at' => now()->subMinute(), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('markExhausted')->never();
         $pipeline->shouldReceive('processDraw')->once()->andReturn(['status' => 'APPLIED']);
         $pipeline->shouldReceive('processDraw')->once()->andReturn(['status' => 'VALIDATION_ERROR']);
         $pipeline->shouldReceive('processDraw')->once()->andThrow(new \RuntimeException('boom'));

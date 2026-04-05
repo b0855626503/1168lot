@@ -486,17 +486,6 @@ class AutoResultPipelineService
 
     public function markExhausted(LottoDraw $draw): void
     {
-        if (! $this->canWriteDrawFetchFields()) {
-            return;
-        }
-
-        $draw->forceFill([
-            'result_fetch_status' => 'EXHAUSTED',
-            'result_fetch_error' => 'retry attempts exhausted',
-            'result_exhausted_at' => now(),
-            'result_fetched_at' => now(),
-        ])->saveQuietly();
-
         $this->hardening->insertFetchLog([
             'draw_id' => (int) $draw->id,
             'market_id' => (int) $draw->market_id,
@@ -506,6 +495,21 @@ class AutoResultPipelineService
             'error_message' => 'retry attempts exhausted',
             'created_at' => now()->toDateTimeString(),
         ]);
+
+        if ($this->canWriteDrawFetchFields()) {
+            $draw->forceFill([
+                'result_fetch_status' => 'EXHAUSTED',
+                'result_fetch_error' => 'retry attempts exhausted',
+                'result_exhausted_at' => now(),
+                'result_fetched_at' => now(),
+            ])->saveQuietly();
+        }
+
+        $this->hardening->notifyExhaustedDraw(
+            $draw->fresh(['market']),
+            (int) ($draw->result_fetch_attempts ?? 0),
+            null
+        );
     }
 
     /**
@@ -596,7 +600,12 @@ class AutoResultPipelineService
         $errorCode = strtoupper(trim($errorCode));
         $message = trim($errorMessage) !== '' ? trim($errorMessage) : 'V2 cutover validation failed';
 
-        if ($status === 'FETCH_DEFERRED' || $this->isRetryableNetworkErrorCode($errorCode)) {
+        if (
+            $status === 'NOT_READY'
+            || str_starts_with($errorCode, 'NOT_READY')
+            || $status === 'FETCH_DEFERRED'
+            || $this->isRetryableNetworkErrorCode($errorCode)
+        ) {
             return [
                 'status' => 'NOT_READY',
                 'draw_status_override' => 'NOT_READY',

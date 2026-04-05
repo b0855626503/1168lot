@@ -3,6 +3,25 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-05 — Auto Result Business Not-Ready Must Stay `NOT_READY` and Exhausted Alert Must Work Without Full Draw Hardening Columns (APPROVED)
+
+- ปรับ auto-result pipeline:
+  - `NOT_READY_BUSINESS_RULE`
+  - `NOT_READY_PARTIAL_RESULT`
+  - และผลลัพธ์ V2 ที่คืน `status=NOT_READY`
+  ต้องถูก map เป็น `NOT_READY`
+  - ห้ามบันทึกเป็น `VALIDATION_ERROR`
+- เหตุผล:
+  - ให้เคส “ผลยังไม่ออกจริง” เข้า retry/backoff/max_attempts policy ได้ถูกต้อง
+  - ปิดปัญหาที่ draw ถูกลองใหม่ทุกนาทีเพราะ status ถูกจัดผิดกลุ่ม
+- ปรับ exhausted alert:
+  - `markExhausted()` ต้องยิง Telegram alert ได้แม้ environment ยังไม่มี hardening columns บน `lotto_draws`
+  - ถ้า draw ไม่มี `result_fetch_attempts/result_fetch_error`
+    ให้ fallback อ่าน `attempt_no/error_message` ล่าสุดจาก `lotto_result_fetch_logs`
+- เหตุผล:
+  - production บางเครื่องยังอยู่ช่วง schema transitional
+  - exhausted alert ต้องไม่หายเพียงเพราะ draw table ยัง migrate ไม่ครบ
+
 ## 2026-04-05 — Dashboard Net Balance Must Exclude Lotto Cash and Recent Lotto Bets Must Show `user_name` (APPROVED)
 
 - ปรับหน้า `admin /dashboard`

@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Services;
 use App\Jobs\SendTelegramBot;
 use Gametech\Lotto\Models\LottoDraw;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -37,11 +38,20 @@ class AutoResultHardeningService
             return;
         }
 
+        $this->notifyExhaustedDraw($draw);
+    }
+
+    public function notifyExhaustedDraw(LottoDraw $draw, ?int $attemptsOverride = null, ?string $lastErrorOverride = null): void
+    {
         if (! (bool) config('lotto_auto_result.hardening.alerts.enabled', true)) {
             return;
         }
 
-        if ($draw->exhausted_alerted_at !== null) {
+        if (
+            Schema::hasTable('lotto_draws')
+            && Schema::hasColumn('lotto_draws', 'exhausted_alerted_at')
+            && $draw->exhausted_alerted_at !== null
+        ) {
             return;
         }
 
@@ -54,15 +64,17 @@ class AutoResultHardeningService
 
         RateLimiter::hit($rateKey, $dedupeSeconds);
 
+        [$resolvedAttempts, $resolvedLastError] = $this->resolveExhaustedAlertContext($draw, $attemptsOverride, $lastErrorOverride);
+
         $payload = [
             'draw_id' => (int) $draw->id,
             'market_id' => (int) $draw->market_id,
             'status' => (string) $draw->status,
-            'result_fetch_status' => (string) $draw->result_fetch_status,
-            'result_fetch_attempts' => (int) ($draw->result_fetch_attempts ?? 0),
+            'result_fetch_status' => (string) ($draw->result_fetch_status ?? self::STATUS_EXHAUSTED),
+            'result_fetch_attempts' => $resolvedAttempts,
             'result_at' => $this->formatDateTime($draw->result_at),
             'result_fetched_at' => $this->formatDateTime($draw->result_fetched_at),
-            'last_error' => (string) ($draw->result_fetch_error ?? ''),
+            'last_error' => $resolvedLastError,
         ];
         $draw->loadMissing('market:id,name');
 
@@ -80,17 +92,51 @@ class AutoResultHardeningService
             $marketName,
             $drawDate,
             $resultAt,
-            (int) ($draw->result_fetch_attempts ?? 0),
-            $lastError
+            $resolvedAttempts,
+            $resolvedLastError !== '' ? $resolvedLastError : '-'
         );
 
         $endpoint = (string) config('lotto_auto_result.hardening.alerts.telegram_endpoint', 'notify/send');
         $queue = (string) config('lotto_auto_result.hardening.alerts.telegram_queue', 'cashback');
-        SendTelegramBot::dispatch($endpoint, $message)->onQueue($queue);
+        Bus::dispatch((new SendTelegramBot($endpoint, $message))->onQueue($queue));
 
         if (Schema::hasTable('lotto_draws') && Schema::hasColumn('lotto_draws', 'exhausted_alerted_at')) {
             $draw->forceFill(['exhausted_alerted_at' => $this->now()])->saveQuietly();
         }
+    }
+
+    /**
+     * @return array{0:int,1:string}
+     */
+    private function resolveExhaustedAlertContext(LottoDraw $draw, ?int $attemptsOverride = null, ?string $lastErrorOverride = null): array
+    {
+        $attempts = max(0, (int) ($attemptsOverride ?? ($draw->result_fetch_attempts ?? 0)));
+        $lastError = trim((string) ($lastErrorOverride ?? ($draw->result_fetch_error ?? '')));
+
+        if (! Schema::hasTable('lotto_result_fetch_logs')) {
+            return [$attempts, $lastError];
+        }
+
+        $latestNonExhaustedLog = DB::table('lotto_result_fetch_logs')
+            ->where('draw_id', (int) $draw->id)
+            ->where('status', '!=', self::STATUS_EXHAUSTED)
+            ->orderByDesc('id')
+            ->first(['attempt_no', 'error_message']);
+
+        $latestLog = $latestNonExhaustedLog ?: DB::table('lotto_result_fetch_logs')
+            ->where('draw_id', (int) $draw->id)
+            ->orderByDesc('id')
+            ->first(['attempt_no', 'error_message']);
+
+        if ($attempts <= 0 && $latestLog) {
+            $attempts = max(0, (int) ($latestLog->attempt_no ?? 0));
+        }
+
+        if ($lastError === '' && $latestLog) {
+            $lastError = trim((string) ($latestLog->error_message ?? ''));
+        }
+
+        return [$attempts, $lastError];
     }
 
     public function acquireSourceRateLimit(int $sourceId): bool

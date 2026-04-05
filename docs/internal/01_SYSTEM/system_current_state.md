@@ -346,6 +346,9 @@
 - รูปแบบข้อความ exhausted:
   - `หวย{ชื่อ} งวดวันที่ {date} เวลาออกผล {time} ไม่สามารถดึงผลรางวัลได้`
 - `TelegramFailedBot` สงวนไว้สำหรับเส้น dev/failed monitoring
+- exhausted alert ต้อง dispatch ได้แม้ environment ยังไม่มี hardening columns บน `lotto_draws` ครบ
+  - ถ้า draw ไม่มี `result_fetch_attempts/result_fetch_error`
+  - ให้ fallback อ่าน `attempt_no/error_message` ล่าสุดจาก `lotto_result_fetch_logs`
 
 ## นโยบาย Retry/Fallback หลาย Source (Auto Result)
 
@@ -354,6 +357,13 @@
 - เมื่อ source แรกครบ `max_attempts` แล้ว ระบบจะ mark ว่า source นั้น exhausted (เฉพาะ source) และ fallback ไป source ถัดไปอัตโนมัติ
 - กรณี source ยังไม่ครบ max แต่ยังติด backoff window ระบบจะคงรอ source เดิม (ยังไม่ข้ามไป source ถัดไป)
 - draw จะถูก mark `EXHAUSTED` เมื่อ source ที่ active ทั้งหมดในช่วงเวลานั้น exhausted ครบแล้วเท่านั้น
+- สำหรับ V2 cutover:
+  - `NOT_READY_BUSINESS_RULE`
+  - `NOT_READY_PARTIAL_RESULT`
+  - หรือผลลัพธ์ที่ runner คืน `status=NOT_READY`
+  ต้องถูกบันทึกเป็น `NOT_READY`
+  - ห้าม downgrade เป็น `VALIDATION_ERROR`
+  - เพื่อให้เข้า retry/backoff/max_attempts policy ถูกต้อง
 - ถ้าเกิด unhandled exception หลัง `result_fetch_attempts` ถูก increment แล้ว:
   - ต้องมีแถวใน `lotto_result_fetch_logs` เสมอ
   - ใช้ `status=VALIDATION_ERROR`, `error_code=UNHANDLED_EXCEPTION`
