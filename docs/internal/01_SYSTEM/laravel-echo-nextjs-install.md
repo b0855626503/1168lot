@@ -13,7 +13,7 @@
 - **Next.js** = เว็บหน้าบ้าน
 - **Laravel Echo** = ตัวช่วย listen event
 - **pusher-js** = ตัวเชื่อม websocket protocol
-- **Public channel** = ห้องกลาง ใครก็ฟังได้
+- **Shared member channel** = ห้องรวมของสมาชิกที่ต้อง auth ก่อนฟัง
 - **Private channel** = ห้องส่วนตัวของสมาชิกแต่ละคน
 
 ## Endpoint สำคัญจากไฟล์ต้นทาง
@@ -31,7 +31,7 @@
 3. เรียก `GET /realtime/config`
 4. เรียก `GET /member/realtime-context`
 5. สร้าง `Echo`
-6. subscribe `public_channel`
+6. subscribe `shared_member_channel`
 7. subscribe `private_channel`
 8. listen event
 9. update UI
@@ -60,7 +60,7 @@ NEXT_PUBLIC_APP_NAME=APP
     "ws_path": "",
     "ws_scheme": "http",
     "force_tls": false,
-    "public_channel": "APP_events",
+    "shared_member_channel": "APP_members",
     "private_channel_member_template": "APP_members.{member_code}"
   }
 }
@@ -111,9 +111,8 @@ export function createRealtimeConnection({
     },
   });
 
-  echo.channel(realtime.public_channel)
-    .listen(".public.activity.updated", (event: any) => onPublicEvent(event))
-    .listen(".lotto.draw_resulted", (event: any) => onPublicEvent(event));
+  echo.private(realtime.shared_member_channel)
+    .listen(".public.activity.updated", (event: any) => onPublicEvent(event));
 
   echo.private(privateChannel)
     .listen(".member.activity.updated", (event: any) => {
@@ -144,7 +143,7 @@ export function createRealtimeConnection({
 ## ปัญหาที่เจอบ่อย
 | อาการ | สาเหตุ |
 |---|---|
-| public ได้ แต่ private ไม่ได้ | ไม่ส่ง Bearer token |
+| shared member/private ไม่ได้ | ไม่ส่ง Bearer token |
 | event ไม่มา | ชื่อ event ไม่ตรง หรือ backend ไม่ broadcast |
 | event ซ้ำ | สร้าง Echo ซ้ำหลาย instance |
 | ยอดไม่ตรง | ไม่มี reconcile ด้วย `/member/balance` |
@@ -154,5 +153,5 @@ export function createRealtimeConnection({
 - login ให้ได้ token
 - เรียก `/realtime/config` และ `/member/realtime-context`
 - สร้าง Echo พร้อม `authEndpoint`
-- listen public + private channel
+- listen shared member + private channel
 - เมื่อมี event ให้ toast + update state + reconcile balance

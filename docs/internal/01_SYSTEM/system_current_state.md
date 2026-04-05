@@ -52,6 +52,9 @@
   - ถ้ามี context ของ draw ให้แนบ `market_name` และ `draw_date`
   - ถ้าเป็น action `created` ต้องแนบผู้ทำรายการ (`actor_id`) และยอดเงิน (`amount`) ด้วย
   - ถ้าเป็น action `cancelled` ต้องแนบทั้งเจ้าของโพย (`owner_id`) และผู้ทำรายการ (`actor_id`) เมื่อ resolve ได้
+  - field `total` ของ event นี้ต้องมีความหมายเท่ากับ badge เมนู `รายการโพย`
+    - นับเฉพาะ `lotto_tickets.status=active`
+    - ห้ามนับ `cancelled` และ `resulted` ปนใน total
   - ตัวอย่างข้อความ:
     - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
     - `มีการคืนโพยหวย: หวย ธกส. งวดวันที่ 2026-04-16 ของ xxx โดย xxxx`
@@ -67,6 +70,12 @@
 - ทั้งสองตัวต้องใช้ toast style:
   - `className = rt-toast rt-info gt-toast gt-toast-info`
   - `avatar = /assets/admin/icons/alert.webp?v=1`
+- realtime channel ฝั่งลูกค้าต้องแยกจากทีมงาน
+  - ทีมงานใช้ `{APP_NAME}_events`
+  - ฝั่งสมาชิกใช้ shared private channel `{APP_NAME}_members` สำหรับ `public.activity.updated`
+  - ฝั่งสมาชิกแต่ละคนยังใช้ private channel `{APP_NAME}_members.{member_code}` สำหรับ `member.activity.updated` และ `member.balance.updated`
+  - `/api/v1/realtime/config` ต้องคืน `shared_member_channel` แทน `public_channel`
+  - frontend ฝั่งลูกค้าห้าม subscribe `{APP_NAME}_events` หรือ listen direct event ของทีมงาน เช่น `lotto.ticket.list.changed` / `lotto.draw.status.changed`
 
 ## นโยบาย ACL แยกสิทธิ์ CRUD (Admin Lotto)
 

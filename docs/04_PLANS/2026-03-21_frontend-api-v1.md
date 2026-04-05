@@ -117,3 +117,7 @@
 - `POST /api/v1/lotto/bet` ใน `FrontendApi` เป็น wrapper ที่ delegate ไป `Gametech\Lotto\Services\BetService`
 - ต้องมี regression test คุมว่า container resolve `BetService` ได้จริง เพราะถ้า binding dependency ผิดลำดับ route จะตอบ generic error แม้ request ถูกต้อง
 - `POST /api/v1/auth/register` ในโหมด `seamless` ต้องคุมว่า `GameUserRepository::addGameUser()` รองรับ source payload แบบ `array` จาก frontend ได้จริง และไม่ล้มหลังสร้าง `games_user`
+- realtime contract ฝั่งสมาชิกต้องแยกจากทีมงาน:
+  - shared feed ของสมาชิกใช้ `shared_member_channel = {APP_NAME}_members`
+  - event รายคนยังใช้ `{APP_NAME}_members.{member_code}`
+  - ห้าม expose `{APP_NAME}_events` ให้ frontend ลูกค้าใช้

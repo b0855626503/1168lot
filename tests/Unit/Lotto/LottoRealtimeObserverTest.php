@@ -343,4 +343,63 @@ class LottoRealtimeObserverTest extends TestCase
         $this->assertSame('2026-04-04', $observer->ticketResultedEvents[0]['draw_date']);
         $this->assertSame([548], $observer->telegramDispatches);
     }
+
+    public function test_ticket_observer_total_counts_only_active_tickets(): void
+    {
+        $this->recreateMinimalLottoTicketsTable();
+
+        DB::table('lotto_tickets')->insert([
+            ['id' => 1, 'status' => 'active'],
+            ['id' => 2, 'status' => 'cancelled'],
+            ['id' => 3, 'status' => 'resulted'],
+            ['id' => 4, 'status' => 'active'],
+        ]);
+
+        $observer = new class extends LottoTicketRealtimeObserver
+        {
+            public function exposedResolveTotalTickets(): int
+            {
+                return $this->resolveTotalTickets();
+            }
+        };
+
+        $this->assertSame(2, $observer->exposedResolveTotalTickets());
+
+        Schema::dropIfExists('lotto_tickets');
+    }
+
+    public function test_draw_observer_total_counts_only_active_tickets(): void
+    {
+        $this->recreateMinimalLottoTicketsTable();
+
+        DB::table('lotto_tickets')->insert([
+            ['id' => 11, 'status' => 'active'],
+            ['id' => 12, 'status' => 'cancelled'],
+            ['id' => 13, 'status' => 'active'],
+            ['id' => 14, 'status' => 'resulted'],
+            ['id' => 15, 'status' => 'cancelled'],
+        ]);
+
+        $observer = new class extends LottoDrawRealtimeObserver
+        {
+            public function exposedResolveTotalTickets(): int
+            {
+                return $this->resolveTotalTickets();
+            }
+        };
+
+        $this->assertSame(2, $observer->exposedResolveTotalTickets());
+
+        Schema::dropIfExists('lotto_tickets');
+    }
+
+    private function recreateMinimalLottoTicketsTable(): void
+    {
+        Schema::dropIfExists('lotto_tickets');
+
+        Schema::create('lotto_tickets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('status')->nullable();
+        });
+    }
 }

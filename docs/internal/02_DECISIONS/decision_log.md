@@ -1,5 +1,32 @@
 # Decision Log
 
+## 2026-04-05 — Customer Realtime Channel Must Be Separated from Admin Events Channel (APPROVED)
+
+- ปรับ `RealtimePublicActivityUpdated` และ `FrontendApi RealtimeController`
+- behavior ใหม่:
+  - event `public.activity.updated` ของฝั่งลูกค้าไม่ broadcast ไป `{APP_NAME}_events` อีกต่อไป
+  - ย้ายไป shared private channel `{APP_NAME}_members`
+  - `/api/v1/realtime/config` คืน `shared_member_channel` แทน `public_channel`
+  - ฝั่ง frontend ลูกค้าต้อง subscribe `private-{APP_NAME}_members` เพื่อรับ `public.activity.updated`
+  - event direct ของทีมงาน เช่น `lotto.ticket.list.changed` และ `lotto.draw.status.changed` ไม่ถูก expose ใน realtime config ฝั่งลูกค้าอีก
+- เหตุผล:
+  - แยก boundary ของ customer/team ให้ชัด
+  - ลดการเอา admin event และ admin payload ไปปะปนกับ channel ที่ frontend ลูกค้าใช้
+
+## 2026-04-05 — Admin Lotto Ticket Realtime Total Must Count Active Tickets Only (APPROVED)
+
+- ปรับ observer `LottoTicketRealtimeObserver` และ `LottoDrawRealtimeObserver`
+- behavior ใหม่:
+  - realtime event `lotto.ticket.list.changed` จะส่ง `total` เป็นจำนวนโพย `active` ปัจจุบันเท่านั้น
+  - ใช้กติกาเดียวกันทุก action ที่ยิง event:
+    - `created`
+    - `cancelled`
+    - `resulted`
+  - ห้ามนับโพย `cancelled` และ `resulted` ปนใน total เพราะหน้าแอดมินใช้ค่านี้เป็น badge ของเมนู `รายการโพย`
+- เหตุผล:
+  - ให้ badge หน้าแอดมินตรงกับ dataset จริงของ `/lotto/tickets` ที่แสดงเฉพาะโพย `active`
+  - ลดความสับสนจาก payload เดิมที่ count ทั้งตารางแต่ UI แสดง active-only
+
 ## 2026-04-05 — Lotto Admin Menus Must Trigger Dashboard `loadCnt` on Entry Consistently (APPROVED)
 
 - ปรับเมนู Lotto ฝั่ง admin ใน scope `admin.lotto.*`

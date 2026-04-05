@@ -1420,19 +1420,12 @@ Response ตัวอย่าง
     "ws_path": "",
     "ws_scheme": "http",
     "force_tls": false,
-    "public_channel": "APP_events",
+    "shared_member_channel": "APP_members",
     "private_channel_member_template": "APP_members.{member_code}",
     "events": [
-      "member.activity.updated",
-      "member.balance.updated",
       "public.activity.updated",
-      "wallet.deposit_approved",
-      "wallet.withdraw_approved",
-      "wallet.rollback_applied",
-      "lotto.draw_closed",
-      "lotto.draw_resulted",
-      "lotto.draw.status.changed",
-      "lotto.ticket.list.changed"
+      "member.activity.updated",
+      "member.balance.updated"
     ]
   }
 }
@@ -1461,7 +1454,7 @@ Request body ตัวอย่าง
 ```json
 {
   "socket_id": "1234.5678",
-  "channel_name": "private-APP_members.10001"
+  "channel_name": "private-APP_members"
 }
 ```
 
@@ -1541,14 +1534,11 @@ Response ตัวอย่าง meta site
   - `rollback`
   - `lotto` (กรณีที่ต้องการส่งเข้า private ในอนาคต)
 
-Public channel:
-- ชื่อ channel: `{APP_NAME}_events`
+Shared member channel:
+- ชื่อ channel: `{APP_NAME}_members`
+- ประเภท: private channel
 - events:
-  - `public.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ public feed)
-  - `lotto.draw_closed`
-  - `lotto.draw_resulted`
-  - `lotto.draw.status.changed`
-  - `lotto.ticket.list.changed`
+  - `public.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ shared feed ของสมาชิก)
 
 Private channel (ของสมาชิกคนนั้น):
 - ชื่อ channel: `{APP_NAME}_members.{member_code}`
@@ -1621,7 +1611,7 @@ export function connectRealtime({
     ws_host: string;
     ws_port: number;
     force_tls: boolean;
-    public_channel: string;
+    shared_member_channel: string;
   };
   onToast: (msg: string) => void;
   onBalanceUpdate: (balance: number) => void;
@@ -1644,10 +1634,8 @@ export function connectRealtime({
     }
   });
 
-  echo.channel(realtime.public_channel)
-    .listen(".public.activity.updated", (e: any) => onLottoChanged(e))
-    .listen(".lotto.draw.status.changed", (e: any) => onLottoChanged(e))
-    .listen(".lotto.ticket.list.changed", (e: any) => onLottoChanged(e));
+  echo.private(realtime.shared_member_channel)
+    .listen(".public.activity.updated", (e: any) => onLottoChanged(e));
 
   echo.private(`${process.env.NEXT_PUBLIC_APP_NAME}_members.${memberCode}`)
     .listen(".member.activity.updated", (e: any) => {

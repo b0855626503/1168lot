@@ -194,6 +194,8 @@ class LottoDrawRealtimeObserver
 
     protected function resolveTotalTickets(): int
     {
-        return (int) LottoTicket::query()->count();
+        return (int) LottoTicket::query()
+            ->where('status', 'active')
+            ->count();
     }
 }

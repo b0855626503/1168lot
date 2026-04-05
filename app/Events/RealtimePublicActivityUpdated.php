@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -24,9 +24,9 @@ class RealtimePublicActivityUpdated implements ShouldBroadcastNow
         $this->data = $data;
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel
     {
-        return new Channel(config('app.name') . '_events');
+        return new PrivateChannel(config('app.name') . '_members');
     }
 
     public function broadcastAs(): string

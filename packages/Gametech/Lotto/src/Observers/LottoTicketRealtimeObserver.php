@@ -52,7 +52,9 @@ class LottoTicketRealtimeObserver
 
     protected function resolveTotalTickets(): int
     {
-        return (int) LottoTicket::query()->count();
+        return (int) LottoTicket::query()
+            ->where('status', 'active')
+            ->count();
     }
 
     protected function afterCommit(callable $callback): void
