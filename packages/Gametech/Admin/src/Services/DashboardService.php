@@ -800,8 +800,9 @@ class DashboardService
             ->orderByDesc('t.id');
 
         $memberUsernameColumn = $this->memberUsernameColumn();
-        if ($this->hasTable('members') && $this->hasColumn('members', 'id')) {
-            $query->leftJoin('members as member', 'member.id', '=', 't.member_id');
+        $memberKeyColumn = $this->memberKeyColumn();
+        if ($this->hasTable('members') && $this->hasColumn('members', $memberKeyColumn)) {
+            $query->leftJoin('members as member', 'member.' . $memberKeyColumn, '=', 't.member_id');
 
             if ($memberUsernameColumn) {
                 $query->addSelect('member.' . $memberUsernameColumn . ' as member_username');

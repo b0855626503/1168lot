@@ -61,7 +61,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
     public function test_recent_lotto_bets_activity_prefers_member_user_name(): void
     {
         Schema::create('members', function (Blueprint $table): void {
-            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('id')->nullable();
+            $table->unsignedBigInteger('code')->primary();
             $table->string('user_name')->nullable();
         });
         Schema::create('lotto_groups', function (Blueprint $table): void {
@@ -90,7 +91,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
         });
 
         DB::table('members')->insert([
-            'id' => 52,
+            'id' => 999,
+            'code' => 52,
             'user_name' => 'member52',
         ]);
         DB::table('lotto_groups')->insert([
