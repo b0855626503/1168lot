@@ -28,6 +28,7 @@ Homestead.json
 /vendor/
 /game/
 /.ai/
+/.codebase-memory/
 /.codex/
 /.github/
 !/.github/
