@@ -1,8 +1,9 @@
 <script>
     window.broadcastConfig = {
-        key: @json(env('REVERB_APP_KEY', env('PUSHER_APP_KEY', 'app-key'))),
-        host: @json(request()->getHost()),
-        port: @json((int) env('REVERB_PORT', env('PUSHER_PORT', 8080))),
-        scheme: @json(env('REVERB_SCHEME', request()->isSecure() ? 'https' : 'http')),
+        key: @json(config('broadcasting.connections.reverb.key', config('broadcasting.connections.pusher.key', 'app-key'))),
+        host: @json(config('broadcasting.connections.reverb.options.host', config('broadcasting.connections.pusher.options.host', 'websocket.168csn.com'))),
+        port: @json((int) config('broadcasting.connections.reverb.options.port', config('broadcasting.connections.pusher.options.port', 443))),
+        scheme: @json(config('broadcasting.connections.reverb.options.scheme', config('broadcasting.connections.pusher.options.scheme', request()->isSecure() ? 'https' : 'http'))),
+        path: @json(config('broadcasting.connections.reverb.options.path', '')),
     };
 </script>
