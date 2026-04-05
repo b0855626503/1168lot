@@ -6,6 +6,17 @@
     @include('admin::layouts.datatables_js')
     {!! $dataTable->scripts() !!}
     <script>
+        const syncMemberBetTypesFilterUi = function (element) {
+            if (!element || typeof window.jQuery !== 'function') {
+                return;
+            }
+
+            const $element = window.jQuery(element);
+            if ($element.hasClass('select2-hidden-accessible')) {
+                $element.trigger('change.select2');
+            }
+        };
+
         $(document).on('preXhr.dt', '#dataTableBuilder', function (_e, _settings, data) {
             data.member_keyword = $('#filter_member_keyword').val() || '';
             data.date_start = $('#filter_date_start').val() || '';
@@ -23,6 +34,7 @@
                 const element = document.getElementById(id);
                 if (element) {
                     element.value = '';
+                    syncMemberBetTypesFilterUi(element);
                 }
             });
 

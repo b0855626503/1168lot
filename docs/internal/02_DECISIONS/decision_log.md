@@ -11,6 +11,13 @@
   - ทุกเมนูข้างต้นเปลี่ยนจาก `SectionController + reports/mockup.blade.php`
   - เป็น controller + DataTable + Transformer + index/create/table views แบบโมดูลจริง
   - `profit-loss-forecast` ใช้ข้อมูลจริงจาก draw bet settings, exposure และ ticket items
+  - report Lotto ทุกหน้าที่มี filter ตลาดใช้ `select2` แบบ grouped ตามกลุ่มรายการหวย พร้อม logo/icon เมื่อมีข้อมูล
+    - `pending-bets`
+    - `profit-loss-forecast`
+    - `member-bet-types`
+    - `tickets-cancel`
+    - `blocked-numbers`
+    - `exposure`
   - `member-bet-types` aggregate ข้อมูลจริงตาม `member + market + bet_type`
   - `tickets-cancel` อ่าน ticket ทุกสถานะและแสดงผู้ยกเลิกเมื่อมีข้อมูล
   - `blocked-numbers` อ่านเลขอั้น/จำกัดอนาคตจาก `lotto_number_blocks` โดยตรง

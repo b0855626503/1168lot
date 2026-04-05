@@ -35,9 +35,23 @@ class LottoExposureReportController extends AppBaseController
             ->toArray();
 
         $marketOptions = LotteryMarket::query()
+            ->with('group:id,name,sort')
+            ->orderBy('group_id')
             ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn ($market) => ['value' => (int) $market->id, 'text' => $market->name])
+            ->get(['id', 'group_id', 'name', 'logo', 'icon'])
+            ->groupBy(static function (LotteryMarket $market): string {
+                return (string) optional($market->group)->name ?: 'ไม่ระบุกลุ่ม';
+            })
+            ->map(static function ($markets, $groupName): array {
+                return [
+                    'label' => (string) $groupName,
+                    'options' => $markets->map(static fn (LotteryMarket $market): array => [
+                        'value' => (int) $market->id,
+                        'text' => (string) $market->name,
+                        'logo' => (string) ($market->logo ?: $market->icon ?: ''),
+                    ])->values()->all(),
+                ];
+            })
             ->values()
             ->toArray();
 
@@ -56,4 +70,3 @@ class LottoExposureReportController extends AppBaseController
         ]);
     }
 }
-

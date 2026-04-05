@@ -6,6 +6,17 @@
 	@include('admin::layouts.datatables_js')
 	{!! $dataTable->scripts() !!}
 	<script>
+		const syncExposureFilterUi = function (element) {
+			if (!element || typeof window.jQuery !== 'function') {
+				return;
+			}
+
+			const $element = window.jQuery(element);
+			if ($element.hasClass('select2-hidden-accessible')) {
+				$element.trigger('change.select2');
+			}
+		};
+
 		$(document).on('preXhr.dt', '#dataTableBuilder', function (e, settings, data) {
 			data.draw_id = $('#filter_draw_id').val() || '';
 			data.market_id = $('#filter_market_id').val() || '';
@@ -21,6 +32,7 @@
 				const element = document.getElementById(id);
 				if (element) {
 					element.value = '';
+					syncExposureFilterUi(element);
 				}
 			});
 

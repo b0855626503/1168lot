@@ -6,6 +6,17 @@
     @include('admin::layouts.datatables_js')
     {!! $dataTable->scripts() !!}
     <script>
+        const syncBlockedNumbersReportFilterUi = function (element) {
+            if (!element || typeof window.jQuery !== 'function') {
+                return;
+            }
+
+            const $element = window.jQuery(element);
+            if ($element.hasClass('select2-hidden-accessible')) {
+                $element.trigger('change.select2');
+            }
+        };
+
         $(document).on('preXhr.dt', '#dataTableBuilder', function (_e, _settings, data) {
             data.draw_date = $('#filter_draw_date').val() || '';
             data.market_id = $('#filter_market_id').val() || '';
@@ -22,6 +33,7 @@
                 const element = document.getElementById(id);
                 if (element) {
                     element.value = '';
+                    syncBlockedNumbersReportFilterUi(element);
                 }
             });
 

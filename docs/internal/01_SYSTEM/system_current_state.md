@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-04
+อัปเดตล่าสุด: 2026-04-05
 
 ## ภาพรวมระบบ
 
@@ -122,6 +122,10 @@
 
 ## นโยบายรายงาน Lotto (Admin `/lotto/reports/*`)
 
+- report Lotto ทุกหน้าที่มี filter `market_id`
+  - ใช้ `select2` แบบ grouped ตาม group ของรายการหวย
+  - แสดง `logo/icon` หน้าชื่อรายการเมื่อมีข้อมูล
+  - ตอน reset filter ต้อง sync ค่าใน UI ของ `select2` ให้กลับเป็นค่าว่างด้วย
 - เมนูรายงานที่เป็นของจริงแล้ว:
   - `pending-bets`
   - `profit-loss-forecast`
