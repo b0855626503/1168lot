@@ -1,5 +1,31 @@
 # Decision Log
 
+## 2026-04-05 — Frontend Lotto Ticket APIs Must Return Clear Result Summary Fields (APPROVED)
+
+- ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+- behavior ใหม่:
+  - คง field เดิมไว้เพื่อ backward compatibility เช่น `status`, `total_win_amount`, `items[].result_status`, `items[].win_amount`
+  - เพิ่ม field ระดับโพยที่ frontend ใช้ได้ตรง ๆ:
+    - `draw_status`, `draw_result_at`
+    - `result_outcome`, `is_final`, `is_winner`
+    - `status_label`, `draw_status_label`, `result_outcome_label`, `result_message`
+    - `item_count`, `winning_item_count`, `losing_item_count`, `pending_item_count`
+  - endpoint รายละเอียดโพยเพิ่ม field ระดับรายการ:
+    - `raw_result_status`
+    - `is_winner`
+    - `result_status_label`
+    - `result_message`
+  - policy การ derive `result_outcome`:
+    - `cancelled` ถ้าโพยถูกยกเลิก
+    - `refunded` ถ้า draw ถูกคืนเงินทั้งงวด
+    - `no_result` ถ้างวดงดออกผล
+    - `won` / `lose` เมื่อ settle แล้ว
+    - `betting_open` ถ้างวดยังเปิดรับ
+    - `pending_result` ถ้ายังรอผลหรือรอทีมงานประกาศผล
+- เหตุผล:
+  - ลดภาระ frontend ที่ต้องเดาสถานะจากหลาย field เอง
+  - ให้หน้าโพยและหน้ารายละเอียดโพยสื่อกับผู้ใช้ได้ทันทีว่า “รอผล / ถูกรางวัล / ไม่ถูกรางวัล / คืนเงินแล้ว”
+
 ## 2026-04-04 — Ticket Resulted Realtime Notification Must Broadcast Once Per Draw (APPROVED)
 
 - ปรับ `LottoTicketRealtimeObserver`

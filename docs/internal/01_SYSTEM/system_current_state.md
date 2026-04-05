@@ -291,6 +291,24 @@
   - `GET /api/v1/lotto/results/by-date?draw_date=YYYY-MM-DD`
   - แสดงผลแบบ grouped ตาม `lotto_groups`
   - แสดงเฉพาะ market ที่มี draw ของวันที่เลือกและสถานะ `resulted`
+- `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+  - คง field เดิม (`status`, `total_*`, `items[].result_status`, `items[].win_amount`) เพื่อ backward compatibility
+  - เพิ่ม field ชัดเจนสำหรับ frontend:
+    - ระดับโพย: `draw_status`, `draw_result_at`, `result_outcome`, `is_final`, `is_winner`
+    - ระดับโพยแบบอ่านได้: `status_label`, `draw_status_label`, `result_outcome_label`, `result_message`
+    - ระดับสรุปรายการ: `item_count`, `winning_item_count`, `losing_item_count`, `pending_item_count`
+  - endpoint รายละเอียดโพยเพิ่ม field ชัดเจนใน `items[]`:
+    - `raw_result_status`
+    - `is_winner`
+    - `result_status_label`
+    - `result_message`
+  - policy การ derive `result_outcome`:
+    - `cancelled` ถ้า `ticket.status=cancelled`
+    - `refunded` ถ้า draw ถูกคืนเงินทั้งงวด (`result_number.manual_cancelled_all_tickets=true`)
+    - `no_result` ถ้า draw เป็น `งดออกผล`
+    - `won` / `lose` เมื่อ ticket ถูก settle แล้ว
+    - `betting_open` ถ้างวดยัง `open`
+    - `pending_result` ในเคสรอผล/รอประกาศผลที่ยังไม่ settle
 - `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
 - `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
 - `POST /api/v1/lotto/bet` ผ่าน `FrontendApi` ไปยัง `Gametech\Lotto\Services\BetService`

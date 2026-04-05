@@ -46,6 +46,11 @@ class TicketController extends AppBaseController
 
         $payload = $this->mapTicketSummary($ticket);
         $payload['items'] = $ticket->items->map(static function ($item): array {
+            $rawStatus = $item->result_status;
+            $itemResultStatus = in_array($rawStatus, ['win', 'lose'], true)
+                ? (string) $rawStatus
+                : 'pending';
+
             return [
                 'bet_type' => (string) $item->bet_type,
                 'bet_type_label' => BetType::label((string) $item->bet_type),
@@ -56,7 +61,9 @@ class TicketController extends AppBaseController
                 'discount_amount_at_time' => (float) ($item->discount_amount_at_time ?? 0),
                 'payable_amount_at_time' => (float) ($item->payable_amount_at_time ?? 0),
                 'potential_win_amount_at_time' => (float) ($item->potential_win_amount_at_time ?? 0),
-                'result_status' => $item->result_status,
+                'result_status' => $itemResultStatus,
+                'raw_result_status' => $rawStatus,
+                'is_winner' => $itemResultStatus === 'win',
                 'win_amount' => (float) ($item->win_amount ?? 0),
             ];
         })->values();
@@ -168,18 +175,79 @@ class TicketController extends AppBaseController
 
     private function mapTicketSummary(LottoTicket $ticket): array
     {
+        $resultContext = $this->ticketResultContext($ticket);
+        $itemSummary = $this->ticketItemSummary($ticket);
+
         return [
             'id' => (int) $ticket->id,
             'draw_id' => (int) $ticket->draw_id,
             'draw_date' => optional($ticket->draw?->draw_date)->toDateString(),
             'market_name' => $ticket->draw?->market?->name,
             'status' => (string) $ticket->status,
+            'draw_status' => (string) ($ticket->draw?->status ?? ''),
+            'draw_result_at' => optional($ticket->draw?->result_at)->toDateTimeString(),
             'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
             'total_bet_amount' => (float) ($ticket->total_bet_amount ?? 0),
             'total_discount_amount' => (float) ($ticket->total_discount_amount ?? 0),
             'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
             'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
+            'refund_amount' => (float) ($ticket->refund_amount ?? 0),
+            'result_outcome' => $resultContext['result_outcome'],
+            'is_final' => $resultContext['is_final'],
+            'is_winner' => $resultContext['is_winner'],
+            'item_count' => $itemSummary['item_count'],
+            'winning_item_count' => $itemSummary['winning_item_count'],
+            'losing_item_count' => $itemSummary['losing_item_count'],
+            'pending_item_count' => $itemSummary['pending_item_count'],
             'created_at' => optional($ticket->created_at)->toDateTimeString(),
+        ];
+    }
+
+    /**
+     * @return array{result_outcome:string,is_final:bool,is_winner:bool}
+     */
+    private function ticketResultContext(LottoTicket $ticket): array
+    {
+        $draw = $ticket->draw;
+        $drawStatus = (string) ($draw?->status ?? '');
+        $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
+        $ticketStatus = (string) $ticket->status;
+        $isNoResult = (bool) ($resultNumber['no_result'] ?? false)
+            || (string) ($resultNumber['status'] ?? '') === 'no_result';
+        $isRefunded = (bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false);
+        $isWinner = (float) ($ticket->total_win_amount ?? 0) > 0;
+
+        $resultOutcome = match (true) {
+            $ticketStatus === 'cancelled' => 'cancelled',
+            $isRefunded => 'refunded',
+            $isNoResult => 'no_result',
+            $ticketStatus === 'resulted' || $drawStatus === 'resulted' => $isWinner ? 'won' : 'lose',
+            $drawStatus === 'open' => 'betting_open',
+            default => 'pending_result',
+        };
+
+        return [
+            'result_outcome' => $resultOutcome,
+            'is_final' => in_array($resultOutcome, ['won', 'lose', 'cancelled', 'no_result', 'refunded'], true),
+            'is_winner' => $resultOutcome === 'won',
+        ];
+    }
+
+    /**
+     * @return array{item_count:int,winning_item_count:int,losing_item_count:int,pending_item_count:int}
+     */
+    private function ticketItemSummary(LottoTicket $ticket): array
+    {
+        $items = $ticket->items ?? collect();
+        $winningCount = (int) $items->where('result_status', 'win')->count();
+        $losingCount = (int) $items->where('result_status', 'lose')->count();
+        $itemCount = (int) $items->count();
+
+        return [
+            'item_count' => $itemCount,
+            'winning_item_count' => $winningCount,
+            'losing_item_count' => $losingCount,
+            'pending_item_count' => max(0, $itemCount - $winningCount - $losingCount),
         ];
     }
 }

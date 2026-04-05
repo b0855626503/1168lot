@@ -789,7 +789,7 @@ class LottoController extends BaseController
                 $row['group_name'] = $this->localizedGroupName($market, $language);
             }
 
-            return $row;
+            return $this->localizeTicketDataRow($row, $language);
         })->values()->all();
 
         $payload['language'] = $language;
@@ -819,7 +819,7 @@ class LottoController extends BaseController
             }
         }
 
-        $payload['data'] = $data;
+        $payload['data'] = $this->localizeTicketDataRow($data, $language, true);
         $payload['language'] = $language;
 
         return $this->normalizeJsonResponseImages(
@@ -1072,5 +1072,169 @@ class LottoController extends BaseController
             'first_prize' => (string) ($resultNumber['first_prize'] ?? ''),
             'last_2_digits' => (string) ($resultNumber['last_2_digits'] ?? ''),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function localizeTicketDataRow(array $row, string $language, bool $includeItems = false): array
+    {
+        $ticketStatus = (string) ($row['status'] ?? '');
+        $drawStatus = (string) ($row['draw_status'] ?? '');
+        $resultOutcome = (string) ($row['result_outcome'] ?? '');
+        $totalWinAmount = (float) ($row['total_win_amount'] ?? 0);
+        $refundAmount = (float) ($row['refund_amount'] ?? 0);
+
+        $row['status_label'] = $this->ticketStatusLabel($ticketStatus, $language);
+        $row['draw_status_label'] = $this->ticketDrawStatusLabel($drawStatus, $language);
+        $row['result_outcome_label'] = $this->ticketResultOutcomeLabel($resultOutcome, $language);
+        $row['result_message'] = $this->ticketResultMessage($resultOutcome, $totalWinAmount, $refundAmount, $language);
+
+        if ($includeItems) {
+            $items = $row['items'] ?? null;
+            if (is_array($items)) {
+                $row['items'] = collect($items)->map(function ($item) use ($language) {
+                    if (! is_array($item)) {
+                        return $item;
+                    }
+
+                    $resultStatus = (string) ($item['result_status'] ?? 'pending');
+                    $item['result_status_label'] = $this->ticketItemResultStatusLabel($resultStatus, $language);
+                    $item['result_message'] = $this->ticketItemResultMessage($resultStatus, (float) ($item['win_amount'] ?? 0), $language);
+
+                    return $item;
+                })->values()->all();
+            }
+        }
+
+        return $row;
+    }
+
+    private function ticketStatusLabel(string $status, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($status) {
+                'active' => 'Active',
+                'cancelled' => 'Cancelled',
+                'resulted' => 'Settled',
+                default => 'Unknown',
+            },
+            default => match ($status) {
+                'active' => 'ใช้งานอยู่',
+                'cancelled' => 'ยกเลิกแล้ว',
+                'resulted' => 'ตัดสินผลแล้ว',
+                default => 'ไม่ทราบสถานะ',
+            },
+        };
+    }
+
+    private function ticketDrawStatusLabel(string $status, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($status) {
+                'open' => 'Open for betting',
+                'closed' => 'Awaiting result',
+                'resulted' => 'Resulted',
+                'draft' => 'Draft',
+                default => 'Pending',
+            },
+            default => match ($status) {
+                'open' => 'เปิดรับแทง',
+                'closed' => 'รอผล',
+                'resulted' => 'ออกผลแล้ว',
+                'draft' => 'ร่าง',
+                default => 'รอผล',
+            },
+        };
+    }
+
+    private function ticketResultOutcomeLabel(string $outcome, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($outcome) {
+                'betting_open' => 'Betting open',
+                'pending_result' => 'Awaiting result',
+                'won' => 'Won',
+                'lose' => 'Did not win',
+                'cancelled' => 'Ticket cancelled',
+                'no_result' => 'No result',
+                'refunded' => 'Refunded',
+                default => 'Awaiting result',
+            },
+            default => match ($outcome) {
+                'betting_open' => 'เปิดรับแทง',
+                'pending_result' => 'รอผล',
+                'won' => 'ถูกรางวัล',
+                'lose' => 'ไม่ถูกรางวัล',
+                'cancelled' => 'ยกเลิกโพย',
+                'no_result' => 'งดออกผล',
+                'refunded' => 'คืนเงินแล้ว',
+                default => 'รอผล',
+            },
+        };
+    }
+
+    private function ticketResultMessage(string $outcome, float $totalWinAmount, float $refundAmount, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($outcome) {
+                'betting_open' => 'This ticket is still open for betting.',
+                'pending_result' => 'This ticket is awaiting result.',
+                'won' => 'This ticket won ' . number_format($totalWinAmount, 2) . ' baht.',
+                'lose' => 'This ticket did not win.',
+                'cancelled' => 'This ticket was cancelled.',
+                'no_result' => 'This draw had no result.',
+                'refunded' => 'This ticket was refunded' . ($refundAmount > 0 ? ' ' . number_format($refundAmount, 2) . ' baht.' : '.'),
+                default => 'This ticket is awaiting result.',
+            },
+            default => match ($outcome) {
+                'betting_open' => 'โพยนี้ยังอยู่ในงวดเปิดรับแทง',
+                'pending_result' => 'โพยนี้กำลังรอผล',
+                'won' => 'โพยนี้ถูกรางวัล ' . number_format($totalWinAmount, 2) . ' บาท',
+                'lose' => 'โพยนี้ไม่ถูกรางวัล',
+                'cancelled' => 'โพยนี้ถูกยกเลิกแล้ว',
+                'no_result' => 'งวดนี้งดออกผล',
+                'refunded' => 'โพยนี้ถูกคืนเงินแล้ว' . ($refundAmount > 0 ? ' ' . number_format($refundAmount, 2) . ' บาท' : ''),
+                default => 'โพยนี้กำลังรอผล',
+            },
+        };
+    }
+
+    private function ticketItemResultStatusLabel(string $status, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($status) {
+                'win' => 'Won',
+                'lose' => 'Did not win',
+                default => 'Awaiting result',
+            },
+            default => match ($status) {
+                'win' => 'ถูกรางวัล',
+                'lose' => 'ไม่ถูกรางวัล',
+                default => 'รอผล',
+            },
+        };
+    }
+
+    private function ticketItemResultMessage(string $status, float $winAmount, string $language): string
+    {
+        return match ($this->normalizeLanguageForLabels($language)) {
+            'en' => match ($status) {
+                'win' => 'Won ' . number_format($winAmount, 2) . ' baht.',
+                'lose' => 'Did not win.',
+                default => 'Awaiting result.',
+            },
+            default => match ($status) {
+                'win' => 'รายการนี้ถูกรางวัล ' . number_format($winAmount, 2) . ' บาท',
+                'lose' => 'รายการนี้ไม่ถูกรางวัล',
+                default => 'รายการนี้กำลังรอผล',
+            },
+        };
+    }
+
+    private function normalizeLanguageForLabels(string $language): string
+    {
+        return $language === 'en' ? 'en' : 'th';
     }
 }

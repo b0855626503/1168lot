@@ -732,6 +732,11 @@ Response จะขึ้นกับกติกาและสถานะง�
 - `GET /lotto/tickets`
 - Auth: ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- endpoint นี้คืนทั้ง raw lifecycle เดิม (`status`) และ field สรุปผลที่พร้อมใช้บน UI:
+  - `draw_status`, `draw_status_label`
+  - `result_outcome`, `result_outcome_label`, `result_message`
+  - `is_final`, `is_winner`
+  - `item_count`, `winning_item_count`, `losing_item_count`, `pending_item_count`
 
 Response ตัวอย่าง
 ```json
@@ -746,8 +751,26 @@ Response ตัวอย่าง
       "market_logo": "/storage/lotto/markets/gsb-logo.png",
       "market_icon": "/storage/lotto/markets/gsb-icon.png",
       "group_name": "หวยไทย",
-      "status": "active",
+      "status": "resulted",
+      "status_label": "ตัดสินผลแล้ว",
+      "draw_status": "resulted",
+      "draw_status_label": "ออกผลแล้ว",
+      "result_outcome": "won",
+      "result_outcome_label": "ถูกรางวัล",
+      "result_message": "โพยนี้ถูกรางวัล 540.00 บาท",
+      "is_final": true,
+      "is_winner": true,
       "total_amount": 90,
+      "total_bet_amount": 100,
+      "total_discount_amount": 10,
+      "total_net_amount": 90,
+      "total_win_amount": 540,
+      "refund_amount": 0,
+      "item_count": 2,
+      "winning_item_count": 1,
+      "losing_item_count": 1,
+      "pending_item_count": 0,
+      "draw_result_at": "2026-03-24 16:00:00",
       "created_at": "2026-03-24 12:00:00"
     }
   ],
@@ -760,6 +783,12 @@ Response ตัวอย่าง
 - `GET /lotto/tickets/{id}`
 - Auth: ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- endpoint นี้คง field summary แบบเดียวกับรายการโพย และเพิ่ม field ระดับรายการใน `items[]`:
+  - `result_status` (`win` / `lose` / `pending`)
+  - `raw_result_status` (ค่าเดิมจากระบบภายในก่อน normalize)
+  - `is_winner`
+  - `result_status_label`
+  - `result_message`
 
 Response ตัวอย่างเมื่อไม่พบโพย
 ```json
@@ -781,10 +810,63 @@ Response ตัวอย่าง (พบข้อมูล)
     "market_logo": "/storage/lotto/markets/gsb-logo.png",
     "market_icon": "/storage/lotto/markets/gsb-icon.png",
     "group_name": "หวยไทย",
-    "status": "active",
+    "status": "resulted",
+    "status_label": "ตัดสินผลแล้ว",
+    "draw_status": "resulted",
+    "draw_status_label": "ออกผลแล้ว",
+    "result_outcome": "won",
+    "result_outcome_label": "ถูกรางวัล",
+    "result_message": "โพยนี้ถูกรางวัล 540.00 บาท",
+    "is_final": true,
+    "is_winner": true,
     "total_amount": 90,
+    "total_bet_amount": 100,
+    "total_discount_amount": 10,
+    "total_net_amount": 90,
+    "total_win_amount": 540,
+    "refund_amount": 0,
+    "item_count": 2,
+    "winning_item_count": 1,
+    "losing_item_count": 1,
+    "pending_item_count": 0,
+    "draw_result_at": "2026-03-24 16:00:00",
     "created_at": "2026-03-24 12:00:00",
-    "items": []
+    "items": [
+      {
+        "bet_type": "top_3",
+        "bet_type_label": "3 ตัวบน",
+        "number": "450",
+        "amount": 50,
+        "payout_at_time": 9,
+        "discount_percent_at_time": 10,
+        "discount_amount_at_time": 5,
+        "payable_amount_at_time": 45,
+        "potential_win_amount_at_time": 450,
+        "result_status": "win",
+        "raw_result_status": "win",
+        "result_status_label": "ถูกรางวัล",
+        "result_message": "รายการนี้ถูกรางวัล 450.00 บาท",
+        "is_winner": true,
+        "win_amount": 450
+      },
+      {
+        "bet_type": "run_bottom",
+        "bet_type_label": "วิ่งล่าง",
+        "number": "5",
+        "amount": 10,
+        "payout_at_time": 9,
+        "discount_percent_at_time": 0,
+        "discount_amount_at_time": 0,
+        "payable_amount_at_time": 10,
+        "potential_win_amount_at_time": 90,
+        "result_status": "lose",
+        "raw_result_status": "lose",
+        "result_status_label": "ไม่ถูกรางวัล",
+        "result_message": "รายการนี้ไม่ถูกรางวัล",
+        "is_winner": false,
+        "win_amount": 0
+      }
+    ]
   },
   "language": "th",
   "message": "ดึงรายละเอียดโพยสำเร็จ"

@@ -67,8 +67,10 @@
   - รับโพยจากลูกค้า
 - `GET /api/v1/lotto/tickets` (ต้องมี token)
   - ประวัติโพย
+  - ต้องมี field สรุปผลที่ frontend ใช้ได้ตรง ๆ เช่น `draw_status`, `result_outcome`, `result_message`
 - `GET /api/v1/lotto/tickets/{id}` (ต้องมี token)
   - รายละเอียดโพย
+  - ต้องมีทั้ง summary ระดับโพยและผลระดับ `items[]` ที่อ่านได้ตรง ๆ โดยไม่ต้องเดาเองจาก raw status
 - `POST /api/v1/lotto/tickets/{id}/cancel` (ต้องมี token)
   - ยกเลิกโพย (ตามเงื่อนไขระบบ)
 
