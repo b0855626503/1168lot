@@ -110,6 +110,8 @@
   - หน้า DataTable ของ Lotto ใช้ shared `datatables_js` เป็นตัวเรียก
   - หน้า custom dashboard / Vue page ของ Lotto ที่ไม่ได้ใช้ DataTables โดยตรง
     - ใช้ shared partial `admin::layouts.loadcnt_js` เพื่อเรียก `loadCnt` ตอนเปิดหน้า
+  - หน้า Lotto index ทั้งหมดต้อง include `admin::layouts.loadcnt_js` เป็น fallback/guarantee แม้บางหน้าจะยังมี `autoCnt()` จากโค้ดเดิม
+  - ใช้ global dedupe (`window.__adminLoadCntTriggered`) กัน request `loadCnt` ซ้ำในหน้าเดียวกัน
   - หน้า Vue reports `results-by-date` และ `profit-loss-forecast` ต้องมีการเรียก `loadCnt` ตอนเข้าเมนูเช่นกัน
 - badge เมนู `รายการโพย` (`lotto_tickets`) ใช้ค่า count จาก `Admin DashboardController@loadCnt`
   - นับเฉพาะ `lotto_tickets.status=active`

@@ -1,6 +1,8 @@
 <script>
     (function () {
-        let loadCntTriggered = false;
+        if (typeof window.__adminLoadCntTriggered === 'undefined') {
+            window.__adminLoadCntTriggered = false;
+        }
 
         const applyBadgeValue = function (key, value) {
             const numericValue = Number(value || 0);
@@ -24,11 +26,11 @@
         };
 
         const runLoadCnt = async function () {
-            if (loadCntTriggered || typeof window.axios === 'undefined') {
+            if (window.__adminLoadCntTriggered || typeof window.axios === 'undefined') {
                 return;
             }
 
-            loadCntTriggered = true;
+            window.__adminLoadCntTriggered = true;
 
             try {
                 const response = await window.axios.get("{{ route('admin.home.loadcnt') }}");
@@ -50,7 +52,7 @@
                     memberConfirmEl.textContent = res.member_confirm || 0;
                 }
             } catch (_error) {
-                loadCntTriggered = false;
+                window.__adminLoadCntTriggered = false;
             }
         };
 

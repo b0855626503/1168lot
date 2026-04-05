@@ -63,3 +63,7 @@
     </section>
 @endsection
 
+@push('scripts')
+    @include('admin::layouts.loadcnt_js')
+@endpush
+

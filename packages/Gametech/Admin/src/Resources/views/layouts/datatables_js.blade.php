@@ -226,11 +226,22 @@
                     });
                 },
                 async loadCnt() {
+                    if (typeof window.__adminLoadCntTriggered === 'undefined') {
+                        window.__adminLoadCntTriggered = false;
+                    }
+
+                    if (window.__adminLoadCntTriggered) {
+                        return 0;
+                    }
+
+                    window.__adminLoadCntTriggered = true;
+
                     let err, response;
                     [err, response] = await axios.get("{{ url('loadcnt') }}").then(data => {
                         return [null, data];
                     }).catch(err => [err]);
                     if (err) {
+                        window.__adminLoadCntTriggered = false;
                         return 0;
                     }
 

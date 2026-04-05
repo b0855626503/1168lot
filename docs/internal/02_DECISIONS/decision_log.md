@@ -10,8 +10,10 @@
     - เมนูใน `ตั้งค่าหวย`
     - เมนูใน `รายงาน Lotto`
   - หน้า DataTable ของ Lotto ใช้ shared `datatables_js` เป็นจุดเรียกตามเดิม
+  - ทุกหน้า Lotto index ต้อง include shared partial `admin::layouts.loadcnt_js` เป็น fallback/guarantee
   - หน้า custom dashboard / Vue page ของ Lotto ที่ไม่ได้ผ่าน DataTables ต้อง include shared partial `admin::layouts.loadcnt_js`
   - หน้า Vue reports `results-by-date` และ `profit-loss-forecast` ต้องเรียก `loadCnt` ตอนเปิดหน้าด้วย
+  - ใช้ global dedupe (`window.__adminLoadCntTriggered`) กัน request `loadCnt` ซ้ำในหน้าเดียวกัน
 - เหตุผล:
   - ให้ badge และตัวเลขกลางใน admin sync ทันทีเมื่อเข้าเมนู Lotto ทุกหน้า
   - ปิดช่องที่บางเมนู Lotto เรียก `loadCnt` แต่บางเมนูไม่เรียก ทำให้พฤติกรรมไม่สม่ำเสมอ

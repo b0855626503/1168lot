@@ -66,6 +66,19 @@ class LottoTicketBadgeLoadcntTest extends TestCase
     public function test_lotto_custom_admin_pages_include_shared_loadcnt_partial(): void
     {
         $files = [
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/default_settings/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/member_permissions/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/number_blocks/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/member_bet_types_report/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets_cancel_report/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/blocked_numbers_report/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/exposure_report/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/revenue_report/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/groups/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/markets/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/draws/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/result_sources/index.blade.php',
             '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/switches/index.blade.php',
             '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/group_packages/index.blade.php',
             '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/rate_plans/index.blade.php',

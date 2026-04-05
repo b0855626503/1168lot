@@ -16,6 +16,10 @@
     </section>
 @endsection
 
+@push('scripts')
+    @include('admin::layouts.loadcnt_js')
+@endpush
+
 @if(request()->boolean('embed'))
     @push('styles')
         <style>
