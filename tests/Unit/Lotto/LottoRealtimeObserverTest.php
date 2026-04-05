@@ -29,12 +29,26 @@ class LottoRealtimeObserverTest extends TestCase
                 $callback();
             }
 
-            protected function broadcastTicketListChanged(string $action, int $total, ?string $marketName, ?string $drawDate): void
+            protected function broadcastTicketListChanged(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void
             {
                 $this->ticketListBroadcasts++;
             }
 
-            protected function broadcastPublicActivityUpdated(string $action, int $total, ?string $marketName, ?string $drawDate): void
+            protected function broadcastPublicActivityUpdated(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void
             {
                 $this->publicActivityBroadcasts++;
             }
@@ -73,14 +87,28 @@ class LottoRealtimeObserverTest extends TestCase
                 $callback();
             }
 
-            protected function broadcastTicketListChanged(string $action, int $total, ?string $marketName, ?string $drawDate): void
+            protected function broadcastTicketListChanged(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void
             {
-                $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate');
+                $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'actorId', 'amount');
             }
 
-            protected function broadcastPublicActivityUpdated(string $action, int $total, ?string $marketName, ?string $drawDate): void
+            protected function broadcastPublicActivityUpdated(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void
             {
-                $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate');
+                $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'actorId', 'amount');
             }
         };
 
@@ -98,8 +126,83 @@ class LottoRealtimeObserverTest extends TestCase
 
         $this->assertCount(1, $observer->ticketEvents);
         $this->assertSame('cancelled', $observer->ticketEvents[0]['action']);
+        $this->assertNull($observer->ticketEvents[0]['actorId']);
+        $this->assertNull($observer->ticketEvents[0]['amount']);
         $this->assertCount(1, $observer->publicEvents);
         $this->assertSame('cancelled', $observer->publicEvents[0]['action']);
+        $this->assertNull($observer->publicEvents[0]['actorId']);
+        $this->assertNull($observer->publicEvents[0]['amount']);
+    }
+
+    public function test_ticket_observer_created_message_includes_actor_and_amount(): void
+    {
+        $observer = new class extends LottoTicketRealtimeObserver
+        {
+            public array $ticketEvents = [];
+            public array $publicEvents = [];
+
+            protected function resolveTotalTickets(): int
+            {
+                return 7;
+            }
+
+            protected function afterCommit(callable $callback): void
+            {
+                $callback();
+            }
+
+            protected function broadcastTicketListChanged(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void {
+                $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'actorId', 'amount');
+            }
+
+            protected function broadcastPublicActivityUpdated(
+                string $action,
+                int $total,
+                ?string $marketName,
+                ?string $drawDate,
+                ?string $actorId,
+                ?float $amount
+            ): void {
+                $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'actorId', 'amount');
+            }
+        };
+
+        $market = new LotteryMarket(['name' => 'หวยมาเลเซีย']);
+        $draw = new LottoDraw(['draw_date' => '2026-04-05']);
+        $draw->setRelation('market', $market);
+
+        $member = new \Gametech\Member\Models\Member([
+            'user_name' => '0855626503',
+            'tel' => '0855626503',
+        ]);
+
+        $ticket = new LottoTicket([
+            'status' => 'active',
+            'member_id' => 52,
+            'total_amount' => 200,
+        ]);
+        $ticket->setRelation('draw', $draw);
+        $ticket->setRelation('member', $member);
+
+        $observer->created($ticket);
+
+        $this->assertCount(1, $observer->ticketEvents);
+        $this->assertSame('created', $observer->ticketEvents[0]['action']);
+        $this->assertSame('0855626503', $observer->ticketEvents[0]['actorId']);
+        $this->assertSame(200.0, $observer->ticketEvents[0]['amount']);
+        $this->assertCount(1, $observer->publicEvents);
+        $this->assertSame('0855626503', $observer->publicEvents[0]['actorId']);
+        $this->assertSame(200.0, $observer->publicEvents[0]['amount']);
+
+        $event = new \App\Events\LottoTicketListChanged('created', 7, 'หวยมาเลเซีย', '2026-04-05', '0855626503', 200.0);
+        $this->assertSame('มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200', $event->message);
     }
 
     public function test_draw_observer_broadcasts_resulted_ticket_notification_once_per_draw(): void

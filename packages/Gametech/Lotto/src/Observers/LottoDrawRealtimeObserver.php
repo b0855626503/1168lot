@@ -179,6 +179,8 @@ class LottoDrawRealtimeObserver
                 'total' => $total,
                 'market_name' => $marketName,
                 'draw_date' => $drawDate,
+                'actor_id' => null,
+                'amount' => null,
             ]
         ));
     }

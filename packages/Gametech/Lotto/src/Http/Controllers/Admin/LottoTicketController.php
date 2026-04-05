@@ -62,6 +62,8 @@ class LottoTicketController extends AppBaseController
         return $dataTable->render($this->_config['view'], [
             'marketOptions' => $marketOptions,
             'drawOptionsByMarket' => $drawOptionsByMarket,
+            'loadDataRouteName' => $this->_config['load_data_route'] ?? 'admin.lotto.tickets.loaddata',
+            'menuBadgeKey' => $this->_config['menu_badge_key'] ?? 'lotto_tickets',
         ]);
     }
 

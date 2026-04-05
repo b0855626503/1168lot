@@ -50,14 +50,22 @@
 - หน้า `lotto/draws` รองรับ filter เพิ่มเติมด้วย `สถานะ` (`draft/open/closed/resulted`) ร่วมกับ group/market/draw_date
 - realtime toast ของรายการ `โพยหวย` (`lotto.ticket.list.changed`) ต้องส่งข้อความที่อ่านรู้เรื่องใน event เดียว
   - ถ้ามี context ของ draw ให้แนบ `market_name` และ `draw_date`
+  - ถ้าเป็น action `created` ต้องแนบผู้ทำรายการ (`actor_id`) และยอดเงิน (`amount`) ด้วย
   - ตัวอย่างข้อความ:
     - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
     - `มีการคืนโพยหวย: หวยรัฐบาล งวดวันที่ 2026-04-04`
+    - `มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200`
   - trigger policy:
     - `created` = ยิงตอนสร้าง ticket ใหม่
     - `cancelled` = ยิงตอน ticket เปลี่ยนสถานะเป็น `cancelled`
     - `resulted` = ยิงครั้งเดียวต่อ `draw` ตอน `draw.status` เปลี่ยนเป็น `resulted`
   - ห้ามยิง `resulted` ทีละ ticket ระหว่าง settlement ของงวดเดียวกัน
+- toast ของ Lotto ที่ขึ้นหน้าแอดมินทีมงานตอนนี้มี 2 ตัวหลัก:
+  - `lotto.ticket.list.changed`
+  - `lotto.draw.status.changed`
+- ทั้งสองตัวต้องใช้ toast style:
+  - `className = rt-toast rt-info gt-toast gt-toast-info`
+  - `avatar = /assets/admin/icons/alert.webp?v=1`
 
 ## นโยบาย ACL แยกสิทธิ์ CRUD (Admin Lotto)
 
@@ -92,6 +100,18 @@
 - เปิด DataTables global searching (`searching=true`) และยังรองรับ filter ด้านบนผ่าน preXhr
 - รองรับลบหลายรายการจาก checkbox ที่เลือกผ่านปุ่ม `ลบที่เลือก`
 - คอลัมน์ `จัดการ` มีปุ่ม `แก้ไข` และ `ลบ` รายรายการ
+
+## นโยบายหน้าโพยหวย (Admin `/lotto/tickets`)
+
+- เมนู `รายการโพย/ยกเลิกโพย` แสดงเฉพาะ ticket ที่ `status=active`
+- รายการ `cancelled` และ `resulted` ต้องไม่แสดงใน DataTable หลักของหน้า
+- filter `draw_id/market_id/search` ยังคงทำงานภายใต้ชุดข้อมูล active-only
+
+## นโยบายรายงานรอผลเดิมพัน (Admin `/lotto/reports/pending-bets`)
+
+- เมนู `รอผลเดิมพัน` ใช้หน้า/ชุดข้อมูลเดียวกับ `รายการโพย` ไม่ใช่ mockup แล้ว
+- DataTable หลักดึงเฉพาะ ticket ที่ `status=active`
+- การดูรายละเอียดโพยใน modal ใช้ route รายงานของตัวเอง แต่แสดง payload รายละเอียดโพยรูปแบบเดียวกับหน้า `รายการโพย`
 
 ## นโยบาย Auto Result Manual Action (Admin UI)
 

@@ -1,5 +1,45 @@
 # Decision Log
 
+## 2026-04-05 — Lotto Admin Toasts Must Carry Alert Avatar and New Ticket Toast Must Show Actor+Amount (APPROVED)
+
+- ปรับ realtime Lotto notification ฝั่งหน้าแอดมินทีมงาน
+- behavior ใหม่:
+  - event `lotto.ticket.list.changed` เมื่อ action=`created` ต้องใส่ผู้ทำรายการ (`actor_id`) และยอดเงิน (`amount`) ใน payload
+  - message ของ create toast ต้องอ่านได้ใน event เดียว เช่น
+    - `มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200`
+  - Lotto toast ที่หน้าแอดมินทีมงานมีอยู่ตอนนี้ 2 ตัว:
+    - `lotto.ticket.list.changed`
+    - `lotto.draw.status.changed`
+  - ทั้งสองตัวต้อง render ด้วย
+    - `className = rt-toast rt-info gt-toast gt-toast-info`
+    - `avatar = /assets/admin/icons/alert.webp?v=1`
+- เหตุผล:
+  - ให้ทีมงานรู้ทันทีว่าใครเป็นคนทำรายการและยอดเท่าไร โดยไม่ต้องเปิดหน้าโพย
+  - ทำให้ visual style ของ Lotto toast สม่ำเสมอกับ alert toast มาตรฐานใน admin
+
+## 2026-04-05 — Pending Bets Report Must Use Real Active Ticket Dataset (APPROVED)
+
+- ปรับเมนู `admin /lotto/reports/pending-bets`
+- behavior ใหม่:
+  - route หน้า report เปลี่ยนจาก mockup `SectionController` ไปใช้ `LottoTicketController@index`
+  - ใช้ DataTable และชุด filter เดียวกับหน้า `admin /lotto/tickets`
+  - dataset หลักแสดงเฉพาะ ticket ที่ `status=active`
+  - เพิ่ม route `admin.lotto.reports.pending_bets.loaddata` สำหรับ modal รายละเอียดโพย
+- เหตุผล:
+  - เมนู `รอผลเดิมพัน` ต้องตอบงานปฏิบัติการด้วยข้อมูลจริง ไม่ใช่ placeholder
+  - ลดการทำ logic query ซ้ำ เพราะ requirement ชุดข้อมูลตรงกับโพย active ที่ยังรอผลอยู่
+
+## 2026-04-05 — Admin Lotto Tickets Menu Shows Only Active Tickets (APPROVED)
+
+- ปรับ query ของหน้า `admin /lotto/tickets`
+- behavior ใหม่:
+  - DataTable หลักแสดงเฉพาะ ticket ที่ `status=active`
+  - รายการ `cancelled` และ `resulted` ถูกตัดออกจากหน้ารายการนี้
+  - filter/search เดิมยังทำงาน แต่ต้องทำงานบน active-only dataset
+- เหตุผล:
+  - ให้เมนู `รายการโพย/ยกเลิกโพย` โฟกัสเฉพาะโพยที่ยังมี action เชิงปฏิบัติการได้จริง
+  - ลด noise จากโพยที่ถูกยกเลิกแล้วหรือออกผลแล้ว
+
 ## 2026-04-05 — Member Ticket Cancel Is Limited to 4 Times Per Day and Must Be 10 Minutes Before Close (APPROVED)
 
 - ปรับ `POST /api/v1/lotto/tickets/{id}/cancel`

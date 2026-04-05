@@ -363,6 +363,7 @@
                 position: 'right',
                 stopOnFocus: true,
                 className: 'rt-toast rt-info gt-toast gt-toast-info',
+                avatar: '/assets/admin/icons/alert.webp?v=1',
             }).showToast();
 
             const tableKey = e.datatable_id || 'lottoDrawsTable';
@@ -410,6 +411,7 @@
                 position: 'right',
                 stopOnFocus: true,
                 className: 'rt-toast rt-info gt-toast gt-toast-info',
+                avatar: '/assets/admin/icons/alert.webp?v=1',
             }).showToast();
 
             const tableKey = e.datatable_id || 'lottoTicketsTable';

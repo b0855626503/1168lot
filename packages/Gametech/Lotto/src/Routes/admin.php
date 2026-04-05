@@ -282,14 +282,13 @@ Route::domain(
                 'section' => 'settings.bet_types',
             ])->name('admin.lotto.settings.bet_types');
 
-            Route::get('reports/pending-bets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.reports.mockup',
-                'title' => 'รอผลเดิมพัน',
-                'description' => 'Mockup: รายงานรายการเดิมพันที่รอผล',
-                'section' => 'reports.pending_bets',
-                'filters' => ['วันที่เริ่ม', 'วันที่สิ้นสุด', 'ตลาด', 'สถานะโพย'],
-                'columns' => ['เวลา', 'สมาชิก', 'ตลาด', 'ประเภท', 'เลข', 'ยอดแทง', 'สถานะ'],
+            Route::get('reports/pending-bets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.tickets.index',
+                'load_data_route' => 'admin.lotto.reports.pending_bets.loaddata',
+                'menu_badge_key' => 'lotto_reports.pending_bets',
             ])->name('admin.lotto.reports.pending_bets');
+            Route::post('reports/pending-bets/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketController@loadData')
+                ->name('admin.lotto.reports.pending_bets.loaddata');
 
             Route::get('reports/profit-loss-forecast', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\SectionController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.reports.mockup',

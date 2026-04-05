@@ -52,6 +52,8 @@
 </b-modal>
 @push('scripts')
 	<script type="module">
+		const loadDataRoute = @json(route($loadDataRouteName ?? 'admin.lotto.tickets.loaddata'));
+
 		window.app = new Vue({
 			el: '#app',
 			data() {
@@ -61,7 +63,7 @@
 			},
 			methods: {
 				async editModal(id) {
-					const response = await axios.post("{{ route('admin.lotto.tickets.loaddata') }}", { id });
+					const response = await axios.post(loadDataRoute, { id });
 					this.ticket = response.data.data;
 					this.$refs.addedit.show();
 				},

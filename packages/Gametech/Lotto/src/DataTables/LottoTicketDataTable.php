@@ -38,6 +38,7 @@ class LottoTicketDataTable extends DataTable
     {
         $query = $model->newQuery()
             ->select('lotto_tickets.*')
+            ->where('lotto_tickets.status', 'active')
             ->with(['member', 'draw.market'])
             ->withCount([
                 'items as winning_items_count' => function ($query) {
