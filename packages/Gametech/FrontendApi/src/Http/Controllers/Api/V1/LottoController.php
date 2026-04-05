@@ -1136,7 +1136,7 @@ class LottoController extends BaseController
             'draw_id' => (int) $ticket->draw_id,
             'draw_date' => optional($ticket->draw?->draw_date)->toDateString(),
             'market_name' => $ticket->draw?->market?->name,
-            'status' => (string) $ticket->status,
+            'status' => $this->ticketDisplayStatus((string) $ticket->status, $resultContext),
             'draw_status' => (string) ($ticket->draw?->status ?? ''),
             'draw_result_at' => optional($ticket->draw?->result_at)->toDateTimeString(),
             'total_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
@@ -1188,6 +1188,18 @@ class LottoController extends BaseController
             'is_final' => in_array($resultOutcome, ['won', 'lose', 'cancelled', 'no_result', 'refunded'], true),
             'is_winner' => $resultOutcome === 'won',
         ];
+    }
+
+    /**
+     * @param array{result_outcome:string,is_final:bool,is_winner:bool} $resultContext
+     */
+    private function ticketDisplayStatus(string $ticketStatus, array $resultContext): string
+    {
+        return match (true) {
+            $resultContext['result_outcome'] === 'won' && $resultContext['is_winner'] === true => 'won',
+            $resultContext['result_outcome'] === 'lose' && $resultContext['is_winner'] === false => 'lose',
+            default => $ticketStatus,
+        };
     }
 
     /**
@@ -1617,12 +1629,16 @@ class LottoController extends BaseController
                 'active' => 'Active',
                 'cancelled' => 'Cancelled',
                 'resulted' => 'Settled',
+                'won' => 'Won',
+                'lose' => 'Lost',
                 default => 'Unknown',
             },
             default => match ($status) {
                 'active' => 'ใช้งานอยู่',
                 'cancelled' => 'ยกเลิกแล้ว',
                 'resulted' => 'ตัดสินผลแล้ว',
+                'won' => 'ถูกรางวัล',
+                'lose' => 'ไม่ถูกรางวัล',
                 default => 'ไม่ทราบสถานะ',
             },
         };

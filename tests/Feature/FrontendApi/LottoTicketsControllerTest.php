@@ -51,8 +51,8 @@ class LottoTicketsControllerTest extends TestCase
 
         $response->assertJsonFragment([
             'id' => 1001,
-            'status' => 'resulted',
-            'status_label' => 'ตัดสินผลแล้ว',
+            'status' => 'won',
+            'status_label' => 'ถูกรางวัล',
             'draw_status' => 'resulted',
             'draw_status_label' => 'ออกผลแล้ว',
             'result_outcome' => 'won',
@@ -115,12 +115,13 @@ class LottoTicketsControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.id', 1001);
+        $response->assertJsonPath('data.status', 'won');
+        $response->assertJsonPath('data.status_label', 'ถูกรางวัล');
         $response->assertJsonPath('data.result_outcome', 'won');
         $response->assertJsonPath('data.result_outcome_label', 'ถูกรางวัล');
         $response->assertJsonPath('data.result_message', 'โพยนี้ถูกรางวัล 540.00 บาท');
         $response->assertJsonPath('data.draw_status', 'resulted');
         $response->assertJsonPath('data.draw_status_label', 'ออกผลแล้ว');
-        $response->assertJsonPath('data.status_label', 'ตัดสินผลแล้ว');
         $response->assertJsonPath('data.items.0.result_status', 'win');
         $response->assertJsonPath('data.items.0.raw_result_status', 'win');
         $response->assertJsonPath('data.items.0.result_status_label', 'ถูกรางวัล');

@@ -19,6 +19,18 @@
   - เมื่อทีมงานกด retry เอง ระบบต้องลอง apply จริงได้ แม้ auto scheduler จะ exhausted draw/source ไปก่อนหน้านั้น
   - สอดคล้องกับแผนเมนูงวดหวยที่ระบุว่า manual retry ต้อง bypass เงื่อนไขคัดกรองของ auto path
 
+## 2026-04-06 — Frontend Lotto Ticket `status` Must Reflect Win/Lose Outcome on Final Tickets (APPROVED)
+
+- ปรับ `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+- behavior ใหม่:
+  - ถ้า `result_outcome=won` และ `is_winner=true` ให้ส่ง `status=won`
+  - ถ้า `result_outcome=lose` และ `is_winner=false` ให้ส่ง `status=lose`
+  - กรณีอื่นคง status lifecycle เดิม เช่น `active`, `cancelled`
+  - `draw_status` ยังเก็บ lifecycle ของ draw แยกตามเดิม
+- เหตุผล:
+  - ฝั่งลูกค้าต้องใช้ `status` ที่พร้อมแสดงผลลัพธ์โพยทันที โดยไม่ต้องเขียน mapping ซ้ำจาก `result_outcome`
+  - แยกความหมายของ `status` ฝั่ง customer UI ออกจาก lifecycle ภายในของ ticket สำหรับเคส final outcome
+
 ## 2026-04-05 — Auto Result Business Not-Ready Must Stay `NOT_READY` and Exhausted Alert Must Work Without Full Draw Hardening Columns (APPROVED)
 
 - ปรับ auto-result pipeline:

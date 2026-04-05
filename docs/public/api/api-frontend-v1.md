@@ -907,7 +907,11 @@ Response จะขึ้นกับกติกาและสถานะง�
 - `GET /lotto/tickets`
 - Auth: ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
-- endpoint นี้คืนทั้ง raw lifecycle เดิม (`status`) และ field สรุปผลที่พร้อมใช้บน UI:
+- endpoint นี้คืน `status` แบบพร้อมใช้บน UI:
+  - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
+  - `lose` เมื่อ `result_outcome=lose` และ `is_winner=false`
+  - กรณีอื่นคงค่า lifecycle เดิม เช่น `active`, `cancelled`
+- และคืน field สรุปผลที่พร้อมใช้บน UI:
   - `draw_status`, `draw_status_label`
   - `result_outcome`, `result_outcome_label`, `result_message`
   - `is_final`, `is_winner`
@@ -931,8 +935,8 @@ Response ตัวอย่าง
       "market_logo": "/storage/lotto/markets/gsb-logo.png",
       "market_icon": "/storage/lotto/markets/gsb-icon.png",
       "group_name": "หวยไทย",
-      "status": "resulted",
-      "status_label": "ตัดสินผลแล้ว",
+      "status": "won",
+      "status_label": "ถูกรางวัล",
       "draw_status": "resulted",
       "draw_status_label": "ออกผลแล้ว",
       "result_outcome": "won",
@@ -999,8 +1003,8 @@ Response ตัวอย่าง (พบข้อมูล)
     "market_logo": "/storage/lotto/markets/gsb-logo.png",
     "market_icon": "/storage/lotto/markets/gsb-icon.png",
     "group_name": "หวยไทย",
-    "status": "resulted",
-    "status_label": "ตัดสินผลแล้ว",
+    "status": "won",
+    "status_label": "ถูกรางวัล",
     "draw_status": "resulted",
     "draw_status_label": "ออกผลแล้ว",
     "result_outcome": "won",
