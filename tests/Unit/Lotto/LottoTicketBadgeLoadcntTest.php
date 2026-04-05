@@ -39,8 +39,6 @@ class LottoTicketBadgeLoadcntTest extends TestCase
         $files = [
             '/packages/Gametech/Admin/src/Resources/views/layouts/datatables_js.blade.php',
             '/packages/Gametech/Admin/src/Resources/views/module/dashboard/index.blade.php',
-            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/reports/results_by_date.blade.php',
-            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/index.blade.php',
             '/packages/Gametech/Admin/src/Resources/views/module/jobs/index.blade.php',
             '/packages/Gametech/Admin/src/Resources/views/module/fix/index.blade.php',
             '/packages/Gametech/Admin/src/Resources/views/module/setting/addedit.blade.php',
@@ -52,6 +50,35 @@ class LottoTicketBadgeLoadcntTest extends TestCase
 
             $this->assertNotFalse($contents, $file);
             $this->assertStringContainsString('lotto_tickets', $contents, $file);
+        }
+    }
+
+    public function test_lotto_datatable_pages_still_use_shared_loadcnt_flow(): void
+    {
+        $datatableJs = file_get_contents($this->rootPath . '/packages/Gametech/Admin/src/Resources/views/layouts/datatables_js.blade.php');
+
+        $this->assertNotFalse($datatableJs);
+        $this->assertStringContainsString('this.loadCnt();', $datatableJs);
+        $this->assertStringContainsString('async loadCnt()', $datatableJs);
+        $this->assertStringNotContainsString("request()->routeIs('admin.lotto.*')", $datatableJs);
+    }
+
+    public function test_lotto_custom_admin_pages_include_shared_loadcnt_partial(): void
+    {
+        $files = [
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/switches/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/group_packages/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/rate_plans/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/bet_limits/index.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/reports/results_by_date.blade.php',
+            '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/profit_loss_forecast_report/index.blade.php',
+        ];
+
+        foreach ($files as $file) {
+            $contents = file_get_contents($this->rootPath . $file);
+
+            $this->assertNotFalse($contents, $file);
+            $this->assertStringContainsString("@include('admin::layouts.loadcnt_js')", $contents, $file);
         }
     }
 }

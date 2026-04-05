@@ -21,7 +21,6 @@
     })
 </script>
 <script type="module">
-
         Vue.mixin({
             data() {
                 return {
@@ -336,5 +335,3 @@
         });
 
 </script>
-
-

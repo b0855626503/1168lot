@@ -105,6 +105,12 @@
 ## นโยบายหน้าโพยหวย (Admin `/lotto/tickets`)
 
 - เมนู `รายการโพย/ยกเลิกโพย` แสดงเฉพาะ ticket ที่ `status=active`
+- เมนู Lotto ฝั่งทีมงานต้องเรียก `DashboardController@loadCnt` ตอนเข้าเมนูให้สม่ำเสมอ
+  - ครอบคลุมหน้า `รายการโพย`, เมนูใน `ตั้งค่าหวย`, และเมนูใน `รายงาน Lotto`
+  - หน้า DataTable ของ Lotto ใช้ shared `datatables_js` เป็นตัวเรียก
+  - หน้า custom dashboard / Vue page ของ Lotto ที่ไม่ได้ใช้ DataTables โดยตรง
+    - ใช้ shared partial `admin::layouts.loadcnt_js` เพื่อเรียก `loadCnt` ตอนเปิดหน้า
+  - หน้า Vue reports `results-by-date` และ `profit-loss-forecast` ต้องมีการเรียก `loadCnt` ตอนเข้าเมนูเช่นกัน
 - badge เมนู `รายการโพย` (`lotto_tickets`) ใช้ค่า count จาก `Admin DashboardController@loadCnt`
   - นับเฉพาะ `lotto_tickets.status=active`
   - หน้า `/lotto/tickets` ห้ามดึงค่า badge จาก `DataTable xhr` ของหน้าเอง

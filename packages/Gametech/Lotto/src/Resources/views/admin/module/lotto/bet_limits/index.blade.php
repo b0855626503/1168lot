@@ -504,4 +504,5 @@
             },
         });
     </script>
+    @include('admin::layouts.loadcnt_js')
 @endpush

@@ -577,8 +577,6 @@
                 }
             },
             created() {
-                const self = this;
-                self.autoCnt(false);
             },
             watch: {
                 withdraw_cnt: function (event) {
@@ -628,82 +626,8 @@
                         })
                 },
 
-                autoCnt(draw) {
-                    const self = this;
-                    this.toast = window.Toasty;
-                    this.loadCnt();
-                },
-
-                runMarquee() {
-                    this.announce = $('#announce');
-                    this.announce.marquee({
-                        duration: 20000,
-                        startVisible: false
-                    });
-                },
-
-                ToastPlay() {
-                    this.toast.error('<span class="text-danger">มีการถอนรายการใหม่</span>');
-                },
-
-                async loadCnt() {
-                    let err, response;
-                    [err, response] = await axios.get("{{ route('admin.home.loadcnt') }}").then(data => {
-                        return [null, data];
-                    }).catch(err => [err]);
-                    if (err) {
-                        return 0;
-                    }
-
-                    const res = response.data;
-
-                    if(res.bank_in_today > 0){
-                        updateBadge('bank_in', res.bank_in_today);
-                    }else{
-                        update('bank_in', res.bank_in_today);
-                    }
-                    if(res.bank_in > 0){
-                        updateBadge('bank_in_old', res.bank_in);
-                    }else{
-                        update('bank_in_old', res.bank_in);
-                    }
-                    if(res.withdraw > 0){
-                        updateBadge('withdraw', res.withdraw);
-                    }else{
-                        update('withdraw', res.withdraw);
-                    }
-                    if(res.lotto_tickets > 0){
-                        updateBadge('lotto_tickets', res.lotto_tickets);
-                    }else{
-                        update('lotto_tickets', res.lotto_tickets);
-                    }
-                    if(res.withdraw > 0){
-                        updateBadge('withdraw_free', res.withdraw_free);
-                    }else{
-                        update('withdraw_free', res.withdraw_free);
-                    }
-
-                    const announceEl = document.getElementById('announce');
-
-                    if (this.loopcnts == 0) {
-                        if (announceEl) {
-                            announceEl.textContent = response.data.announce;
-                            this.runMarquee();
-                        }
-                    } else {
-                        if (announceEl && response.data.announce_new == 'Y') {
-                            this.announce.on('finished', (event) => {
-                                announceEl.textContent = response.data.announce;
-                                this.announce.trigger('destroy');
-                                this.announce.off('finished');
-                                this.runMarquee();
-                            });
-                        }
-                    }
-
-                    this.withdraw_cnt = response.data.withdraw;
-                }
             }
         });
     </script>
+    @include('admin::layouts.loadcnt_js')
 @endpush

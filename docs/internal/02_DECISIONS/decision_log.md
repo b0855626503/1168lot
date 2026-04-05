@@ -1,5 +1,21 @@
 # Decision Log
 
+## 2026-04-05 — Lotto Admin Menus Must Trigger Dashboard `loadCnt` on Entry Consistently (APPROVED)
+
+- ปรับเมนู Lotto ฝั่ง admin ใน scope `admin.lotto.*`
+- behavior ใหม่:
+  - เมื่อกดเข้าเมนู Lotto ต้องมีการเรียก `Gametech\Admin\Http\Controllers\DashboardController@loadCnt`
+  - ครอบคลุม:
+    - เมนู `รายการโพย`
+    - เมนูใน `ตั้งค่าหวย`
+    - เมนูใน `รายงาน Lotto`
+  - หน้า DataTable ของ Lotto ใช้ shared `datatables_js` เป็นจุดเรียกตามเดิม
+  - หน้า custom dashboard / Vue page ของ Lotto ที่ไม่ได้ผ่าน DataTables ต้อง include shared partial `admin::layouts.loadcnt_js`
+  - หน้า Vue reports `results-by-date` และ `profit-loss-forecast` ต้องเรียก `loadCnt` ตอนเปิดหน้าด้วย
+- เหตุผล:
+  - ให้ badge และตัวเลขกลางใน admin sync ทันทีเมื่อเข้าเมนู Lotto ทุกหน้า
+  - ปิดช่องที่บางเมนู Lotto เรียก `loadCnt` แต่บางเมนูไม่เรียก ทำให้พฤติกรรมไม่สม่ำเสมอ
+
 ## 2026-04-05 — Admin Lotto Tickets Menu Badge Must Be Sourced from Dashboard `loadCnt` (APPROVED)
 
 - ปรับ badge เมนู `รายการโพย` (`lotto_tickets`)
