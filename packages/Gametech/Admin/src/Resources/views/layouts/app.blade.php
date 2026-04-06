@@ -52,7 +52,6 @@
 <script src="{{ mix('assets/admin/js/vendor.js') }}"></script>
 @include('partials.broadcast-config')
 <script baseUrl="{{ url()->to('/') }}" id="mainscript" src="{{ mix('assets/admin/js/app.js') }}"></script>
-@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/broadcasting/auth'])
 <script type="text/javascript" src="{{ asset('assets/ui/js/ui.js') }}"></script>
 
 @stack('scripts')

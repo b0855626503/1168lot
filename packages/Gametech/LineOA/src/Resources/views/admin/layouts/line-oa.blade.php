@@ -218,7 +218,6 @@
 <script src="{{ mix('assets/admin/js/vendor.js') }}"></script>
 @include('partials.broadcast-config')
 <script baseUrl="{{ url()->to('/') }}" id="mainscript" src="{{ mix('assets/admin/js/app.js') }}"></script>
-@include('partials.reverb-echo-bootstrap', ['authEndpoint' => '/broadcasting/auth'])
 {{--<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.0/dist/alpine.min.js" defer></script>--}}
 <script src="{{ asset('assets/ui/js/ui.js') }}"></script>
 <script src="{{ mix('assets/lineoa/js/lineoa.js') }}"></script>
