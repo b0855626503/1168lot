@@ -35,6 +35,19 @@
         #ticketsCancelDetailModal .table th {
             padding: 0.3rem;
         }
+        #ticketsCancelDetailTableWrapper {
+            max-height: 320px;
+            overflow-y: auto;
+            border-radius: 0 0 6px 6px;
+            border: 1px solid #e9ecef;
+            background: #fff;
+        }
+        #ticketsCancelDetailTableWrapper thead th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 2;
+        }
     </style>
 @endsection
 {!! $dataTable->table(['width' => '100%', 'class' => 'table table-striped table-sm']) !!}
@@ -51,6 +64,7 @@
                 <div id="ticketsCancelDetailLoading" class="alert alert-light border mb-1 py-1 px-2 d-none">กำลังโหลดรายละเอียด...</div>
                 <div id="ticketsCancelDetailSummary"></div>
                 <div class="table-responsive mt-1">
+                    <div id="ticketsCancelDetailTableWrapper">
                     <table class="table table-bordered table-sm mb-0">
                         <thead class="thead-light">
                         <tr>
@@ -69,6 +83,7 @@
                         </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
