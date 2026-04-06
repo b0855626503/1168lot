@@ -163,6 +163,8 @@ class AuthController extends BaseController
             'has_acc_no' => $request->filled('acc_no'),
             'has_refer' => $request->filled('refer'),
             'has_referral_code' => $request->filled('referral_code'),
+            'has_marketing' => $request->filled('marketing'),
+            'all' => $request->all(),
         ]);
 
         $data = $this->normalizeRegisterPayload((array) $request->all());
