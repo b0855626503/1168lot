@@ -195,9 +195,9 @@ class LottoProfitLossForecastReportService
         $rows = [
             'total_bet_amount' => 'ยอดแทง',
             'total_discount_amount' => 'ส่วนลด',
-            'total_receive_amount' => 'ยอดรับ (แทง-ส่วนลด)',
+            'total_receive_amount' => 'ยอดรับ',
             'total_payout_amount' => 'ยอดจ่าย',
-            'total_profit_amount' => 'ยอดสุทธิ (รับ - จ่าย)',
+            'total_profit_amount' => 'ยอดสุทธิ',
         ];
 
         return collect($rows)->map(function (string $label, string $metric) use ($columns): array {

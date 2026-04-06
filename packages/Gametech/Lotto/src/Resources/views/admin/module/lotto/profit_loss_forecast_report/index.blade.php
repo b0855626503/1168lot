@@ -233,7 +233,12 @@
                                         @click="toggleAutoReload"
                                     >
                                         <i class="fa" :class="autoReloadEnabled ? 'fa-pause' : 'fa-play'"></i>
-                                        Auto Reload 5 วินาที
+                                        <template v-if="autoReloadEnabled">
+                                            Auto Reload 10 วินาที (@{{ autoReloadCountdown }}s)
+                                        </template>
+                                        <template v-else>
+                                            Auto Reload 10 วินาที
+                                        </template>
                                     </button>
                                     <button type="button" class="btn bg-gradient-secondary" @click="resetFilters">
                                         <i class="fa fa-refresh"></i> ล้างค่า
@@ -444,6 +449,8 @@
                     showOnlyBetNumbers: false,
                     autoReloadEnabled: false,
                     autoReloadTimerId: null,
+                    autoReloadCountdownTimerId: null,
+                    autoReloadCountdown: 10,
                 };
             },
             computed: {
@@ -785,6 +792,7 @@
                 startAutoReload: function () {
                     this.stopAutoReload();
                     this.autoReloadEnabled = true;
+                    this.autoReloadCountdown = 10;
 
                     this.autoReloadTimerId = window.setInterval(() => {
                         if (!this.autoReloadEnabled || !this.hasCompleteFilters || this.isLoadingReport) {
@@ -792,7 +800,16 @@
                         }
 
                         this.fetchReport(false);
-                    }, 5000);
+                        this.autoReloadCountdown = 10;
+                    }, 10000);
+
+                    this.autoReloadCountdownTimerId = window.setInterval(() => {
+                        if (!this.autoReloadEnabled) {
+                            return;
+                        }
+
+                        this.autoReloadCountdown = this.autoReloadCountdown > 1 ? this.autoReloadCountdown - 1 : 1;
+                    }, 1000);
 
                     if (this.hasCompleteFilters && !this.isLoadingReport) {
                         this.fetchReport(false);
@@ -804,6 +821,11 @@
                         window.clearInterval(this.autoReloadTimerId);
                         this.autoReloadTimerId = null;
                     }
+                    if (this.autoReloadCountdownTimerId !== null) {
+                        window.clearInterval(this.autoReloadCountdownTimerId);
+                        this.autoReloadCountdownTimerId = null;
+                    }
+                    this.autoReloadCountdown = 10;
                 },
                 resetFilters: function () {
                     this.selectedMarketId = '';

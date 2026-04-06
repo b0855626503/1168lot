@@ -22,12 +22,13 @@
 - payout/discount ในหน้า `profit-loss-forecast` ต้องอิงจาก package ที่เลือก
 - ตารางเลขด้านล่างของ `profit-loss-forecast` รองรับ toggle `แสดงเฉพาะแถวที่มียอดแทง`
 - ตาราง `profit-loss-forecast` ปรับ layout ให้เห็นข้อมูลครบในกรอบหน้าเป็นหลัก (ไม่บังคับ scroll แนวนอน)
+- หน้า `profit-loss-forecast` รองรับ `Auto Reload` ทุก 10 วินาที พร้อม countdown บนปุ่ม
 - summary matrix ของ `profit-loss-forecast` ใช้ลำดับ metric:
   - ยอดแทง
   - ส่วนลด
-  - ยอดรับ (แทง-ส่วนลด)
+  - ยอดรับ
   - ยอดจ่าย
-  - ยอดสุทธิ (รับ - จ่าย)
+  - ยอดสุทธิ
 - semantic badge/toast ต้องตรงกับ dataset ของเมนูจริง
 
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
