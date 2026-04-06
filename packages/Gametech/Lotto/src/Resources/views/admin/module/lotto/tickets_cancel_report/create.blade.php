@@ -32,10 +32,10 @@
             @endforeach
         </select>
     </div>
-    <div class="col-md-2">
-        <label class="mb-1">สมาชิก (username)</label>
-        <input id="filter_member_username" type="text" class="form-control form-control-sm" placeholder="พิมพ์ username">
-    </div>
+{{--    <div class="col-md-2">--}}
+{{--        <label class="mb-1">สมาชิก (username)</label>--}}
+{{--        <input id="filter_member_username" type="text" class="form-control form-control-sm" placeholder="พิมพ์ username">--}}
+{{--    </div>--}}
     <div class="col-md-1 text-right">
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetTicketsCancelFilters()">
             <i class="fa fa-refresh"></i>
