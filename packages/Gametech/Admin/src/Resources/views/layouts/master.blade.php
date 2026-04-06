@@ -461,6 +461,8 @@
 
         })
         .listen('SumNewWithdraw', (e) => {
+            window.Toasty.error(e.sum);
+
             if(e.sum === 0){
                 update('withdraw', e.sum);
             }else{

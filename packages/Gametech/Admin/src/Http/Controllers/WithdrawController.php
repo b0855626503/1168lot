@@ -343,16 +343,24 @@ class WithdrawController extends AppBaseController
 
             if ($response) {
                 // finalize: คืนยอดสำเร็จ
-                \Illuminate\Support\Facades\DB::table('withdraws')
-                    ->where('code', $id)
-                    ->update([
-                        'ip_admin' => $request->ip(),
-                        'remark_admin' => $remark,
-                        'status' => 2,
-                        'emp_approve' => $this->id(),
-                        'user_update' => $user,
-                        'date_approve' => now()->toDateTimeString(),
-                    ]);
+               $this->repository->update([
+                   'ip_admin' => $request->ip(),
+                   'remark_admin' => $remark,
+                   'status' => 2,
+                   'emp_approve' => $this->id(),
+                   'user_update' => $user,
+                   'date_approve' => now()->toDateTimeString(),
+               ], $id);
+//                \Illuminate\Support\Facades\DB::table('withdraws')
+//                    ->where('code', $id)
+//                    ->update([
+//                        'ip_admin' => $request->ip(),
+//                        'remark_admin' => $remark,
+//                        'status' => 2,
+//                        'emp_approve' => $this->id(),
+//                        'user_update' => $user,
+//                        'date_approve' => now()->toDateTimeString(),
+//                    ]);
 
                 // ปิด bill เดิม (WITHDRAW) เป็น R ถ้ามี
                 $bill = app('Gametech\Payment\Repositories\BillRepository')->findOneWhere([

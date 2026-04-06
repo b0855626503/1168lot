@@ -944,7 +944,7 @@ class WithdrawRepository extends Repository
         }
 
         ActivityLoggerUser::activity('Request Withdraw Wallet User : '.$member->user_name, 'ทำรายการแจ้งถอนสำเร็จแล้ว');
-        broadcast(new RealTimeMessage('มีรายการแจ้งถอนใหม่ จาก '.$member->user_name));
+//        broadcast(new RealTimeMessage('มีรายการแจ้งถอนใหม่ จาก '.$member->user_name));
 
         $result['success'] = true;
         $result['msg'] = Lang::get('app.withdraw.complete');
