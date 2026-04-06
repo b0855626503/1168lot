@@ -24,6 +24,8 @@
 - internal result source `exphuay` มี request budget cap (`LOTTO_EXPHUAY_REQUEST_BUDGET_SECONDS`) เพื่อกัน fallback latency ยาวผิดปกติ
 - Frontend API `POST /api/v1/lotto/bet` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `lotto_dashboard_risk_snapshot` และ `lotto_result_fetch_logs` จะไม่เขียน audit ลงตาราง `logs`
+- การเขียนข้อมูลลง `lotto_tickets` และ `lotto_ticket_items` จะไม่เขียน audit ลงตาราง `logs`
+- การเขียนข้อมูลลง `member_lotto_market_policies` จะไม่เขียน audit ลงตาราง `logs`
 
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 

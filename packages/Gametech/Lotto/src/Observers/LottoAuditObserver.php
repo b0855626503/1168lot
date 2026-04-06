@@ -66,6 +66,9 @@ class LottoAuditObserver
         return in_array($table, [
             'lotto_dashboard_risk_snapshot',
             'lotto_result_fetch_logs',
+            'lotto_tickets',
+            'lotto_ticket_items',
+            'member_lotto_market_policies',
         ], true);
     }
 
