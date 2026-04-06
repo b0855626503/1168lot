@@ -3,6 +3,21 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-06 — Market-Level Auto Refund on `No Result` Is Configurable and Reuses Draw Cancel-All-Refund Flow (APPROVED)
+
+- เพิ่ม market flag ใหม่ `lotto_markets.auto_refund_on_no_result` (default `false`)
+- behavior:
+  - เมื่อ draw ถูก mark เป็น `no_result` และ market เปิด flag นี้ไว้
+  - ระบบต้องรัน flow `ยกเลิกโพยทั้งงวด+คืนเงิน` อัตโนมัติทันที
+  - draw ต้องติด marker `result_number.manual_cancelled_all_tickets=true` เหมือน manual cancel-all-refund
+- ขอบเขตที่บังคับใช้:
+  - auto-result apply path
+  - manual `POST /lotto/draws/mark-no-result` path
+- เหตุผล:
+  - ลดงาน manual ของทีมหลังเจอเคสงดออกผล
+  - ทำให้ policy คืนเงินของงวด `no_result` ผูกกับการตั้งค่าในเมนู `รายการหวย` ได้ชัดเจน
+  - ลดความเสี่ยง logic drift โดยบังคับ reuse service คืนเงินชุดเดียวกับ action manual
+
 ## 2026-04-06 — Laravel 10 Is the Current Practical Upgrade Target; Laravel 12 Is Deferred Pending Package Compatibility (APPROVED)
 
 - ปรับ execution target ของงาน framework upgrade:

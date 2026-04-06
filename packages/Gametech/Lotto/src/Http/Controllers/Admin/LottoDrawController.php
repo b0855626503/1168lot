@@ -12,9 +12,9 @@ use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\AutoResultHardeningService;
+use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
-use Gametech\Lotto\Services\WalletTransactionService;
 use Gametech\Lotto\Support\DrawStatusFlow;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
@@ -373,7 +373,7 @@ class LottoDrawController extends AppBaseController
         }
     }
 
-    public function markNoResult(Request $request): JsonResponse
+    public function markNoResult(Request $request, DrawCancelAllRefundService $drawCancelAllRefundService): JsonResponse
     {
         $drawId = (int) $request->input('id');
         $draw = LottoDraw::query()->find($drawId);
@@ -390,7 +390,7 @@ class LottoDrawController extends AppBaseController
         }
 
         try {
-            $summary = DB::transaction(function () use ($drawId): array {
+            $summary = DB::transaction(function () use ($drawId, $drawCancelAllRefundService): array {
                 /** @var LottoDraw $lockedDraw */
                 $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail($drawId);
 
@@ -407,16 +407,30 @@ class LottoDrawController extends AppBaseController
                 }
 
                 $reason = 'งดออกผล';
+                $resultNumber = [
+                    'no_result' => true,
+                    'status' => 'no_result',
+                    'label' => $reason,
+                    'no_result_reason' => $reason,
+                    'manual_marked_no_result' => true,
+                ];
+
+                $refundSummary = null;
+                if ($this->shouldAutoRefundOnNoResult((int) $lockedDraw->market_id)) {
+                    $refundSummary = $drawCancelAllRefundService->cancelAllActiveTickets(
+                        lockedDraw: $lockedDraw,
+                        reason: $reason,
+                        createdByType: 'system',
+                        createdById: null,
+                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_' . (int) $lockedDraw->id . '_' . now()->format('YmdHis')
+                    );
+                    $resultNumber['manual_cancelled_all_tickets'] = true;
+                }
+
                 $lockedDraw->forceFill([
                     'status' => 'resulted',
                     'result_at' => now(),
-                    'result_number' => [
-                        'no_result' => true,
-                        'status' => 'no_result',
-                        'label' => $reason,
-                        'no_result_reason' => $reason,
-                        'manual_marked_no_result' => true,
-                    ],
+                    'result_number' => $resultNumber,
                     'result_fetch_status' => 'APPLIED',
                     'result_fetch_error' => null,
                     'result_applied_at' => now(),
@@ -427,6 +441,7 @@ class LottoDrawController extends AppBaseController
                     'draw_id' => (int) $lockedDraw->id,
                     'status' => (string) $lockedDraw->status,
                     'result_no_result' => true,
+                    'auto_refund' => $refundSummary,
                 ];
             });
 
@@ -438,7 +453,7 @@ class LottoDrawController extends AppBaseController
         }
     }
 
-    public function cancelAllRefund(Request $request, WalletTransactionService $walletTransactionService): JsonResponse
+    public function cancelAllRefund(Request $request, DrawCancelAllRefundService $drawCancelAllRefundService): JsonResponse
     {
         $drawId = (int) $request->input('id');
         $draw = LottoDraw::query()->find($drawId);
@@ -450,15 +465,11 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ยกเลิกโพยทั้งงวดได้เฉพาะงวดที่ประกาศเป็น งดออกผล เท่านั้น', 422);
         }
 
-        if (! Schema::hasTable('wallet_transactions')) {
-            return $this->sendError('ไม่พบตาราง wallet_transactions สำหรับคืนเงิน', 422);
-        }
-
         $adminId = auth('admin')->id();
         $groupCode = 'LOTTO_DRAW_CANCEL_' . $drawId . '_' . now()->format('YmdHis');
 
         try {
-            $summary = DB::transaction(function () use ($drawId, $walletTransactionService, $groupCode, $adminId): array {
+            $summary = DB::transaction(function () use ($drawId, $drawCancelAllRefundService, $groupCode, $adminId): array {
                 /** @var LottoDraw $lockedDraw */
                 $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail($drawId);
 
@@ -466,84 +477,14 @@ class LottoDrawController extends AppBaseController
                     throw new InvalidArgumentException('สถานะงวดไม่อนุญาตให้ยกเลิกโพยทั้งงวด');
                 }
 
-                $tickets = LottoTicket::query()
-                    ->with(['items:id,ticket_id,bet_type,number,amount'])
-                    ->where('draw_id', (int) $lockedDraw->id)
-                    ->where('status', 'active')
-                    ->lockForUpdate()
-                    ->get();
-
-                $cancelledTickets = 0;
-                $totalRefund = 0.0;
                 $reason = 'งดออกผล';
-
-                foreach ($tickets as $ticket) {
-                    $refundAmount = round((float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0), 2);
-                    if ($refundAmount > 0) {
-                        $debitTxn = DB::table('wallet_transactions')
-                            ->where('member_id', (int) $ticket->member_id)
-                            ->where('ref_type', 'LOTTO_BET')
-                            ->where('ref_id', (int) $ticket->id)
-                            ->orderByDesc('id')
-                            ->first(['id']);
-
-                        $walletTransactionService->creditMemberBalance(
-                            memberId: (int) $ticket->member_id,
-                            amount: $refundAmount,
-                            refType: 'LOTTO_CANCEL',
-                            refId: (int) $ticket->id,
-                            refCode: (string) $ticket->id,
-                            groupCode: $groupCode,
-                            relatedTxnId: isset($debitTxn->id) ? (int) $debitTxn->id : null,
-                            meta: [
-                                'draw_id' => (int) $ticket->draw_id,
-                                'ticket_id' => (int) $ticket->id,
-                                'cancel_scope' => 'draw',
-                            ],
-                            createdByType: 'admin',
-                            createdById: $adminId ? (int) $adminId : null,
-                            description: 'คืนเงินจากการยกเลิกโพยทั้งงวด'
-                        );
-                    }
-
-                    foreach ($ticket->items as $item) {
-                        $exposure = DB::table('lotto_number_exposures')
-                            ->where('draw_id', (int) $ticket->draw_id)
-                            ->where('bet_type', (string) $item->bet_type)
-                            ->where('number', (string) $item->number)
-                            ->lockForUpdate()
-                            ->first(['id', 'sold_amount']);
-
-                        if (! $exposure) {
-                            continue;
-                        }
-
-                        $nextAmount = max(0, round((float) ($exposure->sold_amount ?? 0) - (float) ($item->amount ?? 0), 2));
-                        DB::table('lotto_number_exposures')
-                            ->where('id', (int) $exposure->id)
-                            ->update([
-                                'sold_amount' => $nextAmount,
-                                'updated_at' => now(),
-                            ]);
-                    }
-
-                    $updatePayload = [
-                        'status' => 'cancelled',
-                        'cancelled_at' => now(),
-                        'cancelled_by' => $adminId ? (int) $adminId : null,
-                        'refund_amount' => $refundAmount,
-                        'total_win_amount' => 0,
-                    ];
-
-                    if (Schema::hasColumn('lotto_tickets', 'reason')) {
-                        $updatePayload['reason'] = $reason;
-                    }
-
-                    $ticket->update($updatePayload);
-
-                    $cancelledTickets++;
-                    $totalRefund += $refundAmount;
-                }
+                $refundSummary = $drawCancelAllRefundService->cancelAllActiveTickets(
+                    lockedDraw: $lockedDraw,
+                    reason: $reason,
+                    createdByType: 'admin',
+                    createdById: $adminId ? (int) $adminId : null,
+                    groupCode: $groupCode
+                );
 
                 $lockedDraw->forceFill([
                     'status' => 'resulted',
@@ -563,8 +504,8 @@ class LottoDrawController extends AppBaseController
 
                 return [
                     'draw_id' => (int) $lockedDraw->id,
-                    'cancelled_tickets' => $cancelledTickets,
-                    'refunded_amount' => round($totalRefund, 2),
+                    'cancelled_tickets' => (int) ($refundSummary['cancelled_tickets'] ?? 0),
+                    'refunded_amount' => (float) ($refundSummary['refunded_amount'] ?? 0.0),
                 ];
             });
 
@@ -1044,6 +985,23 @@ class LottoDrawController extends AppBaseController
         }
 
         return ! (bool) ($resultNumber['manual_cancelled_all_tickets'] ?? false);
+    }
+
+    private function shouldAutoRefundOnNoResult(int $marketId): bool
+    {
+        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
+            return false;
+        }
+
+        $market = LotteryMarket::query()
+            ->select(['id', 'auto_refund_on_no_result'])
+            ->find($marketId);
+
+        if (! $market instanceof LotteryMarket) {
+            return false;
+        }
+
+        return (bool) ($market->auto_refund_on_no_result ?? false);
     }
 
 }

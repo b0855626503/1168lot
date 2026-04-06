@@ -84,6 +84,7 @@ class LotteryMarketDataTable extends DataTable
             ['data' => 'auto_result_time', 'name' => 'auto_result_time', 'title' => 'ออกผล',   'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'result_url', 'name' => 'result_url',  'title' => 'ลิงก์ออกผล',     'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'result_apply_mode', 'name' => 'auto_settle_on_result', 'title' => 'คำนวน', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '110px'],
+            ['data' => 'auto_refund_mode', 'name' => 'auto_refund_on_no_result', 'title' => 'คืนเงิน', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '110px'],
             ['data' => 'auto_result_source_status', 'name' => 'auto_result_sources_count', 'title' => 'Source', 'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'is_enabled', 'name' => 'is_enabled',  'title' => 'สถานะ',         'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '100px'],
             ['data' => 'action',     'name' => 'action',      'title' => 'จัดการ',        'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '170px'],

@@ -15,6 +15,7 @@
 - `no_result` และ `refunded` เป็น result context ไม่ใช่ draw state ใหม่
 - cancel/refund ต้องเก็บ audit context ให้ครบ
 - งาน auto-result เป็น high-risk; ถ้างานแตะ retry/backoff/exhausted ให้เปิด full docs เพิ่ม
+- market สามารถตั้ง `auto_refund_on_no_result` เพื่อให้ no-result คืนเงินทั้งงวดอัตโนมัติได้
 
 ## ข้อควรจำ
 

@@ -4,14 +4,17 @@ namespace Gametech\Lotto\Services\AutoResult;
 
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\SettlementService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class ResultApplier
 {
     public function __construct(
-        private SettlementService $settlementService
+        private SettlementService $settlementService,
+        private DrawCancelAllRefundService $drawCancelAllRefundService
     ) {
     }
 
@@ -70,6 +73,18 @@ class ResultApplier
                     'label' => $reason,
                     'no_result_reason' => $reason,
                 ];
+                $autoRefundSummary = null;
+
+                if ($this->shouldAutoRefundOnNoResult($locked)) {
+                    $autoRefundSummary = $this->drawCancelAllRefundService->cancelAllActiveTickets(
+                        lockedDraw: $locked,
+                        reason: $reason,
+                        createdByType: 'system',
+                        createdById: null,
+                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_' . (int) $locked->id . '_' . now()->format('YmdHis')
+                    );
+                    $resultNumber['manual_cancelled_all_tickets'] = true;
+                }
 
                 $locked->forceFill([
                     'result_number' => $resultNumber,
@@ -89,6 +104,7 @@ class ResultApplier
                     'result_hash' => $resultHash,
                     'no_result' => true,
                     'deferred_settlement' => false,
+                    'auto_refund' => $autoRefundSummary,
                 ];
             }
 
@@ -154,6 +170,23 @@ class ResultApplier
         }
 
         return (bool) ($market->auto_settle_on_result ?? true);
+    }
+
+    private function shouldAutoRefundOnNoResult(LottoDraw $draw): bool
+    {
+        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
+            return false;
+        }
+
+        $market = LotteryMarket::query()
+            ->select(['id', 'auto_refund_on_no_result'])
+            ->find((int) $draw->market_id);
+
+        if (! $market instanceof LotteryMarket) {
+            return false;
+        }
+
+        return (bool) ($market->auto_refund_on_no_result ?? false);
     }
 
     /**

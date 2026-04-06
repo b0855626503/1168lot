@@ -403,6 +403,10 @@
 - ถ้า market ตั้ง `auto_settle_on_result=false`:
   - ระบบจะบันทึกผลที่ดึงได้ไว้ใน draw แต่คงสถานะงวดเป็น `closed`
   - ทีมงานต้องกดประกาศผลเองจากหน้า admin เพื่อคำนวณยอดได้เสีย
+- ถ้า market ตั้ง `auto_refund_on_no_result=true`:
+  - เมื่อผลถูก normalize เป็น `no_result` (ทั้ง auto-result และ manual mark no-result)
+  - ระบบจะยกเลิก ticket `active` ทั้งงวดและคืนเงินอัตโนมัติทันที
+  - draw จะถูกบันทึก marker `result_number.manual_cancelled_all_tickets=true`
 - เมื่อ draw เปลี่ยนเป็น `resulted`:
   - ถ้า market เปิด `notify_result_telegram=true` ระบบ dispatch queue job แยกเพื่อสรุปผลและส่ง Telegram ผ่าน `notify/send`
   - ข้อความแจ้งผลเป็นแบบสั้น (impact-first) และมีสรุป `บิลทั้งหมด/ชนะ/แพ้/กำไรสุทธิ` ในข้อความเดียว
@@ -753,6 +757,9 @@
   - ปรับ exposure (`lotto_number_exposures.sold_amount`) ลงตามจำนวนที่ยกเลิก
   - mark draw เป็น `resulted` พร้อมผล `งดออกผล` (`result_number.no_result=true`)
   - หลังคืนเงินสำเร็จ ระบบบันทึก marker `result_number.manual_cancelled_all_tickets=true`
+- หมายเหตุ:
+  - ถ้า market เปิด `auto_refund_on_no_result=true` ระบบจะรัน behavior ชุดเดียวกันแบบอัตโนมัติทันทีตอนงวดถูก mark เป็น `no_result`
+  - ถ้า auto-refund ทำงานแล้ว ปุ่ม `ยกเลิกโพย+คืนเงิน` จะไม่แสดงซ้ำ
 - policy การแสดงปุ่มในหน้า `งวดหวย`:
   - ปุ่ม `ยกเลิกโพย+คืนเงิน` แสดงเฉพาะสถานะ `resulted+งดออกผล`
   - ถ้าเคยคืนเงินทั้งงวดแล้ว (`manual_cancelled_all_tickets=true`) ปุ่มต้องไม่แสดงซ้ำ
@@ -863,12 +870,14 @@
 - ปุ่ม `Auto` ถูกดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
 - ฟอร์มตลาดรองรับตัวเลือกเพิ่ม:
   - `ออกผลแล้วคำนวณยอดได้เสียอัตโนมัติทันที` (`auto_settle_on_result`)
+  - `งดออกผลแล้วคืนเงินโพยอัตโนมัติ` (`auto_refund_on_no_result`)
   - `ส่งแจ้งเตือน Telegram เมื่อหวยนี้ออกผล` (`notify_result_telegram`)
 - ปุ่ม `Auto` ของหน้า `lotto/markets` เปิด modal ในหน้าเดิมแบบ native (ไม่ใช้ iframe) และดึงข้อมูลผ่าน API:
   - `GET /lotto/auto-result-sources/list?market_id={id}`
   - `POST /lotto/auto-result-sources/loaddata|create|update|edit`
 - ตาราง `รายการหวย` เพิ่มคอลัมน์สถานะผูก source (`ผูกแล้ว` / `ยังไม่ผูก`) ถัดจากคอลัมน์ `ลิงก์ออกผล`
 - เพิ่มคอลัมน์ `ออกผล` (หลัง `ลิงก์ออกผล`) เป็นปุ่มสลับ `Auto/Manual` สำหรับ `auto_settle_on_result`
+- เพิ่มคอลัมน์ `คืนเงิน` เป็นปุ่มสลับ `Auto/Manual` สำหรับ `auto_refund_on_no_result`
 - คอลัมน์สถานะผูก source ปรับ UI เป็นไอคอนไฟ:
   - ผูกแล้ว = ไฟเขียวมี effect + แสดงจำนวน
   - ยังไม่ผูก = ไฟสีเทา

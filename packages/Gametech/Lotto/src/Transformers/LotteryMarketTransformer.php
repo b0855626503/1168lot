@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Transformers;
 
 use Gametech\Lotto\Contracts\LotteryMarket;
+use Illuminate\Support\Facades\Schema;
 use League\Fractal\TransformerAbstract;
 
 class LotteryMarketTransformer extends TransformerAbstract
@@ -23,6 +24,7 @@ class LotteryMarketTransformer extends TransformerAbstract
                 ? '<a href="' . e($model->result_url) . '" target="_blank">ลิงก์ผล</a>'
                 : '-',
             'result_apply_mode' => $this->renderResultApplyModeToggle((int) $model->id, (bool) ($model->auto_settle_on_result ?? true)),
+            'auto_refund_mode' => $this->renderAutoRefundModeToggle((int) $model->id, (bool) ($model->auto_refund_on_no_result ?? false)),
             'auto_result_source_status' => $this->renderAutoResultSourceStatus((int) ($model->auto_result_sources_count ?? 0)),
             'is_enabled' => '<button type="button" class="btn ' . ($model->is_enabled ? 'btn-success' : 'btn-danger') . ' btn-xs"'
                 . ' onclick="editdata(' . $model->id . ',' . ($model->is_enabled ? '0' : '1') . ',\'is_enabled\')">'
@@ -94,6 +96,22 @@ class LotteryMarketTransformer extends TransformerAbstract
 
         return '<button type="button" class="btn ' . $class . ' btn-xs"'
             . ' onclick="editdata(' . $id . ',' . $next . ',\'auto_settle_on_result\')">'
+            . $label
+            . '</button>';
+    }
+
+    private function renderAutoRefundModeToggle(int $id, bool $autoRefundOnNoResult): string
+    {
+        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
+            return '-';
+        }
+
+        $next = $autoRefundOnNoResult ? '0' : '1';
+        $label = $autoRefundOnNoResult ? 'Auto' : 'Manual';
+        $class = $autoRefundOnNoResult ? 'btn-success' : 'btn-secondary';
+
+        return '<button type="button" class="btn ' . $class . ' btn-xs"'
+            . ' onclick="editdata(' . $id . ',' . $next . ',\'auto_refund_on_no_result\')">'
             . $label
             . '</button>';
     }

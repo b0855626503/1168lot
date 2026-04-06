@@ -110,6 +110,12 @@
             <small class="text-muted d-block">ถ้าปิดไว้ ระบบจะดึงและบันทึกผล แต่คงสถานะงวดเป็นปิดรับเพื่อให้ทีมงานกดออกผลเอง</small>
         </b-form-group>
         <b-form-group>
+            <b-form-checkbox v-model="formaddedit.auto_refund_on_no_result" :value="1" :unchecked-value="0">
+                งดออกผลแล้วคืนเงินโพยอัตโนมัติ
+            </b-form-checkbox>
+            <small class="text-muted d-block">เมื่อผลเป็นงดออกผล ระบบจะยกเลิกโพย active และคืนเงินทั้งงวดทันที</small>
+        </b-form-group>
+        <b-form-group>
             <b-form-checkbox v-model="formaddedit.notify_result_telegram" :value="1" :unchecked-value="0">
                 ส่งแจ้งเตือน Telegram เมื่อหวยนี้ออกผล
             </b-form-checkbox>
@@ -553,6 +559,7 @@
                         auto_result_time: '',
                         result_url: '',
                         auto_settle_on_result: 1,
+                        auto_refund_on_no_result: 0,
                         notify_result_telegram: 1,
                         is_enabled: 1,
                     },
@@ -1291,7 +1298,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1303,7 +1310,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1694,6 +1701,7 @@
                         auto_result_time: d.auto_result_time ? String(d.auto_result_time).substring(0, 5) : '',
                         result_url: d.result_url || '',
                         auto_settle_on_result: d.auto_settle_on_result === undefined || d.auto_settle_on_result === null ? 1 : (d.auto_settle_on_result ? 1 : 0),
+                        auto_refund_on_no_result: d.auto_refund_on_no_result ? 1 : 0,
                         notify_result_telegram: d.notify_result_telegram === undefined || d.notify_result_telegram === null ? 1 : (d.notify_result_telegram ? 1 : 0),
                         is_enabled: d.is_enabled ? 1 : 0,
                     };
