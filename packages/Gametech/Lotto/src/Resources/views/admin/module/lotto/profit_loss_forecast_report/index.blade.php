@@ -57,6 +57,10 @@
             line-height: 1.2;
         }
 
+        .profit-loss-forecast__number-amount.is-positive {
+            color: #dc2626;
+        }
+
         .profit-loss-forecast__scroll-wrap {
             max-height: 62vh;
             overflow: auto;
@@ -224,7 +228,7 @@
                                                 <th class="profit-loss-forecast__sticky-col" style="min-width:72px;">#</th>
                                                 <th v-for="column in report.columns" :key="column.bet_type" style="min-width:150px;">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
-                                                    <div class="small text-muted">จ่าย @{{ formatMoney(column.payout) }} | ส่วนลด @{{ formatPercent(column.discount_percent) }}</div>
+                                                    <div class="small text-muted">ยอดสูงสุดต่อเลข @{{ formatMoney(column.max_number_amount || 0) }}</div>
                                                 </th>
                                             </tr>
                                             </thead>
@@ -239,7 +243,10 @@
                                                         <div class="profit-loss-forecast__number-code">
                                                             @{{ displayCellNumber(row.cells[column.bet_type]) }}
                                                         </div>
-                                                        <div class="profit-loss-forecast__number-amount">
+                                                        <div
+                                                            class="profit-loss-forecast__number-amount"
+                                                            :class="{ 'is-positive': ((row.cells[column.bet_type] || {}).amount || 0) > 0 }"
+                                                        >
                                                             @{{ formatMoney((row.cells[column.bet_type] || {}).amount || 0) }}
                                                         </div>
                                                     </div>

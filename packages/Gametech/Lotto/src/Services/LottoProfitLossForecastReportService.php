@@ -127,6 +127,7 @@ class LottoProfitLossForecastReportService
                 $stats = $betStats->get($betType);
                 $digits = $this->digitsForBetType($betType);
                 $exposures = $exposureByType->get($betType, []);
+                $maxNumberAmount = empty($exposures) ? 0.0 : max($exposures);
                 $totalBetAmount = (float) ($stats->total_bet_amount ?? 0);
                 $totalDiscountAmount = (float) ($stats->total_discount_amount ?? 0);
                 $totalReceiveAmount = (float) ($stats->total_net_amount ?? ($totalBetAmount - $totalDiscountAmount));
@@ -144,6 +145,7 @@ class LottoProfitLossForecastReportService
                     'total_receive_amount' => $totalReceiveAmount,
                     'total_payout_amount' => $totalPayoutAmount,
                     'total_profit_amount' => $totalReceiveAmount - $totalPayoutAmount,
+                    'max_number_amount' => $maxNumberAmount,
                     'number_amounts' => $exposures,
                 ];
             })
