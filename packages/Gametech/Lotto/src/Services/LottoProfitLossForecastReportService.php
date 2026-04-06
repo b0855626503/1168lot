@@ -51,6 +51,14 @@ class LottoProfitLossForecastReportService
             ])
             ->keyBy('bet_type');
 
+        $drawBetSettings = DB::table('lotto_draw_bet_settings')
+            ->where('draw_id', $drawId)
+            ->get([
+                'bet_type',
+                'max_per_number',
+            ])
+            ->keyBy('bet_type');
+
         if ($settings->isEmpty()) {
             return [
                 'draw' => $this->mapDrawContext($draw),
@@ -122,12 +130,12 @@ class LottoProfitLossForecastReportService
 
         $columns = collect(BetType::all())
             ->filter(fn (string $betType): bool => $settings->has($betType))
-            ->map(function (string $betType) use ($settings, $betStats, $exposureByType): array {
+            ->map(function (string $betType) use ($settings, $betStats, $exposureByType, $drawBetSettings): array {
                 $setting = $settings->get($betType);
+                $drawBetSetting = $drawBetSettings->get($betType);
                 $stats = $betStats->get($betType);
                 $digits = $this->digitsForBetType($betType);
                 $exposures = $exposureByType->get($betType, []);
-                $maxNumberAmount = empty($exposures) ? 0.0 : max($exposures);
                 $totalBetAmount = (float) ($stats->total_bet_amount ?? 0);
                 $totalDiscountAmount = (float) ($stats->total_discount_amount ?? 0);
                 $totalReceiveAmount = (float) ($stats->total_net_amount ?? ($totalBetAmount - $totalDiscountAmount));
@@ -140,12 +148,12 @@ class LottoProfitLossForecastReportService
                     'range_count' => 10 ** $digits,
                     'payout' => (float) ($setting->payout ?? 0),
                     'discount_percent' => (float) ($setting->discount_percent ?? 0),
+                    'max_per_number' => (float) ($drawBetSetting->max_per_number ?? 0),
                     'total_bet_amount' => $totalBetAmount,
                     'total_discount_amount' => $totalDiscountAmount,
                     'total_receive_amount' => $totalReceiveAmount,
                     'total_payout_amount' => $totalPayoutAmount,
                     'total_profit_amount' => $totalReceiveAmount - $totalPayoutAmount,
-                    'max_number_amount' => $maxNumberAmount,
                     'number_amounts' => $exposures,
                 ];
             })

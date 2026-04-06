@@ -228,7 +228,7 @@
                                                 <th class="profit-loss-forecast__sticky-col" style="min-width:72px;">#</th>
                                                 <th v-for="column in report.columns" :key="column.bet_type" style="min-width:150px;">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
-                                                    <div class="small text-muted">ยอดสูงสุดต่อเลข @{{ formatMoney(column.max_number_amount || 0) }}</div>
+                                                    <div class="small text-muted">ยอดสูงสุดต่อเลข @{{ formatMoney(column.max_per_number || 0) }}</div>
                                                 </th>
                                             </tr>
                                             </thead>
