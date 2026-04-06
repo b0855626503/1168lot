@@ -1,5 +1,34 @@
 @section('css')
     @include('admin::layouts.datatables_css')
+    <style>
+        #ticketsCancelDetailModal .modal-header {
+            border-bottom: 1px solid #e9ecef;
+        }
+        #ticketsCancelDetailSummary .ticket-detail-card {
+            border: 1px solid #edf0f5;
+            border-radius: 8px;
+            padding: 8px 10px;
+            height: 100%;
+            background: #fff;
+        }
+        #ticketsCancelDetailSummary .ticket-detail-label {
+            display: block;
+            font-size: 11px;
+            color: #7a8599;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+        #ticketsCancelDetailSummary .ticket-detail-value {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #253247;
+            line-height: 1.3;
+        }
+        #ticketsCancelDetailSummary .ticket-detail-value.is-danger {
+            color: #dc3545;
+        }
+    </style>
 @endsection
 {!! $dataTable->table(['width' => '100%', 'class' => 'table table-striped table-sm']) !!}
 <div class="modal fade" id="ticketsCancelDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -63,6 +92,9 @@
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
+            };
+            const isPositive = function (value) {
+                return Number(value || 0) > 0;
             };
 
             const escapeHtml = function (value) {
@@ -130,20 +162,21 @@
                         const payload = response && response.data ? response.data : {};
                         const ticket = payload.ticket || {};
                         const items = Array.isArray(payload.items) ? payload.items : [];
+                        const winAmountClass = isPositive(ticket.total_win_amount) ? 'ticket-detail-value is-danger' : 'ticket-detail-value';
 
                         $('#ticketsCancelDetailSummary').html(
                             `<div class="row">
-                                <div class="col-md-6 mb-2"><strong>เลขโพย:</strong> ${escapeHtml(ticket.id || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>สมาชิก:</strong> ${escapeHtml(ticket.member_display || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>ตลาด:</strong> ${escapeHtml(ticket.market_name || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>วันงวด:</strong> ${escapeHtml(ticket.draw_date || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>สถานะ:</strong> ${escapeHtml(ticket.status_label || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>ผู้ยกเลิก:</strong> ${escapeHtml(ticket.cancelled_by_name || '-')}</div>
-                                <div class="col-md-6 mb-2"><strong>ยอดแทง:</strong> ${formatMoney(ticket.total_bet_amount)}</div>
-                                <div class="col-md-6 mb-2"><strong>ส่วนลด:</strong> ${formatMoney(ticket.total_discount_amount)}</div>
-                                <div class="col-md-6 mb-2"><strong>ยอดรับ:</strong> ${formatMoney(ticket.total_net_amount)}</div>
-                                <div class="col-md-6 mb-2"><strong>ยอดถูก:</strong> ${formatMoney(ticket.total_win_amount)}</div>
-                                <div class="col-md-12 mb-2"><strong>สาเหตุ:</strong> ${escapeHtml(ticket.reason || '-')}</div>
+                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">เลขโพย</span><span class="ticket-detail-value">${escapeHtml(ticket.id || '-')}</span></div></div>
+                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">สถานะ</span><span class="ticket-detail-value">${escapeHtml(ticket.status_label || '-')}</span></div></div>
+                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">วันงวด</span><span class="ticket-detail-value">${escapeHtml(ticket.draw_date || '-')}</span></div></div>
+                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">ผู้ยกเลิก</span><span class="ticket-detail-value">${escapeHtml(ticket.cancelled_by_name || '-')}</span></div></div>
+                                <div class="col-12 col-lg-6 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">สมาชิก</span><span class="ticket-detail-value">${escapeHtml(ticket.member_display || '-')}</span></div></div>
+                                <div class="col-12 col-lg-6 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">ตลาด</span><span class="ticket-detail-value">${escapeHtml(ticket.market_name || '-')}</span></div></div>
+                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดแทง</span><span class="ticket-detail-value">${formatMoney(ticket.total_bet_amount)}</span></div></div>
+                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ส่วนลด</span><span class="ticket-detail-value">${formatMoney(ticket.total_discount_amount)}</span></div></div>
+                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดรับ</span><span class="ticket-detail-value">${formatMoney(ticket.total_net_amount)}</span></div></div>
+                                <div class="col-12 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดถูก</span><span class="${winAmountClass}">${formatMoney(ticket.total_win_amount)}</span></div></div>
+                                <div class="col-12 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">สาเหตุ</span><span class="ticket-detail-value">${escapeHtml(ticket.reason || '-')}</span></div></div>
                             </div>`
                         );
 
@@ -154,6 +187,7 @@
 
                         const rowsHtml = items.map((item) => {
                             const resultStatus = item.result_status ? String(item.result_status) : '-';
+                            const itemWinClass = isPositive(item.win_amount) ? 'text-right text-danger font-weight-bold' : 'text-right';
                             return `<tr>
                                 <td class="text-center">${escapeHtml(item.bet_type_label || item.bet_type || '-')}</td>
                                 <td class="text-center">${escapeHtml(item.number || '-')}</td>
@@ -162,7 +196,7 @@
                                 <td class="text-right">${formatMoney(item.discount_amount)}</td>
                                 <td class="text-right">${formatMoney(item.net_amount)}</td>
                                 <td class="text-right">${formatMoney(item.payout)}</td>
-                                <td class="text-right">${formatMoney(item.win_amount)}</td>
+                                <td class="${itemWinClass}">${formatMoney(item.win_amount)}</td>
                                 <td class="text-center">${escapeHtml(resultStatus)}</td>
                             </tr>`;
                         }).join('');
