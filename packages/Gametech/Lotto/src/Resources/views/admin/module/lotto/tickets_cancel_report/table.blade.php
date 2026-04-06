@@ -6,21 +6,21 @@
         }
         #ticketsCancelDetailSummary .ticket-detail-card {
             border: 1px solid #edf0f5;
-            border-radius: 8px;
-            padding: 8px 10px;
+            border-radius: 6px;
+            padding: 6px 8px;
             height: 100%;
             background: #fff;
         }
         #ticketsCancelDetailSummary .ticket-detail-label {
             display: block;
-            font-size: 11px;
+            font-size: 10px;
             color: #7a8599;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             line-height: 1.2;
         }
         #ticketsCancelDetailSummary .ticket-detail-value {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: #253247;
             line-height: 1.3;
@@ -28,11 +28,18 @@
         #ticketsCancelDetailSummary .ticket-detail-value.is-danger {
             color: #dc3545;
         }
+        #ticketsCancelDetailModal .modal-body {
+            padding: 10px;
+        }
+        #ticketsCancelDetailModal .table td,
+        #ticketsCancelDetailModal .table th {
+            padding: 0.3rem;
+        }
     </style>
 @endsection
 {!! $dataTable->table(['width' => '100%', 'class' => 'table table-striped table-sm']) !!}
 <div class="modal fade" id="ticketsCancelDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+    <div class="modal-dialog modal-md modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header py-2">
                 <h5 class="modal-title">รายละเอียดโพย</h5>
@@ -41,9 +48,9 @@
                 </button>
             </div>
             <div class="modal-body text-sm">
-                <div id="ticketsCancelDetailLoading" class="alert alert-light border mb-2 d-none">กำลังโหลดรายละเอียด...</div>
+                <div id="ticketsCancelDetailLoading" class="alert alert-light border mb-1 py-1 px-2 d-none">กำลังโหลดรายละเอียด...</div>
                 <div id="ticketsCancelDetailSummary"></div>
-                <div class="table-responsive mt-2">
+                <div class="table-responsive mt-1">
                     <table class="table table-bordered table-sm mb-0">
                         <thead class="thead-light">
                         <tr>
@@ -165,18 +172,18 @@
                         const winAmountClass = isPositive(ticket.total_win_amount) ? 'ticket-detail-value is-danger' : 'ticket-detail-value';
 
                         $('#ticketsCancelDetailSummary').html(
-                            `<div class="row">
-                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">เลขโพย</span><span class="ticket-detail-value">${escapeHtml(ticket.id || '-')}</span></div></div>
-                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">สถานะ</span><span class="ticket-detail-value">${escapeHtml(ticket.status_label || '-')}</span></div></div>
-                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">วันงวด</span><span class="ticket-detail-value">${escapeHtml(ticket.draw_date || '-')}</span></div></div>
-                                <div class="col-6 col-lg-3 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">ผู้ยกเลิก</span><span class="ticket-detail-value">${escapeHtml(ticket.cancelled_by_name || '-')}</span></div></div>
-                                <div class="col-12 col-lg-6 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">สมาชิก</span><span class="ticket-detail-value">${escapeHtml(ticket.member_display || '-')}</span></div></div>
-                                <div class="col-12 col-lg-6 mb-2"><div class="ticket-detail-card"><span class="ticket-detail-label">ตลาด</span><span class="ticket-detail-value">${escapeHtml(ticket.market_name || '-')}</span></div></div>
-                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดแทง</span><span class="ticket-detail-value">${formatMoney(ticket.total_bet_amount)}</span></div></div>
-                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ส่วนลด</span><span class="ticket-detail-value">${formatMoney(ticket.total_discount_amount)}</span></div></div>
-                                <div class="col-4 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดรับ</span><span class="ticket-detail-value">${formatMoney(ticket.total_net_amount)}</span></div></div>
-                                <div class="col-12 mb-2"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดถูก</span><span class="${winAmountClass}">${formatMoney(ticket.total_win_amount)}</span></div></div>
-                                <div class="col-12 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">สาเหตุ</span><span class="ticket-detail-value">${escapeHtml(ticket.reason || '-')}</span></div></div>
+                            `<div class="row mx-n1">
+                                <div class="col-6 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">เลขโพย</span><span class="ticket-detail-value">${escapeHtml(ticket.id || '-')}</span></div></div>
+                                <div class="col-6 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">สถานะ</span><span class="ticket-detail-value">${escapeHtml(ticket.status_label || '-')}</span></div></div>
+                                <div class="col-6 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">วันงวด</span><span class="ticket-detail-value">${escapeHtml(ticket.draw_date || '-')}</span></div></div>
+                                <div class="col-6 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">ผู้ยกเลิก</span><span class="ticket-detail-value">${escapeHtml(ticket.cancelled_by_name || '-')}</span></div></div>
+                                <div class="col-12 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">สมาชิก</span><span class="ticket-detail-value">${escapeHtml(ticket.member_display || '-')}</span></div></div>
+                                <div class="col-12 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">ตลาด</span><span class="ticket-detail-value">${escapeHtml(ticket.market_name || '-')}</span></div></div>
+                                <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดแทง</span><span class="ticket-detail-value">${formatMoney(ticket.total_bet_amount)}</span></div></div>
+                                <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ส่วนลด</span><span class="ticket-detail-value">${formatMoney(ticket.total_discount_amount)}</span></div></div>
+                                <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดรับ</span><span class="ticket-detail-value">${formatMoney(ticket.total_net_amount)}</span></div></div>
+                                <div class="col-12 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดถูก</span><span class="${winAmountClass}">${formatMoney(ticket.total_win_amount)}</span></div></div>
+                                <div class="col-12 px-1 mb-0"><div class="ticket-detail-card"><span class="ticket-detail-label">สาเหตุ</span><span class="ticket-detail-value">${escapeHtml(ticket.reason || '-')}</span></div></div>
                             </div>`
                         );
 
