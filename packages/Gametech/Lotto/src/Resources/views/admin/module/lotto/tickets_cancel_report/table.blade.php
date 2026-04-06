@@ -56,18 +56,16 @@
                         <tr>
                             <th class="text-center">ประเภท</th>
                             <th class="text-center">เลข</th>
-                            <th class="text-left">แพกเกจ</th>
                             <th class="text-right">ยอดแทง</th>
                             <th class="text-right">ส่วนลด</th>
                             <th class="text-right">ยอดรับ</th>
                             <th class="text-right">อัตราจ่าย</th>
                             <th class="text-right">ยอดถูก</th>
-                            <th class="text-center">ผล</th>
                         </tr>
                         </thead>
                         <tbody id="ticketsCancelDetailItemsBody">
                         <tr>
-                            <td colspan="9" class="text-center text-muted">ยังไม่มีข้อมูล</td>
+                            <td colspan="7" class="text-center text-muted">ยังไม่มีข้อมูล</td>
                         </tr>
                         </tbody>
                     </table>
@@ -155,7 +153,7 @@
                 $('#ticketsCancelDetailModal').modal('show');
                 $('#ticketsCancelDetailLoading').removeClass('d-none');
                 $('#ticketsCancelDetailSummary').empty();
-                $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="9" class="text-center text-muted">กำลังโหลด...</td></tr>');
+                $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="7" class="text-center text-muted">กำลังโหลด...</td></tr>');
 
                 const requestUrl = `${detailUrl}?id=${encodeURIComponent(ticketId)}`;
                 if (window.axios && typeof window.axios.get === 'function') {
@@ -179,6 +177,7 @@
                                 <div class="col-6 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">ผู้ยกเลิก</span><span class="ticket-detail-value">${escapeHtml(ticket.cancelled_by_name || '-')}</span></div></div>
                                 <div class="col-12 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">สมาชิก</span><span class="ticket-detail-value">${escapeHtml(ticket.member_display || '-')}</span></div></div>
                                 <div class="col-12 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">ตลาด</span><span class="ticket-detail-value">${escapeHtml(ticket.market_name || '-')}</span></div></div>
+                                <div class="col-12 px-1 mb-1"><div class="ticket-detail-card"><span class="ticket-detail-label">แพกเกจ</span><span class="ticket-detail-value">${escapeHtml(ticket.packages || '-')}</span></div></div>
                                 <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดแทง</span><span class="ticket-detail-value">${formatMoney(ticket.total_bet_amount)}</span></div></div>
                                 <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ส่วนลด</span><span class="ticket-detail-value">${formatMoney(ticket.total_discount_amount)}</span></div></div>
                                 <div class="col-4 px-1 mb-1"><div class="ticket-detail-card text-right"><span class="ticket-detail-label">ยอดรับ</span><span class="ticket-detail-value">${formatMoney(ticket.total_net_amount)}</span></div></div>
@@ -188,30 +187,27 @@
                         );
 
                         if (items.length === 0) {
-                            $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="9" class="text-center text-muted">ไม่พบรายการย่อยในโพย</td></tr>');
+                            $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="7" class="text-center text-muted">ไม่พบรายการย่อยในโพย</td></tr>');
                             return;
                         }
 
                         const rowsHtml = items.map((item) => {
-                            const resultStatus = item.result_status ? String(item.result_status) : '-';
                             const itemWinClass = isPositive(item.win_amount) ? 'text-right text-danger font-weight-bold' : 'text-right';
                             return `<tr>
                                 <td class="text-center">${escapeHtml(item.bet_type_label || item.bet_type || '-')}</td>
                                 <td class="text-center">${escapeHtml(item.number || '-')}</td>
-                                <td class="text-left">${escapeHtml(item.package_name || '-')}</td>
                                 <td class="text-right">${formatMoney(item.amount)}</td>
                                 <td class="text-right">${formatMoney(item.discount_amount)}</td>
                                 <td class="text-right">${formatMoney(item.net_amount)}</td>
                                 <td class="text-right">${formatMoney(item.payout)}</td>
                                 <td class="${itemWinClass}">${formatMoney(item.win_amount)}</td>
-                                <td class="text-center">${escapeHtml(resultStatus)}</td>
                             </tr>`;
                         }).join('');
 
                         $('#ticketsCancelDetailItemsBody').html(rowsHtml);
                     }).catch(() => {
                         $('#ticketsCancelDetailSummary').html('<div class="alert alert-danger mb-2">โหลดรายละเอียดโพยไม่สำเร็จ</div>');
-                        $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="9" class="text-center text-muted">ไม่สามารถโหลดข้อมูลได้</td></tr>');
+                        $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="7" class="text-center text-muted">ไม่สามารถโหลดข้อมูลได้</td></tr>');
                     }).then(() => {
                         $('#ticketsCancelDetailLoading').addClass('d-none');
                     });
@@ -221,7 +217,7 @@
 
                 $('#ticketsCancelDetailLoading').addClass('d-none');
                 $('#ticketsCancelDetailSummary').html('<div class="alert alert-danger mb-2">ไม่พบ HTTP client (axios)</div>');
-                $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="9" class="text-center text-muted">ไม่สามารถโหลดข้อมูลได้</td></tr>');
+                $('#ticketsCancelDetailItemsBody').html('<tr><td colspan="7" class="text-center text-muted">ไม่สามารถโหลดข้อมูลได้</td></tr>');
             });
         });
     </script>

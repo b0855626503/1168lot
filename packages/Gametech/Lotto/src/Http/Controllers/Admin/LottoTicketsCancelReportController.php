@@ -124,6 +124,13 @@ class LottoTicketsCancelReportController extends AppBaseController
             $reason = '-';
         }
 
+        $packageNames = collect($ticket->items ?? [])
+            ->pluck('package_name_at_time')
+            ->map(static fn ($name) => trim((string) $name))
+            ->filter()
+            ->unique()
+            ->values();
+
         return response()->json([
             'ticket' => [
                 'id' => (int) $ticket->id,
@@ -142,6 +149,7 @@ class LottoTicketsCancelReportController extends AppBaseController
                 'total_net_amount' => (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0),
                 'total_win_amount' => (float) ($ticket->total_win_amount ?? 0),
                 'refund_amount' => (float) ($ticket->refund_amount ?? 0),
+                'packages' => $packageNames->isNotEmpty() ? $packageNames->implode(', ') : '-',
             ],
             'items' => collect($ticket->items ?? [])->map(static function ($item): array {
                 $betType = (string) ($item->bet_type ?? '');
