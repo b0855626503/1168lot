@@ -602,6 +602,26 @@ class MemberCreditLogRepository extends Repository
 
                 $member->save();
                 $game_user->save();
+
+                $this->recordWalletTransaction(
+                    (int) $member->code,
+                    $method == 'D' ? 'CREDIT' : 'DEBIT',
+                    (float) $amount,
+                    $response['before'],
+                    (float) $response['after'],
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
+                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    'Member wallet adjust via setWalletSeamlessWithdraw',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWalletSeamlessWithdraw',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
+
             } catch (Throwable $e) {
                 report($e);
 

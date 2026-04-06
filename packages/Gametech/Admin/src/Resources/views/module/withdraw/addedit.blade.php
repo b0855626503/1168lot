@@ -544,7 +544,7 @@
                                     footerClass: 'p-2 border-top-0',
                                     centered: true
                                 });
-                                window.LaravelDataTables["dataTableBuilder"].draw(false);
+                                window.LaravelDataTables["withdrawtable"].draw(false);
                             } else {
                                 $.each(response.data.message, function (index, value) {
                                     document.getElementById(index).classList.add("is-invalid");
@@ -592,7 +592,7 @@
                                     footerClass: 'p-2 border-top-0',
                                     centered: true
                                 });
-                                window.LaravelDataTables["dataTableBuilder"].draw(false);
+                                window.LaravelDataTables["withdrawtable"].draw(false);
                             } else {
                                 $.each(response.data.message, function (index, value) {
                                     document.getElementById(index).classList.add("is-invalid");
@@ -627,7 +627,7 @@
                                 footerClass: 'p-2 border-top-0',
                                 centered: true
                             });
-                            window.LaravelDataTables["dataTableBuilder"].draw(false);
+                            window.LaravelDataTables["withdrawtable"].draw(false);
                         })
                         .catch(exception => {
                             console.log('error');
@@ -662,7 +662,7 @@
                                             footerClass: 'p-2 border-top-0',
                                             centered: true
                                         });
-                                        window.LaravelDataTables["dataTableBuilder"].draw(false);
+                                        window.LaravelDataTables["withdrawtable"].draw(false);
                                     })
                                     .catch(exception => {
                                         console.log('error');
