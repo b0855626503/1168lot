@@ -219,6 +219,19 @@
                             <div class="card card-outline card-secondary mb-0">
                                 <div class="card-header py-2">
                                     <h4 class="card-title mb-0">ยอดแทงสะสมรายหมายเลข (แพกเกจที่เลือก)</h4>
+                                    <div class="card-tools">
+                                        <div class="custom-control custom-switch custom-switch-sm">
+                                            <input
+                                                id="profit-loss-forecast-only-bet-numbers"
+                                                type="checkbox"
+                                                class="custom-control-input"
+                                                v-model="showOnlyBetNumbers"
+                                            >
+                                            <label class="custom-control-label text-xs" for="profit-loss-forecast-only-bet-numbers">
+                                                แสดงเฉพาะแถวที่มียอดแทง
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive profit-loss-forecast__scroll-wrap">
@@ -233,7 +246,7 @@
                                             </tr>
                                             </thead>
                                             <tbody>
-                                            <tr v-for="row in report.number_rows" :key="row.index">
+                                            <tr v-for="row in displayedNumberRows" :key="row.index">
                                                 <th class="profit-loss-forecast__sticky-col">@{{ row.index }}</th>
                                                 <td v-for="column in report.columns" :key="row.index + '-' + column.bet_type">
                                                     <div
@@ -342,6 +355,7 @@
                     isLoadingPackageOptions: false,
                     isLoadingDrawOptions: false,
                     isLoadingReport: false,
+                    showOnlyBetNumbers: false,
                 };
             },
             computed: {
@@ -350,6 +364,17 @@
                 },
                 hasReportColumns: function () {
                     return Array.isArray(this.report.columns) && this.report.columns.length > 0;
+                },
+                displayedNumberRows: function () {
+                    const rows = Array.isArray(this.report.number_rows) ? this.report.number_rows : [];
+                    if (!this.showOnlyBetNumbers) {
+                        return rows;
+                    }
+
+                    return rows.filter((row) => {
+                        const cells = row && row.cells ? row.cells : {};
+                        return Object.values(cells).some((cell) => Number((cell || {}).amount || 0) > 0);
+                    });
                 },
             },
             mounted: function () {

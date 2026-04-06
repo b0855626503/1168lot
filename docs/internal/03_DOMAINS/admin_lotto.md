@@ -20,6 +20,7 @@
 - `profit-loss-forecast` เป็น Vue report ไม่ใช่ DataTable ปกติ
 - `profit-loss-forecast` ต้องเลือก filter แบบ `ตลาด -> แพกเกจ -> งวดหวย` ก่อนโหลดข้อมูล
 - payout/discount ในหน้า `profit-loss-forecast` ต้องอิงจาก package ที่เลือก
+- ตารางเลขด้านล่างของ `profit-loss-forecast` รองรับ toggle `แสดงเฉพาะแถวที่มียอดแทง`
 - summary matrix ของ `profit-loss-forecast` ใช้ลำดับ metric:
   - ยอดแทง
   - ส่วนลด
