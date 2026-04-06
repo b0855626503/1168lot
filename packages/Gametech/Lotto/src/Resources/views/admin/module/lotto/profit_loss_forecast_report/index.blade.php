@@ -250,7 +250,7 @@
                             กรุณาเลือกตลาด แพกเกจ และงวดหวยเพื่อดูรายงาน
                         </div>
 
-                        <div v-else-if="isLoadingReport" class="alert alert-light border mb-0">
+                        <div v-else-if="isLoadingReport && !hasReportColumns" class="alert alert-light border mb-0">
                             กำลังโหลดข้อมูลรายงาน...
                         </div>
 
@@ -768,7 +768,6 @@
                             }
                         })
                         .catch(() => {
-                            this.report = buildEmptyReport();
                             window.alert('โหลดรายงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
                         })
                         .then(() => {
