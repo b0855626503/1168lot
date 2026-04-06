@@ -21,6 +21,7 @@
 - `profit-loss-forecast` ต้องเลือก filter แบบ `ตลาด -> แพกเกจ -> งวดหวย` ก่อนโหลดข้อมูล
 - payout/discount ในหน้า `profit-loss-forecast` ต้องอิงจาก package ที่เลือก
 - ตารางเลขด้านล่างของ `profit-loss-forecast` รองรับ toggle `แสดงเฉพาะแถวที่มียอดแทง`
+- ตาราง `profit-loss-forecast` ปรับ layout ให้เห็นข้อมูลครบในกรอบหน้าเป็นหลัก (ไม่บังคับ scroll แนวนอน)
 - summary matrix ของ `profit-loss-forecast` ใช้ลำดับ metric:
   - ยอดแทง
   - ส่วนลด

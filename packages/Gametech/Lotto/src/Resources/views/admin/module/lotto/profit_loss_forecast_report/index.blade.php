@@ -15,7 +15,10 @@
         .profit-loss-forecast__numbers th,
         .profit-loss-forecast__numbers td {
             vertical-align: middle;
-            white-space: nowrap;
+            white-space: normal;
+            padding: 0.38rem 0.35rem;
+            font-size: 0.78rem;
+            line-height: 1.2;
         }
 
         .profit-loss-forecast__sticky-col {
@@ -26,9 +29,9 @@
         }
 
         .profit-loss-forecast__number-cell {
-            min-width: 120px;
-            min-height: 86px;
-            padding: 0.5rem 0.6rem 0.65rem 0.6rem;
+            width: 100%;
+            min-height: 72px;
+            padding: 0.35rem 0.45rem 0.4rem 0.45rem;
             border-radius: 0.4rem;
             background: #f8fafc;
             display: flex;
@@ -43,7 +46,7 @@
         .profit-loss-forecast__number-code {
             text-align: right;
             font-weight: 700;
-            font-size: 1.35rem;
+            font-size: 1.05rem;
             color: #1d4ed8;
             line-height: 1.15;
         }
@@ -63,7 +66,14 @@
 
         .profit-loss-forecast__scroll-wrap {
             max-height: 62vh;
-            overflow: auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .profit-loss-forecast__matrix,
+        .profit-loss-forecast__numbers {
+            width: 100%;
+            table-layout: fixed;
         }
 
         .profit-loss-forecast__numbers thead th {
@@ -122,6 +132,24 @@
             color: #166534;
             background: #f0fdf4;
             border-color: #bbf7d0;
+        }
+
+        @media (max-width: 991.98px) {
+            .profit-loss-forecast__matrix th,
+            .profit-loss-forecast__matrix td,
+            .profit-loss-forecast__numbers th,
+            .profit-loss-forecast__numbers td {
+                font-size: 0.72rem;
+                padding: 0.3rem 0.25rem;
+            }
+
+            .profit-loss-forecast__number-code {
+                font-size: 0.9rem;
+            }
+
+            .profit-loss-forecast__number-amount {
+                font-size: 0.74rem;
+            }
         }
     </style>
 @endpush
@@ -252,9 +280,9 @@
                                         <table class="table table-bordered table-sm mb-0 profit-loss-forecast__matrix">
                                             <thead class="thead-light">
                                             <tr>
-                                                <th class="profit-loss-forecast__sticky-col" style="min-width:160px;">รายการ</th>
-                                                <th style="min-width:140px;">รวมทั้งหมด</th>
-                                                <th v-for="column in report.columns" :key="column.bet_type" style="min-width:160px;">
+                                                <th class="profit-loss-forecast__sticky-col">รายการ</th>
+                                                <th>รวมทั้งหมด</th>
+                                                <th v-for="column in report.columns" :key="column.bet_type">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
                                                     <div class="small text-muted">จ่าย @{{ formatMoney(column.payout) }} | ส่วนลด @{{ formatPercent(column.discount_percent) }}</div>
                                                 </th>
@@ -296,8 +324,8 @@
                                         <table class="table table-bordered table-sm mb-0 profit-loss-forecast__numbers">
                                             <thead class="thead-light">
                                             <tr>
-                                                <th class="profit-loss-forecast__sticky-col" style="min-width:72px;">#</th>
-                                                <th v-for="column in report.columns" :key="column.bet_type" style="min-width:150px;">
+                                                <th class="profit-loss-forecast__sticky-col">#</th>
+                                                <th v-for="column in report.columns" :key="column.bet_type">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
                                                     <div class="small text-muted">ยอดสูงสุดต่อเลข @{{ formatMoney(column.max_per_number || 0) }}</div>
                                                 </th>
