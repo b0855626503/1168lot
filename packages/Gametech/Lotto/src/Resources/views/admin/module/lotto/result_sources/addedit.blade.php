@@ -658,8 +658,8 @@
                             minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
                         },
                         retry_policy_json: {
-                            max_attempts: 3,
-                            backoff_seconds: [10, 30, 60],
+                            max_attempts: 5,
+                            backoff_seconds: [300, 300, 300, 300, 300],
                         },
                     };
 
@@ -719,8 +719,8 @@
                             minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
                         },
                         retry_policy_json: {
-                            max_attempts: 3,
-                            backoff_seconds: [10, 30, 60],
+                            max_attempts: 5,
+                            backoff_seconds: [300, 300, 300, 300, 300],
                         },
                     };
                 },
@@ -1058,8 +1058,8 @@
                                 minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
                             },
                             retry_policy_json: {
-                                max_attempts: 3,
-                                backoff_seconds: [10, 30, 60],
+                                max_attempts: 5,
+                                backoff_seconds: [300, 300, 300, 300, 300],
                             },
                         }, null, 2);
 

@@ -440,6 +440,7 @@
 - เมื่อ source แรกครบ `max_attempts` แล้ว ระบบจะ mark ว่า source นั้น exhausted (เฉพาะ source) และ fallback ไป source ถัดไปอัตโนมัติ
 - กรณี source ยังไม่ครบ max แต่ยังติด backoff window ระบบจะคงรอ source เดิม (ยังไม่ข้ามไป source ถัดไป)
 - draw จะถูก mark `EXHAUSTED` เมื่อ source ที่ active ทั้งหมดในช่วงเวลานั้น exhausted ครบแล้วเท่านั้น
+- retry policy ค่ามาตรฐานทั้งระบบ: `max_attempts=5`, หน่วงครั้งละ 5 นาที (`base_backoff_seconds=300`, `max_backoff_seconds=300`)
 - สำหรับ V2 cutover:
   - `NOT_READY_BUSINESS_RULE`
   - `NOT_READY_PARTIAL_RESULT`

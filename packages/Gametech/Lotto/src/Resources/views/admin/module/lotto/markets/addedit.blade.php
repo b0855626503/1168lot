@@ -820,7 +820,7 @@
                         parser_config_json: '{}',
                         mapping_config_json: '{}',
                         validation_config_json: '{"required_fields":["draw_date","first_prize","last_2_digits"]}',
-                        retry_policy_json: '{"max_attempts":3,"backoff_seconds":[10,30,60]}',
+                        retry_policy_json: '{"max_attempts":5,"backoff_seconds":[300,300,300,300,300]}',
                         fetch_config_json: '{}',
                         selection_config_json: '{"selection_stage":"PRE_MAPPING","strategy":"strict_single_match","date_field":"draw_date_raw","required_fields":[],"meta":{"candidate_draw_date_offset_days":0,"expected_draw_date_offset_days":0}}',
                         readiness_config_json: '{"enabled":true,"minimum_required_keys":["draw_date","first_prize","last_2_digits"]}',
@@ -892,8 +892,8 @@
                             minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'],
                         },
                         retry_policy_json: {
-                            max_attempts: 3,
-                            backoff_seconds: [10, 30, 60],
+                            max_attempts: 5,
+                            backoff_seconds: [300, 300, 300, 300, 300],
                         },
                     };
 
@@ -1185,7 +1185,7 @@
                         },
                         validation_config_json: { required_fields: ['draw_date', 'first_prize', 'last_2_digits'] },
                         readiness_config_json: { enabled: true, minimum_required_keys: ['draw_date', 'first_prize', 'last_2_digits'] },
-                        retry_policy_json: { max_attempts: 3, backoff_seconds: [10, 30, 60] },
+                        retry_policy_json: { max_attempts: 5, backoff_seconds: [300, 300, 300, 300, 300] },
                     };
 
                     this.autoSourceForm.unified_pipeline_json = JSON.stringify(unified, null, 2);

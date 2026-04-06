@@ -257,8 +257,8 @@ class InsertInternalResultSourceMappingsCommand extends Command
                 'required_fields' => ['draw_date', 'first_prize', 'last_2_digits'],
             ],
             'retry_policy_json' => [
-                'max_attempts' => 3,
-                'backoff_seconds' => [10, 30, 60],
+                'max_attempts' => 5,
+                'backoff_seconds' => [300, 300, 300, 300, 300],
             ],
             'timeout_seconds' => 10,
             'effective_from' => null,

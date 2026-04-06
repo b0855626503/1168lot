@@ -9,8 +9,8 @@ return [
     ],
 
     'retry' => [
-        'max_attempts' => (int) env('LOTTO_AUTO_RESULT_RETRY_MAX_ATTEMPTS', 27),
-        'base_backoff_seconds' => (int) env('LOTTO_AUTO_RESULT_RETRY_BASE_BACKOFF_SECONDS', 10),
+        'max_attempts' => (int) env('LOTTO_AUTO_RESULT_RETRY_MAX_ATTEMPTS', 5),
+        'base_backoff_seconds' => (int) env('LOTTO_AUTO_RESULT_RETRY_BASE_BACKOFF_SECONDS', 300),
         'max_backoff_seconds' => (int) env('LOTTO_AUTO_RESULT_RETRY_MAX_BACKOFF_SECONDS', 300),
     ],
 

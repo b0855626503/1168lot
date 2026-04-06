@@ -1464,6 +1464,12 @@
 - ล็อกให้ triage อิง `reason_code` + trace fields (`selected_driver`, `phase_timing`, `payload_origin`, `selected_capture`, `artifact_refs`)
 - ล็อก rollback policy ตาม capability (`prefer_browser_runtime` fallback allowlist only, `require_browser_runtime` no HTTP fallback)
 
+## 2026-04-06 — Auto Result Global Retry Backoff = 5 Minutes (APPROVED)
+
+- ปรับค่า default retry policy ของ auto-result ให้เป็นทั้งระบบ
+- `max_attempts=5`
+- หน่วงการ retry ครั้งละ 5 นาที (ตั้ง `base_backoff_seconds=300`, `max_backoff_seconds=300`)
+
 ## 2026-03-29 — Browser Runtime Artifact Retention Cleanup Scheduling (APPROVED)
 
 - เพิ่ม command `lotto:cleanup-browser-runtime-artifacts` สำหรับลบ artifact ที่เกิน retention
