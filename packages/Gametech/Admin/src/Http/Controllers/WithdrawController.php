@@ -339,7 +339,7 @@ class WithdrawController extends AppBaseController
                 'emp_name' => $this->user()->name.' '.$this->user()->surname,
             ];
 
-            $response = $this->memberCreditLogRepository->setWalletSingleWithdraw($datanew);
+            $response = $this->memberCreditLogRepository->setWalletSeamlessWithdraw($datanew);
 
             if ($response) {
                 // finalize: คืนยอดสำเร็จ
@@ -383,56 +383,6 @@ class WithdrawController extends AppBaseController
         }
     }
 
-    public function clear_(Request $request)
-    {
-        $config = $this->getCoreConfig();
-        $user = $this->user()->name.' '.$this->user()->surname;
-        $id = $request->input('id');
-        $remark = $request->input('remark');
-
-        $chk = $this->repository->find($id);
-
-        if (! $chk) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
-        }
-
-        if ($chk->emp_approve > 0) {
-            return $this->sendSuccess('รายการนี้ นี้มีผู้ทำรายการแล้ว');
-        }
-
-        $datanew = [
-            'refer_code' => $id,
-            'refer_table' => 'withdraws',
-            'remark' => 'คืนยอดจากการถอน',
-            'kind' => 'ROLLBACK',
-            'amount' => $chk->amount,
-            'method' => 'D',
-            'member_code' => $chk->member_code,
-            'emp_code' => $this->id(),
-            'emp_name' => $this->user()->name.' '.$this->user()->surname,
-        ];
-
-        if ($config->multigame_open == 'Y') {
-            $response = $this->memberCreditLogRepository->setWallet($datanew);
-        } else {
-            $response = $this->memberCreditLogRepository->setWalletSingle($datanew);
-        }
-
-        if ($response) {
-            $data['ip_admin'] = $request->ip();
-            $data['remark_admin'] = $remark;
-            $data['status'] = 2;
-            $data['date_bank'] = date('Y-m-d');
-            $data['time_bank'] = date('H:i:s');
-            $data['emp_approve'] = $this->id();
-            $data['user_update'] = $user;
-            $data['date_approve'] = now()->toDateTimeString();
-            $this->repository->update($data, $id);
-        }
-
-        return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
-    }
-
     public function destroy(Request $request)
     {
         $user = $this->user()->name.' '.$this->user()->surname;
@@ -467,21 +417,61 @@ class WithdrawController extends AppBaseController
 
     public function fixSubmit(Request $request)
     {
-        $user = $this->user()->name.' '.$this->user()->surname;
-        $id = $request->input('id');
+        try {
+            $user = $this->user()->name.' '.$this->user()->surname;
+            $id = $request->input('id');
 
-        $chk = $this->repository->find($id);
+            \Log::info('Attempting to fix withdraw', ['id' => $id, 'user' => $user]);
 
-        if (! $chk) {
-            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+            $chk = $this->repository->find($id);
+
+            if (! $chk) {
+                \Log::error('Withdraw not found', ['id' => $id]);
+                return $this->sendError('ไม่พบรายการนี้', 200);
+            }
+
+            \Log::info('Current withdraw status', [
+                'id' => $id,
+                'status_withdraw' => $chk->status_withdraw,
+                'emp_approve' => $chk->emp_approve,
+                'status' => $chk->status
+            ]);
+
+            // ตรวจสอบว่า status ปัจจุบันสามารถคืนยอดได้หรือไม่
+            if ($chk->status_withdraw === 'C' || $chk->status_withdraw === 'F') {
+                \Log::error('Cannot fix withdraw with status', ['status' => $chk->status_withdraw]);
+                return $this->sendError('ไม่สามารถคืนยอดรายการที่สถานะ: ' . $chk->status_withdraw, 200);
+            }
+
+            // ตรวจสอบว่ารายการนี้มีคนอนุมัติแล้วหรือยัง
+            if ($chk->emp_approve > 0 && $chk->status == 1) {
+                \Log::error('Withdraw already approved and completed', ['emp_approve' => $chk->emp_approve, 'status' => $chk->status]);
+                return $this->sendError('รายการนี้มีผู้ทำรายการแล้ว ไม่สามารถคืนยอดได้', 200);
+            }
+
+            $data['emp_approve'] = 0;
+            $data['status_withdraw'] = 'W';
+            $data['user_update'] = $user;
+
+            \Log::info('Updating withdraw with data', $data);
+
+            $result = $this->repository->update($data, $id);
+
+            if ($result) {
+                \Log::info('Withdraw fixed successfully', ['id' => $id]);
+                return $this->sendSuccess('รายการนี้ถูกคืนยอดแล้ว โปรด F5');
+            } else {
+                \Log::error('Failed to update withdraw', ['id' => $id]);
+                return $this->sendError('ไม่สามารถคืนยอดได้ โปรดลองใหม่', 200);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error in fixSubmit', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->sendError('เกิดข้อผิดพลาด: ' . $e->getMessage(), 200);
         }
-
-        $data['emp_approve'] = 0;
-        $data['status_withdraw'] = 'W';
-        $data['user_update'] = $user;
-        $this->repository->update($data, $id);
-
-        return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
     }
 
     public function loadBank()

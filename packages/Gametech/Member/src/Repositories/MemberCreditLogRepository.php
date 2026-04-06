@@ -427,6 +427,197 @@ class MemberCreditLogRepository extends Repository
 
     public function setWalletSeamlessWithdraw(array $data): bool
     {
+        $ip = request()->ip();
+
+        $member_code = (int) ($data['member_code'] ?? 0);
+        $amount = (float) ($data['amount'] ?? 0);
+
+        $amount_balance = (float) ($data['amount_balance'] ?? 0);
+        $withdraw_limit = (float) ($data['withdraw_limit'] ?? 0);
+        $withdraw_limit_amount = (float) ($data['withdraw_limit_amount'] ?? 0);
+
+        $method = (string) ($data['method'] ?? '');
+        $kind = (string) ($data['kind'] ?? '');
+        $remark = (string) ($data['remark'] ?? '');
+
+        $emp_code = (int) ($data['emp_code'] ?? 0);
+        $emp_name = (string) ($data['emp_name'] ?? '');
+
+        $refer_code = (int) ($data['refer_code'] ?? 0);
+        $refer_table = (string) ($data['refer_table'] ?? '');
+
+        $pro_name = (string) ($data['pro_name'] ?? '');
+        $pro_code = (int) ($data['pro_code'] ?? 0);
+
+        if ($member_code <= 0 || $refer_code <= 0 || $refer_table === '' || $method === '' || $kind === '') {
+            return false;
+        }
+
+        // ===== กันซ้ำแบบเร็ว (0.5 วิ) =====
+        $idemKey = "mcl:singlewithdraw:{$refer_table}:{$refer_code}:{$kind}:{$method}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($idemKey, 20);
+
+        if (! $lock->get()) {
+            // มีคนทำอยู่/เพิ่งทำไป
+            return true;
+        }
+
+        try {
+            // ===== Idempotency check: ถ้ามี log แล้ว ถือว่าเคยทำแล้ว =====
+            $logExists = \Illuminate\Support\Facades\DB::table('members_credit_log')
+                ->where('refer_table', $refer_table)
+                ->where('refer_code', $refer_code)
+                ->where('kind', $kind)
+                ->where('credit_type', $method)
+                ->where('member_code', $member_code)
+                ->exists();
+
+            if ($logExists) {
+                return true;
+            }
+
+            $member = $this->memberRepository->find($member_code);
+            if (! $member) {
+                return false;
+            }
+
+            $game = core()->getGame();
+            $game_user = $this->gameUserRepository->findOneWhere([
+                'member_code' => $member->code,
+                'enable' => 'Y',
+            ]);
+
+            if (! $game_user) {
+                return false;
+            }
+
+            $game_code = $game->code;
+            $user_name = $game_user->user_name;
+            $user_code = $game_user->code;
+
+            $money_text = 'จำนวนเงิน '.$amount;
+
+            try {
+                $response['ref_id'] = $refer_code.'-'.$kind.'-'.$method.'-'.time();
+                $response['before'] = $member->balance;
+                $response['after'] = $member->balance + $amount;
+
+                // ===== กันซ้ำรอบสอง (กรณีแปลก ๆ) ก่อน insert จริง =====
+                $logExists2 = \Illuminate\Support\Facades\DB::table('members_credit_log')
+                    ->where('refer_table', $refer_table)
+                    ->where('refer_code', $refer_code)
+                    ->where('kind', $kind)
+                    ->where('credit_type', $method)
+                    ->where('member_code', $member->code)
+                    ->exists();
+
+                if (! $logExists2) {
+                    $this->create([
+                        'refer_code' => $refer_code,
+                        'refer_table' => $refer_table,
+                        'credit_type' => $method,
+                        'pro_code' => $pro_code,
+                        'pro_name' => $pro_name,
+                        'amount_balance' => $amount_balance,
+                        'withdraw_limit' => $withdraw_limit,
+                        'withdraw_limit_amount' => $withdraw_limit_amount,
+                        'amount' => $amount,
+                        'bonus' => 0,
+                        'total' => $amount,
+                        'balance_before' => $response['before'],
+                        'balance_after' => $response['after'],
+                        'credit' => 0,
+                        'credit_bonus' => 0,
+                        'credit_total' => 0,
+                        'credit_before' => $response['before'],
+                        'credit_after' => $response['after'],
+                        'member_code' => $member->code,
+                        'user_name' => $member->user_name,
+                        'remark' => 'RefID : '.$response['ref_id'].' '.$remark,
+                        'kind' => $kind,
+                        'auto' => 'N',
+                        'emp_code' => $emp_code,
+                        'ip' => $ip,
+                        'user_create' => $emp_name,
+                        'user_update' => $emp_name,
+                    ]);
+                }
+
+                // ===== Bill: เช็คก่อนสร้าง (กันซ้ำ) =====
+                $billExists = \Illuminate\Support\Facades\DB::table('bills')
+                    ->where('refer_table', $refer_table)
+                    ->where('refer_code', $refer_code)
+                    ->where('method', $kind)
+                    ->where('member_code', $member->code)
+                    ->exists();
+
+                if (! $billExists) {
+                    app('Gametech\Payment\Repositories\BillRepository')->create([
+                        'complete' => 'Y',
+                        'enable' => 'Y',
+                        'refer_code' => $refer_code,
+                        'refer_table' => $refer_table,
+                        'ref_id' => $response['ref_id'],
+                        'credit_before' => $response['before'],
+                        'credit_after' => $response['after'],
+                        'member_code' => $member->code,
+                        'game_code' => $game_code,
+                        'gameuser_code' => $user_code,
+                        'pro_code' => $pro_code,
+                        'pro_name' => $pro_name,
+                        'remark' => $remark,
+                        'method' => $kind,
+                        'transfer_type' => 1,
+                        'amount' => $amount,
+                        'balance_before' => $response['before'],
+                        'balance_after' => $response['after'],
+                        'credit' => $amount,
+                        'credit_bonus' => 0,
+                        'credit_balance' => $amount,
+                        'amount_request' => 0,
+                        'amount_limit' => 0,
+                        'ip' => $ip,
+                        'user_create' => $member['name'],
+                        'user_update' => $member['name'],
+                    ]);
+                }
+
+                // ===== Sync balance ตาม after จากเกม =====
+                if ($method === 'D') {
+                    $member->balance = $response['after'];
+                    $game_user->balance = $response['after'];
+
+                    if ($pro_code > 0) {
+                        if ((int) $game_user->pro_code === 0) {
+                            $game_user->pro_code = $pro_code;
+                            $game_user->amount_balance = $amount_balance;
+                            $game_user->withdraw_limit = $withdraw_limit;
+                            $game_user->withdraw_limit_amount = $withdraw_limit_amount;
+                        } else {
+                            $game_user->amount_balance += $amount_balance;
+                            $game_user->withdraw_limit_amount += $withdraw_limit_amount;
+                        }
+                    }
+                }
+
+                $member->save();
+                $game_user->save();
+            } catch (Throwable $e) {
+                report($e);
+
+                return false;
+            }
+
+            Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+
+            return true;
+        } finally {
+            optional($lock)->release();
+        }
+    }
+
+    public function setWalletSeamlessWithdraw_bk(array $data): bool
+    {
 
         $ip = request()->ip();
         $credit_balance = 0;
