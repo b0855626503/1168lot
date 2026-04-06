@@ -3,7 +3,6 @@
 namespace Gametech\Lotto\Transformers;
 
 use Gametech\Lotto\Contracts\LotteryMarket;
-use Illuminate\Support\Facades\Schema;
 use League\Fractal\TransformerAbstract;
 
 class LotteryMarketTransformer extends TransformerAbstract
@@ -102,10 +101,6 @@ class LotteryMarketTransformer extends TransformerAbstract
 
     private function renderAutoRefundModeToggle(int $id, bool $autoRefundOnNoResult): string
     {
-        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
-            return '-';
-        }
-
         $next = $autoRefundOnNoResult ? '0' : '1';
         $label = $autoRefundOnNoResult ? 'Auto' : 'Manual';
         $class = $autoRefundOnNoResult ? 'btn-success' : 'btn-secondary';

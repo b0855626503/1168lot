@@ -5,8 +5,6 @@ namespace Gametech\Lotto\Services;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use InvalidArgumentException;
 
 class DrawCancelAllRefundService
 {
@@ -25,10 +23,6 @@ class DrawCancelAllRefundService
         ?int $createdById = null,
         ?string $groupCode = null
     ): array {
-        if (! Schema::hasTable('wallet_transactions')) {
-            throw new InvalidArgumentException('ไม่พบตาราง wallet_transactions สำหรับคืนเงิน');
-        }
-
         $resolvedGroupCode = trim((string) $groupCode);
         if ($resolvedGroupCode === '') {
             $resolvedGroupCode = 'LOTTO_DRAW_CANCEL_' . (int) $lockedDraw->id . '_' . now()->format('YmdHis');
@@ -100,11 +94,8 @@ class DrawCancelAllRefundService
                 'cancelled_by' => $createdById,
                 'refund_amount' => $refundAmount,
                 'total_win_amount' => 0,
+                'reason' => $reason,
             ];
-
-            if (Schema::hasColumn('lotto_tickets', 'reason')) {
-                $updatePayload['reason'] = $reason;
-            }
 
             $ticket->update($updatePayload);
 

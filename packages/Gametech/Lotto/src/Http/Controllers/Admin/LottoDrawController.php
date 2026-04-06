@@ -22,7 +22,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -847,13 +846,7 @@ class LottoDrawController extends AppBaseController
 
     private function drawColumnExists(string $column): bool
     {
-        static $cache = [];
-
-        if (! array_key_exists($column, $cache)) {
-            $cache[$column] = Schema::hasColumn('lotto_draws', $column);
-        }
-
-        return (bool) $cache[$column];
+        return true;
     }
 
     /**
@@ -989,10 +982,6 @@ class LottoDrawController extends AppBaseController
 
     private function shouldAutoRefundOnNoResult(int $marketId): bool
     {
-        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
-            return false;
-        }
-
         $market = LotteryMarket::query()
             ->select(['id', 'auto_refund_on_no_result'])
             ->find($marketId);

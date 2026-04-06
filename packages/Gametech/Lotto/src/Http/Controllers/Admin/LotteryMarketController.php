@@ -9,7 +9,6 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Support\ToggleFieldGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
@@ -88,13 +87,11 @@ class LotteryMarketController extends AppBaseController
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
             'result_url' => $this->nullableString($validated['result_url'] ?? null),
             'auto_settle_on_result' => (bool) ($validated['auto_settle_on_result'] ?? true),
+            'auto_refund_on_no_result' => (bool) ($validated['auto_refund_on_no_result'] ?? false),
             'notify_result_telegram' => (bool) ($validated['notify_result_telegram'] ?? true),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
             'affect_existing_members' => false,
         ];
-        if ($this->hasAutoRefundOnNoResultColumn()) {
-            $payload['auto_refund_on_no_result'] = (bool) ($validated['auto_refund_on_no_result'] ?? false);
-        }
 
         $payload = $this->attachUploadedMedia($request, $payload);
 
@@ -109,10 +106,7 @@ class LotteryMarketController extends AppBaseController
 
         try {
             $status = ToggleFieldGuard::resolveBoolean($request->input('status'));
-            $allowedFields = ['is_enabled', 'auto_settle_on_result'];
-            if ($this->hasAutoRefundOnNoResultColumn()) {
-                $allowedFields[] = 'auto_refund_on_no_result';
-            }
+            $allowedFields = ['is_enabled', 'auto_settle_on_result', 'auto_refund_on_no_result'];
             $method = ToggleFieldGuard::resolveField((string) $request->input('method'), $allowedFields);
         } catch (InvalidArgumentException $exception) {
             return $this->sendError($exception->getMessage(), 422);
@@ -182,12 +176,10 @@ class LotteryMarketController extends AppBaseController
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
             'result_url' => $this->nullableString($validated['result_url'] ?? null),
             'auto_settle_on_result' => (bool) ($validated['auto_settle_on_result'] ?? true),
+            'auto_refund_on_no_result' => (bool) ($validated['auto_refund_on_no_result'] ?? false),
             'notify_result_telegram' => (bool) ($validated['notify_result_telegram'] ?? true),
             'is_enabled' => (bool) ($validated['is_enabled'] ?? false),
         ];
-        if ($this->hasAutoRefundOnNoResultColumn()) {
-            $payload['auto_refund_on_no_result'] = (bool) ($validated['auto_refund_on_no_result'] ?? false);
-        }
 
         $payload = $this->attachUploadedMedia($request, $payload, [
             'logo' => (string) ($market->logo ?? ''),
@@ -282,8 +274,4 @@ class LotteryMarketController extends AppBaseController
         }
     }
 
-    private function hasAutoRefundOnNoResultColumn(): bool
-    {
-        return Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result');
-    }
 }

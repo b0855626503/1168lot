@@ -7,7 +7,6 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\SettlementService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class ResultApplier
@@ -174,10 +173,6 @@ class ResultApplier
 
     private function shouldAutoRefundOnNoResult(LottoDraw $draw): bool
     {
-        if (! Schema::hasColumn('lotto_markets', 'auto_refund_on_no_result')) {
-            return false;
-        }
-
         $market = LotteryMarket::query()
             ->select(['id', 'auto_refund_on_no_result'])
             ->find((int) $draw->market_id);
