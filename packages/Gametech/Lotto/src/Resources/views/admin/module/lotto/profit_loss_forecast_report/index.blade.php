@@ -76,6 +76,53 @@
         .profit-loss-forecast__numbers thead .profit-loss-forecast__sticky-col {
             z-index: 5;
         }
+
+        .profit-loss-forecast__summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .profit-loss-forecast__summary-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 0.22rem 0.62rem;
+            font-weight: 600;
+            line-height: 1.2;
+            border: 1px solid transparent;
+        }
+
+        .profit-loss-forecast__summary-chip.is-market {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .profit-loss-forecast__summary-chip.is-date {
+            color: #075985;
+            background: #ecfeff;
+            border-color: #a5f3fc;
+        }
+
+        .profit-loss-forecast__summary-chip.is-package {
+            color: #92400e;
+            background: #fffbeb;
+            border-color: #fde68a;
+        }
+
+        .profit-loss-forecast__summary-chip.is-status {
+            color: #374151;
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .profit-loss-forecast__summary-chip.is-types {
+            color: #166534;
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
     </style>
 @endpush
 
@@ -150,9 +197,20 @@
                                 </select>
                             </div>
                             <div class="col-lg-3 mb-3 text-lg-right">
-                                <button type="button" class="btn bg-gradient-secondary btn-sm" @click="resetFilters">
-                                    <i class="fa fa-refresh"></i> ล้างค่า
-                                </button>
+                                <div class="btn-group btn-group-sm" role="group" aria-label="report-actions">
+                                    <button
+                                        type="button"
+                                        class="btn"
+                                        :class="autoReloadEnabled ? 'btn-success' : 'btn-outline-success'"
+                                        @click="toggleAutoReload"
+                                    >
+                                        <i class="fa" :class="autoReloadEnabled ? 'fa-pause' : 'fa-play'"></i>
+                                        Auto Reload 5 วินาที
+                                    </button>
+                                    <button type="button" class="btn bg-gradient-secondary" @click="resetFilters">
+                                        <i class="fa fa-refresh"></i> ล้างค่า
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -169,8 +227,8 @@
                         </div>
 
                         <template v-else-if="hasReportColumns">
-                            <div class="mb-3 d-flex flex-wrap align-items-center" style="gap:8px;">
-                                <span class="badge badge-primary">
+                            <div class="mb-3 profit-loss-forecast__summary">
+                                <span class="profit-loss-forecast__summary-chip is-market">
                                     <img
                                         v-if="report.draw.market_logo"
                                         :src="report.draw.market_logo"
@@ -179,10 +237,10 @@
                                     >
                                     @{{ report.draw.market_name || '-' }}
                                 </span>
-                                <span class="badge badge-info">งวดวันที่: @{{ report.draw.draw_date_display || '-' }}</span>
-                                <span class="badge badge-warning text-dark">แพกเกจ: @{{ report.package.name || '-' }}</span>
-                                <span class="badge badge-secondary">สถานะ: @{{ drawStatusLabel(report.draw.status) }}</span>
-                                <span class="badge badge-success">ประเภทที่เปิดรับ: @{{ report.columns.length }}</span>
+                                <span class="profit-loss-forecast__summary-chip is-date">งวดวันที่: @{{ report.draw.draw_date_display || '-' }}</span>
+                                <span class="profit-loss-forecast__summary-chip is-package">แพกเกจ: @{{ report.package.name || '-' }}</span>
+                                <span class="profit-loss-forecast__summary-chip is-status">สถานะ: @{{ drawStatusLabel(report.draw.status) }}</span>
+                                <span class="profit-loss-forecast__summary-chip is-types">ประเภทที่เปิดรับ: @{{ report.columns.length }}</span>
                             </div>
 
                             <div class="card card-outline card-secondary">
@@ -356,6 +414,8 @@
                     isLoadingDrawOptions: false,
                     isLoadingReport: false,
                     showOnlyBetNumbers: false,
+                    autoReloadEnabled: false,
+                    autoReloadTimerId: null,
                 };
             },
             computed: {
@@ -389,6 +449,9 @@
                     this.loadPackageOptions(this.selectedMarketId, this.pendingRequestedPackageId, shouldAutoLoadReport);
                     this.loadDrawOptions(this.selectedMarketId, this.pendingRequestedDrawId, shouldAutoLoadReport);
                 }
+            },
+            beforeDestroy: function () {
+                this.stopAutoReload();
             },
             methods: {
                 requestJson: function (targetUrl, headers) {
@@ -683,6 +746,37 @@
                         .then(() => {
                             this.isLoadingReport = false;
                         });
+                },
+                toggleAutoReload: function () {
+                    if (this.autoReloadEnabled) {
+                        this.stopAutoReload();
+                        return;
+                    }
+
+                    this.startAutoReload();
+                },
+                startAutoReload: function () {
+                    this.stopAutoReload();
+                    this.autoReloadEnabled = true;
+
+                    this.autoReloadTimerId = window.setInterval(() => {
+                        if (!this.autoReloadEnabled || !this.hasCompleteFilters || this.isLoadingReport) {
+                            return;
+                        }
+
+                        this.fetchReport(false);
+                    }, 5000);
+
+                    if (this.hasCompleteFilters && !this.isLoadingReport) {
+                        this.fetchReport(false);
+                    }
+                },
+                stopAutoReload: function () {
+                    this.autoReloadEnabled = false;
+                    if (this.autoReloadTimerId !== null) {
+                        window.clearInterval(this.autoReloadTimerId);
+                        this.autoReloadTimerId = null;
+                    }
                 },
                 resetFilters: function () {
                     this.selectedMarketId = '';
