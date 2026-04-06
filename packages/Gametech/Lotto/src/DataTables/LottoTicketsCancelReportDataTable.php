@@ -85,6 +85,20 @@ class LottoTicketsCancelReportDataTable extends DataTable
             $query->where('lotto_tickets.status', $status);
         }
 
+        if ($memberUsername = trim((string) request('member_username'))) {
+            $query->where('members.user_name', 'like', '%' . $memberUsername . '%');
+        }
+
+        if ($searchValue = trim((string) request('search.value'))) {
+            $likeValue = '%' . $searchValue . '%';
+            $query->where(function ($subQuery) use ($likeValue): void {
+                $subQuery->where('lotto_tickets.id', 'like', $likeValue)
+                    ->orWhere('members.user_name', 'like', $likeValue)
+                    ->orWhere('members.name', 'like', $likeValue)
+                    ->orWhere('lotto_markets.name', 'like', $likeValue);
+            });
+        }
+
         return $query;
     }
 

@@ -124,16 +124,23 @@
                 data.date_stop = $('#filter_date_stop').val() || '';
                 data.market_id = $('#filter_market_id').val() || '';
                 data.status = $('#filter_status').val() || '';
+                data.member_username = $('#filter_member_username').val() || '';
             });
 
-            $('#filter_date_start, #filter_date_stop, #filter_market_id, #filter_status')
+            $('#filter_date_start, #filter_date_stop, #filter_market_id, #filter_status, #filter_member_username')
                 .off('change.ticketsCancelFilter')
                 .on('change.ticketsCancelFilter', function () {
                     redrawTicketsCancelTable();
                 });
 
+            $('#filter_member_username')
+                .off('input.ticketsCancelFilter')
+                .on('input.ticketsCancelFilter', function () {
+                    redrawTicketsCancelTable();
+                });
+
             window.resetTicketsCancelFilters = function () {
-                ['filter_date_start', 'filter_date_stop', 'filter_market_id', 'filter_status'].forEach((id) => {
+                ['filter_date_start', 'filter_date_stop', 'filter_market_id', 'filter_status', 'filter_member_username'].forEach((id) => {
                     const element = document.getElementById(id);
                     if (element) {
                         element.value = '';

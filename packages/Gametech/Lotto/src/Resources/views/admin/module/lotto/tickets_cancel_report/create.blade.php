@@ -1,9 +1,9 @@
 <div class="row mb-2 align-items-end">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label class="mb-1">วันที่เริ่ม</label>
         <input id="filter_date_start" type="date" class="form-control form-control-sm">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label class="mb-1">วันที่สิ้นสุด</label>
         <input id="filter_date_stop" type="date" class="form-control form-control-sm">
     </div>
@@ -31,6 +31,10 @@
                 <option value="{{ $option['value'] }}">{{ $option['text'] }}</option>
             @endforeach
         </select>
+    </div>
+    <div class="col-md-2">
+        <label class="mb-1">สมาชิก (username)</label>
+        <input id="filter_member_username" type="text" class="form-control form-control-sm" placeholder="พิมพ์ username">
     </div>
     <div class="col-md-1 text-right">
         <button type="button" class="btn bg-gradient-secondary btn-xs" onclick="resetTicketsCancelFilters()">
