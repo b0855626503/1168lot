@@ -23,6 +23,7 @@
 - ตารางเลขด้านล่างของ `profit-loss-forecast` รองรับ toggle `แสดงเฉพาะแถวที่มียอดแทง`
 - ตาราง `profit-loss-forecast` ปรับ layout ให้เห็นข้อมูลครบในกรอบหน้าเป็นหลัก (ไม่บังคับ scroll แนวนอน)
 - หน้า `profit-loss-forecast` รองรับ `Auto Reload` ทุก 10 วินาที พร้อม countdown บนปุ่ม
+- รายงาน `tickets-cancel` รองรับปุ่ม `รายละเอียด` ต่อแถว เพื่อเปิด modal ดูรายการเลขในโพยที่เลือก
 - summary matrix ของ `profit-loss-forecast` ใช้ลำดับ metric:
   - ยอดแทง
   - ส่วนลด

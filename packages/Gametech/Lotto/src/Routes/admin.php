@@ -309,6 +309,8 @@ Route::domain(
             Route::get('reports/tickets-cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketsCancelReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.tickets_cancel_report.index',
             ])->name('admin.lotto.reports.tickets_cancel');
+            Route::get('reports/tickets-cancel/ticket-detail', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketsCancelReportController@ticketDetail')
+                ->name('admin.lotto.reports.tickets_cancel.ticket_detail');
 
             Route::get('reports/blocked-numbers', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoBlockedNumbersReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.blocked_numbers_report.index',

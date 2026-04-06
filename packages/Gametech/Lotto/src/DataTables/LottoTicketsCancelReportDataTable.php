@@ -9,6 +9,7 @@ use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
 use Yajra\DataTables\Services\DataTable;
+use function Laravel\Prompts\search;
 
 class LottoTicketsCancelReportDataTable extends DataTable
 {
@@ -100,7 +101,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
                 'stateSave' => true,
                 'scrollX' => true,
                 'paging' => true,
-                'searching' => false,
+                'searching' => true,
                 'deferRender' => true,
                 'retrieve' => true,
                 'ordering' => true,
@@ -117,7 +118,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
         return [
             ['data' => 'created_at', 'name' => 'created_at', 'title' => 'เวลาสร้างรายการ', 'className' => 'text-center'],
             ['data' => 'id', 'name' => 'id', 'title' => 'เลขโพย', 'className' => 'text-center'],
-            ['data' => 'member_display', 'name' => 'member_user_name', 'title' => 'สมาชิก', 'className' => 'text-left'],
+            ['data' => 'member_display', 'name' => 'member_user_name', 'title' => 'สมาชิก', 'className' => 'text-left' , 'searchable' => true],
             ['data' => 'market_name', 'name' => 'market_name', 'title' => 'รายการหวย', 'className' => 'text-left'],
             ['data' => 'draw_date', 'name' => 'draw_date', 'title' => 'วันงวด', 'className' => 'text-center'],
             ['data' => 'package_name', 'name' => 'items.package_name_at_time', 'title' => 'แพกเกจ', 'className' => 'text-left'],
@@ -129,6 +130,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ['data' => 'reason', 'name' => 'id', 'title' => 'สาเหตุ', 'className' => 'text-left', 'orderable' => false],
             ['data' => 'cancelled_by_name', 'name' => 'cancel_tx_admin_user_name', 'title' => 'ผู้ยกเลิก', 'className' => 'text-left'],
             ['data' => 'latest_updated_at', 'name' => 'updated_at', 'title' => 'เวลาอัปเดทล่าสุด', 'className' => 'text-center'],
+            ['data' => 'actions', 'name' => 'id', 'title' => 'ดูโพย', 'className' => 'text-center', 'orderable' => false, 'searchable' => false],
         ];
     }
 }

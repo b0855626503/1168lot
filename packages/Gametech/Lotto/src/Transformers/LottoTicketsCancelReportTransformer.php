@@ -35,6 +35,7 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'reason' => e($this->resolveReason($row)),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
             'latest_updated_at' => $latestUpdatedAt ? date('d/m/Y H:i', strtotime((string) $latestUpdatedAt)) : '-',
+            'actions' => '<button type="button" class="btn btn-outline-primary btn-xs js-tickets-cancel-detail" data-ticket-id="' . (int) ($row->id ?? 0) . '"><i class="fa fa-file-text-o"></i> รายละเอียด</button>',
         ];
     }
 
