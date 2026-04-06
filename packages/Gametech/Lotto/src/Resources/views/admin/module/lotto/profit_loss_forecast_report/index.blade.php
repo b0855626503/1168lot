@@ -43,22 +43,34 @@
         .profit-loss-forecast__number-code {
             text-align: right;
             font-weight: 700;
-            color: #334155;
+            font-size: 1.35rem;
+            color: #1d4ed8;
             line-height: 1.15;
         }
 
         .profit-loss-forecast__number-amount {
             margin-top: auto;
             text-align: center;
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #0f172a;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #6b7280;
             line-height: 1.2;
         }
 
         .profit-loss-forecast__scroll-wrap {
             max-height: 62vh;
             overflow: auto;
+        }
+
+        .profit-loss-forecast__numbers thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: #f8f9fa;
+        }
+
+        .profit-loss-forecast__numbers thead .profit-loss-forecast__sticky-col {
+            z-index: 5;
         }
     </style>
 @endpush
@@ -189,8 +201,8 @@
                                             <tbody>
                                             <tr v-for="row in report.summary_rows" :key="row.metric">
                                                 <th class="profit-loss-forecast__sticky-col">@{{ row.label }}</th>
-                                                <td class="font-weight-bold">@{{ formatMoney(row.overall) }}</td>
-                                                <td v-for="column in report.columns" :key="row.metric + '-' + column.bet_type">
+                                                <td class="font-weight-bold text-right">@{{ formatMoney(row.overall) }}</td>
+                                                <td class="text-right" v-for="column in report.columns" :key="row.metric + '-' + column.bet_type">
                                                     @{{ formatMoney(row.values[column.bet_type] || 0) }}
                                                 </td>
                                             </tr>
