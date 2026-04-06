@@ -132,9 +132,9 @@ class LottoTicketsCancelReportDataTable extends DataTable
         return [
             ['data' => 'created_at', 'name' => 'created_at', 'title' => 'เวลาสร้างรายการ', 'className' => 'text-center'],
             ['data' => 'id', 'name' => 'id', 'title' => 'เลขโพย', 'className' => 'text-center'],
-            ['data' => 'member_display', 'name' => 'member_user_name', 'title' => 'สมาชิก', 'className' => 'text-left' , 'searchable' => true],
-            ['data' => 'market_name', 'name' => 'market_name', 'title' => 'รายการหวย', 'className' => 'text-left'],
-            ['data' => 'draw_date', 'name' => 'draw_date', 'title' => 'วันงวด', 'className' => 'text-center'],
+            ['data' => 'member_display', 'name' => 'members.user_name', 'title' => 'สมาชิก', 'className' => 'text-left'],
+            ['data' => 'market_name', 'name' => 'lotto_markets.name', 'title' => 'รายการหวย', 'className' => 'text-left'],
+            ['data' => 'draw_date', 'name' => 'lotto_draws.draw_date', 'title' => 'วันงวด', 'className' => 'text-center'],
             ['data' => 'package_name', 'name' => 'items.package_name_at_time', 'title' => 'แพกเกจ', 'className' => 'text-left'],
             ['data' => 'total_bet_amount', 'name' => 'total_bet_amount', 'title' => 'ยอดแทง', 'className' => 'text-right'],
             ['data' => 'total_discount_amount', 'name' => 'total_discount_amount', 'title' => 'ส่วนลด', 'className' => 'text-right'],
