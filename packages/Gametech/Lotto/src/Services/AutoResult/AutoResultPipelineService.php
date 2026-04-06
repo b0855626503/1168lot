@@ -11,6 +11,7 @@ use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class AutoResultPipelineService
@@ -473,6 +474,40 @@ class AutoResultPipelineService
 
     public function markExhausted(LottoDraw $draw): void
     {
+        $attemptNo = (int) ($draw->result_fetch_attempts ?? 0);
+        $lastError = null;
+        if (Schema::hasTable('lotto_result_fetch_logs')) {
+            $latestNonExhaustedLog = DB::table('lotto_result_fetch_logs')
+                ->where('draw_id', (int) $draw->id)
+                ->where('status', '!=', 'EXHAUSTED')
+                ->orderByDesc('id')
+                ->first(['attempt_no', 'error_message']);
+
+            $latestLog = $latestNonExhaustedLog ?: DB::table('lotto_result_fetch_logs')
+                ->where('draw_id', (int) $draw->id)
+                ->orderByDesc('id')
+                ->first(['attempt_no', 'error_message']);
+
+            if ($attemptNo <= 0 && $latestLog) {
+                $attemptNo = max(0, (int) ($latestLog->attempt_no ?? 0));
+            }
+
+            if ($latestLog) {
+                $lastError = trim((string) ($latestLog->error_message ?? ''));
+            }
+        }
+
+        $this->hardening->insertFetchLog([
+            'draw_id' => (int) $draw->id,
+            'market_id' => (int) $draw->market_id,
+            'source_id' => isset($draw->result_source_id) ? (int) $draw->result_source_id : null,
+            'attempt_no' => max(1, $attemptNo),
+            'status' => 'EXHAUSTED',
+            'pipeline_stage' => 'retry_policy',
+            'error_message' => $lastError !== '' ? $lastError : 'retry attempts exhausted',
+            'created_at' => now()->toDateTimeString(),
+        ]);
+
         if ($this->canWriteDrawFetchFields()) {
             $draw->forceFill([
                 'result_fetch_status' => 'EXHAUSTED',
@@ -484,8 +519,8 @@ class AutoResultPipelineService
 
         $this->hardening->notifyExhaustedDraw(
             $draw->fresh(['market']),
-            (int) ($draw->result_fetch_attempts ?? 0),
-            null
+            $attemptNo > 0 ? $attemptNo : null,
+            $lastError
         );
     }
 

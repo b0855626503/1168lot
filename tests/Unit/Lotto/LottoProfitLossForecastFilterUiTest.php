@@ -28,13 +28,18 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
         $this->assertStringContainsString("->groupBy(static function (LotteryMarket \$market): string", $controller);
         $this->assertStringContainsString("'label' => (string) \$groupName", $controller);
         $this->assertStringContainsString("reports/profit-loss-forecast/draw-options", $routes);
+        $this->assertStringContainsString("reports/profit-loss-forecast/package-options", $routes);
         $this->assertStringContainsString("reports/profit-loss-forecast/loaddata", $routes);
         $this->assertStringContainsString("<profit-loss-forecast-app ref=\"profitLossForecastApp\"></profit-loss-forecast-app>", $view);
         $this->assertStringContainsString("Vue.component('profit-loss-forecast-app'", $view);
         $this->assertStringContainsString("<optgroup", $view);
         $this->assertStringContainsString(":data-logo=\"option.logo || ''\"", $view);
+        $this->assertStringContainsString("ref=\"packageSelect\"", $view);
+        $this->assertStringContainsString("onPackageChange", $view);
+        $this->assertStringContainsString("loadPackageOptionsUrl", $view);
         $this->assertStringContainsString("typeof \$marketSelect.select2 !== 'function'", $view);
         $this->assertStringContainsString("\$marketSelect.select2({", $view);
+        $this->assertStringContainsString("this.loadPackageOptions(this.selectedMarketId", $view);
         $this->assertStringContainsString('this.loadDrawOptions(this.selectedMarketId', $view);
         $this->assertStringContainsString('this.fetchReport()', $view);
     }
@@ -141,7 +146,9 @@ class LottoProfitLossForecastFilterUiTest extends TestCase
 
         $this->assertNotFalse($profitLossView);
         $this->assertStringNotContainsString('fa-search', $profitLossView);
+        $this->assertStringContainsString('if (!this.hasCompleteFilters || !this.loadDataUrl)', $profitLossView);
         $this->assertStringContainsString('this.loadDrawOptions(this.selectedMarketId', $profitLossView);
+        $this->assertStringContainsString('this.loadPackageOptions(this.selectedMarketId', $profitLossView);
         $this->assertStringContainsString('this.fetchReport()', $profitLossView);
         $this->assertStringContainsString('if (!this.hasCompleteFilters)', $profitLossView);
     }

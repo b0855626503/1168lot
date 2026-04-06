@@ -297,6 +297,8 @@ Route::domain(
             ])->name('admin.lotto.reports.profit_loss_forecast');
             Route::get('reports/profit-loss-forecast/draw-options', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@loadDrawOptions')
                 ->name('admin.lotto.reports.profit_loss_forecast.draw_options');
+            Route::get('reports/profit-loss-forecast/package-options', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@loadPackageOptions')
+                ->name('admin.lotto.reports.profit_loss_forecast.package_options');
             Route::get('reports/profit-loss-forecast/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@loadData')
                 ->name('admin.lotto.reports.profit_loss_forecast.loaddata');
 

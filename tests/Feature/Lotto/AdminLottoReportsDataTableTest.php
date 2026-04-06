@@ -34,8 +34,11 @@ class AdminLottoReportsDataTableTest extends TestCase
         Schema::dropIfExists('lotto_number_blocks');
         Schema::dropIfExists('lotto_number_exposures');
         Schema::dropIfExists('lotto_draw_bet_settings');
+        Schema::dropIfExists('lotto_group_package_bet_settings');
+        Schema::dropIfExists('lotto_group_packages');
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
+        Schema::dropIfExists('lotto_groups');
         Schema::dropIfExists('members');
         Schema::dropIfExists('employees');
 
@@ -44,24 +47,13 @@ class AdminLottoReportsDataTableTest extends TestCase
 
     public function test_profit_loss_forecast_report_service_builds_summary_and_number_rows_from_real_data(): void
     {
-        DB::table('lotto_draw_bet_settings')->insert([
+        DB::table('lotto_group_package_bet_settings')->insert([
             'id' => 1,
-            'draw_id' => 101,
+            'package_id' => 301,
             'bet_type' => 'top_2',
             'payout' => 90,
             'discount_percent' => 0,
             'is_enabled' => 1,
-            'min_bet' => 1,
-            'max_bet' => 1000,
-            'max_per_number' => 1000,
-        ]);
-
-        DB::table('lotto_number_exposures')->insert([
-            'id' => 1,
-            'draw_id' => 101,
-            'bet_type' => 'top_2',
-            'number' => '46',
-            'sold_amount' => 200,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -86,26 +78,75 @@ class AdminLottoReportsDataTableTest extends TestCase
             'bet_type' => 'top_2',
             'number' => '46',
             'amount' => 200,
+            'package_id_at_time' => 301,
             'payout_at_time' => 90,
+            'discount_amount_at_time' => 0,
+            'payable_amount_at_time' => 200,
             'result_status' => null,
             'win_amount' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $payload = app(LottoProfitLossForecastReportService::class)->build(1, 101);
+        DB::table('lotto_group_package_bet_settings')->insert([
+            'id' => 2,
+            'package_id' => 302,
+            'bet_type' => 'top_2',
+            'payout' => 80,
+            'discount_percent' => 10,
+            'is_enabled' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_tickets')->insert([
+            'id' => 1004,
+            'member_id' => 52,
+            'draw_id' => 101,
+            'total_amount' => 50,
+            'total_bet_amount' => 50,
+            'total_discount_amount' => 5,
+            'total_net_amount' => 45,
+            'total_win_amount' => 0,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_ticket_items')->insert([
+            'id' => 5006,
+            'ticket_id' => 1004,
+            'bet_type' => 'top_2',
+            'number' => '47',
+            'amount' => 50,
+            'package_id_at_time' => 302,
+            'payout_at_time' => 80,
+            'discount_amount_at_time' => 5,
+            'payable_amount_at_time' => 45,
+            'result_status' => null,
+            'win_amount' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $payload = app(LottoProfitLossForecastReportService::class)->build(1, 101, 301);
 
         $this->assertSame('หวยมาเลเซีย', $payload['draw']['market_name']);
         $this->assertSame('2026-04-05', $payload['draw']['draw_date']);
+        $this->assertSame('แพกเกจหลัก', $payload['package']['name']);
         $this->assertCount(1, $payload['columns']);
         $this->assertSame('top_2', $payload['columns'][0]['bet_type']);
         $this->assertEquals(200.0, (float) $payload['columns'][0]['total_bet_amount']);
-        $this->assertEquals(1000.0, (float) $payload['columns'][0]['max_per_number']);
+        $this->assertEquals(200.0, (float) $payload['columns'][0]['total_receive_amount']);
+        $this->assertEquals(0.0, (float) $payload['columns'][0]['total_payout_amount']);
+        $this->assertEquals(200.0, (float) $payload['columns'][0]['total_profit_amount']);
 
         $summaryRows = collect($payload['summary_rows'])->keyBy('metric');
         $this->assertEquals(200.0, (float) $summaryRows['total_bet_amount']['overall']);
-        $this->assertEquals(0.0, (float) $summaryRows['total_win_amount']['overall']);
-        $this->assertEquals(1000.0, (float) $summaryRows['max_per_number']['overall']);
+        $this->assertEquals(0.0, (float) $summaryRows['total_discount_amount']['overall']);
+        $this->assertEquals(200.0, (float) $summaryRows['total_receive_amount']['overall']);
+        $this->assertEquals(0.0, (float) $summaryRows['total_payout_amount']['overall']);
+        $this->assertEquals(200.0, (float) $summaryRows['total_profit_amount']['overall']);
 
         $numberRow = collect($payload['number_rows'])->first(static function (array $row): bool {
             return (string) ($row['cells']['top_2']['number'] ?? '') === '46';
@@ -292,6 +333,7 @@ class AdminLottoReportsDataTableTest extends TestCase
 
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->bigIncrements('id');
+            $table->unsignedBigInteger('group_id')->nullable();
             $table->string('name');
             $table->string('logo')->nullable();
             $table->string('icon')->nullable();
@@ -318,6 +360,30 @@ class AdminLottoReportsDataTableTest extends TestCase
             $table->decimal('min_bet', 12, 2)->default(0);
             $table->decimal('max_bet', 12, 2)->default(0);
             $table->decimal('max_per_number', 12, 2)->default(0);
+        });
+
+        Schema::create('lotto_groups', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->string('name');
+        });
+
+        Schema::create('lotto_group_packages', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('group_id');
+            $table->string('name');
+            $table->string('image')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('lotto_group_package_bet_settings', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('package_id');
+            $table->string('bet_type');
+            $table->decimal('payout', 12, 2)->default(0);
+            $table->decimal('discount_percent', 12, 2)->default(0);
+            $table->boolean('is_enabled')->default(true);
+            $table->timestamps();
         });
 
         Schema::create('lotto_number_exposures', function (Blueprint $table): void {
@@ -364,8 +430,11 @@ class AdminLottoReportsDataTableTest extends TestCase
             $table->string('bet_type');
             $table->string('number');
             $table->decimal('amount', 12, 2)->default(0);
+            $table->unsignedBigInteger('package_id_at_time')->nullable();
             $table->string('package_name_at_time')->nullable();
             $table->decimal('payout_at_time', 12, 2)->default(0);
+            $table->decimal('discount_amount_at_time', 12, 2)->default(0);
+            $table->decimal('payable_amount_at_time', 12, 2)->default(0);
             $table->string('result_status')->nullable();
             $table->decimal('win_amount', 12, 2)->nullable();
             $table->timestamps();
@@ -404,11 +473,38 @@ class AdminLottoReportsDataTableTest extends TestCase
             'name' => 'Member 52',
         ]);
 
+        DB::table('lotto_groups')->insert([
+            'id' => 11,
+            'name' => 'หุ้น',
+        ]);
+
         DB::table('lotto_markets')->insert([
             'id' => 1,
+            'group_id' => 11,
             'name' => 'หวยมาเลเซีย',
             'logo' => 'https://example.com/malaysia.png',
             'icon' => null,
+        ]);
+
+        DB::table('lotto_group_packages')->insert([
+            [
+                'id' => 301,
+                'group_id' => 11,
+                'name' => 'แพกเกจหลัก',
+                'image' => null,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 302,
+                'group_id' => 11,
+                'name' => 'แพกเกจสำรอง',
+                'image' => null,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         DB::table('lotto_draws')->insert([

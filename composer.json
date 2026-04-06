@@ -49,12 +49,12 @@
         "yajra/laravel-datatables-oracle": "^10.11"
     },
     "require-dev": {
-        "spatie/laravel-ignition": "^2.8",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.22",
         "mockery/mockery": "^1.4.2",
         "nunomaduro/collision": "^7.12",
-        "phpunit/phpunit": "^9.3.3",
+        "phpunit/phpunit": "^10",
+        "spatie/laravel-ignition": "^2.8",
         "thecodingmachine/phpstan-safe-rule": "*"
     },
     "config": {
@@ -75,9 +75,7 @@
         "laravel": {
             "dont-discover": [
                 "laravel/dusk",
-                "mockery/mockery",
-                "nunomaduro/collision",
-                "phpunit/phpunit"
+                "mockery/mockery"
             ]
         }
     },

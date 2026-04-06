@@ -25,6 +25,8 @@ class WithdrawRepository extends Repository
 
     private $gameUserRepository;
 
+    private $bankPaymentRepository;
+
     /**
      * WithdrawRepository constructor.
      */
@@ -33,6 +35,7 @@ class WithdrawRepository extends Repository
         MemberRepository $memberRepo,
         MemberCreditLogRepository $memberCreditLogRepo,
         GameUserRepository $gameUserRepo,
+        BankPaymentRepository        $bankPaymentRepo,
         App $app
     ) {
         $this->memberLogRepository = $memberLogRepo;
@@ -42,6 +45,8 @@ class WithdrawRepository extends Repository
         $this->memberCreditLogRepository = $memberCreditLogRepo;
 
         $this->gameUserRepository = $gameUserRepo;
+
+        $this->bankPaymentRepository = $bankPaymentRepo;
 
         parent::__construct($app);
     }
@@ -709,6 +714,7 @@ class WithdrawRepository extends Repository
             'success' => false,
             'msg' => Lang::get('app.withdraw.fail'),
         ];
+
 
         $datenow = now();
         $timenow = $datenow->toTimeString();

@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoGroupPackage;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\LottoProfitLossForecastReportService;
 use Illuminate\Http\Request;
@@ -25,8 +26,55 @@ class LottoProfitLossForecastReportController extends AppBaseController
             'marketOptions' => $this->buildMarketOptions(),
             'initialFilters' => [
                 'market_id' => $this->normalizePositiveInt($request->query('market_id')),
+                'package_id' => $this->normalizePositiveInt($request->query('package_id')),
                 'draw_id' => $this->normalizePositiveInt($request->query('draw_id')),
             ],
+        ]);
+    }
+
+    public function loadPackageOptions(Request $request)
+    {
+        $marketId = $this->normalizePositiveInt($request->query('market_id'));
+
+        if ($marketId === null) {
+            return response()->json([
+                'market_id' => null,
+                'group_id' => null,
+                'packages' => [],
+            ]);
+        }
+
+        $market = LotteryMarket::query()
+            ->where('id', $marketId)
+            ->first(['id', 'group_id']);
+
+        if (! $market) {
+            return response()->json([
+                'market_id' => $marketId,
+                'group_id' => null,
+                'packages' => [],
+            ]);
+        }
+
+        $packages = LottoGroupPackage::query()
+            ->where('group_id', (int) $market->group_id)
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get(['id', 'name', 'image'])
+            ->map(static function (LottoGroupPackage $package): array {
+                return [
+                    'value' => (int) $package->id,
+                    'text' => (string) $package->name,
+                    'image' => (string) ($package->image ?? ''),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json([
+            'market_id' => $marketId,
+            'group_id' => (int) $market->group_id,
+            'packages' => $packages,
         ]);
     }
 
@@ -74,16 +122,17 @@ class LottoProfitLossForecastReportController extends AppBaseController
     public function loadData(Request $request, LottoProfitLossForecastReportService $service)
     {
         $marketId = $this->normalizePositiveInt($request->query('market_id'));
+        $packageId = $this->normalizePositiveInt($request->query('package_id'));
         $drawId = $this->normalizePositiveInt($request->query('draw_id'));
 
-        if ($marketId === null || $drawId === null) {
+        if ($marketId === null || $packageId === null || $drawId === null) {
             return response()->json([
-                'message' => 'กรุณาเลือกตลาดและงวดหวยก่อน',
+                'message' => 'กรุณาเลือกตลาด แพกเกจ และงวดหวยก่อน',
             ], 422);
         }
 
         try {
-            return response()->json($service->build($marketId, $drawId));
+            return response()->json($service->build($marketId, $drawId, $packageId));
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

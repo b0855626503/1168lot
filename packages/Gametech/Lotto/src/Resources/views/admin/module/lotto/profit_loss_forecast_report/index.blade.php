@@ -27,14 +27,38 @@
 
         .profit-loss-forecast__number-cell {
             min-width: 120px;
-            padding: 0.5rem 0.6rem;
+            min-height: 86px;
+            padding: 0.5rem 0.6rem 0.65rem 0.6rem;
             border-radius: 0.4rem;
             background: #f8fafc;
+            display: flex;
+            flex-direction: column;
         }
 
         .profit-loss-forecast__number-cell.is-active {
             background: #eefbf3;
             border: 1px solid #b7efcc;
+        }
+
+        .profit-loss-forecast__number-code {
+            text-align: right;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.15;
+        }
+
+        .profit-loss-forecast__number-amount {
+            margin-top: auto;
+            text-align: center;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        .profit-loss-forecast__scroll-wrap {
+            max-height: 62vh;
+            overflow: auto;
         }
     </style>
 @endpush
@@ -49,7 +73,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row align-items-end">
-                            <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">ตลาด</label>
                                 <select ref="marketSelect" class="form-control form-control-sm" @change="onMarketChange($event.target.value)">
                                     <option value="">เลือกตลาด</option>
@@ -69,7 +93,27 @@
                                     </optgroup>
                                 </select>
                             </div>
-                            <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <label class="mb-1">แพกเกจ</label>
+                                <select
+                                    ref="packageSelect"
+                                    class="form-control form-control-sm"
+                                    :disabled="!selectedMarketId || isLoadingPackageOptions"
+                                    @change="onPackageChange($event.target.value)"
+                                >
+                                    <option value="">
+                                        @{{ isLoadingPackageOptions ? 'กำลังโหลดแพกเกจ...' : 'เลือกแพกเกจ' }}
+                                    </option>
+                                    <option
+                                        v-for="option in packageOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        @{{ option.text }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">งวดหวย</label>
                                 <select
                                     ref="drawSelect"
@@ -89,7 +133,7 @@
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-lg-4 mb-3 text-lg-right">
+                            <div class="col-lg-3 mb-3 text-lg-right">
                                 <button type="button" class="btn bg-gradient-secondary btn-sm" @click="resetFilters">
                                     <i class="fa fa-refresh"></i> ล้างค่า
                                 </button>
@@ -97,11 +141,11 @@
                         </div>
 
                         <div class="mb-3 text-muted">
-                            เลือก `ตลาด` และ `งวดหวย` ก่อน แล้วระบบจะโหลดตารางคาดการณ์กำไร/ขาดทุนของงวดนั้นทันที
+                            เลือก `ตลาด` `แพกเกจ` และ `งวดหวย` ก่อน แล้วระบบจะโหลดตารางคาดการณ์กำไร/ขาดทุนของงวดนั้นทันที
                         </div>
 
                         <div v-if="!hasCompleteFilters" class="alert alert-info mb-0">
-                            กรุณาเลือกตลาดและงวดหวยเพื่อดูรายงาน
+                            กรุณาเลือกตลาด แพกเกจ และงวดหวยเพื่อดูรายงาน
                         </div>
 
                         <div v-else-if="isLoadingReport" class="alert alert-light border mb-0">
@@ -120,6 +164,7 @@
                                     @{{ report.draw.market_name || '-' }}
                                 </span>
                                 <span class="badge badge-info">งวดวันที่: @{{ report.draw.draw_date_display || '-' }}</span>
+                                <span class="badge badge-warning text-dark">แพกเกจ: @{{ report.package.name || '-' }}</span>
                                 <span class="badge badge-secondary">สถานะ: @{{ drawStatusLabel(report.draw.status) }}</span>
                                 <span class="badge badge-success">ประเภทที่เปิดรับ: @{{ report.columns.length }}</span>
                             </div>
@@ -137,7 +182,7 @@
                                                 <th style="min-width:140px;">รวมทั้งหมด</th>
                                                 <th v-for="column in report.columns" :key="column.bet_type" style="min-width:160px;">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
-                                                    <div class="small text-muted">จ่าย @{{ formatMoney(column.payout) }}</div>
+                                                    <div class="small text-muted">จ่าย @{{ formatMoney(column.payout) }} | ส่วนลด @{{ formatPercent(column.discount_percent) }}</div>
                                                 </th>
                                             </tr>
                                             </thead>
@@ -157,17 +202,17 @@
 
                             <div class="card card-outline card-secondary mb-0">
                                 <div class="card-header py-2">
-                                    <h4 class="card-title mb-0">ยอดแทงสะสมรายหมายเลข</h4>
+                                    <h4 class="card-title mb-0">ยอดแทงสะสมรายหมายเลข (แพกเกจที่เลือก)</h4>
                                 </div>
                                 <div class="card-body p-0">
-                                    <div class="table-responsive">
+                                    <div class="table-responsive profit-loss-forecast__scroll-wrap">
                                         <table class="table table-bordered table-sm mb-0 profit-loss-forecast__numbers">
                                             <thead class="thead-light">
                                             <tr>
                                                 <th class="profit-loss-forecast__sticky-col" style="min-width:72px;">#</th>
                                                 <th v-for="column in report.columns" :key="column.bet_type" style="min-width:150px;">
                                                     <div class="font-weight-bold">@{{ column.label }}</div>
-                                                    <div class="small text-muted">อั้น @{{ formatMoney(column.max_per_number) }}</div>
+                                                    <div class="small text-muted">จ่าย @{{ formatMoney(column.payout) }} | ส่วนลด @{{ formatPercent(column.discount_percent) }}</div>
                                                 </th>
                                             </tr>
                                             </thead>
@@ -179,10 +224,10 @@
                                                         class="profit-loss-forecast__number-cell"
                                                         :class="{ 'is-active': (row.cells[column.bet_type] || {}).amount > 0 }"
                                                     >
-                                                        <div class="font-weight-bold text-primary">
+                                                        <div class="profit-loss-forecast__number-code">
                                                             @{{ displayCellNumber(row.cells[column.bet_type]) }}
                                                         </div>
-                                                        <div class="small text-muted">
+                                                        <div class="profit-loss-forecast__number-amount">
                                                             @{{ formatMoney((row.cells[column.bet_type] || {}).amount || 0) }}
                                                         </div>
                                                     </div>
@@ -206,8 +251,9 @@
     <script type="module">
         const initialState = {
             marketOptions: @json($marketOptions ?? []),
-            initialFilters: @json($initialFilters ?? ['market_id' => null, 'draw_id' => null]),
+            initialFilters: @json($initialFilters ?? ['market_id' => null, 'package_id' => null, 'draw_id' => null]),
             viewUrl: @json(route('admin.lotto.reports.profit_loss_forecast')),
+            loadPackageOptionsUrl: @json(route('admin.lotto.reports.profit_loss_forecast.package_options')),
             loadDrawOptionsUrl: @json(route('admin.lotto.reports.profit_loss_forecast.draw_options')),
             loadDataUrl: @json(route('admin.lotto.reports.profit_loss_forecast.loaddata')),
         };
@@ -224,6 +270,11 @@
                     market_logo: '',
                     draw_date_display: '',
                     status: '',
+                },
+                package: {
+                    id: null,
+                    name: '',
+                    image: '',
                 },
                 columns: [],
                 summary_rows: [],
@@ -257,21 +308,26 @@
             data: function () {
                 return {
                     marketOptions: Array.isArray(initialState.marketOptions) ? initialState.marketOptions : [],
+                    packageOptions: [],
                     drawOptions: [],
                     selectedMarketId: normalizeId(initialState.initialFilters.market_id),
+                    selectedPackageId: normalizeId(initialState.initialFilters.package_id),
                     selectedDrawId: normalizeId(initialState.initialFilters.draw_id),
+                    pendingRequestedPackageId: normalizeId(initialState.initialFilters.package_id),
                     pendingRequestedDrawId: normalizeId(initialState.initialFilters.draw_id),
                     report: buildEmptyReport(),
                     viewUrl: String(initialState.viewUrl || ''),
+                    loadPackageOptionsUrl: String(initialState.loadPackageOptionsUrl || ''),
                     loadDrawOptionsUrl: String(initialState.loadDrawOptionsUrl || ''),
                     loadDataUrl: String(initialState.loadDataUrl || ''),
+                    isLoadingPackageOptions: false,
                     isLoadingDrawOptions: false,
                     isLoadingReport: false,
                 };
             },
             computed: {
                 hasCompleteFilters: function () {
-                    return this.selectedMarketId !== '' && this.selectedDrawId !== '';
+                    return this.selectedMarketId !== '' && this.selectedPackageId !== '' && this.selectedDrawId !== '';
                 },
                 hasReportColumns: function () {
                     return Array.isArray(this.report.columns) && this.report.columns.length > 0;
@@ -280,11 +336,14 @@
             mounted: function () {
                 window.profitLossForecastApp = this;
                 this.initializeMarketSelect();
+                this.initializePackageSelect();
                 this.initializeDrawSelect();
                 this.syncSelect2Value(this.$refs.marketSelect, this.selectedMarketId);
 
                 if (this.selectedMarketId !== '') {
-                    this.loadDrawOptions(this.selectedMarketId, this.pendingRequestedDrawId, this.pendingRequestedDrawId !== '');
+                    const shouldAutoLoadReport = this.pendingRequestedPackageId !== '' && this.pendingRequestedDrawId !== '';
+                    this.loadPackageOptions(this.selectedMarketId, this.pendingRequestedPackageId, shouldAutoLoadReport);
+                    this.loadDrawOptions(this.selectedMarketId, this.pendingRequestedDrawId, shouldAutoLoadReport);
                 }
             },
             methods: {
@@ -362,6 +421,29 @@
 
                     this.syncSelect2Value(this.$refs.drawSelect, this.selectedDrawId);
                 },
+                initializePackageSelect: function () {
+                    const $packageSelect = window.jQuery ? window.jQuery(this.$refs.packageSelect) : null;
+                    if (! $packageSelect || typeof $packageSelect.select2 !== 'function') {
+                        return;
+                    }
+
+                    if ($packageSelect.hasClass('select2-hidden-accessible')) {
+                        $packageSelect.off('.profitLossForecastPackage');
+                        $packageSelect.select2('destroy');
+                    }
+
+                    $packageSelect.select2({
+                        width: '100%',
+                        placeholder: 'เลือกแพกเกจ',
+                        allowClear: true,
+                    });
+
+                    $packageSelect.off('change.profitLossForecastPackage').on('change.profitLossForecastPackage', (event) => {
+                        this.onPackageChange(event.target.value);
+                    });
+
+                    this.syncSelect2Value(this.$refs.packageSelect, this.selectedPackageId);
+                },
                 syncSelect2Value: function (element, value) {
                     if (!element || typeof window.jQuery !== 'function') {
                         return;
@@ -377,18 +459,23 @@
                 onMarketChange: function (value) {
                     const marketId = normalizeId(value);
 
-                    if (marketId === this.selectedMarketId && (this.drawOptions.length > 0 || this.isLoadingDrawOptions)) {
+                    if (marketId === this.selectedMarketId && (this.drawOptions.length > 0 || this.isLoadingDrawOptions || this.packageOptions.length > 0 || this.isLoadingPackageOptions)) {
                         return;
                     }
 
                     this.selectedMarketId = marketId;
+                    this.selectedPackageId = '';
                     this.selectedDrawId = '';
+                    this.pendingRequestedPackageId = '';
                     this.pendingRequestedDrawId = '';
+                    this.packageOptions = [];
                     this.drawOptions = [];
                     this.report = buildEmptyReport();
                     this.syncSelect2Value(this.$refs.marketSelect, this.selectedMarketId);
 
                     this.$nextTick(() => {
+                        this.initializePackageSelect();
+                        this.syncSelect2Value(this.$refs.packageSelect, '');
                         this.initializeDrawSelect();
                         this.syncSelect2Value(this.$refs.drawSelect, '');
                     });
@@ -399,7 +486,27 @@
                         return;
                     }
 
+                    this.loadPackageOptions(this.selectedMarketId, '', false);
                     this.loadDrawOptions(this.selectedMarketId, '', false);
+                },
+                onPackageChange: function (value) {
+                    const packageId = normalizeId(value);
+
+                    if (packageId === this.selectedPackageId && ((this.report.package && this.report.package.id) || this.isLoadingReport)) {
+                        return;
+                    }
+
+                    this.selectedPackageId = packageId;
+                    this.pendingRequestedPackageId = '';
+                    this.syncSelect2Value(this.$refs.packageSelect, this.selectedPackageId);
+                    this.updateBrowserUrl();
+
+                    if (!this.hasCompleteFilters) {
+                        this.report = buildEmptyReport();
+                        return;
+                    }
+
+                    this.fetchReport();
                 },
                 onDrawChange: function (value) {
                     const drawId = normalizeId(value);
@@ -419,6 +526,48 @@
                     }
 
                     this.fetchReport();
+                },
+                loadPackageOptions: function (marketId, requestedPackageId, shouldAutoLoadReport) {
+                    if (!marketId || !this.loadPackageOptionsUrl) {
+                        return;
+                    }
+
+                    this.isLoadingPackageOptions = true;
+                    const headers = {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    };
+                    const targetUrl = `${this.loadPackageOptionsUrl}?market_id=${encodeURIComponent(marketId)}`;
+
+                    this.requestJson(targetUrl, headers)
+                        .then((data) => {
+                            this.packageOptions = Array.isArray(data.packages) ? data.packages : [];
+
+                            const requestedId = normalizeId(requestedPackageId);
+                            const packageExists = requestedId !== ''
+                                && this.packageOptions.some((option) => String(option.value) === requestedId);
+
+                            this.selectedPackageId = packageExists ? requestedId : '';
+
+                            this.$nextTick(() => {
+                                this.initializePackageSelect();
+                                this.syncSelect2Value(this.$refs.packageSelect, this.selectedPackageId);
+                            });
+
+                            this.updateBrowserUrl();
+
+                            if (shouldAutoLoadReport && this.hasCompleteFilters) {
+                                this.fetchReport(false);
+                            }
+                        })
+                        .catch(() => {
+                            this.packageOptions = [];
+                            this.selectedPackageId = '';
+                            window.alert('โหลดรายการแพกเกจไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                        })
+                        .then(() => {
+                            this.isLoadingPackageOptions = false;
+                        });
                 },
                 loadDrawOptions: function (marketId, requestedDrawId, shouldAutoLoadReport) {
                     if (!marketId || !this.loadDrawOptionsUrl) {
@@ -449,7 +598,7 @@
 
                             this.updateBrowserUrl();
 
-                            if (shouldAutoLoadReport && this.selectedDrawId !== '') {
+                            if (shouldAutoLoadReport && this.hasCompleteFilters) {
                                 this.fetchReport(false);
                             }
                         })
@@ -473,8 +622,9 @@
                         'X-Requested-With': 'XMLHttpRequest',
                     };
                     const targetUrl = `${this.loadDataUrl}?market_id=${encodeURIComponent(this.selectedMarketId)}&draw_id=${encodeURIComponent(this.selectedDrawId)}`;
+                    const query = `${targetUrl}&package_id=${encodeURIComponent(this.selectedPackageId)}`;
 
-                    this.requestJson(targetUrl, headers)
+                    this.requestJson(query, headers)
                         .then((data) => {
                             this.report = data || buildEmptyReport();
 
@@ -492,13 +642,18 @@
                 },
                 resetFilters: function () {
                     this.selectedMarketId = '';
+                    this.selectedPackageId = '';
                     this.selectedDrawId = '';
+                    this.pendingRequestedPackageId = '';
                     this.pendingRequestedDrawId = '';
+                    this.packageOptions = [];
                     this.drawOptions = [];
                     this.report = buildEmptyReport();
                     this.syncSelect2Value(this.$refs.marketSelect, '');
 
                     this.$nextTick(() => {
+                        this.initializePackageSelect();
+                        this.syncSelect2Value(this.$refs.packageSelect, '');
                         this.initializeDrawSelect();
                         this.syncSelect2Value(this.$refs.drawSelect, '');
                     });
@@ -516,6 +671,10 @@
                         searchParams.set('market_id', this.selectedMarketId);
                     }
 
+                    if (this.selectedPackageId !== '') {
+                        searchParams.set('package_id', this.selectedPackageId);
+                    }
+
                     if (this.selectedDrawId !== '') {
                         searchParams.set('draw_id', this.selectedDrawId);
                     }
@@ -531,6 +690,12 @@
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                     });
+                },
+                formatPercent: function (value) {
+                    return `${Number(value || 0).toLocaleString('th-TH', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                    })}%`;
                 },
                 displayCellNumber: function (cell) {
                     if (!cell || !cell.number) {

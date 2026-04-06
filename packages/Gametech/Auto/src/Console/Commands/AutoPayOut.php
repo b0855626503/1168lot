@@ -33,7 +33,6 @@ class AutoPayOut extends Command
      */
     public function __construct()
     {
-        $this->config = core()->getConfigData();
         parent::__construct();
 
     }
@@ -46,6 +45,11 @@ class AutoPayOut extends Command
     public function handle()
     {
         $config = $this->config;
+        if (! $config) {
+            $config = core()->getConfigData();
+            $this->config = $config;
+        }
+
         $bank = BankAccount::where('auto_transfer', 'Y')->where('status_auto', 'Y')->where('enable', 'Y')->where('bank_type', 2)->first();
         if (isset($bank)) {
 
