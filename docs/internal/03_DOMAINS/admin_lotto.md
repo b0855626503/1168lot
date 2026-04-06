@@ -24,6 +24,9 @@
 - ตาราง `profit-loss-forecast` ปรับ layout ให้เห็นข้อมูลครบในกรอบหน้าเป็นหลัก (ไม่บังคับ scroll แนวนอน)
 - หน้า `profit-loss-forecast` รองรับ `Auto Reload` ทุก 10 วินาที พร้อม countdown บนปุ่ม
 - รายงาน `tickets-cancel` รองรับปุ่ม `รายละเอียด` ต่อแถว เพื่อเปิด modal ดูรายการเลขในโพยที่เลือก
+- `/lotto/draws` แสดงคอลัมน์ `เวลาออกผล` หลัง `ปิดรับ` และถอดคอลัมน์ `2 ตัวบน`
+- `/lotto/draws` ให้คอลัมน์จำนวนรายการที่มีค่ามากกว่า 0 เป็นลิงก์เปิด modal รายการโพย
+- `/lotto/reports/member-bet-types` ให้ filter และตารางสรุปแบบเดียวกับ `profit-loss-forecast` พร้อมตารางประเภท-เลขเรียงตามยอดเงินได้
 - summary matrix ของ `profit-loss-forecast` ใช้ลำดับ metric:
   - ยอดแทง
   - ส่วนลด

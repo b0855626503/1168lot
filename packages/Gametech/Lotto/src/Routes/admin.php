@@ -305,6 +305,12 @@ Route::domain(
             Route::get('reports/member-bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.member_bet_types_report.index',
             ])->name('admin.lotto.reports.member_bet_types');
+            Route::get('reports/member-bet-types/package-options', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@loadPackageOptions')
+                ->name('admin.lotto.reports.member_bet_types.package_options');
+            Route::get('reports/member-bet-types/draw-options', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@loadDrawOptions')
+                ->name('admin.lotto.reports.member_bet_types.draw_options');
+            Route::get('reports/member-bet-types/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@loadData')
+                ->name('admin.lotto.reports.member_bet_types.loaddata');
 
             Route::get('reports/tickets-cancel', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoTicketsCancelReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.tickets_cancel_report.index',

@@ -253,6 +253,35 @@ class LottoProfitLossForecastReportService
         return $rows;
     }
 
+    public function flattenNumberAmounts(Collection $columns, bool $onlyPositive = false): array
+    {
+        $rows = [];
+
+        foreach ($columns as $column) {
+            $betType = (string) ($column['bet_type'] ?? '');
+            $label = (string) ($column['label'] ?? $betType);
+            $numberAmounts = $column['number_amounts'] ?? [];
+
+            foreach ((array) $numberAmounts as $number => $amount) {
+                $value = (float) $amount;
+                if ($onlyPositive && $value <= 0) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'bet_type' => $betType,
+                    'bet_type_label' => $label,
+                    'number' => (string) $number,
+                    'amount' => $value,
+                ];
+            }
+        }
+
+        usort($rows, static fn ($a, $b) => $a['amount'] <=> $b['amount']);
+
+        return $rows;
+    }
+
     private function digitsForBetType(string $betType): int
     {
         return match ($betType) {

@@ -35,6 +35,7 @@ class LottoDrawTransformer extends TransformerAbstract
             'draw_date'      => $model->draw_date ? $model->draw_date->format('d/m/Y') : '-',
             'open_at'        => $model->open_at ? $model->open_at->format('d/m/Y H:i') : '-',
             'close_at'       => $model->close_at ? $model->close_at->format('d/m/Y H:i') : '-',
+            'result_at'      => $model->result_at ? $model->result_at->format('d/m/Y H:i') : '-',
             'status'         => $statusBadge,
             'blocked_numbers_count' => $this->renderCountLink('showDrawBlockedNumbers', (int) $model->id, (int) ($model->blocked_numbers_count ?? 0)),
             'tickets_count' => $this->renderCountLink('showDrawTicketList', (int) $model->id, (int) ($model->tickets_count ?? 0)),
@@ -79,6 +80,10 @@ class LottoDrawTransformer extends TransformerAbstract
 
     private function renderCountLink(string $handlerName, int $drawId, int $count): string
     {
+        if ($count <= 0) {
+            return '<span class="font-weight-bold text-muted">' . $count . '</span>';
+        }
+
         return '<a href="javascript:void(0);" onclick="' . $handlerName . '(' . $drawId . ')" class="font-weight-bold">' . $count . '</a>';
     }
 

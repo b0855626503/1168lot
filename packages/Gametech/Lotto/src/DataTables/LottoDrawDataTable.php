@@ -101,11 +101,11 @@ class LottoDrawDataTable extends DataTable
             ['data' => 'draw_date', 'name' => 'draw_date', 'title' => 'วันงวด'],
             ['data' => 'open_at', 'name' => 'open_at', 'title' => 'เปิดรับ'],
             ['data' => 'close_at', 'name' => 'close_at', 'title' => 'ปิดรับ'],
+            ['data' => 'result_at', 'name' => 'result_at', 'title' => 'เวลาออกผล'],
             ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ'],
             ['data' => 'blocked_numbers_count', 'name' => 'blocked_numbers_count', 'title' => 'จำนวนเลขอั้น', 'className' => 'text-center', 'searchable' => false],
             ['data' => 'tickets_count', 'name' => 'tickets_count', 'title' => 'จำนวนรายการ', 'className' => 'text-center', 'searchable' => false],
             ['data' => 'top_3', 'name' => 'result_number', 'title' => '3 ตัวบน', 'className' => 'text-center'],
-            ['data' => 'top_2', 'name' => 'result_number', 'title' => '2 ตัวบน', 'className' => 'text-center'],
             ['data' => 'bottom_2', 'name' => 'result_number', 'title' => '2 ตัวล่าง', 'className' => 'text-center'],
             ['data' => 'action', 'name' => 'action', 'title' => 'ดำเนินการ', 'orderable' => false, 'searchable' => false, 'className' => 'text-center', 'width' => '3%'],
         ];
