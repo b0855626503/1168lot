@@ -6,7 +6,7 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Observers\LottoDrawRealtimeObserver;
-use Gametech\Lotto\Observers\LottoTicketRealtimeObserver;
+use Gametech\Lotto\Services\LottoTicketRealtimeObserver;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
