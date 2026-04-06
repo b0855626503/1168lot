@@ -155,11 +155,11 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ['data' => 'total_bet_amount', 'name' => 'total_bet_amount', 'title' => 'ยอดแทง', 'className' => 'text-right'],
             ['data' => 'total_discount_amount', 'name' => 'total_discount_amount', 'title' => 'ส่วนลด', 'className' => 'text-right'],
             ['data' => 'total_net_amount', 'name' => 'total_net_amount', 'title' => 'สุทธิ', 'className' => 'text-right'],
-            ['data' => 'total_win_amount', 'name' => 'total_win_amount', 'title' => 'ยอดถูก', 'className' => 'text-right'],
-            ['data' => 'status', 'name' => 'status', 'title' => 'สถานะ', 'className' => 'text-center'],
-            ['data' => 'reason', 'name' => 'id', 'title' => 'สาเหตุ', 'className' => 'text-left', 'orderable' => false],
-            ['data' => 'cancelled_by_name', 'name' => 'cancel_tx_admin_user_name', 'title' => 'ผู้ยกเลิก', 'className' => 'text-left'],
-            ['data' => 'latest_updated_at', 'name' => 'updated_at', 'title' => 'เวลาอัปเดทล่าสุด', 'className' => 'text-center'],
+            ['data' => 'total_win_amount', 'name' => 'lotto_tickets.total_win_amount', 'title' => 'ยอดถูก', 'className' => 'text-right'],
+            ['data' => 'status', 'name' => 'lotto_tickets.status', 'title' => 'สถานะ', 'className' => 'text-center'],
+            ['data' => 'reason', 'name' => 'lotto_tickets.id', 'title' => 'สาเหตุ', 'className' => 'text-left', 'orderable' => false],
+            ['data' => 'cancelled_by_name', 'name' => 'cancel_tx_admin.user_name', 'title' => 'ผู้ยกเลิก', 'className' => 'text-left'],
+            ['data' => 'latest_updated_at', 'name' => 'lotto_tickets.updated_at', 'title' => 'เวลาอัปเดทล่าสุด', 'className' => 'text-center'],
             ['data' => 'actions', 'name' => 'id', 'title' => 'ดูโพย', 'className' => 'text-center', 'orderable' => false, 'searchable' => false],
         ];
     }
