@@ -240,6 +240,7 @@ class AutoResultPipelineService
                 ], 'VALIDATION_ERROR');
             }
 
+            $v2LogContext = $this->buildV2LogContext($v2Result);
             if ((string) ($v2Result['status'] ?? '') !== 'VALID') {
                 $failure = $this->resolveV2CutoverFailureOutcome(
                     (string) ($v2Result['status'] ?? ''),
@@ -247,7 +248,7 @@ class AutoResultPipelineService
                     (string) ($v2Result['error_message'] ?? '')
                 );
 
-                return $this->markAndLog($draw, [
+                return $this->markAndLog($draw, array_merge($v2LogContext, [
                     'status' => $failure['status'],
                     'attempt_no' => $attemptNo,
                     'run_id' => $runId,
@@ -259,7 +260,7 @@ class AutoResultPipelineService
                     'error_code' => (string) ($v2Result['error_code'] ?? 'VALIDATION_ERROR'),
                     'error_stage' => (string) ($v2Result['error_stage'] ?? 'READINESS'),
                     'error_message' => $failure['error_message'],
-                ], (string) ($failure['draw_status_override'] ?? null));
+                ]), (string) ($failure['draw_status_override'] ?? null));
             }
 
             $validated = (array) ($v2Result['validated'] ?? []);
@@ -271,7 +272,7 @@ class AutoResultPipelineService
 
             $status = $this->normalizeStatus((string) ($applyResult['status'] ?? 'APPLIED'));
 
-            return $this->markAndLog($draw, [
+            return $this->markAndLog($draw, array_merge($v2LogContext, [
                 'status' => $status,
                 'attempt_no' => $attemptNo,
                 'run_id' => $runId,
@@ -288,7 +289,7 @@ class AutoResultPipelineService
                 'is_dry_run' => $dryRun,
                 'is_manual_retry' => $isManualRetry,
                 'error_message' => $status === 'CONFLICT' ? 'Result conflict' : null,
-            ], $status === 'APPLIED' ? null : $status);
+            ]), $status === 'APPLIED' ? null : $status);
         }
 
         try {
@@ -588,6 +589,49 @@ class AutoResultPipelineService
     private function normalizeStatus(string $status): string
     {
         return in_array($status, self::CANONICAL_STATUSES, true) ? $status : 'VALIDATION_ERROR';
+    }
+
+    /**
+     * @param array<string,mixed> $v2Result
+     * @return array<string,mixed>
+     */
+    private function buildV2LogContext(array $v2Result): array
+    {
+        $context = [];
+        $trace = is_array($v2Result['trace_json'] ?? null) ? $v2Result['trace_json'] : [];
+        $fetch = is_array($v2Result['fetch'] ?? null) ? $v2Result['fetch'] : [];
+
+        if (is_string($trace['fetched_url'] ?? null) && $trace['fetched_url'] !== '') {
+            $context['request_url'] = $trace['fetched_url'];
+        }
+
+        if (array_key_exists('http_status', $fetch)) {
+            $context['response_http_status'] = $fetch['http_status'];
+        }
+
+        if (array_key_exists('response_body', $fetch)) {
+            $context['response_body'] = $fetch['response_body'];
+        }
+
+        if (array_key_exists('meta', $fetch)) {
+            $context['request_meta_json'] = $fetch['meta'];
+        }
+
+        if (isset($v2Result['extract'])) {
+            $context['parsed_payload_json'] = $v2Result['extract'];
+        }
+
+        if (isset($v2Result['selection'])) {
+            $context['selection_debug_json'] = $v2Result['selection'];
+        }
+
+        if (isset($v2Result['validated'])) {
+            $context['normalized_result_json'] = $v2Result['validated'];
+        } elseif (isset($v2Result['mapped'])) {
+            $context['normalized_result_json'] = $v2Result['mapped'];
+        }
+
+        return $context;
     }
 
     /**
