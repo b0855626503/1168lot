@@ -75,6 +75,7 @@ class LottoFetchAutoResultsCommand extends Command
             'skipped_no_source_config' => 0,
             'skipped_not_due' => 0,
             'skipped_backoff' => 0,
+            'skipped_rate_limit' => 0,
             'marked_exhausted' => 0,
             'unhandled_draw_exceptions' => 0,
             'statuses' => [],
@@ -109,6 +110,12 @@ class LottoFetchAutoResultsCommand extends Command
                     is_string($expectedDrawDate) && trim($expectedDrawDate) !== '' ? trim($expectedDrawDate) : null
                 );
                 $status = (string) ($result['status'] ?? 'VALIDATION_ERROR');
+                if (($result['skipped_backoff'] ?? false) === true) {
+                    $summary['skipped_backoff']++;
+                }
+                if (($result['skipped_rate_limit'] ?? false) === true) {
+                    $summary['skipped_rate_limit']++;
+                }
             } catch (\Throwable $e) {
                 $summary['unhandled_draw_exceptions']++;
 
@@ -151,13 +158,14 @@ class LottoFetchAutoResultsCommand extends Command
         ksort($summary['statuses']);
 
         $this->info(sprintf(
-            'Auto result run=%s selected=%d processed=%d skipped_no_source_config=%d skipped_not_due=%d skipped_backoff=%d marked_exhausted=%d unhandled_draw_exceptions=%d',
+            'Auto result run=%s selected=%d processed=%d skipped_no_source_config=%d skipped_not_due=%d skipped_backoff=%d skipped_rate_limit=%d marked_exhausted=%d unhandled_draw_exceptions=%d',
             $summary['run_id'],
             $summary['selected'],
             $summary['processed'],
             $summary['skipped_no_source_config'],
             $summary['skipped_not_due'],
             $summary['skipped_backoff'],
+            $summary['skipped_rate_limit'],
             $summary['marked_exhausted'],
             $summary['unhandled_draw_exceptions']
         ));

@@ -59,7 +59,7 @@ class AutoResultPipelineService
 
         $sources = $this->resolver->resolveAll($draw);
         if ($sources === []) {
-            return $this->markAndLog($draw, [
+            return $this->markWithoutLog($draw, [
                 'status' => 'NO_SOURCE',
                 'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
                 'run_id' => $runId,
@@ -71,6 +71,7 @@ class AutoResultPipelineService
         }
 
         $fallbackTried = false;
+        $skippedRateLimit = false;
         foreach ($sources as $source) {
             $this->resolver->persistSnapshot($draw, $source);
             if (! $isManualRetry) {
@@ -82,31 +83,22 @@ class AutoResultPipelineService
                 }
 
                 if (! $state['retry_due']) {
-                    return $this->markAndLog($draw, [
-                        'status' => 'NOT_READY',
-                        'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
-                        'run_id' => $runId,
-                        'pipeline_stage' => 'retry_policy_source',
+                    return [
+                        'status' => 'SKIPPED_BACKOFF',
                         'source_id' => (int) $source->id,
-                        'is_dry_run' => $dryRun,
-                        'is_manual_retry' => $isManualRetry,
-                        'error_message' => 'source backoff pending',
-                    ]);
+                        'skipped_backoff' => true,
+                    ];
                 }
             }
 
-            $this->incrementAttempt($draw);
-            $attemptNo = max(1, (int) ($draw->result_fetch_attempts ?? 1));
-
             if (! $this->hardening->acquireSourceRateLimit((int) $source->id)) {
-                $this->hardening->recordRateLimited($draw, (int) $source->id, $attemptNo, 'RATE_LIMITED by source policy');
+                $skippedRateLimit = true;
                 continue;
             }
 
             $result = $this->processSourceAttempt(
                 $draw,
                 $source,
-                $attemptNo,
                 $dryRun,
                 $isManualRetry,
                 $runId,
@@ -138,7 +130,14 @@ class AutoResultPipelineService
             ];
         }
 
-        return $this->markAndLog($draw, [
+        if ($skippedRateLimit) {
+            return [
+                'status' => 'SKIPPED_RATE_LIMIT',
+                'skipped_rate_limit' => true,
+            ];
+        }
+
+        return $this->markWithoutLog($draw, [
             'status' => 'NO_SOURCE',
             'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
             'run_id' => $runId,
@@ -186,28 +185,7 @@ class AutoResultPipelineService
 
     private function logSourceExhaustedIfNeeded(LottoDraw $draw, LottoResultSource $source, string $runId, int $attempts): void
     {
-        $exists = LottoResultFetchLog::query()
-            ->where('draw_id', (int) $draw->id)
-            ->where('source_id', (int) $source->id)
-            ->where('status', 'EXHAUSTED')
-            ->where('pipeline_stage', 'retry_policy_source')
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $this->hardening->insertFetchLog([
-            'draw_id' => (int) $draw->id,
-            'market_id' => (int) $draw->market_id,
-            'source_id' => (int) $source->id,
-            'attempt_no' => max(1, $attempts),
-            'status' => 'EXHAUSTED',
-            'run_id' => $runId,
-            'pipeline_stage' => 'retry_policy_source',
-            'error_message' => 'source retries exhausted; fallback to next source',
-            'created_at' => now()->toDateTimeString(),
-        ]);
+        return;
     }
 
     /**
@@ -216,7 +194,6 @@ class AutoResultPipelineService
     private function processSourceAttempt(
         LottoDraw $draw,
         LottoResultSource $source,
-        int $attemptNo,
         bool $dryRun,
         bool $isManualRetry,
         string $runId,
@@ -240,6 +217,8 @@ class AutoResultPipelineService
         }
 
         if ($this->isV2CutoverEnabled($source)) {
+            $this->incrementAttempt($draw);
+            $attemptNo = max(1, (int) ($draw->result_fetch_attempts ?? 1));
             try {
                 $v2Result = $this->runV2CutoverPipeline($draw, $source, $runId, $expectedDrawDate);
             } catch (\Throwable $e) {
@@ -315,9 +294,9 @@ class AutoResultPipelineService
         try {
             $built = $this->requestBuilder->build($draw, $source);
         } catch (TemplateRenderException $e) {
-            return $this->markAndLog($draw, [
+            return $this->markWithoutLog($draw, [
                 'status' => 'TEMPLATE_ERROR',
-                'attempt_no' => $attemptNo,
+                'attempt_no' => max(1, ((int) ($draw->result_fetch_attempts ?? 0)) + 1),
                 'run_id' => $runId,
                 'pipeline_stage' => 'request_build',
                 'source_id' => (int) $source->id,
@@ -326,6 +305,9 @@ class AutoResultPipelineService
                 'error_message' => $e->getMessage(),
             ]);
         }
+
+        $this->incrementAttempt($draw);
+        $attemptNo = max(1, (int) ($draw->result_fetch_attempts ?? 1));
 
         $fetched = $this->fetcher->fetch($source, $built);
         if ((string) $fetched['status'] === 'HTTP_ERROR') {
@@ -490,16 +472,6 @@ class AutoResultPipelineService
 
     public function markExhausted(LottoDraw $draw): void
     {
-        $this->hardening->insertFetchLog([
-            'draw_id' => (int) $draw->id,
-            'market_id' => (int) $draw->market_id,
-            'attempt_no' => (int) ($draw->result_fetch_attempts ?? 0),
-            'status' => 'EXHAUSTED',
-            'pipeline_stage' => 'retry_policy',
-            'error_message' => 'retry attempts exhausted',
-            'created_at' => now()->toDateTimeString(),
-        ]);
-
         if ($this->canWriteDrawFetchFields()) {
             $draw->forceFill([
                 'result_fetch_status' => 'EXHAUSTED',
@@ -546,6 +518,27 @@ class AutoResultPipelineService
             'run_id' => $logPayload['run_id'] ?? null,
             'attempt_no' => (int) ($logPayload['attempt_no'] ?? 1),
             'error_message' => $logPayload['error_message'] ?? null,
+        ];
+    }
+
+    private function markWithoutLog(LottoDraw $draw, array $payload, ?string $drawStatusOverride = null): array
+    {
+        $status = $this->normalizeStatus((string) ($payload['status'] ?? 'VALIDATION_ERROR'));
+        $isManualRetry = (bool) ($payload['is_manual_retry'] ?? false);
+
+        if ($this->canWriteDrawFetchFields() && ($isManualRetry || ! in_array((string) $draw->result_fetch_status, self::TERMINAL_DRAW_STATUSES, true))) {
+            $draw->forceFill([
+                'result_fetch_status' => $this->normalizeStatus((string) ($drawStatusOverride ?? $status)),
+                'result_fetch_error' => $payload['error_message'] ?? null,
+                'result_fetched_at' => now(),
+            ])->saveQuietly();
+        }
+
+        return [
+            'status' => $status,
+            'run_id' => $payload['run_id'] ?? null,
+            'attempt_no' => (int) ($payload['attempt_no'] ?? 1),
+            'error_message' => $payload['error_message'] ?? null,
         ];
     }
 

@@ -1470,6 +1470,12 @@
 - `max_attempts=5`
 - หน่วงการ retry ครั้งละ 5 นาที (ตั้ง `base_backoff_seconds=300`, `max_backoff_seconds=300`)
 
+## 2026-04-06 — Auto Result Logs Only When Endpoint Is Called (APPROVED)
+
+- ถ้าอยู่ใน backoff window และยังไม่ได้ยิง endpoint จริง: ไม่ต้องบันทึก `lotto_result_fetch_logs`
+- ไม่บันทึก `lotto_result_fetch_logs` สำหรับกรณีที่ยังไม่ยิง endpoint (rate limit, no-source, template error, exhausted decision)
+- บันทึกเฉพาะรอบที่มีการเรียก endpoint จริงเท่านั้น
+
 ## 2026-03-29 — Browser Runtime Artifact Retention Cleanup Scheduling (APPROVED)
 
 - เพิ่ม command `lotto:cleanup-browser-runtime-artifacts` สำหรับลบ artifact ที่เกิน retention
