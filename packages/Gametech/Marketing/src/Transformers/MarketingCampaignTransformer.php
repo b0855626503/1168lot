@@ -10,13 +10,20 @@ class MarketingCampaignTransformer extends TransformerAbstract
     public function transform(MarketingCampaign $model)
     {
 
+        $baseUrl = rtrim(env('FRONTEND_URL', ''), '/');
+        $registrationLink = $model->registrationLink;
+        $marketCode = $registrationLink ? (string) $registrationLink->code : '';
+        $registerUrl = $baseUrl !== '' && $marketCode !== ''
+            ? $baseUrl . '/th/register?market=' . rawurlencode($marketCode)
+            : '';
+
         return [
             'id' => (int) $model->id,
             'name' => $model->name,
             'description' => $model->description,
             'team_id' => ($model->team ? $model->team->name : '<span class="text-muted">-</span>'),
-            'link' => $model->registrationLink
-                ? '<a href="'.route('customer.session.store', ['id' => $model->registrationLink->code]).'" target="_blank">'.$model->registrationLink->code.'</a>'
+            'link' => $registerUrl
+                ? '<a href="' . e($registerUrl) . '" target="_blank">' . e($registerUrl) . '</a>'
                 : '<span class="text-muted">-</span>',
 
             'is_ended' => '<button class="btn btn-xs icon-only '.($model->is_ended == true ? 'btn-danger' : 'btn-success').'" onclick="editdata('.$model->id.','."'".core()->flip2($model->is_ended)."'".','."'is_ended'".')" '.($model->is_ended == true ? 'disabled':'').'>'.($model->is_ended == true ? '<i class="fa fa-lock"></i>' : '<i class="fa fa-check"></i>').'</button>',
