@@ -25,6 +25,18 @@ use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
+    /** @var array<string,bool> */
+    private array $schemaTableCache = [];
+
+    /** @var array<string,bool> */
+    private array $schemaColumnCache = [];
+
+    /** @var array<int,string> */
+    private array $memberNameCache = [];
+
+    /** @var array<int,string> */
+    private array $adminNameCache = [];
+
     public function marketsLatestByGroup(Request $request): JsonResponse
     {
         try {
@@ -319,9 +331,10 @@ class LottoController extends BaseController
                 ->orderByDesc('id')
                 ->limit($this->resolveTicketLimit($request))
                 ->get();
+            $summaryContext = $this->buildTicketSummaryContext($tickets);
 
             $response = $this->sendResponse(
-                $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket))->values()->all(),
+                $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))->values()->all(),
                 'ดึงประวัติโพยสำเร็จ'
             );
 
@@ -543,7 +556,7 @@ class LottoController extends BaseController
                     $exposure->update(['sold_amount' => $nextAmount]);
                 }
 
-                $debitTxn = Schema::hasTable('wallet_transactions')
+                $debitTxn = $this->hasTableCached('wallet_transactions')
                     ? DB::table('wallet_transactions')
                         ->where('member_id', $memberId)
                         ->where('ref_type', 'LOTTO_BET')
@@ -576,7 +589,7 @@ class LottoController extends BaseController
                     'refund_amount' => $refundAmount,
                 ];
 
-                if (Schema::hasColumn('lotto_tickets', 'cancelled_by')) {
+                if ($this->hasColumnCached('lotto_tickets', 'cancelled_by')) {
                     $updatePayload['cancelled_by'] = $memberId;
                 }
 
@@ -1125,14 +1138,22 @@ class LottoController extends BaseController
             ->where('member_id', $memberId);
     }
 
-    private function mapTicketSummary(LottoTicket $ticket): array
+    /**
+     * @param array{
+     *   cancellation_info_by_ticket?: array<int,array{name:string,type:string}>,
+     *   reason_by_ticket?: array<int,string>
+     * } $context
+     */
+    private function mapTicketSummary(LottoTicket $ticket, array $context = []): array
     {
         $resultContext = $this->ticketResultContext($ticket);
         $itemSummary = $this->ticketItemSummary($ticket);
-        $cancellationInfo = $this->resolveCancellationInfo($ticket);
+        $ticketId = (int) $ticket->id;
+        $cancellationInfo = $context['cancellation_info_by_ticket'][$ticketId] ?? $this->resolveCancellationInfo($ticket);
+        $cancelReason = $context['reason_by_ticket'][$ticketId] ?? $this->resolveTicketReason($ticket);
 
         return [
-            'id' => (int) $ticket->id,
+            'id' => $ticketId,
             'draw_id' => (int) $ticket->draw_id,
             'draw_date' => optional($ticket->draw?->draw_date)->toDateString(),
             'market_name' => $ticket->draw?->market?->name,
@@ -1148,7 +1169,7 @@ class LottoController extends BaseController
             'cancelled_at' => optional($ticket->cancelled_at)->toDateTimeString(),
             'cancelled_by_name' => $cancellationInfo['name'],
             'cancelled_by_type' => $cancellationInfo['type'],
-            'cancel_reason' => $this->resolveTicketReason($ticket),
+            'cancel_reason' => $cancelReason,
             'result_outcome' => $resultContext['result_outcome'],
             'is_final' => $resultContext['is_final'],
             'is_winner' => $resultContext['is_winner'],
@@ -1235,7 +1256,7 @@ class LottoController extends BaseController
 
     private function guardDailyCancelLimit(int $memberId): void
     {
-        if (! Schema::hasTable('wallet_transactions')) {
+        if (! $this->hasTableCached('wallet_transactions')) {
             return;
         }
 
@@ -1257,7 +1278,7 @@ class LottoController extends BaseController
      */
     private function resolveCancellationInfo(LottoTicket $ticket): array
     {
-        if (Schema::hasTable('wallet_transactions')) {
+        if ($this->hasTableCached('wallet_transactions')) {
             $cancelTxn = DB::table('wallet_transactions')
                 ->where('ref_type', 'LOTTO_CANCEL')
                 ->where('ref_id', (int) $ticket->id)
@@ -1297,13 +1318,8 @@ class LottoController extends BaseController
         }
 
         return match ($actorType) {
-            'admin' => Schema::hasTable('employees')
-                ? trim((string) DB::table('employees')->where('code', $actorId)->value('user_name'))
-                : '',
-            'member' => Schema::hasTable('members')
-                ? trim((string) (DB::table('members')->where('code', $actorId)->value('user_name')
-                    ?: DB::table('members')->where('code', $actorId)->value('name')))
-                : '',
+            'admin' => $this->resolveAdminName($actorId),
+            'member' => $this->resolveMemberName($actorId),
             default => '',
         };
     }
@@ -1314,7 +1330,7 @@ class LottoController extends BaseController
             return trim((string) ($ticket->reason ?? ''));
         }
 
-        if (! Schema::hasTable('wallet_transactions')) {
+        if (! $this->hasTableCached('wallet_transactions')) {
             return '';
         }
 
@@ -1335,7 +1351,280 @@ class LottoController extends BaseController
 
     private function hasTicketReasonColumn(): bool
     {
-        return Schema::hasColumn('lotto_tickets', 'reason');
+        return $this->hasColumnCached('lotto_tickets', 'reason');
+    }
+
+    /**
+     * @param Collection<int, LottoTicket> $tickets
+     * @return array{
+     *   cancellation_info_by_ticket: array<int,array{name:string,type:string}>,
+     *   reason_by_ticket: array<int,string>
+     * }
+     */
+    private function buildTicketSummaryContext(Collection $tickets): array
+    {
+        $ticketIds = $tickets->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values()
+            ->all();
+
+        $cancellationInfoByTicket = [];
+        $reasonByTicket = [];
+
+        if (empty($ticketIds)) {
+            return [
+                'cancellation_info_by_ticket' => $cancellationInfoByTicket,
+                'reason_by_ticket' => $reasonByTicket,
+            ];
+        }
+
+        $cancelTxnByTicket = [];
+        if ($this->hasTableCached('wallet_transactions')) {
+            $latestCancelTxnSubQuery = DB::table('wallet_transactions')
+                ->selectRaw('MAX(id) as id, ref_id')
+                ->where('ref_type', 'LOTTO_CANCEL')
+                ->whereIn('ref_id', $ticketIds)
+                ->groupBy('ref_id');
+
+            $cancelTxns = DB::table('wallet_transactions as wt')
+                ->joinSub($latestCancelTxnSubQuery, 'latest_cancel', static function ($join): void {
+                    $join->on('wt.id', '=', 'latest_cancel.id');
+                })
+                ->select([
+                    'wt.ref_id',
+                    'wt.created_by_type',
+                    'wt.created_by_id',
+                    'wt.meta',
+                ])
+                ->get();
+
+            foreach ($cancelTxns as $cancelTxn) {
+                $cancelTxnByTicket[(int) ($cancelTxn->ref_id ?? 0)] = $cancelTxn;
+            }
+        }
+
+        $memberIds = [];
+        $adminIds = [];
+        foreach ($tickets as $ticket) {
+            $ticketId = (int) $ticket->id;
+            $cancelTxn = $cancelTxnByTicket[$ticketId] ?? null;
+            $cancelledBy = (int) ($ticket->cancelled_by ?? 0);
+
+            if ($cancelTxn && ! empty($cancelTxn->created_by_type) && ! empty($cancelTxn->created_by_id)) {
+                $actorType = (string) $cancelTxn->created_by_type;
+                $actorId = (int) $cancelTxn->created_by_id;
+                if ($actorType === 'member' && $actorId > 0) {
+                    $memberIds[] = $actorId;
+                } elseif ($actorType === 'admin' && $actorId > 0) {
+                    $adminIds[] = $actorId;
+                }
+            }
+
+            if ($cancelledBy > 0) {
+                $memberIds[] = $cancelledBy;
+                $adminIds[] = $cancelledBy;
+            }
+        }
+
+        $memberNames = $this->loadMemberNames($memberIds);
+        $adminNames = $this->loadAdminNames($adminIds);
+        $hasReasonColumn = $this->hasTicketReasonColumn();
+
+        foreach ($tickets as $ticket) {
+            $ticketId = (int) $ticket->id;
+            $cancelledBy = (int) ($ticket->cancelled_by ?? 0);
+            $cancelTxn = $cancelTxnByTicket[$ticketId] ?? null;
+
+            $name = '';
+            $type = '';
+
+            if ($cancelTxn && ! empty($cancelTxn->created_by_type) && ! empty($cancelTxn->created_by_id)) {
+                $actorType = (string) $cancelTxn->created_by_type;
+                $actorId = (int) $cancelTxn->created_by_id;
+                if ($actorType === 'member') {
+                    $name = trim((string) ($memberNames[$actorId] ?? ''));
+                    $type = $name !== '' ? 'member' : '';
+                } elseif ($actorType === 'admin') {
+                    $name = trim((string) ($adminNames[$actorId] ?? ''));
+                    $type = $name !== '' ? 'admin' : '';
+                }
+            }
+
+            if ($name === '' && $cancelledBy > 0) {
+                $memberName = trim((string) ($memberNames[$cancelledBy] ?? ''));
+                if ($memberName !== '') {
+                    $name = $memberName;
+                    $type = 'member';
+                } else {
+                    $adminName = trim((string) ($adminNames[$cancelledBy] ?? ''));
+                    if ($adminName !== '') {
+                        $name = $adminName;
+                        $type = 'admin';
+                    }
+                }
+            }
+
+            $cancellationInfoByTicket[$ticketId] = [
+                'name' => $name,
+                'type' => $type,
+            ];
+
+            if ($hasReasonColumn) {
+                $reasonByTicket[$ticketId] = trim((string) ($ticket->reason ?? ''));
+                continue;
+            }
+
+            $reasonByTicket[$ticketId] = '';
+            if (! $cancelTxn || ! is_string($cancelTxn->meta) || trim($cancelTxn->meta) === '') {
+                continue;
+            }
+
+            $decoded = json_decode($cancelTxn->meta, true);
+            if (is_array($decoded)) {
+                $reasonByTicket[$ticketId] = trim((string) ($decoded['reason'] ?? ''));
+            }
+        }
+
+        return [
+            'cancellation_info_by_ticket' => $cancellationInfoByTicket,
+            'reason_by_ticket' => $reasonByTicket,
+        ];
+    }
+
+    /**
+     * @param array<int> $memberIds
+     * @return array<int,string>
+     */
+    private function loadMemberNames(array $memberIds): array
+    {
+        if (! $this->hasTableCached('members')) {
+            return [];
+        }
+
+        $ids = collect($memberIds)
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        $rows = DB::table('members')
+            ->whereIn('code', $ids)
+            ->get(['code', 'user_name', 'name']);
+
+        $names = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row->code ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $names[$id] = trim((string) (($row->user_name ?? '') !== '' ? $row->user_name : ($row->name ?? '')));
+            $this->memberNameCache[$id] = $names[$id];
+        }
+
+        return $names;
+    }
+
+    /**
+     * @param array<int> $adminIds
+     * @return array<int,string>
+     */
+    private function loadAdminNames(array $adminIds): array
+    {
+        if (! $this->hasTableCached('employees')) {
+            return [];
+        }
+
+        $ids = collect($adminIds)
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        $rows = DB::table('employees')
+            ->whereIn('code', $ids)
+            ->get(['code', 'user_name']);
+
+        $names = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row->code ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $names[$id] = trim((string) ($row->user_name ?? ''));
+            $this->adminNameCache[$id] = $names[$id];
+        }
+
+        return $names;
+    }
+
+    private function resolveMemberName(int $actorId): string
+    {
+        if ($actorId <= 0 || ! $this->hasTableCached('members')) {
+            return '';
+        }
+
+        if (array_key_exists($actorId, $this->memberNameCache)) {
+            return $this->memberNameCache[$actorId];
+        }
+
+        $row = DB::table('members')
+            ->where('code', $actorId)
+            ->first(['user_name', 'name']);
+
+        $name = trim((string) (($row->user_name ?? '') !== '' ? ($row->user_name ?? '') : ($row->name ?? '')));
+        $this->memberNameCache[$actorId] = $name;
+
+        return $name;
+    }
+
+    private function resolveAdminName(int $actorId): string
+    {
+        if ($actorId <= 0 || ! $this->hasTableCached('employees')) {
+            return '';
+        }
+
+        if (array_key_exists($actorId, $this->adminNameCache)) {
+            return $this->adminNameCache[$actorId];
+        }
+
+        $name = trim((string) DB::table('employees')->where('code', $actorId)->value('user_name'));
+        $this->adminNameCache[$actorId] = $name;
+
+        return $name;
+    }
+
+    private function hasTableCached(string $table): bool
+    {
+        if (! array_key_exists($table, $this->schemaTableCache)) {
+            $this->schemaTableCache[$table] = Schema::hasTable($table);
+        }
+
+        return $this->schemaTableCache[$table];
+    }
+
+    private function hasColumnCached(string $table, string $column): bool
+    {
+        $cacheKey = $table . '.' . $column;
+        if (! array_key_exists($cacheKey, $this->schemaColumnCache)) {
+            if (! $this->hasTableCached($table)) {
+                $this->schemaColumnCache[$cacheKey] = false;
+            } else {
+                $this->schemaColumnCache[$cacheKey] = Schema::hasColumn($table, $column);
+            }
+        }
+
+        return $this->schemaColumnCache[$cacheKey];
     }
 
     private function responsePayload(JsonResponse $response): array

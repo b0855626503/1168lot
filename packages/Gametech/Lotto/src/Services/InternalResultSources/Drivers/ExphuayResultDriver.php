@@ -29,6 +29,8 @@ class ExphuayResultDriver implements InternalResultSourceDriver
      */
     public function fetch(array $params): array
     {
+        $startedAt = microtime(true);
+        $totalBudgetSeconds = max(1, (int) config('lotto_auto_result.internal_result_sources.exphuay.request_budget_seconds', 30));
         $type = (string) ($params['type'] ?? '');
         $date = (string) ($params['date'] ?? '');
         $page = max(1, (int) ($params['page'] ?? 1));
@@ -43,14 +45,18 @@ class ExphuayResultDriver implements InternalResultSourceDriver
         }
 
         $headers = $this->buildHeaders($type);
+        $primaryTimeout = min(
+            max(1, (int) config('lotto_auto_result.internal_result_sources.timeout_seconds', 15)),
+            $totalBudgetSeconds
+        );
         $fetch = $this->fetcher->get(
             $url,
             $query,
-            (int) config('lotto_auto_result.internal_result_sources.timeout_seconds', 15),
+            $primaryTimeout,
             $headers
         );
-        $fetch = $this->tryPythonWorkerFallback($fetch, $url, $query, $headers);
-        $fetch = $this->tryBrowserFallback($fetch, $url, $query, $headers);
+        $fetch = $this->tryPythonWorkerFallback($fetch, $url, $query, $headers, $startedAt, $totalBudgetSeconds);
+        $fetch = $this->tryBrowserFallback($fetch, $url, $query, $headers, $startedAt, $totalBudgetSeconds);
 
         return [
             'source' => $this->sourceKey(),
@@ -88,13 +94,31 @@ class ExphuayResultDriver implements InternalResultSourceDriver
      * @param array<string,mixed> $headers
      * @return array<string,mixed>
      */
-    private function tryPythonWorkerFallback(array $fetch, string $url, array $query, array $headers): array
+    private function tryPythonWorkerFallback(
+        array $fetch,
+        string $url,
+        array $query,
+        array $headers,
+        float $startedAt,
+        int $totalBudgetSeconds
+    ): array
     {
         if (! $this->shouldUsePythonWorkerFallback($fetch)) {
             return $fetch;
         }
 
-        $timeout = max(10, (int) config('lotto_auto_result.internal_result_sources.exphuay.python_worker_timeout_seconds', 20));
+        $remainingSeconds = $this->remainingTimeoutSeconds($startedAt, $totalBudgetSeconds);
+        if ($remainingSeconds <= 0) {
+            $fetch['meta'] = array_merge(
+                is_array($fetch['meta'] ?? null) ? $fetch['meta'] : [],
+                ['budget_exhausted_before_python_worker' => true]
+            );
+
+            return $fetch;
+        }
+
+        $configuredTimeout = max(1, (int) config('lotto_auto_result.internal_result_sources.exphuay.python_worker_timeout_seconds', 20));
+        $timeout = min($configuredTimeout, $remainingSeconds);
         $workerFetch = $this->pythonWorkerClient->fetch($url, $query, $headers, $timeout);
 
         if ((bool) ($workerFetch['ok'] ?? false)) {
@@ -118,13 +142,31 @@ class ExphuayResultDriver implements InternalResultSourceDriver
      * @param array<string,mixed> $headers
      * @return array<string,mixed>
      */
-    private function tryBrowserFallback(array $fetch, string $url, array $query, array $headers): array
+    private function tryBrowserFallback(
+        array $fetch,
+        string $url,
+        array $query,
+        array $headers,
+        float $startedAt,
+        int $totalBudgetSeconds
+    ): array
     {
         if (! $this->shouldUseBrowserFallback($fetch)) {
             return $fetch;
         }
 
-        $timeout = max(10, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_fallback_timeout_seconds', 60));
+        $remainingSeconds = $this->remainingTimeoutSeconds($startedAt, $totalBudgetSeconds);
+        if ($remainingSeconds <= 0) {
+            $fetch['meta'] = array_merge(
+                is_array($fetch['meta'] ?? null) ? $fetch['meta'] : [],
+                ['budget_exhausted_before_browser_fallback' => true]
+            );
+
+            return $fetch;
+        }
+
+        $configuredTimeout = max(1, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_fallback_timeout_seconds', 60));
+        $timeout = min($configuredTimeout, $remainingSeconds);
         $runtime = (new RenderedBrowserFetchDriver())->performRuntimeFetch([
             'url' => $url,
             'method' => 'GET',
@@ -137,7 +179,10 @@ class ExphuayResultDriver implements InternalResultSourceDriver
             'meta' => [
                 'browser_worker' => [
                     'wait_until' => (string) config('lotto_auto_result.internal_result_sources.exphuay.browser_wait_until', 'domcontentloaded'),
-                    'timeout_ms' => max(10000, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_timeout_ms', 60000)),
+                    'timeout_ms' => min(
+                        max(1000, $timeout * 1000),
+                        max(1000, (int) config('lotto_auto_result.internal_result_sources.exphuay.browser_timeout_ms', 60000))
+                    ),
                     'capture_url_patterns' => [$url],
                 ],
             ],
@@ -206,5 +251,12 @@ class ExphuayResultDriver implements InternalResultSourceDriver
         return str_contains($body, 'just a moment')
             || str_contains($body, 'cf-mitigated')
             || str_contains($body, 'cdn-cgi/challenge-platform');
+    }
+
+    private function remainingTimeoutSeconds(float $startedAt, int $totalBudgetSeconds): int
+    {
+        $elapsedSeconds = (int) floor(microtime(true) - $startedAt);
+
+        return max(0, $totalBudgetSeconds - $elapsedSeconds);
     }
 }

@@ -78,6 +78,7 @@ return [
         'shared_key' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_KEY', ''),
         'header_name' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_HEADER', 'X-Lotto-Internal-Key'),
         'exphuay' => [
+            'request_budget_seconds' => max(1, (int) env('LOTTO_EXPHUAY_REQUEST_BUDGET_SECONDS', 30)),
             'python_worker_enabled' => filter_var((string) env('LOTTO_EXPHUAY_PYTHON_WORKER_ENABLED', 'false'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === true,
             'python_worker_binary' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_BINARY', 'python3'),
             'python_worker_script' => (string) env('LOTTO_EXPHUAY_PYTHON_WORKER_SCRIPT', base_path('scripts/lotto/exphuay_curl_cffi_worker.py')),

@@ -34,6 +34,10 @@ class LottoAuditObserver
      */
     private function writeLog(string $mode, Model $model, array $itemPayload): void
     {
+        if ($this->shouldSkipAuditLog($model)) {
+            return;
+        }
+
         [$empCode, $userName] = $this->resolveActor();
 
         $log = new Log();
@@ -46,6 +50,39 @@ class LottoAuditObserver
         $log->ip = Request::ip();
         $log->user_create = $userName;
         $log->save();
+    }
+
+    private function shouldSkipAuditLog(Model $model): bool
+    {
+        if ($this->shouldSkipForTable((string) $model->getTable())) {
+            return true;
+        }
+
+        return $this->shouldSkipForBetRequest();
+    }
+
+    private function shouldSkipForTable(string $table): bool
+    {
+        return in_array($table, [
+            'lotto_dashboard_risk_snapshot',
+            'lotto_result_fetch_logs',
+        ], true);
+    }
+
+    private function shouldSkipForBetRequest(): bool
+    {
+        if (app()->runningInConsole()) {
+            return false;
+        }
+
+        $routeName = (string) (Request::route()?->getName() ?? '');
+        if ($routeName === 'frontend.api.v1.lotto.bet') {
+            return true;
+        }
+
+        $path = trim((string) Request::path(), '/');
+
+        return $path === 'api/v1/lotto/bet';
     }
 
     /**
@@ -82,4 +119,3 @@ class LottoAuditObserver
         return $changes;
     }
 }
-

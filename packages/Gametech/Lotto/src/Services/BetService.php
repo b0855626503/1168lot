@@ -34,6 +34,7 @@ class BetService
 {
     private const BLOCK_MODE_BLOCK = 'block';
     private const BLOCK_MODE_LIMIT_FUTURE = 'limit_future';
+    private static ?bool $hasBetConfirmedAtColumn = null;
 
     public function __construct(
         private ExposureService $exposureService,
@@ -112,7 +113,7 @@ class BetService
                 description: 'หักเงินจากการซื้อหวย'
             );
 
-            if (Schema::hasColumn('lotto_tickets', 'bet_confirmed_at')) {
+            if ($this->supportsBetConfirmedAtColumn()) {
                 $betConfirmedAt = DB::table('wallet_transactions')
                     ->where('id', $walletTxnId)
                     ->value('created_at');
@@ -365,6 +366,15 @@ class BetService
     private function calculatePotentialWinAmount(float $amount, float $payout): float
     {
         return round($amount * $payout, 2);
+    }
+
+    private function supportsBetConfirmedAtColumn(): bool
+    {
+        if (self::$hasBetConfirmedAtColumn === null) {
+            self::$hasBetConfirmedAtColumn = Schema::hasColumn('lotto_tickets', 'bet_confirmed_at');
+        }
+
+        return self::$hasBetConfirmedAtColumn;
     }
 
     /**
