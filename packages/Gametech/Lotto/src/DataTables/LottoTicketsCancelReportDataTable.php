@@ -17,7 +17,23 @@ class LottoTicketsCancelReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoTicketsCancelReportTransformer());
+        return $dataTable
+            ->setTransformer(new LottoTicketsCancelReportTransformer())
+            ->filterColumn('member_display', function ($query, $keyword): void {
+                $like = '%' . $keyword . '%';
+                $query->where(function ($sub) use ($like): void {
+                    $sub->where('members.user_name', 'like', $like)
+                        ->orWhere('members.name', 'like', $like);
+                });
+            })
+            ->filterColumn('market_name', function ($query, $keyword): void {
+                $like = '%' . $keyword . '%';
+                $query->where('lotto_markets.name', 'like', $like);
+            })
+            ->filterColumn('draw_date', function ($query, $keyword): void {
+                $like = '%' . $keyword . '%';
+                $query->where('lotto_draws.draw_date', 'like', $like);
+            });
     }
 
     public function query(LottoTicket $model)
