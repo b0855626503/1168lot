@@ -608,6 +608,49 @@ return [
             'days' => 14,
         ],
 
+        'xepay_deposit_create' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/deposit_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'xepay_deposit_callback' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/deposit_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'xepay_withdraw_create' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/withdraw_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'xepay_withdraw_callback' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/withdraw_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'xepay_balance' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/balance.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'xepay_api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xepay/api.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+
     ],
 
 ];

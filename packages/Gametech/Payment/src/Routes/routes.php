@@ -11,6 +11,10 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('wildpay/deposit/callback', 'WildPayController@deposit_callback')->name('api.wildpay.deposit.callback');
             Route::post('wildpay/withdraw/callback', 'WildPayController@withdraw_callback')->name('api.wildpay.withdraw.callback');
 
+            // ===== XEPAY =====
+            Route::post('xepay/deposit/callback', 'XEPayController@deposit_callback')->name('api.xepay.deposit.callback');
+            Route::post('xepay/withdraw/callback', 'XEPayController@withdraw_callback')->name('api.xepay.withdraw.callback');
+
 //            Route::post('payment/deposit/callback/usd', 'SulifuPayController@deposit_callback_usd')->name('api.payment.deposit.callback.usd');
 //            Route::post('payment/withdraw/callback/usd', 'SulifuPayController@withdraw_callback_usd')->name('api.payment.withdraw.callback.usd');
 
@@ -53,7 +57,10 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('payonex/deposit/callback', 'PayoneXController@deposit_callback')->name('api.payonex.deposit.callback');
             Route::post('payonex/withdraw/callback', 'PayoneXController@withdraw_callback')->name('api.payonex.withdraw.callback');
 
-
+            Route::get('xepay/deposit/status/{txid}', 'XEPayController@checkStatus')->name('api.xepay.deposit.status');
+            Route::post('xepay/deposit/expire/{txid}', 'XEPayController@expire')->name('api.xepay.deposit.expire');
+            Route::post('xepay/deposit/create', 'XEPayController@deposit')->name('api.xepay.deposit');
+            Route::get('xepay/qrcode/{id}', 'XEPayController@index')->name('api.xepay.index');
         });
 
     });
