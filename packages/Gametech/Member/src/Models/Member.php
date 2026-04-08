@@ -146,6 +146,7 @@ class Member extends Authenticatable implements MemberContract
         'nocashback',
         'game_user',
         'maxwithdraw_day',
+        'wallet_address',
     ];
 
     protected $casts = [
@@ -226,6 +227,7 @@ class Member extends Authenticatable implements MemberContract
         'date_update' => 'datetime:Y-m-d H:00',
         'password' => 'string',
         'amount' => 'decimal:2',
+        'wallet_address' => 'string',
     ];
 
     /**

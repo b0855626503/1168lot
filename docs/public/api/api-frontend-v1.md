@@ -363,7 +363,32 @@ Response ตัวอย่างเมื่อ validation ไม่ผ่า�
 }
 ```
 
-#### 2.5 ข้อมูลแนะนำเพื่อน
+#### 2.5 อัปเดต Wallet Address
+- `POST /member/wallet-address`
+- Auth: ต้องใช้ token
+
+Request body
+```json
+{
+  "wallet_address": "0xABC123..."
+}
+```
+
+หมายเหตุ:
+- `wallet_address` ต้องมีค่า ความยาวสูงสุด 255 ตัวอักษร
+- field นี้ใช้เก็บ crypto wallet address หรือ external payment address ของสมาชิก
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "member_code": 1,
+  "wallet_address": "0xABC123...",
+  "message": "อัปเดต wallet address สำเร็จ"
+}
+```
+
+#### 2.6 ข้อมูลแนะนำเพื่อน
 - `GET /member/contributor`
 - Auth: ต้องใช้ token
 
@@ -425,7 +450,7 @@ HTTP status
 - token ไม่ถูกต้อง/หมดอายุ: `401`
 - เกิดข้อผิดพลาดภายใน: `422`
 
-#### 2.6 คูปองของสมาชิก
+#### 2.7 คูปองของสมาชิก
 - `POST /coupon/redeem`
 - Auth: ต้องใช้ token
 
@@ -516,7 +541,7 @@ HTTP status
 - token ไม่ถูกต้อง/หมดอายุ: `401`
 - คูปองไม่ถูกต้อง/หมดอายุ/ผิดเงื่อนไข/รายการรับไม่ได้: `422`
 
-#### 2.7 ประวัติธุรกรรมสมาชิก (อ้างอิงหน้า `/member/history`)
+#### 2.8 ประวัติธุรกรรมสมาชิก (อ้างอิงหน้า `/member/history`)
 - `GET /member/history`
 - `GET /member/history/{type}`
 - Auth: ต้องใช้ token
@@ -1850,6 +1875,7 @@ Response หลัก:
 - `GET /member/profile`
 - `GET /member/balance`
 - `POST /member/change-password`
+- `POST /member/wallet-address`
 - `POST /wallet/withdraw`
 - `GET /games/types`
 - `GET /games/providers/{type}`

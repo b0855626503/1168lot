@@ -25,6 +25,33 @@ class MemberController extends BaseController
         return $this->buildBalanceResponse($request, false);
     }
 
+    public function updateWalletAddress(Request $request)
+    {
+        try {
+            $member = $request->user() ?: $request->user('customer');
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $validated = validator($request->all(), [
+                'wallet_address' => ['required', 'string', 'max:255'],
+            ])->validate();
+
+            app('Gametech\Member\Repositories\MemberRepository')->update([
+                'wallet_address' => (string) $validated['wallet_address'],
+            ], (int) $member->code);
+
+            return $this->sendResponseNew([
+                'member_code' => (int) $member->code,
+                'wallet_address' => (string) $validated['wallet_address'],
+            ], 'อัปเดต wallet address สำเร็จ');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->sendError($e->validator->errors()->first() ?: 'ข้อมูลไม่ถูกต้อง', 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถอัปเดต wallet address ได้ในขณะนี้', 422);
+        }
+    }
+
     public function changePassword(Request $request)
     {
         try {

@@ -603,6 +603,16 @@
 - policy:
   - การเก็บ `user_pass` ยังจำเป็นในช่วงนี้เพื่อรักษา compatibility กับ flow เดิมที่ยังพึ่ง password แบบ legacy
 
+## นโยบาย Frontend API v1 Member Wallet Address
+
+- เพิ่ม endpoint `POST /api/v1/member/wallet-address` (ต้องใช้ Bearer token)
+- request รับ:
+  - `wallet_address` (required, string, max 255)
+- implementation update `members.wallet_address` ผ่าน `MemberRepository`
+- field `wallet_address` เพิ่มใน migration `2026_04_08_000001_add_wallet_address_to_members_table.php`
+  - type: `varchar(255) nullable`
+  - วางหลัง column `wallet_id`
+
 ## นโยบาย Frontend Lotto Critical Path API
 
 - `GET /api/v1/lotto/draws`

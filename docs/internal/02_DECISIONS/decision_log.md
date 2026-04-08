@@ -3,6 +3,16 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-08 — เพิ่ม `wallet_address` Field และ FrontendApi Endpoint สำหรับสมาชิก (APPROVED)
+
+- เพิ่ม column `members.wallet_address varchar(255) nullable` (migration `2026_04_08_000001`)
+- เพิ่ม `wallet_address` ใน `Member.$fillable` และ `$casts`
+- เพิ่ม endpoint `POST /api/v1/member/wallet-address` (auth required) ใน FrontendApi
+- route name: `frontend.api.v1.member.wallet_address`
+- เหตุผล:
+  - รองรับการเก็บ crypto wallet address หรือ external payment address ของสมาชิก
+  - ใช้ MemberRepository ตาม pattern เดิม (ADR-001 compliant)
+
 ## 2026-04-06 — Market-Level Auto Refund on `No Result` Is Configurable and Reuses Draw Cancel-All-Refund Flow (APPROVED)
 
 - เพิ่ม market flag ใหม่ `lotto_markets.auto_refund_on_no_result` (default `false`)

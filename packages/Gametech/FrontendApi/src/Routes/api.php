@@ -80,6 +80,8 @@ Route::domain($apiSubdomain . '.' . $apiDomain)
                 ->name('frontend.api.v1.member.loadbalance');
             Route::post('member/change-password', [MemberController::class, 'changePassword'])
                 ->name('frontend.api.v1.member.change_password');
+            Route::post('member/wallet-address', [MemberController::class, 'updateWalletAddress'])
+                ->name('frontend.api.v1.member.wallet_address');
             Route::get('member/contributor', [MemberController::class, 'contributor'])
                 ->name('frontend.api.v1.member.contributor');
             Route::get('member/history', [MemberController::class, 'history'])
