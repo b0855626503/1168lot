@@ -114,7 +114,7 @@ class XEPayController extends AppBaseController
             'merNo' => (string) config('xepay.mer_no'),
             'tradeNo' => trim($txid),
             'cType' => (string) config('xepay.c_type'),
-            'bankCode' => $providerBankCode,
+            'bankCode' => '',
             'orderAmount' => (string) $amount,
             'playerId' => trim((string) $member->user_name),
             'playerName' => trim((string) $member->name),
