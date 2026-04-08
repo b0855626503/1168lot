@@ -183,7 +183,7 @@ class XEPayController extends AppBaseController
         return response()->json([
             'success' => true,
             'msg' => __('app.topup.create'),
-            'url' => route('api.xepay.index', ['id' => $detail]),
+            'url' => $payPage,
             'payment_url' => $payPage,
         ]);
     }
