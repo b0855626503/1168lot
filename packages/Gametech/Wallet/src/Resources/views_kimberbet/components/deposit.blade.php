@@ -1600,7 +1600,11 @@
                             const msg = res.data.msg || this.trans('app.topup.create');
                             window.Toast.fire({icon: 'success', title: msg, customClass: {popup: 'my-toast'}});
                             setTimeout(() => {
-                                window.location.href = res.data.url;
+                                if(res.data.target === 'blank'){
+                                    window.open(res.data.url, '_blank');
+                                }else {
+                                    window.location.href = res.data.url;
+                                }
                             }, 500);
                         } else if (res.data.status === 'has_pending') {
                             const d = res.data.data;

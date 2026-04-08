@@ -184,7 +184,7 @@ class XEPayController extends AppBaseController
             'success' => true,
             'msg' => __('app.topup.create'),
             'url' => $payPage,
-            'payment_url' => $payPage,
+            'target' => 'blank',
         ]);
     }
 
