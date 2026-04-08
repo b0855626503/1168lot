@@ -57,10 +57,7 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('payonex/deposit/callback', 'PayoneXController@deposit_callback')->name('api.payonex.deposit.callback');
             Route::post('payonex/withdraw/callback', 'PayoneXController@withdraw_callback')->name('api.payonex.withdraw.callback');
 
-            Route::get('xepay/deposit/status/{txid}', 'XEPayController@checkStatus')->name('api.xepay.deposit.status');
-            Route::post('xepay/deposit/expire/{txid}', 'XEPayController@expire')->name('api.xepay.deposit.expire');
-            Route::post('xepay/deposit/create', 'XEPayController@deposit')->name('api.xepay.deposit');
-            Route::get('xepay/qrcode/{id}', 'XEPayController@index')->name('api.xepay.index');
+
         });
 
     });
@@ -133,6 +130,10 @@ Route::domain($domain)->group(function () {
                 Route::post('payonex/deposit/create', 'Gametech\Payment\Http\Controllers\PayoneXController@deposit')->name('api.payonex.deposit');
                 Route::get('payonex/qrcode/{id}', 'Gametech\Payment\Http\Controllers\PayoneXController@index')->name('api.payonex.index');
 
+                Route::get('xepay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\XEPayController@checkStatus')->name('api.xepay.deposit.status');
+                Route::post('xepay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\XEPayController@expire')->name('api.xepay.deposit.expire');
+                Route::post('xepay/deposit/create', 'Gametech\Payment\Http\Controllers\XEPayController@deposit')->name('api.xepay.deposit');
+                Route::get('xepay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\XEPayController@index')->name('api.xepay.index');
 
 //	            Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@checkStatus')->name('api.payment.deposit.status');
 //	            Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@expire')->name('api.payment.deposit.expire');
