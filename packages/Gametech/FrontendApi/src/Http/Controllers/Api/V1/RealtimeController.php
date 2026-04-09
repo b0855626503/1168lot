@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\Response;
 
 class RealtimeController extends BaseController
 {
@@ -77,11 +78,26 @@ class RealtimeController extends BaseController
         }
 
         $response = Broadcast::auth($request);
-        $payload = json_decode((string) $response->getContent(), true);
-        if (! is_array($payload)) {
-            $payload = [];
+
+        if (is_array($response)) {
+            return response()->json($response);
         }
 
-        return response()->json($payload, $response->getStatusCode());
+        if (is_string($response)) {
+            $payload = json_decode($response, true);
+
+            return response()->json(is_array($payload) ? $payload : ['auth' => $response]);
+        }
+
+        if ($response instanceof Response) {
+            $payload = json_decode((string) $response->getContent(), true);
+            if (! is_array($payload)) {
+                $payload = [];
+            }
+
+            return response()->json($payload, $response->getStatusCode());
+        }
+
+        return response()->json([]);
     }
 }
