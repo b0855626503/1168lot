@@ -50,6 +50,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "laravel/boost": "^1.8",
         "laravel/pint": "^1.22",
         "mockery/mockery": "^1.4.2",
         "nunomaduro/collision": "^7.12",
