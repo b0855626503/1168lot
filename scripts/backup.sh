@@ -27,7 +27,8 @@ cp ~/.openclaw/openclaw.json.backup.* "$BACKUP_DIR/" 2>/dev/null || true
 echo "Backing up memory files..."
 tar -czf "$BACKUP_DIR/openclaw_memory_$DATE.tar.gz" \
   -C /home/boat/Projects/1168lot \
-  memory/ MEMORY.md SOUL.md USER.md TOOLS.md HEARTBEAT.md
+  memory/ MEMORY.md \
+  workspace/SOUL.md workspace/USER.md workspace/TOOLS.md workspace/HEARTBEAT.md workspace/IDENTITY.md
 
 # 4. Create backup report
 cat > "$BACKUP_DIR/backup_report_$DATE.txt" << EOF

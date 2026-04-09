@@ -19,12 +19,7 @@ root_allowlist=(
   "README.md"
   "CLAUDE.md"
   "FILE_POLICY.md"
-  "HEARTBEAT.md"
-  "IDENTITY.md"
   "MIGRATION_GUIDE.md"
-  "SOUL.md"
-  "TOOLS.md"
-  "USER.md"
 )
 
 for f in "${md_files[@]}"; do
@@ -69,6 +64,12 @@ for f in "${md_files[@]}"; do
 
     if [[ "$f" == memory/* ]]; then
       log_warn "$f" "markdown under memory is temporarily allowlisted"
+      warnings=$((warnings + 1))
+      continue
+    fi
+
+    if [[ "$f" == workspace/* ]]; then
+      log_warn "$f" "markdown under workspace is temporarily allowlisted"
       warnings=$((warnings + 1))
       continue
     fi
