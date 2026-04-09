@@ -9,6 +9,65 @@ use Illuminate\Support\Facades\Schema;
 
 class LottoProfitLossForecastReportService
 {
+    public function buildSummary(?int $marketId = null, ?int $packageId = null, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $hasDiscountAmountAtTime = Schema::hasColumn('lotto_ticket_items', 'discount_amount_at_time');
+        $hasPayableAmountAtTime = Schema::hasColumn('lotto_ticket_items', 'payable_amount_at_time');
+        $hasDiscountPercentAtTime = Schema::hasColumn('lotto_ticket_items', 'discount_percent_at_time');
+
+        $discountAmountExpression = $this->discountAmountExpression($hasDiscountAmountAtTime, $hasDiscountPercentAtTime);
+        $netAmountExpression = $this->netAmountExpression($hasPayableAmountAtTime, $discountAmountExpression);
+
+        $query = DB::table('lotto_ticket_items')
+            ->join('lotto_tickets', 'lotto_tickets.id', '=', 'lotto_ticket_items.ticket_id')
+            ->join('lotto_draws', 'lotto_draws.id', '=', 'lotto_tickets.draw_id')
+            ->where('lotto_tickets.status', '!=', 'cancelled');
+
+        if ($marketId !== null) {
+            $query->where('lotto_draws.market_id', $marketId);
+        }
+
+        if ($packageId !== null) {
+            $query->where('lotto_ticket_items.package_id_at_time', $packageId);
+        }
+
+        if ($startDate !== null && $endDate !== null) {
+            $query->whereBetween('lotto_draws.draw_date', [$startDate, $endDate]);
+        }
+
+        $summary = $query->first([
+            DB::raw('COALESCE(SUM(lotto_ticket_items.amount), 0) as total_bet_amount'),
+            DB::raw(sprintf(
+                'COALESCE(SUM(%s), 0) as total_discount_amount',
+                $discountAmountExpression
+            )),
+            DB::raw(sprintf(
+                'COALESCE(SUM(%s), 0) as total_receive_amount',
+                $netAmountExpression
+            )),
+            DB::raw('COALESCE(SUM(lotto_ticket_items.win_amount), 0) as total_payout_amount'),
+            DB::raw('COUNT(DISTINCT lotto_draws.id) as draw_count'),
+            DB::raw('COUNT(DISTINCT lotto_ticket_items.package_id_at_time) as package_count'),
+        ]);
+
+        $totalBetAmount = (float) ($summary->total_bet_amount ?? 0);
+        $totalDiscountAmount = (float) ($summary->total_discount_amount ?? 0);
+        $totalReceiveAmount = (float) ($summary->total_receive_amount ?? ($totalBetAmount - $totalDiscountAmount));
+        $totalPayoutAmount = (float) ($summary->total_payout_amount ?? 0);
+
+        return [
+            'summary' => [
+                'total_bet_amount' => $totalBetAmount,
+                'total_discount_amount' => $totalDiscountAmount,
+                'total_receive_amount' => $totalReceiveAmount,
+                'total_payout_amount' => $totalPayoutAmount,
+                'total_profit_amount' => $totalReceiveAmount - $totalPayoutAmount,
+                'draw_count' => (int) ($summary->draw_count ?? 0),
+                'package_count' => (int) ($summary->package_count ?? 0),
+            ],
+        ];
+    }
+
     public function build(int $marketId, int $drawId, int $packageId): array
     {
         $draw = DB::table('lotto_draws as draws')
@@ -73,18 +132,8 @@ class LottoProfitLossForecastReportService
         $hasPayableAmountAtTime = Schema::hasColumn('lotto_ticket_items', 'payable_amount_at_time');
         $hasDiscountPercentAtTime = Schema::hasColumn('lotto_ticket_items', 'discount_percent_at_time');
 
-        $discountAmountExpression = $hasDiscountAmountAtTime
-            ? 'lotto_ticket_items.discount_amount_at_time'
-            : ($hasDiscountPercentAtTime
-                ? '(lotto_ticket_items.amount * lotto_ticket_items.discount_percent_at_time / 100)'
-                : '0');
-
-        $netAmountExpression = $hasPayableAmountAtTime
-            ? 'lotto_ticket_items.payable_amount_at_time'
-            : sprintf(
-                '(lotto_ticket_items.amount - (%s))',
-                $discountAmountExpression
-            );
+        $discountAmountExpression = $this->discountAmountExpression($hasDiscountAmountAtTime, $hasDiscountPercentAtTime);
+        $netAmountExpression = $this->netAmountExpression($hasPayableAmountAtTime, $discountAmountExpression);
 
         $betStats = DB::table('lotto_ticket_items')
             ->join('lotto_tickets', 'lotto_tickets.id', '=', 'lotto_ticket_items.ticket_id')
@@ -290,5 +339,24 @@ class LottoProfitLossForecastReportService
             BetType::RUN_TOP, BetType::RUN_BOTTOM => 1,
             default => 0,
         };
+    }
+
+    private function discountAmountExpression(bool $hasDiscountAmountAtTime, bool $hasDiscountPercentAtTime): string
+    {
+        return $hasDiscountAmountAtTime
+            ? 'lotto_ticket_items.discount_amount_at_time'
+            : ($hasDiscountPercentAtTime
+                ? '(lotto_ticket_items.amount * lotto_ticket_items.discount_percent_at_time / 100)'
+                : '0');
+    }
+
+    private function netAmountExpression(bool $hasPayableAmountAtTime, string $discountAmountExpression): string
+    {
+        return $hasPayableAmountAtTime
+            ? 'lotto_ticket_items.payable_amount_at_time'
+            : sprintf(
+                '(lotto_ticket_items.amount - (%s))',
+                $discountAmountExpression
+            );
     }
 }

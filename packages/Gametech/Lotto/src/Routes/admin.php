@@ -301,6 +301,8 @@ Route::domain(
                 ->name('admin.lotto.reports.profit_loss_forecast.package_options');
             Route::get('reports/profit-loss-forecast/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@loadData')
                 ->name('admin.lotto.reports.profit_loss_forecast.loaddata');
+            Route::get('reports/profit-loss-forecast/summary', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoProfitLossForecastReportController@loadSummary')
+                ->name('admin.lotto.reports.profit_loss_forecast.summary');
 
             Route::get('reports/member-bet-types', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoMemberBetTypesReportController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.member_bet_types_report.index',

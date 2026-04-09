@@ -165,6 +165,31 @@
                     <div class="card-body">
                         <div class="row align-items-end">
                             <div class="col-lg-3 col-md-6 mb-3">
+                                <label class="mb-1">โหมดสรุป</label>
+                                <select class="form-control form-control-sm" v-model="summaryScope" @change="onSummaryScopeChange">
+                                    <option value="all">สรุปทั้งหมด</option>
+                                    <option value="date">สรุปตามช่วงวันที่</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3" v-if="summaryScope === 'date'">
+                                <label class="mb-1">วันที่เริ่มต้น</label>
+                                <input
+                                    type="date"
+                                    class="form-control form-control-sm"
+                                    v-model="summaryStartDate"
+                                    @change="onSummaryDateChange"
+                                >
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3" v-if="summaryScope === 'date'">
+                                <label class="mb-1">วันที่สิ้นสุด</label>
+                                <input
+                                    type="date"
+                                    class="form-control form-control-sm"
+                                    v-model="summaryEndDate"
+                                    @change="onSummaryDateChange"
+                                >
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">ตลาด</label>
                                 <select ref="marketSelect" class="form-control form-control-sm" @change="onMarketChange($event.target.value)">
                                     <option value="">เลือกตลาด</option>
@@ -248,7 +273,48 @@
                         </div>
 
                         <div class="mb-3 text-muted">
-                            เลือก `ตลาด` `แพกเกจ` และ `งวดหวย` ก่อน แล้วระบบจะโหลดตารางคาดการณ์กำไร/ขาดทุนของงวดนั้นทันที
+                            ส่วนสรุปด้านบนโหลดอัตโนมัติทันที ส่วนตารางรายละเอียดด้านล่างต้องเลือก `ตลาด` `แพกเกจ` และ `งวดหวย`
+                        </div>
+
+                        <div class="card card-outline card-info">
+                            <div class="card-header py-2">
+                                <h4 class="card-title mb-0">
+                                    สรุปรวม
+                                    <small class="text-muted ml-2">@{{ summaryScopeLabel }}</small>
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div v-if="isLoadingSummary" class="text-muted">กำลังโหลดข้อมูลสรุป...</div>
+                                <div v-else-if="summaryErrorMessage" class="alert alert-warning mb-0">@{{ summaryErrorMessage }}</div>
+                                <div v-else class="row">
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดแทง</div>
+                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_bet_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ส่วนลด</div>
+                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_discount_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดรับ</div>
+                                        <div class="font-weight-bold text-success">@{{ formatMoney(summary.total_receive_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดจ่าย</div>
+                                        <div class="font-weight-bold text-danger">@{{ formatMoney(summary.total_payout_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">สุทธิ</div>
+                                        <div class="font-weight-bold" :class="summary.total_profit_amount >= 0 ? 'text-success' : 'text-danger'">
+                                            @{{ formatMoney(summary.total_profit_amount) }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">จำนวนงวด/แพกเกจ</div>
+                                        <div class="font-weight-bold">@{{ summary.draw_count }} / @{{ summary.package_count }}</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div v-if="!hasCompleteFilters" class="alert alert-info mb-0">
@@ -375,10 +441,12 @@
         const initialState = {
             marketOptions: @json($marketOptions ?? []),
             initialFilters: @json($initialFilters ?? ['market_id' => null, 'package_id' => null, 'draw_id' => null]),
+            initialSummaryFilters: @json($initialSummaryFilters ?? ['scope' => 'all', 'start_date' => null, 'end_date' => null]),
             viewUrl: @json(route('admin.lotto.reports.profit_loss_forecast')),
             loadPackageOptionsUrl: @json(route('admin.lotto.reports.profit_loss_forecast.package_options')),
             loadDrawOptionsUrl: @json(route('admin.lotto.reports.profit_loss_forecast.draw_options')),
             loadDataUrl: @json(route('admin.lotto.reports.profit_loss_forecast.loaddata')),
+            loadSummaryUrl: @json(route('admin.lotto.reports.profit_loss_forecast.summary')),
         };
 
         const normalizeId = function (value) {
@@ -439,10 +507,25 @@
                     pendingRequestedPackageId: normalizeId(initialState.initialFilters.package_id),
                     pendingRequestedDrawId: normalizeId(initialState.initialFilters.draw_id),
                     report: buildEmptyReport(),
+                    summary: {
+                        total_bet_amount: 0,
+                        total_discount_amount: 0,
+                        total_receive_amount: 0,
+                        total_payout_amount: 0,
+                        total_profit_amount: 0,
+                        draw_count: 0,
+                        package_count: 0,
+                    },
                     viewUrl: String(initialState.viewUrl || ''),
                     loadPackageOptionsUrl: String(initialState.loadPackageOptionsUrl || ''),
                     loadDrawOptionsUrl: String(initialState.loadDrawOptionsUrl || ''),
                     loadDataUrl: String(initialState.loadDataUrl || ''),
+                    loadSummaryUrl: String(initialState.loadSummaryUrl || ''),
+                    summaryScope: String((initialState.initialSummaryFilters || {}).scope || 'all') === 'date' ? 'date' : 'all',
+                    summaryStartDate: String((initialState.initialSummaryFilters || {}).start_date || ''),
+                    summaryEndDate: String((initialState.initialSummaryFilters || {}).end_date || ''),
+                    isLoadingSummary: false,
+                    summaryErrorMessage: '',
                     isLoadingPackageOptions: false,
                     isLoadingDrawOptions: false,
                     isLoadingReport: false,
@@ -471,6 +554,28 @@
                         return Object.values(cells).some((cell) => Number((cell || {}).amount || 0) > 0);
                     });
                 },
+                hasValidSummaryDateRange: function () {
+                    if (this.summaryScope !== 'date') {
+                        return true;
+                    }
+
+                    if (!this.summaryStartDate || !this.summaryEndDate) {
+                        return false;
+                    }
+
+                    return this.summaryStartDate <= this.summaryEndDate;
+                },
+                summaryScopeLabel: function () {
+                    if (this.summaryScope !== 'date') {
+                        return 'ทุกช่วงเวลา';
+                    }
+
+                    if (!this.summaryStartDate || !this.summaryEndDate) {
+                        return 'กรุณาเลือกช่วงวันที่';
+                    }
+
+                    return `${this.summaryStartDate} ถึง ${this.summaryEndDate}`;
+                },
             },
             mounted: function () {
                 window.profitLossForecastApp = this;
@@ -478,6 +583,7 @@
                 this.initializePackageSelect();
                 this.initializeDrawSelect();
                 this.syncSelect2Value(this.$refs.marketSelect, this.selectedMarketId);
+                this.fetchSummary(false);
 
                 if (this.selectedMarketId !== '') {
                     const shouldAutoLoadReport = this.pendingRequestedPackageId !== '' && this.pendingRequestedDrawId !== '';
@@ -623,6 +729,7 @@
                     });
 
                     this.updateBrowserUrl();
+                    this.fetchSummary(false);
 
                     if (this.selectedMarketId === '') {
                         return;
@@ -642,6 +749,7 @@
                     this.pendingRequestedPackageId = '';
                     this.syncSelect2Value(this.$refs.packageSelect, this.selectedPackageId);
                     this.updateBrowserUrl();
+                    this.fetchSummary(false);
 
                     if (!this.hasCompleteFilters) {
                         this.report = buildEmptyReport();
@@ -668,6 +776,19 @@
                     }
 
                     this.fetchReport();
+                },
+                onSummaryScopeChange: function () {
+                    if (this.summaryScope !== 'date') {
+                        this.summaryStartDate = '';
+                        this.summaryEndDate = '';
+                    }
+
+                    this.updateBrowserUrl();
+                    this.fetchSummary(false);
+                },
+                onSummaryDateChange: function () {
+                    this.updateBrowserUrl();
+                    this.fetchSummary(false);
                 },
                 loadPackageOptions: function (marketId, requestedPackageId, shouldAutoLoadReport) {
                     if (!marketId || !this.loadPackageOptionsUrl) {
@@ -781,6 +902,67 @@
                             this.isLoadingReport = false;
                         });
                 },
+                fetchSummary: function (shouldUpdateUrl = true) {
+                    if (!this.loadSummaryUrl) {
+                        return;
+                    }
+
+                    if (!this.hasValidSummaryDateRange) {
+                        this.summaryErrorMessage = 'ช่วงวันที่ไม่ถูกต้อง';
+                        return;
+                    }
+
+                    this.isLoadingSummary = true;
+                    this.summaryErrorMessage = '';
+
+                    const headers = {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    };
+
+                    const searchParams = new URLSearchParams();
+                    if (this.selectedMarketId !== '') {
+                        searchParams.set('market_id', this.selectedMarketId);
+                    }
+                    if (this.selectedPackageId !== '') {
+                        searchParams.set('package_id', this.selectedPackageId);
+                    }
+                    searchParams.set('summary_scope', this.summaryScope);
+                    if (this.summaryScope === 'date') {
+                        searchParams.set('start_date', this.summaryStartDate || '');
+                        searchParams.set('end_date', this.summaryEndDate || '');
+                    }
+
+                    const queryString = searchParams.toString();
+                    const targetUrl = queryString !== '' ? `${this.loadSummaryUrl}?${queryString}` : this.loadSummaryUrl;
+
+                    this.requestJson(targetUrl, headers)
+                        .then((data) => {
+                            const summary = data && data.summary ? data.summary : {};
+                            this.summary = {
+                                total_bet_amount: Number(summary.total_bet_amount || 0),
+                                total_discount_amount: Number(summary.total_discount_amount || 0),
+                                total_receive_amount: Number(summary.total_receive_amount || 0),
+                                total_payout_amount: Number(summary.total_payout_amount || 0),
+                                total_profit_amount: Number(summary.total_profit_amount || 0),
+                                draw_count: Number(summary.draw_count || 0),
+                                package_count: Number(summary.package_count || 0),
+                            };
+
+                            if (shouldUpdateUrl) {
+                                this.updateBrowserUrl();
+                            }
+                        })
+                        .catch((error) => {
+                            const message = (error && error.response && error.response.data && error.response.data.message)
+                                ? String(error.response.data.message)
+                                : 'โหลดสรุปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+                            this.summaryErrorMessage = message;
+                        })
+                        .then(() => {
+                            this.isLoadingSummary = false;
+                        });
+                },
                 toggleAutoReload: function () {
                     if (this.autoReloadEnabled) {
                         this.stopAutoReload();
@@ -831,6 +1013,9 @@
                     this.selectedMarketId = '';
                     this.selectedPackageId = '';
                     this.selectedDrawId = '';
+                    this.summaryScope = 'all';
+                    this.summaryStartDate = '';
+                    this.summaryEndDate = '';
                     this.pendingRequestedPackageId = '';
                     this.pendingRequestedDrawId = '';
                     this.packageOptions = [];
@@ -846,6 +1031,7 @@
                     });
 
                     this.updateBrowserUrl();
+                    this.fetchSummary(false);
                 },
                 updateBrowserUrl: function () {
                     if (!window.history || !this.viewUrl) {
@@ -864,6 +1050,17 @@
 
                     if (this.selectedDrawId !== '') {
                         searchParams.set('draw_id', this.selectedDrawId);
+                    }
+
+                    searchParams.set('summary_scope', this.summaryScope);
+
+                    if (this.summaryScope === 'date') {
+                        if (this.summaryStartDate !== '') {
+                            searchParams.set('start_date', this.summaryStartDate);
+                        }
+                        if (this.summaryEndDate !== '') {
+                            searchParams.set('end_date', this.summaryEndDate);
+                        }
                     }
 
                     const queryString = searchParams.toString();

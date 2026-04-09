@@ -29,6 +29,11 @@ class LottoProfitLossForecastReportController extends AppBaseController
                 'package_id' => $this->normalizePositiveInt($request->query('package_id')),
                 'draw_id' => $this->normalizePositiveInt($request->query('draw_id')),
             ],
+            'initialSummaryFilters' => [
+                'scope' => $this->normalizeSummaryScope($request->query('summary_scope')),
+                'start_date' => $this->normalizeDate($request->query('start_date')),
+                'end_date' => $this->normalizeDate($request->query('end_date')),
+            ],
         ]);
     }
 
@@ -140,6 +145,39 @@ class LottoProfitLossForecastReportController extends AppBaseController
         }
     }
 
+    public function loadSummary(Request $request, LottoProfitLossForecastReportService $service)
+    {
+        $marketId = $this->normalizePositiveInt($request->query('market_id'));
+        $packageId = $this->normalizePositiveInt($request->query('package_id'));
+        $summaryScope = $this->normalizeSummaryScope($request->query('summary_scope'));
+        $startDate = $this->normalizeDate($request->query('start_date'));
+        $endDate = $this->normalizeDate($request->query('end_date'));
+
+        if ($summaryScope === 'date' && ($startDate === null || $endDate === null)) {
+            return response()->json([
+                'message' => 'กรุณาระบุวันที่เริ่มต้นและสิ้นสุด',
+            ], 422);
+        }
+
+        if (
+            $summaryScope === 'date'
+            && $startDate !== null
+            && $endDate !== null
+            && strtotime($startDate) > strtotime($endDate)
+        ) {
+            return response()->json([
+                'message' => 'วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด',
+            ], 422);
+        }
+
+        return response()->json($service->buildSummary(
+            $marketId,
+            $packageId,
+            $summaryScope === 'date' ? $startDate : null,
+            $summaryScope === 'date' ? $endDate : null
+        ));
+    }
+
     private function buildMarketOptions(): array
     {
         return LotteryMarket::query()
@@ -184,5 +222,24 @@ class LottoProfitLossForecastReportController extends AppBaseController
             'resulted' => 'ออกผลแล้ว',
             default => $status !== '' ? $status : '-',
         };
+    }
+
+    private function normalizeSummaryScope($value): string
+    {
+        return strtolower((string) $value) === 'date' ? 'date' : 'all';
+    }
+
+    private function normalizeDate($value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $date = trim($value);
+        if ($date === '') {
+            return null;
+        }
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : null;
     }
 }
