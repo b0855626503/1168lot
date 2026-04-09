@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "wsl.exe",
+      "args": [
+        "/usr/bin/php8.2",
+        "/home/boat/Projects/1168lot/artisan",
+        "boost:mcp"
+      ]
+    }
+  }
+}
