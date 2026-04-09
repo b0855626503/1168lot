@@ -163,6 +163,7 @@
                         <h3 class="card-title mb-0">{{ $menu->currentName }}</h3>
                     </div>
                     <div class="card-body">
+                        <div class="mb-2 font-weight-bold text-primary">กลุ่มสรุปรวม</div>
                         <div class="row align-items-end">
                             <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">โหมดสรุป</label>
@@ -171,24 +172,73 @@
                                     <option value="date">สรุปตามช่วงวันที่</option>
                                 </select>
                             </div>
-                            <div class="col-lg-3 col-md-6 mb-3" v-if="summaryScope === 'date'">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">วันที่เริ่มต้น</label>
                                 <input
                                     type="date"
                                     class="form-control form-control-sm"
                                     v-model="summaryStartDate"
+                                    :disabled="summaryScope !== 'date'"
                                     @change="onSummaryDateChange"
                                 >
                             </div>
-                            <div class="col-lg-3 col-md-6 mb-3" v-if="summaryScope === 'date'">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">วันที่สิ้นสุด</label>
                                 <input
                                     type="date"
                                     class="form-control form-control-sm"
                                     v-model="summaryEndDate"
+                                    :disabled="summaryScope !== 'date'"
                                     @change="onSummaryDateChange"
                                 >
                             </div>
+                        </div>
+
+                        <div class="card card-outline card-info">
+                            <div class="card-header py-2">
+                                <h4 class="card-title mb-0">
+                                    สรุปรวม
+                                    <small class="text-muted ml-2">@{{ summaryScopeLabel }}</small>
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div v-if="isLoadingSummary" class="text-muted">กำลังโหลดข้อมูลสรุป...</div>
+                                <div v-else-if="summaryErrorMessage" class="alert alert-warning mb-0">@{{ summaryErrorMessage }}</div>
+                                <div v-else class="row">
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดแทง</div>
+                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_bet_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ส่วนลด</div>
+                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_discount_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดรับ</div>
+                                        <div class="font-weight-bold text-success">@{{ formatMoney(summary.total_receive_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">ยอดจ่าย</div>
+                                        <div class="font-weight-bold text-danger">@{{ formatMoney(summary.total_payout_amount) }}</div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">สุทธิ</div>
+                                        <div class="font-weight-bold" :class="summary.total_profit_amount >= 0 ? 'text-success' : 'text-danger'">
+                                            @{{ formatMoney(summary.total_profit_amount) }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 col-6 mb-2">
+                                        <div class="small text-muted">จำนวนงวด/แพกเกจ</div>
+                                        <div class="font-weight-bold">@{{ summary.draw_count }} / @{{ summary.package_count }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="mb-2 font-weight-bold text-primary">กลุ่มรายละเอียดงวด</div>
+                        <div class="row align-items-end">
                             <div class="col-lg-3 col-md-6 mb-3">
                                 <label class="mb-1">ตลาด</label>
                                 <select ref="marketSelect" class="form-control form-control-sm" @change="onMarketChange($event.target.value)">
@@ -273,48 +323,7 @@
                         </div>
 
                         <div class="mb-3 text-muted">
-                            ส่วนสรุปด้านบนโหลดอัตโนมัติทันที ส่วนตารางรายละเอียดด้านล่างต้องเลือก `ตลาด` `แพกเกจ` และ `งวดหวย`
-                        </div>
-
-                        <div class="card card-outline card-info">
-                            <div class="card-header py-2">
-                                <h4 class="card-title mb-0">
-                                    สรุปรวม
-                                    <small class="text-muted ml-2">@{{ summaryScopeLabel }}</small>
-                                </h4>
-                            </div>
-                            <div class="card-body">
-                                <div v-if="isLoadingSummary" class="text-muted">กำลังโหลดข้อมูลสรุป...</div>
-                                <div v-else-if="summaryErrorMessage" class="alert alert-warning mb-0">@{{ summaryErrorMessage }}</div>
-                                <div v-else class="row">
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">ยอดแทง</div>
-                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_bet_amount) }}</div>
-                                    </div>
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">ส่วนลด</div>
-                                        <div class="font-weight-bold">@{{ formatMoney(summary.total_discount_amount) }}</div>
-                                    </div>
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">ยอดรับ</div>
-                                        <div class="font-weight-bold text-success">@{{ formatMoney(summary.total_receive_amount) }}</div>
-                                    </div>
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">ยอดจ่าย</div>
-                                        <div class="font-weight-bold text-danger">@{{ formatMoney(summary.total_payout_amount) }}</div>
-                                    </div>
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">สุทธิ</div>
-                                        <div class="font-weight-bold" :class="summary.total_profit_amount >= 0 ? 'text-success' : 'text-danger'">
-                                            @{{ formatMoney(summary.total_profit_amount) }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2 col-6 mb-2">
-                                        <div class="small text-muted">จำนวนงวด/แพกเกจ</div>
-                                        <div class="font-weight-bold">@{{ summary.draw_count }} / @{{ summary.package_count }}</div>
-                                    </div>
-                                </div>
-                            </div>
+                            เลือก `ตลาด` `แพกเกจ` และ `งวดหวย` เพื่อดูตารางคาดการณ์กำไร/ขาดทุนของงวดนั้น
                         </div>
 
                         <div v-if="!hasCompleteFilters" class="alert alert-info mb-0">
@@ -778,11 +787,6 @@
                     this.fetchReport();
                 },
                 onSummaryScopeChange: function () {
-                    if (this.summaryScope !== 'date') {
-                        this.summaryStartDate = '';
-                        this.summaryEndDate = '';
-                    }
-
                     this.updateBrowserUrl();
                     this.fetchSummary(false);
                 },
