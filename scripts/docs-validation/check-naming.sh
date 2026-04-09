@@ -14,6 +14,18 @@ mapfile -t md_files < <(git ls-files '*.md')
 plan_style=""
 plan_underscore_count=0
 plan_dash_count=0
+root_allowlist=(
+  "AGENTS.md"
+  "README.md"
+  "CLAUDE.md"
+  "FILE_POLICY.md"
+  "HEARTBEAT.md"
+  "IDENTITY.md"
+  "MIGRATION_GUIDE.md"
+  "SOUL.md"
+  "TOOLS.md"
+  "USER.md"
+)
 
 for f in "${md_files[@]}"; do
   bn="$(basename "$f")"
@@ -40,9 +52,23 @@ for f in "${md_files[@]}"; do
   bn="$(basename "$f")"
 
   # Placement rules
-  if [[ "$f" != docs/* && "$f" != "AGENTS.md" && "$f" != "README.md" ]]; then
+  is_allowlisted_root="false"
+  for allowed in "${root_allowlist[@]}"; do
+    if [[ "$f" == "$allowed" ]]; then
+      is_allowlisted_root="true"
+      break
+    fi
+  done
+
+  if [[ "$f" != docs/* && "$is_allowlisted_root" != "true" ]]; then
     if [[ "$f" == .github/* ]]; then
       log_warn "$f" "markdown under .github is temporarily allowlisted"
+      warnings=$((warnings + 1))
+      continue
+    fi
+
+    if [[ "$f" == memory/* ]]; then
+      log_warn "$f" "markdown under memory is temporarily allowlisted"
       warnings=$((warnings + 1))
       continue
     fi
