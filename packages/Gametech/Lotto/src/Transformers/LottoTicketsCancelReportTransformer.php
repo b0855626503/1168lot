@@ -19,6 +19,8 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             ->unique()
             ->values();
         $cancelledBy = $this->resolveCancelledByName($row);
+        $totalWinAmount = (float) ($row->total_win_amount ?? 0);
+        $totalWinAmountDisplay = number_format($totalWinAmount, 2);
 
         return [
             'created_at' => $createdAt ? date('d/m/Y H:i', strtotime((string) $createdAt)) : '-',
@@ -30,7 +32,9 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'total_bet_amount' => number_format((float) ($row->total_bet_amount ?? $row->total_amount ?? 0), 2),
             'total_discount_amount' => number_format((float) ($row->total_discount_amount ?? 0), 2),
             'total_net_amount' => number_format((float) ($row->total_net_amount ?? $row->total_amount ?? 0), 2),
-            'total_win_amount' => number_format((float) ($row->total_win_amount ?? 0), 2),
+            'total_win_amount' => $totalWinAmount > 0
+                ? '<span class="text-danger font-weight-bold">' . $totalWinAmountDisplay . '</span>'
+                : $totalWinAmountDisplay,
             'status' => $this->statusBadge((string) ($row->status ?? '')),
             'reason' => e($this->resolveReason($row)),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
