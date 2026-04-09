@@ -329,26 +329,42 @@ class LottoController extends BaseController
 
             $limit = $this->resolveTicketLimit($request);
             $page = $this->resolveTicketPage($request);
+            $statusFilter = $this->resolveTicketStatusFilter($request);
 
             $query = $this->ticketQuery($memberId)
                 ->orderByDesc('id');
 
-            $total = (clone $query)->count();
-            $tickets = $query
-                ->forPage($page, $limit)
-                ->get();
-            $summaryContext = $this->buildTicketSummaryContext($tickets);
+            if ($statusFilter !== '') {
+                $tickets = $query->get();
+                $summaryContext = $this->buildTicketSummaryContext($tickets);
+                $rows = $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))
+                    ->values();
+                $rows = $this->filterTicketRowsByStatus($rows, $statusFilter)->values();
+                $total = $rows->count();
+                $pagedRows = $rows->forPage($page, $limit)->values();
 
-            $response = $this->sendResponse(
-                $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))->values()->all(),
-                'ดึงประวัติโพยสำเร็จ'
-            );
+                $response = $this->sendResponse(
+                    $pagedRows->all(),
+                    'ดึงประวัติโพยสำเร็จ'
+                );
+            } else {
+                $total = (clone $query)->count();
+                $tickets = $query
+                    ->forPage($page, $limit)
+                    ->get();
+                $summaryContext = $this->buildTicketSummaryContext($tickets);
+
+                $response = $this->sendResponse(
+                    $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))->values()->all(),
+                    'ดึงประวัติโพยสำเร็จ'
+                );
+            }
 
             $payload = $this->responsePayload($response);
             $payload['pagination'] = [
                 'page' => $page,
                 'limit' => $limit,
-                'count' => $tickets->count(),
+                'count' => count((array) ($payload['data'] ?? [])),
                 'total' => $total,
                 'has_more' => ($page * $limit) < $total,
             ];
@@ -1152,6 +1168,25 @@ class LottoController extends BaseController
     private function resolveTicketPage(Request $request): int
     {
         return max(1, (int) $request->input('page', 1));
+    }
+
+    private function resolveTicketStatusFilter(Request $request): string
+    {
+        $status = strtolower(trim((string) $request->query('status', '')));
+        $available = ['active', 'cancelled', 'resulted', 'won', 'lost'];
+
+        return in_array($status, $available, true) ? $status : '';
+    }
+
+    /**
+     * @param Collection<int, array<string, mixed>> $rows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function filterTicketRowsByStatus(Collection $rows, string $status): Collection
+    {
+        return $rows->filter(static function (array $row) use ($status): bool {
+            return strtolower((string) ($row['status'] ?? '')) === $status;
+        });
     }
 
     private function ticketQuery(int $memberId)

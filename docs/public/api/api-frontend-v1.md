@@ -974,6 +974,8 @@ Response จะขึ้นกับกติกาและสถานะง�
 - รองรับ pagination:
   - `page` (optional, default=`1`)
   - `limit` (optional, default=`20`, max=`100`)
+- รองรับ filter เพิ่ม:
+  - `status` (optional): `active`, `cancelled`, `resulted`, `won`, `lost`
 - endpoint นี้คืน `status` แบบพร้อมใช้บน UI:
   - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
   - `lost` เมื่อ `result_outcome=lose` และ `is_winner=false`
