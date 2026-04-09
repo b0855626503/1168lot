@@ -971,6 +971,9 @@ Response จะขึ้นกับกติกาและสถานะง�
 - `GET /lotto/tickets`
 - Auth: ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
+- รองรับ pagination:
+  - `page` (optional, default=`1`)
+  - `limit` (optional, default=`20`, max=`100`)
 - endpoint นี้คืน `status` แบบพร้อมใช้บน UI:
   - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
   - `lost` เมื่อ `result_outcome=lose` และ `is_winner=false`
@@ -1026,6 +1029,13 @@ Response ตัวอย่าง
       "created_at": "2026-03-24 12:00:00"
     }
   ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "count": 1,
+    "total": 1,
+    "has_more": false
+  },
   "language": "th",
   "message": "ดึงประวัติโพยสำเร็จ"
 }

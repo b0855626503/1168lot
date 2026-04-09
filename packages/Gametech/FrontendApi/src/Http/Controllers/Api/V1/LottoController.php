@@ -327,9 +327,15 @@ class LottoController extends BaseController
                 return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
-            $tickets = $this->ticketQuery($memberId)
-                ->orderByDesc('id')
-                ->limit($this->resolveTicketLimit($request))
+            $limit = $this->resolveTicketLimit($request);
+            $page = $this->resolveTicketPage($request);
+
+            $query = $this->ticketQuery($memberId)
+                ->orderByDesc('id');
+
+            $total = (clone $query)->count();
+            $tickets = $query
+                ->forPage($page, $limit)
                 ->get();
             $summaryContext = $this->buildTicketSummaryContext($tickets);
 
@@ -338,7 +344,19 @@ class LottoController extends BaseController
                 'ดึงประวัติโพยสำเร็จ'
             );
 
-            return $this->localizeTicketsResponse($response, $language);
+            $payload = $this->responsePayload($response);
+            $payload['pagination'] = [
+                'page' => $page,
+                'limit' => $limit,
+                'count' => $tickets->count(),
+                'total' => $total,
+                'has_more' => ($page * $limit) < $total,
+            ];
+
+            return $this->localizeTicketsResponse(
+                response()->json($payload, $response->getStatusCode()),
+                $language
+            );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการโพยได้ในขณะนี้', 422);
         }
@@ -1129,6 +1147,11 @@ class LottoController extends BaseController
     private function resolveTicketLimit(Request $request): int
     {
         return max(1, min((int) $request->input('limit', 20), 100));
+    }
+
+    private function resolveTicketPage(Request $request): int
+    {
+        return max(1, (int) $request->input('page', 1));
     }
 
     private function ticketQuery(int $memberId)
