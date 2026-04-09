@@ -1,71 +1,60 @@
-# Project Overview
+# 1168lot
 
-โปรเจกต์นี้เป็นระบบ Laravel + Frontend (SPA) สำหรับเกมออนไลน์ พร้อมระบบหวย (Lotto), Wallet, Payment และ Admin Panel
-
----
-
-## 🚀 Getting Started
-
-### Requirements
-
-* PHP 8.2+
-* Composer
-* Node.js
-* MySQL / MariaDB
-
-### Install
-
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-npm install
-npm run dev
-```
+Laravel + Vue SPA + Lotto + Wallet + Payment + Admin
 
 ---
 
-## 📂 โครงสร้างเอกสาร
+## Entry Points
 
-เอกสารทั้งหมดอยู่ที่ `/docs`
+### Code agent / AI coding assistant
+Start at:
 
-* internal → ใช้ภายใน (system, decision, plan)
-* public → ใช้เปิดผ่าน URL (API docs)
+- `docs/START_HERE.md`
 
----
+### Developer reading repository behavior
+Start at:
 
-## 📖 Documentation
+- `docs/internal/01_SYSTEM/system_current_state.md`
 
-เริ่มอ่านที่:
+### Workspace assistant / memory / non-code assistant work
+Start at:
 
-* docs/README.md
-* docs/internal/01_SYSTEM/system_current_state.md
-
----
-
-## 🤖 สำหรับ Agent
-
-Agent ต้องเริ่มจาก:
-
-* docs/START_HERE.md
+- `workspace/README.md`
 
 ---
 
-## ⚠️ หมายเหตุ
+## Source of Truth Layers
 
-* ห้ามแก้ logic โดยไม่อัปเดตเอกสาร
-* เอกสารถือเป็น source of truth ของระบบ
+### Repository / product / architecture / behavior
+- `docs/`
 
-## 🧠 Development Workflow
+### Assistant / memory / user preference / local environment
+- `workspace/`
 
-1. อ่านเอกสารใน /docs ก่อนเสมอ
-2. ยึด SYSTEM_CURRENT_STATE เป็นหลัก
-3. ห้ามแก้ logic โดยไม่อัปเดตเอกสาร
-4. ใช้ WORK_PLAN ในการทำงานทุกครั้ง
-5. เวลาตอบ ให้ตอบสั้นๆ ไม่ต้องอธิบายเยอะ
-6. ทุกอย่างให้ minimal output เพื่อลดการใช้ Token
-7. ถ้าให้แก้ Code แล้วมี จุดอื่นที่เกี่ยวข้อง ที่ควรแก้ด้วย ก็ถามมาเลย อย่ารอให้บอกก่อน
-8. ไม่ต้องรอให้บอกให้แก้ก่อน ถ้าเห็นว่าควรแก้ก็แก้ไปเลย แต่ต้องอัปเดต doc ให้ตรงกันด้วย
-9. ไม่ต้องอธิบายเยอะ ถ้าไม่จำเป็น ให้ตอบสั้นๆ ตรงประเด็น และอัปเดต doc ให้ตรงกันด้วย
-10. ถ้าเจอปัญหา หรืออะไรที่ ต้องเลือกหรือต้องตัดสินใจ ให้ถามมาเลย 
-11. พยายามให้ แต่ละครั้ง ใช้ token น้อยที่สุด ในส่วนของการที่ใช้สื่อสารกัน เพราะ token ที่ใช้ในการสื่อสารกัน ก็มีผลต่อค่าใช้จ่ายด้วย
+Do not mix them.
+
+---
+
+## Hard Rules
+
+- Never change system behavior without updating docs.
+- If code and docs mismatch, report mismatch before changing behavior.
+- Internal docs stay in `docs/internal`.
+- Public docs stay in `docs/public`.
+
+---
+
+## Why this repository is structured this way
+
+This repository supports two valid operating modes:
+
+1. **Code agent / coding assistant**
+   - optimized for low-token startup
+   - optimized for architecture-safe changes
+   - avoids loading unrelated assistant memory
+
+2. **Workspace / general AI assistant**
+   - may need memory, user preferences, workflow context
+   - must not override repository truth
+
+The structure is designed to keep both modes strong without polluting each other.
