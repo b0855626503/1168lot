@@ -25,6 +25,7 @@ class DashboardService
         'dashboard_summary_daily' => true,
         'lotto_dashboard_bet_type_number_daily' => true,
         'lotto_dashboard_bet_type_summary_daily' => true,
+        'lotto_dashboard_risk_aggregates' => true,
         'lotto_dashboard_risk_snapshot' => true,
         'lotto_dashboard_summary_daily' => true,
         'lotto_draws' => true,
@@ -48,6 +49,7 @@ class DashboardService
             'status',
         ],
         'dashboard_summary_daily' => ['*'],
+        'lotto_dashboard_risk_aggregates' => ['summary_date'],
         'lotto_dashboard_risk_snapshot' => ['snapshot_at'],
         'lotto_tickets' => ['bet_type_summary'],
         'members' => [
@@ -217,6 +219,9 @@ class DashboardService
             $lotto = $this->lottoCashMetrics($startDate, $endDate);
             $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
             $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
+            $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
+            $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
+            $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
             $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
             $net = $depositSuccessAmount - $withdrawAmount;
@@ -353,14 +358,29 @@ class DashboardService
                     'markets' => (int) ($lottoRisk['markets'] ?? 0),
                     'rounds' => (int) ($lottoRisk['rounds'] ?? 0),
                     'numbers' => (int) ($lottoRisk['numbers'] ?? 0),
+                    'tracked_market_count' => (int) ($lottoRisk['markets'] ?? 0),
+                    'tracked_round_count' => (int) ($lottoRisk['rounds'] ?? 0),
+                    'tracked_number_count' => (int) ($lottoRisk['numbers'] ?? 0),
                     'exposure_total' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
                     'exposure_total_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
+                    'total_exposure' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
+                    'total_exposure_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
                     'liability_total' => core()->currency((float) ($lottoRisk['liability_total'] ?? 0)),
                     'liability_total_raw' => (float) ($lottoRisk['liability_total'] ?? 0),
                     'liability_max' => core()->currency((float) ($lottoRisk['liability_max'] ?? 0)),
                     'liability_max_raw' => (float) ($lottoRisk['liability_max'] ?? 0),
+                    'max_risk_per_number' => core()->currency((float) ($lottoRisk['max_risk_per_number'] ?? 0)),
+                    'max_risk_per_number_raw' => (float) ($lottoRisk['max_risk_per_number'] ?? 0),
+                    'max_risk_number' => (string) ($lottoRisk['max_risk_number'] ?? ''),
+                    'liability_total_deprecated' => (bool) ($lottoRisk['liability_total_deprecated'] ?? true),
+                    'liability_total_same_as_exposure' => (bool) ($lottoRisk['liability_total_same_as_exposure'] ?? true),
+                    'deprecated_fields' => (array) ($lottoRisk['deprecated_fields'] ?? []),
                     'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
                 ],
+                'top_risky_numbers' => $topRiskyNumbers,
+                'lotto_top_risky_numbers' => $topRiskyNumbers,
+                'lotto_risk_trend' => $lottoRiskTrend,
+                'lotto_risk_alerts' => $lottoRiskAlerts,
                 'lotto_bet_type_insights' => $lottoBetTypeInsights,
                 'net' => [
                     'amount' => core()->currency($net),
@@ -809,7 +829,12 @@ class DashboardService
                     return $row;
                 });
 
-            $lottoRecentBets = $this->getRecentLottoBetsActivity(20, $lottoMarketId > 0 ? $lottoMarketId : null);
+            $lottoRecentBets = $this->getRecentLottoBetsActivity(
+                20,
+                $lottoMarketId > 0 ? $lottoMarketId : null,
+                $startDate,
+                $endDate
+            );
 
             return [
                 'deposits' => $deposits,
@@ -825,8 +850,12 @@ class DashboardService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function getRecentLottoBetsActivity(int $limit = 20, ?int $marketId = null): array
-    {
+    private function getRecentLottoBetsActivity(
+        int $limit = 20,
+        ?int $marketId = null,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         $limit = max(1, min($limit, 20));
 
         if (
@@ -871,6 +900,10 @@ class DashboardService
 
         if ($marketId !== null && $marketId > 0) {
             $query->where('d.market_id', $marketId);
+        }
+
+        if ($startDate !== null || $endDate !== null) {
+            $this->applyDateTimeWindow($query, 't.created_at', $startDate, $endDate);
         }
 
         $rows = $query->limit($limit)->get();
@@ -993,6 +1026,16 @@ class DashboardService
             }
 
             $summary = $this->getSummary($filters);
+            $riskAlerts = (array) ($summary['lotto_risk_alerts'] ?? []);
+            foreach ($riskAlerts as $riskAlert) {
+                $alerts[] = [
+                    'code' => (string) (($riskAlert['type'] ?? 'risk_threshold_exceeded').'_'.$riskAlert['number']),
+                    'level' => (string) ($riskAlert['severity'] ?? 'warning'),
+                    'title' => 'แจ้งเตือนความเสี่ยงหวย',
+                    'message' => (string) ($riskAlert['message'] ?? ''),
+                ];
+            }
+
             if ($summary['bonus']['ratio'] >= 30) {
                 $alerts[] = [
                     'code' => 'bonus_ratio_high',
@@ -1508,6 +1551,9 @@ class DashboardService
         $lottoNetCash = (float) ($current['lotto_net_cash'] ?? ($lottoSalesCash - $lottoPayoutCash - $lottoRefundCash));
         $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
         $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
+        $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
+        $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
+        $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
         $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
 
         $net = $depositSuccessAmount - $withdrawAmount;
@@ -1645,14 +1691,29 @@ class DashboardService
                 'markets' => (int) ($lottoRisk['markets'] ?? 0),
                 'rounds' => (int) ($lottoRisk['rounds'] ?? 0),
                 'numbers' => (int) ($lottoRisk['numbers'] ?? 0),
+                'tracked_market_count' => (int) ($lottoRisk['markets'] ?? 0),
+                'tracked_round_count' => (int) ($lottoRisk['rounds'] ?? 0),
+                'tracked_number_count' => (int) ($lottoRisk['numbers'] ?? 0),
                 'exposure_total' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
                 'exposure_total_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
+                'total_exposure' => core()->currency((float) ($lottoRisk['exposure_total'] ?? 0)),
+                'total_exposure_raw' => (float) ($lottoRisk['exposure_total'] ?? 0),
                 'liability_total' => core()->currency((float) ($lottoRisk['liability_total'] ?? 0)),
                 'liability_total_raw' => (float) ($lottoRisk['liability_total'] ?? 0),
                 'liability_max' => core()->currency((float) ($lottoRisk['liability_max'] ?? 0)),
                 'liability_max_raw' => (float) ($lottoRisk['liability_max'] ?? 0),
+                'max_risk_per_number' => core()->currency((float) ($lottoRisk['max_risk_per_number'] ?? 0)),
+                'max_risk_per_number_raw' => (float) ($lottoRisk['max_risk_per_number'] ?? 0),
+                'max_risk_number' => (string) ($lottoRisk['max_risk_number'] ?? ''),
+                'liability_total_deprecated' => (bool) ($lottoRisk['liability_total_deprecated'] ?? true),
+                'liability_total_same_as_exposure' => (bool) ($lottoRisk['liability_total_same_as_exposure'] ?? true),
+                'deprecated_fields' => (array) ($lottoRisk['deprecated_fields'] ?? []),
                 'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
             ],
+            'top_risky_numbers' => $topRiskyNumbers,
+            'lotto_top_risky_numbers' => $topRiskyNumbers,
+            'lotto_risk_trend' => $lottoRiskTrend,
+            'lotto_risk_alerts' => $lottoRiskAlerts,
             'lotto_bet_type_insights' => $lottoBetTypeInsights,
             'net' => [
                 'amount' => core()->currency($net),
@@ -2610,54 +2671,350 @@ class DashboardService
             'exposure_total' => 0.0,
             'liability_total' => 0.0,
             'liability_max' => 0.0,
+            'max_risk_per_number' => 0.0,
+            'max_risk_number' => '',
+            'liability_total_deprecated' => true,
+            'liability_total_same_as_exposure' => true,
+            'deprecated_fields' => ['liability_total'],
             'last_snapshot_at' => '',
         ];
 
-        if (
-            ! $this->hasTable('lotto_dashboard_risk_snapshot')
-            || ! $this->hasColumn('lotto_dashboard_risk_snapshot', 'snapshot_at')
-        ) {
+        if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return $defaults;
         }
 
-        [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
-        $latestSnapshotAt = DB::table('lotto_dashboard_risk_snapshot')
+        $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
-            ->where('snapshot_at', '>=', $startAt)
-            ->where('snapshot_at', '<', $endAt)
-            ->max('snapshot_at');
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->select([
+                'summary_date',
+                'number',
+                'exposure_total',
+                'liability_total',
+                'snapshot_at',
+                'market_ids_json',
+                'round_ids_json',
+            ])
+            ->get();
 
-        if (empty($latestSnapshotAt)) {
+        if ($rows->isEmpty()) {
             return $defaults;
         }
 
-        $row = DB::table('lotto_dashboard_risk_snapshot')
-            ->where('web_code', $this->dashboardWebCode())
-            ->where('snapshot_at', $latestSnapshotAt)
-            ->selectRaw(implode(",\n", [
-                'COALESCE(COUNT(*), 0) as numbers',
-                'COALESCE(COUNT(DISTINCT market_id), 0) as markets',
-                'COALESCE(COUNT(DISTINCT round_id), 0) as rounds',
-                'COALESCE(SUM(payout_if_hit), 0) as exposure_total',
-                'COALESCE(SUM(liability), 0) as liability_total',
-                'COALESCE(MAX(liability), 0) as liability_max',
-                'MAX(snapshot_at) as last_snapshot_at',
-            ]))
-            ->first();
+        $marketIds = [];
+        $roundIds = [];
+        $exposureTotal = 0.0;
+        $liabilityTotal = 0.0;
+        $liabilityMax = 0.0;
+        $lastSnapshotAt = '';
+        $riskByNumber = [];
+        $numberIds = [];
 
-        if (! $row) {
-            return $defaults;
+        foreach ($rows as $row) {
+            $number = trim((string) ($row->number ?? ''));
+            $exposureAmount = (float) ($row->exposure_total ?? 0);
+            $liabilityAmount = (float) ($row->liability_total ?? 0);
+            $exposureTotal += $exposureAmount;
+            $liabilityTotal += $liabilityAmount;
+            if ($liabilityAmount > $liabilityMax) {
+                $liabilityMax = $liabilityAmount;
+            }
+            if ($number !== '') {
+                $riskByNumber[$number] = round((float) ($riskByNumber[$number] ?? 0) + $exposureAmount, 2);
+                $numberIds[$number] = true;
+            }
+
+            $snapshotAt = (string) ($row->snapshot_at ?? '');
+            if ($snapshotAt !== '' && ($lastSnapshotAt === '' || $snapshotAt > $lastSnapshotAt)) {
+                $lastSnapshotAt = $snapshotAt;
+            }
+
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $marketIds[(string) ((int) $marketId)] = true;
+                }
+            }
+
+            $roundJson = json_decode((string) ($row->round_ids_json ?? '[]'), true);
+            if (is_array($roundJson)) {
+                foreach ($roundJson as $roundId) {
+                    $roundIds[(string) ((int) $roundId)] = true;
+                }
+            }
         }
+
+        $maxRiskNumber = '';
+        $maxRiskPerNumber = 0.0;
+        foreach ($riskByNumber as $number => $riskValue) {
+            if ($riskValue > $maxRiskPerNumber || ($riskValue === $maxRiskPerNumber && ($maxRiskNumber === '' || strcmp($number, $maxRiskNumber) < 0))) {
+                $maxRiskPerNumber = $riskValue;
+                $maxRiskNumber = (string) $number;
+            }
+        }
+
+        $roundedExposureTotal = round($exposureTotal, 2);
+        $roundedLiabilityTotal = round($liabilityTotal, 2);
 
         return [
-            'markets' => (int) ($row->markets ?? 0),
-            'rounds' => (int) ($row->rounds ?? 0),
-            'numbers' => (int) ($row->numbers ?? 0),
-            'exposure_total' => (float) ($row->exposure_total ?? 0),
-            'liability_total' => (float) ($row->liability_total ?? 0),
-            'liability_max' => (float) ($row->liability_max ?? 0),
-            'last_snapshot_at' => (string) ($row->last_snapshot_at ?? ''),
+            'markets' => count($marketIds),
+            'rounds' => count($roundIds),
+            'numbers' => count($numberIds),
+            'exposure_total' => $roundedExposureTotal,
+            'liability_total' => $roundedLiabilityTotal,
+            'liability_max' => round($liabilityMax, 2),
+            'max_risk_per_number' => round($maxRiskPerNumber, 2),
+            'max_risk_number' => $maxRiskNumber,
+            'liability_total_deprecated' => true,
+            'liability_total_same_as_exposure' => abs($roundedExposureTotal - $roundedLiabilityTotal) < 0.00001,
+            'deprecated_fields' => ['liability_total'],
+            'last_snapshot_at' => $lastSnapshotAt,
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoRiskThresholdAlerts(array $lottoRisk): array
+    {
+        $maxRiskNumber = trim((string) ($lottoRisk['max_risk_number'] ?? ''));
+        $maxRiskValue = (float) ($lottoRisk['max_risk_per_number'] ?? 0);
+        $threshold = $this->lottoRiskThreshold();
+        if ($maxRiskNumber === '' || $maxRiskValue < $threshold) {
+            return [];
+        }
+
+        return [[
+            'type' => 'risk_threshold_exceeded',
+            'severity' => 'high',
+            'number' => $maxRiskNumber,
+            'risk_value' => core()->currency($maxRiskValue),
+            'risk_value_raw' => round($maxRiskValue, 2),
+            'threshold' => core()->currency($threshold),
+            'threshold_raw' => round($threshold, 2),
+            'message' => "เลข {$maxRiskNumber} มีความเสี่ยง ".core()->currency($maxRiskValue).' สูงกว่า threshold '.core()->currency($threshold),
+        ]];
+    }
+
+    private function lottoRiskThreshold(): float
+    {
+        $threshold = (float) config('dashboard.lotto_risk.threshold', 1000000);
+
+        return max(0.0, round($threshold, 2));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function lottoRiskTrendSummary(string $startDate, string $endDate): array
+    {
+        $defaults = [
+            'current_date' => '',
+            'previous_date' => '',
+            'risk_current_raw' => 0.0,
+            'risk_previous_raw' => 0.0,
+            'risk_delta_raw' => 0.0,
+            'risk_direction' => 'flat',
+            'sales_current_raw' => 0.0,
+            'sales_previous_raw' => 0.0,
+            'sales_delta_raw' => 0.0,
+            'sales_direction' => 'flat',
+            'risk_current' => core()->currency(0),
+            'risk_previous' => core()->currency(0),
+            'risk_delta' => core()->currency(0),
+            'sales_current' => core()->currency(0),
+            'sales_previous' => core()->currency(0),
+            'sales_delta' => core()->currency(0),
+        ];
+
+        if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
+            return $defaults;
+        }
+
+        $latestDate = DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->max('summary_date');
+        if (empty($latestDate)) {
+            return $defaults;
+        }
+
+        $previousDate = DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->where('summary_date', '<', $latestDate)
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->max('summary_date');
+        if (empty($previousDate)) {
+            $previousDate = DB::table('lotto_dashboard_risk_aggregates')
+                ->where('web_code', $this->dashboardWebCode())
+                ->where('summary_date', '<', $latestDate)
+                ->max('summary_date');
+        }
+
+        $riskCurrent = (float) DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->where('summary_date', $latestDate)
+            ->sum('exposure_total');
+        $riskPrevious = 0.0;
+        if (! empty($previousDate)) {
+            $riskPrevious = (float) DB::table('lotto_dashboard_risk_aggregates')
+                ->where('web_code', $this->dashboardWebCode())
+                ->where('summary_date', $previousDate)
+                ->sum('exposure_total');
+        }
+
+        $salesCurrent = 0.0;
+        $salesPrevious = 0.0;
+        if ($this->hasTable('lotto_dashboard_summary_daily')) {
+            $salesCurrent = (float) DB::table('lotto_dashboard_summary_daily')
+                ->where('web_code', $this->dashboardWebCode())
+                ->where('summary_date', $latestDate)
+                ->sum('total_sales');
+            if (! empty($previousDate)) {
+                $salesPrevious = (float) DB::table('lotto_dashboard_summary_daily')
+                    ->where('web_code', $this->dashboardWebCode())
+                    ->where('summary_date', $previousDate)
+                    ->sum('total_sales');
+            }
+        }
+
+        $riskDelta = round($riskCurrent - $riskPrevious, 2);
+        $salesDelta = round($salesCurrent - $salesPrevious, 2);
+
+        return [
+            'current_date' => (string) $latestDate,
+            'previous_date' => (string) ($previousDate ?? ''),
+            'risk_current_raw' => round($riskCurrent, 2),
+            'risk_previous_raw' => round($riskPrevious, 2),
+            'risk_delta_raw' => $riskDelta,
+            'risk_direction' => $this->resolveTrendDirection($riskDelta),
+            'sales_current_raw' => round($salesCurrent, 2),
+            'sales_previous_raw' => round($salesPrevious, 2),
+            'sales_delta_raw' => $salesDelta,
+            'sales_direction' => $this->resolveTrendDirection($salesDelta),
+            'risk_current' => core()->currency($riskCurrent),
+            'risk_previous' => core()->currency($riskPrevious),
+            'risk_delta' => core()->currency($riskDelta),
+            'sales_current' => core()->currency($salesCurrent),
+            'sales_previous' => core()->currency($salesPrevious),
+            'sales_delta' => core()->currency($salesDelta),
+        ];
+    }
+
+    private function resolveTrendDirection(float $delta): string
+    {
+        if ($delta > 0.00001) {
+            return 'up';
+        }
+        if ($delta < -0.00001) {
+            return 'down';
+        }
+
+        return 'flat';
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoTopRiskyNumbersSummary(string $startDate, string $endDate, int $limit = 10): array
+    {
+        if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
+            return [];
+        }
+
+        $limit = max(1, min(100, $limit));
+
+        $rows = DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->get([
+                'number',
+                'bet_type',
+                'stake_total',
+                'exposure_total',
+                'liability_total',
+                'market_count',
+                'round_count',
+                'market_ids_json',
+                'round_ids_json',
+            ]);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $number = trim((string) ($row->number ?? ''));
+            $betType = trim((string) ($row->bet_type ?? ''));
+            if ($number === '' || $betType === '') {
+                continue;
+            }
+
+            $key = $betType.'|'.$number;
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'number' => $number,
+                    'bet_type' => $betType,
+                    'stake_total_raw' => 0.0,
+                    'exposure_total_raw' => 0.0,
+                    'liability_total_raw' => 0.0,
+                    'market_ids' => [],
+                    'round_ids' => [],
+                ];
+            }
+
+            $grouped[$key]['stake_total_raw'] = round(
+                (float) $grouped[$key]['stake_total_raw'] + (float) ($row->stake_total ?? 0),
+                2
+            );
+            $grouped[$key]['exposure_total_raw'] = round(
+                (float) $grouped[$key]['exposure_total_raw'] + (float) ($row->exposure_total ?? 0),
+                2
+            );
+            $grouped[$key]['liability_total_raw'] = round(
+                (float) $grouped[$key]['liability_total_raw'] + (float) ($row->liability_total ?? 0),
+                2
+            );
+
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $grouped[$key]['market_ids'][(string) ((int) $marketId)] = true;
+                }
+            }
+            $roundJson = json_decode((string) ($row->round_ids_json ?? '[]'), true);
+            if (is_array($roundJson)) {
+                foreach ($roundJson as $roundId) {
+                    $grouped[$key]['round_ids'][(string) ((int) $roundId)] = true;
+                }
+            }
+        }
+
+        return collect(array_values($grouped))
+            ->sortBy([
+                ['exposure_total_raw', 'desc'],
+                ['stake_total_raw', 'desc'],
+                ['number', 'asc'],
+                ['bet_type', 'asc'],
+            ])
+            ->take($limit)
+            ->map(function (array $row): array {
+                return [
+                    'number' => (string) $row['number'],
+                    'bet_type' => (string) $row['bet_type'],
+                    'stake_total' => core()->currency((float) $row['stake_total_raw']),
+                    'stake_total_raw' => (float) $row['stake_total_raw'],
+                    'exposure_total' => core()->currency((float) $row['exposure_total_raw']),
+                    'exposure_total_raw' => (float) $row['exposure_total_raw'],
+                    'liability_total' => core()->currency((float) $row['liability_total_raw']),
+                    'liability_total_raw' => (float) $row['liability_total_raw'],
+                    'market_count' => count((array) ($row['market_ids'] ?? [])),
+                    'round_count' => count((array) ($row['round_ids'] ?? [])),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**
@@ -2688,6 +3045,62 @@ class DashboardService
 
         if ($dailyRows->isEmpty()) {
             return [];
+        }
+
+        $riskByType = [];
+        if ($this->hasTable('lotto_dashboard_risk_aggregates')) {
+            $riskRows = DB::table('lotto_dashboard_risk_aggregates')
+                ->where('web_code', $this->dashboardWebCode())
+                ->whereBetween('summary_date', [$startDate, $endDate])
+                ->select([
+                    'bet_type',
+                    'number',
+                    'exposure_total',
+                ])
+                ->orderBy('bet_type')
+                ->orderByDesc('exposure_total')
+                ->orderBy('number')
+                ->get();
+
+            foreach ($riskRows as $row) {
+                $betType = trim((string) ($row->bet_type ?? ''));
+                if ($betType === '') {
+                    continue;
+                }
+
+                $exposureValue = round((float) ($row->exposure_total ?? 0), 2);
+                $number = trim((string) ($row->number ?? ''));
+
+                if (! isset($riskByType[$betType])) {
+                    $riskByType[$betType] = [
+                        'risk_exposure_total_raw' => 0.0,
+                        'max_risk_number' => '',
+                        'max_risk_value_raw' => 0.0,
+                    ];
+                }
+
+                $riskByType[$betType]['risk_exposure_total_raw'] = round(
+                    (float) $riskByType[$betType]['risk_exposure_total_raw'] + $exposureValue,
+                    2
+                );
+
+                if (
+                    $number !== ''
+                    && (
+                        $exposureValue > (float) $riskByType[$betType]['max_risk_value_raw']
+                        || (
+                            $exposureValue === (float) $riskByType[$betType]['max_risk_value_raw']
+                            && (
+                                $riskByType[$betType]['max_risk_number'] === ''
+                                || strcmp($number, (string) $riskByType[$betType]['max_risk_number']) < 0
+                            )
+                        )
+                    )
+                ) {
+                    $riskByType[$betType]['max_risk_number'] = $number;
+                    $riskByType[$betType]['max_risk_value_raw'] = $exposureValue;
+                }
+            }
         }
 
         $numberRows = DB::table('lotto_dashboard_bet_type_number_daily')
@@ -2749,16 +3162,24 @@ class DashboardService
             }
         }
 
-        return $dailyRows->map(function ($row) use ($isSingleDay, $topByType): array {
+        return $dailyRows->map(function ($row) use ($isSingleDay, $topByType, $riskByType): array {
             $betType = (string) ($row->bet_type ?? '');
             $top = $topByType[$betType] ?? [
                 'top_number' => '',
                 'top_number_amount_raw' => 0.0,
             ];
+            $risk = $riskByType[$betType] ?? [
+                'risk_exposure_total_raw' => 0.0,
+                'max_risk_number' => '',
+                'max_risk_value_raw' => 0.0,
+            ];
 
             $totalAmountRaw = (float) ($row->total_amount ?? 0);
             $topAmountRaw = (float) ($top['top_number_amount_raw'] ?? 0);
             $topNumber = (string) ($top['top_number'] ?? '');
+            $riskExposureTotalRaw = (float) ($risk['risk_exposure_total_raw'] ?? 0);
+            $maxRiskNumber = (string) ($risk['max_risk_number'] ?? '');
+            $maxRiskValueRaw = (float) ($risk['max_risk_value_raw'] ?? 0);
 
             return [
                 'bet_type' => $betType,
@@ -2770,6 +3191,14 @@ class DashboardService
                 'top_number' => $topNumber !== '' ? $topNumber : null,
                 'top_number_amount' => core()->currency($topAmountRaw),
                 'top_number_amount_raw' => $topAmountRaw,
+                'hottest_number' => $topNumber !== '' ? $topNumber : null,
+                'hottest_number_amount' => core()->currency($topAmountRaw),
+                'hottest_number_amount_raw' => $topAmountRaw,
+                'risk_exposure_total' => core()->currency($riskExposureTotalRaw),
+                'risk_exposure_total_raw' => $riskExposureTotalRaw,
+                'max_risk_number' => $maxRiskNumber !== '' ? $maxRiskNumber : null,
+                'max_risk_value' => core()->currency($maxRiskValueRaw),
+                'max_risk_value_raw' => $maxRiskValueRaw,
             ];
         })->values()->all();
     }

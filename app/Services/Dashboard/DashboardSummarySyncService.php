@@ -189,7 +189,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate): void {
+        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -249,6 +249,37 @@ class DashboardSummarySyncService
                             $updateColumns
                         );
                     }
+                }
+            }
+
+            if (Schema::hasTable('lotto_dashboard_risk_aggregates')) {
+                DB::table('lotto_dashboard_risk_aggregates')
+                    ->where('web_code', $webCode)
+                    ->where('summary_date', $summaryDate)
+                    ->delete();
+
+                $rows = [];
+                foreach ((array) ($lottoPayload['risk_aggregate'] ?? []) as $row) {
+                    $filtered = $this->filterPayloadByExistingColumns(
+                        'lotto_dashboard_risk_aggregates',
+                        (array) $row,
+                        ['web_code', 'summary_date', 'bet_type', 'number']
+                    );
+                    if (! empty($filtered)) {
+                        $rows[] = $filtered;
+                    }
+                }
+
+                if (! empty($rows)) {
+                    $updateColumns = array_values(array_filter(
+                        array_keys($rows[0]),
+                        fn ($column) => ! in_array($column, ['web_code', 'summary_date', 'bet_type', 'number'], true)
+                    ));
+                    DB::table('lotto_dashboard_risk_aggregates')->upsert(
+                        $rows,
+                        ['web_code', 'summary_date', 'bet_type', 'number'],
+                        $updateColumns
+                    );
                 }
             }
 

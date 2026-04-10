@@ -121,6 +121,25 @@ class RebuildLottoDashboardSummaryCommand extends Command
                     }
                 }
 
+                if (in_array($only, ['risk', 'all'], true) && Schema::hasTable('lotto_dashboard_risk_aggregates')) {
+                    DB::table('lotto_dashboard_risk_aggregates')
+                        ->where('web_code', $webCode)
+                        ->where('summary_date', $date)
+                        ->delete();
+
+                    $rows = collect((array) ($lottoPayload['risk_aggregate'] ?? []))
+                        ->values()
+                        ->all();
+
+                    if (! empty($rows)) {
+                        DB::table('lotto_dashboard_risk_aggregates')->upsert(
+                            $rows,
+                            ['web_code', 'summary_date', 'bet_type', 'number'],
+                            ['stake_total', 'exposure_total', 'liability_total', 'market_count', 'round_count', 'market_ids_json', 'round_ids_json', 'snapshot_at', 'updated_at']
+                        );
+                    }
+                }
+
                 // Keep daily cash/net in sync for --only=all with filtered rebuild.
                 if ($only === 'all') {
                     $syncService->syncBucket(

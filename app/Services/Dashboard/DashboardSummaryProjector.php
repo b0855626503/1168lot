@@ -120,6 +120,7 @@ class DashboardSummaryProjector
      *     daily: array<string, mixed>,
      *     markets: array<int, array<string, mixed>>,
      *     risk: array<int, array<string, mixed>>,
+     *     risk_aggregate: array<int, array<string, mixed>>,
      *     insights: array{
      *         daily: array<int, array<string, mixed>>,
      *         numbers: array<int, array<string, mixed>>
@@ -129,11 +130,13 @@ class DashboardSummaryProjector
     public function projectLotto(string $summaryDate, string $webCode): array
     {
         $summaryDate = $this->normalizeDate($summaryDate);
+        $riskSnapshotRows = $this->lottoRiskSnapshotMetrics($summaryDate, $webCode);
 
         return [
             'daily' => $this->lottoProductDailyMetrics($summaryDate, $webCode),
             'markets' => $this->lottoMarketSummaryMetrics($summaryDate, $webCode),
-            'risk' => $this->lottoRiskSnapshotMetrics($summaryDate, $webCode),
+            'risk' => $riskSnapshotRows,
+            'risk_aggregate' => $this->lottoRiskAggregateMetrics($summaryDate, $webCode, $riskSnapshotRows),
             'insights' => $this->lottoBetTypeInsightMetrics($summaryDate),
         ];
     }
@@ -766,6 +769,104 @@ class DashboardSummaryProjector
                 'updated_at' => now()->toDateTimeString(),
             ];
         })->values()->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $riskSnapshotRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoRiskAggregateMetrics(string $summaryDate, string $webCode, array $riskSnapshotRows): array
+    {
+        if ($riskSnapshotRows === []) {
+            return [];
+        }
+
+        $aggregateMap = [];
+        foreach ($riskSnapshotRows as $row) {
+            $betType = trim((string) ($row['bet_type'] ?? ''));
+            $number = trim((string) ($row['number'] ?? ''));
+            if ($betType === '' || $number === '') {
+                continue;
+            }
+
+            $marketId = (int) ($row['market_id'] ?? 0);
+            $roundId = (int) ($row['round_id'] ?? 0);
+            $stakeTotal = (float) ($row['stake_total'] ?? 0);
+            $exposureTotal = (float) ($row['payout_if_hit'] ?? 0);
+            $liabilityTotal = (float) ($row['liability'] ?? $exposureTotal);
+            $snapshotAt = (string) ($row['snapshot_at'] ?? '');
+            $aggregateKey = $betType.'|'.$number;
+
+            if (! isset($aggregateMap[$aggregateKey])) {
+                $aggregateMap[$aggregateKey] = [
+                    'web_code' => $webCode,
+                    'summary_date' => $summaryDate,
+                    'bet_type' => $betType,
+                    'number' => $number,
+                    'stake_total' => 0.0,
+                    'exposure_total' => 0.0,
+                    'liability_total' => 0.0,
+                    'market_ids' => [],
+                    'round_ids' => [],
+                    'snapshot_at' => $snapshotAt,
+                    'created_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
+                ];
+            }
+
+            $aggregateMap[$aggregateKey]['stake_total'] = $this->toDecimal(
+                (float) $aggregateMap[$aggregateKey]['stake_total'] + $stakeTotal
+            );
+            $aggregateMap[$aggregateKey]['exposure_total'] = $this->toDecimal(
+                (float) $aggregateMap[$aggregateKey]['exposure_total'] + $exposureTotal
+            );
+            $aggregateMap[$aggregateKey]['liability_total'] = $this->toDecimal(
+                (float) $aggregateMap[$aggregateKey]['liability_total'] + $liabilityTotal
+            );
+
+            if ($marketId > 0) {
+                $aggregateMap[$aggregateKey]['market_ids'][(string) $marketId] = true;
+            }
+            if ($roundId > 0) {
+                $aggregateMap[$aggregateKey]['round_ids'][(string) $roundId] = true;
+            }
+            if ($snapshotAt !== '' && ($aggregateMap[$aggregateKey]['snapshot_at'] === '' || $snapshotAt > $aggregateMap[$aggregateKey]['snapshot_at'])) {
+                $aggregateMap[$aggregateKey]['snapshot_at'] = $snapshotAt;
+            }
+        }
+
+        return collect(array_values($aggregateMap))
+            ->map(function (array $row): array {
+                $marketIds = array_map('intval', array_keys((array) ($row['market_ids'] ?? [])));
+                sort($marketIds);
+
+                $roundIds = array_map('intval', array_keys((array) ($row['round_ids'] ?? [])));
+                sort($roundIds);
+
+                return [
+                    'web_code' => (string) $row['web_code'],
+                    'summary_date' => (string) $row['summary_date'],
+                    'bet_type' => (string) $row['bet_type'],
+                    'number' => (string) $row['number'],
+                    'stake_total' => $this->toDecimal((float) ($row['stake_total'] ?? 0)),
+                    'exposure_total' => $this->toDecimal((float) ($row['exposure_total'] ?? 0)),
+                    'liability_total' => $this->toDecimal((float) ($row['liability_total'] ?? 0)),
+                    'market_count' => count($marketIds),
+                    'round_count' => count($roundIds),
+                    'market_ids_json' => json_encode($marketIds, JSON_UNESCAPED_UNICODE),
+                    'round_ids_json' => json_encode($roundIds, JSON_UNESCAPED_UNICODE),
+                    'snapshot_at' => $row['snapshot_at'] !== '' ? (string) $row['snapshot_at'] : null,
+                    'created_at' => (string) $row['created_at'],
+                    'updated_at' => (string) $row['updated_at'],
+                ];
+            })
+            ->sortBy([
+                ['exposure_total', 'desc'],
+                ['number', 'asc'],
+                ['bet_type', 'asc'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**

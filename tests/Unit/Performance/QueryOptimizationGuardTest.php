@@ -124,14 +124,14 @@ class QueryOptimizationGuardTest extends TestCase
         $this->assertStringNotContainsString("whereDate('d.draw_date'", $contents);
     }
 
-    public function test_dashboard_lotto_risk_summary_aggregates_latest_snapshot_only(): void
+    public function test_dashboard_lotto_risk_summary_reads_from_risk_aggregate_layer(): void
     {
         $contents = file_get_contents($this->rootPath.'/packages/Gametech/Admin/src/Services/DashboardService.php');
 
         $this->assertNotFalse($contents);
-        $this->assertStringContainsString("\$latestSnapshotAt = DB::table('lotto_dashboard_risk_snapshot')", $contents);
-        $this->assertStringContainsString("->where('snapshot_at', \$latestSnapshotAt)", $contents);
-        $this->assertStringNotContainsString("->where('snapshot_at', '>=', \$startAt)\n            ->where('snapshot_at', '<', \$endAt)\n            ->selectRaw", $contents);
+        $this->assertStringContainsString("->whereBetween('summary_date', [\$startDate, \$endDate])", $contents);
+        $this->assertStringContainsString("\$rows = DB::table('lotto_dashboard_risk_aggregates')", $contents);
+        $this->assertStringNotContainsString("DB::table('lotto_dashboard_risk_snapshot')", $contents);
     }
 
     public function test_lotto_risk_snapshot_migration_disables_auto_update_timestamp(): void
@@ -141,5 +141,14 @@ class QueryOptimizationGuardTest extends TestCase
         $this->assertNotFalse($contents);
         $this->assertStringContainsString('MODIFY `snapshot_at` TIMESTAMP NOT NULL', $contents);
         $this->assertStringContainsString('DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP', $contents);
+    }
+
+    public function test_lotto_risk_aggregate_indexes_cover_bet_type_and_number_lookups(): void
+    {
+        $contents = file_get_contents($this->rootPath.'/database/migrations/2026_04_11_005202_add_indexes_to_lotto_dashboard_risk_aggregates.php');
+
+        $this->assertNotFalse($contents);
+        $this->assertStringContainsString('idx_lotto_dash_risk_agg_type_exposure', $contents);
+        $this->assertStringContainsString('idx_lotto_dash_risk_agg_number', $contents);
     }
 }

@@ -764,11 +764,47 @@
                                             </div>
                                             <div class="lotto-block">
                                                 <div class="lotto-block-title">Lotto Risk (ความเสี่ยงหวย)</div>
-                                                <div class="lotto-block-main">@{{ uiValue(summary.lotto_risk.liability_max, '0.00') }}</div>
-                                                <div class="lotto-block-line"><span>ยอดเสี่ยงสูงสุดต่อเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_max, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>ยอดจ่ายถ้าถูกทั้งหมด</span><strong>@{{ uiValue(summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>ยอดความเสี่ยงรวมทุกเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>จำนวนตลาด/งวด/เลขที่ติดตาม</span><strong>@{{ uiCount(summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.numbers) }}</strong></div>
+                                                <div class="lotto-block-main">@{{ uiValue(summary.lotto_risk.max_risk_per_number || summary.lotto_risk.liability_max, '0.00') }}</div>
+                                                <div class="lotto-block-line"><span>ยอดเสี่ยงสูงสุดต่อเลข</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_per_number || summary.lotto_risk.liability_max, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>เลขเสี่ยงสูงสุด</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_number, '-') }}</strong></div>
+                                                <div class="lotto-block-line"><span>ยอดจ่ายถ้าถูกทั้งหมด</span><strong>@{{ uiValue(summary.lotto_risk.total_exposure || summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
+                                                <div v-if="!summary.lotto_risk.liability_total_same_as_exposure" class="lotto-block-line"><span>ยอดความเสี่ยงรวมทุกเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>จำนวนตลาด/งวด/เลขที่ติดตาม</span><strong>@{{ uiCount(summary.lotto_risk.tracked_market_count || summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.tracked_round_count || summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.tracked_number_count || summary.lotto_risk.numbers) }}</strong></div>
+                                                <div class="lotto-block-line"><span>เทียบงวดก่อนหน้า (Risk)</span><strong>@{{ uiValue(summary.lotto_risk_trend.risk_delta, '0.00') }} (@{{ uiValue(summary.lotto_risk_trend.risk_direction, '-') }})</strong></div>
+                                                <div class="lotto-block-line"><span>เทียบงวดก่อนหน้า (Sales)</span><strong>@{{ uiValue(summary.lotto_risk_trend.sales_delta, '0.00') }} (@{{ uiValue(summary.lotto_risk_trend.sales_direction, '-') }})</strong></div>
+                                                <div v-if="summary.lotto_risk_alerts.length > 0" class="lotto-block-line text-danger"><span>Risk Alert</span><strong>@{{ uiValue(summary.lotto_risk_alerts[0].message, '-') }}</strong></div>
+                                            </div>
+                                        </div>
+                                        <div class="lotto-recent-wrap mt-2">
+                                            <div class="lotto-recent-head">
+                                                <div class="lotto-recent-title">เลขเสี่ยงสูงสุด (Top Risky Numbers)</div>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover lotto-recent-table">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>เลข</th>
+                                                            <th>ประเภท</th>
+                                                            <th class="text-right">ยอดแทง</th>
+                                                            <th class="text-right">ความเสี่ยง</th>
+                                                            <th class="text-right">ตลาด</th>
+                                                            <th class="text-right">งวด</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="(row, idx) in summary.top_risky_numbers" :key="'top-risky-' + idx + '-' + row.number + '-' + row.bet_type">
+                                                            <td>@{{ uiValue(row.number, '-') }}</td>
+                                                            <td>@{{ formatLottoRiskBetType(row.bet_type) }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.stake_total, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.exposure_total, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiCount(row.market_count) }}</td>
+                                                            <td class="text-right">@{{ uiCount(row.round_count) }}</td>
+                                                        </tr>
+                                                        <tr v-if="summary.top_risky_numbers.length === 0">
+                                                            <td colspan="6" class="text-center text-muted">ไม่มีข้อมูล top risky numbers</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                         <div class="lotto-recent-wrap mt-2">
@@ -784,7 +820,10 @@
                                                             <th class="text-right">ยอดรวม</th>
                                                             <th class="text-right">ผู้เล่น</th>
                                                             <th>เลขแทงสูงสุด</th>
-                                                            <th class="text-right">ยอดเลขสูงสุด</th>
+                                                            <th class="text-right">ยอดเลขแทงสูงสุด</th>
+                                                            <th class="text-right">ยอดความเสี่ยงรวม</th>
+                                                            <th>เลขเสี่ยงสูงสุด</th>
+                                                            <th class="text-right">มูลค่าเสี่ยงสูงสุด</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -793,11 +832,14 @@
                                                             <td class="text-right">@{{ uiCount(row.item_count) }}</td>
                                                             <td class="text-right">@{{ uiValue(row.total_amount, '0.00') }}</td>
                                                             <td class="text-right">@{{ row.unique_players === null ? '-' : uiCount(row.unique_players) }}</td>
-                                                            <td>@{{ uiValue(row.top_number, '-') }}</td>
-                                                            <td class="text-right">@{{ uiValue(row.top_number_amount, '0.00') }}</td>
+                                                            <td>@{{ uiValue(row.hottest_number || row.top_number, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.hottest_number_amount || row.top_number_amount, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.risk_exposure_total, '0.00') }}</td>
+                                                            <td>@{{ uiValue(row.max_risk_number, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.max_risk_value, '0.00') }}</td>
                                                         </tr>
                                                         <tr v-if="summary.lotto_bet_type_insights.length === 0">
-                                                            <td colspan="6" class="text-center text-muted">ไม่มีข้อมูลสรุปตามประเภทในช่วงวันที่ที่เลือก</td>
+                                                            <td colspan="9" class="text-center text-muted">ไม่มีข้อมูลสรุปตามประเภทในช่วงวันที่ที่เลือก</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1668,18 +1710,40 @@
                             net_cash: '-', net_cash_raw: 0,
                         },
                         lotto_product: {
-                            total_sales: '-', total_sales_raw: 0,
-                            total_payout: '-', total_payout_raw: 0,
+                            total_sales: '0.00', total_sales_raw: 0,
+                            total_payout: '0.00', total_payout_raw: 0,
                             total_tickets: 0, total_players: 0,
                             win_tickets: 0, lose_tickets: 0,
                             pending_tickets: 0, settled_tickets: 0,
                         },
                         lotto_risk: {
                             markets: 0, rounds: 0, numbers: 0,
-                            exposure_total: '-', exposure_total_raw: 0,
-                            liability_total: '-', liability_total_raw: 0,
-                            liability_max: '-', liability_max_raw: 0,
+                            tracked_market_count: 0, tracked_round_count: 0, tracked_number_count: 0,
+                            exposure_total: '0.00', exposure_total_raw: 0,
+                            total_exposure: '0.00', total_exposure_raw: 0,
+                            liability_total: '0.00', liability_total_raw: 0,
+                            liability_max: '0.00', liability_max_raw: 0,
+                            max_risk_per_number: '0.00', max_risk_per_number_raw: 0,
+                            max_risk_number: '',
+                            liability_total_deprecated: true,
+                            liability_total_same_as_exposure: true,
+                            deprecated_fields: [],
                             last_snapshot_at: '',
+                        },
+                        top_risky_numbers: [],
+                        lotto_top_risky_numbers: [],
+                        lotto_risk_alerts: [],
+                        lotto_risk_trend: {
+                            current_date: '',
+                            previous_date: '',
+                            risk_current: '0.00', risk_current_raw: 0,
+                            risk_previous: '0.00', risk_previous_raw: 0,
+                            risk_delta: '0.00', risk_delta_raw: 0,
+                            risk_direction: 'flat',
+                            sales_current: '0.00', sales_current_raw: 0,
+                            sales_previous: '0.00', sales_previous_raw: 0,
+                            sales_delta: '0.00', sales_delta_raw: 0,
+                            sales_direction: 'flat',
                         },
                         lotto_bet_type_insights: [],
                         net: { amount: '-', amount_raw: 0, change_pct: 0 },
@@ -2219,6 +2283,21 @@
                 uiValue(value, placeholder = '-') {
                     if (value === null || value === undefined || value === '') return placeholder;
                     return value;
+                },
+                formatLottoRiskBetType(value) {
+                    const key = String(value || '').trim().toLowerCase();
+                    if (!key) return '-';
+
+                    const map = {
+                        top_2: '2 ตัวบน',
+                        top_3: '3 ตัวบน',
+                        bottom_2: '2 ตัวล่าง',
+                        bottom_3: '3 ตัวล่าง',
+                        run_top: 'วิ่งบน',
+                        run_bottom: 'วิ่งล่าง',
+                    };
+
+                    return map[key] || value;
                 },
                 uiCount(value) {
                     if (value === null || value === undefined || value === '') return 0;
