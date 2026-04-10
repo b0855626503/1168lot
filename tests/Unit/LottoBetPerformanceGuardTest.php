@@ -23,6 +23,8 @@ class LottoBetPerformanceGuardTest extends TestCase
         $this->assertStringContainsString('array_chunk($ticketItemRows, self::TICKET_ITEM_INSERT_CHUNK_SIZE)', $content);
         $this->assertStringContainsString('lockExposureRows', $content);
         $this->assertStringContainsString('LottoTicketItem::query()->insert(', $content);
+        $this->assertStringContainsString('json_encode(', $content);
+        $this->assertStringContainsString('JSON_THROW_ON_ERROR', $content);
         $this->assertStringContainsString('packagePayloadCache', $content);
         $this->assertStringContainsString('blockModeCache', $content);
     }

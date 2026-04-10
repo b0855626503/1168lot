@@ -363,7 +363,10 @@ class BetService
                 'discount_amount_at_time' => $item['discount_amount'],
                 'payable_amount_at_time' => $item['payable_amount'],
                 'potential_win_amount_at_time' => $item['potential_win_amount'],
-                'calculated_values_at_bet_time' => $item['calculated_values_at_bet_time'],
+                'calculated_values_at_bet_time' => json_encode(
+                    $item['calculated_values_at_bet_time'],
+                    JSON_THROW_ON_ERROR
+                ),
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
             ];
