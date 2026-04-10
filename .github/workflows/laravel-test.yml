@@ -29,16 +29,27 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-          extensions: mbstring, bcmath, ctype, fileinfo, json, mongodb, pdo_sqlite, redis
+          extensions: mbstring, bcmath, ctype, fileinfo, json, pdo_sqlite, redis
           coverage: none
+          tools: composer
+
+      - name: Install MongoDB extension 1.21.0
+        run: |
+          sudo pecl uninstall mongodb || true
+          printf "\n" | sudo pecl install mongodb-1.21.0
+          echo "extension=mongodb.so" | sudo tee /etc/php/8.2/cli/conf.d/99-mongodb.ini
+          php -m | grep mongodb
+          php --ri mongodb
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
-      - name: Prepare CI env
+      - name: Prepare CI environment
         run: |
           cat > .env <<'EOF'
           APP_NAME=CI
@@ -57,11 +68,14 @@ jobs:
           LADA_CACHE_ACTIVE=false
           EOF
 
-      - name: Install Composer
+      - name: Validate Composer platform
+        run: composer check-platform-reqs
+
+      - name: Install Composer dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts
 
-      - name: Discover packages
-        run: php artisan package:discover
+      - name: Laravel package discover
+        run: php artisan package:discover --ansi
 
       - name: Run tests
         run: php artisan test
