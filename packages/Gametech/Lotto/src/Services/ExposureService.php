@@ -5,6 +5,8 @@ namespace Gametech\Lotto\Services;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ExposureService - ยอดสะสมต่อเลข
@@ -32,6 +34,57 @@ class ExposureService
         return $this->exposureQuery($drawId, $betType, $number)
             ->lockForUpdate()
             ->firstOrFail();
+    }
+
+    /**
+     * @param  array<int, array{bet_type:string, number:string}>  $items
+     * @return Collection<string, LottoNumberExposure>
+     */
+    public function lockExposureRows(int $drawId, array $items): Collection
+    {
+        $normalizedItems = collect($items)
+            ->map(function (array $item): array {
+                return [
+                    'bet_type' => (string) $item['bet_type'],
+                    'number' => (string) $item['number'],
+                ];
+            })
+            ->unique(static fn (array $item): string => $item['bet_type'].'|'.$item['number'])
+            ->values();
+
+        if ($normalizedItems->isEmpty()) {
+            return collect();
+        }
+
+        DB::table('lotto_number_exposures')->insertOrIgnore(
+            $normalizedItems
+                ->map(function (array $item) use ($drawId): array {
+                    return [
+                        'draw_id' => $drawId,
+                        'bet_type' => $item['bet_type'],
+                        'number' => $item['number'],
+                        'sold_amount' => 0,
+                    ];
+                })
+                ->all()
+        );
+
+        return LottoNumberExposure::query()
+            ->where('draw_id', $drawId)
+            ->where(function ($query) use ($normalizedItems): void {
+                foreach ($normalizedItems as $item) {
+                    $query->orWhere(function ($subQuery) use ($item): void {
+                        $subQuery->where('bet_type', $item['bet_type'])
+                            ->where('number', $item['number']);
+                    });
+                }
+            })
+            ->lockForUpdate()
+            ->get()
+            ->keyBy(fn (LottoNumberExposure $exposure): string => $this->exposureKey(
+                (string) $exposure->bet_type,
+                (string) $exposure->number
+            ));
     }
 
     /**
@@ -86,6 +139,11 @@ class ExposureService
             ->where('draw_id', $drawId)
             ->where('bet_type', $betType)
             ->where('number', $number);
+    }
+
+    private function exposureKey(string $betType, string $number): string
+    {
+        return $betType.'|'.$number;
     }
 
     private function findBetSetting(int $drawId, string $betType)

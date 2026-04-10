@@ -44,7 +44,8 @@ class BetService
     ) {}
 
     /**
-     * @param array<int, array{bet_type:string, number:string, amount:numeric}> $items
+     * @param  array<int, array{bet_type:string, number:string, amount:numeric}>  $items
+     *
      * @throws Exception
      */
     public function placeBet(int $memberId, int $drawId, int $packageId, array $items): LottoTicket
@@ -65,6 +66,8 @@ class BetService
             $totalBetAmount = 0.0;
             $totalDiscountAmount = 0.0;
             $totalNetAmount = 0.0;
+            $blockModeCache = [];
+            $packagePayloadCache = [];
 
             foreach ($items as $item) {
                 $validated = $this->validateAndPrepareItem(
@@ -72,7 +75,9 @@ class BetService
                     $packageId,
                     (string) ($item['bet_type'] ?? ''),
                     (string) ($item['number'] ?? ''),
-                    (float) ($item['amount'] ?? 0)
+                    (float) ($item['amount'] ?? 0),
+                    $blockModeCache,
+                    $packagePayloadCache
                 );
 
                 $validatedItems[] = $validated;
@@ -95,7 +100,7 @@ class BetService
                 'bet_type_summary' => $betTypeSummary,
             ]);
 
-            $groupCode = 'LOTTO_BET_' . $ticket->id . '_' . now()->format('YmdHis');
+            $groupCode = 'LOTTO_BET_'.$ticket->id.'_'.now()->format('YmdHis');
             $walletTxnId = $this->walletTransactionService->debitMemberBalance(
                 memberId: $memberId,
                 amount: (float) round($totalNetAmount, 2),
@@ -123,9 +128,7 @@ class BetService
                 ]);
             }
 
-            foreach ($validatedItems as $item) {
-                $this->persistTicketItemAndExposure($ticket, $drawId, $item);
-            }
+            $this->persistTicketItemsAndExposure($ticket, $drawId, $validatedItems);
 
             return $ticket->fresh('items');
         });
@@ -139,7 +142,9 @@ class BetService
         int $packageId,
         string $betType,
         string $number,
-        float $amount
+        float $amount,
+        array &$blockModeCache,
+        array &$packagePayloadCache
     ): array {
         if (! in_array($betType, BetType::all(), true)) {
             throw new Exception("Invalid bet type: {$betType}");
@@ -157,7 +162,12 @@ class BetService
             );
         }
 
-        $blockMode = $this->resolveBlockMode($draw, $betType, $number);
+        $blockCacheKey = $this->exposureKey($betType, $number);
+        if (! array_key_exists($blockCacheKey, $blockModeCache)) {
+            $blockModeCache[$blockCacheKey] = $this->resolveBlockMode($draw, $betType, $number);
+        }
+
+        $blockMode = $blockModeCache[$blockCacheKey];
 
         if ($blockMode === self::BLOCK_MODE_BLOCK) {
             throw new Exception("Number {$number} is blocked for this draw");
@@ -167,7 +177,12 @@ class BetService
             throw new Exception("Number {$number} is blocked by future-limit rule");
         }
 
-        $packagePayload = $this->packageResolver->resolveForBet($draw, $packageId, $betType);
+        $packageCacheKey = $packageId.'|'.$betType;
+        if (! array_key_exists($packageCacheKey, $packagePayloadCache)) {
+            $packagePayloadCache[$packageCacheKey] = $this->packageResolver->resolveForBet($draw, $packageId, $betType);
+        }
+
+        $packagePayload = $packagePayloadCache[$packageCacheKey];
         $package = $packagePayload['package'];
         $packageSetting = $packagePayload['setting'];
 
@@ -308,36 +323,70 @@ class BetService
      *  },
      *  max_per_number:float
      * } $item
+     *
      * @throws Exception
      */
-    private function persistTicketItemAndExposure(LottoTicket $ticket, int $drawId, array $item): void
+    private function persistTicketItemsAndExposure(LottoTicket $ticket, int $drawId, array $validatedItems): void
     {
-        $exposure = $this->exposureService->lockExposureRow(
-            $drawId,
-            $item['bet_type'],
-            $item['number']
-        );
-
-        if (((float) $exposure->sold_amount + $item['amount']) > $item['max_per_number']) {
-            throw new Exception("Exposure limit reached for number {$item['number']}");
+        if ($validatedItems === []) {
+            return;
         }
 
-        LottoTicketItem::query()->create([
-            'ticket_id' => $ticket->id,
-            'bet_type' => $item['bet_type'],
-            'number' => $item['number'],
-            'amount' => $item['amount'],
-            'package_id_at_time' => $item['package_id'],
-            'package_name_at_time' => $item['package_name'],
-            'payout_at_time' => $item['payout'],
-            'discount_percent_at_time' => $item['discount_percent'],
-            'discount_amount_at_time' => $item['discount_amount'],
-            'payable_amount_at_time' => $item['payable_amount'],
-            'potential_win_amount_at_time' => $item['potential_win_amount'],
-            'calculated_values_at_bet_time' => $item['calculated_values_at_bet_time'],
-        ]);
+        $groupedExposureItems = [];
+        $ticketItemRows = [];
+        $timestamp = now();
 
-        $exposure->increment('sold_amount', $item['amount']);
+        foreach ($validatedItems as $item) {
+            $key = $this->exposureKey($item['bet_type'], $item['number']);
+
+            if (! array_key_exists($key, $groupedExposureItems)) {
+                $groupedExposureItems[$key] = [
+                    'bet_type' => $item['bet_type'],
+                    'number' => $item['number'],
+                    'amount' => 0.0,
+                    'max_per_number' => $item['max_per_number'],
+                ];
+            }
+
+            $groupedExposureItems[$key]['amount'] += (float) $item['amount'];
+
+            $ticketItemRows[] = [
+                'ticket_id' => $ticket->id,
+                'bet_type' => $item['bet_type'],
+                'number' => $item['number'],
+                'amount' => $item['amount'],
+                'package_id_at_time' => $item['package_id'],
+                'package_name_at_time' => $item['package_name'],
+                'payout_at_time' => $item['payout'],
+                'discount_percent_at_time' => $item['discount_percent'],
+                'discount_amount_at_time' => $item['discount_amount'],
+                'payable_amount_at_time' => $item['payable_amount'],
+                'potential_win_amount_at_time' => $item['potential_win_amount'],
+                'calculated_values_at_bet_time' => $item['calculated_values_at_bet_time'],
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+            ];
+        }
+
+        $exposures = $this->exposureService->lockExposureRows($drawId, array_values($groupedExposureItems));
+
+        foreach ($groupedExposureItems as $key => $item) {
+            $exposure = $exposures->get($key);
+
+            if (! $exposure) {
+                throw new Exception("Exposure row missing for number {$item['number']}");
+            }
+
+            if (((float) $exposure->sold_amount + $item['amount']) > $item['max_per_number']) {
+                throw new Exception("Exposure limit reached for number {$item['number']}");
+            }
+        }
+
+        LottoTicketItem::query()->insert($ticketItemRows);
+
+        foreach ($groupedExposureItems as $key => $item) {
+            $exposures->get($key)?->increment('sold_amount', $item['amount']);
+        }
     }
 
     private function normalizeDiscountPercent(float $discountPercent): float
@@ -378,7 +427,7 @@ class BetService
     }
 
     /**
-     * @param array<int, array{bet_type:string}> $validatedItems
+     * @param  array<int, array{bet_type:string}>  $validatedItems
      */
     private function buildBetTypeSummary(array $validatedItems): string
     {
@@ -394,5 +443,10 @@ class BetService
         }
 
         return mb_substr($labels->implode(', '), 0, 255);
+    }
+
+    private function exposureKey(string $betType, string $number): string
+    {
+        return $betType.'|'.$number;
     }
 }

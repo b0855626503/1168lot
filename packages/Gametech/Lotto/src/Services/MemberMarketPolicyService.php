@@ -3,10 +3,10 @@
 namespace Gametech\Lotto\Services;
 
 use Gametech\Lotto\Models\LotteryMarket;
-use Gametech\Lotto\Models\MemberLottoMarketPolicy;
 use Gametech\Member\Models\Member;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class MemberMarketPolicyService
@@ -164,6 +164,9 @@ class MemberMarketPolicyService
         bool $forceAllow,
         string $source
     ): void {
+        $rows = [];
+        $timestamp = now();
+
         foreach ($markets as $market) {
             $group = $market->group;
             if (! $group) {
@@ -175,16 +178,25 @@ class MemberMarketPolicyService
             $policyVersion = max((int) $group->policy_version, (int) $market->policy_version);
 
             foreach ($memberIds as $memberId) {
-                MemberLottoMarketPolicy::query()->updateOrCreate([
-                    'member_id' => $memberId,
-                    'market_id' => (int) $market->id,
-                ], [
+                $rows[] = [
+                    'member_id' => (int) $memberId,
                     'group_id' => (int) $group->id,
+                    'market_id' => (int) $market->id,
                     'is_allowed' => $isAllowed,
                     'source' => $source,
                     'policy_version' => $policyVersion,
-                ]);
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ];
             }
+        }
+
+        foreach (array_chunk($rows, 1000) as $chunk) {
+            DB::table('member_lotto_market_policies')->upsert(
+                $chunk,
+                ['member_id', 'market_id'],
+                ['group_id', 'is_allowed', 'source', 'policy_version', 'updated_at']
+            );
         }
     }
 
@@ -205,4 +217,3 @@ class MemberMarketPolicyService
         return $scope === self::ROLLOUT_SELECTED;
     }
 }
-
