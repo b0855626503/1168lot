@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameListProxy;
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
@@ -24,10 +23,9 @@ class MannaPlayController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -44,7 +42,6 @@ class MannaPlayController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
 
         if ($member) {
@@ -54,20 +51,19 @@ class MannaPlayController extends AppBaseController
                 'message' => 'success',
                 'currency' => 'THB',
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance_free,
-                'token' => $session['token']
+                'balance' => (float) $member->balance_free,
+                'token' => $session['token'],
             ];
 
         } else {
             $param = [
-                "errorCode" => 4,
-                "message" => "Token expired"
+                'errorCode' => 4,
+                'message' => 'Token expired',
             ];
         }
 
         return $param;
     }
-
 
     public function getBalance(Request $request)
     {
@@ -80,7 +76,7 @@ class MannaPlayController extends AppBaseController
             if ($member) {
 
                 $param = [
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                 ];
 
                 $session_in['input'] = $session;
@@ -100,24 +96,21 @@ class MannaPlayController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
             } else {
                 $param = [
-                    "errorCode" => 10105,
-                    "message" => "SessionId or apikey is wrong or empty."
+                    'errorCode' => 10105,
+                    'message' => 'SessionId or apikey is wrong or empty.',
                 ];
             }
 
         } else {
 
             $param = [
-                "errorCode" => 10105,
-                "message" => "SessionId or apikey is wrong or empty."
+                'errorCode' => 10105,
+                'message' => 'SessionId or apikey is wrong or empty.',
             ];
 
-
         }
-
 
         return $param;
     }
@@ -134,10 +127,10 @@ class MannaPlayController extends AppBaseController
 
                 $datamain = GameListProxy::where('product', 'MANNA')->where('code', $session['game_id'])->first();
 
-                if (!$datamain) {
+                if (! $datamain) {
                     return [
-                        "errorCode" => 10109,
-                        "message" => "Game not found!"
+                        'errorCode' => 10109,
+                        'message' => 'Game not found!',
                     ];
 
                 }
@@ -152,26 +145,23 @@ class MannaPlayController extends AppBaseController
                     ->whereNull('con_4')
                     ->first();
 
-
                 $oldbalance = $member->balance_free;
 
                 if ($data) {
 
                     $param = [
-                        "errorCode" => 10208,
-                        "message" => "Transaction id exists!"
+                        'errorCode' => 10208,
+                        'message' => 'Transaction id exists!',
                     ];
-
 
                 } else {
 
                     if ($session['amount'] < 0) {
                         $param = [
-                            "errorCode" => 10201,
-                            "message" => "Warning value must not be less 0."
+                            'errorCode' => 10201,
+                            'message' => 'Warning value must not be less 0.',
                         ];
                     } else {
-
 
                         $balance = ($oldbalance - $session['amount']);
                         if ($balance >= 0) {
@@ -179,12 +169,12 @@ class MannaPlayController extends AppBaseController
                             MemberProxy::where('user_name', $session['account'])->decrement('balance_free', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['account'])->first();
 
-//                            $member->balance_free -= $session['amount'];
-//                            $member->save();
+                            //                            $member->balance_free -= $session['amount'];
+                            //                            $member->save();
 
                             $param = [
-                                'balance' => (float)$member->balance_free,
-                                'transaction_id' => $session['transaction_id']
+                                'balance' => (float) $member->balance_free,
+                                'transaction_id' => $session['transaction_id'],
                             ];
 
                             $session_in['input'] = $session;
@@ -204,12 +194,11 @@ class MannaPlayController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
-                                "errorCode" => 10203,
-                                "message" => "Balance value error. Insufficient balance"
+                                'errorCode' => 10203,
+                                'message' => 'Balance value error. Insufficient balance',
                             ];
                         }
 
@@ -233,23 +222,21 @@ class MannaPlayController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
             } else {
                 $param = [
-                    "errorCode" => 10105,
-                    "message" => "SessionId or apikey is wrong or empty."
+                    'errorCode' => 10105,
+                    'message' => 'SessionId or apikey is wrong or empty.',
                 ];
             }
 
         } else {
 
             $param = [
-                "errorCode" => 10109,
-                "message" => "Game not found!"
+                'errorCode' => 10109,
+                'message' => 'Game not found!',
             ];
 
         }
-
 
         return $param;
     }
@@ -257,7 +244,6 @@ class MannaPlayController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['account'], 'enable' => 'Y']);
         if ($member) {
@@ -277,8 +263,8 @@ class MannaPlayController extends AppBaseController
             if ($data) {
 
                 $param = [
-                    "errorCode" => 10208,
-                    "message" => "Transaction id exists!"
+                    'errorCode' => 10208,
+                    'message' => 'Transaction id exists!',
                 ];
 
             } else {
@@ -298,20 +284,20 @@ class MannaPlayController extends AppBaseController
 
                     if ($session['amount'] < 0) {
                         $param = [
-                            "errorCode" => 10201,
-                            "message" => "Warning value must not be less 0."
+                            'errorCode' => 10201,
+                            'message' => 'Warning value must not be less 0.',
                         ];
                     } else {
 
                         MemberProxy::where('user_name', $session['account'])->increment('balance_free', $session['amount']);
                         $member = MemberProxy::where('user_name', $session['account'])->first();
 
-//                        $member->balance_free += $session['amount'];
-//                        $member->save();
+                        //                        $member->balance_free += $session['amount'];
+                        //                        $member->save();
 
                         $param = [
-                            'balance' => (float)$member->balance_free,
-                            'transaction_id' => $session['transaction_id']
+                            'balance' => (float) $member->balance_free,
+                            'transaction_id' => $session['transaction_id'],
                         ];
 
                         $session_in['input'] = $session;
@@ -333,8 +319,8 @@ class MannaPlayController extends AppBaseController
                     }
                 } else {
                     $param = [
-                        "errorCode" => 10212,
-                        "message" => "Round was not found!"
+                        'errorCode' => 10212,
+                        'message' => 'Round was not found!',
                     ];
                 }
             }
@@ -356,14 +342,12 @@ class MannaPlayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
-                "errorCode" => 10105,
-                "message" => "SessionId or apikey is wrong or empty."
+                'errorCode' => 10105,
+                'message' => 'SessionId or apikey is wrong or empty.',
             ];
         }
-
 
         return $param;
     }
@@ -380,12 +364,11 @@ class MannaPlayController extends AppBaseController
             if ($session['transaction_id'] == '') {
 
                 $param = [
-                    "errorCode" => 10211,
-                    "message" => "Transaction id not found!"
+                    'errorCode' => 10211,
+                    'message' => 'Transaction id not found!',
                 ];
 
             } else {
-
 
                 $data = GameLogProxy::where('company', 'MANNAPLAY')
                     ->where('response', 'in')
@@ -397,12 +380,11 @@ class MannaPlayController extends AppBaseController
                     ->whereNull('con_4')
                     ->first();
 
-
                 if ($data) {
 
                     $param = [
-                        "errorCode" => 10208,
-                        "message" => "Transaction id exists!"
+                        'errorCode' => 10208,
+                        'message' => 'Transaction id exists!',
                     ];
 
                 } else {
@@ -412,13 +394,12 @@ class MannaPlayController extends AppBaseController
                     MemberProxy::where('user_name', $session['account'])->increment('balance_free', $session['jp_win']);
                     $member = MemberProxy::where('user_name', $session['account'])->first();
 
-
-//                    $member->balance_free += $session['jp_win'];
-//                    $member->save();
+                    //                    $member->balance_free += $session['jp_win'];
+                    //                    $member->save();
 
                     $param = [
-                        'balance' => (float)$member->balance_free,
-                        'transaction_id' => $session['transaction_id']
+                        'balance' => (float) $member->balance_free,
+                        'transaction_id' => $session['transaction_id'],
                     ];
 
                     $session_in['input'] = $session;
@@ -457,16 +438,14 @@ class MannaPlayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
-                "errorCode" => 10105,
-                "message" => "SessionId or apikey is wrong or empty."
+                'errorCode' => 10105,
+                'message' => 'SessionId or apikey is wrong or empty.',
             ];
 
         }
-
 
         return $param;
     }
@@ -476,7 +455,6 @@ class MannaPlayController extends AppBaseController
         $session = $request->all();
 
         if ($session['target_transaction_id']) {
-
 
             $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['account'], 'enable' => 'Y']);
 
@@ -498,8 +476,8 @@ class MannaPlayController extends AppBaseController
                 if ($data) {
 
                     $param = [
-                        "errorCode" => 10208,
-                        "message" => "Transaction id exists!"
+                        'errorCode' => 10208,
+                        'message' => 'Transaction id exists!',
                     ];
 
                 } else {
@@ -523,13 +501,12 @@ class MannaPlayController extends AppBaseController
                             MemberProxy::where('user_name', $session['account'])->increment('balance_free', $datasub['input']['amount']);
                             $member = MemberProxy::where('user_name', $session['account'])->first();
 
-
-//                            $member->balance_free += $datasub['input']['amount'];
-//                            $member->save();
+                            //                            $member->balance_free += $datasub['input']['amount'];
+                            //                            $member->save();
 
                             $param = [
-                                'balance' => (float)$member->balance_free,
-                                'transaction_id' => $session['transaction_id']
+                                'balance' => (float) $member->balance_free,
+                                'transaction_id' => $session['transaction_id'],
                             ];
 
                             $session_in['input'] = $session;
@@ -552,8 +529,8 @@ class MannaPlayController extends AppBaseController
                         } else {
 
                             $param = [
-                                'balance' => (float)$member->balance_free,
-                                'transaction_id' => $session['transaction_id']
+                                'balance' => (float) $member->balance_free,
+                                'transaction_id' => $session['transaction_id'],
                             ];
 
                         }
@@ -561,8 +538,8 @@ class MannaPlayController extends AppBaseController
                     } else {
 
                         $param = [
-                            "errorCode" => 10210,
-                            "message" => "Target transaction id not found!"
+                            'errorCode' => 10210,
+                            'message' => 'Target transaction id not found!',
                         ];
 
                     }
@@ -588,23 +565,20 @@ class MannaPlayController extends AppBaseController
 
             } else {
                 $param = [
-                    "errorCode" => 10100,
-                    "message" => "Server is not ready!"
+                    'errorCode' => 10100,
+                    'message' => 'Server is not ready!',
                 ];
             }
 
         } else {
 
             $param = [
-                "errorCode" => 10102,
-                "message" => "Post data is missing some necessary parameters."
+                'errorCode' => 10102,
+                'message' => 'Post data is missing some necessary parameters.',
             ];
 
         }
 
-
         return $param;
     }
-
-
 }

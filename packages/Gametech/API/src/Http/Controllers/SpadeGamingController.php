@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class SpadeGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -42,9 +40,7 @@ class SpadeGamingController extends AppBaseController
         $header = $request->header('api');
         $session = $request->all();
 
-
         $session['api'] = $header;
-
 
         switch ($header) {
             case 'authorize':
@@ -65,7 +61,7 @@ class SpadeGamingController extends AppBaseController
                 } else {
                     $param = [
                         'code' => 50100,
-                        'msg' => 'Acct Not Found'
+                        'msg' => 'Acct Not Found',
                     ];
                 }
 
@@ -77,10 +73,9 @@ class SpadeGamingController extends AppBaseController
             default:
                 $param = [
                     'code' => 50100,
-                    'msg' => 'Acct Not Found'
+                    'msg' => 'Acct Not Found',
                 ];
         }
-
 
         return $param;
 
@@ -89,11 +84,9 @@ class SpadeGamingController extends AppBaseController
     public function verify($session)
     {
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'user_name' => $session['acctId'], 'enable' => 'Y']);
 
         if ($member) {
-
 
             $param = [
                 'code' => 0,
@@ -102,11 +95,10 @@ class SpadeGamingController extends AppBaseController
                 'acctInfo' => [
                     'acctId' => $member->user_name,
                     'userName' => $member->user_name,
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
-                ]
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
+                ],
             ];
-
 
         } else {
             $param = [
@@ -117,20 +109,17 @@ class SpadeGamingController extends AppBaseController
                     'acctId' => $session['acctId'],
                     'userName' => $session['acctId'],
                     'balance' => 0,
-                    'currency' => 'THB'
-                ]
+                    'currency' => 'THB',
+                ],
             ];
         }
-
 
         return $param;
 
     }
 
-
     public function getBalance($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['acctId'], 'enable' => 'Y']);
 
@@ -143,9 +132,9 @@ class SpadeGamingController extends AppBaseController
                 'acctInfo' => [
                     'acctId' => $member->user_name,
                     'userName' => $member->user_name,
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
-                ]
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
+                ],
             ];
 
             $session_in['input'] = $session;
@@ -165,7 +154,6 @@ class SpadeGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'code' => 50100,
@@ -175,18 +163,16 @@ class SpadeGamingController extends AppBaseController
                     'acctId' => $session['acctId'],
                     'userName' => $session['acctId'],
                     'balance' => 0,
-                    'currency' => 'THB'
-                ]
+                    'currency' => 'THB',
+                ],
             ];
         }
-
 
         return $param;
     }
 
     public function transferOut($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['acctId'], 'enable' => 'Y']);
 
@@ -210,7 +196,7 @@ class SpadeGamingController extends AppBaseController
                     'transferId' => $session['transferId'],
                     'merchantTxId' => $session['transferId'],
                     'acctId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'code' => 0,
                     'msg' => 'success',
                     'serialNo' => $session['serialNo'],
@@ -235,14 +221,13 @@ class SpadeGamingController extends AppBaseController
                         'transferId' => $session['transferId'],
                         'merchantTxId' => $session['transferId'],
                         'acctId' => $member->user_name,
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'code' => 0,
                         'msg' => 'success',
                         'serialNo' => $session['serialNo'],
                     ];
 
                 } else {
-
 
                     $balance = ($oldbalance - $session['amount']);
                     if ($balance >= 0) {
@@ -254,7 +239,7 @@ class SpadeGamingController extends AppBaseController
                             'transferId' => $session['transferId'],
                             'merchantTxId' => $session['transferId'],
                             'acctId' => $member->user_name,
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'code' => 0,
                             'msg' => 'success',
                             'serialNo' => $session['serialNo'],
@@ -277,14 +262,13 @@ class SpadeGamingController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         GameLogProxy::create($session_in);
 
-
                     } else {
 
                         $param = [
                             'transferId' => $session['transferId'],
                             'merchantTxId' => $session['transferId'],
                             'acctId' => $member->user_name,
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'code' => 50110,
                             'msg' => 'Insufficient Balance',
                             'serialNo' => $session['serialNo'],
@@ -343,13 +327,11 @@ class SpadeGamingController extends AppBaseController
 
         }
 
-
         return $param;
     }
 
     public function cancelBet($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['acctId'], 'enable' => 'Y']);
 
@@ -373,7 +355,7 @@ class SpadeGamingController extends AppBaseController
                     'transferId' => $session['transferId'],
                     'merchantTxId' => $session['referenceId'],
                     'acctId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'code' => 0,
                     'msg' => 'success',
                     'serialNo' => $session['serialNo'],
@@ -392,7 +374,7 @@ class SpadeGamingController extends AppBaseController
                     ->whereNull('con_4')
                     ->first();
 
-                if (!$datasub) {
+                if (! $datasub) {
 
                     $param = [
 
@@ -420,14 +402,13 @@ class SpadeGamingController extends AppBaseController
                             'transferId' => $session['transferId'],
                             'merchantTxId' => $session['referenceId'],
                             'acctId' => $member->user_name,
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'code' => 0,
                             'msg' => 'success',
                             'serialNo' => $session['serialNo'],
                         ];
 
                     } else {
-
 
                         if ($datasub['amount'] != 0) {
 
@@ -440,12 +421,11 @@ class SpadeGamingController extends AppBaseController
                             'transferId' => $session['transferId'],
                             'merchantTxId' => $session['referenceId'],
                             'acctId' => $member->user_name,
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'code' => 0,
                             'msg' => 'success',
                             'serialNo' => $session['serialNo'],
                         ];
-
 
                     }
                 }
@@ -497,13 +477,11 @@ class SpadeGamingController extends AppBaseController
             ];
         }
 
-
         return $param;
     }
 
     public function transferIn($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['acctId'], 'enable' => 'Y']);
 
@@ -527,14 +505,13 @@ class SpadeGamingController extends AppBaseController
                     'transferId' => $session['transferId'],
                     'merchantTxId' => $session['referenceId'],
                     'acctId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'code' => 0,
                     'msg' => 'success',
                     'serialNo' => $session['serialNo'],
                 ];
 
             } else {
-
 
                 $datasub = GameLogProxy::where('company', 'SPADEGAMING')
                     ->where('response', 'in')
@@ -545,7 +522,7 @@ class SpadeGamingController extends AppBaseController
                     ->whereNull('con_4')
                     ->first();
 
-                if (!$datasub) {
+                if (! $datasub) {
 
                     $param = [
                         'code' => 109,
@@ -554,7 +531,6 @@ class SpadeGamingController extends AppBaseController
 
                 } else {
 
-
                     $member->balance += $session['amount'];
                     $member->save();
 
@@ -562,7 +538,7 @@ class SpadeGamingController extends AppBaseController
                         'transferId' => $session['transferId'],
                         'merchantTxId' => $session['referenceId'],
                         'acctId' => $member->user_name,
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'code' => 0,
                         'msg' => 'success',
                         'serialNo' => $session['serialNo'],
@@ -617,13 +593,11 @@ class SpadeGamingController extends AppBaseController
             ];
         }
 
-
         return $param;
     }
 
     public function transferBonus($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['acctId'], 'enable' => 'Y']);
 
@@ -647,7 +621,7 @@ class SpadeGamingController extends AppBaseController
                     'transferId' => $session['transferId'],
                     'merchantTxId' => $session['transferId'],
                     'acctId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'code' => 109,
                     'msg' => 'Duplicated transferId',
                     'serialNo' => $session['serialNo'],
@@ -662,7 +636,7 @@ class SpadeGamingController extends AppBaseController
                     'transferId' => $session['transferId'],
                     'merchantTxId' => $session['transferId'],
                     'acctId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'code' => 0,
                     'msg' => 'success',
                     'serialNo' => $session['serialNo'],
@@ -716,9 +690,6 @@ class SpadeGamingController extends AppBaseController
             ];
         }
 
-
         return $param;
     }
-
-
 }

@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class EvoplayController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -41,7 +39,6 @@ class EvoplayController extends AppBaseController
     {
 
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
 
@@ -62,36 +59,32 @@ class EvoplayController extends AppBaseController
                     break;
             }
 
-
             return $param;
         }
 
         return [
             'status' => 'error',
             'error' => [
-                'scope' => "internal",
-                'no_refund' => "1",
-                'message' => 'Invalid token'
-            ]
+                'scope' => 'internal',
+                'no_refund' => '1',
+                'message' => 'Invalid token',
+            ],
         ];
 
     }
 
-
     public function getBalance($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
         if ($member) {
 
-
             $param = [
                 'status' => 'ok',
                 'data' => [
-                    'balance' => (string)$member->balance_free,
-                    'currency' => 'THB'
-                ]
+                    'balance' => (string) $member->balance_free,
+                    'currency' => 'THB',
+                ],
             ];
 
             $session_in['input'] = $session;
@@ -111,25 +104,22 @@ class EvoplayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => 'error',
                 'error' => [
-                    'scope' => "internal",
-                    'no_refund' => "1",
-                    'message' => 'Invalid token'
-                ]
+                    'scope' => 'internal',
+                    'no_refund' => '1',
+                    'message' => 'Invalid token',
+                ],
             ];
         }
-
 
         return $param;
     }
 
     public function transferOut($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
         if ($member) {
@@ -151,10 +141,10 @@ class EvoplayController extends AppBaseController
                 $param = [
                     'status' => 'error',
                     'error' => [
-                        'scope' => "user",
-                        'no_refund' => "1",
-                        'message' => 'Duplicate Bet'
-                    ]
+                        'scope' => 'user',
+                        'no_refund' => '1',
+                        'message' => 'Duplicate Bet',
+                    ],
                 ];
 
             } else {
@@ -174,9 +164,9 @@ class EvoplayController extends AppBaseController
                     $param = [
                         'status' => 'ok',
                         'data' => [
-                            'balance' => (string)$member->balance_free,
-                            'currency' => 'THB'
-                        ]
+                            'balance' => (string) $member->balance_free,
+                            'currency' => 'THB',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -198,10 +188,8 @@ class EvoplayController extends AppBaseController
 
                 } else {
 
-
                     $balance = ($oldbalance - $session['data']['amount']);
                     if ($balance >= 0) {
-
 
                         $member->balance_free -= $session['data']['amount'];
                         $member->save();
@@ -209,9 +197,9 @@ class EvoplayController extends AppBaseController
                         $param = [
                             'status' => 'ok',
                             'data' => [
-                                'balance' => (string)$member->balance_free,
-                                'currency' => 'THB'
-                            ]
+                                'balance' => (string) $member->balance_free,
+                                'currency' => 'THB',
+                            ],
                         ];
 
                         $session_in['input'] = $session;
@@ -231,16 +219,15 @@ class EvoplayController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         GameLogProxy::create($session_in);
 
-
                     } else {
 
                         $param = [
                             'status' => 'error',
                             'error' => [
-                                'scope' => "internal",
-                                'no_refund' => "1",
-                                'message' => 'Insufficient balance'
-                            ]
+                                'scope' => 'internal',
+                                'no_refund' => '1',
+                                'message' => 'Insufficient balance',
+                            ],
                         ];
                     }
                 }
@@ -264,18 +251,16 @@ class EvoplayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => 'error',
                 'error' => [
-                    'scope' => "internal",
-                    'no_refund' => "1",
-                    'message' => 'Invalid token'
-                ]
+                    'scope' => 'internal',
+                    'no_refund' => '1',
+                    'message' => 'Invalid token',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -296,7 +281,6 @@ class EvoplayController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance_free;
 
             if ($data) {
@@ -304,9 +288,9 @@ class EvoplayController extends AppBaseController
                 $param = [
                     'status' => 'ok',
                     'data' => [
-                        'balance' => (string)$member->balance_free,
-                        'currency' => 'THB'
-                    ]
+                        'balance' => (string) $member->balance_free,
+                        'currency' => 'THB',
+                    ],
                 ];
 
             } else {
@@ -326,14 +310,13 @@ class EvoplayController extends AppBaseController
                     $param = [
                         'status' => 'error',
                         'error' => [
-                            'scope' => "user",
-                            'no_refund' => "1",
-                            'message' => 'Transaction already cancel'
-                        ]
+                            'scope' => 'user',
+                            'no_refund' => '1',
+                            'message' => 'Transaction already cancel',
+                        ],
                     ];
 
                 } else {
-
 
                     $member->balance_free += $session['data']['amount'];
                     $member->save();
@@ -341,9 +324,9 @@ class EvoplayController extends AppBaseController
                     $param = [
                         'status' => 'ok',
                         'data' => [
-                            'balance' => (string)$member->balance_free,
-                            'currency' => 'THB'
-                        ]
+                            'balance' => (string) $member->balance_free,
+                            'currency' => 'THB',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -383,25 +366,22 @@ class EvoplayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => 'error',
                 'error' => [
-                    'scope' => "internal",
-                    'no_refund' => "1",
-                    'message' => 'Invalid token'
-                ]
+                    'scope' => 'internal',
+                    'no_refund' => '1',
+                    'message' => 'Invalid token',
+                ],
             ];
         }
-
 
         return $param;
     }
 
     public function cancelBet($session)
     {
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
         if ($member) {
@@ -423,9 +403,9 @@ class EvoplayController extends AppBaseController
                 $param = [
                     'status' => 'ok',
                     'data' => [
-                        'balance' => (string)$member->balance_free,
-                        'currency' => 'THB'
-                    ]
+                        'balance' => (string) $member->balance_free,
+                        'currency' => 'THB',
+                    ],
                 ];
 
             } else {
@@ -447,8 +427,8 @@ class EvoplayController extends AppBaseController
                         'error' => [
                             'scope' => 'user',
                             'no_refund' => '1',
-                            'message' => 'Transaction already settle'
-                        ]
+                            'message' => 'Transaction already settle',
+                        ],
                     ];
 
                 } else {
@@ -474,9 +454,9 @@ class EvoplayController extends AppBaseController
                     $param = [
                         'status' => 'ok',
                         'data' => [
-                            'balance' => (string)$member->balance_free,
-                            'currency' => 'THB'
-                        ]
+                            'balance' => (string) $member->balance_free,
+                            'currency' => 'THB',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -515,21 +495,17 @@ class EvoplayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => 'error',
                 'error' => [
-                    'scope' => "internal",
-                    'no_refund' => "1",
-                    'message' => 'Invalid token'
-                ]
+                    'scope' => 'internal',
+                    'no_refund' => '1',
+                    'message' => 'Invalid token',
+                ],
             ];
         }
 
-
         return $param;
     }
-
-
 }

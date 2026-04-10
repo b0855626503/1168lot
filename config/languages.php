@@ -5,22 +5,22 @@ return [
         'th' => [
             'name' => 'ไทย',
             'flag' => 'th.png', // หรือ '🇹🇭'
-            'code' => 'th'
+            'code' => 'th',
         ],
         'en' => [
             'name' => 'English',
             'flag' => 'en.png', // หรือ '🇺🇸'
-            'code' => 'us'
+            'code' => 'us',
         ],
         'kh' => [
             'name' => 'ខ្មែរ', // Khmer
             'flag' => 'kh.png', // หรือ '🇰🇭'
-            'code' => 'kh'
+            'code' => 'kh',
         ],
         'la' => [
             'name' => 'ລາວ', // Lao
             'flag' => 'la.png', // หรือ '🇱🇦'
-            'code' => 'la'
+            'code' => 'la',
         ],
     ],
 ];

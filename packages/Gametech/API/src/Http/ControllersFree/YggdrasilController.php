@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class YggdrasilController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -43,7 +41,6 @@ class YggdrasilController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -53,26 +50,24 @@ class YggdrasilController extends AppBaseController
                 'msg' => 'Success',
                 'data' => [
                     'currency' => 'THB',
-                    'balance' => (float)$member->balance_free,
-                    'country' => 'TH'
-                ]
+                    'balance' => (float) $member->balance_free,
+                    'country' => 'TH',
+                ],
             ];
 
         } else {
             $param = [
                 'code' => 1,
-                'Description' => 'Any other error'
+                'Description' => 'Any other error',
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -82,9 +77,9 @@ class YggdrasilController extends AppBaseController
                 'msg' => 'Success',
                 'data' => [
                     'currency' => 'THB',
-                    'balance' => (float)$member->balance_free,
-                    'country' => 'TH'
-                ]
+                    'balance' => (float) $member->balance_free,
+                    'country' => 'TH',
+                ],
             ];
 
             $session_in['input'] = $session;
@@ -104,14 +99,12 @@ class YggdrasilController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
-
 
         return $param;
     }
@@ -140,7 +133,7 @@ class YggdrasilController extends AppBaseController
 
                 $param = [
                     'code' => 5043,
-                    'msg' => 'Bet data existed'
+                    'msg' => 'Bet data existed',
                 ];
 
             } else {
@@ -162,9 +155,9 @@ class YggdrasilController extends AppBaseController
                         'msg' => 'Success',
                         'data' => [
                             'currency' => 'THB',
-                            'balance' => (float)$member->balance_free,
-                            'country' => 'TH'
-                        ]
+                            'balance' => (float) $member->balance_free,
+                            'country' => 'TH',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -186,12 +179,11 @@ class YggdrasilController extends AppBaseController
 
                 } else {
 
-
                     if ($session['amount'] < 0) {
 
                         $param = [
                             'code' => 5001,
-                            'msg' => 'Request parameter error'
+                            'msg' => 'Request parameter error',
                         ];
 
                     } else {
@@ -201,18 +193,17 @@ class YggdrasilController extends AppBaseController
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance_free -= $session['amount'];
-//                            $member->save();
+                            //                            $member->balance_free -= $session['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'code' => 0,
                                 'msg' => 'Success',
                                 'data' => [
                                     'currency' => 'THB',
-                                    'balance' => (float)$member->balance_free,
-                                    'country' => 'TH'
-                                ]
+                                    'balance' => (float) $member->balance_free,
+                                    'country' => 'TH',
+                                ],
                             ];
 
                             $session_in['input'] = $session;
@@ -236,7 +227,7 @@ class YggdrasilController extends AppBaseController
 
                             $param = [
                                 'code' => 1006,
-                                'msg' => 'Overdraft'
+                                'msg' => 'Overdraft',
                             ];
                         }
                     }
@@ -263,10 +254,9 @@ class YggdrasilController extends AppBaseController
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
-
 
         return $param;
     }
@@ -274,7 +264,6 @@ class YggdrasilController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -296,7 +285,7 @@ class YggdrasilController extends AppBaseController
 
                 $param = [
                     'code' => 5043,
-                    'msg' => 'Bet data existed'
+                    'msg' => 'Bet data existed',
                 ];
 
             } else {
@@ -315,7 +304,7 @@ class YggdrasilController extends AppBaseController
 
                     $param = [
                         'code' => 5043,
-                        'msg' => 'Bet data existed'
+                        'msg' => 'Bet data existed',
                     ];
 
                 } else {
@@ -336,26 +325,25 @@ class YggdrasilController extends AppBaseController
 
                             $param = [
                                 'code' => 5001,
-                                'msg' => 'Request parameter error'
+                                'msg' => 'Request parameter error',
                             ];
 
                         } else {
 
-
                             MemberProxy::where('user_name', $session['username'])->increment('balance_free', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance_free += $session['amount'];
-//                            $member->save();
+                            //                            $member->balance_free += $session['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'code' => 0,
                                 'msg' => 'Success',
                                 'data' => [
                                     'currency' => 'THB',
-                                    'balance' => (float)$member->balance_free,
-                                    'country' => 'TH'
-                                ]
+                                    'balance' => (float) $member->balance_free,
+                                    'country' => 'TH',
+                                ],
                             ];
 
                             $session_in['input'] = $session;
@@ -378,7 +366,7 @@ class YggdrasilController extends AppBaseController
                     } else {
                         $param = [
                             'code' => 5042,
-                            'msg' => 'Bet data is not existed'
+                            'msg' => 'Bet data is not existed',
                         ];
                     }
                 }
@@ -404,10 +392,9 @@ class YggdrasilController extends AppBaseController
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
-
 
         return $param;
     }
@@ -415,7 +402,6 @@ class YggdrasilController extends AppBaseController
     public function transferInAppend(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -437,32 +423,31 @@ class YggdrasilController extends AppBaseController
 
                 $param = [
                     'code' => 5043,
-                    'msg' => 'Bet data existed'
+                    'msg' => 'Bet data existed',
                 ];
 
             } else {
                 if ($session['amount'] < 0) {
                     $param = [
                         'code' => 5001,
-                        'msg' => 'Request parameter error'
+                        'msg' => 'Request parameter error',
                     ];
                 } else {
 
                     MemberProxy::where('user_name', $session['username'])->increment('balance_free', $session['amount']);
                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                    $member->balance_free += $session['amount'];
-//                    $member->save();
-
+                    //                    $member->balance_free += $session['amount'];
+                    //                    $member->save();
 
                     $param = [
                         'code' => 0,
                         'msg' => 'Success',
                         'data' => [
                             'currency' => 'THB',
-                            'balance' => (float)$member->balance_free,
-                            'country' => 'TH'
-                        ]
+                            'balance' => (float) $member->balance_free,
+                            'country' => 'TH',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -504,10 +489,9 @@ class YggdrasilController extends AppBaseController
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
-
 
         return $param;
     }
@@ -515,7 +499,6 @@ class YggdrasilController extends AppBaseController
     public function transferInCampaign(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -537,30 +520,30 @@ class YggdrasilController extends AppBaseController
 
                 $param = [
                     'code' => 5043,
-                    'msg' => 'Bet data existed'
+                    'msg' => 'Bet data existed',
                 ];
 
             } else {
                 if ($session['amount'] < 0) {
                     $param = [
                         'code' => 5001,
-                        'msg' => 'Request parameter error'
+                        'msg' => 'Request parameter error',
                     ];
                 } else {
                     MemberProxy::where('user_name', $session['username'])->increment('balance_free', $session['amount']);
                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                    $member->balance_free += $session['amount'];
-//                    $member->save();
+                    //                    $member->balance_free += $session['amount'];
+                    //                    $member->save();
 
                     $param = [
                         'code' => 0,
                         'msg' => 'Success',
                         'data' => [
                             'currency' => 'THB',
-                            'balance' => (float)$member->balance_free,
-                            'country' => 'TH'
-                        ]
+                            'balance' => (float) $member->balance_free,
+                            'country' => 'TH',
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -602,10 +585,9 @@ class YggdrasilController extends AppBaseController
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
-
 
         return $param;
     }
@@ -613,7 +595,6 @@ class YggdrasilController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -635,7 +616,7 @@ class YggdrasilController extends AppBaseController
 
                 $param = [
                     'code' => 5043,
-                    'msg' => 'Bet data existed'
+                    'msg' => 'Bet data existed',
                 ];
 
             } else {
@@ -662,29 +643,29 @@ class YggdrasilController extends AppBaseController
                         ->whereNull('con_4')
                         ->first();
 
-                    if (!$datasubs) {
+                    if (! $datasubs) {
 
                         if ($session['amount'] < 0) {
                             $param = [
                                 'code' => 5001,
-                                'msg' => 'Request parameter error'
+                                'msg' => 'Request parameter error',
                             ];
                         } else {
 
                             MemberProxy::where('user_name', $session['username'])->increment('balance_free', $datasub['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance_free += $datasub['amount'];
-//                            $member->save();
+                            //                            $member->balance_free += $datasub['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'code' => 0,
                                 'msg' => 'Success',
                                 'data' => [
                                     'currency' => 'THB',
-                                    'balance' => (float)$member->balance_free,
-                                    'country' => 'TH'
-                                ]
+                                    'balance' => (float) $member->balance_free,
+                                    'country' => 'TH',
+                                ],
                             ];
 
                             $session_in['input'] = $session;
@@ -708,7 +689,7 @@ class YggdrasilController extends AppBaseController
 
                         $param = [
                             'code' => 5043,
-                            'msg' => 'Bet data existed'
+                            'msg' => 'Bet data existed',
                         ];
 
                     }
@@ -720,9 +701,9 @@ class YggdrasilController extends AppBaseController
                         'msg' => 'Success',
                         'data' => [
                             'currency' => 'THB',
-                            'balance' => (float)$member->balance_free,
-                            'country' => 'TH'
-                        ]
+                            'balance' => (float) $member->balance_free,
+                            'country' => 'TH',
+                        ],
                     ];
                     $session_in['input'] = $session;
                     $session_in['output'] = $param;
@@ -741,7 +722,6 @@ class YggdrasilController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
                 }
-
 
             }
 
@@ -765,12 +745,10 @@ class YggdrasilController extends AppBaseController
         } else {
             $param = [
                 'code' => 1,
-                'msg' => 'Any other error'
+                'msg' => 'Any other error',
             ];
         }
 
         return $param;
     }
-
-
 }

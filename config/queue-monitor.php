@@ -1,5 +1,7 @@
 <?php
 
+use romanzipp\QueueMonitor\Models\Monitor;
+
 return [
     /*
      * Set the table to be used for monitoring data.
@@ -12,7 +14,7 @@ return [
      *   romanzipp\QueueMonitor\Models\Contracts\MonitorContract
      * interface or extend the base model.
      */
-    'model' => \romanzipp\QueueMonitor\Models\Monitor::class,
+    'model' => Monitor::class,
 
     /*
      * The optional UI settings.

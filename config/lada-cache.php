@@ -1,5 +1,38 @@
 <?php
 
+use Gametech\Admin\Models\Role;
+use Gametech\Core\Models\BatchUser;
+use Gametech\Core\Models\Config;
+use Gametech\Core\Models\Coupon;
+use Gametech\Core\Models\CouponList;
+use Gametech\Core\Models\Faq;
+use Gametech\Core\Models\Refer;
+use Gametech\Core\Models\Spin;
+use Gametech\Game\Models\Game;
+use Gametech\Game\Models\GameSeamless;
+use Gametech\Game\Models\GameType;
+use Gametech\Game\Models\GameUser;
+use Gametech\Game\Models\GameUserEvent;
+use Gametech\Game\Models\GameUserFree;
+use Gametech\Member\Models\Member;
+use Gametech\Member\Models\MemberCashback;
+use Gametech\Member\Models\MemberCreditFreeLog;
+use Gametech\Member\Models\MemberCreditLog;
+use Gametech\Member\Models\MemberIc;
+use Gametech\Member\Models\MemberRemark;
+use Gametech\Payment\Models\Bank;
+use Gametech\Payment\Models\BankAccount;
+use Gametech\Payment\Models\BankPayment;
+use Gametech\Payment\Models\BankRule;
+use Gametech\Payment\Models\Bill;
+use Gametech\Payment\Models\Bonus;
+use Gametech\Payment\Models\PaymentWaiting;
+use Gametech\Payment\Models\Withdraw;
+use Gametech\Promotion\Models\Promotion;
+use Gametech\Promotion\Models\PromotionAmount;
+use Gametech\Promotion\Models\PromotionContent;
+use Gametech\Promotion\Models\PromotionTime;
+
 return [
 
     /*
@@ -50,7 +83,6 @@ return [
     */
     'consider-rows' => true,
 
-
     /*
     |--------------------------------------------------------------------------
     | Include tables
@@ -72,38 +104,38 @@ return [
     |
     */
     'include-tables' => [
-        (new \Gametech\Core\Models\Config())->getTable(),
-        (new \Gametech\Core\Models\Spin())->getTable(),
-        (new \Gametech\Core\Models\BatchUser())->getTable(),
-        (new \Gametech\Core\Models\Faq())->getTable(),
-        (new \Gametech\Core\Models\Refer())->getTable(),
-        (new \Gametech\Core\Models\Coupon())->getTable(),
-        (new \Gametech\Core\Models\CouponList())->getTable(),
-        (new \Gametech\Admin\Models\Role())->getTable(),
-        (new \Gametech\Game\Models\Game())->getTable(),
-        (new \Gametech\Game\Models\GameSeamless())->getTable(),
-        (new \Gametech\Game\Models\GameType())->getTable(),
-        (new \Gametech\Game\Models\GameUserEvent())->getTable(),
-        (new \Gametech\Member\Models\MemberCashback())->getTable(),
-        (new \Gametech\Member\Models\MemberIc())->getTable(),
-        (new \Gametech\Member\Models\MemberRemark())->getTable(),
-        (new \Gametech\Member\Models\MemberCreditLog())->getTable(),
-        (new \Gametech\Member\Models\MemberCreditFreeLog())->getTable(),
-        (new \Gametech\Payment\Models\Bank())->getTable(),
-        (new \Gametech\Payment\Models\BankAccount())->getTable(),
-        (new \Gametech\Payment\Models\BankPayment())->getTable(),
-        (new \Gametech\Payment\Models\BankRule())->getTable(),
-        (new \Gametech\Payment\Models\PaymentWaiting())->getTable(),
-        (new \Gametech\Payment\Models\Withdraw())->getTable(),
-//        (new \Gametech\Payment\Models\WithdrawFree())->getTable(),
-//        (new \Gametech\Payment\Models\WithdrawSeamless())->getTable(),
-//        (new \Gametech\Payment\Models\WithdrawSeamlessFree())->getTable(),
-        (new \Gametech\Promotion\Models\Promotion())->getTable(),
-        (new \Gametech\Promotion\Models\PromotionContent())->getTable(),
-        (new \Gametech\Promotion\Models\PromotionAmount())->getTable(),
-        (new \Gametech\Promotion\Models\PromotionTime())->getTable(),
-        (new \Gametech\Payment\Models\Bill())->getTable(),
-        (new \Gametech\Payment\Models\Bonus())->getTable()
+        (new Config)->getTable(),
+        (new Spin)->getTable(),
+        (new BatchUser)->getTable(),
+        (new Faq)->getTable(),
+        (new Refer)->getTable(),
+        (new Coupon)->getTable(),
+        (new CouponList)->getTable(),
+        (new Role)->getTable(),
+        (new Game)->getTable(),
+        (new GameSeamless)->getTable(),
+        (new GameType)->getTable(),
+        (new GameUserEvent)->getTable(),
+        (new MemberCashback)->getTable(),
+        (new MemberIc)->getTable(),
+        (new MemberRemark)->getTable(),
+        (new MemberCreditLog)->getTable(),
+        (new MemberCreditFreeLog)->getTable(),
+        (new Bank)->getTable(),
+        (new BankAccount)->getTable(),
+        (new BankPayment)->getTable(),
+        (new BankRule)->getTable(),
+        (new PaymentWaiting)->getTable(),
+        (new Withdraw)->getTable(),
+        //        (new \Gametech\Payment\Models\WithdrawFree())->getTable(),
+        //        (new \Gametech\Payment\Models\WithdrawSeamless())->getTable(),
+        //        (new \Gametech\Payment\Models\WithdrawSeamlessFree())->getTable(),
+        (new Promotion)->getTable(),
+        (new PromotionContent)->getTable(),
+        (new PromotionAmount)->getTable(),
+        (new PromotionTime)->getTable(),
+        (new Bill)->getTable(),
+        (new Bonus)->getTable(),
 
     ],
 
@@ -118,9 +150,9 @@ return [
     |
     */
     'exclude-tables' => [
-        (new \Gametech\Game\Models\GameUser())->getTable(),
-        (new \Gametech\Game\Models\GameUserFree())->getTable(),
-        (new \Gametech\Member\Models\Member())->getTable(),
+        (new GameUser)->getTable(),
+        (new GameUserFree)->getTable(),
+        (new Member)->getTable(),
     ],
 
 ];

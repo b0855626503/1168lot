@@ -4,11 +4,11 @@
 
 ให้อ่านแค่ core startup set นี้ทุกครั้งก่อน:
 
-1. `internal/00_RULES/agent_rules.md`
-2. `internal/01_SYSTEM/startup_digest.md`
-3. `internal/02_DECISIONS/adr_baseline.md`
-4. `internal/02_DECISIONS/adr_index_by_domain.md`
-5. `04_PLANS/README.md`
+1. `docs/internal/00_RULES/agent_rules.md`
+2. `docs/internal/01_SYSTEM/startup_digest.md`
+3. `docs/internal/02_DECISIONS/adr_baseline.md`
+4. `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+5. `docs/04_PLANS/README.md`
 
 ---
 
@@ -16,11 +16,11 @@
 
 หลังจากนั้นให้อ่านเฉพาะ domain ที่เกี่ยวข้อง:
 
-- `internal/03_DOMAINS/frontend_api.md`
-- `internal/03_DOMAINS/wallet.md`
-- `internal/03_DOMAINS/lotto.md`
-- `internal/03_DOMAINS/admin_lotto.md`
-- `internal/03_DOMAINS/realtime.md`
+- `docs/internal/03_DOMAINS/frontend_api.md`
+- `docs/internal/03_DOMAINS/wallet.md`
+- `docs/internal/03_DOMAINS/lotto.md`
+- `docs/internal/03_DOMAINS/admin_lotto.md`
+- `docs/internal/03_DOMAINS/realtime.md`
 
 ## 🧭 ค่อยเปิดไฟล์ใหญ่เมื่อจำเป็น
 
@@ -49,7 +49,7 @@
 2. อ่าน domain note ที่เกี่ยวข้อง
 3. ตรวจ plan ที่ active
 4. ค่อยอ่าน full docs เฉพาะจุดที่จำเป็น
-5. update doc ทุกครั้งที่มีการเปลี่ยน behavior
+5. อัปเดต doc ทุกครั้งที่มีการเปลี่ยน behavior
 
 ---
 

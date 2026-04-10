@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -32,11 +31,10 @@ class SabaSportsNewController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo,
-        Request               $request
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo,
+        Request $request
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -56,13 +54,12 @@ class SabaSportsNewController extends AppBaseController
             $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('enable', 'Y')->first();
         }
 
-//        $this->member->balance = $this->member->balance;
+        //        $this->member->balance = $this->member->balance;
 
         $this->balances = 'balance';
 
         $this->game = 'SABASPORTS';
     }
-
 
     public function getBalance(Request $request)
     {
@@ -73,13 +70,12 @@ class SabaSportsNewController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
-                'balance' => (float)$this->member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $this->member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -104,14 +100,14 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -142,8 +138,8 @@ class SabaSportsNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -169,9 +165,7 @@ class SabaSportsNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-
 
                     $checkDup = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -190,8 +184,8 @@ class SabaSportsNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -211,7 +205,7 @@ class SabaSportsNewController extends AppBaseController
                             ->latest('created_at')
                             ->first();
 
-                        if (!$checkData) {
+                        if (! $checkData) {
 
                             $balance = ($this->member->balance - $item['betAmount']);
                             if ($balance < 0) {
@@ -220,27 +214,26 @@ class SabaSportsNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
                             }
 
-
                             $this->member->decrement($this->balances, $item['betAmount']);
-                            //$this->member->refresh();
-//                            MemberProxy::where('user_name', $session['username'])->decrement($this->balances, $item['betAmount']);
-//                            $member = MemberProxy::where('user_name', $session['username'])->first();
+                            // $this->member->refresh();
+                            //                            MemberProxy::where('user_name', $session['username'])->decrement($this->balances, $item['betAmount']);
+                            //                            $member = MemberProxy::where('user_name', $session['username'])->first();
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -260,18 +253,17 @@ class SabaSportsNewController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -291,11 +283,10 @@ class SabaSportsNewController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             $id = GameLogProxy::create($session_in)->id;
 
-                            $checkData->con_4 = 'bet_' . $id;
+                            $checkData->con_4 = 'bet_'.$id;
                             $checkData->save();
 
                         }
-
 
                     } else {
 
@@ -306,28 +297,28 @@ class SabaSportsNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        MemberProxy::where('user_name', $session['username'])->decrement($this->balances, $item['betAmount']);
-//                        $member = MemberProxy::where('user_name', $session['username'])->first();
+                        //                        MemberProxy::where('user_name', $session['username'])->decrement($this->balances, $item['betAmount']);
+                        //                        $member = MemberProxy::where('user_name', $session['username'])->first();
 
                         $this->member->decrement($this->balances, $item['betAmount']);
-                        //$this->member->refresh();
+                        // $this->member->refresh();
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -349,11 +340,9 @@ class SabaSportsNewController extends AppBaseController
 
                     }
 
-
                 }
 
             }
-
 
         } else {
 
@@ -362,11 +351,10 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -376,7 +364,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -395,13 +382,12 @@ class SabaSportsNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -409,7 +395,6 @@ class SabaSportsNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -447,8 +432,8 @@ class SabaSportsNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -464,20 +449,20 @@ class SabaSportsNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkBet) {
+                    if (! $checkBet) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
 
-                    if (!is_null($checkBet['con_4'])) {
+                    if (! is_null($checkBet['con_4'])) {
 
                         if (Str::contains($checkBet['con_4'], 'cancel')) {
 
@@ -485,8 +470,8 @@ class SabaSportsNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -494,24 +479,22 @@ class SabaSportsNewController extends AppBaseController
 
                     }
 
-
                     $amount = ($this->member->balance + $item['payoutAmount']);
 
                     $this->member->increment($this->balances, abs($item['payoutAmount']));
-//                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
-//                    $member = MemberProxy::where('user_name', $session['username'])->first();
+                    //                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
+                    //                    $member = MemberProxy::where('user_name', $session['username'])->first();
 
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
-
 
                     $session_in['input'] = $item;
                     $session_in['output'] = $param;
@@ -530,9 +513,8 @@ class SabaSportsNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkBet->con_4 = 'settle_' . $id;
+                    $checkBet->con_4 = 'settle_'.$id;
                     $checkBet->save();
-
 
                 }
 
@@ -545,11 +527,10 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -559,7 +540,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -578,13 +558,12 @@ class SabaSportsNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -610,7 +589,6 @@ class SabaSportsNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $checkDup = GameLogProxy::where('company', $this->game)
@@ -630,13 +608,12 @@ class SabaSportsNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
-
 
                     $checkData = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -648,17 +625,17 @@ class SabaSportsNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -680,31 +657,30 @@ class SabaSportsNewController extends AppBaseController
 
                     } else {
 
-                        if (!is_null($checkData['con_4'])) {
+                        if (! is_null($checkData['con_4'])) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20004,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
-
 
                         $this->member->increment($this->balances, $checkData['amount']);
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -724,13 +700,12 @@ class SabaSportsNewController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         $id = GameLogProxy::create($session_in)->id;
 
-                        $checkData->con_4 = 'cancel_' . $id;
+                        $checkData->con_4 = 'cancel_'.$id;
                         $checkData->save();
                     }
 
                 }
             }
-
 
         } else {
 
@@ -739,11 +714,10 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -753,7 +727,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -776,8 +749,8 @@ class SabaSportsNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -805,66 +778,65 @@ class SabaSportsNewController extends AppBaseController
 
                 foreach ($session['txns'] as $item) {
 
-//                    $checkDup = GameLogProxy::where('company', $this->game)
-//                        ->where('response', 'in')
-//                        ->where('game_user', $this->member->user_name)
-//                        ->where('method', 'unsettlesub')
-//                        ->where('con_1', $item['id'])
-//                        ->where('con_2', $item['roundId'])
-//                        ->where('con_3', $item['txnId'])
-//                        ->whereNull('con_4')
-//                        ->latest('created_at')
-//                        ->first();
-//
-//                    if ($checkDup) {
-//
-//                        $param = [
-//                            'id' => $session['id'],
-//                            'statusCode' => 20002,
-//                            'timestampMillis' => now()->getTimestampMs(),
-//                            'balance' => (float)$this->member->balance,
-//                            'productId' => $session['productId']
-//                        ];
-//
-//                        break;
-//                    }
+                    //                    $checkDup = GameLogProxy::where('company', $this->game)
+                    //                        ->where('response', 'in')
+                    //                        ->where('game_user', $this->member->user_name)
+                    //                        ->where('method', 'unsettlesub')
+                    //                        ->where('con_1', $item['id'])
+                    //                        ->where('con_2', $item['roundId'])
+                    //                        ->where('con_3', $item['txnId'])
+                    //                        ->whereNull('con_4')
+                    //                        ->latest('created_at')
+                    //                        ->first();
+                    //
+                    //                    if ($checkDup) {
+                    //
+                    //                        $param = [
+                    //                            'id' => $session['id'],
+                    //                            'statusCode' => 20002,
+                    //                            'timestampMillis' => now()->getTimestampMs(),
+                    //                            'balance' => (float)$this->member->balance,
+                    //                            'productId' => $session['productId']
+                    //                        ];
+                    //
+                    //                        break;
+                    //                    }
 
-
-//                    if ($item['betAmount'] > 0) {
-//
-//                        $this->member->decrement($this->balances, $item['betAmount']);
-//
-//                        $param = [
-//                            'id' => $session['id'],
-//                            'statusCode' => 0,
-//                            'currency' => "THB",
-//                            'productId' => $session['productId'],
-//                            'username' => $this->member->user_name,
-//                            'balanceBefore' => (float)$oldbalance,
-//                            'balanceAfter' => (float)$this->member->balance,
-//                            'timestampMillis' => now()->getTimestampMs()
-//                        ];
-//
-//                        $session_in['input'] = $item;
-//                        $session_in['output'] = $param;
-//                        $session_in['company'] = $this->game;
-//                        $session_in['game_user'] = $this->member->user_name;
-//                        $session_in['method'] = 'betsub';
-//                        $session_in['response'] = 'in';
-//                        $session_in['amount'] = $item['betAmount'];
-//                        $session_in['con_1'] = $item['id'];
-//                        $session_in['con_2'] = $item['roundId'];
-//                        $session_in['con_3'] = 'OPEN';
-//                        $session_in['con_4'] = null;
-//                        $session_in['before_balance'] = $oldbalance;
-//                        $session_in['after_balance'] = $this->member->balance;
-//                        $session_in['date_create'] = now()->toDateTimeString();
-//                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                        GameLogProxy::create($session_in);
-//
-//                        continue;
-//
-//                    }
+                    //                    if ($item['betAmount'] > 0) {
+                    //
+                    //                        $this->member->decrement($this->balances, $item['betAmount']);
+                    //
+                    //                        $param = [
+                    //                            'id' => $session['id'],
+                    //                            'statusCode' => 0,
+                    //                            'currency' => "THB",
+                    //                            'productId' => $session['productId'],
+                    //                            'username' => $this->member->user_name,
+                    //                            'balanceBefore' => (float)$oldbalance,
+                    //                            'balanceAfter' => (float)$this->member->balance,
+                    //                            'timestampMillis' => now()->getTimestampMs()
+                    //                        ];
+                    //
+                    //                        $session_in['input'] = $item;
+                    //                        $session_in['output'] = $param;
+                    //                        $session_in['company'] = $this->game;
+                    //                        $session_in['game_user'] = $this->member->user_name;
+                    //                        $session_in['method'] = 'betsub';
+                    //                        $session_in['response'] = 'in';
+                    //                        $session_in['amount'] = $item['betAmount'];
+                    //                        $session_in['con_1'] = $item['id'];
+                    //                        $session_in['con_2'] = $item['roundId'];
+                    //                        $session_in['con_3'] = 'OPEN';
+                    //                        $session_in['con_4'] = null;
+                    //                        $session_in['before_balance'] = $oldbalance;
+                    //                        $session_in['after_balance'] = $this->member->balance;
+                    //                        $session_in['date_create'] = now()->toDateTimeString();
+                    //                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    //                        GameLogProxy::create($session_in);
+                    //
+                    //                        continue;
+                    //
+                    //                    }
 
                     $checkData = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -880,14 +852,14 @@ class SabaSportsNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -902,8 +874,8 @@ class SabaSportsNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -912,16 +884,15 @@ class SabaSportsNewController extends AppBaseController
 
                     $this->member->decrement($this->balances, $item['payoutAmount']);
 
-
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -941,16 +912,14 @@ class SabaSportsNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkData->con_4 = 'unsettle_' . $id;
+                    $checkData->con_4 = 'unsettle_'.$id;
                     $checkData->save();
 
-                    GameLogProxy::where('con_4', 'settle_' . $checkData['_id'])->update(['con_4' => null]);
-
+                    GameLogProxy::where('con_4', 'settle_'.$checkData['_id'])->update(['con_4' => null]);
 
                 }
 
             }
-
 
         } else {
 
@@ -959,11 +928,10 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -973,7 +941,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -996,8 +963,8 @@ class SabaSportsNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1036,18 +1003,16 @@ class SabaSportsNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-
                     if ($checkDup) {
 
                         if ($item['betAmount'] > $this->member->balance) {
-
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1057,11 +1022,9 @@ class SabaSportsNewController extends AppBaseController
 
                             $amount = $checkDup['amount'] - $item['betAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkDup['amount']) {
+                        } elseif ($item['betAmount'] > $checkDup['amount']) {
 
                             $amount = $item['betAmount'] - $checkDup['amount'];
 
@@ -1072,8 +1035,8 @@ class SabaSportsNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1084,12 +1047,12 @@ class SabaSportsNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1122,14 +1085,14 @@ class SabaSportsNewController extends AppBaseController
                             ->latest('created_at')
                             ->first();
 
-                        if (!$checkData) {
+                        if (! $checkData) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1141,8 +1104,7 @@ class SabaSportsNewController extends AppBaseController
 
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkData['amount']) {
+                        } elseif ($item['betAmount'] > $checkData['amount']) {
 
                             $amount = $item['betAmount'] - $checkData['amount'];
 
@@ -1151,8 +1113,8 @@ class SabaSportsNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1164,12 +1126,12 @@ class SabaSportsNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1200,11 +1162,10 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -1214,7 +1175,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1233,13 +1193,12 @@ class SabaSportsNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1247,7 +1206,6 @@ class SabaSportsNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1267,8 +1225,7 @@ class SabaSportsNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1286,14 +1243,12 @@ class SabaSportsNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', $this->game)
                             ->where('response', 'in')
@@ -1326,12 +1281,12 @@ class SabaSportsNewController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $this->member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$this->member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $this->member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1359,14 +1314,13 @@ class SabaSportsNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1387,13 +1341,11 @@ class SabaSportsNewController extends AppBaseController
 
                         }
 
-
                     }
 
                 } // loop
 
             }
-
 
         } else {
 
@@ -1402,7 +1354,7 @@ class SabaSportsNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
@@ -1415,7 +1367,6 @@ class SabaSportsNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1433,13 +1384,12 @@ class SabaSportsNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$this->member->balance,
+                    'balance' => (float) $this->member->balance,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1447,7 +1397,6 @@ class SabaSportsNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1467,7 +1416,7 @@ class SabaSportsNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1484,9 +1433,9 @@ class SabaSportsNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20003,
-                            'balance' => (float)$this->member->balance,
+                            'balance' => (float) $this->member->balance,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1507,26 +1456,24 @@ class SabaSportsNewController extends AppBaseController
                         if ($datasubs) {
                             $amount = $item['betAmount'] - $item['payoutAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-//                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
-//                            $member = MemberProxy::where('user_name', $session['username'])->first();
+                            //                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
+                            //                            $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $this->member->balance += $amount;
-//                            $member->save();
+                            //                            $this->member->balance += $amount;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1550,21 +1497,18 @@ class SabaSportsNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$this->member->balance,
+                                'balance' => (float) $this->member->balance,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                         }
 
-
                     }
-
 
                 }
 
             }
-
 
         } else {
 
@@ -1572,13 +1516,11 @@ class SabaSportsNewController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-
         return $param;
     }
-
 }

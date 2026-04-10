@@ -1185,6 +1185,8 @@ Response ตัวอย่างเมื่อไม่พบโพย
 - Auth: ไม่ต้องใช้ token
 - รองรับภาษา (`language/lang/locale/X-Language`) และคืน `language` ใน response
 - ฟิลด์รูปใน response (`group_logo`, `group_icon`, `group_image`, `market_logo`, `market_icon`) จะถูกแปลงเป็น **Full URL (absolute URL)** เช่น `https://api.1168lot.com/storage/...`
+- ลำดับ `markets` ในแต่ละ `group` จะเรียงตาม `latest_draw.close_at` จากน้อยไปมาก
+  - ถ้า `close_at` ว่าง จะอยู่ท้ายรายการ
 
 Query ที่รองรับ:
 - `code` (แนะนำ) เช่น `thai` เพื่อขอเฉพาะกลุ่มนั้น

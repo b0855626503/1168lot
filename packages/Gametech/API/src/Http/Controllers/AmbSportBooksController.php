@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class AmbSportBooksController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,7 +36,6 @@ class AmbSportBooksController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function transaction(Request $request)
     {
         $param = [];
@@ -48,11 +45,11 @@ class AmbSportBooksController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 40003,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
+
             return $param;
         }
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -77,7 +74,7 @@ class AmbSportBooksController extends AppBaseController
                         'id' => $session['id'],
                         'statusCode' => 20002,
                         'productId' => $session['productId'],
-                        'timestampMillis' => now()->getTimestampMs()
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
                     break;
 
@@ -100,9 +97,9 @@ class AmbSportBooksController extends AppBaseController
                             'productId' => $session['productId'],
                             'timestampMillis' => now()->getTimestampMs(),
                             'currency' => 'THB',
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'username' => $session['username']
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'username' => $session['username'],
                         ];
 
                         $session_in['input'] = $session;
@@ -127,7 +124,7 @@ class AmbSportBooksController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'productId' => $session['productId'],
-                            'timestampMillis' => now()->getTimestampMs()
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
                         break;
                     }
@@ -153,24 +150,21 @@ class AmbSportBooksController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
 
         }
 
-
-        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/AMBSPORTBOOK'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
-
 
         return $param;
     }
@@ -179,21 +173,19 @@ class AmbSportBooksController extends AppBaseController
     {
         $session = $request->all();
 
-
-        $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'] , 'enable' => 'Y' , [ 'session_page' , '!=' , '']]);
+        $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y', ['session_page', '!=', '']]);
 
         if ($member) {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -218,11 +210,11 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/AMBSPORTBOOK'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
@@ -258,8 +250,8 @@ class AmbSportBooksController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -285,9 +277,8 @@ class AmbSportBooksController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['betAmount'];
+                    //                    $amount += $item['betAmount'];
 
                     if ($item['status'] == 'WAITING') {
 
@@ -315,18 +306,17 @@ class AmbSportBooksController extends AppBaseController
 
                     }
 
-
                     if ($data_sub) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -348,7 +338,6 @@ class AmbSportBooksController extends AppBaseController
 
                     } else {
 
-
                         $datasub = GameLogProxy::where('company', 'AMBSPORTBOOK')
                             ->where('response', 'in')
                             ->where('game_user', $member->user_name)
@@ -361,16 +350,16 @@ class AmbSportBooksController extends AppBaseController
 
                         if ($datasub) {
 
-//
+                            //
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                         } else {
@@ -387,14 +376,14 @@ class AmbSportBooksController extends AppBaseController
                                     ->whereNull('con_4')
                                     ->first();
 
-                                if (!$datasub) {
+                                if (! $datasub) {
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 20001,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -403,12 +392,12 @@ class AmbSportBooksController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -440,19 +429,18 @@ class AmbSportBooksController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance', abs($item['betAmount']));
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                $member->balance = $balance;
-//                                $member->save();
+                                    //                                $member->balance = $balance;
+                                    //                                $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                 } else {
@@ -461,8 +449,8 @@ class AmbSportBooksController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -487,19 +475,18 @@ class AmbSportBooksController extends AppBaseController
 
                             }
 
-//                            if ($item['status'] === 'OPEN') {
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 20001,
-//                                    'timestampMillis' => now()->getTimestampMs(),
-//                                    'balance' => (float)$member->balance,
-//                                    'productId' => $session['productId']
-//                                ];
-//                                break;
-//
-//                            }
-
+                            //                            if ($item['status'] === 'OPEN') {
+                            //
+                            //                                $param = [
+                            //                                    'id' => $session['id'],
+                            //                                    'statusCode' => 20001,
+                            //                                    'timestampMillis' => now()->getTimestampMs(),
+                            //                                    'balance' => (float)$member->balance,
+                            //                                    'productId' => $session['productId']
+                            //                                ];
+                            //                                break;
+                            //
+                            //                            }
 
                         }
 
@@ -533,16 +520,15 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -571,13 +557,12 @@ class AmbSportBooksController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -585,7 +570,6 @@ class AmbSportBooksController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -605,7 +589,7 @@ class AmbSportBooksController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'AMBSPORTBOOK')
                         ->where('response', 'in')
@@ -635,8 +619,8 @@ class AmbSportBooksController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -658,11 +642,10 @@ class AmbSportBooksController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
-
 
                         } else {
 
@@ -681,12 +664,12 @@ class AmbSportBooksController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
                                 break;
 
@@ -702,20 +685,19 @@ class AmbSportBooksController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                        $member->balance = $amount;
-//                                        $member->save();
+                                    //                                        $member->balance = $amount;
+                                    //                                        $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
-
 
                                     $session_in['input'] = $item;
                                     $session_in['output'] = $param;
@@ -740,8 +722,8 @@ class AmbSportBooksController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 20001,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -749,7 +731,7 @@ class AmbSportBooksController extends AppBaseController
                             }
 
                         }
-//                        }
+                        //                        }
 
                     } else {
 
@@ -757,8 +739,8 @@ class AmbSportBooksController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -792,16 +774,15 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -834,8 +815,8 @@ class AmbSportBooksController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -861,7 +842,6 @@ class AmbSportBooksController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $datasub = GameLogProxy::where('company', 'AMBSPORTBOOK')
@@ -880,15 +860,13 @@ class AmbSportBooksController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
 
-
                     } else {
-
 
                         if ($item['status'] == 'REFUND') {
 
@@ -909,12 +887,12 @@ class AmbSportBooksController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -934,15 +912,15 @@ class AmbSportBooksController extends AppBaseController
                                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                                 GameLogProxy::create($session_in);
 
-//                                GameLogProxy::where('company', 'AMBSPORTBOOK')
-//                                    ->where('response', 'in')
-//                                    ->where('game_user', $member->user_name)
-//                                    ->where('method', 'unsettlesub')
-////                                ->where('con_1', $item['id'])
-//                                    ->where('con_2', $item['roundId'])
-////                                ->where('con_3', $item['txnId'])
-//                                    ->whereNull('con_4')
-//                                    ->update(['con_4' => 'complete']);
+                                //                                GameLogProxy::where('company', 'AMBSPORTBOOK')
+                                //                                    ->where('response', 'in')
+                                //                                    ->where('game_user', $member->user_name)
+                                //                                    ->where('method', 'unsettlesub')
+                                // //                                ->where('con_1', $item['id'])
+                                //                                    ->where('con_2', $item['roundId'])
+                                // //                                ->where('con_3', $item['txnId'])
+                                //                                    ->whereNull('con_4')
+                                //                                    ->update(['con_4' => 'complete']);
 
                                 GameLogProxy::where('company', 'AMBSPORTBOOK')
                                     ->where('response', 'in')
@@ -958,7 +936,6 @@ class AmbSportBooksController extends AppBaseController
                                 break;
 
                             } else {
-
 
                                 $datasubs = GameLogProxy::where('company', 'AMBSPORTBOOK')
                                     ->where('response', 'in')
@@ -985,36 +962,33 @@ class AmbSportBooksController extends AppBaseController
 
                         }
 
-
-                        if (!$datasubs) {
+                        if (! $datasubs) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         } else {
 
-
                             MemberProxy::where('user_name', $session['username'])->increment('balance', $item['betAmount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                $member->save();
-
+                            //                                $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -1036,239 +1010,236 @@ class AmbSportBooksController extends AppBaseController
 
                         }
 
-//                        $datasubs = GameLogProxy::where('company', 'AMBSPORTBOOK')
-//                            ->where('response', 'in')
-//                            ->where('game_user', $member->user_name)
-//                            ->whereIn('method', ['betsub', 'paysub'])
-////                            ->where('con_1', $item['id'])
-//                            ->where('con_2', $item['roundId'])
-////                            ->where('con_3', $item['txnId'])
-//                            ->whereNull('con_4')
-//                            ->get();
-//
-//                        $sumamount = 0;
-//                        if (count($datasubs) > 0) {
-//                            foreach ($datasubs as $items) {
-//                                if ($items['method'] == 'paysub') {
-//                                    $sumamount += $items['amount'];
-//                                } else {
-//                                    $sumamount -= $items['amount'];
-//                                }
-//                            }
-//
-//                            $balance = ($member->balance - $sumamount);
-//                            if ($balance >= 0) {
-//                                MemberProxy::where('user_name', $session['username'])->decrement('balance', $sumamount);
-//                                $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 0,
-//                                    'currency' => "THB",
-//                                    'productId' => $session['productId'],
-//                                    'username' => $member->user_name,
-//                                    'balanceBefore' => (float)$oldbalance,
-//                                    'balanceAfter' => (float)$member->balance,
-//                                    'timestampMillis' => now()->getTimestampMs()
-//                                ];
-//
-//                                $session_in['input'] = $item;
-//                                $session_in['output'] = $param;
-//                                $session_in['company'] = 'AMBSPORTBOOK';
-//                                $session_in['game_user'] = $member->user_name;
-//                                $session_in['method'] = 'refundsub';
-//                                $session_in['response'] = 'in';
-//                                $session_in['amount'] = $sumamount;
-//                                $session_in['con_1'] = $item['id'];
-//                                $session_in['con_2'] = $item['roundId'];
-//                                $session_in['con_3'] = $item['txnId'];
-//                                $session_in['con_4'] = null;
-//                                $session_in['before_balance'] = $oldbalance;
-//                                $session_in['after_balance'] = $member->balance;
-//                                $session_in['date_create'] = now()->toDateTimeString();
-//                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                                GameLogProxy::create($session_in);
-//
-//                                GameLogProxy::where('company', 'AMBSPORTBOOK')
-//                                    ->where('response', 'in')
-//                                    ->where('game_user', $member->user_name)
-//                                    ->whereIn('method', ['betsub', 'paysub'])
-//                                    ->where('con_2', $item['roundId'])
-//                                    ->whereNull('con_4')
-//                                    ->update(['con_4' => 'complete']);
-//
-//                            } else {
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 0,
-//                                    'currency' => "THB",
-//                                    'productId' => $session['productId'],
-//                                    'username' => $member->user_name,
-//                                    'balanceBefore' => (float)$oldbalance,
-//                                    'balanceAfter' => (float)$member->balance,
-//                                    'timestampMillis' => now()->getTimestampMs()
-//                                ];
-//
-//                                $session_in['input'] = $item;
-//                                $session_in['output'] = $param;
-//                                $session_in['company'] = 'AMBSPORTBOOK';
-//                                $session_in['game_user'] = $member->user_name;
-//                                $session_in['method'] = 'refundsub';
-//                                $session_in['response'] = 'in';
-//                                $session_in['amount'] = $item['betAmount'];
-//                                $session_in['con_1'] = $item['id'];
-//                                $session_in['con_2'] = $item['roundId'];
-//                                $session_in['con_3'] = $item['txnId'];
-//                                $session_in['con_4'] = null;
-//                                $session_in['before_balance'] = $oldbalance;
-//                                $session_in['after_balance'] = $member->balance;
-//                                $session_in['date_create'] = now()->toDateTimeString();
-//                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                                GameLogProxy::create($session_in);
-//                                break;
-//
-//                            }
-//
-//
-//                        } else {
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'AMBSPORTBOOK';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'refundsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//                            break;
-//
-//                        }
+                        //                        $datasubs = GameLogProxy::where('company', 'AMBSPORTBOOK')
+                        //                            ->where('response', 'in')
+                        //                            ->where('game_user', $member->user_name)
+                        //                            ->whereIn('method', ['betsub', 'paysub'])
+                        // //                            ->where('con_1', $item['id'])
+                        //                            ->where('con_2', $item['roundId'])
+                        // //                            ->where('con_3', $item['txnId'])
+                        //                            ->whereNull('con_4')
+                        //                            ->get();
+                        //
+                        //                        $sumamount = 0;
+                        //                        if (count($datasubs) > 0) {
+                        //                            foreach ($datasubs as $items) {
+                        //                                if ($items['method'] == 'paysub') {
+                        //                                    $sumamount += $items['amount'];
+                        //                                } else {
+                        //                                    $sumamount -= $items['amount'];
+                        //                                }
+                        //                            }
+                        //
+                        //                            $balance = ($member->balance - $sumamount);
+                        //                            if ($balance >= 0) {
+                        //                                MemberProxy::where('user_name', $session['username'])->decrement('balance', $sumamount);
+                        //                                $member = MemberProxy::where('user_name', $session['username'])->first();
+                        //
+                        //
+                        //                                $param = [
+                        //                                    'id' => $session['id'],
+                        //                                    'statusCode' => 0,
+                        //                                    'currency' => "THB",
+                        //                                    'productId' => $session['productId'],
+                        //                                    'username' => $member->user_name,
+                        //                                    'balanceBefore' => (float)$oldbalance,
+                        //                                    'balanceAfter' => (float)$member->balance,
+                        //                                    'timestampMillis' => now()->getTimestampMs()
+                        //                                ];
+                        //
+                        //                                $session_in['input'] = $item;
+                        //                                $session_in['output'] = $param;
+                        //                                $session_in['company'] = 'AMBSPORTBOOK';
+                        //                                $session_in['game_user'] = $member->user_name;
+                        //                                $session_in['method'] = 'refundsub';
+                        //                                $session_in['response'] = 'in';
+                        //                                $session_in['amount'] = $sumamount;
+                        //                                $session_in['con_1'] = $item['id'];
+                        //                                $session_in['con_2'] = $item['roundId'];
+                        //                                $session_in['con_3'] = $item['txnId'];
+                        //                                $session_in['con_4'] = null;
+                        //                                $session_in['before_balance'] = $oldbalance;
+                        //                                $session_in['after_balance'] = $member->balance;
+                        //                                $session_in['date_create'] = now()->toDateTimeString();
+                        //                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                                GameLogProxy::create($session_in);
+                        //
+                        //                                GameLogProxy::where('company', 'AMBSPORTBOOK')
+                        //                                    ->where('response', 'in')
+                        //                                    ->where('game_user', $member->user_name)
+                        //                                    ->whereIn('method', ['betsub', 'paysub'])
+                        //                                    ->where('con_2', $item['roundId'])
+                        //                                    ->whereNull('con_4')
+                        //                                    ->update(['con_4' => 'complete']);
+                        //
+                        //                            } else {
+                        //
+                        //                                $param = [
+                        //                                    'id' => $session['id'],
+                        //                                    'statusCode' => 0,
+                        //                                    'currency' => "THB",
+                        //                                    'productId' => $session['productId'],
+                        //                                    'username' => $member->user_name,
+                        //                                    'balanceBefore' => (float)$oldbalance,
+                        //                                    'balanceAfter' => (float)$member->balance,
+                        //                                    'timestampMillis' => now()->getTimestampMs()
+                        //                                ];
+                        //
+                        //                                $session_in['input'] = $item;
+                        //                                $session_in['output'] = $param;
+                        //                                $session_in['company'] = 'AMBSPORTBOOK';
+                        //                                $session_in['game_user'] = $member->user_name;
+                        //                                $session_in['method'] = 'refundsub';
+                        //                                $session_in['response'] = 'in';
+                        //                                $session_in['amount'] = $item['betAmount'];
+                        //                                $session_in['con_1'] = $item['id'];
+                        //                                $session_in['con_2'] = $item['roundId'];
+                        //                                $session_in['con_3'] = $item['txnId'];
+                        //                                $session_in['con_4'] = null;
+                        //                                $session_in['before_balance'] = $oldbalance;
+                        //                                $session_in['after_balance'] = $member->balance;
+                        //                                $session_in['date_create'] = now()->toDateTimeString();
+                        //                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                                GameLogProxy::create($session_in);
+                        //                                break;
+                        //
+                        //                            }
+                        //
+                        //
+                        //                        } else {
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'AMBSPORTBOOK';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'refundsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //                            break;
+                        //
+                        //                        }
 
-//                        if ($datasubs) {
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 20004,
-//                                'timestampMillis' => now()->getTimestampMs(),
-//                                'balance' => (float)$member->balance,
-//                                'productId' => $session['productId']
-//                            ];
-//                            break;
-//
-//                        } else {
-//
-//
-//                            $amountsub = 0;
-//
-//                            $datasubss = GameLogProxy::where('company', 'AMBSPORTBOOK')
-//                                ->where('response', 'in')
-//                                ->where('game_user', $member->user_name)
-//                                ->where('method', 'betsub')
-////                                ->where('con_1', $item['id'])
-//                                ->where('con_2', $item['roundId'])
-////                                ->where('con_3', $item['txnId'])
-//                                ->whereNull('con_4')
-//                                ->first();
+                        //                        if ($datasubs) {
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 20004,
+                        //                                'timestampMillis' => now()->getTimestampMs(),
+                        //                                'balance' => (float)$member->balance,
+                        //                                'productId' => $session['productId']
+                        //                            ];
+                        //                            break;
+                        //
+                        //                        } else {
+                        //
+                        //
+                        //                            $amountsub = 0;
+                        //
+                        //                            $datasubss = GameLogProxy::where('company', 'AMBSPORTBOOK')
+                        //                                ->where('response', 'in')
+                        //                                ->where('game_user', $member->user_name)
+                        //                                ->where('method', 'betsub')
+                        // //                                ->where('con_1', $item['id'])
+                        //                                ->where('con_2', $item['roundId'])
+                        // //                                ->where('con_3', $item['txnId'])
+                        //                                ->whereNull('con_4')
+                        //                                ->first();
 
-
-//                            if ($datasubss) {
-//
-//                                $amountsub = $datasubss['amount'];
-////                                $member->balance += $datasubss['amount'];
-//
-//                                MemberProxy::where('user_name', $session['username'])->increment('balance', $datasubss['amount']);
-//                                $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-////                                $member->save();
-//
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 0,
-//                                    'currency' => "THB",
-//                                    'productId' => $session['productId'],
-//                                    'username' => $member->user_name,
-//                                    'balanceBefore' => (float)$oldbalance,
-//                                    'balanceAfter' => (float)$member->balance,
-//                                    'timestampMillis' => now()->getTimestampMs()
-//                                ];
-//
-//                                $session_in['input'] = $item;
-//                                $session_in['output'] = $param;
-//                                $session_in['company'] = 'AMBSPORTBOOK';
-//                                $session_in['game_user'] = $member->user_name;
-//                                $session_in['method'] = 'refundsub';
-//                                $session_in['response'] = 'in';
-//                                $session_in['amount'] = $amountsub;
-//                                $session_in['con_1'] = $item['id'];
-//                                $session_in['con_2'] = $item['roundId'];
-//                                $session_in['con_3'] = $item['txnId'];
-//                                $session_in['con_4'] = null;
-//                                $session_in['before_balance'] = $oldbalance;
-//                                $session_in['after_balance'] = $member->balance;
-//                                $session_in['date_create'] = now()->toDateTimeString();
-//                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                                GameLogProxy::create($session_in);
-//
-//
-//                            } else {
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 0,
-//                                    'currency' => "THB",
-//                                    'productId' => $session['productId'],
-//                                    'username' => $member->user_name,
-//                                    'balanceBefore' => (float)$oldbalance,
-//                                    'balanceAfter' => (float)$member->balance,
-//                                    'timestampMillis' => now()->getTimestampMs()
-//                                ];
-//
-//                                $session_in['input'] = $item;
-//                                $session_in['output'] = $param;
-//                                $session_in['company'] = 'AMBSPORTBOOK';
-//                                $session_in['game_user'] = $member->user_name;
-//                                $session_in['method'] = 'refundsub';
-//                                $session_in['response'] = 'in';
-//                                $session_in['amount'] = $item['betAmount'];
-//                                $session_in['con_1'] = $item['id'];
-//                                $session_in['con_2'] = $item['roundId'];
-//                                $session_in['con_3'] = $item['txnId'];
-//                                $session_in['con_4'] = null;
-//                                $session_in['before_balance'] = $oldbalance;
-//                                $session_in['after_balance'] = $member->balance;
-//                                $session_in['date_create'] = now()->toDateTimeString();
-//                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                                GameLogProxy::create($session_in);
-//                                break;
-//
-//                            }
-//                        }
-
+                        //                            if ($datasubss) {
+                        //
+                        //                                $amountsub = $datasubss['amount'];
+                        // //                                $member->balance += $datasubss['amount'];
+                        //
+                        //                                MemberProxy::where('user_name', $session['username'])->increment('balance', $datasubss['amount']);
+                        //                                $member = MemberProxy::where('user_name', $session['username'])->first();
+                        //
+                        // //                                $member->save();
+                        //
+                        //
+                        //                                $param = [
+                        //                                    'id' => $session['id'],
+                        //                                    'statusCode' => 0,
+                        //                                    'currency' => "THB",
+                        //                                    'productId' => $session['productId'],
+                        //                                    'username' => $member->user_name,
+                        //                                    'balanceBefore' => (float)$oldbalance,
+                        //                                    'balanceAfter' => (float)$member->balance,
+                        //                                    'timestampMillis' => now()->getTimestampMs()
+                        //                                ];
+                        //
+                        //                                $session_in['input'] = $item;
+                        //                                $session_in['output'] = $param;
+                        //                                $session_in['company'] = 'AMBSPORTBOOK';
+                        //                                $session_in['game_user'] = $member->user_name;
+                        //                                $session_in['method'] = 'refundsub';
+                        //                                $session_in['response'] = 'in';
+                        //                                $session_in['amount'] = $amountsub;
+                        //                                $session_in['con_1'] = $item['id'];
+                        //                                $session_in['con_2'] = $item['roundId'];
+                        //                                $session_in['con_3'] = $item['txnId'];
+                        //                                $session_in['con_4'] = null;
+                        //                                $session_in['before_balance'] = $oldbalance;
+                        //                                $session_in['after_balance'] = $member->balance;
+                        //                                $session_in['date_create'] = now()->toDateTimeString();
+                        //                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                                GameLogProxy::create($session_in);
+                        //
+                        //
+                        //                            } else {
+                        //
+                        //                                $param = [
+                        //                                    'id' => $session['id'],
+                        //                                    'statusCode' => 0,
+                        //                                    'currency' => "THB",
+                        //                                    'productId' => $session['productId'],
+                        //                                    'username' => $member->user_name,
+                        //                                    'balanceBefore' => (float)$oldbalance,
+                        //                                    'balanceAfter' => (float)$member->balance,
+                        //                                    'timestampMillis' => now()->getTimestampMs()
+                        //                                ];
+                        //
+                        //                                $session_in['input'] = $item;
+                        //                                $session_in['output'] = $param;
+                        //                                $session_in['company'] = 'AMBSPORTBOOK';
+                        //                                $session_in['game_user'] = $member->user_name;
+                        //                                $session_in['method'] = 'refundsub';
+                        //                                $session_in['response'] = 'in';
+                        //                                $session_in['amount'] = $item['betAmount'];
+                        //                                $session_in['con_1'] = $item['id'];
+                        //                                $session_in['con_2'] = $item['roundId'];
+                        //                                $session_in['con_3'] = $item['txnId'];
+                        //                                $session_in['con_4'] = null;
+                        //                                $session_in['before_balance'] = $oldbalance;
+                        //                                $session_in['after_balance'] = $member->balance;
+                        //                                $session_in['date_create'] = now()->toDateTimeString();
+                        //                                $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                                GameLogProxy::create($session_in);
+                        //                                break;
+                        //
+                        //                            }
+                        //                        }
 
                     }
-
 
                 }
             }
@@ -1297,16 +1268,15 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1339,8 +1309,8 @@ class AmbSportBooksController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1389,14 +1359,13 @@ class AmbSportBooksController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1417,19 +1386,17 @@ class AmbSportBooksController extends AppBaseController
 
                         }
 
-
                     } else {
 
-//                        $datasub1 = GameLogProxy::where('company', 'AMBSPORTBOOK')
-//                            ->where('response', 'in')
-//                            ->where('game_user', $member->user_name)
-//                            ->where('method', 'refundsub')
-//                            ->where('con_1', $item['id'])
-//                            ->where('con_2', $item['roundId'])
-//                            ->where('con_3', $item['txnId'])
-//                            ->where('con_4', 'complete')
-//                            ->first();
-
+                        //                        $datasub1 = GameLogProxy::where('company', 'AMBSPORTBOOK')
+                        //                            ->where('response', 'in')
+                        //                            ->where('game_user', $member->user_name)
+                        //                            ->where('method', 'refundsub')
+                        //                            ->where('con_1', $item['id'])
+                        //                            ->where('con_2', $item['roundId'])
+                        //                            ->where('con_3', $item['txnId'])
+                        //                            ->where('con_4', 'complete')
+                        //                            ->first();
 
                         $datasub2 = GameLogProxy::where('company', 'AMBSPORTBOOK')
                             ->where('response', 'in')
@@ -1448,22 +1415,21 @@ class AmbSportBooksController extends AppBaseController
                             if ($balance >= 0) {
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['payoutAmount']);
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['betAmount']);
-//                            MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['betAmount']);
+                                //                            MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['betAmount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance -= $datasub2['amount'];
-//                            $member->save();
+                                //                            $member->balance -= $datasub2['amount'];
+                                //                            $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1483,8 +1449,8 @@ class AmbSportBooksController extends AppBaseController
                                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                                 GameLogProxy::create($session_in);
 
-//                            $datasub2->con_4 = 'complete';
-//                            $datasub2->save();
+                                //                            $datasub2->con_4 = 'complete';
+                                //                            $datasub2->save();
 
                                 GameLogProxy::where('company', 'AMBSPORTBOOK')
                                     ->where('response', 'in')
@@ -1496,15 +1462,14 @@ class AmbSportBooksController extends AppBaseController
                                     ->whereNull('con_4')
                                     ->update(['con_4' => 'complete']);
 
-
                             } else {
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance,
+                                    'productId' => $session['productId'],
                                 ];
 
                                 break;
@@ -1516,8 +1481,8 @@ class AmbSportBooksController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
 
                             break;
@@ -1525,7 +1490,6 @@ class AmbSportBooksController extends AppBaseController
                         }
 
                     }
-
 
                 }
 
@@ -1555,16 +1519,15 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1597,8 +1560,8 @@ class AmbSportBooksController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1642,28 +1605,28 @@ class AmbSportBooksController extends AppBaseController
 
                         $newbalance = $member->balance - $adjust;
 
-                        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+                        $path = storage_path('logs/seamless/AMBSPORTBOOK'.now()->format('Y_m_d').'.log');
                         file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        file_put_contents($path, print_r($item['betAmount'].' - '.$datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
                             MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance = $member->balance - $adjust;
-//                            $member->save();
+                            //                            $member->balance = $member->balance - $adjust;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'AMBSPORTBOOK')
@@ -1693,55 +1656,53 @@ class AmbSportBooksController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        } else {
-//
-//                            $member->balance += abs($adjust);
-//                            $member->save();
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'AMBSPORTBOOK';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'ajsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//
-//                        }
-
+                        //                        } else {
+                        //
+                        //                            $member->balance += abs($adjust);
+                        //                            $member->save();
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'AMBSPORTBOOK';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'ajsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //
+                        //                        }
 
                     } else {
 
@@ -1768,18 +1729,18 @@ class AmbSportBooksController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                    $member->balance -= $adjust;
-//                                    $member->save();
+                                    //                                    $member->balance -= $adjust;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1805,8 +1766,8 @@ class AmbSportBooksController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -1816,18 +1777,18 @@ class AmbSportBooksController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance', abs($adjust));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                $member->balance += abs($adjust);
-//                                $member->save();
+                                //                                $member->balance += abs($adjust);
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1849,15 +1810,14 @@ class AmbSportBooksController extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1890,16 +1850,15 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1928,13 +1887,12 @@ class AmbSportBooksController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1942,7 +1900,6 @@ class AmbSportBooksController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1962,7 +1919,7 @@ class AmbSportBooksController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'AMBSPORTBOOK')
                         ->where('response', 'in')
@@ -1979,32 +1936,30 @@ class AmbSportBooksController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                     } else {
                         MemberProxy::where('user_name', $session['username'])->increment('balance', $item['payoutAmount']);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
-//                        $member->balance += $item['payoutAmount'];
-//                        $member->save();
+                        //                        $member->balance += $item['payoutAmount'];
+                        //                        $member->save();
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                         $session_in['input'] = $item;
                         $session_in['output'] = $param;
@@ -2053,18 +2008,16 @@ class AmbSportBooksController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/AMBSPORTBOOK' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

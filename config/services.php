@@ -33,5 +33,4 @@ return [
         'base_url' => env('TRACK_BASE_URL', 'https://thegrand789.com'),
     ],
 
-
 ];

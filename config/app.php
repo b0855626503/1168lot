@@ -1,5 +1,96 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\HorizonServiceProvider;
+use App\Providers\RouteServiceProvider;
+use Collective\Html\FormFacade;
+use Collective\Html\HtmlFacade;
+use Gametech\Admin\Providers\AdminServiceProvider;
+use Gametech\API\Providers\APIServiceProvider;
+use Gametech\CenterOA\Providers\CenterOAServiceProvider;
+use Gametech\Core\Facades\Core;
+use Gametech\Core\Providers\CoreServiceProvider;
+use Gametech\FrontendApi\Providers\FrontendApiServiceProvider;
+use Gametech\Game\Providers\GameServiceProvider;
+use Gametech\LineOA\Providers\LineOAServiceProvider;
+use Gametech\LogAdmin\Providers\LogAdminServiceProvider;
+use Gametech\LogUser\Providers\LogUserServiceProvider;
+use Gametech\Lotto\Providers\LottoServiceProvider;
+use Gametech\Marketing\Providers\MarketingServiceProvider;
+use Gametech\Member\Providers\MemberServiceProvider;
+use Gametech\Payment\Providers\PaymentServiceProvider;
+use Gametech\Promotion\Providers\PromotionServiceProvider;
+use Gametech\Reward\Providers\RewardServiceProvider;
+use Gametech\Ui\Providers\UiServiceProvider;
+use Gametech\Wallet\Providers\WalletServiceProvider;
+use Illuminate\Auth\AuthServiceProvider;
+use Illuminate\Broadcasting\BroadcastServiceProvider;
+use Illuminate\Bus\BusServiceProvider;
+use Illuminate\Cache\CacheServiceProvider;
+use Illuminate\Cookie\CookieServiceProvider;
+use Illuminate\Database\DatabaseServiceProvider;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Encryption\EncryptionServiceProvider;
+use Illuminate\Filesystem\FilesystemServiceProvider;
+use Illuminate\Foundation\Providers\ConsoleSupportServiceProvider;
+use Illuminate\Foundation\Providers\FoundationServiceProvider;
+use Illuminate\Hashing\HashServiceProvider;
+use Illuminate\Notifications\NotificationServiceProvider;
+use Illuminate\Pipeline\PipelineServiceProvider;
+use Illuminate\Queue\QueueServiceProvider;
+use Illuminate\Redis\RedisServiceProvider;
+use Illuminate\Session\SessionServiceProvider;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Illuminate\Translation\TranslationServiceProvider;
+use Illuminate\Validation\ValidationServiceProvider;
+use Illuminate\View\ViewServiceProvider;
+use Konekt\Concord\ConcordServiceProvider;
+use Konekt\Concord\Facades\Concord;
+use Konekt\Concord\Facades\Helper;
+use Maatwebsite\Excel\ExcelServiceProvider;
+use Maatwebsite\Excel\Facades\Excel;
+use MongoDB\Laravel\MongoDBServiceProvider;
+use PragmaRX\Google2FALaravel\Facade;
+use PragmaRX\Google2FALaravel\ServiceProvider;
+use Prettus\Repository\Providers\RepositoryServiceProvider;
+use Rap2hpoutre\FastExcel\Facades\FastExcel;
+use Yajra\DataTables\DataTablesServiceProvider;
+use Yajra\DataTables\Facades\DataTables;
+
 return [
 
     /*
@@ -14,7 +105,6 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
-
 
     'checkfaststart' => env('CHECKFASTSTART', false),
 
@@ -144,8 +234,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE','Asia/Bangkok'),
-
+    'timezone' => env('APP_TIMEZONE', 'Asia/Bangkok'),
 
     /*
     |--------------------------------------------------------------------------
@@ -210,16 +299,16 @@ return [
     'debug_blacklist' => [
         '_ENV' => [
             'APP_KEY',
-            'DB_PASSWORD'
+            'DB_PASSWORD',
         ],
 
         '_SERVER' => [
             'APP_KEY',
-            'DB_PASSWORD'
+            'DB_PASSWORD',
         ],
 
         '_POST' => [
-            'password'
+            'password',
         ],
     ],
 
@@ -239,78 +328,78 @@ return [
         /*
          * Laravel Framework Service Providers...
          */
-        Illuminate\Auth\AuthServiceProvider::class,
-        Illuminate\Broadcasting\BroadcastServiceProvider::class,
-        Illuminate\Bus\BusServiceProvider::class,
-        Illuminate\Cache\CacheServiceProvider::class,
-        Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
-        Illuminate\Cookie\CookieServiceProvider::class,
-        Illuminate\Database\DatabaseServiceProvider::class,
-        Illuminate\Encryption\EncryptionServiceProvider::class,
-        Illuminate\Filesystem\FilesystemServiceProvider::class,
-        Illuminate\Foundation\Providers\FoundationServiceProvider::class,
-        Illuminate\Hashing\HashServiceProvider::class,
-//        Illuminate\Mail\MailServiceProvider::class,
-        Illuminate\Notifications\NotificationServiceProvider::class,
-//        Illuminate\Pagination\PaginationServiceProvider::class,
-        Illuminate\Pipeline\PipelineServiceProvider::class,
-        Illuminate\Queue\QueueServiceProvider::class,
-        Illuminate\Redis\RedisServiceProvider::class,
-        Illuminate\Session\SessionServiceProvider::class,
-//        Very\Redis\RedisServiceProvider::class,
-//        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
-//        Rairlie\LockingSession\LockingSessionServiceProvider::class,
-        Illuminate\Translation\TranslationServiceProvider::class,
-        Illuminate\Validation\ValidationServiceProvider::class,
-        Illuminate\View\ViewServiceProvider::class,
-        Prettus\Repository\Providers\RepositoryServiceProvider::class,
+        AuthServiceProvider::class,
+        BroadcastServiceProvider::class,
+        BusServiceProvider::class,
+        CacheServiceProvider::class,
+        ConsoleSupportServiceProvider::class,
+        CookieServiceProvider::class,
+        DatabaseServiceProvider::class,
+        EncryptionServiceProvider::class,
+        FilesystemServiceProvider::class,
+        FoundationServiceProvider::class,
+        HashServiceProvider::class,
+        //        Illuminate\Mail\MailServiceProvider::class,
+        NotificationServiceProvider::class,
+        //        Illuminate\Pagination\PaginationServiceProvider::class,
+        PipelineServiceProvider::class,
+        QueueServiceProvider::class,
+        RedisServiceProvider::class,
+        SessionServiceProvider::class,
+        //        Very\Redis\RedisServiceProvider::class,
+        //        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
+        //        Rairlie\LockingSession\LockingSessionServiceProvider::class,
+        TranslationServiceProvider::class,
+        ValidationServiceProvider::class,
+        ViewServiceProvider::class,
+        RepositoryServiceProvider::class,
         /*
          * Package Service Providers...
          */
-        Yajra\DataTables\DataTablesServiceProvider::class,
-//        Pimlie\DataTables\MongodbDataTablesServiceProvider::class,
-//        Barryvdh\Debugbar\ServiceProvider::class,
-//        Intervention\Image\ImageServiceProvider::class,
-//        Rainwater\Active\ActiveServiceProvider::class,
-        PragmaRX\Google2FALaravel\ServiceProvider::class,
-        Maatwebsite\Excel\ExcelServiceProvider::class,
-        Konekt\Concord\ConcordServiceProvider::class,
-        MongoDB\Laravel\MongoDBServiceProvider::class,
-//        Alimranahmed\LaraOCR\LaraOCRServiceProvider::class,
-//        Rap2hpoutre\LaravelLogViewer\LaravelLogViewerServiceProvider::class,
+        DataTablesServiceProvider::class,
+        //        Pimlie\DataTables\MongodbDataTablesServiceProvider::class,
+        //        Barryvdh\Debugbar\ServiceProvider::class,
+        //        Intervention\Image\ImageServiceProvider::class,
+        //        Rainwater\Active\ActiveServiceProvider::class,
+        ServiceProvider::class,
+        ExcelServiceProvider::class,
+        ConcordServiceProvider::class,
+        MongoDBServiceProvider::class,
+        //        Alimranahmed\LaraOCR\LaraOCRServiceProvider::class,
+        //        Rap2hpoutre\LaravelLogViewer\LaravelLogViewerServiceProvider::class,
         /*
          * Application Service Providers...
          */
-        App\Providers\AppServiceProvider::class,
+        AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\HorizonServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
+        EventServiceProvider::class,
+        HorizonServiceProvider::class,
+        RouteServiceProvider::class,
 
         /*
          * Gametech Service Providers...
          */
-        Gametech\Core\Providers\CoreServiceProvider::class,
-        Gametech\Admin\Providers\AdminServiceProvider::class,
-        Gametech\Member\Providers\MemberServiceProvider::class,
-        Gametech\API\Providers\APIServiceProvider::class,
-        Gametech\Ui\Providers\UiServiceProvider::class,
-        Gametech\Wallet\Providers\WalletServiceProvider::class,
-        Gametech\Game\Providers\GameServiceProvider::class,
-        Gametech\LogAdmin\Providers\LogAdminServiceProvider::class,
-        Gametech\LogUser\Providers\LogUserServiceProvider::class,
-        Gametech\Payment\Providers\PaymentServiceProvider::class,
-        Gametech\Promotion\Providers\PromotionServiceProvider::class,
+        CoreServiceProvider::class,
+        AdminServiceProvider::class,
+        MemberServiceProvider::class,
+        APIServiceProvider::class,
+        UiServiceProvider::class,
+        WalletServiceProvider::class,
+        GameServiceProvider::class,
+        LogAdminServiceProvider::class,
+        LogUserServiceProvider::class,
+        PaymentServiceProvider::class,
+        PromotionServiceProvider::class,
         //        Gametech\TelegramBot\Providers\TelegramBotServiceProvider::class,
-        Gametech\Marketing\Providers\MarketingServiceProvider::class,
-        Gametech\CenterOA\Providers\CenterOAServiceProvider::class,
-        Gametech\LineOA\Providers\LineOAServiceProvider::class,
-//        Gametech\FacebookOA\Providers\FacebookOAServiceProvider::class,
-//        Gametech\Sms\Providers\SmsServiceProvider::class,
-        Gametech\Reward\Providers\RewardServiceProvider::class,
-        Gametech\Lotto\Providers\LottoServiceProvider::class,
-        Gametech\FrontendApi\Providers\FrontendApiServiceProvider::class,
+        MarketingServiceProvider::class,
+        CenterOAServiceProvider::class,
+        LineOAServiceProvider::class,
+        //        Gametech\FacebookOA\Providers\FacebookOAServiceProvider::class,
+        //        Gametech\Sms\Providers\SmsServiceProvider::class,
+        RewardServiceProvider::class,
+        LottoServiceProvider::class,
+        FrontendApiServiceProvider::class,
     ],
 
     /*
@@ -327,51 +416,51 @@ return [
     'aliases' => [
 
         'App' => Illuminate\Support\Facades\App::class,
-        'Arr' => Illuminate\Support\Arr::class,
-        'Artisan' => Illuminate\Support\Facades\Artisan::class,
-        'Auth' => Illuminate\Support\Facades\Auth::class,
-        'Blade' => Illuminate\Support\Facades\Blade::class,
-        'Broadcast' => Illuminate\Support\Facades\Broadcast::class,
-        'Bus' => Illuminate\Support\Facades\Bus::class,
-        'Cache' => Illuminate\Support\Facades\Cache::class,
-        'Config' => Illuminate\Support\Facades\Config::class,
-        'Cookie' => Illuminate\Support\Facades\Cookie::class,
-        'Crypt' => Illuminate\Support\Facades\Crypt::class,
-        'DB' => Illuminate\Support\Facades\DB::class,
-        'Eloquent' => Illuminate\Database\Eloquent\Model::class,
-        'Event' => Illuminate\Support\Facades\Event::class,
-        'File' => Illuminate\Support\Facades\File::class,
-        'Gate' => Illuminate\Support\Facades\Gate::class,
-        'Hash' => Illuminate\Support\Facades\Hash::class,
-        'Http' => Illuminate\Support\Facades\Http::class,
-        'Lang' => Illuminate\Support\Facades\Lang::class,
-        'Log' => Illuminate\Support\Facades\Log::class,
-        'Mail' => Illuminate\Support\Facades\Mail::class,
-        'Notification' => Illuminate\Support\Facades\Notification::class,
-        'Password' => Illuminate\Support\Facades\Password::class,
-        'Queue' => Illuminate\Support\Facades\Queue::class,
-        'Redirect' => Illuminate\Support\Facades\Redirect::class,
-        'Redis' => Illuminate\Support\Facades\Redis::class,
-        'Request' => Illuminate\Support\Facades\Request::class,
-        'Response' => Illuminate\Support\Facades\Response::class,
-        'Route' => Illuminate\Support\Facades\Route::class,
-        'Schema' => Illuminate\Support\Facades\Schema::class,
-        'Session' => Illuminate\Support\Facades\Session::class,
-        'Storage' => Illuminate\Support\Facades\Storage::class,
-        'Str' => Illuminate\Support\Str::class,
-        'URL' => Illuminate\Support\Facades\URL::class,
-        'Validator' => Illuminate\Support\Facades\Validator::class,
-        'View' => Illuminate\Support\Facades\View::class,
-        'Form'      => Collective\Html\FormFacade::class,
-        'Html'      => Collective\Html\HtmlFacade::class,
-        'DataTables' => Yajra\DataTables\Facades\DataTables::class,
-        'Core' => Gametech\Core\Facades\Core::class,
-        'Concord' => Konekt\Concord\Facades\Concord::class,
-        'Helper'  => Konekt\Concord\Facades\Helper::class,
-        'Google2FA' => PragmaRX\Google2FALaravel\Facade::class,
-        'FastExcel' => Rap2hpoutre\FastExcel\Facades\FastExcel::class,
-        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
-        'RedisManager' => Illuminate\Support\Facades\Redis::class,
+        'Arr' => Arr::class,
+        'Artisan' => Artisan::class,
+        'Auth' => Auth::class,
+        'Blade' => Blade::class,
+        'Broadcast' => Broadcast::class,
+        'Bus' => Bus::class,
+        'Cache' => Cache::class,
+        'Config' => Config::class,
+        'Cookie' => Cookie::class,
+        'Crypt' => Crypt::class,
+        'DB' => DB::class,
+        'Eloquent' => Model::class,
+        'Event' => Event::class,
+        'File' => File::class,
+        'Gate' => Gate::class,
+        'Hash' => Hash::class,
+        'Http' => Http::class,
+        'Lang' => Lang::class,
+        'Log' => Log::class,
+        'Mail' => Mail::class,
+        'Notification' => Notification::class,
+        'Password' => Password::class,
+        'Queue' => Queue::class,
+        'Redirect' => Redirect::class,
+        'Redis' => Redis::class,
+        'Request' => Request::class,
+        'Response' => Response::class,
+        'Route' => Route::class,
+        'Schema' => Schema::class,
+        'Session' => Session::class,
+        'Storage' => Storage::class,
+        'Str' => Str::class,
+        'URL' => URL::class,
+        'Validator' => Validator::class,
+        'View' => View::class,
+        'Form' => FormFacade::class,
+        'Html' => HtmlFacade::class,
+        'DataTables' => DataTables::class,
+        'Core' => Core::class,
+        'Concord' => Concord::class,
+        'Helper' => Helper::class,
+        'Google2FA' => Facade::class,
+        'FastExcel' => FastExcel::class,
+        'Excel' => Excel::class,
+        'RedisManager' => Redis::class,
     ],
 
 ];

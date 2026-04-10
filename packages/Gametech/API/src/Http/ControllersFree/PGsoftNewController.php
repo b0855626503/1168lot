@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -32,11 +31,10 @@ class PGsoftNewController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo,
-        Request               $request
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo,
+        Request $request
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -56,13 +54,12 @@ class PGsoftNewController extends AppBaseController
             $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('enable', 'Y')->first();
         }
 
-//        $this->member->balance_free = $this->member->balance_free;
+        //        $this->member->balance_free = $this->member->balance_free;
 
         $this->balances = 'balance_free';
 
         $this->game = 'PGSOFT2';
     }
-
 
     public function getBalance(Request $request)
     {
@@ -73,13 +70,12 @@ class PGsoftNewController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
-                'balance' => (float)$this->member->balance_free,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $this->member->balance_free,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -104,14 +100,14 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 30001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -121,7 +117,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -143,8 +138,8 @@ class PGsoftNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -170,9 +165,7 @@ class PGsoftNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-
 
                     $checkDup = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -190,19 +183,19 @@ class PGsoftNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         break;
 
                     }
 
-                    if (!isset($item['skipBalanceUpdate'])) {
+                    if (! isset($item['skipBalanceUpdate'])) {
                         $balance = ($this->member->balance_free - $item['betAmount']);
                         if ($balance > 0) {
                             $this->member->decrement($this->balances, $item['betAmount']);
@@ -210,12 +203,12 @@ class PGsoftNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -237,16 +230,15 @@ class PGsoftNewController extends AppBaseController
 
                             $this->member->increment($this->balances, $item['payoutAmount']);
 
-
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -266,12 +258,10 @@ class PGsoftNewController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             $id = GameLogProxy::create($session_in)->id;
 
-                            $bet->con_4 = 'settle_' . $id;
+                            $bet->con_4 = 'settle_'.$id;
                             $bet->save();
 
-
                             $sumbalance = $item['payoutAmount'] - $item['betAmount'];
-
 
                         } else {
 
@@ -279,8 +269,8 @@ class PGsoftNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance_free,
+                                'productId' => $session['productId'],
                             ];
 
                         }
@@ -289,7 +279,6 @@ class PGsoftNewController extends AppBaseController
                 }
             }
 
-
         } else {
 
             $param = [
@@ -297,11 +286,10 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 30001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -311,7 +299,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -330,13 +317,12 @@ class PGsoftNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -344,7 +330,6 @@ class PGsoftNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -382,8 +367,8 @@ class PGsoftNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -399,20 +384,20 @@ class PGsoftNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkBet) {
+                    if (! $checkBet) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
 
-                    if (!is_null($checkBet['con_4'])) {
+                    if (! is_null($checkBet['con_4'])) {
 
                         if (Str::contains($checkBet['con_4'], 'cancel')) {
 
@@ -420,8 +405,8 @@ class PGsoftNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -429,24 +414,22 @@ class PGsoftNewController extends AppBaseController
 
                     }
 
-
                     $amount = ($this->member->balance_free + $item['payoutAmount']);
 
                     $this->member->increment($this->balances, abs($item['payoutAmount']));
-//                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
-//                    $member = MemberProxy::where('user_name', $session['username'])->first();
+                    //                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
+                    //                    $member = MemberProxy::where('user_name', $session['username'])->first();
 
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance_free,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance_free,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
-
 
                     $session_in['input'] = $item;
                     $session_in['output'] = $param;
@@ -465,9 +448,8 @@ class PGsoftNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkBet->con_4 = 'settle_' . $id;
+                    $checkBet->con_4 = 'settle_'.$id;
                     $checkBet->save();
-
 
                 }
 
@@ -480,11 +462,10 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -494,7 +475,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -513,13 +493,12 @@ class PGsoftNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -545,7 +524,6 @@ class PGsoftNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $checkDup = GameLogProxy::where('company', $this->game)
@@ -565,13 +543,12 @@ class PGsoftNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
-
 
                     $checkData = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -583,17 +560,17 @@ class PGsoftNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -615,31 +592,30 @@ class PGsoftNewController extends AppBaseController
 
                     } else {
 
-                        if (!is_null($checkData['con_4'])) {
+                        if (! is_null($checkData['con_4'])) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20004,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
-
 
                         $this->member->increment($this->balances, $checkData['amount']);
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -659,13 +635,12 @@ class PGsoftNewController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         $id = GameLogProxy::create($session_in)->id;
 
-                        $checkData->con_4 = 'cancel_' . $id;
+                        $checkData->con_4 = 'cancel_'.$id;
                         $checkData->save();
                     }
 
                 }
             }
-
 
         } else {
 
@@ -674,11 +649,10 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -688,7 +662,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -711,8 +684,8 @@ class PGsoftNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -757,13 +730,12 @@ class PGsoftNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
                     }
-
 
                     if ($item['betAmount'] > 0) {
 
@@ -772,12 +744,12 @@ class PGsoftNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -815,14 +787,14 @@ class PGsoftNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -837,8 +809,8 @@ class PGsoftNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -847,16 +819,15 @@ class PGsoftNewController extends AppBaseController
 
                     $this->member->decrement($this->balances, $item['payoutAmount']);
 
-
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance_free,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance_free,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -876,16 +847,14 @@ class PGsoftNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkData->con_4 = 'unsettle_' . $id;
+                    $checkData->con_4 = 'unsettle_'.$id;
                     $checkData->save();
 
-                    GameLogProxy::where('con_4', 'settle_' . $checkData['_id'])->update(['con_4' => null]);
-
+                    GameLogProxy::where('con_4', 'settle_'.$checkData['_id'])->update(['con_4' => null]);
 
                 }
 
             }
-
 
         } else {
 
@@ -894,11 +863,10 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -908,7 +876,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -931,8 +898,8 @@ class PGsoftNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -971,18 +938,16 @@ class PGsoftNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-
                     if ($checkDup) {
 
                         if ($item['betAmount'] > $this->member->balance_free) {
-
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -992,11 +957,9 @@ class PGsoftNewController extends AppBaseController
 
                             $amount = $checkDup['amount'] - $item['betAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkDup['amount']) {
+                        } elseif ($item['betAmount'] > $checkDup['amount']) {
 
                             $amount = $item['betAmount'] - $checkDup['amount'];
 
@@ -1007,8 +970,8 @@ class PGsoftNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance_free,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance_free,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1019,12 +982,12 @@ class PGsoftNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1057,14 +1020,14 @@ class PGsoftNewController extends AppBaseController
                             ->latest('created_at')
                             ->first();
 
-                        if (!$checkData) {
+                        if (! $checkData) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1076,8 +1039,7 @@ class PGsoftNewController extends AppBaseController
 
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkData['amount']) {
+                        } elseif ($item['betAmount'] > $checkData['amount']) {
 
                             $amount = $item['betAmount'] - $checkData['amount'];
 
@@ -1086,8 +1048,8 @@ class PGsoftNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance_free,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance_free,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1099,12 +1061,12 @@ class PGsoftNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1135,11 +1097,10 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -1149,7 +1110,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1168,13 +1128,12 @@ class PGsoftNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1182,7 +1141,6 @@ class PGsoftNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1202,8 +1160,7 @@ class PGsoftNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1221,14 +1178,12 @@ class PGsoftNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', $this->game)
                             ->where('response', 'in')
@@ -1261,12 +1216,12 @@ class PGsoftNewController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $this->member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$this->member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $this->member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1294,14 +1249,13 @@ class PGsoftNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1322,13 +1276,11 @@ class PGsoftNewController extends AppBaseController
 
                         }
 
-
                     }
 
                 } // loop
 
             }
-
 
         } else {
 
@@ -1337,7 +1289,7 @@ class PGsoftNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
@@ -1350,7 +1302,6 @@ class PGsoftNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1368,13 +1319,12 @@ class PGsoftNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$this->member->balance_free,
+                    'balance' => (float) $this->member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1382,7 +1332,6 @@ class PGsoftNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1402,7 +1351,7 @@ class PGsoftNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1419,9 +1368,9 @@ class PGsoftNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20003,
-                            'balance' => (float)$this->member->balance_free,
+                            'balance' => (float) $this->member->balance_free,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1442,26 +1391,24 @@ class PGsoftNewController extends AppBaseController
                         if ($datasubs) {
                             $amount = $item['betAmount'] - $item['payoutAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-//                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
-//                            $member = MemberProxy::where('user_name', $session['username'])->first();
+                            //                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
+                            //                            $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $this->member->balance_free += $amount;
-//                            $member->save();
+                            //                            $this->member->balance_free += $amount;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1485,21 +1432,18 @@ class PGsoftNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$this->member->balance_free,
+                                'balance' => (float) $this->member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                         }
 
-
                     }
-
 
                 }
 
             }
-
 
         } else {
 
@@ -1507,13 +1451,11 @@ class PGsoftNewController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-
         return $param;
     }
-
 }

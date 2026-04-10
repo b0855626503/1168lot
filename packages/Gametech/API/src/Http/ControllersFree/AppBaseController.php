@@ -9,6 +9,7 @@ use InfyOm\Generator\Utils\ResponseUtil;
 /**
  * @SWG\Swagger(
  *   basePath="/api/v1",
+ *
  *   @SWG\Info(
  *     title="Laravel Generator APIs",
  *     version="1.0.0",
@@ -24,10 +25,7 @@ class AppBaseController extends Controller
         return number_format($number, 2, '.', ',');
     }
 
-    public static function betweenDate($datenow, $start, $stop)
-    {
-
-    }
+    public static function betweenDate($datenow, $start, $stop) {}
 
     public function sendResponse($result, $message): JsonResponse
     {
@@ -47,6 +45,7 @@ class AppBaseController extends Controller
     {
         $result['success'] = true;
         $result['message'] = $message;
+
         return Response::json($result, $code);
     }
 
@@ -54,6 +53,7 @@ class AppBaseController extends Controller
     {
         $result['success'] = false;
         $result['message'] = $message;
+
         return Response::json($result, $code);
     }
 
@@ -66,7 +66,7 @@ class AppBaseController extends Controller
     {
         return Response::json([
             'success' => true,
-            'message' => $message
+            'message' => $message,
         ], 200);
     }
 

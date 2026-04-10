@@ -1,5 +1,10 @@
 <?php
 
+use Yajra\DataTables\ApiResourceDataTable;
+use Yajra\DataTables\CollectionDataTable;
+use Yajra\DataTables\EloquentDataTable;
+use Yajra\DataTables\QueryDataTable;
+
 return [
     /*
      * DataTables search options.
@@ -45,14 +50,14 @@ return [
      * This is where you can register your custom dataTables builder.
      */
     'engines' => [
-//        'moloquent' => Pimlie\DataTables\MongodbDataTable::class,
-//        'mongodb-query' => Pimlie\DataTables\MongodbQueryDataTable::class,
-//        'mongodb-hybrid' => Pimlie\DataTables\HybridMongodbQueryDataTable::class,
+        //        'moloquent' => Pimlie\DataTables\MongodbDataTable::class,
+        //        'mongodb-query' => Pimlie\DataTables\MongodbQueryDataTable::class,
+        //        'mongodb-hybrid' => Pimlie\DataTables\HybridMongodbQueryDataTable::class,
 
-        'eloquent' => Yajra\DataTables\EloquentDataTable::class,
-        'query' => Yajra\DataTables\QueryDataTable::class,
-        'collection' => Yajra\DataTables\CollectionDataTable::class,
-        'resource' => Yajra\DataTables\ApiResourceDataTable::class,
+        'eloquent' => EloquentDataTable::class,
+        'query' => QueryDataTable::class,
+        'collection' => CollectionDataTable::class,
+        'resource' => ApiResourceDataTable::class,
     ],
 
     /*
@@ -61,10 +66,10 @@ return [
      * Note, only change this if you know what you are doing!
      */
     'builders' => [
-//        Illuminate\Database\Eloquent\Relations\Relation::class => 'eloquent',
-//        Illuminate\Database\Eloquent\Builder::class => 'eloquent',
-//        Illuminate\Database\Query\Builder::class => 'query',
-//        Illuminate\Support\Collection::class => 'collection',
+        //        Illuminate\Database\Eloquent\Relations\Relation::class => 'eloquent',
+        //        Illuminate\Database\Eloquent\Builder::class => 'eloquent',
+        //        Illuminate\Database\Query\Builder::class => 'query',
+        //        Illuminate\Support\Collection::class => 'collection',
     ],
 
     /*

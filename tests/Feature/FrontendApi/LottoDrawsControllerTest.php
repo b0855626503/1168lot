@@ -261,9 +261,9 @@ class LottoDrawsControllerTest extends TestCase
             [
                 'id' => 40,
                 'market_id' => 2,
-                'draw_date' => '2026-04-03',
-                'open_at' => '2026-04-03 09:00:00',
-                'close_at' => '2026-04-03 15:00:00',
+                'draw_date' => '2026-04-04',
+                'open_at' => '2026-04-04 09:00:00',
+                'close_at' => '2026-04-04 12:00:00',
                 'status' => 'resulted',
                 'result_number' => null,
                 'created_at' => now(),
@@ -285,7 +285,7 @@ class LottoDrawsControllerTest extends TestCase
                 'market_id' => 3,
                 'draw_date' => '2026-04-04',
                 'open_at' => '2026-04-04 09:00:00',
-                'close_at' => '2026-04-04 15:00:00',
+                'close_at' => '2026-04-04 18:00:00',
                 'status' => 'resulted',
                 'result_number' => json_encode([
                     'no_result' => true,
@@ -300,7 +300,7 @@ class LottoDrawsControllerTest extends TestCase
                 'market_id' => 4,
                 'draw_date' => '2026-04-04',
                 'open_at' => '2026-04-04 09:00:00',
-                'close_at' => '2026-04-04 15:00:00',
+                'close_at' => '2026-04-04 17:00:00',
                 'status' => 'resulted',
                 'result_number' => json_encode([
                     'no_result' => true,
@@ -314,7 +314,7 @@ class LottoDrawsControllerTest extends TestCase
                 'market_id' => 5,
                 'draw_date' => '2026-04-04',
                 'open_at' => '2026-04-04 09:00:00',
-                'close_at' => '2026-04-04 15:00:00',
+                'close_at' => '2026-04-04 11:00:00',
                 'status' => 'open',
                 'result_number' => null,
                 'created_at' => now(),
@@ -354,5 +354,11 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonFragment(['draw_id' => 60, 'status' => 'no_result', 'status_label' => 'ยกเลิก']);
         $response->assertJsonFragment(['market_id' => 5]);
         $response->assertJsonFragment(['draw_id' => 69, 'status' => 'open', 'status_label' => 'แทงหวย']);
+        $this->assertSame(
+            [5, 2, 1, 4, 3],
+            collect($response->json('data.groups.0.markets'))
+                ->pluck('market_id')
+                ->all()
+        );
     }
 }

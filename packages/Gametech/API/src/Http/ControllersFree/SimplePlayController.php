@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class SimplePlayController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -50,25 +48,23 @@ class SimplePlayController extends AppBaseController
             $param = [
                 'username' => $member->user_name,
                 'currency' => 'THB',
-                'amount' => (float)$member->balance_free,
-                'error' => 0
+                'amount' => (float) $member->balance_free,
+                'error' => 0,
             ];
 
         } else {
             $param = [
-                "error" => 101,
-                "description" => "Internal Server Error"
+                'error' => 101,
+                'description' => 'Internal Server Error',
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -76,8 +72,8 @@ class SimplePlayController extends AppBaseController
             $param = [
                 'username' => $member->user_name,
                 'currency' => 'THB',
-                'amount' => (float)$member->balance_free,
-                'error' => 0
+                'amount' => (float) $member->balance_free,
+                'error' => 0,
             ];
 
             $session_in['input'] = $session;
@@ -97,18 +93,16 @@ class SimplePlayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
-
 
         return $param;
     }
@@ -116,7 +110,6 @@ class SimplePlayController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -137,8 +130,8 @@ class SimplePlayController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance_free,
-                    'error' => 0
+                    'amount' => (float) $member->balance_free,
+                    'error' => 0,
                 ];
 
             } else {
@@ -157,8 +150,8 @@ class SimplePlayController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance_free,
-                        'error' => 0
+                        'amount' => (float) $member->balance_free,
+                        'error' => 0,
                     ];
 
                     $session_in['input'] = $session;
@@ -180,18 +173,16 @@ class SimplePlayController extends AppBaseController
 
                 } else {
 
-
                     if ($session['amount'] < 0) {
 
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance_free,
-                            'error' => 1002
+                            'amount' => (float) $member->balance_free,
+                            'error' => 1002,
                         ];
 
                     } else {
-
 
                         $balance = ($oldbalance - $session['amount']);
                         if ($balance >= 0) {
@@ -199,14 +190,14 @@ class SimplePlayController extends AppBaseController
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance_free -= $session['amount'];
-//                            $member->save();
+                            //                            $member->balance_free -= $session['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance_free,
-                                'error' => 0
+                                'amount' => (float) $member->balance_free,
+                                'error' => 0,
                             ];
 
                             $session_in['input'] = $session;
@@ -231,8 +222,8 @@ class SimplePlayController extends AppBaseController
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance_free,
-                                'error' => 1004
+                                'amount' => (float) $member->balance_free,
+                                'error' => 1004,
                             ];
                         }
                     }
@@ -257,16 +248,14 @@ class SimplePlayController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
         }
-
 
         return $param;
     }
@@ -274,7 +263,6 @@ class SimplePlayController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -295,8 +283,8 @@ class SimplePlayController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance_free,
-                    'error' => 0
+                    'amount' => (float) $member->balance_free,
+                    'error' => 0,
                 ];
 
             } else {
@@ -317,26 +305,24 @@ class SimplePlayController extends AppBaseController
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance_free,
-                            'error' => 1002
+                            'amount' => (float) $member->balance_free,
+                            'error' => 1002,
                         ];
 
                     } else {
                         $balance = ($oldbalance + $session['amount']);
 
-
                         MemberProxy::where('user_name', $session['username'])->increment('balance_free', $session['amount']);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                        $member->balance_free += $session['amount'];
-//                        $member->save();
-
+                        //                        $member->balance_free += $session['amount'];
+                        //                        $member->save();
 
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance_free,
-                            'error' => 0
+                            'amount' => (float) $member->balance_free,
+                            'error' => 0,
                         ];
 
                         $session_in['input'] = $session;
@@ -360,8 +346,8 @@ class SimplePlayController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance_free,
-                        'error' => 9999
+                        'amount' => (float) $member->balance_free,
+                        'error' => 9999,
                     ];
                 }
 
@@ -389,10 +375,9 @@ class SimplePlayController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
         }
-
 
         return $param;
     }
@@ -400,7 +385,6 @@ class SimplePlayController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -420,8 +404,8 @@ class SimplePlayController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance_free,
-                    'error' => 0
+                    'amount' => (float) $member->balance_free,
+                    'error' => 0,
                 ];
 
             } else {
@@ -441,8 +425,8 @@ class SimplePlayController extends AppBaseController
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance_free,
-                            'error' => 1002
+                            'amount' => (float) $member->balance_free,
+                            'error' => 1002,
                         ];
                     } else {
 
@@ -450,14 +434,14 @@ class SimplePlayController extends AppBaseController
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
                         $balance = ($oldbalance + $session['amount']);
-//                        $member->balance_free += $session['amount'];
-//                        $member->save();
+                        //                        $member->balance_free += $session['amount'];
+                        //                        $member->save();
 
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance_free,
-                            'error' => 0
+                            'amount' => (float) $member->balance_free,
+                            'error' => 0,
                         ];
 
                         $session_in['input'] = $session;
@@ -482,8 +466,8 @@ class SimplePlayController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance_free,
-                        'error' => 0
+                        'amount' => (float) $member->balance_free,
+                        'error' => 0,
                     ];
 
                     $session_in['input'] = $session;
@@ -530,11 +514,10 @@ class SimplePlayController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
-
 
         return $param;
     }
@@ -542,7 +525,6 @@ class SimplePlayController extends AppBaseController
     public function transferLost(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -564,8 +546,8 @@ class SimplePlayController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance_free,
-                    'error' => 0
+                    'amount' => (float) $member->balance_free,
+                    'error' => 0,
                 ];
 
             } else {
@@ -573,8 +555,8 @@ class SimplePlayController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance_free,
-                    'error' => 0
+                    'amount' => (float) $member->balance_free,
+                    'error' => 0,
                 ];
 
                 $session_in['input'] = $session;
@@ -618,18 +600,12 @@ class SimplePlayController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
         }
-
 
         return $param;
     }
 
-    public function lists(Request $request)
-    {
-
-    }
-
-
+    public function lists(Request $request) {}
 }

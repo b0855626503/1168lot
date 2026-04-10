@@ -27,10 +27,9 @@ class BankPaymentController extends AppBaseController
     public function __construct(
         BankPaymentRepository $repository,
         BankAccountRepository $bankAccount,
-        BankRepository        $bank,
+        BankRepository $bank,
         WithdrawNewRepository $withdraw
-    )
-    {
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -44,7 +43,6 @@ class BankPaymentController extends AppBaseController
         $this->withdraw = $withdraw;
     }
 
-
     public function krungsri(Request $request)
     {
         $data = json_decode($request['data'], true);
@@ -53,7 +51,7 @@ class BankPaymentController extends AppBaseController
         file_put_contents($path, print_r($data, true));
 
         $bank_account = $this->bankAccount->findOneByField('acc_no', $data['acc_no']);
-        if (!$bank_account) {
+        if (! $bank_account) {
             return $this->sendError('ไม่พบเลขบัญชี', 200);
         }
 
@@ -62,12 +60,12 @@ class BankPaymentController extends AppBaseController
         if (isset($data['balance'])) {
             $balance = ($data['balance'] ? $data['balance'] : 0);
             $this->bankAccount->update([
-                'balance' => $balance
+                'balance' => $balance,
             ], $bank_account->code);
         }
 
         $out = $data['data'];
-        if (!(empty($out)) && count($out) > 0) {
+        if (! (empty($out)) && count($out) > 0) {
 
             for ($indexrow = count($out); $indexrow >= 0; $indexrow--) {
 
@@ -76,12 +74,11 @@ class BankPaymentController extends AppBaseController
                     'channel' => $out[$indexrow]['channel'],
                     'acc_num' => $out[$indexrow]['acc_num'],
                     'detail' => $out[$indexrow]['detail'],
-                    'checktime' => strtotime(date("Y-m-d H:i:s")),
-                    'value' => str_replace(",", "", $out[$indexrow]['value'])
+                    'checktime' => strtotime(date('Y-m-d H:i:s')),
+                    'value' => str_replace(',', '', $out[$indexrow]['value']),
                 ];
 
-
-                if ($out[$indexrow]['value'] == "" || $out[$indexrow]['value'] == 0) {
+                if ($out[$indexrow]['value'] == '' || $out[$indexrow]['value'] == 0) {
                     continue;
                 }
                 if (strlen($list['date']) < 6) {
@@ -97,42 +94,40 @@ class BankPaymentController extends AppBaseController
 
     public function getBank($method, $acc)
     {
-//        $acc = $request->input('account');
+        //        $acc = $request->input('account');
         $firstname = '';
         $value = 0;
-//        return $this->sendError('ไม่พบเลขบัญชี', 200);
-
+        //        return $this->sendError('ไม่พบเลขบัญชี', 200);
 
         $datas = $this->repository->scopeQuery(function ($query) use ($method, $acc) {
-            return $query->select('code', 'bankname', 'bank_time', 'report_id', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', $method . '_' . $acc)->orderBy('code', 'desc')->take(20);
+            return $query->select('code', 'bankname', 'bank_time', 'report_id', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', $method.'_'.$acc)->orderBy('code', 'desc')->take(20);
         })->all();
 
-
         $data = $datas->map(function ($items) {
-            $item = (object)$items;
-//            if (!empty($item->atranferer)) {
-//                if(Str::length($item->atranferer) == 4){
-//                    $acc_chk = explode(' ', $item->detail);
-//                    if (isset($acc_chk[4])) {
-//                        $firstname = $acc_chk[4];
-//                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                        $value = Str::of($acc)->replace('*', '')->__toString();
-//                    }
-//                }else{
-//                    $firstname = '';
-//                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//                }
-//            } else {
-//
-//                $acc_chk = explode(' ', $item->detail);
-//                if (isset($acc_chk[4])) {
-//                    $firstname = $acc_chk[4];
-//                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//
-//                }
-//            }
+            $item = (object) $items;
+            //            if (!empty($item->atranferer)) {
+            //                if(Str::length($item->atranferer) == 4){
+            //                    $acc_chk = explode(' ', $item->detail);
+            //                    if (isset($acc_chk[4])) {
+            //                        $firstname = $acc_chk[4];
+            //                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                        $value = Str::of($acc)->replace('*', '')->__toString();
+            //                    }
+            //                }else{
+            //                    $firstname = '';
+            //                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //                }
+            //            } else {
+            //
+            //                $acc_chk = explode(' ', $item->detail);
+            //                if (isset($acc_chk[4])) {
+            //                    $firstname = $acc_chk[4];
+            //                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //
+            //                }
+            //            }
 
             return [
                 'id' => $item->code,
@@ -143,55 +138,54 @@ class BankPaymentController extends AppBaseController
                 'detail' => $item->detail,
                 'atranferer' => $item->atranferer,
                 'tx_hash' => $item->tx_hash,
-                'firstname' => $item->title
+                'firstname' => $item->title,
 
             ];
         });
 
-//        dd()
+        //        dd()
 
-//        $newdata = new ScbResource($da1ta);
+        //        $newdata = new ScbResource($da1ta);
         return $this->sendResponse($data, 'complete');
     }
 
     public function getScb($acc)
     {
-//        $acc = $request->input('account');
+        //        $acc = $request->input('account');
         $firstname = '';
         $value = 0;
+
         return $this->sendError('ไม่พบเลขบัญชี', 200);
 
-
         $datas = $this->repository->scopeQuery(function ($query) use ($acc) {
-            return $query->select('code', 'bankname', 'bank_time', 'channel', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', 'scb_' . $acc)->orderBy('code', 'desc')->take(50);
+            return $query->select('code', 'bankname', 'bank_time', 'channel', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', 'scb_'.$acc)->orderBy('code', 'desc')->take(50);
         })->all();
 
-
         $data = $datas->map(function ($items) {
-            $item = (object)$items;
-//            if (!empty($item->atranferer)) {
-//                if(Str::length($item->atranferer) == 4){
-//                    $acc_chk = explode(' ', $item->detail);
-//                    if (isset($acc_chk[4])) {
-//                        $firstname = $acc_chk[4];
-//                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                        $value = Str::of($acc)->replace('*', '')->__toString();
-//                    }
-//                }else{
-//                    $firstname = '';
-//                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//                }
-//            } else {
-//
-//                $acc_chk = explode(' ', $item->detail);
-//                if (isset($acc_chk[4])) {
-//                    $firstname = $acc_chk[4];
-//                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//
-//                }
-//            }
+            $item = (object) $items;
+            //            if (!empty($item->atranferer)) {
+            //                if(Str::length($item->atranferer) == 4){
+            //                    $acc_chk = explode(' ', $item->detail);
+            //                    if (isset($acc_chk[4])) {
+            //                        $firstname = $acc_chk[4];
+            //                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                        $value = Str::of($acc)->replace('*', '')->__toString();
+            //                    }
+            //                }else{
+            //                    $firstname = '';
+            //                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //                }
+            //            } else {
+            //
+            //                $acc_chk = explode(' ', $item->detail);
+            //                if (isset($acc_chk[4])) {
+            //                    $firstname = $acc_chk[4];
+            //                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //
+            //                }
+            //            }
 
             return [
                 'id' => $item->code,
@@ -202,55 +196,54 @@ class BankPaymentController extends AppBaseController
                 'detail' => $item->detail,
                 'atranferer' => $item->atranferer,
                 'tx_hash' => $item->tx_hash,
-                'firstname' => $item->title
+                'firstname' => $item->title,
 
             ];
         });
 
-//        dd()
+        //        dd()
 
-//        $newdata = new ScbResource($da1ta);
+        //        $newdata = new ScbResource($da1ta);
         return $this->sendResponse($data, 'complete');
     }
 
     public function getKbank($acc)
     {
-//        $acc = $request->input('account');
+        //        $acc = $request->input('account');
         $firstname = '';
         $value = 0;
+
         return $this->sendError('ไม่พบเลขบัญชี', 200);
 
-
         $datas = $this->repository->scopeQuery(function ($query) use ($acc) {
-            return $query->select('code', 'bankname', 'bank_time', 'channel', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', 'kbank_' . $acc)->orderBy('code', 'desc')->take(50);
+            return $query->select('code', 'bankname', 'bank_time', 'channel', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->where('bank', 'kbank_'.$acc)->orderBy('code', 'desc')->take(50);
         })->all();
 
-
         $data = $datas->map(function ($items) {
-            $item = (object)$items;
-//            if (!empty($item->atranferer)) {
-//                if(Str::length($item->atranferer) == 4){
-//                    $acc_chk = explode(' ', $item->detail);
-//                    if (isset($acc_chk[4])) {
-//                        $firstname = $acc_chk[4];
-//                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                        $value = Str::of($acc)->replace('*', '')->__toString();
-//                    }
-//                }else{
-//                    $firstname = '';
-//                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//                }
-//            } else {
-//
-//                $acc_chk = explode(' ', $item->detail);
-//                if (isset($acc_chk[4])) {
-//                    $firstname = $acc_chk[4];
-//                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//
-//                }
-//            }
+            $item = (object) $items;
+            //            if (!empty($item->atranferer)) {
+            //                if(Str::length($item->atranferer) == 4){
+            //                    $acc_chk = explode(' ', $item->detail);
+            //                    if (isset($acc_chk[4])) {
+            //                        $firstname = $acc_chk[4];
+            //                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                        $value = Str::of($acc)->replace('*', '')->__toString();
+            //                    }
+            //                }else{
+            //                    $firstname = '';
+            //                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //                }
+            //            } else {
+            //
+            //                $acc_chk = explode(' ', $item->detail);
+            //                if (isset($acc_chk[4])) {
+            //                    $firstname = $acc_chk[4];
+            //                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //
+            //                }
+            //            }
 
             return [
                 'id' => $item->code,
@@ -261,55 +254,53 @@ class BankPaymentController extends AppBaseController
                 'detail' => $item->detail,
                 'atranferer' => $item->atranferer,
                 'tx_hash' => $item->tx_hash,
-                'firstname' => $item->title
+                'firstname' => $item->title,
 
             ];
         });
 
-//        dd()
+        //        dd()
 
-//        $newdata = new ScbResource($da1ta);
+        //        $newdata = new ScbResource($da1ta);
         return $this->sendResponse($data, 'complete');
     }
 
     public function getBankAll()
     {
-//        $acc = $request->input('account');
+        //        $acc = $request->input('account');
         $firstname = '';
         $value = 0;
-//        return $this->sendError('ไม่พบเลขบัญชี', 200);
-
+        //        return $this->sendError('ไม่พบเลขบัญชี', 200);
 
         $datas = $this->repository->scopeQuery(function ($query) {
             return $query->select('code', 'bankname', 'bank_time', 'report_id', 'value', 'detail', 'atranferer', 'tx_hash', 'title')->orderBy('code', 'desc')->take(50);
         })->all();
 
-
         $data = $datas->map(function ($items) {
-            $item = (object)$items;
-//            if (!empty($item->atranferer)) {
-//                if(Str::length($item->atranferer) == 4){
-//                    $acc_chk = explode(' ', $item->detail);
-//                    if (isset($acc_chk[4])) {
-//                        $firstname = $acc_chk[4];
-//                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                        $value = Str::of($acc)->replace('*', '')->__toString();
-//                    }
-//                }else{
-//                    $firstname = '';
-//                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//                }
-//            } else {
-//
-//                $acc_chk = explode(' ', $item->detail);
-//                if (isset($acc_chk[4])) {
-//                    $firstname = $acc_chk[4];
-//                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
-//                    $value = Str::of($acc)->replace('*', '')->__toString();
-//
-//                }
-//            }
+            $item = (object) $items;
+            //            if (!empty($item->atranferer)) {
+            //                if(Str::length($item->atranferer) == 4){
+            //                    $acc_chk = explode(' ', $item->detail);
+            //                    if (isset($acc_chk[4])) {
+            //                        $firstname = $acc_chk[4];
+            //                        $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                        $value = Str::of($acc)->replace('*', '')->__toString();
+            //                    }
+            //                }else{
+            //                    $firstname = '';
+            //                    $acc = Str::of($item->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //                }
+            //            } else {
+            //
+            //                $acc_chk = explode(' ', $item->detail);
+            //                if (isset($acc_chk[4])) {
+            //                    $firstname = $acc_chk[4];
+            //                    $acc = Str::of($acc_chk[2])->replaceMatches('/[^0-9]/', '')->trim();
+            //                    $value = Str::of($acc)->replace('*', '')->__toString();
+            //
+            //                }
+            //            }
 
             return [
                 'id' => $item->code,
@@ -320,14 +311,14 @@ class BankPaymentController extends AppBaseController
                 'detail' => $item->detail,
                 'atranferer' => $item->atranferer,
                 'tx_hash' => $item->tx_hash,
-                'firstname' => $item->title
+                'firstname' => $item->title,
 
             ];
         });
 
-//        dd()
+        //        dd()
 
-//        $newdata = new ScbResource($da1ta);
+        //        $newdata = new ScbResource($da1ta);
         return $this->sendResponse($data, 'complete');
     }
 
@@ -340,28 +331,29 @@ class BankPaymentController extends AppBaseController
         }
 
         $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOneNew($id);
-        if (!$bank) {
+        if (! $bank) {
             return $this->sendResponseFail([], 'Not Found Account');
         }
 
         $banks = [
             'value' => '',
-            'text' => '== Select =='
+            'text' => '== Select ==',
         ];
 
         $responses = collect(app('Gametech\Payment\Repositories\BankRepository')->findWhere(['enable' => 'Y'])->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'value' => $item->shortcode,
-                'text' => $item->name_en
+                'text' => $item->name_en,
             ];
 
         })->prepend($banks);
 
-
         $result['data'] = $responses;
+
         return $this->sendResponseNew($result, 'Complete');
     }
 
@@ -375,10 +367,10 @@ class BankPaymentController extends AppBaseController
         $data = [];
         $to_bank = $request->input('to_bank');
         $account = $request->input('to_account');
-//        $id = $request->input('to_account');
+        //        $id = $request->input('to_account');
 
         $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOneNew($id);
-        if (!$bank) {
+        if (! $bank) {
             return $this->sendResponseFail([], 'Not Found Account');
         }
 
@@ -386,7 +378,7 @@ class BankPaymentController extends AppBaseController
 
         if ($bank_code == 2) {
 
-            $kbank = new KbankOut();
+            $kbank = new KbankOut;
             $bank_trans = $to_bank;
             if ($bank_trans == '500') {
                 return $this->sendResponseFail([], 'Not Found Bank Code');
@@ -400,7 +392,7 @@ class BankPaymentController extends AppBaseController
 
         } elseif ($bank_code == 4) {
 
-            $kbank = new ScbOut();
+            $kbank = new ScbOut;
             $bank_trans = $to_bank;
             if ($bank_trans == '500') {
                 return $this->sendResponseFail([], 'Not Found Bank Code');
@@ -414,11 +406,9 @@ class BankPaymentController extends AppBaseController
 
         }
 
-
-        if (!$data) {
+        if (! $data) {
             return $this->sendResponseFail([], 'Not found Account Data');
         }
-
 
         return $this->sendResponse($data, 'Complete');
 
@@ -439,18 +429,16 @@ class BankPaymentController extends AppBaseController
             'to_account' => 'required|string',
             'to_name' => 'nullable|string',
             'amount' => 'required|numeric',
-            'remark' => 'nullable|string'
+            'remark' => 'nullable|string',
         ]);
 
-
         $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOneNew($id);
-        if (!$bank) {
+        if (! $bank) {
             return $this->sendResponseFail([], 'Not Found Account');
         }
 
         $to_bank = $request->input('to_bank');
         $to_bank = app('Gametech\Payment\Repositories\BankRepository')->findOneWhere(['shortcode' => $to_bank]);
-
 
         $data['to_bank'] = $to_bank->code;
         $data['to_account'] = $request->input('to_account');
@@ -469,7 +457,6 @@ class BankPaymentController extends AppBaseController
         $data['time_bank'] = date('H:i:s');
         $response = $this->withdraw->create($data);
 
-
         $bank_code = $bank->bank->code;
         if ($bank_code == 2) {
             $return = PaymentOutKbankNew::dispatchNow($response->code);
@@ -477,26 +464,24 @@ class BankPaymentController extends AppBaseController
             $return = PaymentOutScbNew::dispatchNow($response->code);
         }
 
-//        switch ($return['success']) {
-//
-//
-//            case 'COMPLETE':
-//            case 'NOTWAIT':
-//            case 'MONEY':
-//                break;
-//
-//            case 'NOMONEY':
-//            case 'FAIL_AUTO':
-//            default:
-//                $datanew['status'] = 0;
-//                $this->repository->update($datanew, $response->code);
-//
-//
-//        }
+        //        switch ($return['success']) {
+        //
+        //
+        //            case 'COMPLETE':
+        //            case 'NOTWAIT':
+        //            case 'MONEY':
+        //                break;
+        //
+        //            case 'NOMONEY':
+        //            case 'FAIL_AUTO':
+        //            default:
+        //                $datanew['status'] = 0;
+        //                $this->repository->update($datanew, $response->code);
+        //
+        //
+        //        }
 
         return $this->sendResponse($return, 'Result');
 
-
     }
-
 }

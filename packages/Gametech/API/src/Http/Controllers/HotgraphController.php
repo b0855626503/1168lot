@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class HotgraphController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,7 +35,6 @@ class HotgraphController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function transaction(Request $request)
     {
         $param = [];
@@ -47,11 +44,11 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 40003,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
+
             return $param;
         }
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -76,7 +73,7 @@ class HotgraphController extends AppBaseController
                         'id' => $session['id'],
                         'statusCode' => 20002,
                         'productId' => $session['productId'],
-                        'timestampMillis' => now()->getTimestampMs()
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
                     break;
 
@@ -99,9 +96,9 @@ class HotgraphController extends AppBaseController
                             'productId' => $session['productId'],
                             'timestampMillis' => now()->getTimestampMs(),
                             'currency' => 'THB',
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'username' => $session['username']
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'username' => $session['username'],
                         ];
 
                         $session_in['input'] = $session;
@@ -126,7 +123,7 @@ class HotgraphController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'productId' => $session['productId'],
-                            'timestampMillis' => now()->getTimestampMs()
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
                         break;
                     }
@@ -152,24 +149,21 @@ class HotgraphController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
 
         }
 
-
-        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HOTGRAPH'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
-
 
         return $param;
     }
@@ -178,7 +172,6 @@ class HotgraphController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -186,13 +179,12 @@ class HotgraphController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -216,11 +208,11 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 997,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HOTGRAPH'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
@@ -256,7 +248,7 @@ class HotgraphController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 806,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -282,9 +274,8 @@ class HotgraphController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['betAmount'];
+                    //                    $amount += $item['betAmount'];
 
                     $data_sub = GameLogProxy::where('company', 'HOTGRAPH')
                         ->where('response', 'in')
@@ -301,16 +292,15 @@ class HotgraphController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
-
 
                         $datasub = GameLogProxy::where('company', 'HOTGRAPH')
                             ->where('response', 'in')
@@ -328,7 +318,7 @@ class HotgraphController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 806,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -347,12 +337,12 @@ class HotgraphController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                             } else {
@@ -361,7 +351,7 @@ class HotgraphController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 800,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'productId' => $session['productId']
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
@@ -415,16 +405,15 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -453,12 +442,11 @@ class HotgraphController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 806,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -466,7 +454,6 @@ class HotgraphController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -486,7 +473,7 @@ class HotgraphController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'HOTGRAPH')
                         ->where('response', 'in')
@@ -515,16 +502,15 @@ class HotgraphController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                         } else {
-
 
                             $datasubs = GameLogProxy::where('company', 'HOTGRAPH')
                                 ->where('response', 'in')
@@ -542,10 +528,9 @@ class HotgraphController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 806,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'productId' => $session['productId']
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
-
 
                             } else {
 
@@ -564,12 +549,12 @@ class HotgraphController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                 } else {
@@ -587,14 +572,13 @@ class HotgraphController extends AppBaseController
                                         $param = [
                                             'id' => $session['id'],
                                             'statusCode' => 0,
-                                            'currency' => "THB",
+                                            'currency' => 'THB',
                                             'productId' => $session['productId'],
                                             'username' => $member->user_name,
-                                            'balanceBefore' => (float)$oldbalance,
-                                            'balanceAfter' => (float)$member->balance,
-                                            'timestampMillis' => now()->getTimestampMs()
+                                            'balanceBefore' => (float) $oldbalance,
+                                            'balanceAfter' => (float) $member->balance,
+                                            'timestampMillis' => now()->getTimestampMs(),
                                         ];
-
 
                                         $session_in['input'] = $item;
                                         $session_in['output'] = $param;
@@ -619,7 +603,7 @@ class HotgraphController extends AppBaseController
                                             'id' => $session['id'],
                                             'statusCode' => 20001,
                                             'timestampMillis' => now()->getTimestampMs(),
-                                            'productId' => $session['productId']
+                                            'productId' => $session['productId'],
                                         ];
                                         break;
 
@@ -635,7 +619,7 @@ class HotgraphController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -668,16 +652,15 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -710,7 +693,7 @@ class HotgraphController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 806,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -736,7 +719,6 @@ class HotgraphController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $datasub = GameLogProxy::where('company', 'HOTGRAPH')
@@ -755,7 +737,7 @@ class HotgraphController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 806,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -776,12 +758,12 @@ class HotgraphController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                         } else {
@@ -809,12 +791,12 @@ class HotgraphController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -836,9 +818,7 @@ class HotgraphController extends AppBaseController
 
                         }
 
-
                     }
-
 
                 }
             }
@@ -866,16 +846,15 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -908,7 +887,7 @@ class HotgraphController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -957,12 +936,12 @@ class HotgraphController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -982,8 +961,8 @@ class HotgraphController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-//                            $datasub2->con_4 = 'complete';
-//                            $datasub2->save();
+                            //                            $datasub2->con_4 = 'complete';
+                            //                            $datasub2->save();
 
                             GameLogProxy::where('company', 'HOTGRAPH')
                                 ->where('response', 'in')
@@ -995,14 +974,13 @@ class HotgraphController extends AppBaseController
                                 ->whereNull('con_4')
                                 ->update(['con_4' => 'complete']);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                             break;
@@ -1014,7 +992,7 @@ class HotgraphController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -1047,16 +1025,15 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1089,7 +1066,7 @@ class HotgraphController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1133,11 +1110,11 @@ class HotgraphController extends AppBaseController
 
                         $newbalance = $member->balance - $adjust;
 
-                        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+                        $path = storage_path('logs/seamless/HOTGRAPH'.now()->format('Y_m_d').'.log');
                         file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        file_put_contents($path, print_r($item['betAmount'].' - '.$datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
                             $member->balance = $member->balance - $adjust;
@@ -1146,12 +1123,12 @@ class HotgraphController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'HOTGRAPH')
@@ -1181,54 +1158,52 @@ class HotgraphController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        } else {
-//
-//                            $member->balance += abs($adjust);
-//                            $member->save();
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'HOTGRAPH';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'ajsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//
-//                        }
-
+                        //                        } else {
+                        //
+                        //                            $member->balance += abs($adjust);
+                        //                            $member->save();
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'HOTGRAPH';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'ajsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //
+                        //                        }
 
                     } else {
 
@@ -1257,12 +1232,12 @@ class HotgraphController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1288,7 +1263,7 @@ class HotgraphController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'productId' => $session['productId']
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -1302,12 +1277,12 @@ class HotgraphController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1329,14 +1304,13 @@ class HotgraphController extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1368,16 +1342,15 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1406,16 +1379,15 @@ class HotgraphController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 0,
-                    'currency' => "THB",
+                    'currency' => 'THB',
                     'productId' => $session['productId'],
                     'username' => $member->user_name,
-                    'balanceBefore' => (float)$oldbalance,
-                    'balanceAfter' => (float)$member->balance,
-                    'timestampMillis' => now()->getTimestampMs()
+                    'balanceBefore' => (float) $oldbalance,
+                    'balanceAfter' => (float) $member->balance,
+                    'timestampMillis' => now()->getTimestampMs(),
                 ];
 
             } else {
@@ -1423,7 +1395,6 @@ class HotgraphController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1443,7 +1414,7 @@ class HotgraphController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'HOTGRAPH')
                         ->where('response', 'in')
@@ -1460,14 +1431,13 @@ class HotgraphController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                     } else {
 
@@ -1477,14 +1447,13 @@ class HotgraphController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                         $session_in['input'] = $item;
                         $session_in['output'] = $param;
@@ -1532,18 +1501,16 @@ class HotgraphController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/HOTGRAPH' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

@@ -101,7 +101,7 @@ class RbLottoController extends AppBaseController
                     ->where('response', 'in')
                     ->where('game_user', $member->user_name)
                     ->where('method', 'CANCEL')
-                    ->where('con_3', (string)$session['ticket_id'])
+                    ->where('con_3', (string) $session['ticket_id'])
                     ->first();
 
                 if ($txnCancel) {
@@ -119,9 +119,9 @@ class RbLottoController extends AppBaseController
                         'method' => 'OPEN',
                         'response' => 'in',
                         'amount' => abs($session['amount']),
-                        'con_1' => (string)$session['request_id'],
-                        'con_2' => (string)$session['round_id'],
-                        'con_3' => (string)$session['ticket_id'],
+                        'con_1' => (string) $session['request_id'],
+                        'con_2' => (string) $session['round_id'],
+                        'con_3' => (string) $session['ticket_id'],
                         'con_4' => 'CANCEL_'.$txnCancel->_id,
                         'before_balance' => $oldbalance,
                         'after_balance' => $member->balance,
@@ -156,9 +156,9 @@ class RbLottoController extends AppBaseController
                             'method' => 'OPEN',
                             'response' => 'in',
                             'amount' => abs($session['amount']),
-                            'con_1' => (string)$session['request_id'],
-                            'con_2' => (string)$session['round_id'],
-                            'con_3' => (string)$session['ticket_id'],
+                            'con_1' => (string) $session['request_id'],
+                            'con_2' => (string) $session['round_id'],
+                            'con_3' => (string) $session['ticket_id'],
                             'con_4' => null,
                             'before_balance' => $oldbalance,
                             'after_balance' => $member->balance,
@@ -205,7 +205,7 @@ class RbLottoController extends AppBaseController
                 ->where('response', 'in')
                 ->where('game_user', $member->user_name)
                 ->where('method', 'OPEN')
-                ->where('con_3', (string)$session['ticket_id'])
+                ->where('con_3', (string) $session['ticket_id'])
                 ->whereNull('con_4')
                 ->latest('created_at')
                 ->first();
@@ -237,9 +237,9 @@ class RbLottoController extends AppBaseController
                     'method' => 'SETTLED',
                     'response' => 'in',
                     'amount' => $session['amount'],
-                    'con_1' => (string)$session['request_id'],
-                    'con_2' => (string)$session['round_id'],
-                    'con_3' => (string)$session['ticket_id'],
+                    'con_1' => (string) $session['request_id'],
+                    'con_2' => (string) $session['round_id'],
+                    'con_3' => (string) $session['ticket_id'],
                     'con_4' => null,
                     'before_balance' => $oldbalance,
                     'after_balance' => $member->balance,
@@ -281,7 +281,7 @@ class RbLottoController extends AppBaseController
                 ->where('response', 'in')
                 ->where('game_user', $member->user_name)
                 ->where('method', 'OPEN')
-                ->where('con_3', (string)$session['ticket_id'])
+                ->where('con_3', (string) $session['ticket_id'])
                 ->first();
 
             if (! $log) {
@@ -300,9 +300,9 @@ class RbLottoController extends AppBaseController
                     'method' => 'CANCEL',
                     'response' => 'in',
                     'amount' => 0,
-                    'con_1' => (string)$session['request_id'],
-                    'con_2' => (string)$session['round_id'],
-                    'con_3' => (string)$session['ticket_id'],
+                    'con_1' => (string) $session['request_id'],
+                    'con_2' => (string) $session['round_id'],
+                    'con_3' => (string) $session['ticket_id'],
                     'con_4' => null,
                     'before_balance' => $oldbalance,
                     'after_balance' => $member->balance,
@@ -340,9 +340,9 @@ class RbLottoController extends AppBaseController
                         'method' => 'CANCEL',
                         'response' => 'in',
                         'amount' => $betAmount,
-                        'con_1' => (string)$session['request_id'],
-                        'con_2' => (string)$session['round_id'],
-                        'con_3' => (string)$session['ticket_id'],
+                        'con_1' => (string) $session['request_id'],
+                        'con_2' => (string) $session['round_id'],
+                        'con_3' => (string) $session['ticket_id'],
                         'con_4' => null,
                         'before_balance' => $oldbalance,
                         'after_balance' => $member->balance,
@@ -427,8 +427,8 @@ class RbLottoController extends AppBaseController
                         'method' => 'ROLLBACK',
                         'response' => 'in',
                         'amount' => $amount,
-                        'con_1' => (string)$session['request_id'],
-                        'con_2' => (string)$session['rollback_target_request_id'],
+                        'con_1' => (string) $session['request_id'],
+                        'con_2' => (string) $session['rollback_target_request_id'],
                         'con_3' => null,
                         'con_4' => null,
                         'before_balance' => $oldbalance,

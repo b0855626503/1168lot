@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -24,10 +23,9 @@ class HuayDragonController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -39,11 +37,9 @@ class HuayDragonController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -52,27 +48,26 @@ class HuayDragonController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
-                    'balance' => (float)$member->balance
-                ]
+                    'balance' => (float) $member->balance,
+                ],
             ];
-
 
         } else {
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
-                    'balance' => 0
-                ]
+                    'balance' => 0,
+                ],
             ];
         }
-//
-        $path = storage_path('logs/seamless/HuayDragon' . now()->format('Y_m_d') . '.log');
+        //
+        $path = storage_path('logs/seamless/HuayDragon'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
@@ -95,33 +90,31 @@ class HuayDragonController extends AppBaseController
             MemberProxy::where('user_name', $session['username'])->decrement('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
-                        'lastUpdate' => now()->toDateTimeString()
+                        'balance' => (float) $member->balance,
+                        'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
-                    'refId' => $session['refId']
-                ]
+                    'refId' => $session['refId'],
+                ],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return Response::json($param);
     }
@@ -141,33 +134,31 @@ class HuayDragonController extends AppBaseController
             MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
-                        'lastUpdate' => now()->toDateTimeString()
+                        'balance' => (float) $member->balance,
+                        'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
-                    'refId' => $session['refId']
-                ]
+                    'refId' => $session['refId'],
+                ],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return Response::json($param);
     }
@@ -187,33 +178,31 @@ class HuayDragonController extends AppBaseController
             MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
-                        'lastUpdate' => now()->toDateTimeString()
+                        'balance' => (float) $member->balance,
+                        'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
-                    'refId' => $session['refId']
-                ]
+                    'refId' => $session['refId'],
+                ],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return Response::json($param);
     }
@@ -233,33 +222,31 @@ class HuayDragonController extends AppBaseController
             MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
-                        'lastUpdate' => now()->toDateTimeString()
+                        'balance' => (float) $member->balance,
+                        'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
-                    'refId' => $session['refId']
-                ]
+                    'refId' => $session['refId'],
+                ],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return Response::json($param);
     }
@@ -279,33 +266,31 @@ class HuayDragonController extends AppBaseController
             MemberProxy::where('user_name', $session['username'])->decrement('balance', abs($session['amount']));
             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => 'Success'
+                    'message' => 'Success',
                 ],
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
-                        'lastUpdate' => now()->toDateTimeString()
+                        'balance' => (float) $member->balance,
+                        'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
-                    'refId' => $session['refId']
-                ]
+                    'refId' => $session['refId'],
+                ],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return Response::json($param);
     }
@@ -337,9 +322,9 @@ class HuayDragonController extends AppBaseController
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20001,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -383,30 +368,29 @@ class HuayDragonController extends AppBaseController
 
                         $newbalance = $member->balance - $adjust;
 
-//                        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//                        file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-//                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        //                        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+                        //                        file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
+                        //                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
 
                             MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance = $member->balance - $adjust;
-//                            $member->save();
+                            //                            $member->balance = $member->balance - $adjust;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'ACE333')
@@ -436,20 +420,18 @@ class HuayDragonController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
-                                'balance' => (float)$member->balance,
+                                'balance' => (float) $member->balance,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
-
 
                     } else {
 
@@ -476,16 +458,15 @@ class HuayDragonController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -510,9 +491,9 @@ class HuayDragonController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
-                                        'balance' => (float)$member->balance,
+                                        'balance' => (float) $member->balance,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'productId' => $session['productId']
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -523,16 +504,15 @@ class HuayDragonController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance', abs($adjust));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -554,15 +534,14 @@ class HuayDragonController extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$member->balance,
+                                'balance' => (float) $member->balance,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -594,16 +573,15 @@ class HuayDragonController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -632,16 +610,15 @@ class HuayDragonController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 0,
-                    'currency' => "THB",
+                    'currency' => 'THB',
                     'productId' => $session['productId'],
                     'username' => $member->user_name,
-                    'balanceBefore' => (float)$oldbalance,
-                    'balanceAfter' => (float)$member->balance,
-                    'timestampMillis' => now()->getTimestampMs()
+                    'balanceBefore' => (float) $oldbalance,
+                    'balanceAfter' => (float) $member->balance,
+                    'timestampMillis' => now()->getTimestampMs(),
                 ];
 
             } else {
@@ -649,7 +626,6 @@ class HuayDragonController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -669,7 +645,7 @@ class HuayDragonController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'ACE333')
                         ->where('response', 'in')
@@ -686,35 +662,32 @@ class HuayDragonController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                     } else {
 
                         MemberProxy::where('user_name', $session['username'])->increment('balance', $item['payoutAmount']);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                        $member->balance += $item['payoutAmount'];
-//                        $member->save();
+                        //                        $member->balance += $item['payoutAmount'];
+                        //                        $member->save();
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                         $session_in['input'] = $item;
                         $session_in['output'] = $param;
@@ -762,18 +735,16 @@ class HuayDragonController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/ACE333' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

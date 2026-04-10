@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class RelaxGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,7 +36,6 @@ class RelaxGamingController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function transaction(Request $request)
     {
         $param = [];
@@ -48,11 +45,11 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 40003,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
+
             return $param;
         }
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -77,7 +74,7 @@ class RelaxGamingController extends AppBaseController
                         'id' => $session['id'],
                         'statusCode' => 20002,
                         'productId' => $session['productId'],
-                        'timestampMillis' => now()->getTimestampMs()
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
                     break;
 
@@ -92,9 +89,8 @@ class RelaxGamingController extends AppBaseController
                     }
 
                     if ($check >= 0) {
-//                        MemberProxy::where('user_name', $session['username'])->increment('balance_free', $datasubss['amount']);
-//                        $member = MemberProxy::where('user_name', $session['username'])->first();
-
+                        //                        MemberProxy::where('user_name', $session['username'])->increment('balance_free', $datasubss['amount']);
+                        //                        $member = MemberProxy::where('user_name', $session['username'])->first();
 
                         $member->balance_free = $check;
                         $member->save();
@@ -106,7 +102,7 @@ class RelaxGamingController extends AppBaseController
                             'currency' => 'THB',
                             'balanceBefore' => $oldbalance,
                             'balanceAfter' => $member->balance_free,
-                            'username' => $session['username']
+                            'username' => $session['username'],
                         ];
 
                         $session_in['input'] = $session;
@@ -131,7 +127,7 @@ class RelaxGamingController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'productId' => $session['productId'],
-                            'timestampMillis' => now()->getTimestampMs()
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
                         break;
                     }
@@ -157,24 +153,21 @@ class RelaxGamingController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
 
         }
 
-
-        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/RELAX'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
-
 
         return $param;
     }
@@ -183,7 +176,6 @@ class RelaxGamingController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -191,13 +183,12 @@ class RelaxGamingController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance_free,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $member->balance_free,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -221,14 +212,14 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -260,21 +251,21 @@ class RelaxGamingController extends AppBaseController
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
-//                $param = [
-//                    'id' => $session['id'],
-//                    'statusCode' => 0,
-//                    'currency' => "THB",
-//                    'productId' => $session['productId'],
-//                    'username' => $member->user_name,
-//                    'balanceBefore' => (float)$oldbalance,
-//                    'balanceAfter' => (float)$member->balance_free,
-//                    'timestampMillis' => now()->getTimestampMs()
-//                ];
+                //                $param = [
+                //                    'id' => $session['id'],
+                //                    'statusCode' => 0,
+                //                    'currency' => "THB",
+                //                    'productId' => $session['productId'],
+                //                    'username' => $member->user_name,
+                //                    'balanceBefore' => (float)$oldbalance,
+                //                    'balanceAfter' => (float)$member->balance_free,
+                //                    'timestampMillis' => now()->getTimestampMs()
+                //                ];
 
             } else {
 
@@ -299,9 +290,8 @@ class RelaxGamingController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['betAmount'];
+                    //                    $amount += $item['betAmount'];
 
                     $data_sub = GameLogProxy::where('company', 'RELAX')
                         ->where('response', 'in')
@@ -319,16 +309,15 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
-
 
                         $datasub = GameLogProxy::where('company', 'RELAX')
                             ->where('response', 'in')
@@ -346,9 +335,9 @@ class RelaxGamingController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20002,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -364,18 +353,18 @@ class RelaxGamingController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance_free', abs($item['betAmount']));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                $member->balance_free = $balance;
-//                                $member->save();
+                                //                                $member->balance_free = $balance;
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                             } else {
@@ -383,9 +372,9 @@ class RelaxGamingController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
-                                    'balance' => (float)$member->balance_free,
+                                    'balance' => (float) $member->balance_free,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'productId' => $session['productId']
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
@@ -439,16 +428,15 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -477,13 +465,12 @@ class RelaxGamingController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -491,7 +478,6 @@ class RelaxGamingController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -512,8 +498,7 @@ class RelaxGamingController extends AppBaseController
 
                 $amount = 0;
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'RELAX')
                         ->where('response', 'in')
@@ -530,9 +515,9 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
-                            'balance' => (float)$member->balance_free,
+                            'balance' => (float) $member->balance_free,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -565,14 +550,13 @@ class RelaxGamingController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 20003,
-                                    'balance' => (float)$member->balance_free,
+                                    'balance' => (float) $member->balance_free,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'productId' => $session['productId']
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
                             } else {
-
 
                                 $amount += $item['payoutAmount'] - $item['betAmount'];
 
@@ -581,9 +565,9 @@ class RelaxGamingController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
-                                        'balance' => (float)$member->balance_free,
+                                        'balance' => (float) $member->balance_free,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'productId' => $session['productId']
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
                                 }
@@ -594,20 +578,19 @@ class RelaxGamingController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', $item['payoutAmount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                $member->balance_free = $balance;
-//                                $member->save();
+                                //                                $member->balance_free = $balance;
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
-
 
                                 $session_in['input'] = $item;
                                 $session_in['output'] = $param;
@@ -632,9 +615,9 @@ class RelaxGamingController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                         }
 
@@ -667,11 +650,10 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -703,21 +685,21 @@ class RelaxGamingController extends AppBaseController
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
-//                $param = [
-//                    'id' => $session['id'],
-//                    'statusCode' => 0,
-//                    'currency' => "THB",
-//                    'productId' => $session['productId'],
-//                    'username' => $member->user_name,
-//                    'balanceBefore' => (float)$oldbalance,
-//                    'balanceAfter' => (float)$member->balance_free,
-//                    'timestampMillis' => now()->getTimestampMs()
-//                ];
+                //                $param = [
+                //                    'id' => $session['id'],
+                //                    'statusCode' => 0,
+                //                    'currency' => "THB",
+                //                    'productId' => $session['productId'],
+                //                    'username' => $member->user_name,
+                //                    'balanceBefore' => (float)$oldbalance,
+                //                    'balanceAfter' => (float)$member->balance_free,
+                //                    'timestampMillis' => now()->getTimestampMs()
+                //                ];
 
             } else {
 
@@ -742,7 +724,6 @@ class RelaxGamingController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $datasub = GameLogProxy::where('company', 'RELAX')
@@ -761,12 +742,12 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
@@ -786,9 +767,9 @@ class RelaxGamingController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20004,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -809,22 +790,21 @@ class RelaxGamingController extends AppBaseController
                             if ($datasubss) {
 
                                 $amountsub = $datasubss['amount'];
-//                                $member->balance_free += $datasubss['amount'];
-//                                $member->save();
+                                //                                $member->balance_free += $datasubss['amount'];
+                                //                                $member->save();
 
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', $datasubss['amount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -849,12 +829,12 @@ class RelaxGamingController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -874,15 +854,11 @@ class RelaxGamingController extends AppBaseController
                                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                                 GameLogProxy::create($session_in);
 
-
                             }
-
 
                         }
 
-
                     }
-
 
                 }
             }
@@ -910,16 +886,15 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -951,9 +926,9 @@ class RelaxGamingController extends AppBaseController
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20001,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -999,19 +974,18 @@ class RelaxGamingController extends AppBaseController
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $datasub2['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance_free -= $datasub2['amount'];
-//                            $member->save();
+                            //                            $member->balance_free -= $datasub2['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -1031,8 +1005,8 @@ class RelaxGamingController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-//                            $datasub2->con_4 = 'complete';
-//                            $datasub2->save();
+                            //                            $datasub2->con_4 = 'complete';
+                            //                            $datasub2->save();
 
                             GameLogProxy::where('company', 'RELAX')
                                 ->where('response', 'in')
@@ -1044,15 +1018,14 @@ class RelaxGamingController extends AppBaseController
                                 ->whereNull('con_4')
                                 ->update(['con_4' => 'complete']);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                             break;
@@ -1063,9 +1036,9 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
-                            'balance' => (float)$member->balance_free,
+                            'balance' => (float) $member->balance_free,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -1098,16 +1071,15 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1139,9 +1111,9 @@ class RelaxGamingController extends AppBaseController
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20001,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1185,29 +1157,28 @@ class RelaxGamingController extends AppBaseController
 
                         $newbalance = $member->balance_free - $adjust;
 
-//                        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//                        file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-//                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        //                        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+                        //                        file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
+                        //                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
-//                            $member->balance_free = $member->balance_free - $adjust;
-//                            $member->save();
+                            //                            $member->balance_free = $member->balance_free - $adjust;
+                            //                            $member->save();
 
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $adjust);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'RELAX')
@@ -1237,55 +1208,53 @@ class RelaxGamingController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        } else {
-//
-//                            $member->balance_free += abs($adjust);
-//                            $member->save();
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance_free,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'RELAX';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'ajsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance_free;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//
-//                        }
-
+                        //                        } else {
+                        //
+                        //                            $member->balance_free += abs($adjust);
+                        //                            $member->save();
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance_free,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'RELAX';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'ajsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance_free;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //
+                        //                        }
 
                     } else {
 
@@ -1311,19 +1280,18 @@ class RelaxGamingController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $adjust);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                    $member->balance_free -= $adjust;
-//                                    $member->save();
+                                    //                                    $member->balance_free -= $adjust;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance_free,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance_free,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1348,9 +1316,9 @@ class RelaxGamingController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
-                                        'balance' => (float)$member->balance_free,
+                                        'balance' => (float) $member->balance_free,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'productId' => $session['productId']
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -1361,18 +1329,18 @@ class RelaxGamingController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', abs($adjust));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                $member->balance_free += abs($adjust);
-//                                $member->save();
+                                //                                $member->balance_free += abs($adjust);
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1394,15 +1362,14 @@ class RelaxGamingController extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1434,16 +1401,15 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1472,13 +1438,12 @@ class RelaxGamingController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1486,7 +1451,6 @@ class RelaxGamingController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1506,7 +1470,7 @@ class RelaxGamingController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'RELAX')
                         ->where('response', 'in')
@@ -1523,33 +1487,31 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                     } else {
                         MemberProxy::where('user_name', $session['username'])->increment('balance_free', $item['payoutAmount']);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                        $member->balance_free += $item['payoutAmount'];
-//                        $member->save();
+                        //                        $member->balance_free += $item['payoutAmount'];
+                        //                        $member->save();
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
-
 
                         $session_in['input'] = $item;
                         $session_in['output'] = $param;
@@ -1597,16 +1559,15 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/RELAX' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1635,13 +1596,12 @@ class RelaxGamingController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$member->balance_free,
+                    'balance' => (float) $member->balance_free,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1649,7 +1609,6 @@ class RelaxGamingController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1669,7 +1628,7 @@ class RelaxGamingController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'RELAX')
                         ->where('response', 'in')
@@ -1686,9 +1645,9 @@ class RelaxGamingController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20003,
-                            'balance' => (float)$member->balance_free,
+                            'balance' => (float) $member->balance_free,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1709,24 +1668,22 @@ class RelaxGamingController extends AppBaseController
                         if ($datasubs) {
                             $amount = $item['betAmount'] - $item['payoutAmount'];
 
-
                             MemberProxy::where('user_name', $session['username'])->increment('balance_free', $amount);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance_free += $amount;
-//                            $member->save();
+                            //                            $member->balance_free += $amount;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1750,16 +1707,14 @@ class RelaxGamingController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$member->balance_free,
+                                'balance' => (float) $member->balance_free,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                         }
 
-
                     }
-
 
                 }
 
@@ -1788,13 +1743,11 @@ class RelaxGamingController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-
         return $param;
     }
-
 }

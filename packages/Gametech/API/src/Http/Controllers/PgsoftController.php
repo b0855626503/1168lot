@@ -2,15 +2,14 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\Request;
-use MongoDB\BSON\UTCDateTime;
 use Illuminate\Support\Str;
+use MongoDB\BSON\UTCDateTime;
 
 class PgsoftController extends AppBaseController
 {
@@ -24,10 +23,9 @@ class PgsoftController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $game = 'seamlesss';
 
         $this->method = 'game';
@@ -38,30 +36,29 @@ class PgsoftController extends AppBaseController
 
         $this->repository = $repository;
 
-        $this->login = config($this->method . '.' . $game . '.login');
+        $this->login = config($this->method.'.'.$game.'.login');
 
         $this->memberRepository = $memberRepo;
 
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function getBalance(Request $request)
     {
-//        $mtime = microtime();
-//        $mtime = explode(" ",$mtime);
-//        $mtime = $mtime[1] + $mtime[0];
-//        $starttime = $mtime;
+        //        $mtime = microtime();
+        //        $mtime = explode(" ",$mtime);
+        //        $mtime = $mtime[1] + $mtime[0];
+        //        $starttime = $mtime;
         $session = $request->all();
-        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/pgsoft2'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
         file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         $username = $session['username'];
         $username = Str::replace($this->login, '', $username);
 
-        $member = $this->memberRepository->findOneWhere(['session_page' => $session['sessionToken'] ,'user_name' => $username, 'enable' => 'Y']);
-//        $member = $this->memberRepository->findOneWhere(['user_name' => $username, 'enable' => 'Y']);
+        $member = $this->memberRepository->findOneWhere(['session_page' => $session['sessionToken'], 'user_name' => $username, 'enable' => 'Y']);
+        //        $member = $this->memberRepository->findOneWhere(['user_name' => $username, 'enable' => 'Y']);
         if ($member) {
 
             $param = [
@@ -70,27 +67,26 @@ class PgsoftController extends AppBaseController
                 'timestampMillis' => now()->getTimestampMs(),
                 'productId' => $session['productId'],
                 'currency' => 'THB',
-                'balance' => (float)$member->balance,
+                'balance' => (float) $member->balance,
                 'username' => $this->login.$member->user_name,
             ];
 
-
-//            $session_in['input'] = $session;
-//            $session_in['output'] = $param;
-//            $session_in['company'] = 'PGSOFT2';
-//            $session_in['game_user'] = $member->user_name;
-//            $session_in['method'] = 'getbalance';
-//            $session_in['response'] = 'in';
-//            $session_in['amount'] = (float)$member->balance;
-//            $session_in['con_1'] = null;
-//            $session_in['con_2'] = null;
-//            $session_in['con_3'] = null;
-//            $session_in['con_4'] = null;
-//            $session_in['before_balance'] = $member->balance;
-//            $session_in['after_balance'] = $member->balance;
-//            $session_in['date_create'] = now()->toDateTimeString();
-//            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//            GameLogProxy::insert($session_in);
+            //            $session_in['input'] = $session;
+            //            $session_in['output'] = $param;
+            //            $session_in['company'] = 'PGSOFT2';
+            //            $session_in['game_user'] = $member->user_name;
+            //            $session_in['method'] = 'getbalance';
+            //            $session_in['response'] = 'in';
+            //            $session_in['amount'] = (float)$member->balance;
+            //            $session_in['con_1'] = null;
+            //            $session_in['con_2'] = null;
+            //            $session_in['con_3'] = null;
+            //            $session_in['con_4'] = null;
+            //            $session_in['before_balance'] = $member->balance;
+            //            $session_in['after_balance'] = $member->balance;
+            //            $session_in['date_create'] = now()->toDateTimeString();
+            //            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+            //            GameLogProxy::insert($session_in);
 
         } else {
 
@@ -106,15 +102,16 @@ class PgsoftController extends AppBaseController
 
         }
 
-//        $mtime = microtime();
-//        $mtime = explode(" ",$mtime);
-//        $mtime = $mtime[1] + $mtime[0];
-//        $endtime = $mtime;
-//        $totaltime = ($endtime - $starttime);
-        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
+        //        $mtime = microtime();
+        //        $mtime = explode(" ",$mtime);
+        //        $mtime = $mtime[1] + $mtime[0];
+        //        $endtime = $mtime;
+        //        $totaltime = ($endtime - $starttime);
+        $path = storage_path('logs/seamless/pgsoft2'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE end --', true), FILE_APPEND);
         file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
+
         return $param;
     }
 
@@ -122,21 +119,20 @@ class PgsoftController extends AppBaseController
     {
 
         $session = $request->all();
-//        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- settle start --', true), FILE_APPEND);
-////        file_put_contents($path, print_r('', true), FILE_APPEND);
-//        file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- settle start --', true), FILE_APPEND);
+        // //        file_put_contents($path, print_r('', true), FILE_APPEND);
+        //        file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
         $username = $session['username'];
         $username = Str::replace($this->login, '', $username);
 
-        $member = $this->memberRepository->findOneWhere(['session_page' => $session['sessionToken'] , 'user_name' => $username, 'enable' => 'Y']);
-//        $member = $this->memberRepository->findOneWhere(['user_name' => $username, 'enable' => 'Y']);
+        $member = $this->memberRepository->findOneWhere(['session_page' => $session['sessionToken'], 'user_name' => $username, 'enable' => 'Y']);
+        //        $member = $this->memberRepository->findOneWhere(['user_name' => $username, 'enable' => 'Y']);
 
         if ($member) {
 
             $oldbalance = $member->balance;
-
 
             foreach ($session['txns'] as $item) {
 
@@ -158,15 +154,14 @@ class PgsoftController extends AppBaseController
                         'timestampMillis' => now()->getTimestampMs(),
                         'productId' => $session['productId'],
                         'currency' => 'THB',
-                        'balanceBefore' => (float)$member->balance,
-                        'balanceAfter' => (float)$member->balance,
+                        'balanceBefore' => (float) $member->balance,
+                        'balanceAfter' => (float) $member->balance,
                         'username' => $session['username'],
                     ];
 
                 } else {
 
-                    if (!isset($item['skipBalanceUpdate'])) {
-
+                    if (! isset($item['skipBalanceUpdate'])) {
 
                         $balance = ($member->balance - $item['betAmount']);
                         if ($balance >= 0) {
@@ -175,9 +170,9 @@ class PgsoftController extends AppBaseController
                             $member = MemberProxy::where('user_name', $username)->first();
 
                             $sumbalance = $item['payoutAmount'] - $item['betAmount'];
-//                            $member->balance -= $item['betAmount'];
-//                            $member->balance += $item['payoutAmount'];
-//                            $member->save();
+                            //                            $member->balance -= $item['betAmount'];
+                            //                            $member->balance += $item['payoutAmount'];
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
@@ -185,8 +180,8 @@ class PgsoftController extends AppBaseController
                                 'timestampMillis' => now()->getTimestampMs(),
                                 'productId' => $session['productId'],
                                 'currency' => 'THB',
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
                                 'username' => $session['username'],
                             ];
 
@@ -213,7 +208,7 @@ class PgsoftController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
+                                'balance' => (float) $member->balance,
                                 'productId' => $session['productId'],
                             ];
 
@@ -236,15 +231,12 @@ class PgsoftController extends AppBaseController
 
         }
 
-
-//        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- settle end --', true), FILE_APPEND);
-////        file_put_contents($path, print_r('', true), FILE_APPEND);
-//        file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/pgsoft2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- settle end --', true), FILE_APPEND);
+        // //        file_put_contents($path, print_r('', true), FILE_APPEND);
+        //        file_put_contents($path, print_r(now()->toDateTimeString(), true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
-
 }

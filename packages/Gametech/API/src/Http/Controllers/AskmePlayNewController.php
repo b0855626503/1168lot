@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -32,11 +31,10 @@ class AskmePlayNewController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo,
-        Request               $request
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo,
+        Request $request
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -56,13 +54,12 @@ class AskmePlayNewController extends AppBaseController
             $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('enable', 'Y')->first();
         }
 
-//        $this->member->balance = $this->member->balance;
+        //        $this->member->balance = $this->member->balance;
 
         $this->balances = 'balance';
 
         $this->game = 'ASKMEPLAY';
     }
-
 
     public function getBalance(Request $request)
     {
@@ -73,13 +70,12 @@ class AskmePlayNewController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
-                'balance' => (float)$this->member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $this->member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -104,14 +100,14 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -121,7 +117,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -143,8 +138,8 @@ class AskmePlayNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -170,9 +165,7 @@ class AskmePlayNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-
 
                     $checkDup = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -191,8 +184,8 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -218,12 +211,12 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         break;
@@ -237,8 +230,8 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -249,12 +242,12 @@ class AskmePlayNewController extends AppBaseController
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -278,7 +271,6 @@ class AskmePlayNewController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
@@ -286,11 +278,10 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -300,7 +291,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -319,13 +309,12 @@ class AskmePlayNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -333,7 +322,6 @@ class AskmePlayNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -371,8 +359,8 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -388,20 +376,20 @@ class AskmePlayNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkBet) {
+                    if (! $checkBet) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
 
-                    if (!is_null($checkBet['con_4'])) {
+                    if (! is_null($checkBet['con_4'])) {
 
                         if (Str::contains($checkBet['con_4'], 'cancel')) {
 
@@ -409,8 +397,8 @@ class AskmePlayNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -418,24 +406,22 @@ class AskmePlayNewController extends AppBaseController
 
                     }
 
-
                     $amount = ($this->member->balance + $item['payoutAmount']);
 
                     $this->member->increment($this->balances, abs($item['payoutAmount']));
-//                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
-//                    $member = MemberProxy::where('user_name', $session['username'])->first();
+                    //                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
+                    //                    $member = MemberProxy::where('user_name', $session['username'])->first();
 
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
-
 
                     $session_in['input'] = $item;
                     $session_in['output'] = $param;
@@ -454,9 +440,8 @@ class AskmePlayNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkBet->con_4 = 'settle_' . $id;
+                    $checkBet->con_4 = 'settle_'.$id;
                     $checkBet->save();
-
 
                 }
 
@@ -469,11 +454,10 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -483,7 +467,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -502,13 +485,12 @@ class AskmePlayNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -534,7 +516,6 @@ class AskmePlayNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $checkDup = GameLogProxy::where('company', $this->game)
@@ -554,8 +535,8 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -572,7 +553,7 @@ class AskmePlayNewController extends AppBaseController
                         ->whereNull('con_4')
                         ->get();
 
-                    if(count($checkDatas) > 0){
+                    if (count($checkDatas) > 0) {
                         foreach ($checkDatas as $items) {
                             $sumamount += $items['amount'];
                         }
@@ -588,12 +569,11 @@ class AskmePlayNewController extends AppBaseController
 //                        ->whereNull('con_4')
                         ->get();
 
-                    if(count($checkDatass) > 0){
+                    if (count($checkDatass) > 0) {
                         foreach ($checkDatass as $items) {
                             $sumamount -= $items['amount'];
                         }
                     }
-
 
                     $balance = ($this->member->balance - $sumamount);
                     if ($balance >= 0) {
@@ -602,12 +582,12 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -627,113 +607,110 @@ class AskmePlayNewController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         $id = GameLogProxy::create($session_in)->id;
 
-//                        if($checkDatas) {
-//                            $checkDatas->con_4 = 'cancel_' . $id;
-//                            $checkDatas->save();
-//                        }
-//                        if($checkData) {
-//                            $checkData->con_4 = 'cancel_' . $id;
-//                            $checkData->save();
-//                        }
+                        //                        if($checkDatas) {
+                        //                            $checkDatas->con_4 = 'cancel_' . $id;
+                        //                            $checkDatas->save();
+                        //                        }
+                        //                        if($checkData) {
+                        //                            $checkData->con_4 = 'cancel_' . $id;
+                        //                            $checkData->save();
+                        //                        }
 
                         foreach ($checkDatas as $checkData) {
-                            $checkData->con_4 = 'cancel_' . $id;
+                            $checkData->con_4 = 'cancel_'.$id;
                             $checkData->save();
                         }
 
                         foreach ($checkDatass as $checkData1) {
-                            $checkData1->con_4 = 'cancel_' . $id;
+                            $checkData1->con_4 = 'cancel_'.$id;
                             $checkData1->save();
                         }
                     }
 
+                    //                    }
 
-//                    }
-
-
-//                        if (!$checkData) {
-//
-//                        $param = [
-//                            'id' => $session['id'],
-//                            'statusCode' => 0,
-//                            'currency' => "THB",
-//                            'productId' => $session['productId'],
-//                            'username' => $this->member->user_name,
-//                            'balanceBefore' => (float)$oldbalance,
-//                            'balanceAfter' => (float)$this->member->balance,
-//                            'timestampMillis' => now()->getTimestampMs()
-//                        ];
-//
-//                        $session_in['input'] = $item;
-//                        $session_in['output'] = $param;
-//                        $session_in['company'] = $this->game;
-//                        $session_in['game_user'] = $this->member->user_name;
-//                        $session_in['method'] = 'refundsub';
-//                        $session_in['response'] = 'in';
-//                        $session_in['amount'] = $item['betAmount'];
-//                        $session_in['con_1'] = $item['id'];
-//                        $session_in['con_2'] = $item['roundId'];
-//                        $session_in['con_3'] = $item['status'];
-//                        $session_in['con_4'] = null;
-//                        $session_in['before_balance'] = $oldbalance;
-//                        $session_in['after_balance'] = $this->member->balance;
-//                        $session_in['date_create'] = now()->toDateTimeString();
-//                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                        GameLogProxy::create($session_in);
-//
-//                    } else {
-//
-//                        if (!is_null($checkData['con_4'])) {
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 20004,
-//                                'timestampMillis' => now()->getTimestampMs(),
-//                                'balance' => (float)$this->member->balance,
-//                                'productId' => $session['productId']
-//                            ];
-//                            break;
-//
-//                        }
-//
-//
-//                        $this->member->increment($this->balances, $checkData['amount']);
-//
-//                        $param = [
-//                            'id' => $session['id'],
-//                            'statusCode' => 0,
-//                            'currency' => "THB",
-//                            'productId' => $session['productId'],
-//                            'username' => $this->member->user_name,
-//                            'balanceBefore' => (float)$oldbalance,
-//                            'balanceAfter' => (float)$this->member->balance,
-//                            'timestampMillis' => now()->getTimestampMs()
-//                        ];
-//
-//                        $session_in['input'] = $item;
-//                        $session_in['output'] = $param;
-//                        $session_in['company'] = $this->game;
-//                        $session_in['game_user'] = $this->member->user_name;
-//                        $session_in['method'] = 'refundsub';
-//                        $session_in['response'] = 'in';
-//                        $session_in['amount'] = $item['betAmount'];
-//                        $session_in['con_1'] = $item['id'];
-//                        $session_in['con_2'] = $item['roundId'];
-//                        $session_in['con_3'] = $item['status'];
-//                        $session_in['con_4'] = null;
-//                        $session_in['before_balance'] = $oldbalance;
-//                        $session_in['after_balance'] = $this->member->balance;
-//                        $session_in['date_create'] = now()->toDateTimeString();
-//                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                        $id = GameLogProxy::create($session_in)->id;
-//
-//                        $checkData->con_4 = 'cancel_' . $id;
-//                        $checkData->save();
-//                    }
+                    //                        if (!$checkData) {
+                    //
+                    //                        $param = [
+                    //                            'id' => $session['id'],
+                    //                            'statusCode' => 0,
+                    //                            'currency' => "THB",
+                    //                            'productId' => $session['productId'],
+                    //                            'username' => $this->member->user_name,
+                    //                            'balanceBefore' => (float)$oldbalance,
+                    //                            'balanceAfter' => (float)$this->member->balance,
+                    //                            'timestampMillis' => now()->getTimestampMs()
+                    //                        ];
+                    //
+                    //                        $session_in['input'] = $item;
+                    //                        $session_in['output'] = $param;
+                    //                        $session_in['company'] = $this->game;
+                    //                        $session_in['game_user'] = $this->member->user_name;
+                    //                        $session_in['method'] = 'refundsub';
+                    //                        $session_in['response'] = 'in';
+                    //                        $session_in['amount'] = $item['betAmount'];
+                    //                        $session_in['con_1'] = $item['id'];
+                    //                        $session_in['con_2'] = $item['roundId'];
+                    //                        $session_in['con_3'] = $item['status'];
+                    //                        $session_in['con_4'] = null;
+                    //                        $session_in['before_balance'] = $oldbalance;
+                    //                        $session_in['after_balance'] = $this->member->balance;
+                    //                        $session_in['date_create'] = now()->toDateTimeString();
+                    //                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    //                        GameLogProxy::create($session_in);
+                    //
+                    //                    } else {
+                    //
+                    //                        if (!is_null($checkData['con_4'])) {
+                    //
+                    //                            $param = [
+                    //                                'id' => $session['id'],
+                    //                                'statusCode' => 20004,
+                    //                                'timestampMillis' => now()->getTimestampMs(),
+                    //                                'balance' => (float)$this->member->balance,
+                    //                                'productId' => $session['productId']
+                    //                            ];
+                    //                            break;
+                    //
+                    //                        }
+                    //
+                    //
+                    //                        $this->member->increment($this->balances, $checkData['amount']);
+                    //
+                    //                        $param = [
+                    //                            'id' => $session['id'],
+                    //                            'statusCode' => 0,
+                    //                            'currency' => "THB",
+                    //                            'productId' => $session['productId'],
+                    //                            'username' => $this->member->user_name,
+                    //                            'balanceBefore' => (float)$oldbalance,
+                    //                            'balanceAfter' => (float)$this->member->balance,
+                    //                            'timestampMillis' => now()->getTimestampMs()
+                    //                        ];
+                    //
+                    //                        $session_in['input'] = $item;
+                    //                        $session_in['output'] = $param;
+                    //                        $session_in['company'] = $this->game;
+                    //                        $session_in['game_user'] = $this->member->user_name;
+                    //                        $session_in['method'] = 'refundsub';
+                    //                        $session_in['response'] = 'in';
+                    //                        $session_in['amount'] = $item['betAmount'];
+                    //                        $session_in['con_1'] = $item['id'];
+                    //                        $session_in['con_2'] = $item['roundId'];
+                    //                        $session_in['con_3'] = $item['status'];
+                    //                        $session_in['con_4'] = null;
+                    //                        $session_in['before_balance'] = $oldbalance;
+                    //                        $session_in['after_balance'] = $this->member->balance;
+                    //                        $session_in['date_create'] = now()->toDateTimeString();
+                    //                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                    //                        $id = GameLogProxy::create($session_in)->id;
+                    //
+                    //                        $checkData->con_4 = 'cancel_' . $id;
+                    //                        $checkData->save();
+                    //                    }
 
                 }
             }
-
 
         } else {
 
@@ -742,11 +719,10 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -756,7 +732,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -779,8 +754,8 @@ class AskmePlayNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -825,13 +800,12 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
                     }
-
 
                     if ($item['betAmount'] > 0) {
 
@@ -840,12 +814,12 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -883,14 +857,14 @@ class AskmePlayNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -905,8 +879,8 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -915,16 +889,15 @@ class AskmePlayNewController extends AppBaseController
 
                     $this->member->decrement($this->balances, $item['payoutAmount']);
 
-
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -944,16 +917,14 @@ class AskmePlayNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkData->con_4 = 'unsettle_' . $id;
+                    $checkData->con_4 = 'unsettle_'.$id;
                     $checkData->save();
 
-                    GameLogProxy::where('con_4', 'settle_' . $checkData['_id'])->update(['con_4' => null]);
-
+                    GameLogProxy::where('con_4', 'settle_'.$checkData['_id'])->update(['con_4' => null]);
 
                 }
 
             }
-
 
         } else {
 
@@ -962,11 +933,10 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -976,7 +946,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -999,8 +968,8 @@ class AskmePlayNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1039,18 +1008,16 @@ class AskmePlayNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-
                     if ($checkDup) {
 
                         if ($item['betAmount'] > $this->member->balance) {
-
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1060,11 +1027,9 @@ class AskmePlayNewController extends AppBaseController
 
                             $amount = $checkDup['amount'] - $item['betAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkDup['amount']) {
+                        } elseif ($item['betAmount'] > $checkDup['amount']) {
 
                             $amount = $item['betAmount'] - $checkDup['amount'];
 
@@ -1075,8 +1040,8 @@ class AskmePlayNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1087,12 +1052,12 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1125,14 +1090,14 @@ class AskmePlayNewController extends AppBaseController
                             ->latest('created_at')
                             ->first();
 
-                        if (!$checkData) {
+                        if (! $checkData) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1144,8 +1109,7 @@ class AskmePlayNewController extends AppBaseController
 
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkData['amount']) {
+                        } elseif ($item['betAmount'] > $checkData['amount']) {
 
                             $amount = $item['betAmount'] - $checkData['amount'];
 
@@ -1154,8 +1118,8 @@ class AskmePlayNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1167,12 +1131,12 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1203,11 +1167,10 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -1217,7 +1180,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1236,13 +1198,12 @@ class AskmePlayNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1250,7 +1211,6 @@ class AskmePlayNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1270,8 +1230,7 @@ class AskmePlayNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1289,14 +1248,12 @@ class AskmePlayNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', $this->game)
                             ->where('response', 'in')
@@ -1329,12 +1286,12 @@ class AskmePlayNewController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $this->member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$this->member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $this->member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1362,14 +1319,13 @@ class AskmePlayNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1390,13 +1346,11 @@ class AskmePlayNewController extends AppBaseController
 
                         }
 
-
                     }
 
                 } // loop
 
             }
-
 
         } else {
 
@@ -1405,7 +1359,7 @@ class AskmePlayNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
@@ -1418,7 +1372,6 @@ class AskmePlayNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1436,13 +1389,12 @@ class AskmePlayNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$this->member->balance,
+                    'balance' => (float) $this->member->balance,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1450,7 +1402,6 @@ class AskmePlayNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1470,7 +1421,7 @@ class AskmePlayNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1487,9 +1438,9 @@ class AskmePlayNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20003,
-                            'balance' => (float)$this->member->balance,
+                            'balance' => (float) $this->member->balance,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1510,26 +1461,24 @@ class AskmePlayNewController extends AppBaseController
                         if ($datasubs) {
                             $amount = $item['betAmount'] - $item['payoutAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-//                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
-//                            $member = MemberProxy::where('user_name', $session['username'])->first();
+                            //                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
+                            //                            $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $this->member->balance += $amount;
-//                            $member->save();
+                            //                            $this->member->balance += $amount;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1553,21 +1502,18 @@ class AskmePlayNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$this->member->balance,
+                                'balance' => (float) $this->member->balance,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                         }
 
-
                     }
-
 
                 }
 
             }
-
 
         } else {
 
@@ -1575,13 +1521,11 @@ class AskmePlayNewController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-
         return $param;
     }
-
 }

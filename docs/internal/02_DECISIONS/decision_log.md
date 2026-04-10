@@ -714,6 +714,16 @@
   - หน้าเลือกรายการหวยต้องพา user ไปงวดที่ใช้งานได้ก่อน
   - frontend ยังแยก machine-readable `status` ได้ชัดเจน แต่ข้อความที่โชว์ผู้ใช้ควรรวมเป็น `ยกเลิก`
 
+## 2026-04-10 — `GET /api/v1/lotto/markets/latest` Must Order Markets By Latest Close Time Ascending (APPROVED)
+
+- ปรับ `FrontendApi LottoController@marketsLatestByGroup`
+- behavior ใหม่:
+  - `markets` ในแต่ละ `group` ต้องเรียงตาม `latest_draw.close_at` จากน้อยไปมาก
+  - ถ้า `latest_draw.close_at` เป็น `null` ให้ไปท้ายรายการ
+  - ถ้าเวลาเท่ากัน ให้คงลำดับรองแบบ deterministic ด้วย `market_name`, `market_id`
+- เหตุผล:
+  - หน้า frontend ต้องเรียงรายการหวยตามเวลาปิดรับใกล้สุดก่อน เพื่อช่วยตัดสินใจแทงได้เร็วขึ้น
+
 ## 2026-04-04 — `BetService` Container Binding Must Include `LottoPackageResolver` Before `WalletTransactionService` (APPROVED)
 
 - แก้ binding ของ `Gametech\Lotto\Services\BetService` ใน `LottoServiceProvider`

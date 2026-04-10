@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class SaGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,7 +35,6 @@ class SaGamingController extends AppBaseController
 
         $this->gameUserRepository = $gameUserRepo;
     }
-
 
     public function verify(Request $request)
     {
@@ -52,9 +49,9 @@ class SaGamingController extends AppBaseController
                     'player_name' => $member->user_name,
                     'nickname' => $member->user_name,
                     'currency' => 'THB',
-                    'reminder_time' => now()->timestamp
+                    'reminder_time' => now()->timestamp,
                 ],
-                'error' => null
+                'error' => null,
             ];
         } else {
 
@@ -62,8 +59,8 @@ class SaGamingController extends AppBaseController
                 'data' => null,
                 'error' => [
                     'code' => 3004,
-                    'message' => "Player isn't exist"
-                ]
+                    'message' => "Player isn't exist",
+                ],
             ];
 
         }
@@ -75,7 +72,6 @@ class SaGamingController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -83,10 +79,9 @@ class SaGamingController extends AppBaseController
             $param = [
                 'username' => $member->user_name,
                 'currency' => 'THB',
-                'amount' => (float)$member->balance,
-                'error' => 0
+                'amount' => (float) $member->balance,
+                'error' => 0,
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -111,10 +106,9 @@ class SaGamingController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 0
+                'error' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -145,8 +139,8 @@ class SaGamingController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance,
-                    'error' => 0
+                    'amount' => (float) $member->balance,
+                    'error' => 0,
                 ];
 
             } else {
@@ -165,8 +159,8 @@ class SaGamingController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance,
-                        'error' => 0
+                        'amount' => (float) $member->balance,
+                        'error' => 0,
                     ];
 
                 } else {
@@ -176,8 +170,8 @@ class SaGamingController extends AppBaseController
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance,
-                            'error' => 1002
+                            'amount' => (float) $member->balance,
+                            'error' => 1002,
                         ];
 
                     } else {
@@ -187,14 +181,14 @@ class SaGamingController extends AppBaseController
                             MemberProxy::where('user_name', $session['username'])->decrement('balance', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance -= $session['amount'];
-//                            $member->save();
+                            //                            $member->balance -= $session['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 0
+                                'amount' => (float) $member->balance,
+                                'error' => 0,
                             ];
 
                             $session_in['input'] = $session;
@@ -219,15 +213,14 @@ class SaGamingController extends AppBaseController
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 1004
+                                'amount' => (float) $member->balance,
+                                'error' => 1004,
                             ];
 
                         }
                     }
 
                 }
-
 
             }
 
@@ -254,11 +247,10 @@ class SaGamingController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
-
 
         return $param;
     }
@@ -289,8 +281,8 @@ class SaGamingController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance,
-                    'error' => 0
+                    'amount' => (float) $member->balance,
+                    'error' => 0,
                 ];
 
             } else {
@@ -324,33 +316,32 @@ class SaGamingController extends AppBaseController
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance,
-                            'error' => 0
+                            'amount' => (float) $member->balance,
+                            'error' => 0,
                         ];
 
                     } else {
-
 
                         if ($session['amount'] < 0) {
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 1002
+                                'amount' => (float) $member->balance,
+                                'error' => 1002,
                             ];
                         } else {
 
                             MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance += $session['amount'];
-//                            $member->save();
+                            //                            $member->balance += $session['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 0
+                                'amount' => (float) $member->balance,
+                                'error' => 0,
                             ];
 
                             $session_in['input'] = $session;
@@ -377,8 +368,8 @@ class SaGamingController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance,
-                        'error' => 0
+                        'amount' => (float) $member->balance,
+                        'error' => 0,
                     ];
 
                     $session_in['input'] = $session;
@@ -424,11 +415,10 @@ class SaGamingController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
-
 
         return $param;
     }
@@ -447,10 +437,9 @@ class SaGamingController extends AppBaseController
             $param = [
                 'username' => $member->user_name,
                 'currency' => 'THB',
-                'amount' => (float)$member->balance,
-                'error' => 0
+                'amount' => (float) $member->balance,
+                'error' => 0,
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -468,7 +457,6 @@ class SaGamingController extends AppBaseController
             $session_in['date_create'] = now()->toDateTimeString();
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -493,15 +481,13 @@ class SaGamingController extends AppBaseController
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
 
-
         return $param;
     }
-
 
     public function cancelBet(Request $request)
     {
@@ -529,12 +515,11 @@ class SaGamingController extends AppBaseController
                 $param = [
                     'username' => $member->user_name,
                     'currency' => 'THB',
-                    'amount' => (float)$member->balance,
-                    'error' => 0
+                    'amount' => (float) $member->balance,
+                    'error' => 0,
                 ];
 
             } else {
-
 
                 $datasub = GameLogProxy::where('company', 'SAGAME')
                     ->where('response', 'in')
@@ -563,33 +548,32 @@ class SaGamingController extends AppBaseController
                         $param = [
                             'username' => $member->user_name,
                             'currency' => 'THB',
-                            'amount' => (float)$member->balance,
-                            'error' => 0
+                            'amount' => (float) $member->balance,
+                            'error' => 0,
                         ];
                     } else {
-
 
                         if ($session['amount'] < 0) {
 
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 1002
+                                'amount' => (float) $member->balance,
+                                'error' => 1002,
                             ];
 
                         } else {
                             MemberProxy::where('user_name', $session['username'])->increment('balance', $datasub['amount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-//                            $member->balance += $datasub['amount'];
-//                            $member->save();
+                            //
+                            //                            $member->balance += $datasub['amount'];
+                            //                            $member->save();
 
                             $param = [
                                 'username' => $member->user_name,
                                 'currency' => 'THB',
-                                'amount' => (float)$member->balance,
-                                'error' => 0
+                                'amount' => (float) $member->balance,
+                                'error' => 0,
                             ];
 
                             $session_in['input'] = $session;
@@ -628,8 +612,8 @@ class SaGamingController extends AppBaseController
                     $param = [
                         'username' => $member->user_name,
                         'currency' => 'THB',
-                        'amount' => (float)$member->balance,
-                        'error' => 0
+                        'amount' => (float) $member->balance,
+                        'error' => 0,
                     ];
 
                     $session_in['input'] = $session;
@@ -651,9 +635,7 @@ class SaGamingController extends AppBaseController
 
                 }
 
-
             }
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -672,20 +654,17 @@ class SaGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'username' => $session['username'],
                 'currency' => 'THB',
                 'amount' => 0,
-                'error' => 1000
+                'error' => 1000,
             ];
 
         }
 
-
         return $param;
     }
-
 }

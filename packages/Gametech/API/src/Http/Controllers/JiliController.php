@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class JiliController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -43,7 +41,6 @@ class JiliController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
 
         if ($member) {
@@ -53,25 +50,23 @@ class JiliController extends AppBaseController
                 'message' => 'success',
                 'currency' => 'THB',
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance,
-                'token' => $session['token']
+                'balance' => (float) $member->balance,
+                'token' => $session['token'],
             ];
 
         } else {
             $param = [
-                "errorCode" => 4,
-                "message" => "Token expired"
+                'errorCode' => 4,
+                'message' => 'Token expired',
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
         if ($member) {
@@ -79,9 +74,9 @@ class JiliController extends AppBaseController
             $param = [
                 'errorCode' => 0,
                 'accountId' => $member->user_name,
-                'balance' => (float)$member->balance,
+                'balance' => (float) $member->balance,
                 'currency' => 'THB',
-                'returnTime' => now()->toISOString()
+                'returnTime' => now()->toISOString(),
             ];
 
             $session_in['input'] = $session;
@@ -101,14 +96,12 @@ class JiliController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
-                "errorCode" => 102,
-                "Description" => "player not found"
+                'errorCode' => 102,
+                'Description' => 'player not found',
             ];
         }
-
 
         return $param;
     }
@@ -131,14 +124,13 @@ class JiliController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
 
                 $param = [
-                    "errorCode" => 1,
-                    "message" => "Already accepted"
+                    'errorCode' => 1,
+                    'message' => 'Already accepted',
                 ];
 
             } else {
@@ -146,23 +138,22 @@ class JiliController extends AppBaseController
                 $balance = ($oldbalance - $session['betAmount']);
                 if ($balance >= 0) {
 
-//                    $balance = $balance + $session['winloseAmount'];
-//                    $member->balance = $balance;
-//                    $member->save();
+                    //                    $balance = $balance + $session['winloseAmount'];
+                    //                    $member->balance = $balance;
+                    //                    $member->save();
 
                     MemberProxy::where('user_name', $member->user_name)->decrement('balance', $session['betAmount']);
                     MemberProxy::where('user_name', $member->user_name)->increment('balance', $session['winloseAmount']);
                     $member = MemberProxy::where('user_name', $member->user_name)->first();
-
 
                     $param = [
                         'errorCode' => 0,
                         'message' => 'success',
                         'currency' => 'THB',
                         'username' => $member->user_name,
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'token' => $session['token'],
-                        'txId' => $session['round']
+                        'txId' => $session['round'],
                     ];
 
                     $session_in['input'] = $session;
@@ -182,12 +173,11 @@ class JiliController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
-                        "errorCode" => 2,
-                        "message" => "Not enough balance"
+                        'errorCode' => 2,
+                        'message' => 'Not enough balance',
                     ];
                 }
 
@@ -210,14 +200,12 @@ class JiliController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
-                "errorCode" => 4,
-                "message" => "Token expired"
+                'errorCode' => 4,
+                'message' => 'Token expired',
             ];
         }
-
 
         return $param;
     }
@@ -225,7 +213,6 @@ class JiliController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
 
@@ -246,27 +233,26 @@ class JiliController extends AppBaseController
             if ($data) {
 
                 $param = [
-                    "errorCode" => 1,
-                    "message" => "Already canceled"
+                    'errorCode' => 1,
+                    'message' => 'Already canceled',
                 ];
 
             } else {
 
                 $balance = ($oldbalance + $session['amount']);
 
-//                $member->balance += $session['amount'];
-//                $member->save();
+                //                $member->balance += $session['amount'];
+                //                $member->save();
 
                 MemberProxy::where('user_name', $member->user_name)->increment('balance', $session['amount']);
                 $member = MemberProxy::where('user_name', $member->user_name)->first();
 
-
                 $param = [
                     'errorCode' => 0,
                     'accountId' => $member->user_name,
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                     'currency' => 'THB',
-                    'returnTime' => now()->toISOString()
+                    'returnTime' => now()->toISOString(),
                 ];
 
                 $session_in['input'] = $session;
@@ -307,11 +293,10 @@ class JiliController extends AppBaseController
 
         } else {
             $param = [
-                "errorCode" => 102,
-                "Description" => "player not found"
+                'errorCode' => 102,
+                'Description' => 'player not found',
             ];
         }
-
 
         return $param;
     }
@@ -319,7 +304,6 @@ class JiliController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         if ($session['round']) {
 
@@ -342,8 +326,8 @@ class JiliController extends AppBaseController
                 if ($data) {
 
                     $param = [
-                        "errorCode" => 1,
-                        "message" => "Already canceled"
+                        'errorCode' => 1,
+                        'message' => 'Already canceled',
                     ];
 
                 } else {
@@ -365,12 +349,11 @@ class JiliController extends AppBaseController
                         if ($balance < 0) {
 
                             $param = [
-                                "errorCode" => 6,
-                                "message" => "The bet is already accepted and cannot be cancelled"
+                                'errorCode' => 6,
+                                'message' => 'The bet is already accepted and cannot be cancelled',
                             ];
 
                         } else {
-
 
                             MemberProxy::where('user_name', $member->user_name)->decrement('balance', $session['winloseAmount']);
                             MemberProxy::where('user_name', $member->user_name)->increment('balance', $session['betAmount']);
@@ -381,9 +364,9 @@ class JiliController extends AppBaseController
                                 'message' => 'success',
                                 'currency' => 'THB',
                                 'username' => $member->user_name,
-                                'balance' => (float)$member->balance,
+                                'balance' => (float) $member->balance,
                                 'token' => $session['token'],
-                                'txId' => $session['round']
+                                'txId' => $session['round'],
                             ];
 
                             $session_in['input'] = $session;
@@ -406,8 +389,8 @@ class JiliController extends AppBaseController
                     } else {
 
                         $param = [
-                            "errorCode" => 2,
-                            "message" => "Round not found"
+                            'errorCode' => 2,
+                            'message' => 'Round not found',
                         ];
 
                     }
@@ -431,26 +414,22 @@ class JiliController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
             } else {
                 $param = [
-                    "errorCode" => 3,
-                    "message" => "Invalid parameter"
+                    'errorCode' => 3,
+                    'message' => 'Invalid parameter',
                 ];
             }
 
         } else {
 
             $param = [
-                "errorCode" => 2,
-                "message" => "Round not found"
+                'errorCode' => 2,
+                'message' => 'Round not found',
             ];
 
         }
 
-
         return $param;
     }
-
-
 }

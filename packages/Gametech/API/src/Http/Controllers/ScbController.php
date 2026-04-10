@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\Member\Models\MemberCreditLogProxy;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Gametech\Promotion\Repositories\PromotionContentRepository;
@@ -25,14 +24,13 @@ class ScbController extends AppBaseController
     protected $proContentRepository;
 
     public function __construct(
-        BankPaymentRepository      $repository,
-        PromotionRepository        $promotionRepo,
+        BankPaymentRepository $repository,
+        PromotionRepository $promotionRepo,
         PromotionContentRepository $proContentRepo
-    )
-    {
+    ) {
         $this->_config = request('_config');
 
-//        $this->middleware('api');
+        //        $this->middleware('api');
 
         $this->repository = $repository;
 
@@ -42,22 +40,19 @@ class ScbController extends AppBaseController
 
     }
 
-    public function index(Request $request)
-    {
-
-
-    }
+    public function index(Request $request) {}
 
     public function withdraw(Request $request)
     {
         $data = MemberCreditLogProxy::where('KIND', 'CONFIRM_WD')->with('member')->get()->toArray();
         $games = collect($data)->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'date' => $item->date_create,
                 'amount' => $item->amount,
                 'name' => $item->member['name'],
-                'user' => $item->member['user_name']
+                'user' => $item->member['user_name'],
             ];
 
         });
@@ -69,12 +64,13 @@ class ScbController extends AppBaseController
     {
         $data = MemberCreditLogProxy::where('KIND', 'CONFIRM_WD')->with('member')->get()->toArray();
         $games = collect($data)->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'date' => $item->date_create,
                 'amount' => $item->amount,
                 'name' => $item->member['name'],
-                'user' => $item->member['user_name']
+                'user' => $item->member['user_name'],
             ];
 
         });
@@ -85,15 +81,16 @@ class ScbController extends AppBaseController
     public function promotion()
     {
         $data = $this->promotionRepository->orderBy('sort')->findWhere(['enable' => 'Y', 'use_wallet' => 'Y', ['code', '<>', 0]])->toArray();
-//        $arr2 = $this->proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->pluck('name_th as name','content','filepic');
+        //        $arr2 = $this->proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->pluck('name_th as name','content','filepic');
 
-//        $arr =
+        //        $arr =
 
         $response = collect($data)->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'filepic' => $item->filepic,
-                'content' => $item->content
+                'content' => $item->content,
             ];
 
         });
@@ -104,21 +101,20 @@ class ScbController extends AppBaseController
     public function promotion_content()
     {
         $data = $this->proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->toArray();
-//        $arr2 = $this->proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->pluck('name_th as name','content','filepic');
+        //        $arr2 = $this->proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->pluck('name_th as name','content','filepic');
 
-//        $arr =
+        //        $arr =
 
         $response = collect($data)->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'filepic' => $item->filepic,
-                'content' => $item->content
+                'content' => $item->content,
             ];
 
         });
 
         return Response::json($response);
     }
-
-
 }

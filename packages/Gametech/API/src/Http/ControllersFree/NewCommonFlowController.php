@@ -288,7 +288,6 @@ class NewCommonFlowController extends AppBaseController
         return $param;
     }
 
-
     public function placeBets_cockfight(Request $request)
     {
         $param = [];

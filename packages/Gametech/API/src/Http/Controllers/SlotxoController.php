@@ -21,10 +21,9 @@ class SlotxoController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -41,44 +40,41 @@ class SlotxoController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'enable' => 'Y']);
 
         if ($member) {
 
             $param = [
                 'Status' => 0,
-                'Message' => "Success",
+                'Message' => 'Success',
                 'Username' => $member->user_name,
-                'Balance' => (float)$member->balance
+                'Balance' => (float) $member->balance,
             ];
 
         } else {
             $param = [
                 'Status' => 3,
-                'Message' => "Invalid Token",
+                'Message' => 'Invalid Token',
                 'Username' => 'foobar',
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
 
             $param = [
                 'Status' => 0,
-                'Message' => "Success",
+                'Message' => 'Success',
                 'Username' => $member->user_name,
-                'Balance' => (float)$member->balance
+                'Balance' => (float) $member->balance,
             ];
 
             $session_in['input'] = $session;
@@ -98,13 +94,12 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
 
@@ -114,7 +109,6 @@ class SlotxoController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -136,9 +130,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
@@ -157,9 +151,9 @@ class SlotxoController extends AppBaseController
 
                     $param = [
                         'Status' => 0,
-                        'Message' => "Success",
+                        'Message' => 'Success',
                         'Username' => $member->user_name,
-                        'Balance' => (float)$member->balance
+                        'Balance' => (float) $member->balance,
                     ];
 
                     $session_in['input'] = $session;
@@ -181,19 +175,17 @@ class SlotxoController extends AppBaseController
 
                 } else {
 
-
                     $balance = ($oldbalance - $session['amount']);
                     if ($balance >= 0) {
-
 
                         $member->balance -= $session['amount'];
                         $member->save();
 
                         $param = [
                             'Status' => 0,
-                            'Message' => "Success",
+                            'Message' => 'Success',
                             'Username' => $member->user_name,
-                            'Balance' => (float)$member->balance
+                            'Balance' => (float) $member->balance,
                         ];
 
                         $session_in['input'] = $session;
@@ -213,12 +205,11 @@ class SlotxoController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         GameLogProxy::create($session_in);
 
-
                     } else {
 
                         $param = [
-                            'Error' => "100",
-                            'Description' => "Insufficient fund"
+                            'Error' => '100',
+                            'Description' => 'Insufficient fund',
                         ];
                     }
                 }
@@ -242,16 +233,14 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -259,7 +248,6 @@ class SlotxoController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -281,22 +269,21 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
-
 
                 $member->balance += $session['amount'];
                 $member->save();
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
                 $session_in['input'] = $session;
@@ -335,16 +322,14 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -352,7 +337,6 @@ class SlotxoController extends AppBaseController
     public function bonusWin(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -374,22 +358,21 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
-
 
                 $member->balance += $session['amount'];
                 $member->save();
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
                 $session_in['input'] = $session;
@@ -428,16 +411,14 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -445,7 +426,6 @@ class SlotxoController extends AppBaseController
     public function jackpotWin(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -461,16 +441,15 @@ class SlotxoController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
@@ -482,9 +461,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
                 $session_in['input'] = $session;
@@ -523,16 +502,14 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -541,17 +518,15 @@ class SlotxoController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
 
-
             $param = [
                 'Status' => 0,
-                'Message' => "Success",
+                'Message' => 'Success',
                 'Username' => $member->user_name,
-                'Balance' => (float)$member->balance
+                'Balance' => (float) $member->balance,
             ];
 
             $session_in['input'] = $session;
@@ -575,13 +550,12 @@ class SlotxoController extends AppBaseController
 
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
 
         }
-
 
         return $param;
     }
@@ -589,7 +563,6 @@ class SlotxoController extends AppBaseController
     public function withdraw(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -611,9 +584,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
@@ -625,12 +598,11 @@ class SlotxoController extends AppBaseController
                     $member->balance -= $session['amount'];
                     $member->save();
 
-
                     $param = [
                         'Status' => 0,
-                        'Message' => "Success",
+                        'Message' => 'Success',
                         'Username' => $member->user_name,
-                        'Balance' => (float)$member->balance
+                        'Balance' => (float) $member->balance,
                     ];
 
                     $session_in['input'] = $session;
@@ -654,9 +626,9 @@ class SlotxoController extends AppBaseController
 
                     $param = [
                         'Error' => '100',
-                        'Description' => "Insufficient fund",
+                        'Description' => 'Insufficient fund',
                         'Username' => $member->user_name,
-                        'Balance' => (float)$member->balance
+                        'Balance' => (float) $member->balance,
                     ];
                 }
             }
@@ -678,16 +650,14 @@ class SlotxoController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -695,7 +665,6 @@ class SlotxoController extends AppBaseController
     public function deposit(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -717,9 +686,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
@@ -731,9 +700,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
                 $session_in['input'] = $session;
@@ -776,16 +745,14 @@ class SlotxoController extends AppBaseController
 
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
 
-
         return $param;
     }
-
 
     public function cancelBet(Request $request)
     {
@@ -812,9 +779,9 @@ class SlotxoController extends AppBaseController
 
                 $param = [
                     'Status' => 0,
-                    'Message' => "Success",
+                    'Message' => 'Success',
                     'Username' => $member->user_name,
-                    'Balance' => (float)$member->balance
+                    'Balance' => (float) $member->balance,
                 ];
 
             } else {
@@ -836,9 +803,9 @@ class SlotxoController extends AppBaseController
 
                     $param = [
                         'Status' => 0,
-                        'Message' => "Success",
+                        'Message' => 'Success',
                         'Username' => $member->user_name,
-                        'Balance' => (float)$member->balance
+                        'Balance' => (float) $member->balance,
                     ];
 
                     $session_in['input'] = $session;
@@ -862,9 +829,9 @@ class SlotxoController extends AppBaseController
 
                     $param = [
                         'Status' => 0,
-                        'Message' => "Success",
+                        'Message' => 'Success',
                         'Username' => $member->user_name,
-                        'Balance' => (float)$member->balance
+                        'Balance' => (float) $member->balance,
                     ];
 
                     $session_in['input'] = $session;
@@ -909,14 +876,12 @@ class SlotxoController extends AppBaseController
 
             $param = [
                 'Status' => 7,
-                'Message' => "Invalid username or password",
+                'Message' => 'Invalid username or password',
                 'Username' => $session['username'],
-                'Balance' => 0
+                'Balance' => 0,
             ];
         }
 
-
         return $param;
     }
-
 }

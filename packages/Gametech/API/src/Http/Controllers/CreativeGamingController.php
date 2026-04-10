@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class CreativeGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -42,7 +40,6 @@ class CreativeGamingController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['accountId'], 'enable' => 'Y']);
 
         if ($member) {
@@ -50,27 +47,24 @@ class CreativeGamingController extends AppBaseController
             $param = [
                 'errorCode' => 0,
                 'accountId' => $member->user_name,
-                'nickName' => $member->user_name
+                'nickName' => $member->user_name,
             ];
 
         } else {
             $param = [
-                "errorCode" => 102
+                'errorCode' => 102,
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
         if ($member) {
-
 
             $session['company'] = 'CREATIVE';
             $session['game_user'] = $session['accountId'];
@@ -87,9 +81,9 @@ class CreativeGamingController extends AppBaseController
             $param = [
                 'errorCode' => 0,
                 'accountId' => $member->user_name,
-                'balance' => (float)$user->balance,
+                'balance' => (float) $user->balance,
                 'currency' => 'THB',
-                'returnTime' => now()->toISOString()
+                'returnTime' => now()->toISOString(),
             ];
 
             $session_out = $param;
@@ -100,19 +94,18 @@ class CreativeGamingController extends AppBaseController
             $session_out['before_balance'] = $user->balance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
+            // GameLogProxy::insert($session_out);
 
         } else {
 
             $param = [
-                "errorCode" => 102,
-                "returnTime" => now()->toISOString(),
-                "accountId" => $session['accountId'],
-                "balance" => 0,
-                "currency" => 'THB'
+                'errorCode' => 102,
+                'returnTime' => now()->toISOString(),
+                'accountId' => $session['accountId'],
+                'balance' => 0,
+                'currency' => 'THB',
             ];
         }
-
 
         return $param;
     }
@@ -120,7 +113,6 @@ class CreativeGamingController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
 
@@ -149,9 +141,9 @@ class CreativeGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 105,
                     'accountId' => $member->user_name,
-                    'balance' => (float)$user->balance,
+                    'balance' => (float) $user->balance,
                     'currency' => 'THB',
-                    'returnTime' => now()->toISOString()
+                    'returnTime' => now()->toISOString(),
                 ];
 
             } else {
@@ -168,9 +160,9 @@ class CreativeGamingController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'accountId' => $member->user_name,
-                        'balance' => (float)$user->balance,
+                        'balance' => (float) $user->balance,
                         'currency' => 'THB',
-                        'returnTime' => now()->toISOString()
+                        'returnTime' => now()->toISOString(),
                     ];
 
                 } else {
@@ -178,9 +170,9 @@ class CreativeGamingController extends AppBaseController
                     $param = [
                         'errorCode' => 101,
                         'accountId' => $member->user_name,
-                        'balance' => (float)$user->balance,
+                        'balance' => (float) $user->balance,
                         'currency' => 'THB',
-                        'returnTime' => now()->toISOString()
+                        'returnTime' => now()->toISOString(),
                     ];
                 }
 
@@ -194,20 +186,18 @@ class CreativeGamingController extends AppBaseController
             $session_out['before_balance'] = $oldbalance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
-
+            // GameLogProxy::insert($session_out);
 
         } else {
 
             $param = [
-                "errorCode" => 102,
-                "returnTime" => now()->toISOString(),
-                "accountId" => $session['accountId'],
-                "balance" => 0,
-                "currency" => 'THB'
+                'errorCode' => 102,
+                'returnTime' => now()->toISOString(),
+                'accountId' => $session['accountId'],
+                'balance' => 0,
+                'currency' => 'THB',
             ];
         }
-
 
         return $param;
     }
@@ -215,7 +205,6 @@ class CreativeGamingController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
 
@@ -244,9 +233,9 @@ class CreativeGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 105,
                     'accountId' => $member->user_name,
-                    'balance' => (float)$user->balance,
+                    'balance' => (float) $user->balance,
                     'currency' => 'THB',
-                    'returnTime' => now()->toISOString()
+                    'returnTime' => now()->toISOString(),
                 ];
 
             } else {
@@ -260,13 +249,12 @@ class CreativeGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'accountId' => $member->user_name,
-                    'balance' => (float)$user->balance,
+                    'balance' => (float) $user->balance,
                     'currency' => 'THB',
-                    'returnTime' => now()->toISOString()
+                    'returnTime' => now()->toISOString(),
                 ];
 
             }
-
 
             $session_out = $param;
             $session_out['company'] = 'CREATIVE';
@@ -276,18 +264,17 @@ class CreativeGamingController extends AppBaseController
             $session_out['before_balance'] = $oldbalance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
+            // GameLogProxy::insert($session_out);
 
         } else {
             $param = [
-                "errorCode" => 102,
-                "returnTime" => now()->toISOString(),
-                "accountId" => $session['accountId'],
-                "balance" => 0,
-                "currency" => 'THB'
+                'errorCode' => 102,
+                'returnTime' => now()->toISOString(),
+                'accountId' => $session['accountId'],
+                'balance' => 0,
+                'currency' => 'THB',
             ];
         }
-
 
         return $param;
     }
@@ -295,7 +282,6 @@ class CreativeGamingController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['accountId'], 'enable' => 'Y']);
 
@@ -324,9 +310,9 @@ class CreativeGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 105,
                     'accountId' => $member->user_name,
-                    'balance' => (float)$user->balance,
+                    'balance' => (float) $user->balance,
                     'currency' => 'THB',
-                    'returnTime' => now()->toISOString()
+                    'returnTime' => now()->toISOString(),
                 ];
 
             } else {
@@ -347,20 +333,19 @@ class CreativeGamingController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'accountId' => $member->user_name,
-                        'balance' => (float)$user->balance,
+                        'balance' => (float) $user->balance,
                         'currency' => 'THB',
-                        'returnTime' => now()->toISOString()
+                        'returnTime' => now()->toISOString(),
                     ];
-
 
                 } else {
 
                     $param = [
                         'errorCode' => 103,
                         'accountId' => $member->user_name,
-                        'balance' => (float)$user->balance,
+                        'balance' => (float) $user->balance,
                         'currency' => 'THB',
-                        'returnTime' => now()->toISOString()
+                        'returnTime' => now()->toISOString(),
                     ];
 
                 }
@@ -375,18 +360,17 @@ class CreativeGamingController extends AppBaseController
             $session_out['before_balance'] = $oldbalance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
+            // GameLogProxy::insert($session_out);
 
         } else {
             $param = [
-                "errorCode" => 102,
-                "returnTime" => now()->toISOString(),
-                "accountId" => $session['accountId'],
-                "balance" => 0,
-                "currency" => 'THB'
+                'errorCode' => 102,
+                'returnTime' => now()->toISOString(),
+                'accountId' => $session['accountId'],
+                'balance' => 0,
+                'currency' => 'THB',
             ];
         }
-
 
         return $param;
     }
@@ -405,41 +389,41 @@ class CreativeGamingController extends AppBaseController
         if ($data) {
 
             $param = [
-                "errorCode" => 0,
-                "returnTime" => now()->toISOString(),
-                "data" => [
-                    "transaction_id" => $data['roundId'],
-                    "action" => $data['method'],
-                    "target" => [
-                        "account" => $data['accountId']
+                'errorCode' => 0,
+                'returnTime' => now()->toISOString(),
+                'data' => [
+                    'transaction_id' => $data['roundId'],
+                    'action' => $data['method'],
+                    'target' => [
+                        'account' => $data['accountId'],
                     ],
-                    "balance" => [
-                        "before" => $data['before_balance'],
-                        "after" => $data['after_balance']
+                    'balance' => [
+                        'before' => $data['before_balance'],
+                        'after' => $data['after_balance'],
                     ],
-                    "status" => [
-                        "createtime" => $data['eventTime'],
-                        "endtime" => $data['eventTime'],
-                        "status" => "success",
-                        "message" => "success"
+                    'status' => [
+                        'createtime' => $data['eventTime'],
+                        'endtime' => $data['eventTime'],
+                        'status' => 'success',
+                        'message' => 'success',
                     ],
-                    "currency" => 'THB',
-                    "incident" => [
-                        "mtcode" => $data['mtcode'],
-                        "amount" => $data['amount'],
-                        "eventtime" => $data['eventTime']
-                    ]
-                ]
+                    'currency' => 'THB',
+                    'incident' => [
+                        'mtcode' => $data['mtcode'],
+                        'amount' => $data['amount'],
+                        'eventtime' => $data['eventTime'],
+                    ],
+                ],
             ];
 
         } else {
 
             $param = [
-                "errorCode" => 107,
-                "returnTime" => now()->toISOString(),
-                "accountId" => null,
-                "balance" => 0,
-                "currency" => 'THB'
+                'errorCode' => 107,
+                'returnTime' => now()->toISOString(),
+                'accountId' => null,
+                'balance' => 0,
+                'currency' => 'THB',
             ];
 
         }
@@ -447,6 +431,4 @@ class CreativeGamingController extends AppBaseController
         return $param;
 
     }
-
-
 }

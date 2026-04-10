@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class LiveController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,21 +36,18 @@ class LiveController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['PlayerId'], 'enable' => 'Y']);
         if ($member) {
 
-
             $param = [
                 'Status' => 200,
-                'Description' => "OK",
+                'Description' => 'OK',
                 'ResponseDateTime' => now()->toDateTimeString(),
-                'Balance' => (float)$member->balance_free
+                'Balance' => (float) $member->balance_free,
             ];
 
             $session_in['input'] = $session;
@@ -72,17 +67,15 @@ class LiveController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 900404,
-                'Description' => "Invalid player/password",
+                'Description' => 'Invalid player/password',
                 'ResponseDateTime' => now()->toDateTimeString(),
                 'OldBalance' => 0,
-                'NewBalance' => 0
+                'NewBalance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -90,7 +83,6 @@ class LiveController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['PlayerId'], 'enable' => 'Y']);
 
@@ -112,10 +104,10 @@ class LiveController extends AppBaseController
 
                 $param = [
                     'Status' => 900409,
-                    'Description' => "Duplicate Transaction",
+                    'Description' => 'Duplicate Transaction',
                     'ResponseDateTime' => now()->toDateTimeString(),
-                    'OldBalance' => (float)$oldbalance,
-                    'NewBalance' => (float)$member->balance_free
+                    'OldBalance' => (float) $oldbalance,
+                    'NewBalance' => (float) $member->balance_free,
                 ];
 
             } else {
@@ -126,16 +118,15 @@ class LiveController extends AppBaseController
                     MemberProxy::where('user_name', $session['PlayerId'])->decrement('balance_free', $session['BetAmount']);
                     $member = MemberProxy::where('user_name', $session['PlayerId'])->first();
 
-
-//                    $member->balance_free -= $session['BetAmount'];
-//                    $member->save();
+                    //                    $member->balance_free -= $session['BetAmount'];
+                    //                    $member->save();
 
                     $param = [
                         'Status' => 200,
-                        'Description' => "OK",
+                        'Description' => 'OK',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free,
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
 
                     $session_in['input'] = $session;
@@ -155,15 +146,14 @@ class LiveController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
                         'Status' => 900605,
-                        'Description' => "Insufficient Balance",
+                        'Description' => 'Insufficient Balance',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
                 }
 
@@ -186,18 +176,16 @@ class LiveController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 900404,
-                'Description' => "Invalid player/password",
+                'Description' => 'Invalid player/password',
                 'ResponseDateTime' => now()->toDateTimeString(),
                 'OldBalance' => 0,
-                'NewBalance' => 0
+                'NewBalance' => 0,
 
             ];
         }
-
 
         return $param;
     }
@@ -205,7 +193,6 @@ class LiveController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['PlayerId'], 'enable' => 'Y']);
 
@@ -227,14 +214,13 @@ class LiveController extends AppBaseController
 
                 $param = [
                     'Status' => 900409,
-                    'Description' => "Duplicate Transaction",
+                    'Description' => 'Duplicate Transaction',
                     'ResponseDateTime' => now()->toDateTimeString(),
-                    'OldBalance' => (float)$oldbalance,
-                    'NewBalance' => (float)$member->balance_free
+                    'OldBalance' => (float) $oldbalance,
+                    'NewBalance' => (float) $member->balance_free,
                 ];
 
             } else {
-
 
                 $datasub = GameLogProxy::where('company', 'LIVE22')
                     ->where('response', 'in')
@@ -248,20 +234,18 @@ class LiveController extends AppBaseController
 
                 if ($datasub) {
 
-
                     MemberProxy::where('user_name', $session['PlayerId'])->increment('balance_free', $session['Payout']);
                     $member = MemberProxy::where('user_name', $session['PlayerId'])->first();
 
-
-//                $member->balance_free += $session['Payout'];
-//                $member->save();
+                    //                $member->balance_free += $session['Payout'];
+                    //                $member->save();
 
                     $param = [
                         'Status' => 200,
-                        'Description' => "OK",
+                        'Description' => 'OK',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free,
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
 
                     $session_in['input'] = $session;
@@ -285,10 +269,10 @@ class LiveController extends AppBaseController
 
                     $param = [
                         'Status' => 900415,
-                        'Description' => "Bet Transaction Not Found",
+                        'Description' => 'Bet Transaction Not Found',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
 
                 }
@@ -312,17 +296,15 @@ class LiveController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 900404,
-                'Description' => "Invalid player/password",
+                'Description' => 'Invalid player/password',
                 'ResponseDateTime' => now()->toDateTimeString(),
                 'OldBalance' => 0,
-                'NewBalance' => 0
+                'NewBalance' => 0,
             ];
         }
-
 
         return $param;
     }
@@ -330,7 +312,6 @@ class LiveController extends AppBaseController
     public function rollBack(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['PlayerId'], 'enable' => 'Y']);
 
@@ -352,10 +333,10 @@ class LiveController extends AppBaseController
 
                 $param = [
                     'Status' => 900409,
-                    'Description' => "Duplicate Transaction",
+                    'Description' => 'Duplicate Transaction',
                     'ResponseDateTime' => now()->toDateTimeString(),
-                    'OldBalance' => (float)$oldbalance,
-                    'NewBalance' => (float)$member->balance_free
+                    'OldBalance' => (float) $oldbalance,
+                    'NewBalance' => (float) $member->balance_free,
                 ];
 
             } else {
@@ -377,16 +358,15 @@ class LiveController extends AppBaseController
                     MemberProxy::where('user_name', $session['PlayerId'])->increment('balance_free', $session['BetAmount']);
                     $member = MemberProxy::where('user_name', $session['PlayerId'])->first();
 
-
-//                $member->balance_free += $session['BetAmount'];
-//                $member->save();
+                    //                $member->balance_free += $session['BetAmount'];
+                    //                $member->save();
 
                     $param = [
                         'Status' => 200,
-                        'Description' => "OK",
+                        'Description' => 'OK',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free,
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
 
                     $session_in['input'] = $session;
@@ -410,10 +390,10 @@ class LiveController extends AppBaseController
 
                     $param = [
                         'Status' => 900415,
-                        'Description' => "Bet Transaction Not Found",
+                        'Description' => 'Bet Transaction Not Found',
                         'ResponseDateTime' => now()->toDateTimeString(),
-                        'OldBalance' => (float)$oldbalance,
-                        'NewBalance' => (float)$member->balance_free,
+                        'OldBalance' => (float) $oldbalance,
+                        'NewBalance' => (float) $member->balance_free,
                     ];
 
                 }
@@ -437,19 +417,16 @@ class LiveController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'Status' => 900404,
-                'Description' => "Invalid player/password",
+                'Description' => 'Invalid player/password',
                 'ResponseDateTime' => now()->toDateTimeString(),
                 'OldBalance' => 0,
-                'NewBalance' => 0
+                'NewBalance' => 0,
             ];
         }
 
-
         return $param;
     }
-
 }

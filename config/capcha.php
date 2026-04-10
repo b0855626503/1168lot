@@ -5,5 +5,3 @@ return [
 
     'secret' => env('RECAPCHA_SECERT', 'null'),
 ];
-
-?>

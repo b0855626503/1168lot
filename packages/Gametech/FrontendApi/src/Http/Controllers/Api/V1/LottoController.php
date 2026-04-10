@@ -60,11 +60,11 @@ class LottoController extends BaseController
 
             if ($groupName !== '') {
                 $groupsQuery->where(function ($query) use ($groupName): void {
-                    $query->where('name', 'like', '%' . $groupName . '%')
-                        ->orWhere('name_en', 'like', '%' . $groupName . '%')
-                        ->orWhere('name_kh', 'like', '%' . $groupName . '%')
-                        ->orWhere('name_laos', 'like', '%' . $groupName . '%')
-                        ->orWhere('code', 'like', '%' . $groupName . '%');
+                    $query->where('name', 'like', '%'.$groupName.'%')
+                        ->orWhere('name_en', 'like', '%'.$groupName.'%')
+                        ->orWhere('name_kh', 'like', '%'.$groupName.'%')
+                        ->orWhere('name_laos', 'like', '%'.$groupName.'%')
+                        ->orWhere('code', 'like', '%'.$groupName.'%');
                 });
             }
 
@@ -142,36 +142,49 @@ class LottoController extends BaseController
                     'group_logo' => (string) ($group->logo ?? ''),
                     'group_icon' => (string) ($group->icon ?? ''),
                     'group_image' => (string) (($group->logo ?: $group->icon) ?? ''),
-                    'markets' => $groupMarkets->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
-                        $draw = $latestDrawMap->get((int) $market->id);
-                        $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
-                        $status = $draw ? $this->latestDrawStatus($draw) : 'draft';
+                    'markets' => $groupMarkets
+                        ->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
+                            $draw = $latestDrawMap->get((int) $market->id);
+                            $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
+                            $status = $draw ? $this->latestDrawStatus($draw) : 'draft';
 
-                        return [
-                            'market_id' => (int) $market->id,
-                            'market_name' => $this->localizedNameByLanguage([
-                                'name' => (string) $market->name,
-                                'name_en' => (string) ($market->name_en ?? ''),
-                                'name_kh' => (string) ($market->name_kh ?? ''),
-                                'name_laos' => (string) ($market->name_laos ?? ''),
-                            ], $language, 'name'),
-                            'market_logo' => (string) ($market->logo ?? ''),
-                            'market_icon' => (string) ($market->icon ?? ''),
-                            'is_enabled' => (bool) $market->is_enabled,
-                            'latest_draw' => [
-                                'draw_id' => (int) ($draw?->id ?? 0),
-                                'draw_date' => $draw?->draw_date ? $draw->draw_date->format('Y-m-d') : null,
-                                'open_at' => $draw?->open_at ? $draw->open_at->format('Y-m-d H:i:s') : null,
-                                'close_at' => $draw?->close_at ? $draw->close_at->format('Y-m-d H:i:s') : null,
-                                'result_at' => $draw?->result_at ? $draw->result_at->format('Y-m-d H:i:s') : null,
-                                'status' => $status,
-                                'status_label' => $this->latestDrawStatusLabel($status),
-                                'is_open_bet' => $status === 'open',
-                                'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
-                                'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
-                            ],
-                        ];
-                    })->values()->all(),
+                            return [
+                                'market_id' => (int) $market->id,
+                                'market_name' => $this->localizedNameByLanguage([
+                                    'name' => (string) $market->name,
+                                    'name_en' => (string) ($market->name_en ?? ''),
+                                    'name_kh' => (string) ($market->name_kh ?? ''),
+                                    'name_laos' => (string) ($market->name_laos ?? ''),
+                                ], $language, 'name'),
+                                'market_logo' => (string) ($market->logo ?? ''),
+                                'market_icon' => (string) ($market->icon ?? ''),
+                                'is_enabled' => (bool) $market->is_enabled,
+                                'latest_draw' => [
+                                    'draw_id' => (int) ($draw?->id ?? 0),
+                                    'draw_date' => $draw?->draw_date ? $draw->draw_date->format('Y-m-d') : null,
+                                    'open_at' => $draw?->open_at ? $draw->open_at->format('Y-m-d H:i:s') : null,
+                                    'close_at' => $draw?->close_at ? $draw->close_at->format('Y-m-d H:i:s') : null,
+                                    'result_at' => $draw?->result_at ? $draw->result_at->format('Y-m-d H:i:s') : null,
+                                    'status' => $status,
+                                    'status_label' => $this->latestDrawStatusLabel($status),
+                                    'is_open_bet' => $status === 'open',
+                                    'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
+                                    'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
+                                ],
+                            ];
+                        })
+                        ->sortBy(static function (array $market): array {
+                            $closeAt = $market['latest_draw']['close_at'] ?? null;
+
+                            return [
+                                $closeAt === null ? 1 : 0,
+                                $closeAt ?? '9999-12-31 23:59:59',
+                                $market['market_name'],
+                                $market['market_id'],
+                            ];
+                        })
+                        ->values()
+                        ->all(),
                 ];
             })->values()->all();
 
@@ -606,7 +619,7 @@ class LottoController extends BaseController
                     refType: 'LOTTO_CANCEL',
                     refId: (int) $ticket->id,
                     refCode: (string) $ticket->id,
-                    groupCode: 'LOTTO_CANCEL_' . $ticket->id . '_' . now()->format('YmdHis'),
+                    groupCode: 'LOTTO_CANCEL_'.$ticket->id.'_'.now()->format('YmdHis'),
                     relatedTxnId: isset($debitTxn->id) ? (int) $debitTxn->id : null,
                     meta: [
                         'draw_id' => (int) $ticket->draw_id,
@@ -712,7 +725,7 @@ class LottoController extends BaseController
 
             if ($exposureScope !== 'all') {
                 $blockedPairs = $blockedNumbers
-                    ->map(static fn (LottoNumberBlock $row): string => (string) $row->bet_type . ':' . (string) $row->number)
+                    ->map(static fn (LottoNumberBlock $row): string => (string) $row->bet_type.':'.(string) $row->number)
                     ->unique()
                     ->values()
                     ->all();
@@ -1041,6 +1054,7 @@ class LottoController extends BaseController
         })->values()->all();
 
         $payload['language'] = $language;
+
         return $this->normalizeJsonResponseImages(
             response()->json($payload, $response->getStatusCode())
         );
@@ -1179,7 +1193,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param Collection<int, array<string, mixed>> $rows
+     * @param  Collection<int, array<string, mixed>>  $rows
      * @return Collection<int, array<string, mixed>>
      */
     private function filterTicketRowsByStatus(Collection $rows, string $status): Collection
@@ -1270,7 +1284,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array{result_outcome:string,is_final:bool,is_winner:bool} $resultContext
+     * @param  array{result_outcome:string,is_final:bool,is_winner:bool}  $resultContext
      */
     private function ticketDisplayStatus(string $ticketStatus, array $resultContext): string
     {
@@ -1413,7 +1427,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param Collection<int, LottoTicket> $tickets
+     * @param  Collection<int, LottoTicket>  $tickets
      * @return array{
      *   cancellation_info_by_ticket: array<int,array{name:string,type:string}>,
      *   reason_by_ticket: array<int,string>
@@ -1530,6 +1544,7 @@ class LottoController extends BaseController
 
             if ($hasReasonColumn) {
                 $reasonByTicket[$ticketId] = trim((string) ($ticket->reason ?? ''));
+
                 continue;
             }
 
@@ -1551,7 +1566,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<int> $memberIds
+     * @param  array<int>  $memberIds
      * @return array<int,string>
      */
     private function loadMemberNames(array $memberIds): array
@@ -1589,7 +1604,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<int> $adminIds
+     * @param  array<int>  $adminIds
      * @return array<int,string>
      */
     private function loadAdminNames(array $adminIds): array
@@ -1673,7 +1688,7 @@ class LottoController extends BaseController
 
     private function hasColumnCached(string $table, string $column): bool
     {
-        $cacheKey = $table . '.' . $column;
+        $cacheKey = $table.'.'.$column;
         if (! array_key_exists($cacheKey, $this->schemaColumnCache)) {
             if (! $this->hasTableCached($table)) {
                 $this->schemaColumnCache[$cacheKey] = false;
@@ -1693,7 +1708,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<int> $marketIds
+     * @param  array<int>  $marketIds
      * @return array<int, array<string, mixed>>
      */
     private function marketMapByIds(array $marketIds): array
@@ -1759,7 +1774,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<int> $drawIds
+     * @param  array<int>  $drawIds
      * @return array<int, array<string, mixed>>
      */
     private function marketMapByDrawIds(array $drawIds): array
@@ -1793,7 +1808,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<string, mixed> $market
+     * @param  array<string, mixed>  $market
      */
     private function localizedMarketName(array $market, string $language): string
     {
@@ -1801,7 +1816,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<string, mixed> $market
+     * @param  array<string, mixed>  $market
      */
     private function localizedGroupName(array $market, string $language): string
     {
@@ -1809,12 +1824,12 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<string, mixed> $entity
+     * @param  array<string, mixed>  $entity
      */
     private function localizedNameByLanguage(array $entity, string $language, string $baseField): string
     {
         $suffix = $this->languageSuffix($language);
-        $preferredField = $suffix === '' ? $baseField : $baseField . '_' . $suffix;
+        $preferredField = $suffix === '' ? $baseField : $baseField.'_'.$suffix;
 
         $preferred = trim((string) ($entity[$preferredField] ?? ''));
         if ($preferred !== '') {
@@ -1933,7 +1948,7 @@ class LottoController extends BaseController
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param  array<string, mixed>  $row
      * @return array<string, mixed>
      */
     private function localizeTicketDataRow(array $row, string $language, bool $includeItems = false): array
@@ -2043,21 +2058,21 @@ class LottoController extends BaseController
             'en' => match ($outcome) {
                 'betting_open' => 'This ticket is still open for betting.',
                 'pending_result' => 'This ticket is awaiting result.',
-                'won' => 'This ticket won ' . number_format($totalWinAmount, 2) . ' baht.',
+                'won' => 'This ticket won '.number_format($totalWinAmount, 2).' baht.',
                 'lose' => 'This ticket did not win.',
                 'cancelled' => 'This ticket was cancelled.',
                 'no_result' => 'This draw had no result.',
-                'refunded' => 'This ticket was refunded' . ($refundAmount > 0 ? ' ' . number_format($refundAmount, 2) . ' baht.' : '.'),
+                'refunded' => 'This ticket was refunded'.($refundAmount > 0 ? ' '.number_format($refundAmount, 2).' baht.' : '.'),
                 default => 'This ticket is awaiting result.',
             },
             default => match ($outcome) {
                 'betting_open' => 'โพยนี้ยังอยู่ในงวดเปิดรับแทง',
                 'pending_result' => 'โพยนี้กำลังรอผล',
-                'won' => 'โพยนี้ถูกรางวัล ' . number_format($totalWinAmount, 2) . ' บาท',
+                'won' => 'โพยนี้ถูกรางวัล '.number_format($totalWinAmount, 2).' บาท',
                 'lose' => 'โพยนี้ไม่ถูกรางวัล',
                 'cancelled' => 'โพยนี้ถูกยกเลิกแล้ว',
                 'no_result' => 'งวดนี้งดออกผล',
-                'refunded' => 'โพยนี้ถูกคืนเงินแล้ว' . ($refundAmount > 0 ? ' ' . number_format($refundAmount, 2) . ' บาท' : ''),
+                'refunded' => 'โพยนี้ถูกคืนเงินแล้ว'.($refundAmount > 0 ? ' '.number_format($refundAmount, 2).' บาท' : ''),
                 default => 'โพยนี้กำลังรอผล',
             },
         };
@@ -2083,12 +2098,12 @@ class LottoController extends BaseController
     {
         return match ($this->normalizeLanguageForLabels($language)) {
             'en' => match ($status) {
-                'win' => 'Won ' . number_format($winAmount, 2) . ' baht.',
+                'win' => 'Won '.number_format($winAmount, 2).' baht.',
                 'lose' => 'Did not win.',
                 default => 'Awaiting result.',
             },
             default => match ($status) {
-                'win' => 'รายการนี้ถูกรางวัล ' . number_format($winAmount, 2) . ' บาท',
+                'win' => 'รายการนี้ถูกรางวัล '.number_format($winAmount, 2).' บาท',
                 'lose' => 'รายการนี้ไม่ถูกรางวัล',
                 default => 'รายการนี้กำลังรอผล',
             },

@@ -14,7 +14,6 @@ use MongoDB\BSON\UTCDateTime;
 
 class HuayDragonController extends AppBaseController
 {
-
     protected $_config;
 
     protected $repository;
@@ -25,10 +24,9 @@ class HuayDragonController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -59,7 +57,7 @@ class HuayDragonController extends AppBaseController
                     'message' => 'Success',
                 ],
                 'data' => [
-                    'balance' => (float)$member->balance,
+                    'balance' => (float) $member->balance,
                 ],
             ];
 
@@ -75,7 +73,7 @@ class HuayDragonController extends AppBaseController
             ];
         }
         //
-        $path = storage_path('logs/seamless/HuayDragon' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
@@ -89,7 +87,7 @@ class HuayDragonController extends AppBaseController
         $amount = 0;
         $session = $request->all();
 
-        $path = storage_path('logs/seamless/HuayDragon_BET' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon_BET'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
 
@@ -116,12 +114,12 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
@@ -144,9 +142,9 @@ class HuayDragonController extends AppBaseController
                     'date_create' => now()->toDateTimeString(),
                     'expireAt' => new UTCDateTime(now()->addDays(15)),
                 ]);
+
                 return Response::json($param);
             }
-
 
             MemberProxy::where('user_name', $session['username'])->decrement('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
@@ -159,12 +157,12 @@ class HuayDragonController extends AppBaseController
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance,
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
                     'refId' => $session['refId'],
                 ],
@@ -194,7 +192,7 @@ class HuayDragonController extends AppBaseController
                 'roundId' => $session['roundId'],
                 'playInfo' => $session['gameName'],
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'OPEN'
+                'status' => 'OPEN',
             ];
 
             LogSeamless::log(
@@ -208,9 +206,9 @@ class HuayDragonController extends AppBaseController
 
         }
 
-
         file_put_contents($path, print_r($param, true), FILE_APPEND);
         file_put_contents($path, print_r('-- END --', true), FILE_APPEND);
+
         return Response::json($param);
     }
 
@@ -220,10 +218,9 @@ class HuayDragonController extends AppBaseController
         $amount = 0;
         $session = $request->all();
 
-        $path = storage_path('logs/seamless/HuayDragon_SETTLED' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon_SETTLED'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- SETTLED --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -247,16 +244,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -269,7 +267,7 @@ class HuayDragonController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-            if (!$chkBet) {
+            if (! $chkBet) {
                 $param = [
                     'status' => [
                         'code' => 806,
@@ -278,16 +276,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -302,12 +301,12 @@ class HuayDragonController extends AppBaseController
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance,
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
                     'refId' => $session['refId'],
                 ],
@@ -331,7 +330,7 @@ class HuayDragonController extends AppBaseController
                 'expireAt' => new UTCDateTime(now()->addDays(15)),
             ])->id;
 
-            $chkBet->con_4 = 'SETTLED_' . $settle;
+            $chkBet->con_4 = 'SETTLED_'.$settle;
             $chkBet->save();
 
             $txn = [
@@ -342,7 +341,7 @@ class HuayDragonController extends AppBaseController
                 'playInfo' => $session['gameName'],
                 'isSingleState' => true,
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'SETTLED'
+                'status' => 'SETTLED',
             ];
 
             LogSeamless::log(
@@ -356,9 +355,9 @@ class HuayDragonController extends AppBaseController
 
         }
 
-
         file_put_contents($path, print_r($param, true), FILE_APPEND);
         file_put_contents($path, print_r('-- END --', true), FILE_APPEND);
+
         return Response::json($param);
     }
 
@@ -368,10 +367,9 @@ class HuayDragonController extends AppBaseController
         $amount = 0;
         $session = $request->all();
 
-        $path = storage_path('logs/seamless/HuayDragon_CANCEL' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon_CANCEL'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -395,16 +393,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -417,7 +416,7 @@ class HuayDragonController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-            if (!$chkBet) {
+            if (! $chkBet) {
                 $param = [
                     'status' => [
                         'code' => 806,
@@ -426,19 +425,19 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
-
 
             MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
             $member = MemberProxy::where('user_name', $session['username'])->first();
@@ -451,12 +450,12 @@ class HuayDragonController extends AppBaseController
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance,
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
                     'refId' => $session['refId'],
                 ],
@@ -480,7 +479,7 @@ class HuayDragonController extends AppBaseController
                 'expireAt' => new UTCDateTime(now()->addDays(15)),
             ])->id;
 
-            $chkBet->con_4 = 'CANCELBET_' . $newlog;
+            $chkBet->con_4 = 'CANCELBET_'.$newlog;
             $chkBet->save();
 
             $txn = [
@@ -490,7 +489,7 @@ class HuayDragonController extends AppBaseController
                 'playInfo' => $session['gameName'],
                 'isSingleState' => false,
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'CANCELBET'
+                'status' => 'CANCELBET',
             ];
 
             LogSeamless::log(
@@ -516,10 +515,9 @@ class HuayDragonController extends AppBaseController
         $amount = 0;
         $session = $request->all();
 
-        $path = storage_path('logs/seamless/HuayDragon_CANCELNUMBER' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon_CANCELNUMBER'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- CANCELNUMBER --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -543,16 +541,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -565,7 +564,7 @@ class HuayDragonController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-            if (!$chkBet) {
+            if (! $chkBet) {
                 $param = [
                     'status' => [
                         'code' => 806,
@@ -574,16 +573,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -598,12 +598,12 @@ class HuayDragonController extends AppBaseController
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance,
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
                     'refId' => $session['refId'],
                 ],
@@ -627,7 +627,7 @@ class HuayDragonController extends AppBaseController
                 'expireAt' => new UTCDateTime(now()->addDays(15)),
             ])->id;
 
-            $chkBet->con_4 = 'CANCELNUMBER_' . $newlog;
+            $chkBet->con_4 = 'CANCELNUMBER_'.$newlog;
             $chkBet->save();
 
             $txn = [
@@ -637,7 +637,7 @@ class HuayDragonController extends AppBaseController
                 'playInfo' => $session['gameName'],
                 'isSingleState' => false,
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'CANCELNUMBER'
+                'status' => 'CANCELNUMBER',
             ];
 
             LogSeamless::log(
@@ -675,7 +675,7 @@ class HuayDragonController extends AppBaseController
                 'skipBalanceUpdate' => true,
                 'isSingleState' => false,
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'OPEN'
+                'status' => 'OPEN',
             ];
 
             LogSeamless::log(
@@ -689,7 +689,6 @@ class HuayDragonController extends AppBaseController
 
         }
 
-
         file_put_contents($path, print_r($param, true), FILE_APPEND);
         file_put_contents($path, print_r('-- END --', true), FILE_APPEND);
 
@@ -702,10 +701,9 @@ class HuayDragonController extends AppBaseController
         $amount = 0;
         $session = $request->all();
 
-        $path = storage_path('logs/seamless/HuayDragon_VOID' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/HuayDragon_VOID'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- VOID --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -729,16 +727,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -751,7 +750,7 @@ class HuayDragonController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-            if (!$chkBet) {
+            if (! $chkBet) {
                 $param = [
                     'status' => [
                         'code' => 806,
@@ -760,16 +759,17 @@ class HuayDragonController extends AppBaseController
                     'data' => [
                         'username' => $session['username'],
                         'wallet' => [
-                            'balance' => (float)$member->balance,
+                            'balance' => (float) $member->balance,
                             'lastUpdate' => now()->toDateTimeString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance,
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
                         'refId' => $session['refId'],
                     ],
                 ];
+
                 return Response::json($param);
             }
 
@@ -784,12 +784,12 @@ class HuayDragonController extends AppBaseController
                 'data' => [
                     'username' => $session['username'],
                     'wallet' => [
-                        'balance' => (float)$member->balance,
+                        'balance' => (float) $member->balance,
                         'lastUpdate' => now()->toDateTimeString(),
                     ],
                     'balance' => [
-                        'before' => (float)$oldbalance,
-                        'after' => (float)$member->balance,
+                        'before' => (float) $oldbalance,
+                        'after' => (float) $member->balance,
                     ],
                     'refId' => $session['refId'],
                 ],
@@ -813,10 +813,10 @@ class HuayDragonController extends AppBaseController
                 'expireAt' => new UTCDateTime(now()->addDays(15)),
             ])->id;
 
-            $chkBet->con_4 = 'VOID_' . $newlog;
+            $chkBet->con_4 = 'VOID_'.$newlog;
             $chkBet->save();
 
-            GameLogProxy::where('con_4', $chkBet->method . '_' . $chkBet->id)
+            GameLogProxy::where('con_4', $chkBet->method.'_'.$chkBet->id)
                 ->where('method', 'OPEN')
                 ->where('company', 'HUAYDRAGON')
                 ->where('game_user', $member->user_name)
@@ -829,7 +829,7 @@ class HuayDragonController extends AppBaseController
                 'playInfo' => $session['gameName'],
                 'isSingleState' => false,
                 'transactionType' => 'BY_TRANSACTION',
-                'status' => 'VOID'
+                'status' => 'VOID',
             ];
 
             LogSeamless::log(
@@ -848,5 +848,4 @@ class HuayDragonController extends AppBaseController
 
         return Response::json($param);
     }
-
 }
