@@ -4,10 +4,10 @@ namespace Tests\Unit\Admin;
 
 use App\Services\Dashboard\DashboardWebCodeResolver;
 use Gametech\Admin\Services\DashboardService;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -38,7 +38,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
             'date_update' => now(),
         ]);
 
-        $this->service = new DashboardService();
+        $this->service = new DashboardService;
     }
 
     protected function tearDown(): void
@@ -179,8 +179,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $summaryWarmCache = new \ReflectionProperty(DashboardService::class, 'summaryWarmCache');
         $summaryWarmCache->setAccessible(true);
         $summaryWarmCache->setValue($this->service, [
-            $webCode . '|2026-04-05|2026-04-05' => true,
-            $webCode . '|2026-04-04|2026-04-04' => true,
+            $webCode.'|2026-04-05|2026-04-05' => true,
+            $webCode.'|2026-04-04|2026-04-04' => true,
         ]);
 
         $summary = $this->service->getSummary([
@@ -209,6 +209,92 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString("(float) \$deposit['deposit_success_amount']", $projector);
         $this->assertStringContainsString("- (float) \$withdraw['withdraw_total_amount']", $projector);
         $this->assertStringNotContainsString("+ (float) \$lottoCash['lotto_net_cash']", $projector);
+    }
+
+    public function test_lotto_risk_summary_uses_latest_snapshot_only_within_selected_day(): void
+    {
+        Schema::create('lotto_dashboard_risk_snapshot', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->timestamp('snapshot_at');
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamps();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+
+        DB::table('lotto_dashboard_risk_snapshot')->insert([
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 10,
+                'bet_type' => 'top_2',
+                'number' => '11',
+                'snapshot_at' => '2026-04-10 09:00:00',
+                'stake_total' => 100,
+                'payout_if_hit' => 1000,
+                'liability' => 1000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 10,
+                'bet_type' => 'top_2',
+                'number' => '22',
+                'snapshot_at' => '2026-04-10 09:00:00',
+                'stake_total' => 200,
+                'payout_if_hit' => 2000,
+                'liability' => 2000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 10,
+                'bet_type' => 'top_2',
+                'number' => '11',
+                'snapshot_at' => '2026-04-10 10:00:00',
+                'stake_total' => 300,
+                'payout_if_hit' => 3000,
+                'liability' => 3000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 2,
+                'round_id' => 20,
+                'bet_type' => 'bottom_2',
+                'number' => '33',
+                'snapshot_at' => '2026-04-10 10:00:00',
+                'stake_total' => 400,
+                'payout_if_hit' => 4000,
+                'liability' => 4000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoRiskSummaryMetrics');
+        $method->setAccessible(true);
+        $summary = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $this->assertSame(2, $summary['numbers']);
+        $this->assertSame(2, $summary['markets']);
+        $this->assertSame(2, $summary['rounds']);
+        $this->assertSame(7000.0, (float) $summary['exposure_total']);
+        $this->assertSame(7000.0, (float) $summary['liability_total']);
+        $this->assertSame(4000.0, (float) $summary['liability_max']);
+        $this->assertSame('2026-04-10 10:00:00', $summary['last_snapshot_at']);
     }
 
     private function dropTableIfExists(string $table): void

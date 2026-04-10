@@ -2621,11 +2621,19 @@ class DashboardService
         }
 
         [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
-
-        $row = DB::table('lotto_dashboard_risk_snapshot')
+        $latestSnapshotAt = DB::table('lotto_dashboard_risk_snapshot')
             ->where('web_code', $this->dashboardWebCode())
             ->where('snapshot_at', '>=', $startAt)
             ->where('snapshot_at', '<', $endAt)
+            ->max('snapshot_at');
+
+        if (empty($latestSnapshotAt)) {
+            return $defaults;
+        }
+
+        $row = DB::table('lotto_dashboard_risk_snapshot')
+            ->where('web_code', $this->dashboardWebCode())
+            ->where('snapshot_at', $latestSnapshotAt)
             ->selectRaw(implode(",\n", [
                 'COALESCE(COUNT(*), 0) as numbers',
                 'COALESCE(COUNT(DISTINCT market_id), 0) as markets',
