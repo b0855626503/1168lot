@@ -13,7 +13,6 @@ jobs:
     env:
       APP_ENV: testing
       APP_DEBUG: true
-      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       CACHE_DRIVER: array
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
@@ -29,17 +28,9 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-          extensions: mbstring, bcmath, ctype, fileinfo, json, pdo_sqlite, redis
+          extensions: mbstring, bcmath, ctype, fileinfo, json, pdo_sqlite, redis, mongodb-1.21.0
           coverage: none
-          tools: composer
-
-      - name: Install MongoDB extension 1.21.0
-        run: |
-          sudo pecl uninstall mongodb || true
-          printf "\n" | sudo pecl install mongodb-1.21.0
-          echo "extension=mongodb.so" | sudo tee /etc/php/8.2/cli/conf.d/99-mongodb.ini
-          php -m | grep mongodb
-          php --ri mongodb
+          tools: composer:v2
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -54,7 +45,6 @@ jobs:
           cat > .env <<'EOF'
           APP_NAME=CI
           APP_ENV=testing
-          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           APP_DEBUG=true
           APP_URL=http://localhost
 
@@ -68,11 +58,11 @@ jobs:
           LADA_CACHE_ACTIVE=false
           EOF
 
-      - name: Validate Composer platform
-        run: composer check-platform-reqs
-
       - name: Install Composer dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --no-scripts
+
+      - name: Generate app key
+        run: php artisan key:generate --force
 
       - name: Laravel package discover
         run: php artisan package:discover --ansi
