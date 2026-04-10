@@ -83,6 +83,15 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
     }
 
+    public function test_rebuild_command_chunks_risk_snapshot_upserts(): void
+    {
+        $content = file_get_contents(base_path('app/Console/Commands/RebuildLottoDashboardSummaryCommand.php'));
+
+        $this->assertStringContainsString('RISK_SNAPSHOT_UPSERT_CHUNK_SIZE', $content);
+        $this->assertStringContainsString('array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE)', $content);
+        $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
+    }
+
     private function makeService(): DashboardSummarySyncService
     {
         return new DashboardSummarySyncService(

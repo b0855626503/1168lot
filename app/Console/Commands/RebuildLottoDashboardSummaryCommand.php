@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Schema;
 
 class RebuildLottoDashboardSummaryCommand extends Command
 {
+    private const RISK_SNAPSHOT_UPSERT_CHUNK_SIZE = 200;
+
     protected $signature = 'dashboard:lotto-rebuild
         {--date= : Single date (Y-m-d)}
         {--from= : Start date (Y-m-d)}
@@ -31,14 +33,16 @@ class RebuildLottoDashboardSummaryCommand extends Command
         DashboardWebCodeResolver $webCodeResolver
     ): int {
         $only = strtolower(trim((string) $this->option('only')));
-        if (!in_array($only, ['cash', 'product', 'risk', 'insights', 'all'], true)) {
+        if (! in_array($only, ['cash', 'product', 'risk', 'insights', 'all'], true)) {
             $this->error('--only ต้องเป็น cash|product|risk|insights|all');
+
             return 1;
         }
 
         $dates = $this->resolveDates();
         if (empty($dates)) {
             $this->error('ไม่พบช่วงวันที่สำหรับ rebuild');
+
             return 1;
         }
 
@@ -67,14 +71,15 @@ class RebuildLottoDashboardSummaryCommand extends Command
             count($dates),
             $webCode,
             $only,
-            $marketId !== null ? ', market_id=' . $marketId : '',
-            $roundId !== null ? ', round_id=' . $roundId : '',
+            $marketId !== null ? ', market_id='.$marketId : '',
+            $roundId !== null ? ', round_id='.$roundId : '',
             $dryRun ? ', dry-run' : ''
         ));
 
         foreach ($dates as $date) {
             if ($dryRun) {
-                $this->line('[dry-run] ' . $date);
+                $this->line('[dry-run] '.$date);
+
                 continue;
             }
 
@@ -89,7 +94,7 @@ class RebuildLottoDashboardSummaryCommand extends Command
                         ->values()
                         ->all();
 
-                    if (!empty($rows)) {
+                    if (! empty($rows)) {
                         DB::table('lotto_dashboard_market_summary')->upsert(
                             $rows,
                             ['summary_date', 'web_code', 'market_id', 'round_id'],
@@ -105,12 +110,14 @@ class RebuildLottoDashboardSummaryCommand extends Command
                         ->values()
                         ->all();
 
-                    if (!empty($rows)) {
-                        DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                            $rows,
-                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                            ['stake_total', 'payout_if_hit', 'liability', 'updated_at']
-                        );
+                    if (! empty($rows)) {
+                        foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+                            DB::table('lotto_dashboard_risk_snapshot')->upsert(
+                                $chunk,
+                                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
+                                ['stake_total', 'payout_if_hit', 'liability', 'updated_at']
+                            );
+                        }
                     }
                 }
 
@@ -134,7 +141,7 @@ class RebuildLottoDashboardSummaryCommand extends Command
                 );
             }
 
-            $this->line('synced ' . $date);
+            $this->line('synced '.$date);
         }
 
         $this->info('rebuild complete');

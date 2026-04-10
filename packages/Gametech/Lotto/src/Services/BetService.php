@@ -34,6 +34,7 @@ class BetService
 {
     private const BLOCK_MODE_BLOCK = 'block';
     private const BLOCK_MODE_LIMIT_FUTURE = 'limit_future';
+    private const TICKET_ITEM_INSERT_CHUNK_SIZE = 200;
     private static ?bool $hasBetConfirmedAtColumn = null;
 
     public function __construct(
@@ -382,7 +383,9 @@ class BetService
             }
         }
 
-        LottoTicketItem::query()->insert($ticketItemRows);
+        foreach (array_chunk($ticketItemRows, self::TICKET_ITEM_INSERT_CHUNK_SIZE) as $chunk) {
+            LottoTicketItem::query()->insert($chunk);
+        }
 
         foreach ($groupedExposureItems as $key => $item) {
             $exposures->get($key)?->increment('sold_amount', $item['amount']);

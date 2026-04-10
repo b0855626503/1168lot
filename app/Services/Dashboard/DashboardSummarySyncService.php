@@ -13,7 +13,7 @@ class DashboardSummarySyncService
 {
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
     private const PENDING_BUCKET_KEY_PREFIX = 'dashboard:summary:pending';
-    private const RISK_SNAPSHOT_UPSERT_CHUNK_SIZE = 500;
+    private const RISK_SNAPSHOT_UPSERT_CHUNK_SIZE = 200;
 
     private DashboardBucketResolver $bucketResolver;
     private DashboardWebCodeResolver $webCodeResolver;

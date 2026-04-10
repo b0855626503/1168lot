@@ -19,6 +19,8 @@ class LottoBetPerformanceGuardTest extends TestCase
     {
         $content = file_get_contents($this->servicePath.'/BetService.php');
 
+        $this->assertStringContainsString('TICKET_ITEM_INSERT_CHUNK_SIZE', $content);
+        $this->assertStringContainsString('array_chunk($ticketItemRows, self::TICKET_ITEM_INSERT_CHUNK_SIZE)', $content);
         $this->assertStringContainsString('lockExposureRows', $content);
         $this->assertStringContainsString('LottoTicketItem::query()->insert(', $content);
         $this->assertStringContainsString('packagePayloadCache', $content);
