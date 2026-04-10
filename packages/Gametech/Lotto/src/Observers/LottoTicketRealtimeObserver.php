@@ -18,7 +18,6 @@ class LottoTicketRealtimeObserver
 
         $this->afterCommit(function () use ($total, $marketName, $drawDate, $ownerId, $amount): void {
             $this->broadcastTicketListChanged('created', $total, $marketName, $drawDate, null, $ownerId, $amount);
-            $this->broadcastPublicActivityUpdated('created', $total, $marketName, $drawDate, null, $ownerId, $amount);
         });
     }
 
@@ -46,7 +45,6 @@ class LottoTicketRealtimeObserver
 
         $this->afterCommit(function () use ($total, $action, $marketName, $drawDate, $ownerId, $actorId): void {
             $this->broadcastTicketListChanged($action, $total, $marketName, $drawDate, $ownerId, $actorId, null);
-            $this->broadcastPublicActivityUpdated($action, $total, $marketName, $drawDate, $ownerId, $actorId, null);
         });
     }
 
@@ -70,8 +68,7 @@ class LottoTicketRealtimeObserver
         ?string $ownerId,
         ?string $actorId,
         ?float $amount
-    ): void
-    {
+    ): void {
         broadcast(new LottoTicketListChanged($action, $total, $marketName, $drawDate, $ownerId, $actorId, $amount));
     }
 
@@ -83,8 +80,7 @@ class LottoTicketRealtimeObserver
         ?string $ownerId,
         ?string $actorId,
         ?float $amount
-    ): void
-    {
+    ): void {
         broadcast(new RealtimePublicActivityUpdated(
             'lotto',
             'lotto.ticket.list.changed',

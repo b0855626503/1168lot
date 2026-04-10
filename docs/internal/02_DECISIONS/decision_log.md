@@ -3,6 +3,38 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-10 — Admin `setWallet` Must Broadcast Member-Facing Realtime Message for Credit Adjustments (APPROVED)
+
+- ปรับ flow `Gametech\Admin\Http\Controllers\MemberController@setWallet`
+- behavior ใหม่:
+  - เมื่อทีมงานเพิ่ม/ลดเครดิตสำเร็จ ต้องยิง `member.activity.updated` ไปที่ `{APP_NAME}_members.{member_code}`
+  - ใช้ `method=adjust` และ `event=wallet.admin_adjusted`
+  - payload ต้องมี `message` ที่พร้อมแสดงบน frontend ทันที
+  - field `data` ต้องมีอย่างน้อย `direction`, `remark`, `adjusted_by`, `amount`, `balance`
+  - ต้องยิง `member.balance.updated` คู่กันด้วยข้อความเดียวกันเพื่อคง compatibility กับ client ที่ยังฟัง event เก่า
+- เหตุผล:
+  - flow admin adjust เดิมอัปเดตยอดเงินจริง แต่ frontend ลูกค้าไม่รู้ว่าเป็นการเพิ่ม/ลดโดยทีมงาน
+  - การแนบข้อความตรงจาก backend ลดการเดา copy ฝั่ง Next.js และทำให้กรณีลดเครดิตไม่ถูกแสดงเป็นข้อความฝากเงิน
+
+## 2026-04-10 — Customer Wallet Realtime Must Use `member.activity.updated` as the Primary Event, and Lotto Ticket Created/Cancelled Must Not Broadcast to Shared Member Feed (APPROVED)
+
+- ปรับ customer realtime contract
+- behavior ใหม่:
+  - `member.activity.updated` เป็น primary event สำหรับ wallet/customer-facing financial updates
+  - ทุก flow หลักที่ยิง event นี้ต้องแนบ `message` ที่พร้อมแสดงทันที
+  - `member.balance.updated` ยังอยู่เพื่อ backward compatibility แต่ถือเป็น legacy fallback
+  - `lotto.ticket.list.changed` ที่เกิดจาก `created` และ `cancelled` ไม่ถูก broadcast ไป shared member channel อีก
+  - เมื่อสมาชิกถูกรางวัล ระบบต้องยิง targeted private event:
+    - `method=lotto`
+    - `event=lotto.ticket_won`
+  - เมื่อสมาชิกได้รับคืนเงินโพย ระบบต้องยิง targeted private event:
+    - `method=lotto`
+    - `event=lotto.ticket_refunded`
+- เหตุผล:
+  - ลดความซับซ้อนฝั่ง Next.js ให้ listen หลักเพียง `.member.activity.updated`
+  - ลด noise ใน shared feed ของสมาชิก เพราะรายการสร้างโพย/ยกเลิกโพยไม่ใช่ public audience
+  - ทำให้ wallet/lotto credit updates แนบ copy ที่ backend ควบคุมเองได้สม่ำเสมอ
+
 ## 2026-04-08 — เพิ่ม `wallet_address` Field และ FrontendApi Endpoint สำหรับสมาชิก (APPROVED)
 
 - เพิ่ม column `members.wallet_address varchar(255) nullable` (migration `2026_04_08_000001`)

@@ -1707,7 +1707,8 @@ Response ตัวอย่าง meta site
   - `deposit`
   - `withdraw`
   - `rollback`
-  - `lotto` (กรณีที่ต้องการส่งเข้า private ในอนาคต)
+  - `adjust`
+  - `lotto`
 
 Shared member channel:
 - ชื่อ channel: `{APP_NAME}_members`
@@ -1715,17 +1716,22 @@ Shared member channel:
 - events:
   - `public.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ shared feed ของสมาชิก)
 
+หมายเหตุ:
+- ไม่ควรใช้ shared member channel สำหรับ event รายโพยของสมาชิกแต่ละคน
+- event อย่าง `lotto.ticket.list.changed` ที่เกิดจาก `created/cancelled` ไม่ถูกส่งไป shared member channel แล้ว
+
 Private channel (ของสมาชิกคนนั้น):
 - ชื่อ channel: `{APP_NAME}_members.{member_code}`
 - events:
-  - `member.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ wallet update)
-  - `member.balance.updated`
+  - `member.activity.updated` (แนะนำใช้ตัวนี้เป็นหลักสำหรับ wallet update ทั้งหมด)
+  - `member.balance.updated` (legacy compatibility เท่านั้น)
 
 Payload ตัวอย่าง `member.activity.updated`
 ```json
 {
   "method": "deposit",
   "event": "wallet.deposit_approved",
+  "message": "เติมเงินสำเร็จ +100 บาท",
   "member_code": 10001,
   "occurred_at": "2026-03-24 23:10:05",
   "data": {
@@ -1733,6 +1739,48 @@ Payload ตัวอย่าง `member.activity.updated`
     "balance": 5230,
     "reference_code": 889912,
     "reason": "deposit_approved"
+  }
+}
+```
+
+Payload ตัวอย่าง `member.activity.updated` จากทีมงานเพิ่ม/ลดเครดิต
+```json
+{
+  "method": "adjust",
+  "event": "wallet.admin_adjusted",
+  "message": "ทีมงานเพิ่มเครดิต 500.00 บาท หมายเหตุ: โบนัสชดเชย",
+  "member_code": 10001,
+  "occurred_at": "2026-04-10 12:34:56",
+  "data": {
+    "amount": 500,
+    "balance": 5230,
+    "reference_code": 0,
+    "reason": "admin_adjust_credit",
+    "direction": "credit",
+    "remark": "โบนัสชดเชย",
+    "adjusted_by": "Staff Demo"
+  }
+}
+```
+
+Payload ตัวอย่าง `member.activity.updated` ตอนโพยถูกรางวัล
+```json
+{
+  "method": "lotto",
+  "event": "lotto.ticket_won",
+  "message": "โพยหวยของคุณถูกรางวัล 540.00 บาท (หวยออมสิน งวดวันที่ 2026-04-10)",
+  "member_code": 10001,
+  "occurred_at": "2026-04-10 12:34:56",
+  "data": {
+    "amount": 540,
+    "balance": 1540,
+    "reference_code": 41,
+    "reason": "lotto_ticket_won",
+    "direction": "credit",
+    "draw_id": 18,
+    "ticket_id": 41,
+    "market_name": "หวยออมสิน",
+    "draw_date": "2026-04-10"
   }
 }
 ```
@@ -1764,6 +1812,11 @@ Payload ตัวอย่าง `member.balance.updated` (legacy compatibility)
   "message": "ยอดเงินของคุณถูกอัปเดต"
 }
 ```
+
+หมายเหตุ:
+- กรณีทีมงานใช้ admin `setWallet` เพิ่ม/ลดเครดิต ระบบจะยิงทั้ง `member.activity.updated` และ `member.balance.updated`
+- field `message` ของทั้งสอง event อาจเป็นข้อความเฉพาะธุรกรรม เช่น `ทีมงานลดเครดิต 500.00 บาท หมายเหตุ: ปรับยอดผิดพลาด`
+- สำหรับ frontend ใหม่ แนะนำให้ถือ `member.balance.updated` เป็น legacy fallback และใช้ `member.activity.updated` เป็นเส้นหลักเพียงเส้นเดียว
 
 #### 9.6 ตัวอย่าง Next.js (Laravel Echo)
 
@@ -1814,13 +1867,7 @@ export function connectRealtime({
 
   echo.private(`${process.env.NEXT_PUBLIC_APP_NAME}_members.${memberCode}`)
     .listen(".member.activity.updated", (e: any) => {
-      if (e.method === "deposit") {
-        onToast(`เติมเงินสำเร็จ +${e.data?.amount ?? 0} บาท`);
-      } else if (e.method === "withdraw") {
-        onToast(`ถอนเงินสำเร็จ -${e.data?.amount ?? 0} บาท`);
-      } else if (e.method === "rollback") {
-        onToast(`ระบบคืนยอดสำเร็จ +${e.data?.amount ?? 0} บาท`);
-      }
+      onToast(String(e.message || "ยอดเงินของคุณถูกอัปเดต"));
       onBalanceUpdate(Number(e.data?.balance ?? 0));
     })
     .listen(".member.balance.updated", (e: any) => {
@@ -1841,6 +1888,7 @@ export function connectRealtime({
    - โชว์ toast ทันที
    - อัปเดต state/cache ยอดเงินทันที
    - เรียก `GET /member/balance` ซ้ำ 1 ครั้งเพื่อ reconcile
+6. สำหรับ implementation ใหม่ ให้ยึด `member.activity.updated` เป็น event หลัก และเก็บ `member.balance.updated` ไว้เป็น legacy fallback ชั่วคราว
 
 ---
 

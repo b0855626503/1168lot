@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\Services;
 
+use App\Events\RealtimeMemberActivityUpdated;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Illuminate\Support\Facades\DB;
@@ -10,7 +11,7 @@ use RuntimeException;
 class WalletTransactionService
 {
     /**
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     public function debitMemberBalance(
         int $memberId,
@@ -42,7 +43,7 @@ class WalletTransactionService
     }
 
     /**
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     public function creditMemberBalance(
         int $memberId,
@@ -74,7 +75,7 @@ class WalletTransactionService
     }
 
     /**
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     private function applyMemberBalance(
         int $memberId,
@@ -157,6 +158,155 @@ class WalletTransactionService
             });
         }
 
+        $this->broadcastMemberRealtimeActivity(
+            memberId: $memberId,
+            direction: $direction,
+            amount: $normalizedAmount,
+            balanceAfter: $balanceAfter,
+            refType: $refType,
+            refId: $refId,
+            meta: $meta
+        );
+
         return $txId;
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function broadcastMemberRealtimeActivity(
+        int $memberId,
+        string $direction,
+        float $amount,
+        float $balanceAfter,
+        string $refType,
+        ?int $refId,
+        array $meta
+    ): void {
+        $payload = $this->resolveRealtimePayload($direction, $amount, $balanceAfter, $refType, $refId, $meta);
+        if ($payload === null) {
+            return;
+        }
+
+        broadcast(new RealtimeMemberActivityUpdated(
+            $memberId,
+            $payload['method'],
+            $payload['event'],
+            $payload['data'],
+            $payload['message']
+        ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array{method:string,event:string,message:string,data:array<string,mixed>}|null
+     */
+    private function resolveRealtimePayload(
+        string $direction,
+        float $amount,
+        float $balanceAfter,
+        string $refType,
+        ?int $refId,
+        array $meta
+    ): ?array {
+        if ($refType === 'LOTTO_SETTLE_WIN') {
+            $lottoContext = $this->resolveLottoRealtimeContext($meta);
+            $message = 'โพยหวยของคุณถูกรางวัล '.$this->formatMoney($amount).' บาท';
+            if ($lottoContext['market_name'] !== null && $lottoContext['draw_date'] !== null) {
+                $message .= ' ('.$lottoContext['market_name'].' งวดวันที่ '.$lottoContext['draw_date'].')';
+            }
+
+            return [
+                'method' => 'lotto',
+                'event' => 'lotto.ticket_won',
+                'message' => $message,
+                'data' => [
+                    'amount' => $amount,
+                    'balance' => $balanceAfter,
+                    'reference_code' => $refId ?? 0,
+                    'reason' => 'lotto_ticket_won',
+                    'direction' => strtolower($direction),
+                    'draw_id' => $lottoContext['draw_id'],
+                    'ticket_id' => $lottoContext['ticket_id'],
+                    'market_name' => $lottoContext['market_name'],
+                    'draw_date' => $lottoContext['draw_date'],
+                ],
+            ];
+        }
+
+        if ($refType === 'LOTTO_CANCEL') {
+            $lottoContext = $this->resolveLottoRealtimeContext($meta);
+            $message = 'ระบบคืนเงินโพยหวย '.$this->formatMoney($amount).' บาท';
+            if ($lottoContext['market_name'] !== null && $lottoContext['draw_date'] !== null) {
+                $message .= ' ('.$lottoContext['market_name'].' งวดวันที่ '.$lottoContext['draw_date'].')';
+            }
+
+            return [
+                'method' => 'lotto',
+                'event' => 'lotto.ticket_refunded',
+                'message' => $message,
+                'data' => [
+                    'amount' => $amount,
+                    'balance' => $balanceAfter,
+                    'reference_code' => $refId ?? 0,
+                    'reason' => 'lotto_ticket_refunded',
+                    'direction' => strtolower($direction),
+                    'draw_id' => $lottoContext['draw_id'],
+                    'ticket_id' => $lottoContext['ticket_id'],
+                    'market_name' => $lottoContext['market_name'],
+                    'draw_date' => $lottoContext['draw_date'],
+                    'cancel_scope' => $meta['cancel_scope'] ?? null,
+                ],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array{draw_id:?int,ticket_id:?int,market_name:?string,draw_date:?string}
+     */
+    private function resolveLottoRealtimeContext(array $meta): array
+    {
+        $drawId = isset($meta['draw_id']) ? (int) $meta['draw_id'] : null;
+        $ticketId = isset($meta['ticket_id']) ? (int) $meta['ticket_id'] : null;
+
+        if ($drawId === null || $drawId <= 0) {
+            return [
+                'draw_id' => null,
+                'ticket_id' => $ticketId,
+                'market_name' => null,
+                'draw_date' => null,
+            ];
+        }
+
+        $row = DB::table('lotto_draws as draws')
+            ->leftJoin('lotto_markets as markets', 'markets.id', '=', 'draws.market_id')
+            ->where('draws.id', $drawId)
+            ->first([
+                'draws.id as draw_id',
+                'draws.draw_date as draw_date',
+                'markets.name as market_name',
+            ]);
+
+        return [
+            'draw_id' => $row ? (int) ($row->draw_id ?? 0) : $drawId,
+            'ticket_id' => $ticketId,
+            'market_name' => $row ? $this->normalizeNullableText($row->market_name ?? null) : null,
+            'draw_date' => $row ? $this->normalizeNullableText($row->draw_date ?? null) : null,
+        ];
+    }
+
+    private function formatMoney(float $amount): string
+    {
+        return number_format(round($amount, 2), 2, '.', ',');
+    }
+
+    private function normalizeNullableText(mixed $value): ?string
+    {
+        $text = trim((string) $value);
+
+        return $text === '' ? null : $text;
     }
 }

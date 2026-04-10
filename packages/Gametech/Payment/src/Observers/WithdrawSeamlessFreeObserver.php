@@ -1,12 +1,9 @@
 <?php
 
-
 namespace Gametech\Payment\Observers;
 
-
-
-use App\Events\SumNewWithdrawFree;
 use App\Events\RealtimeMemberActivityUpdated;
+use App\Events\SumNewWithdrawFree;
 use App\Helpers\TelegramBot;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Carbon\Carbon;
@@ -111,10 +108,9 @@ class WithdrawSeamlessFreeObserver
                 broadcast(new SumNewWithdrawFree($withdraw_free, 'down'));
             }
         });
-//        ActivityLogger::activitie('แก้ไขข้อมูล รายการที่ ' . $data->code, json_encode($logs));
+        //        ActivityLogger::activitie('แก้ไขข้อมูล รายการที่ ' . $data->code, json_encode($logs));
 
     }
-
 
     public function deleted(EventData $data)
     {
@@ -149,7 +145,7 @@ class WithdrawSeamlessFreeObserver
 
             broadcast(new SumNewWithdrawFree($withdraw_free, 'down'));
         });
-//        ActivityLogger::activitie('ลบข้อมูล รายการที่ ' . $data->code, json_encode($logs));
+        //        ActivityLogger::activitie('ลบข้อมูล รายการที่ ' . $data->code, json_encode($logs));
 
     }
 
@@ -235,7 +231,7 @@ HTML;
 
     private function telegramNotifyPayload(string $path = '/withdraw_seamless_free'): array
     {
-        $baseUrl = 'https://' . config('app.admin_url') . '.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
+        $baseUrl = 'https://'.config('app.admin_url').'.'.(is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
 
         return [
             'parse_mode' => 'HTML',
@@ -243,8 +239,8 @@ HTML;
                 'inline_keyboard' => [
                     [
                         [
-                            'text' => 'เข้าระบบ ' . config('app.name'),
-                            'url' => $baseUrl . $path,
+                            'text' => 'เข้าระบบ '.config('app.name'),
+                            'url' => $baseUrl.$path,
                         ],
                     ],
                 ],
@@ -311,16 +307,25 @@ HTML;
 
         $member = app('Gametech\Member\Repositories\MemberRepository')->find($memberCode);
         $balance = (float) ($member->balance ?? 0);
+        $amount = (float) ($data->amount ?? 0);
+        $message = match ($event) {
+            'wallet.withdraw_approved' => 'ถอนเงินสำเร็จ -'.number_format($amount, 2, '.', ',').' บาท',
+            'wallet.withdraw_rejected' => 'รายการถอนเงิน '.number_format($amount, 2, '.', ',').' บาทถูกปฏิเสธ',
+            'wallet.rollback_applied' => 'ระบบคืนยอดสำเร็จ +'.number_format($amount, 2, '.', ',').' บาท',
+            default => 'ยอดเงินของคุณถูกอัปเดต',
+        };
 
         broadcast(new RealtimeMemberActivityUpdated(
             $memberCode,
             $method,
             $event,
             [
-                'amount' => (float) ($data->amount ?? 0),
+                'amount' => $amount,
                 'balance' => $balance,
                 'reference_code' => (int) $data->code,
-            ]
+                'reason' => $event,
+            ],
+            $message
         ));
     }
 }

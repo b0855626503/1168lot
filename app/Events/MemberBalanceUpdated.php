@@ -17,13 +17,15 @@ class MemberBalanceUpdated implements ShouldBroadcastNow
     public string $reason;
     public int $referenceCode;
     public string $occurredAt;
+    public string $message;
 
     public function __construct(
         int $memberCode,
         float $balance,
         float $amount,
         string $reason,
-        int $referenceCode
+        int $referenceCode,
+        string $message = 'ยอดเงินของคุณถูกอัปเดต'
     ) {
         $this->memberCode = $memberCode;
         $this->balance = $balance;
@@ -31,11 +33,12 @@ class MemberBalanceUpdated implements ShouldBroadcastNow
         $this->reason = $reason;
         $this->referenceCode = $referenceCode;
         $this->occurredAt = now()->format('Y-m-d H:i:s');
+        $this->message = $message;
     }
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel(config('app.name') . '_members.' . $this->memberCode);
+        return new PrivateChannel(config('app.name').'_members.'.$this->memberCode);
     }
 
     public function broadcastAs(): string
@@ -52,7 +55,7 @@ class MemberBalanceUpdated implements ShouldBroadcastNow
             'reason' => $this->reason,
             'reference_code' => $this->referenceCode,
             'occurred_at' => $this->occurredAt,
-            'message' => 'ยอดเงินของคุณถูกอัปเดต',
+            'message' => $this->message,
         ];
     }
 }

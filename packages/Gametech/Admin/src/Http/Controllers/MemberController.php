@@ -2,6 +2,9 @@
 
 namespace Gametech\Admin\Http\Controllers;
 
+use App\Events\MemberBalanceUpdated;
+use App\Events\RealtimeMemberActivityUpdated;
+use Carbon\Carbon;
 use Gametech\Admin\DataTables\MemberDataTable;
 use Gametech\Game\Repositories\GameRepository;
 use Gametech\Game\Repositories\GameUserRepository;
@@ -180,7 +183,7 @@ class MemberController extends AppBaseController
         $bankTime = $datenow;
         if ($rawBankTime) {
             try {
-                $bankTime = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $rawBankTime, 'Asia/Bangkok')
+                $bankTime = Carbon::createFromFormat('Y-m-d\TH:i', $rawBankTime, 'Asia/Bangkok')
                     ->format('Y-m-d H:i:s');
             } catch (\Throwable $e) {
                 // ถ้า parse ไม่ผ่าน ให้ใช้ now() และปล่อยผ่านเพื่อไม่ทำรายการล่ม
@@ -316,11 +319,68 @@ class MemberController extends AppBaseController
 
         }
         if ($response) {
+            $this->broadcastManualWalletAdjust($id, (float) $amount, (string) $method, (string) $remark);
+
             return $this->sendSuccess('ดำเนินการ '.$types[$method].' เรียบร้อยแล้ว');
         } else {
             return $this->sendError('ไม่สามารถทำรายการได้ โปรดลองใหม่อีกครั้ง', 200);
         }
 
+    }
+
+    protected function broadcastManualWalletAdjust(int $memberCode, float $amount, string $method, string $remark): void
+    {
+        $member = $this->memberRepository->find($memberCode);
+        if (! $member) {
+            return;
+        }
+
+        $normalizedMethod = strtoupper(trim($method));
+        if (! in_array($normalizedMethod, ['D', 'W'], true)) {
+            return;
+        }
+
+        $direction = $normalizedMethod === 'D' ? 'credit' : 'debit';
+        $reason = $normalizedMethod === 'D' ? 'admin_adjust_credit' : 'admin_adjust_debit';
+        $message = $this->manualWalletAdjustMessage($normalizedMethod, $amount, $remark);
+
+        broadcast(new MemberBalanceUpdated(
+            $memberCode,
+            (float) ($member->balance ?? 0),
+            round($amount, 2),
+            $reason,
+            0,
+            $message
+        ));
+
+        broadcast(new RealtimeMemberActivityUpdated(
+            $memberCode,
+            'adjust',
+            'wallet.admin_adjusted',
+            [
+                'amount' => round($amount, 2),
+                'balance' => (float) ($member->balance ?? 0),
+                'reference_code' => 0,
+                'reason' => $reason,
+                'direction' => $direction,
+                'remark' => trim($remark),
+                'adjusted_by' => trim((string) ($this->user()?->name.' '.$this->user()?->surname)),
+            ],
+            $message
+        ));
+    }
+
+    protected function manualWalletAdjustMessage(string $method, float $amount, string $remark): string
+    {
+        $action = strtoupper(trim($method)) === 'D' ? 'เพิ่มเครดิต' : 'ลดเครดิต';
+        $message = 'ทีมงาน'.$action.' '.number_format(round($amount, 2), 2, '.', ',').' บาท';
+
+        $normalizedRemark = trim($remark);
+        if ($normalizedRemark !== '') {
+            $message .= ' หมายเหตุ: '.$normalizedRemark;
+        }
+
+        return $message;
     }
 
     public function setPoint(Request $request)
@@ -1035,7 +1095,7 @@ class MemberController extends AppBaseController
 
         // acc_no: เหลือเลขล้วน ถ้าไม่ใช่ bank_code 18
         if ($bank_code !== 18) {
-            $acc_no = \Illuminate\Support\Str::of($data['acc_no'] ?? '')
+            $acc_no = Str::of($data['acc_no'] ?? '')
                 ->replaceMatches('/[^0-9]++/', '')
                 ->trim()
                 ->__toString();
@@ -1045,12 +1105,12 @@ class MemberController extends AppBaseController
         }
 
         // tel & user_name: บังคับเป็นเลข 10 หลัก (กันเคสมีขีด/เว้นวรรค/ตัวอักษรพิเศษ)
-        $data['tel'] = \Illuminate\Support\Str::of($data['tel'] ?? '')
+        $data['tel'] = Str::of($data['tel'] ?? '')
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
 
-        $data['user_name'] = \Illuminate\Support\Str::of($data['user_name'] ?? '')
+        $data['user_name'] = Str::of($data['user_name'] ?? '')
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
@@ -1119,7 +1179,7 @@ class MemberController extends AppBaseController
         }
 
         if (! empty($data['user_pass'])) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['user_pass']);
+            $data['password'] = Hash::make($data['user_pass']);
         } else {
             unset($data['user_pass']);
         }

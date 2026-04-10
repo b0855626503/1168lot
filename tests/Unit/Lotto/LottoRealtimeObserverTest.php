@@ -2,15 +2,17 @@
 
 namespace Tests\Unit\Lotto;
 
+use App\Events\LottoTicketListChanged;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
-use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Observers\LottoDrawRealtimeObserver;
 use Gametech\Lotto\Observers\LottoTicketRealtimeObserver;
+use Gametech\Member\Models\Member;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Tests\TestCase;
 
 class LottoRealtimeObserverTest extends TestCase
@@ -40,8 +42,7 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $ownerId,
                 ?string $actorId,
                 ?float $amount
-            ): void
-            {
+            ): void {
                 $this->ticketListBroadcasts++;
             }
 
@@ -53,8 +54,7 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $ownerId,
                 ?string $actorId,
                 ?float $amount
-            ): void
-            {
+            ): void {
                 $this->publicActivityBroadcasts++;
             }
         };
@@ -75,7 +75,7 @@ class LottoRealtimeObserverTest extends TestCase
         $this->assertSame(0, $observer->publicActivityBroadcasts);
     }
 
-    public function test_ticket_observer_still_broadcasts_cancelled_updates(): void
+    public function test_ticket_observer_cancelled_updates_do_not_broadcast_to_member_public_feed(): void
     {
         $observer = new class extends LottoTicketRealtimeObserver
         {
@@ -100,8 +100,7 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $ownerId,
                 ?string $actorId,
                 ?float $amount
-            ): void
-            {
+            ): void {
                 $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
 
@@ -113,8 +112,7 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $ownerId,
                 ?string $actorId,
                 ?float $amount
-            ): void
-            {
+            ): void {
                 $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
         };
@@ -144,7 +142,7 @@ class LottoRealtimeObserverTest extends TestCase
         $draw = new LottoDraw(['draw_date' => '2026-04-04']);
         $draw->setRelation('market', $market);
 
-        $member = new \Gametech\Member\Models\Member([
+        $member = new Member([
             'user_name' => '0855626503',
             'tel' => '0855626503',
         ]);
@@ -172,11 +170,7 @@ class LottoRealtimeObserverTest extends TestCase
         $this->assertSame('0855626503', $observer->ticketEvents[0]['ownerId']);
         $this->assertSame('staff01', $observer->ticketEvents[0]['actorId']);
         $this->assertNull($observer->ticketEvents[0]['amount']);
-        $this->assertCount(1, $observer->publicEvents);
-        $this->assertSame('cancelled', $observer->publicEvents[0]['action']);
-        $this->assertSame('0855626503', $observer->publicEvents[0]['ownerId']);
-        $this->assertSame('staff01', $observer->publicEvents[0]['actorId']);
-        $this->assertNull($observer->publicEvents[0]['amount']);
+        $this->assertCount(0, $observer->publicEvents);
 
         Schema::dropIfExists('wallet_transactions');
         Schema::dropIfExists('employees');
@@ -228,7 +222,7 @@ class LottoRealtimeObserverTest extends TestCase
         $draw = new LottoDraw(['draw_date' => '2026-04-05']);
         $draw->setRelation('market', $market);
 
-        $member = new \Gametech\Member\Models\Member([
+        $member = new Member([
             'user_name' => '0855626503',
             'tel' => '0855626503',
         ]);
@@ -248,18 +242,15 @@ class LottoRealtimeObserverTest extends TestCase
         $this->assertSame('0855626503', $observer->ticketEvents[0]['actorId']);
         $this->assertNull($observer->ticketEvents[0]['ownerId']);
         $this->assertSame(200.0, $observer->ticketEvents[0]['amount']);
-        $this->assertCount(1, $observer->publicEvents);
-        $this->assertSame('0855626503', $observer->publicEvents[0]['actorId']);
-        $this->assertNull($observer->publicEvents[0]['ownerId']);
-        $this->assertSame(200.0, $observer->publicEvents[0]['amount']);
+        $this->assertCount(0, $observer->publicEvents);
 
-        $event = new \App\Events\LottoTicketListChanged('created', 7, 'หวยมาเลเซีย', '2026-04-05', null, '0855626503', 200.0);
+        $event = new LottoTicketListChanged('created', 7, 'หวยมาเลเซีย', '2026-04-05', null, '0855626503', 200.0);
         $this->assertSame('มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200', $event->message);
     }
 
     public function test_cancelled_event_message_includes_ticket_owner_and_actor(): void
     {
-        $event = new \App\Events\LottoTicketListChanged(
+        $event = new LottoTicketListChanged(
             'cancelled',
             3,
             'หวย ธกส.',

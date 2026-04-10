@@ -3,8 +3,8 @@
 namespace Gametech\Payment\Observers;
 
 use App\Events\MemberBalanceUpdated;
-use App\Events\RealTimeNewMessage;
 use App\Events\RealtimeMemberActivityUpdated;
+use App\Events\RealTimeNewMessage;
 use App\Events\SumNewPayment;
 use App\Helpers\TelegramBot;
 use App\Services\Dashboard\DashboardSummarySyncService;
@@ -147,7 +147,7 @@ class BankPaymentObserver
             return;
         }
 
-        $log = new Log();
+        $log = new Log;
         $log->emp_code = $admin->code;
         $log->mode = $mode;
         $log->menu = 'bank_payment';
@@ -183,12 +183,17 @@ class BankPaymentObserver
                 return;
             }
 
+            $amount = (float) ($data->value ?? 0);
+            $balance = (float) ($member->balance ?? 0);
+            $message = 'เติมเงินสำเร็จ +'.number_format($amount, 2, '.', ',').' บาท';
+
             broadcast(new MemberBalanceUpdated(
                 $memberCode,
-                (float) ($member->balance ?? 0),
-                (float) ($data->value ?? 0),
+                $balance,
+                $amount,
                 'deposit_approved',
-                (int) $data->code
+                (int) $data->code,
+                $message
             ));
 
             broadcast(new RealtimeMemberActivityUpdated(
@@ -196,11 +201,12 @@ class BankPaymentObserver
                 'deposit',
                 'wallet.deposit_approved',
                 [
-                    'amount' => (float) ($data->value ?? 0),
-                    'balance' => (float) ($member->balance ?? 0),
+                    'amount' => $amount,
+                    'balance' => $balance,
                     'reference_code' => (int) $data->code,
                     'reason' => 'deposit_approved',
-                ]
+                ],
+                $message
             ));
         } catch (Throwable $e) {
             report($e);
@@ -248,7 +254,7 @@ HTML;
 
     private function telegramNotifyPayload(string $path = '/bank_in'): array
     {
-        $baseUrl = 'https://' . config('app.admin_url') . '.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
+        $baseUrl = 'https://'.config('app.admin_url').'.'.(is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url'));
 
         return [
             'parse_mode' => 'HTML',
@@ -256,8 +262,8 @@ HTML;
                 'inline_keyboard' => [
                     [
                         [
-                            'text' => 'เข้าระบบ ' . config('app.name'),
-                            'url' => $baseUrl . $path,
+                            'text' => 'เข้าระบบ '.config('app.name'),
+                            'url' => $baseUrl.$path,
                         ],
                     ],
                 ],

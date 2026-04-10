@@ -99,6 +99,24 @@
   - ทีมงานใช้ `{APP_NAME}_events`
   - ฝั่งสมาชิกใช้ shared private channel `{APP_NAME}_members` สำหรับ `public.activity.updated`
   - ฝั่งสมาชิกแต่ละคนยังใช้ private channel `{APP_NAME}_members.{member_code}` สำหรับ `member.activity.updated` และ `member.balance.updated`
+  - `member.activity.updated` เป็นเส้นหลักของ wallet/customer realtime
+    - deposit approval
+    - withdraw approval / reject
+    - rollback
+    - admin adjust
+    - lotto ticket win
+    - lotto ticket refund/cancel credit
+  - ทุก wallet flow ที่ยิง `member.activity.updated` ต้องแนบ `message` ที่พร้อมแสดงบน frontend ทันที
+  - `member.balance.updated` ถือเป็น legacy compatibility เท่านั้น
+  - กรณีทีมงานเพิ่ม/ลดเครดิตผ่าน admin `setWallet`
+    - ต้องยิง `member.activity.updated` เพิ่มด้วย payload `method=adjust`, `event=wallet.admin_adjusted`
+    - payload ต้องแนบ `message` สำหรับแสดงผลตรงบน frontend และแนบ `direction`, `remark`, `adjusted_by` ใน `data`
+    - ต้องยิง `member.balance.updated` คู่กันด้วยข้อความเดียวกันเพื่อรักษา legacy compatibility
+  - shared member channel ห้าม broadcast `lotto.ticket.list.changed` ที่มาจาก `created/cancelled`
+  - ตอนสมาชิกถูกรางวัล ต้องยิง targeted private event ผ่าน `member.activity.updated`
+    - `method=lotto`
+    - `event=lotto.ticket_won`
+    - payload ต้องแนบ `market_name`, `draw_date`, `ticket_id`, `draw_id`, `amount`, `balance`, `message`
   - `/api/v1/realtime/config` ต้องคืน `shared_member_channel` แทน `public_channel`
   - frontend ฝั่งลูกค้าห้าม subscribe `{APP_NAME}_events` หรือ listen direct event ของทีมงาน เช่น `lotto.ticket.list.changed` / `lotto.draw.status.changed`
 
