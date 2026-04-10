@@ -4,6 +4,8 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Exceptions\LottoPackageException;
+use Gametech\Lotto\Models\LotteryGroup;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Models\LottoGroupPackage;
@@ -11,8 +13,6 @@ use Gametech\Lotto\Models\LottoMarketBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoTicket;
-use Gametech\Lotto\Models\LotteryGroup;
-use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
@@ -125,7 +125,9 @@ class LottoController extends BaseController
             $marketRowsByGroup = $markets
                 ->groupBy(static fn (LotteryMarket $market): int => (int) $market->group_id);
 
-            $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $language): array {
+            $now = Carbon::now();
+
+            $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $language, $now): array {
                 $groupMarkets = $marketRowsByGroup->get((int) $group->id, collect());
                 $groupDescription = $this->localizedDescriptionByLanguage((string) ($group->description ?? ''), $language);
 
@@ -173,11 +175,17 @@ class LottoController extends BaseController
                                 ],
                             ];
                         })
-                        ->sortBy(static function (array $market): array {
+                        ->sortBy(static function (array $market) use ($now): array {
                             $closeAt = $market['latest_draw']['close_at'] ?? null;
+                            $closeAtCarbon = $closeAt ? Carbon::parse($closeAt) : null;
+                            $sortBucket = match (true) {
+                                $closeAtCarbon === null => 2,
+                                $closeAtCarbon->lt($now) => 1,
+                                default => 0,
+                            };
 
                             return [
-                                $closeAt === null ? 1 : 0,
+                                $sortBucket,
                                 $closeAt ?? '9999-12-31 23:59:59',
                                 $market['market_name'],
                                 $market['market_id'],
