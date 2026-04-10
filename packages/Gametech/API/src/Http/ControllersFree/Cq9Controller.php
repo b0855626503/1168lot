@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\ControllersFree;
 
-
 use Gametech\API\Models\GameLogFreeProxy as GameLogProxy;
 use Gametech\Game\Repositories\GameUserFreeRepository as GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class Cq9Controller extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,7 +36,6 @@ class Cq9Controller extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function transaction(Request $request)
     {
         $param = [];
@@ -48,11 +45,11 @@ class Cq9Controller extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 40003,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
+
             return $param;
         }
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -77,7 +74,7 @@ class Cq9Controller extends AppBaseController
                         'id' => $session['id'],
                         'statusCode' => 20002,
                         'productId' => $session['productId'],
-                        'timestampMillis' => now()->getTimestampMs()
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
                     break;
 
@@ -100,9 +97,9 @@ class Cq9Controller extends AppBaseController
                             'productId' => $session['productId'],
                             'timestampMillis' => now()->getTimestampMs(),
                             'currency' => 'THB',
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'username' => $session['username']
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'username' => $session['username'],
                         ];
 
                         $session_in['input'] = $session;
@@ -127,7 +124,7 @@ class Cq9Controller extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'productId' => $session['productId'],
-                            'timestampMillis' => now()->getTimestampMs()
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
                         break;
                     }
@@ -153,24 +150,21 @@ class Cq9Controller extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
 
         }
 
-
-        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/CQ9V2'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
-
 
         return $param;
     }
@@ -179,7 +173,6 @@ class Cq9Controller extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -187,13 +180,12 @@ class Cq9Controller extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance_free,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $member->balance_free,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -218,14 +210,14 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -258,8 +250,8 @@ class Cq9Controller extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -285,9 +277,8 @@ class Cq9Controller extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['betAmount'];
+                    //                    $amount += $item['betAmount'];
 
                     $data_sub = GameLogProxy::where('company', 'CQ9V2')
                         ->where('response', 'in')
@@ -304,16 +295,15 @@ class Cq9Controller extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
-
 
                         $datasub = GameLogProxy::where('company', 'CQ9V2')
                             ->where('response', 'in')
@@ -331,8 +321,8 @@ class Cq9Controller extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -347,19 +337,19 @@ class Cq9Controller extends AppBaseController
                             if ($balance >= 0) {
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance_free', abs($item['betAmount']));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-//                                $member->balance_free = $balance;
-//                                $member->save();
+                                //
+                                //                                $member->balance_free = $balance;
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                             } else {
@@ -368,8 +358,8 @@ class Cq9Controller extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance_free,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance_free,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
@@ -424,16 +414,15 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -462,13 +451,12 @@ class Cq9Controller extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -476,7 +464,6 @@ class Cq9Controller extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -496,7 +483,7 @@ class Cq9Controller extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'CQ9V2')
                         ->where('response', 'in')
@@ -526,13 +513,12 @@ class Cq9Controller extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         } else {
-
 
                             $datasubs = GameLogProxy::where('company', 'CQ9V2')
                                 ->where('response', 'in')
@@ -549,40 +535,38 @@ class Cq9Controller extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
-
 
                             } else {
 
-//                            $datasub_s = GameLogProxy::where('company', 'CQ9V2')
-//                                ->where('response', 'in')
-//                                ->where('game_user', $member->user_name)
-//                                ->where('method', 'unsettlesub')
-//                                ->where('con_1', $item['id'])
-//                                ->where('con_2', $item['roundId'])
-//                                ->where('con_3', $item['txnId'])
-//                                ->whereNull('con_4')
-//                                ->first();
-//
-//
-//                            if ($datasub_s) {
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 20003,
-//                                    'timestampMillis' => now()->getTimestampMs(),
-//                                    'productId' => $session['productId']
-//                                ];
-//                                break;
-//
-//                            } else {
-
+                                //                            $datasub_s = GameLogProxy::where('company', 'CQ9V2')
+                                //                                ->where('response', 'in')
+                                //                                ->where('game_user', $member->user_name)
+                                //                                ->where('method', 'unsettlesub')
+                                //                                ->where('con_1', $item['id'])
+                                //                                ->where('con_2', $item['roundId'])
+                                //                                ->where('con_3', $item['txnId'])
+                                //                                ->whereNull('con_4')
+                                //                                ->first();
+                                //
+                                //
+                                //                            if ($datasub_s) {
+                                //
+                                //                                $param = [
+                                //                                    'id' => $session['id'],
+                                //                                    'statusCode' => 20003,
+                                //                                    'timestampMillis' => now()->getTimestampMs(),
+                                //                                    'productId' => $session['productId']
+                                //                                ];
+                                //                                break;
+                                //
+                                //                            } else {
 
                                 if ($item['payoutAmount'] >= 0) {
                                     $amount = ($member->balance_free + $item['payoutAmount']);
@@ -594,20 +578,19 @@ class Cq9Controller extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->increment('balance_free', abs($item['payoutAmount']));
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                    $member->balance_free = $amount;
-//                                    $member->save();
+                                    //                                    $member->balance_free = $amount;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance_free,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance_free,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
-
 
                                     $session_in['input'] = $item;
                                     $session_in['output'] = $param;
@@ -632,25 +615,24 @@ class Cq9Controller extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 20001,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance_free,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance_free,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
                                 }
-//                            }
-
+                                //                            }
 
                             }
 
-//                        $datasub_s = GameLogProxy::where('company', 'CQ9V2')
-//                            ->where('response', 'in')
-//                            ->where('game_user', $member->user_name)
-//                            ->where('method', 'refundsub')
-//                            ->where('con_1', $item['id'])
-//                            ->where('con_2', $item['roundId'])
-//                            ->where('con_3', $item['txnId'])
-//                            ->whereNull('con_4');
+                            //                        $datasub_s = GameLogProxy::where('company', 'CQ9V2')
+                            //                            ->where('response', 'in')
+                            //                            ->where('game_user', $member->user_name)
+                            //                            ->where('method', 'refundsub')
+                            //                            ->where('con_1', $item['id'])
+                            //                            ->where('con_2', $item['roundId'])
+                            //                            ->where('con_3', $item['txnId'])
+                            //                            ->whereNull('con_4');
                         }
 
                     } else {
@@ -659,8 +641,8 @@ class Cq9Controller extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -694,16 +676,15 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -732,13 +713,12 @@ class Cq9Controller extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -764,7 +744,6 @@ class Cq9Controller extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $datasub = GameLogProxy::where('company', 'CQ9V2')
@@ -782,12 +761,12 @@ class Cq9Controller extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance_free,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance_free,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
@@ -808,8 +787,8 @@ class Cq9Controller extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20004,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -830,26 +809,24 @@ class Cq9Controller extends AppBaseController
                             if ($datasubss) {
 
                                 $amountsub = $datasubss['amount'];
-//                                $member->balance_free += $datasubss['amount'];
-
+                                //                                $member->balance_free += $datasubss['amount'];
 
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', $datasubss['amount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                $member->save();
+                                //                                $member->save();
 
                             }
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -871,9 +848,7 @@ class Cq9Controller extends AppBaseController
 
                         }
 
-
                     }
-
 
                 }
             }
@@ -902,16 +877,15 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -944,8 +918,8 @@ class Cq9Controller extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -993,19 +967,18 @@ class Cq9Controller extends AppBaseController
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $item['payoutAmount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance_free -= $item['payoutAmount'];
-//                            $member->save();
+                            //                            $member->balance_free -= $item['payoutAmount'];
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -1025,8 +998,8 @@ class Cq9Controller extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-//                            $datasub2->con_4 = 'complete';
-//                            $datasub2->save();
+                            //                            $datasub2->con_4 = 'complete';
+                            //                            $datasub2->save();
 
                             GameLogProxy::where('company', 'CQ9V2')
                                 ->where('response', 'in')
@@ -1039,15 +1012,14 @@ class Cq9Controller extends AppBaseController
                                 ->whereNull('con_4')
                                 ->update(['con_4' => 'complete']);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
 
                             break;
@@ -1055,23 +1027,23 @@ class Cq9Controller extends AppBaseController
 
                     } else {
 
-//                        $param = [
-//                            'id' => $session['id'],
-//                            'statusCode' => 0,
-//                            'currency' => "THB",
-//                            'productId' => $session['productId'],
-//                            'username' => $member->user_name,
-//                            'balanceBefore' => (float)$oldbalance,
-//                            'balanceAfter' => (float)$member->balance_free,
-//                            'timestampMillis' => now()->getTimestampMs()
-//                        ];
+                        //                        $param = [
+                        //                            'id' => $session['id'],
+                        //                            'statusCode' => 0,
+                        //                            'currency' => "THB",
+                        //                            'productId' => $session['productId'],
+                        //                            'username' => $member->user_name,
+                        //                            'balanceBefore' => (float)$oldbalance,
+                        //                            'balanceAfter' => (float)$member->balance_free,
+                        //                            'timestampMillis' => now()->getTimestampMs()
+                        //                        ];
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1104,16 +1076,15 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1146,8 +1117,8 @@ class Cq9Controller extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance_free,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance_free,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1191,29 +1162,29 @@ class Cq9Controller extends AppBaseController
 
                         $newbalance = $member->balance_free - $adjust;
 
-                        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+                        $path = storage_path('logs/seamless/CQ9V2'.now()->format('Y_m_d').'.log');
                         file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        file_put_contents($path, print_r($item['betAmount'].' - '.$datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
 
                             MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $adjust);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance_free = $member->balance_free - $adjust;
-//                            $member->save();
+                            //                            $member->balance_free = $member->balance_free - $adjust;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'CQ9V2')
@@ -1243,55 +1214,53 @@ class Cq9Controller extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        } else {
-//
-//                            $member->balance_free += abs($adjust);
-//                            $member->save();
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance_free,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'CQ9V2';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'ajsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance_free;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//
-//                        }
-
+                        //                        } else {
+                        //
+                        //                            $member->balance_free += abs($adjust);
+                        //                            $member->save();
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance_free,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'CQ9V2';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'ajsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance_free;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //
+                        //                        }
 
                     } else {
 
@@ -1318,19 +1287,18 @@ class Cq9Controller extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance_free', $adjust);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                    $member->balance_free -= $adjust;
-//                                    $member->save();
+                                    //                                    $member->balance_free -= $adjust;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance_free,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance_free,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1356,8 +1324,8 @@ class Cq9Controller extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance_free,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance_free,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -1368,19 +1336,18 @@ class Cq9Controller extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', abs($adjust));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                $member->balance_free += abs($adjust);
-//                                $member->save();
+                                //                                $member->balance_free += abs($adjust);
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1402,15 +1369,14 @@ class Cq9Controller extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance_free,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance_free,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1443,16 +1409,15 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1481,16 +1446,15 @@ class Cq9Controller extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 0,
-                    'currency' => "THB",
+                    'currency' => 'THB',
                     'productId' => $session['productId'],
                     'username' => $member->user_name,
-                    'balanceBefore' => (float)$oldbalance,
-                    'balanceAfter' => (float)$member->balance_free,
-                    'timestampMillis' => now()->getTimestampMs()
+                    'balanceBefore' => (float) $oldbalance,
+                    'balanceAfter' => (float) $member->balance_free,
+                    'timestampMillis' => now()->getTimestampMs(),
                 ];
 
             } else {
@@ -1498,7 +1462,6 @@ class Cq9Controller extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1518,8 +1481,7 @@ class Cq9Controller extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'CQ9V2')
                         ->where('response', 'in')
@@ -1537,14 +1499,12 @@ class Cq9Controller extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance_free,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance_free,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', 'CQ9V2')
                             ->where('response', 'in')
@@ -1573,16 +1533,15 @@ class Cq9Controller extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance_free', $item['payoutAmount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance_free,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance_free,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1611,14 +1570,13 @@ class Cq9Controller extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance_free,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance_free,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1638,7 +1596,6 @@ class Cq9Controller extends AppBaseController
                             GameLogProxy::create($session_in);
 
                         }
-
 
                     }
 
@@ -1670,18 +1627,16 @@ class Cq9Controller extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/CQ9V2' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

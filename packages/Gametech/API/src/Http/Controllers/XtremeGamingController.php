@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class XtremeGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,7 +35,6 @@ class XtremeGamingController extends AppBaseController
 
         $this->gameUserRepository = $gameUserRepo;
     }
-
 
     public function verify(Request $request)
     {
@@ -52,17 +49,17 @@ class XtremeGamingController extends AppBaseController
                     'player_name' => $member->user_name,
                     'nickname' => $member->user_name,
                     'currency' => 'THB',
-                    'reminder_time' => now()->timestamp
+                    'reminder_time' => now()->timestamp,
                 ],
-                'error' => null
+                'error' => null,
             ];
         } else {
             $param = [
                 'data' => null,
                 'error' => [
                     'code' => 3004,
-                    'message' => "Player isn't exist"
-                ]
+                    'message' => "Player isn't exist",
+                ],
             ];
         }
 
@@ -73,7 +70,6 @@ class XtremeGamingController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['user'], 'enable' => 'Y']);
 
         if ($member) {
@@ -83,10 +79,9 @@ class XtremeGamingController extends AppBaseController
                 'status' => 'ok',
                 'user' => $member->user_name,
                 'currency' => 'THB',
-                'balance' => number_format($member->balance, 4, '.', '')
+                'balance' => number_format($member->balance, 4, '.', ''),
 
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -109,14 +104,14 @@ class XtremeGamingController extends AppBaseController
 
             $param = [
                 'status' => 'FAILED',
-                'message' => "User doesn't exist"
+                'message' => "User doesn't exist",
             ];
         }
 
-//        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -146,7 +141,7 @@ class XtremeGamingController extends AppBaseController
 
                 $param = [
                     'status' => 'FAILED',
-                    'message' => "DUP"
+                    'message' => 'DUP',
 
                 ];
 
@@ -169,7 +164,7 @@ class XtremeGamingController extends AppBaseController
                         'status' => 'ok',
                         'user' => $member->user_name,
                         'currency' => 'THB',
-                        'balance' => number_format($member->balance, 4, '.', '')
+                        'balance' => number_format($member->balance, 4, '.', ''),
 
                     ];
 
@@ -180,9 +175,8 @@ class XtremeGamingController extends AppBaseController
                         MemberProxy::where('user_name', $session['user'])->decrement('balance', $session['amount']);
                         $member = MemberProxy::where('user_name', $session['user'])->first();
 
-
-//                        $member->balance -= $session['amount'];
-//                        $member->save();
+                        //                        $member->balance -= $session['amount'];
+                        //                        $member->save();
 
                         $param = [
                             'transactionId' => $session['transactionId'],
@@ -190,16 +184,15 @@ class XtremeGamingController extends AppBaseController
                             'status' => 'ok',
                             'user' => $member->user_name,
                             'currency' => 'THB',
-                            'balance' => number_format($member->balance, 4, '.', '')
+                            'balance' => number_format($member->balance, 4, '.', ''),
 
                         ];
-
 
                     } else {
 
                         $param = [
                             'status' => 'FAILED',
-                            'message' => "NO CREDIT",
+                            'message' => 'NO CREDIT',
 
                         ];
 
@@ -227,7 +220,6 @@ class XtremeGamingController extends AppBaseController
                 GameLogProxy::create($session_in);
             }
 
-
             $session_in['input'] = $session;
             $session_in['output'] = $param;
             $session_in['company'] = 'XTREME';
@@ -249,16 +241,15 @@ class XtremeGamingController extends AppBaseController
 
             $param = [
                 'status' => 'FAILED',
-                'message' => "User doesn't exist"
+                'message' => "User doesn't exist",
             ];
 
         }
 
-
-//        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -268,11 +259,12 @@ class XtremeGamingController extends AppBaseController
         $param = [];
         $session = $request->all();
 
-        if (!isset($session['transactionId'])) {
+        if (! isset($session['transactionId'])) {
             $param = [
                 'status' => 'FAILED',
-                'message' => "Transaction not found",
+                'message' => 'Transaction not found',
             ];
+
             return $param;
         }
 
@@ -296,7 +288,7 @@ class XtremeGamingController extends AppBaseController
 
                 $param = [
                     'status' => 'FAILED',
-                    'message' => "DUP",
+                    'message' => 'DUP',
                 ];
 
             } else {
@@ -324,7 +316,7 @@ class XtremeGamingController extends AppBaseController
 
                         $param = [
                             'status' => 'FAILED',
-                            'message' => "Bet already cancel",
+                            'message' => 'Bet already cancel',
                         ];
 
                     } else {
@@ -332,14 +324,14 @@ class XtremeGamingController extends AppBaseController
                         MemberProxy::where('user_name', $session['user'])->increment('balance', $session['amount']);
                         $member = MemberProxy::where('user_name', $session['user'])->first();
 
-//                    $member->balance += $session['amount'];
-//                    $member->save();
+                        //                    $member->balance += $session['amount'];
+                        //                    $member->save();
 
                         $param = [
                             'status' => 'ok',
                             'user' => $member->user_name,
                             'currency' => 'THB',
-                            'balance' => number_format($member->balance, 4, '.', '')
+                            'balance' => number_format($member->balance, 4, '.', ''),
 
                         ];
 
@@ -360,19 +352,16 @@ class XtremeGamingController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         GameLogProxy::create($session_in);
 
-
                     }
-
 
                 } else {
 
                     $param = [
                         'status' => 'FAILED',
-                        'message' => "Transaction not found",
+                        'message' => 'Transaction not found',
                     ];
 
                 }
-
 
             }
 
@@ -397,19 +386,18 @@ class XtremeGamingController extends AppBaseController
 
             $param = [
                 'status' => 'FAILED',
-                'message' => "User doesn't exist"
+                'message' => "User doesn't exist",
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAYOUT --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAYOUT --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 
     public function cancelBet(Request $request)
     {
@@ -436,7 +424,7 @@ class XtremeGamingController extends AppBaseController
 
                 $param = [
                     'status' => 'FAILED',
-                    'message' => "DUP",
+                    'message' => 'DUP',
 
                 ];
 
@@ -455,8 +443,9 @@ class XtremeGamingController extends AppBaseController
 
                     $param = [
                         'status' => 'FAILED',
-                        'message' => "Transaction Already Settle",
+                        'message' => 'Transaction Already Settle',
                     ];
+
                     return $param;
                 }
 
@@ -477,9 +466,8 @@ class XtremeGamingController extends AppBaseController
                     MemberProxy::where('user_name', $session['user'])->increment('balance', $amount);
                     $member = MemberProxy::where('user_name', $session['user'])->first();
 
-
-//                    $member->balance += $amount;
-//                    $member->save();
+                    //                    $member->balance += $amount;
+                    //                    $member->save();
 
                 }
 
@@ -488,7 +476,7 @@ class XtremeGamingController extends AppBaseController
                     'status' => 'ok',
                     'user' => $member->user_name,
                     'currency' => 'THB',
-                    'balance' => number_format($member->balance, 4, '.', '')
+                    'balance' => number_format($member->balance, 4, '.', ''),
 
                 ];
 
@@ -508,7 +496,6 @@ class XtremeGamingController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -533,17 +520,16 @@ class XtremeGamingController extends AppBaseController
 
             $param = [
                 'status' => 'FAILED',
-                'message' => "User doesn't exist"
+                'message' => "User doesn't exist",
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/xtreme' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

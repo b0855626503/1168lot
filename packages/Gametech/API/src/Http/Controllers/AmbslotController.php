@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class AmbslotController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,11 +35,9 @@ class AmbslotController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -49,11 +45,11 @@ class AmbslotController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => "Success"
+                    'message' => 'Success',
                 ],
                 'data' => [
-                    'balance' => (float)$member->balance
-                ]
+                    'balance' => (float) $member->balance,
+                ],
             ];
 
             $session_in['input'] = $session;
@@ -73,16 +69,14 @@ class AmbslotController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -90,7 +84,6 @@ class AmbslotController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -106,7 +99,6 @@ class AmbslotController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
@@ -114,20 +106,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -141,20 +133,20 @@ class AmbslotController extends AppBaseController
                     $param = [
                         'status' => [
                             'code' => 0,
-                            'message' => "Success"
+                            'message' => 'Success',
                         ],
                         'data' => [
                             'username' => $member->user_name,
                             'wallet' => [
-                                'balance' => (float)$member->balance,
-                                'lastUpdate' => now()->toISOString()
+                                'balance' => (float) $member->balance,
+                                'lastUpdate' => now()->toISOString(),
                             ],
                             'balance' => [
-                                'before' => (float)$oldbalance,
-                                'after' => (float)$member->balance
+                                'before' => (float) $oldbalance,
+                                'after' => (float) $member->balance,
                             ],
-                            'refId' => $session['refId']
-                        ]
+                            'refId' => $session['refId'],
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -174,14 +166,13 @@ class AmbslotController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
                         'status' => [
                             'code' => 800,
-                            'message' => "Balance insufficient"
-                        ]
+                            'message' => 'Balance insufficient',
+                        ],
                     ];
                 }
 
@@ -208,11 +199,10 @@ class AmbslotController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -220,7 +210,6 @@ class AmbslotController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -243,20 +232,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -267,20 +256,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -323,11 +312,10 @@ class AmbslotController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -335,7 +323,6 @@ class AmbslotController extends AppBaseController
     public function settle(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -358,20 +345,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -382,20 +369,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -438,11 +425,10 @@ class AmbslotController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -450,7 +436,6 @@ class AmbslotController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -473,20 +458,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -497,20 +482,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -553,11 +538,10 @@ class AmbslotController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -565,7 +549,6 @@ class AmbslotController extends AppBaseController
     public function voidBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -588,20 +571,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -612,20 +595,20 @@ class AmbslotController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -664,19 +647,15 @@ class AmbslotController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
 
-
         return $param;
     }
-
-
 }

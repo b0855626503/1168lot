@@ -249,7 +249,7 @@ class NewCommonFlowController extends AppBaseController
         $meta['round_id'] = (string) ($meta['round_id'] ?? $roundIdFromRequest);
         $meta['request_id'] = (string) ($meta['request_id'] ?? $this->request->input('id', ''));
         $refId = isset($walletTxn['ref_id']) && is_numeric($walletTxn['ref_id']) ? (int) $walletTxn['ref_id'] : null;
-        $groupCode = (string) ($walletTxn['group_code'] ?? ($refType . '_' . $refCode));
+        $groupCode = (string) ($walletTxn['group_code'] ?? ($refType.'_'.$refCode));
 
         $insert = [
             'member_id' => (int) $this->member->code,
@@ -388,7 +388,7 @@ class NewCommonFlowController extends AppBaseController
                 if (! $this->safeDecrementBalance($betAmount, false, [
                     'ref_type' => 'GAME_BET',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_BET_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_BET_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider bet debit',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -492,12 +492,12 @@ class NewCommonFlowController extends AppBaseController
                         ->first();
 
                     if ($existingBet) {
-                        if($session['productId'] === 'PGSOFT') {
+                        if ($session['productId'] === 'PGSOFT') {
                             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                                    'balanceBefore' => (float)$oldBalance,
-                                    'balanceAfter' => (float)$this->member->balance,
-                                ];
-                        }else{
+                                'balanceBefore' => (float) $oldBalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                            ];
+                        } else {
                             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 20002, $this->member->balance);
                         }
 
@@ -507,7 +507,7 @@ class NewCommonFlowController extends AppBaseController
                     if (! $this->safeDecrementBalance($txn['betAmount'], false, [
                         'ref_type' => 'GAME_OPEN',
                         'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                        'group_code' => 'GAME_OPEN_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'group_code' => 'GAME_OPEN_'.(string) ($txn['roundId'] ?? $session['id']),
                         'description' => 'Provider open debit',
                         'meta' => [
                             'product_id' => $session['productId'] ?? null,
@@ -603,7 +603,7 @@ class NewCommonFlowController extends AppBaseController
                 $this->safeIncrementBalance($txn['payoutAmount'], [
                     'ref_type' => 'GAME_SETTLE',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_SETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_SETTLE_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider settle credit',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -734,7 +734,7 @@ class NewCommonFlowController extends AppBaseController
                 $this->safeDecrementBalance($txn['betAmount'], true, [
                     'ref_type' => 'GAME_UNSETTLE',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_UNSETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_UNSETTLE_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider unsettled debit (bet)',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -762,7 +762,7 @@ class NewCommonFlowController extends AppBaseController
                 $this->safeDecrementBalance($txn['payoutAmount'], true, [
                     'ref_type' => 'GAME_UNSETTLE',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_UNSETTLE_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_UNSETTLE_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider unsettled debit (payout)',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -898,7 +898,7 @@ class NewCommonFlowController extends AppBaseController
                     walletTxn: [
                         'ref_type' => 'GAME_ADJUST_BET',
                         'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                        'group_code' => 'GAME_ADJUST_BET_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'group_code' => 'GAME_ADJUST_BET_'.(string) ($txn['roundId'] ?? $session['id']),
                         'description' => 'Provider adjust bet',
                         'meta' => [
                             'product_id' => $session['productId'] ?? null,
@@ -1040,7 +1040,7 @@ class NewCommonFlowController extends AppBaseController
                 $this->safeDecrementBalance($betAmount, true, [
                     'ref_type' => 'GAME_CANCEL',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_CANCEL_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_CANCEL_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider cancel debit correction',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -1053,7 +1053,7 @@ class NewCommonFlowController extends AppBaseController
             $this->safeIncrementBalance($txn['betAmount'], [
                 'ref_type' => 'GAME_CANCEL',
                 'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                'group_code' => 'GAME_CANCEL_' . (string) ($txn['roundId'] ?? $session['id']),
+                'group_code' => 'GAME_CANCEL_'.(string) ($txn['roundId'] ?? $session['id']),
                 'description' => 'Provider cancel credit',
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
@@ -1192,7 +1192,7 @@ class NewCommonFlowController extends AppBaseController
             $this->safeDecrementBalance($rollbackAmount, true, [
                 'ref_type' => 'GAME_ROLLBACK',
                 'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                'group_code' => 'GAME_ROLLBACK_' . (string) ($txn['roundId'] ?? $session['id']),
+                'group_code' => 'GAME_ROLLBACK_'.(string) ($txn['roundId'] ?? $session['id']),
                 'description' => 'Provider rollback debit',
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
@@ -1300,7 +1300,7 @@ class NewCommonFlowController extends AppBaseController
             $this->safeIncrementBalance($payout, [
                 'ref_type' => 'GAME_WIN_REWARD',
                 'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                'group_code' => 'GAME_WIN_REWARD_' . (string) ($txn['roundId'] ?? $session['id']),
+                'group_code' => 'GAME_WIN_REWARD_'.(string) ($txn['roundId'] ?? $session['id']),
                 'description' => 'Provider win reward credit',
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
@@ -1456,7 +1456,7 @@ class NewCommonFlowController extends AppBaseController
                     walletTxn: [
                         'ref_type' => 'GAME_VOID_SETTLED',
                         'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                        'group_code' => 'GAME_VOID_SETTLED_' . (string) ($txn['roundId'] ?? $session['id']),
+                        'group_code' => 'GAME_VOID_SETTLED_'.(string) ($txn['roundId'] ?? $session['id']),
                         'description' => 'Provider void settled',
                         'meta' => [
                             'product_id' => $session['productId'] ?? null,
@@ -1565,7 +1565,7 @@ class NewCommonFlowController extends AppBaseController
                 if (! $this->safeDecrementBalance($amount, false, [
                     'ref_type' => 'GAME_TIP',
                     'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                    'group_code' => 'GAME_TIP_' . (string) ($txn['roundId'] ?? $session['id']),
+                    'group_code' => 'GAME_TIP_'.(string) ($txn['roundId'] ?? $session['id']),
                     'description' => 'Provider tip debit',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -1688,7 +1688,7 @@ class NewCommonFlowController extends AppBaseController
             $this->safeIncrementBalance($txn['betAmount'], [
                 'ref_type' => 'GAME_CANCEL_TIP',
                 'ref_code' => (string) ($txn['id'] ?? $session['id']),
-                'group_code' => 'GAME_CANCEL_TIP_' . (string) ($txn['roundId'] ?? $session['id']),
+                'group_code' => 'GAME_CANCEL_TIP_'.(string) ($txn['roundId'] ?? $session['id']),
                 'description' => 'Provider cancel tip credit',
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
@@ -1788,7 +1788,7 @@ class NewCommonFlowController extends AppBaseController
                 if (! $this->safeDecrementBalance($item['amount'], false, [
                     'ref_type' => 'GAME_ADJUST_BALANCE',
                     'ref_code' => (string) ($item['refId'] ?? $session['id']),
-                    'group_code' => 'GAME_ADJUST_BALANCE_' . (string) ($item['refId'] ?? $session['id']),
+                    'group_code' => 'GAME_ADJUST_BALANCE_'.(string) ($item['refId'] ?? $session['id']),
                     'description' => 'Provider adjust balance debit',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,
@@ -1802,7 +1802,7 @@ class NewCommonFlowController extends AppBaseController
                 $this->safeIncrementBalance($item['amount'], [
                     'ref_type' => 'GAME_ADJUST_BALANCE',
                     'ref_code' => (string) ($item['refId'] ?? $session['id']),
-                    'group_code' => 'GAME_ADJUST_BALANCE_' . (string) ($item['refId'] ?? $session['id']),
+                    'group_code' => 'GAME_ADJUST_BALANCE_'.(string) ($item['refId'] ?? $session['id']),
                     'description' => 'Provider adjust balance credit',
                     'meta' => [
                         'product_id' => $session['productId'] ?? null,

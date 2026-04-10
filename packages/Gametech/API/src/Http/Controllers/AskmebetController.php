@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class AskmebetController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -48,7 +46,7 @@ class AskmebetController extends AppBaseController
 
             $param = [
                 'status' => 1,
-                'balance' => (float)$member->balance
+                'balance' => (float) $member->balance,
             ];
 
             $session_in['input'] = $session;
@@ -72,11 +70,10 @@ class AskmebetController extends AppBaseController
 
             $param = [
                 'status' => 3,
-                'balance' => 0
+                'balance' => 0,
             ];
 
         }
-
 
         return $param;
     }
@@ -84,7 +81,6 @@ class AskmebetController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'user_name' => $session['account'], 'enable' => 'Y']);
 
@@ -106,8 +102,8 @@ class AskmebetController extends AppBaseController
 
                 $param = [
                     'status' => 4,
-                    'balance' => (float)$member->balance,
-                    'trans_id' => $session['trans_id']
+                    'balance' => (float) $member->balance,
+                    'trans_id' => $session['trans_id'],
                 ];
 
             } else {
@@ -118,13 +114,13 @@ class AskmebetController extends AppBaseController
                     MemberProxy::where('user_name', $session['account'])->decrement('balance', $session['amount']);
                     $member = MemberProxy::where('user_name', $session['account'])->first();
 
-//                    $member->balance -= $session['amount'];
-//                    $member->save();
+                    //                    $member->balance -= $session['amount'];
+                    //                    $member->save();
 
                     $param = [
                         'status' => 1,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
 
                     $session_in['input'] = $session;
@@ -144,13 +140,12 @@ class AskmebetController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
                         'status' => 5,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
                 }
 
@@ -177,10 +172,9 @@ class AskmebetController extends AppBaseController
             $param = [
                 'status' => 3,
                 'balance' => 0,
-                'trans_id' => $session['trans_id']
+                'trans_id' => $session['trans_id'],
             ];
         }
-
 
         return $param;
     }
@@ -188,7 +182,6 @@ class AskmebetController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['token'], 'user_name' => $session['account'], 'enable' => 'Y']);
 
@@ -204,15 +197,14 @@ class AskmebetController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
 
                 $param = [
                     'status' => 4,
-                    'balance' => (float)$member->balance,
-                    'trans_id' => $session['trans_id']
+                    'balance' => (float) $member->balance,
+                    'trans_id' => $session['trans_id'],
                 ];
 
             } else {
@@ -234,13 +226,13 @@ class AskmebetController extends AppBaseController
                     MemberProxy::where('user_name', $session['account'])->increment('balance', $session['amount']);
                     $member = MemberProxy::where('user_name', $session['account'])->first();
 
-//                    $member->balance += $session['amount'];
-//                    $member->save();
+                    //                    $member->balance += $session['amount'];
+                    //                    $member->save();
 
                     $param = [
                         'status' => 1,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
 
                     $session_in['input'] = $session;
@@ -262,8 +254,8 @@ class AskmebetController extends AppBaseController
                 } else {
                     $param = [
                         'status' => 6,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
                 }
 
@@ -286,16 +278,14 @@ class AskmebetController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'status' => 3,
                 'balance' => 0,
-                'trans_id' => $session['trans_id']
+                'trans_id' => $session['trans_id'],
             ];
         }
-
 
         return $param;
     }
@@ -303,7 +293,6 @@ class AskmebetController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['account'], 'enable' => 'Y']);
 
@@ -326,8 +315,8 @@ class AskmebetController extends AppBaseController
 
                 $param = [
                     'status' => 4,
-                    'balance' => (float)$member->balance,
-                    'trans_id' => $session['trans_id']
+                    'balance' => (float) $member->balance,
+                    'trans_id' => $session['trans_id'],
                 ];
 
             } else {
@@ -349,13 +338,13 @@ class AskmebetController extends AppBaseController
                     MemberProxy::where('user_name', $session['account'])->increment('balance', $amount);
                     $member = MemberProxy::where('user_name', $session['account'])->first();
 
-//                    $member->balance += $amount;
-//                    $member->save();
+                    //                    $member->balance += $amount;
+                    //                    $member->save();
 
                     $param = [
                         'status' => 1,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
 
                     $session_in['input'] = $session;
@@ -379,8 +368,8 @@ class AskmebetController extends AppBaseController
 
                     $param = [
                         'status' => 6,
-                        'balance' => (float)$member->balance,
-                        'trans_id' => $session['trans_id']
+                        'balance' => (float) $member->balance,
+                        'trans_id' => $session['trans_id'],
                     ];
 
                 }
@@ -404,19 +393,15 @@ class AskmebetController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'status' => 3,
                 'balance' => 0,
-                'trans_id' => $session['trans_id']
+                'trans_id' => $session['trans_id'],
             ];
         }
 
-
         return $param;
     }
-
-
 }

@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class DreamGamingOldController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -36,7 +34,6 @@ class DreamGamingOldController extends AppBaseController
 
         $this->gameUserRepository = $gameUserRepo;
     }
-
 
     public function verify(Request $request)
     {
@@ -51,17 +48,17 @@ class DreamGamingOldController extends AppBaseController
                     'player_name' => $member->user_name,
                     'nickname' => $member->user_name,
                     'currency' => 'THB',
-                    'reminder_time' => now()->timestamp
+                    'reminder_time' => now()->timestamp,
                 ],
-                'error' => null
+                'error' => null,
             ];
         } else {
             $param = [
                 'data' => null,
                 'error' => [
                     'code' => 3004,
-                    'message' => "Player isn't exist"
-                ]
+                    'message' => "Player isn't exist",
+                ],
             ];
         }
 
@@ -72,7 +69,6 @@ class DreamGamingOldController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['member']['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -82,10 +78,9 @@ class DreamGamingOldController extends AppBaseController
                 'token' => $session['token'],
                 'member' => [
                     'username' => $member->user_name,
-                    'balance' => (float)$member->balance
-                ]
+                    'balance' => (float) $member->balance,
+                ],
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -110,7 +105,6 @@ class DreamGamingOldController extends AppBaseController
                 'token' => $session['token'],
             ];
         }
-
 
         return $param;
     }
@@ -145,8 +139,8 @@ class DreamGamingOldController extends AppBaseController
                     'member' => [
                         'username' => $member->user_name,
                         'amount' => $session['member']['amount'],
-                        'balance' => $oldbalance
-                    ]
+                        'balance' => $oldbalance,
+                    ],
                 ];
 
             } else {
@@ -163,8 +157,8 @@ class DreamGamingOldController extends AppBaseController
                         'member' => [
                             'username' => $member->user_name,
                             'amount' => $session['member']['amount'],
-                            'balance' => $member->balance
-                        ]
+                            'balance' => $member->balance,
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -199,8 +193,8 @@ class DreamGamingOldController extends AppBaseController
                             'member' => [
                                 'username' => $member->user_name,
                                 'amount' => $session['member']['amount'],
-                                'balance' => $balance
-                            ]
+                                'balance' => $balance,
+                            ],
                         ];
 
                         $session_in['input'] = $session;
@@ -256,7 +250,6 @@ class DreamGamingOldController extends AppBaseController
             ];
 
         }
-
 
         return $param;
     }
@@ -333,7 +326,6 @@ class DreamGamingOldController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
             }
 
         } else {
@@ -345,8 +337,6 @@ class DreamGamingOldController extends AppBaseController
 
         }
 
-
         return $param;
     }
-
 }

@@ -28,5 +28,4 @@ Route::domain(
         ])->name('admin.gamelog.log');
     });
 
-
 });

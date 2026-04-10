@@ -21,7 +21,6 @@ class AnnounceController extends AppBaseController
         $this->repository = $repository;
     }
 
-
     public function Announce(Request $request)
     {
         $id = 1;
@@ -53,21 +52,21 @@ class AnnounceController extends AppBaseController
         $banks = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountInAll();
         $banks = $banks->map(function ($items) {
             return [
-                'text' => $items->bank->shortcode . ' ' . $items->acc_no,
+                'text' => $items->bank->shortcode.' '.$items->acc_no,
                 'value' => core()->currency($items->balance),
-                'update' => core()->formatDate($items->checktime, 'd/m/y H:i:s')
+                'update' => core()->formatDate($items->checktime, 'd/m/y H:i:s'),
             ];
         });
 
         $response = [
-            'title' => $config['sitename'] . ' (' . config('game.starvegas.merchant_admin_name') . ')',
+            'title' => $config['sitename'].' ('.config('game.starvegas.merchant_admin_name').')',
             'data' => [
                 ['method' => 'deposit', 'icon' => 'fas fa-plus-circle', 'color' => 'bg-info', 'text' => 'ยอดฝาก', 'value' => core()->currency($deposit)],
                 ['method' => 'deposit_1', 'icon' => 'fas fa-plus', 'color' => 'bg-info', 'text' => 'จำนวนบิลฝาก', 'value' => $deposit_cnt],
                 ['method' => 'withdraw', 'icon' => 'fas fa-minus-circle', 'color' => 'bg-danger', 'text' => 'ยอดถอน', 'value' => core()->currency($withdraw)],
                 ['method' => 'withdraw_1', 'icon' => 'fas fa-minus', 'color' => 'bg-danger', 'text' => 'จำนวนบิลถอน', 'value' => $withdraw_cnt],
                 ['method' => 'member', 'icon' => 'fas fa-user', 'color' => 'bg-success', 'text' => 'ลูกค้าสมัครใหม่', 'value' => $member_cnt],
-                ['method' => 'agent', 'icon' => 'fas fa-user', 'color' => 'bg-success', 'text' => 'Agent', 'value' => config('game.starvegas.merchant_admin_name')]
+                ['method' => 'agent', 'icon' => 'fas fa-user', 'color' => 'bg-success', 'text' => 'Agent', 'value' => config('game.starvegas.merchant_admin_name')],
             ],
             'bank' => $banks,
             'money' => [
@@ -75,7 +74,7 @@ class AnnounceController extends AppBaseController
                 ['method' => 'withdraw', 'icon' => 'fas fa-minus-circle', 'color' => 'bg-danger', 'text' => 'ยอดถอน', 'value' => core()->currency($withdraw)],
                 ['method' => 'withdraw', 'icon' => 'fas fa-minus-circle', 'color' => 'bg-danger', 'text' => 'คงเหลือ', 'value' => core()->currency($deposit - $withdraw)],
 
-            ]
+            ],
         ];
 
         return Response::json($response);
@@ -84,8 +83,7 @@ class AnnounceController extends AppBaseController
     public function index()
     {
         $response = $this->repository->findOrFail(1);
-        return $this->sendResponse($response,'complete');
+
+        return $this->sendResponse($response, 'complete');
     }
-
-
 }

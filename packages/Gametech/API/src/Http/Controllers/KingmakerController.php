@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class KingmakerController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -41,7 +39,7 @@ class KingmakerController extends AppBaseController
     {
         $param = [
             'code' => 50100,
-            'msg' => 'Acct Not Found'
+            'msg' => 'Acct Not Found',
         ];
 
         $session = $request->all();
@@ -88,29 +86,25 @@ class KingmakerController extends AppBaseController
                 'acctInfo' => [
                     'acctId' => $user->user_name,
                     'userName' => $user->user_name,
-                    'balance' => (float)$user->balance,
-                    'currency' => 'THB'
-                ]
+                    'balance' => (float) $user->balance,
+                    'currency' => 'THB',
+                ],
             ];
-
 
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
-
 
         return $param;
 
     }
 
-
     public function getBalance($session)
     {
         $session['userId'] = $session['subdata']->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -131,8 +125,8 @@ class KingmakerController extends AppBaseController
             $param = [
                 'status' => '0000',
                 'userId' => $member->user_name,
-                'balance' => (string)$member->balance,
-                'balanceTs' => now()->toIso8601String()
+                'balance' => (string) $member->balance,
+                'balanceTs' => now()->toIso8601String(),
             ];
 
             $session_in['input'] = $session;
@@ -152,16 +146,15 @@ class KingmakerController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::insert($session_in);
 
-
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
 
-//        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -170,13 +163,12 @@ class KingmakerController extends AppBaseController
     {
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-//        $session['method'] = 'bet';
+        //        $session['method'] = 'bet';
         $session['txns'] = $txns;
         $session['betAmount'] = $txns->betAmount;
 
-
-//        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -206,8 +198,8 @@ class KingmakerController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$user->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $user->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
                 $session_out = $param;
@@ -218,24 +210,22 @@ class KingmakerController extends AppBaseController
                 $session_out['before_balance'] = $oldbalance;
                 $session_out['after_balance'] = $user->balance;
                 $session_out['date_create'] = now()->toDateTimeString();
-                //GameLogProxy::insert($session_out);
+                // GameLogProxy::insert($session_out);
 
             } else {
 
                 $param = [
                     'code' => 50110,
-                    'msg' => 'Insufficient Balance'
+                    'msg' => 'Insufficient Balance',
                 ];
             }
-
 
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
-
 
         return $param;
     }
@@ -245,13 +235,12 @@ class KingmakerController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-//        $session['method'] = 'settle';
+        //        $session['method'] = 'settle';
         $session['txns'] = $txns;
         $session['betAmount'] = $txns->winAmount;
 
-
-//        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -287,14 +276,14 @@ class KingmakerController extends AppBaseController
                 $member->save();
             }
 
-//            $user->balance += $session['betAmount'];
-//            $user->save();
-//
-//            $member->balance += $session['betAmount'];
-//            $member->save();
+            //            $user->balance += $session['betAmount'];
+            //            $user->save();
+            //
+            //            $member->balance += $session['betAmount'];
+            //            $member->save();
 
             $param = [
-                'status' => '0000'
+                'status' => '0000',
             ];
 
             $session_out = $param;
@@ -305,15 +294,14 @@ class KingmakerController extends AppBaseController
             $session_out['before_balance'] = $oldbalance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
+            // GameLogProxy::insert($session_out);
 
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
-
 
         return $param;
     }
@@ -323,7 +311,6 @@ class KingmakerController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -344,16 +331,16 @@ class KingmakerController extends AppBaseController
             $oldbalance = $user->balance;
             $balance = ($oldbalance + $session['amount']);
 
-//            $user->balance += $session['amount'];
-//            $user->save();
-//
-//            $member->balance += $session['amount'];
-//            $member->save();
+            //            $user->balance += $session['amount'];
+            //            $user->save();
+            //
+            //            $member->balance += $session['amount'];
+            //            $member->save();
 
             $param = [
                 'status' => '0000',
-                'balance' => (float)$user->balance,
-                'balanceTs' => now()->toIso8601String()
+                'balance' => (float) $user->balance,
+                'balanceTs' => now()->toIso8601String(),
             ];
 
             $session_out = $param;
@@ -364,15 +351,14 @@ class KingmakerController extends AppBaseController
             $session_out['before_balance'] = $oldbalance;
             $session_out['after_balance'] = $user->balance;
             $session_out['date_create'] = now()->toDateTimeString();
-            //GameLogProxy::insert($session_out);
+            // GameLogProxy::insert($session_out);
 
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
-
 
         return $param;
     }
@@ -381,13 +367,12 @@ class KingmakerController extends AppBaseController
     {
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-//        $session['method'] = 'bet';
+        //        $session['method'] = 'bet';
         $session['txns'] = $txns;
         $session['betAmount'] = $txns->betAmount;
 
-
-//        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/kingmaker_' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -417,8 +402,8 @@ class KingmakerController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (float)$user->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (float) $user->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
                 $session_out = $param;
@@ -429,27 +414,23 @@ class KingmakerController extends AppBaseController
                 $session_out['before_balance'] = $oldbalance;
                 $session_out['after_balance'] = $user->balance;
                 $session_out['date_create'] = now()->toDateTimeString();
-                //GameLogProxy::insert($session_out);
+                // GameLogProxy::insert($session_out);
 
             } else {
 
                 $param = [
                     'code' => 50110,
-                    'msg' => 'Insufficient Balance'
+                    'msg' => 'Insufficient Balance',
                 ];
             }
-
 
         } else {
             $param = [
                 'code' => 50100,
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
 
-
         return $param;
     }
-
-
 }

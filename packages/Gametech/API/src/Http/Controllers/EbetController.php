@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -23,10 +22,9 @@ class EbetController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,7 +35,6 @@ class EbetController extends AppBaseController
 
         $this->gameUserRepository = $gameUserRepo;
     }
-
 
     public function verify(Request $request)
     {
@@ -55,7 +52,7 @@ class EbetController extends AppBaseController
                 'status' => 200,
                 'event' => 'registerOrLogin',
                 'seqNo' => $session['seqNo'],
-                'nickname' => $member->user_name
+                'nickname' => $member->user_name,
             ];
         } else {
             $param = [
@@ -66,7 +63,7 @@ class EbetController extends AppBaseController
                 'status' => 4037,
                 'event' => 'registerOrLogin',
                 'seqNo' => $session['seqNo'],
-                'nickname' => $session['username']
+                'nickname' => $session['username'],
             ];
         }
 
@@ -77,21 +74,19 @@ class EbetController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
 
             $param = [
                 'username' => $member->user_name,
-                'money' => (float)$member->balance,
-                'currency' => "THB",
+                'money' => (float) $member->balance,
+                'currency' => 'THB',
                 'status' => 200,
-                'event' => "syncCredit",
+                'event' => 'syncCredit',
                 'seqNo' => $session['seqNo'],
-                'timestamp' => now()->getTimestampMs()
+                'timestamp' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -112,10 +107,9 @@ class EbetController extends AppBaseController
 
         } else {
             $param = [
-                'status' => 4037
+                'status' => 4037,
             ];
         }
-
 
         return $param;
     }
@@ -124,13 +118,11 @@ class EbetController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
 
             $oldbalance = $member->balance;
-
 
             if ($session['type'] != 38) {
                 $data = GameLogProxy::where('company', 'EBET')
@@ -154,7 +146,6 @@ class EbetController extends AppBaseController
                     ->first();
             }
 
-
             if ($data) {
 
             } else {
@@ -166,18 +157,17 @@ class EbetController extends AppBaseController
                 $balance = ($member->balance + $session['money']);
                 if ($balance >= 0) {
 
-
                     $member->balance += $session['money'];
                     $member->save();
 
                     $param = [
                         'username' => $member->user_name,
-                        'money' => (float)$member->balance,
-                        'moneyBefore' => (float)$oldbalance,
+                        'money' => (float) $member->balance,
+                        'moneyBefore' => (float) $oldbalance,
                         'status' => 200,
-                        'event' => "increaseCredit",
+                        'event' => 'increaseCredit',
                         'seqNo' => $session['seqNo'],
-                        'timestamp' => now()->getTimestampMs()
+                        'timestamp' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $session;
@@ -201,18 +191,16 @@ class EbetController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                 }
-
 
             }
 
         } else {
 
             $param = [
-                'status' => 4037
+                'status' => 4037,
             ];
 
         }
@@ -224,7 +212,6 @@ class EbetController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -233,8 +220,7 @@ class EbetController extends AppBaseController
 
             $id = Str::of($session['querySeqNo'])->explode(',');
 
-//            if ($id->count() > 1) {
-
+            //            if ($id->count() > 1) {
 
             $chk = $id->each(function ($isub, $key) use ($member, $session) {
 
@@ -258,7 +244,7 @@ class EbetController extends AppBaseController
                         'creditTime' => now()->getTimestampMs(),
                         'moneyBefore' => $data['before_balance'],
                         'moneyAfter' => $data['after_balance'],
-                        'money' => $data['amount']
+                        'money' => $data['amount'],
                     ];
 
                 }
@@ -266,25 +252,22 @@ class EbetController extends AppBaseController
 
             $param = [
                 'username' => $member->user_name,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'status' => 200,
-                'event' => "queryIncreaseCreditRecord",
+                'event' => 'queryIncreaseCreditRecord',
                 'seqNo' => $session['seqNo'],
                 'timestamp' => now()->getTimestampMs(),
-                'creditRecord' => $chk
+                'creditRecord' => $chk,
             ];
-
 
         } else {
 
             $param = [
-                'status' => 4037
+                'status' => 4037,
             ];
 
         }
 
         return $param;
     }
-
-
 }

@@ -1611,7 +1611,7 @@ Route::prefix('ambsuperapi')->group(function () {
     Route::post('cancelTips', 'NewCommonFlowController@cancelTips');
 });
 
-//Route::prefix('ambsuperapi')->group(function () {
+// Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('checkBalance', 'NewCommonFlowController@getBalance');
 //
 //    // หน่วงเวลาเฉพาะเส้นนี้ เมื่อเปิด config('api.test.allow_delay')
@@ -1633,9 +1633,9 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback',     'NewCommonFlowController@rollback');
 //    Route::post('placeTips',    'NewCommonFlowController@placeTips');
 //    Route::post('cancelTips',   'NewCommonFlowController@cancelTips');
-//});
+// });
 
-//Route::prefix('pgapi')->group(function () {
+// Route::prefix('pgapi')->group(function () {
 //    Route::post('checkBalance', 'NewCommonFlowController@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonFlowController@placeBets');
@@ -1651,10 +1651,10 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonFlowController@rollback');
 //    Route::post('placeTips', 'NewCommonFlowController@placeTips');
 //    Route::post('cancelTips', 'NewCommonFlowController@cancelTips');
-//});
+// });
 //
 //
-//Route::prefix('apiredis')->group(function () {
+// Route::prefix('apiredis')->group(function () {
 //    Route::post('checkBalance', 'NewCommonFlowRedisController@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonFlowRedisController@placeBets');
@@ -1670,15 +1670,15 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonFlowRedisController@rollback');
 //    Route::post('placeTips', 'NewCommonFlowRedisController@placeTips');
 //    Route::post('cancelTips', 'NewCommonFlowRedisController@cancelTips');
-//});
+// });
 //
-//Route::prefix('newcommon')->group(function () {
+// Route::prefix('newcommon')->group(function () {
 //    Route::post('checkBalance', 'NewCommonController@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonController@placeBets');
 //    });
 //    Route::post('settleBets', 'NewCommonController@settleBets');
-////    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
+// //    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
 //    Route::post('adjustBets', 'NewCommonController@adjustBets');
 //    Route::post('adjustBalance', 'NewCommonController@adjustBalance');
 //    Route::post('cancelBets', 'NewCommonController@cancelBets');
@@ -1688,15 +1688,15 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonController@rollback');
 //    Route::post('placeTips', 'NewCommonController@placeTips');
 //    Route::post('cancelTips', 'NewCommonController@cancelTips');
-//});
+// });
 //
-//Route::prefix('newcommonv2')->group(function () {
+// Route::prefix('newcommonv2')->group(function () {
 //    Route::post('checkBalance', 'NewCommonV2Controller@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonV2Controller@placeBets');
 //    });
 //    Route::post('settleBets', 'NewCommonV2Controller@settleBets');
-////    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
+// //    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
 //    Route::post('adjustBets', 'NewCommonV2Controller@adjustBets');
 //    Route::post('adjustBalance', 'NewCommonV2Controller@adjustBalance');
 //    Route::post('cancelBets', 'NewCommonV2Controller@cancelBets');
@@ -1706,16 +1706,16 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonV2Controller@rollback');
 //    Route::post('placeTips', 'NewCommonV2Controller@placeTips');
 //    Route::post('cancelTips', 'NewCommonV2Controller@cancelTips');
-//});
+// });
 //
-//Route::prefix('newcommonv1')->group(function () {
+// Route::prefix('newcommonv1')->group(function () {
 //    Route::post('checkBalance', 'NewCommonV0Controller@getBalance');
-////    Route::post('checkBalance', 'NewCommonV1Controller@getBalance');
+// //    Route::post('checkBalance', 'NewCommonV1Controller@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonV1Controller@placeBets');
 //    });
 //    Route::post('settleBets', 'NewCommonV1Controller@settleBets');
-////    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
+// //    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
 //    Route::post('adjustBets', 'NewCommonV1Controller@adjustBets');
 //    Route::post('adjustBalance', 'NewCommonV1Controller@adjustBalance');
 //    Route::post('cancelBets', 'NewCommonV1Controller@cancelBets');
@@ -1725,15 +1725,15 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonV1Controller@rollback');
 //    Route::post('placeTips', 'NewCommonV1Controller@placeTips');
 //    Route::post('cancelTips', 'NewCommonV1Controller@cancelTips');
-//});
+// });
 //
-//Route::prefix('newcommonv3')->group(function () {
+// Route::prefix('newcommonv3')->group(function () {
 //    Route::post('checkBalance', 'NewCommonV3Controller@getBalance');
 //    Route::middleware('ensure.in.game')->group(function () {
 //        Route::post('placeBets', 'NewCommonV3Controller@placeBets');
 //    });
 //    Route::post('settleBets', 'NewCommonV3Controller@settleBets');
-////    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
+// //    Route::post('unsettleBets', 'NewCommonFlowRedisController@unsettleBets');
 //    Route::post('adjustBets', 'NewCommonV3Controller@adjustBets');
 //    Route::post('adjustBalance', 'NewCommonV3Controller@adjustBalance');
 //    Route::post('cancelBets', 'NewCommonV3Controller@cancelBets');
@@ -1743,7 +1743,7 @@ Route::prefix('ambsuperapi')->group(function () {
 //    Route::post('rollback', 'NewCommonV3Controller@rollback');
 //    Route::post('placeTips', 'NewCommonV3Controller@placeTips');
 //    Route::post('cancelTips', 'NewCommonV3Controller@cancelTips');
-//});
+// });
 //
 
 Route::prefix('rb7lotto')->group(function () {

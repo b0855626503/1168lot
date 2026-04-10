@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class AmbpokerController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,11 +36,9 @@ class AmbpokerController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function getBalance(Request $request): array
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -50,11 +46,11 @@ class AmbpokerController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 0,
-                    'message' => "Success"
+                    'message' => 'Success',
                 ],
                 'data' => [
-                    'balance' => (float)$member->balance
-                ]
+                    'balance' => (float) $member->balance,
+                ],
             ];
 
             $session_in['input'] = $session;
@@ -74,16 +70,14 @@ class AmbpokerController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -91,7 +85,6 @@ class AmbpokerController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -107,7 +100,6 @@ class AmbpokerController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
@@ -115,20 +107,20 @@ class AmbpokerController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 806,
-                        'message' => "Duplicate Round Id"
+                        'message' => 'Duplicate Round Id',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -139,26 +131,26 @@ class AmbpokerController extends AppBaseController
                     MemberProxy::where('user_name', $session['username'])->decrement('balance', abs($session['amount']));
                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                    $member->balance -= abs($session['amount']);
-//                    $member->save();
+                    //                    $member->balance -= abs($session['amount']);
+                    //                    $member->save();
 
                     $param = [
                         'status' => [
                             'code' => 0,
-                            'message' => "Success"
+                            'message' => 'Success',
                         ],
                         'data' => [
                             'username' => $member->user_name,
                             'wallet' => [
-                                'balance' => (float)$member->balance,
-                                'lastUpdate' => now()->toISOString()
+                                'balance' => (float) $member->balance,
+                                'lastUpdate' => now()->toISOString(),
                             ],
                             'balance' => [
-                                'before' => (float)$oldbalance,
-                                'after' => (float)$member->balance
+                                'before' => (float) $oldbalance,
+                                'after' => (float) $member->balance,
                             ],
-                            'refId' => $session['refId']
-                        ]
+                            'refId' => $session['refId'],
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -178,14 +170,13 @@ class AmbpokerController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
                         'status' => [
                             'code' => 800,
-                            'message' => "Balance insufficient"
-                        ]
+                            'message' => 'Balance insufficient',
+                        ],
                     ];
                 }
 
@@ -212,11 +203,10 @@ class AmbpokerController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -224,7 +214,6 @@ class AmbpokerController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -247,20 +236,20 @@ class AmbpokerController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 806,
-                        'message' => "Duplicate Round Id"
+                        'message' => 'Duplicate Round Id',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -284,20 +273,20 @@ class AmbpokerController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -316,7 +305,6 @@ class AmbpokerController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -341,11 +329,10 @@ class AmbpokerController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -353,7 +340,6 @@ class AmbpokerController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -376,20 +362,20 @@ class AmbpokerController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 806,
-                        'message' => "Duplicate Round Id"
+                        'message' => 'Duplicate Round Id',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
@@ -403,7 +389,6 @@ class AmbpokerController extends AppBaseController
                     ->where('con_3', $session['roundId'])
                     ->whereNull('con_4')
                     ->get();
-
 
                 if (count($datasub) > 0) {
 
@@ -421,7 +406,7 @@ class AmbpokerController extends AppBaseController
                         ->whereNull('con_4')
                         ->first();
 
-                    if (!$datasubs) {
+                    if (! $datasubs) {
                         MemberProxy::where('user_name', $session['username'])->increment('balance', $sumamount);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
@@ -430,20 +415,20 @@ class AmbpokerController extends AppBaseController
                     $param = [
                         'status' => [
                             'code' => 0,
-                            'message' => "Success"
+                            'message' => 'Success',
                         ],
                         'data' => [
                             'username' => $member->user_name,
                             'wallet' => [
-                                'balance' => (float)$member->balance,
-                                'lastUpdate' => now()->toISOString()
+                                'balance' => (float) $member->balance,
+                                'lastUpdate' => now()->toISOString(),
                             ],
                             'balance' => [
-                                'before' => (float)$oldbalance,
-                                'after' => (float)$member->balance
+                                'before' => (float) $oldbalance,
+                                'after' => (float) $member->balance,
                             ],
-                            'refId' => $session['refId']
-                        ]
+                            'refId' => $session['refId'],
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -468,20 +453,20 @@ class AmbpokerController extends AppBaseController
                     $param = [
                         'status' => [
                             'code' => 807,
-                            'message' => "Bet not found"
+                            'message' => 'Bet not found',
                         ],
                         'data' => [
                             'username' => $member->user_name,
                             'wallet' => [
-                                'balance' => (float)$member->balance,
-                                'lastUpdate' => now()->toISOString()
+                                'balance' => (float) $member->balance,
+                                'lastUpdate' => now()->toISOString(),
                             ],
                             'balance' => [
-                                'before' => (float)$oldbalance,
-                                'after' => (float)$member->balance
+                                'before' => (float) $oldbalance,
+                                'after' => (float) $member->balance,
                             ],
-                            'refId' => $session['refId']
-                        ]
+                            'refId' => $session['refId'],
+                        ],
                     ];
                 }
             }
@@ -507,11 +492,10 @@ class AmbpokerController extends AppBaseController
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
-
 
         return $param;
     }
@@ -519,7 +503,6 @@ class AmbpokerController extends AppBaseController
     public function voidBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
@@ -542,44 +525,43 @@ class AmbpokerController extends AppBaseController
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
             } else {
                 MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                 $param = [
                     'status' => [
                         'code' => 0,
-                        'message' => "Success"
+                        'message' => 'Success',
                     ],
                     'data' => [
                         'username' => $member->user_name,
                         'wallet' => [
-                            'balance' => (float)$member->balance,
-                            'lastUpdate' => now()->toISOString()
+                            'balance' => (float) $member->balance,
+                            'lastUpdate' => now()->toISOString(),
                         ],
                         'balance' => [
-                            'before' => (float)$oldbalance,
-                            'after' => (float)$member->balance
+                            'before' => (float) $oldbalance,
+                            'after' => (float) $member->balance,
                         ],
-                        'refId' => $session['refId']
-                    ]
+                        'refId' => $session['refId'],
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -618,19 +600,15 @@ class AmbpokerController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => [
                     'code' => 999,
-                    'message' => "Service not available"
-                ]
+                    'message' => 'Service not available',
+                ],
             ];
         }
 
-
         return $param;
     }
-
-
 }

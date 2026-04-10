@@ -103,7 +103,7 @@ return [
         'cashback' => [
             'driver' => 'single',
             'path' => storage_path('logs/cashback_create.log'),
-            'level' => 'info'
+            'level' => 'info',
         ],
 
         'slowlog' => [
@@ -295,7 +295,6 @@ return [
             'level' => 'info',
             'days' => 14,
         ],
-
 
         'cloudpay_deposit_create' => [
             'driver' => 'daily',
@@ -649,7 +648,6 @@ return [
             'level' => 'info',
             'days' => 14,
         ],
-
 
     ],
 

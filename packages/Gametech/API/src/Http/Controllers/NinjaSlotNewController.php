@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -32,11 +31,10 @@ class NinjaSlotNewController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo,
-        Request               $request
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo,
+        Request $request
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -56,13 +54,12 @@ class NinjaSlotNewController extends AppBaseController
             $this->member = MemberProxy::without('bank')->where('user_name', $this->request['username'])->where('enable', 'Y')->first();
         }
 
-//        $this->member->balance = $this->member->balance;
+        //        $this->member->balance = $this->member->balance;
 
         $this->balances = 'balance';
 
         $this->game = 'NINJA';
     }
-
 
     public function getBalance(Request $request)
     {
@@ -73,13 +70,12 @@ class NinjaSlotNewController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $this->member->user_name,
-                'balance' => (float)$this->member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $this->member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -104,14 +100,14 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/ADVANT' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -121,7 +117,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -143,8 +138,8 @@ class NinjaSlotNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -170,9 +165,7 @@ class NinjaSlotNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-
 
                     $checkDup = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -191,8 +184,8 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -218,12 +211,12 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         break;
@@ -237,8 +230,8 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -249,12 +242,12 @@ class NinjaSlotNewController extends AppBaseController
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -278,7 +271,6 @@ class NinjaSlotNewController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
@@ -286,11 +278,10 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -300,7 +291,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -319,13 +309,12 @@ class NinjaSlotNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -333,7 +322,6 @@ class NinjaSlotNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -371,8 +359,8 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -388,20 +376,20 @@ class NinjaSlotNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkBet) {
+                    if (! $checkBet) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
                     }
 
-                    if (!is_null($checkBet['con_4'])) {
+                    if (! is_null($checkBet['con_4'])) {
 
                         if (Str::contains($checkBet['con_4'], 'cancel')) {
 
@@ -409,8 +397,8 @@ class NinjaSlotNewController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -418,24 +406,22 @@ class NinjaSlotNewController extends AppBaseController
 
                     }
 
-
                     $amount = ($this->member->balance + $item['payoutAmount']);
 
                     $this->member->increment($this->balances, abs($item['payoutAmount']));
-//                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
-//                    $member = MemberProxy::where('user_name', $session['username'])->first();
+                    //                    MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
+                    //                    $member = MemberProxy::where('user_name', $session['username'])->first();
 
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
-
 
                     $session_in['input'] = $item;
                     $session_in['output'] = $param;
@@ -454,9 +440,8 @@ class NinjaSlotNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkBet->con_4 = 'settle_' . $id;
+                    $checkBet->con_4 = 'settle_'.$id;
                     $checkBet->save();
-
 
                 }
 
@@ -469,11 +454,10 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -483,7 +467,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -502,13 +485,12 @@ class NinjaSlotNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -534,7 +516,6 @@ class NinjaSlotNewController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $checkDup = GameLogProxy::where('company', $this->game)
@@ -554,8 +535,8 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -605,12 +586,12 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -631,27 +612,27 @@ class NinjaSlotNewController extends AppBaseController
                         $id = GameLogProxy::create($session_in)->id;
 
                         foreach ($checkDatas as $checkData1) {
-                            $checkData1->con_4 = 'cancel_' . $id;
+                            $checkData1->con_4 = 'cancel_'.$id;
                             $checkData1->save();
                         }
                         foreach ($checkData as $checkData2) {
-                            $checkData2->con_4 = 'cancel_' . $id;
+                            $checkData2->con_4 = 'cancel_'.$id;
                             $checkData2->save();
                         }
 
-//                        $checkData->con_4 = 'cancel_' . $id;
-//                        $checkData->save();
+                        //                        $checkData->con_4 = 'cancel_' . $id;
+                        //                        $checkData->save();
                     } else {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -676,7 +657,6 @@ class NinjaSlotNewController extends AppBaseController
                 }
             }
 
-
         } else {
 
             $param = [
@@ -684,11 +664,10 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -698,7 +677,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -721,8 +699,8 @@ class NinjaSlotNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -767,13 +745,12 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
                     }
-
 
                     if ($item['betAmount'] > 0) {
 
@@ -782,12 +759,12 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -825,14 +802,14 @@ class NinjaSlotNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-                    if (!$checkData) {
+                    if (! $checkData) {
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -847,8 +824,8 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
@@ -857,16 +834,15 @@ class NinjaSlotNewController extends AppBaseController
 
                     $this->member->decrement($this->balances, $item['payoutAmount']);
 
-
                     $param = [
                         'id' => $session['id'],
                         'statusCode' => 0,
-                        'currency' => "THB",
+                        'currency' => 'THB',
                         'productId' => $session['productId'],
                         'username' => $this->member->user_name,
-                        'balanceBefore' => (float)$oldbalance,
-                        'balanceAfter' => (float)$this->member->balance,
-                        'timestampMillis' => now()->getTimestampMs()
+                        'balanceBefore' => (float) $oldbalance,
+                        'balanceAfter' => (float) $this->member->balance,
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
 
                     $session_in['input'] = $item;
@@ -886,16 +862,14 @@ class NinjaSlotNewController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     $id = GameLogProxy::create($session_in)->id;
 
-                    $checkData->con_4 = 'unsettle_' . $id;
+                    $checkData->con_4 = 'unsettle_'.$id;
                     $checkData->save();
 
-                    GameLogProxy::where('con_4', 'settle_' . $checkData['_id'])->update(['con_4' => null]);
-
+                    GameLogProxy::where('con_4', 'settle_'.$checkData['_id'])->update(['con_4' => null]);
 
                 }
 
             }
-
 
         } else {
 
@@ -904,11 +878,10 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -918,7 +891,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -941,8 +913,8 @@ class NinjaSlotNewController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -981,18 +953,16 @@ class NinjaSlotNewController extends AppBaseController
                         ->latest('created_at')
                         ->first();
 
-
                     if ($checkDup) {
 
                         if ($item['betAmount'] > $this->member->balance) {
-
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1002,11 +972,9 @@ class NinjaSlotNewController extends AppBaseController
 
                             $amount = $checkDup['amount'] - $item['betAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkDup['amount']) {
+                        } elseif ($item['betAmount'] > $checkDup['amount']) {
 
                             $amount = $item['betAmount'] - $checkDup['amount'];
 
@@ -1017,8 +985,8 @@ class NinjaSlotNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1029,12 +997,12 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1067,14 +1035,14 @@ class NinjaSlotNewController extends AppBaseController
                             ->latest('created_at')
                             ->first();
 
-                        if (!$checkData) {
+                        if (! $checkData) {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$this->member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $this->member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1086,8 +1054,7 @@ class NinjaSlotNewController extends AppBaseController
 
                             $this->member->increment($this->balances, $amount);
 
-
-                        } else if ($item['betAmount'] > $checkData['amount']) {
+                        } elseif ($item['betAmount'] > $checkData['amount']) {
 
                             $amount = $item['betAmount'] - $checkData['amount'];
 
@@ -1096,8 +1063,8 @@ class NinjaSlotNewController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$this->member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $this->member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
                             }
@@ -1109,12 +1076,12 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $this->member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$this->member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1145,11 +1112,10 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
-
 
         return $param;
     }
@@ -1159,7 +1125,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1178,13 +1143,12 @@ class NinjaSlotNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$this->member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $this->member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1192,7 +1156,6 @@ class NinjaSlotNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1212,8 +1175,7 @@ class NinjaSlotNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1231,14 +1193,12 @@ class NinjaSlotNewController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$this->member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $this->member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', $this->game)
                             ->where('response', 'in')
@@ -1271,12 +1231,12 @@ class NinjaSlotNewController extends AppBaseController
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $this->member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$this->member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $this->member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1304,14 +1264,13 @@ class NinjaSlotNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1332,13 +1291,11 @@ class NinjaSlotNewController extends AppBaseController
 
                         }
 
-
                     }
 
                 } // loop
 
             }
-
 
         } else {
 
@@ -1347,7 +1304,7 @@ class NinjaSlotNewController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
@@ -1360,7 +1317,6 @@ class NinjaSlotNewController extends AppBaseController
         $param = [];
         $amount = 0;
         $session = $request->all();
-
 
         if ($this->member) {
 
@@ -1378,13 +1334,12 @@ class NinjaSlotNewController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
-                    'balance' => (float)$this->member->balance,
+                    'balance' => (float) $this->member->balance,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'productId' => $session['productId']
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1392,7 +1347,6 @@ class NinjaSlotNewController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'] - $item['betAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1412,7 +1366,7 @@ class NinjaSlotNewController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', $this->game)
                         ->where('response', 'in')
@@ -1429,9 +1383,9 @@ class NinjaSlotNewController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20003,
-                            'balance' => (float)$this->member->balance,
+                            'balance' => (float) $this->member->balance,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'productId' => $session['productId']
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -1452,26 +1406,24 @@ class NinjaSlotNewController extends AppBaseController
                         if ($datasubs) {
                             $amount = $item['betAmount'] - $item['payoutAmount'];
 
-
                             $this->member->increment($this->balances, $amount);
 
-//                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
-//                            $member = MemberProxy::where('user_name', $session['username'])->first();
+                            //                            MemberProxy::where('user_name', $session['username'])->increment('balance', $amount);
+                            //                            $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $this->member->balance += $amount;
-//                            $member->save();
+                            //                            $this->member->balance += $amount;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $this->member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$this->member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $this->member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -1495,21 +1447,18 @@ class NinjaSlotNewController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
-                                'balance' => (float)$this->member->balance,
+                                'balance' => (float) $this->member->balance,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'productId' => $session['productId']
+                                'productId' => $session['productId'],
                             ];
 
                         }
 
-
                     }
-
 
                 }
 
             }
-
 
         } else {
 
@@ -1517,13 +1466,11 @@ class NinjaSlotNewController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-
         return $param;
     }
-
 }

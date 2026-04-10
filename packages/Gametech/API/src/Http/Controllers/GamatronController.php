@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class GamatronController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -42,7 +40,6 @@ class GamatronController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['launchToken'], 'enable' => 'Y']);
 
         if ($member) {
@@ -50,7 +47,7 @@ class GamatronController extends AppBaseController
             $param = [
                 'errorCode' => 0,
                 'description' => 'Success',
-                'balance' => (float)$member->balance,
+                'balance' => (float) $member->balance,
                 'currency' => 'THB',
                 'playerId' => $member->user_name,
                 'sessionId' => $session['launchToken'],
@@ -58,15 +55,15 @@ class GamatronController extends AppBaseController
                     'country' => 'TH',
                     'birthDate' => '',
                     'gender' => 'male',
-                    'alias' => $member->user_name
-                ]
+                    'alias' => $member->user_name,
+                ],
             ];
 
         } else {
 
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
 
         }
@@ -74,21 +71,18 @@ class GamatronController extends AppBaseController
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['playerId'], 'enable' => 'Y']);
         if ($member) {
-
 
             $param = [
                 'errorCode' => 0,
                 'description' => 'Success',
-                'balance' => (float)$member->balance,
-                'currency' => 'THB'
+                'balance' => (float) $member->balance,
+                'currency' => 'THB',
             ];
 
             $session_in['input'] = $session;
@@ -108,16 +102,14 @@ class GamatronController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
 
         }
-
 
         return $param;
     }
@@ -125,7 +117,6 @@ class GamatronController extends AppBaseController
     public function transferOut(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['playerId'], 'enable' => 'Y']);
         if ($member) {
@@ -146,9 +137,8 @@ class GamatronController extends AppBaseController
 
                 $param = [
                     'errorCode' => 200,
-                    'description' => 'Transaction Declined'
+                    'description' => 'Transaction Declined',
                 ];
-
 
             } else {
 
@@ -161,8 +151,8 @@ class GamatronController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'description' => 'Success',
-                        'balance' => (float)$member->balance,
-                        'currency' => 'THB'
+                        'balance' => (float) $member->balance,
+                        'currency' => 'THB',
                     ];
 
                     $session_in['input'] = $session;
@@ -182,12 +172,11 @@ class GamatronController extends AppBaseController
                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                     GameLogProxy::create($session_in);
 
-
                 } else {
 
                     $param = [
                         'errorCode' => 201,
-                        'description' => 'Insufficient funds'
+                        'description' => 'Insufficient funds',
                     ];
 
                 }
@@ -211,16 +200,14 @@ class GamatronController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
 
         }
-
 
         return $param;
     }
@@ -228,7 +215,6 @@ class GamatronController extends AppBaseController
     public function transferIn(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['playerId'], 'enable' => 'Y']);
         if ($member) {
@@ -243,14 +229,13 @@ class GamatronController extends AppBaseController
                 ->whereNull('con_4')
                 ->first();
 
-
             $oldbalance = $member->balance;
 
             if ($data) {
 
                 $param = [
                     'errorCode' => 200,
-                    'description' => 'Transaction Declined'
+                    'description' => 'Transaction Declined',
                 ];
 
             } else {
@@ -261,8 +246,8 @@ class GamatronController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'description' => 'Success',
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
                 ];
 
                 $session_in['input'] = $session;
@@ -301,15 +286,13 @@ class GamatronController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
         }
-
 
         return $param;
     }
@@ -317,7 +300,6 @@ class GamatronController extends AppBaseController
     public function withdrawDeposit(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['playerId'], 'enable' => 'Y']);
         if ($member) {
@@ -339,7 +321,7 @@ class GamatronController extends AppBaseController
 
                 $param = [
                     'errorCode' => 200,
-                    'description' => 'Transaction Declined'
+                    'description' => 'Transaction Declined',
                 ];
 
             } else {
@@ -356,8 +338,8 @@ class GamatronController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'description' => 'Success',
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
                 ];
 
                 $session_in['input'] = $session;
@@ -396,15 +378,13 @@ class GamatronController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
         }
-
 
         return $param;
     }
@@ -412,7 +392,6 @@ class GamatronController extends AppBaseController
     public function cancelBet(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['session_id' => $session['sessionId'], 'user_name' => $session['playerId'], 'enable' => 'Y']);
         if ($member) {
@@ -434,7 +413,7 @@ class GamatronController extends AppBaseController
 
                 $param = [
                     'errorCode' => 200,
-                    'description' => 'Transaction Declined'
+                    'description' => 'Transaction Declined',
                 ];
 
             } else {
@@ -449,18 +428,15 @@ class GamatronController extends AppBaseController
                     ->whereNull('con_4')
                     ->get();
 
-
                 if (count($datasubs) > 0) {
 
                     foreach ($datasubs as $datasub) {
-
 
                         if ($datasub['method'] == 'bet') {
 
                             $amount += $datasub['input']['amount'];
                             $member->balance += $datasub['input']['amount'];
                             $member->save();
-
 
                         } elseif ($datasub['method'] == 'payout') {
 
@@ -469,7 +445,6 @@ class GamatronController extends AppBaseController
 
                             $member->balance -= $datasub['input']['amount'];
                             $member->save();
-
 
                         } elseif ($datasub['method'] == 'withdrawDeposit') {
 
@@ -486,8 +461,8 @@ class GamatronController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'description' => 'Success',
-                        'balance' => (float)$member->balance,
-                        'currency' => 'THB'
+                        'balance' => (float) $member->balance,
+                        'currency' => 'THB',
                     ];
 
                     $session_in['input'] = $session;
@@ -511,7 +486,7 @@ class GamatronController extends AppBaseController
 
                     $param = [
                         'errorCode' => 200,
-                        'description' => 'Transaction Declined'
+                        'description' => 'Transaction Declined',
                     ];
 
                 }
@@ -535,22 +510,15 @@ class GamatronController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'errorCode' => 103,
-                'description' => 'Session Expired'
+                'description' => 'Session Expired',
             ];
         }
-
 
         return $param;
     }
 
-    public function lists(Request $request)
-    {
-
-    }
-
-
+    public function lists(Request $request) {}
 }

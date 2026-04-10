@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class WmCasinoController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -37,7 +35,6 @@ class WmCasinoController extends AppBaseController
 
         $this->gameUserRepository = $gameUserRepo;
     }
-
 
     public function verify(Request $request)
     {
@@ -52,17 +49,17 @@ class WmCasinoController extends AppBaseController
                     'player_name' => $member->user_name,
                     'nickname' => $member->user_name,
                     'currency' => 'THB',
-                    'reminder_time' => now()->timestamp
+                    'reminder_time' => now()->timestamp,
                 ],
-                'error' => null
+                'error' => null,
             ];
         } else {
             $param = [
                 'data' => null,
                 'error' => [
                     'code' => 3004,
-                    'message' => "Player isn't exist"
-                ]
+                    'message' => "Player isn't exist",
+                ],
             ];
         }
 
@@ -73,7 +70,6 @@ class WmCasinoController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -81,10 +77,9 @@ class WmCasinoController extends AppBaseController
             $param = [
                 'errorCode' => 0,
                 'result' => [
-                    'balance' => (float)$member->balance
-                ]
+                    'balance' => (float) $member->balance,
+                ],
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -109,7 +104,6 @@ class WmCasinoController extends AppBaseController
                 'errorMessage' => 'No such account was found, please check',
             ];
         }
-
 
         return $param;
     }
@@ -140,12 +134,11 @@ class WmCasinoController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
             } else {
-
 
                 $datasub = GameLogProxy::where('company', 'WM')
                     ->where('response', 'in')
@@ -162,10 +155,9 @@ class WmCasinoController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'result' => [
-                            'balance' => (float)$member->balance
-                        ]
+                            'balance' => (float) $member->balance,
+                        ],
                     ];
-
 
                 } else {
 
@@ -174,15 +166,14 @@ class WmCasinoController extends AppBaseController
                         MemberProxy::where('user_name', $session['username'])->decrement('balance', $session['amount']);
                         $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                        $member->balance -= $session['amount'];
-//                        $member->save();
+                        //                        $member->balance -= $session['amount'];
+                        //                        $member->save();
 
                         $param = [
                             'errorCode' => 0,
                             'result' => [
-                                'balance' => (float)$member->balance
-                            ]
+                                'balance' => (float) $member->balance,
+                            ],
                         ];
 
                         $session_in['input'] = $session;
@@ -209,7 +200,6 @@ class WmCasinoController extends AppBaseController
                         ];
                     }
                 }
-
 
             }
 
@@ -238,7 +228,6 @@ class WmCasinoController extends AppBaseController
             ];
 
         }
-
 
         return $param;
     }
@@ -269,8 +258,8 @@ class WmCasinoController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
             } else {
@@ -290,17 +279,16 @@ class WmCasinoController extends AppBaseController
                     MemberProxy::where('user_name', $session['username'])->increment('balance', $session['amount']);
                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                    $member->balance += $session['amount'];
-//                    $member->save();
+                    //                    $member->balance += $session['amount'];
+                    //                    $member->save();
 
                 }
 
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -319,7 +307,6 @@ class WmCasinoController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -349,7 +336,6 @@ class WmCasinoController extends AppBaseController
 
         }
 
-
         return $param;
     }
 
@@ -364,35 +350,35 @@ class WmCasinoController extends AppBaseController
 
             $oldbalance = $member->balance;
 
-//            $balance = ($member->balance + $session['amount']);
-//
-//
-//            $member->balance += $session['amount'];
-//            $member->save();
-//
-//            $param = [
-//                'errorCode' => 0,
-//                'result' => [
-//                    'balance' => (float)$member->balance
-//                ]
-//            ];
-//
-//            $session_in['input'] = $session;
-//            $session_in['output'] = $param;
-//            $session_in['company'] = 'WM';
-//            $session_in['game_user'] = $member->user_name;
-//            $session_in['method'] = 'refund';
-//            $session_in['response'] = 'in';
-//            $session_in['amount'] = $session['amount'];
-//            $session_in['con_1'] = $session['betId'];
-//            $session_in['con_2'] = $session['roundId'];
-//            $session_in['con_3'] = $session['gameId'];
-//            $session_in['con_4'] = null;
-//            $session_in['before_balance'] = $oldbalance;
-//            $session_in['after_balance'] = $member->balance;
-//            $session_in['date_create'] = now()->toDateTimeString();
-//            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//            GameLogProxy::create($session_in);
+            //            $balance = ($member->balance + $session['amount']);
+            //
+            //
+            //            $member->balance += $session['amount'];
+            //            $member->save();
+            //
+            //            $param = [
+            //                'errorCode' => 0,
+            //                'result' => [
+            //                    'balance' => (float)$member->balance
+            //                ]
+            //            ];
+            //
+            //            $session_in['input'] = $session;
+            //            $session_in['output'] = $param;
+            //            $session_in['company'] = 'WM';
+            //            $session_in['game_user'] = $member->user_name;
+            //            $session_in['method'] = 'refund';
+            //            $session_in['response'] = 'in';
+            //            $session_in['amount'] = $session['amount'];
+            //            $session_in['con_1'] = $session['betId'];
+            //            $session_in['con_2'] = $session['roundId'];
+            //            $session_in['con_3'] = $session['gameId'];
+            //            $session_in['con_4'] = null;
+            //            $session_in['before_balance'] = $oldbalance;
+            //            $session_in['after_balance'] = $member->balance;
+            //            $session_in['date_create'] = now()->toDateTimeString();
+            //            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+            //            GameLogProxy::create($session_in);
 
             $data = GameLogProxy::where('company', 'WM')
                 ->where('response', 'in')
@@ -409,12 +395,11 @@ class WmCasinoController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
             } else {
-
 
                 $datasub = GameLogProxy::where('company', 'WM')
                     ->where('response', 'in')
@@ -435,17 +420,16 @@ class WmCasinoController extends AppBaseController
                     MemberProxy::where('user_name', $session['username'])->increment('balance', $datasub['amount']);
                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                    $member->balance += $session['amount'];
-//                    $member->save();
-
+                    //                    $member->balance += $session['amount'];
+                    //                    $member->save();
 
                 }
 
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
                 $session_in['input'] = $session;
@@ -464,7 +448,6 @@ class WmCasinoController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -494,9 +477,6 @@ class WmCasinoController extends AppBaseController
 
         }
 
-
         return $param;
     }
-
-
 }

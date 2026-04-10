@@ -623,6 +623,8 @@
     - `open` ล่าสุด
     - ถ้าไม่มี `open` ค่อยใช้ non-draft ล่าสุด
   - ห้ามชี้ไปที่ `draft`
+  - ลำดับ `markets` ในแต่ละ `group` ต้องเรียงตาม `latest_draw.close_at` จากน้อยไปมาก
+    - ถ้า `close_at` ว่าง ให้ไปท้ายรายการ
   - `latest_draw.status/status_label` สำหรับหน้าเลือกหวยใช้ mapping:
     - `open` -> `แทงหวย`
     - `closed` -> `รอผล`

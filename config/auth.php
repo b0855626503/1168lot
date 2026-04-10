@@ -1,5 +1,8 @@
 <?php
 
+use Gametech\Admin\Models\Admin;
+use Gametech\Member\Models\Member;
+
 return [
 
     /*
@@ -41,14 +44,14 @@ return [
             'provider' => 'users',
         ],
 
-        'customer' =>[
+        'customer' => [
             'driver' => 'session',
-            'provider' => 'users'
+            'provider' => 'users',
         ],
 
         'admin' => [
             'driver' => 'session',
-            'provider' => 'admins'
+            'provider' => 'admins',
         ],
 
         'api' => [
@@ -78,13 +81,13 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => Gametech\Member\Models\Member::class,
+            'model' => Member::class,
         ],
 
         'admins' => [
             'driver' => 'eloquent',
-            'model' => Gametech\Admin\Models\Admin::class,
-        ]
+            'model' => Admin::class,
+        ],
 
         // 'users' => [
         //     'driver' => 'database',

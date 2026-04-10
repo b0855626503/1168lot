@@ -101,10 +101,10 @@ return [
                 // ช่วยเวลาเริ่มเชื่อมต่อครั้งแรก
                 'serverSelectionTryOnce' => false,
                 'serverSelectionTimeoutMS' => 10000,
-                'connectTimeoutMS'         => 3000,
-                'socketTimeoutMS'          => 10000,
-                'retryReads'               => true,
-                'retryWrites'              => true,
+                'connectTimeoutMS' => 3000,
+                'socketTimeoutMS' => 10000,
+                'retryReads' => true,
+                'retryWrites' => true,
             ],
         ],
     ],
@@ -141,7 +141,6 @@ return [
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
-
 
         'default' => [
             'scheme' => 'tcp',

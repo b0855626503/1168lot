@@ -9,7 +9,7 @@ use MongoDB\BSON\UTCDateTime;
 
 trait LogSeamlessOld
 {
-    public static function log($product, $username, $item, $beforebalance, $afterbalance,$update=true)
+    public static function log($product, $username, $item, $beforebalance, $afterbalance, $update = true)
     {
         try {
             $date = 5;
@@ -113,12 +113,11 @@ trait LogSeamlessOld
                 }
             }
 
-            if($update){
+            if ($update) {
                 GameData::updateOrCreate($where, $common);
-            }else{
+            } else {
                 GameData::create($common);
             }
-
 
         } catch (\Exception $e) {
             Log::error('LogSeamless failed', [

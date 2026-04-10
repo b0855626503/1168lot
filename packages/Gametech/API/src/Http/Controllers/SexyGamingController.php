@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class SexyGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -42,7 +40,7 @@ class SexyGamingController extends AppBaseController
     {
         $param = [
             'code' => 50100,
-            'msg' => 'Acct Not Found'
+            'msg' => 'Acct Not Found',
         ];
 
         $session = $request->all();
@@ -51,10 +49,9 @@ class SexyGamingController extends AppBaseController
         $session['subdata'] = $message;
         $goto = $message->action;
 
-        $path = storage_path('logs/seamless/sexy' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/sexy'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- index --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
-
 
         switch ($goto) {
             case 'authorize':
@@ -107,29 +104,25 @@ class SexyGamingController extends AppBaseController
                 'acctInfo' => [
                     'acctId' => $user->user_name,
                     'userName' => $user->user_name,
-                    'balance' => (float)$user->balance,
-                    'currency' => 'THB'
-                ]
+                    'balance' => (float) $user->balance,
+                    'currency' => 'THB',
+                ],
             ];
-
 
         } else {
             $param = [
                 'code' => '50100',
-                'msg' => 'Acct Not Found'
+                'msg' => 'Acct Not Found',
             ];
         }
-
 
         return $param;
 
     }
 
-
     public function getBalance($session)
     {
         $session['userId'] = $session['subdata']->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -138,8 +131,8 @@ class SexyGamingController extends AppBaseController
             $param = [
                 'status' => '0000',
                 'userId' => $member->user_name,
-                'balance' => (string)$member->balance,
-                'balanceTs' => now()->toIso8601String()
+                'balance' => (string) $member->balance,
+                'balanceTs' => now()->toIso8601String(),
             ];
 
             $session_in['input'] = $session;
@@ -159,15 +152,14 @@ class SexyGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
         }
 
-        $path = storage_path('logs/seamless/sexy' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/sexy'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- getbalance --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
 
@@ -205,8 +197,8 @@ class SexyGamingController extends AppBaseController
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
                     break;
 
@@ -226,55 +218,53 @@ class SexyGamingController extends AppBaseController
 
                         $param = [
                             'status' => '0000',
-                            'balance' => (string)$member->balance,
-                            'balanceTs' => now()->toIso8601String()
+                            'balance' => (string) $member->balance,
+                            'balanceTs' => now()->toIso8601String(),
                         ];
 
                     } else {
-
 
                         $balance = ($oldbalance - $session['betAmount']);
                         if ($balance >= 0) {
 
                             MemberProxy::where('user_name', $session['userId'])->decrement('balance', $session['betAmount']);
-//
+                            //
                             $member = MemberProxy::where('user_name', $session['userId'])->first();
 
-//                            $member->balance -= $session['betAmount'];
-//                            $member->save();
+                            //                            $member->balance -= $session['betAmount'];
+                            //                            $member->save();
 
                             $param = [
                                 'status' => '0000',
-                                'balance' => (string)$member->balance,
-                                'balanceTs' => now()->toIso8601String()
+                                'balance' => (string) $member->balance,
+                                'balanceTs' => now()->toIso8601String(),
                             ];
-
 
                         } else {
 
                             $param = [
                                 'status' => '1018',
-                                'desc' => 'Not Enough Balance'
+                                'desc' => 'Not Enough Balance',
                             ];
                             break;
                         }
 
-//                        $session_in['input'] = $session;
-//                        $session_in['output'] = $param;
-//                        $session_in['company'] = 'SEXY';
-//                        $session_in['game_user'] = $member->user_name;
-//                        $session_in['method'] = 'bet';
-//                        $session_in['response'] = 'in';
-//                        $session_in['amount'] = $session['betAmount'];
-//                        $session_in['con_1'] = $txns->platformTxId;
-//                        $session_in['con_2'] = $txns->roundId;
-//                        $session_in['con_3'] = $txns->gameCode;
-//                        $session_in['con_4'] = null;
-//                        $session_in['before_balance'] = $oldbalance;
-//                        $session_in['after_balance'] = $member->balance;
-//                        $session_in['date_create'] = now()->toDateTimeString();
-//                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                        GameLogProxy::create($session_in);
+                        //                        $session_in['input'] = $session;
+                        //                        $session_in['output'] = $param;
+                        //                        $session_in['company'] = 'SEXY';
+                        //                        $session_in['game_user'] = $member->user_name;
+                        //                        $session_in['method'] = 'bet';
+                        //                        $session_in['response'] = 'in';
+                        //                        $session_in['amount'] = $session['betAmount'];
+                        //                        $session_in['con_1'] = $txns->platformTxId;
+                        //                        $session_in['con_2'] = $txns->roundId;
+                        //                        $session_in['con_3'] = $txns->gameCode;
+                        //                        $session_in['con_4'] = null;
+                        //                        $session_in['before_balance'] = $oldbalance;
+                        //                        $session_in['after_balance'] = $member->balance;
+                        //                        $session_in['date_create'] = now()->toDateTimeString();
+                        //                        $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                        GameLogProxy::create($session_in);
 
                     }
 
@@ -316,7 +306,7 @@ class SexyGamingController extends AppBaseController
             } else {
                 $param = [
                     'status' => '1000',
-                    'desc' => 'Invalid user Id'
+                    'desc' => 'Invalid user Id',
                 ];
             }
         }
@@ -331,11 +321,9 @@ class SexyGamingController extends AppBaseController
 
         foreach ($txnss as $txns) {
 
-
             $session['userId'] = $txns->userId;
             $session['winAmount'] = $txns->winAmount;
             $session['winLoss'] = $txns->gameInfo->winLoss;
-
 
             $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -357,21 +345,21 @@ class SexyGamingController extends AppBaseController
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
                     break;
 
                 } else {
 
                     MemberProxy::where('user_name', $session['userId'])->increment('balance', $session['winAmount']);
-//
+                    //
                     $member = MemberProxy::where('user_name', $session['userId'])->first();
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
 
                     $session_in['input'] = $session;
@@ -410,11 +398,10 @@ class SexyGamingController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
             } else {
                 $param = [
                     'status' => '1000',
-                    'desc' => 'Invalid user Id'
+                    'desc' => 'Invalid user Id',
                 ];
             }
 
@@ -428,7 +415,6 @@ class SexyGamingController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -450,8 +436,8 @@ class SexyGamingController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
             } else {
@@ -473,18 +459,18 @@ class SexyGamingController extends AppBaseController
                     $amountsub = $datasub['amount'];
 
                     MemberProxy::where('user_name', $session['userId'])->increment('balance', $amountsub);
-//
+                    //
                     $member = MemberProxy::where('user_name', $session['userId'])->first();
 
-//                    $member->balance += $amountsub;
-//                    $member->save();
+                    //                    $member->balance += $amountsub;
+                    //                    $member->save();
 
                 }
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
                 $session_in['input'] = $session;
@@ -527,11 +513,10 @@ class SexyGamingController extends AppBaseController
 
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
 
         }
-
 
         return $param;
     }
@@ -541,7 +526,6 @@ class SexyGamingController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -563,8 +547,8 @@ class SexyGamingController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
             } else {
@@ -581,7 +565,6 @@ class SexyGamingController extends AppBaseController
                     ->whereNull('con_4')
                     ->first();
 
-
                 if ($datasub) {
 
                     GameLogProxy::where('company', 'SEXY')
@@ -596,40 +579,40 @@ class SexyGamingController extends AppBaseController
 
                     $amountsub = $datasub->amount;
 
-//                    $balance = ($oldbalance - $amountsub);
-//                    if ($balance >= 0) {
-//
-//                        $member->balance -= $amountsub;
-//                        $member->save();
-//
-//                        $param = [
-//                            'status' => '0000',
-//                            'balance' => (string)$member->balance,
-//                            'balanceTs' => now()->toIso8601String()
-//                        ];
-//
-//
-//
-//                    } else {
-//
-//                        $param = [
-//                            'status' => '0000',
-//                            'balance' => '0',
-//                            'balanceTs' => now()->toIso8601String()
-//                        ];
-//
-//                    }
+                    //                    $balance = ($oldbalance - $amountsub);
+                    //                    if ($balance >= 0) {
+                    //
+                    //                        $member->balance -= $amountsub;
+                    //                        $member->save();
+                    //
+                    //                        $param = [
+                    //                            'status' => '0000',
+                    //                            'balance' => (string)$member->balance,
+                    //                            'balanceTs' => now()->toIso8601String()
+                    //                        ];
+                    //
+                    //
+                    //
+                    //                    } else {
+                    //
+                    //                        $param = [
+                    //                            'status' => '0000',
+                    //                            'balance' => '0',
+                    //                            'balanceTs' => now()->toIso8601String()
+                    //                        ];
+                    //
+                    //                    }
 
                     MemberProxy::where('user_name', $session['userId'])->decrement('balance', $amountsub);
-//
+                    //
                     $member = MemberProxy::where('user_name', $session['userId'])->first();
-//                    $member->balance -= $amountsub;
-//                    $member->save();
+                    //                    $member->balance -= $amountsub;
+                    //                    $member->save();
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
 
                     $session_in['input'] = $session;
@@ -653,8 +636,8 @@ class SexyGamingController extends AppBaseController
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
 
                     $session_in['input'] = $session;
@@ -675,7 +658,6 @@ class SexyGamingController extends AppBaseController
                     GameLogProxy::create($session_in);
 
                 }
-
 
             }
 
@@ -700,11 +682,10 @@ class SexyGamingController extends AppBaseController
 
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
 
         }
-
 
         return $param;
     }
@@ -714,7 +695,6 @@ class SexyGamingController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -736,23 +716,23 @@ class SexyGamingController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
             } else {
 
                 MemberProxy::where('user_name', $session['userId'])->increment('balance', $txns->betAmount);
-//
+                //
                 $member = MemberProxy::where('user_name', $session['userId'])->first();
 
-//                $member->balance += $txns->betAmount;
-//                $member->save();
+                //                $member->balance += $txns->betAmount;
+                //                $member->save();
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
                 $session_in['input'] = $session;
@@ -771,7 +751,6 @@ class SexyGamingController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -792,16 +771,14 @@ class SexyGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
 
         }
-
 
         return $param;
     }
@@ -811,7 +788,6 @@ class SexyGamingController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -833,8 +809,8 @@ class SexyGamingController extends AppBaseController
 
                 $param = [
                     'status' => '0000',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
             } else {
@@ -862,16 +838,16 @@ class SexyGamingController extends AppBaseController
                         ->update(['con_4' => 'complete']);
 
                     MemberProxy::where('user_name', $session['userId'])->decrement('balance', $datasub['input']['winLoss']);
-//
+                    //
                     $member = MemberProxy::where('user_name', $session['userId'])->first();
 
-//                    $member->balance -= $datasub['input']['winLoss'];
-//                    $member->save();
+                    //                    $member->balance -= $datasub['input']['winLoss'];
+                    //                    $member->save();
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
 
                     $session_in['input'] = $session;
@@ -895,8 +871,8 @@ class SexyGamingController extends AppBaseController
 
                     $param = [
                         'status' => '0000',
-                        'balance' => (string)$member->balance,
-                        'balanceTs' => now()->toIso8601String()
+                        'balance' => (string) $member->balance,
+                        'balanceTs' => now()->toIso8601String(),
                     ];
 
                     $session_in['input'] = $session;
@@ -917,41 +893,41 @@ class SexyGamingController extends AppBaseController
                     GameLogProxy::create($session_in);
                 }
 
-//                $balance = ($oldbalance - $txns->betAmount);
-//                if ($balance >= 0) {
-//                    $member->balance -= $txns->betAmount;
-//                    $member->save();
-//
-//                    $param = [
-//                        'status' => '0000',
-//                        'balance' => (string)$member->balance,
-//                        'balanceTs' => now()->toIso8601String()
-//                    ];
-//
-//                    $session_in['input'] = $session;
-//                    $session_in['output'] = $param;
-//                    $session_in['company'] = 'SEXY';
-//                    $session_in['game_user'] = $member->user_name;
-//                    $session_in['method'] = 'voidsettle';
-//                    $session_in['response'] = 'in';
-//                    $session_in['amount'] = $txns->betAmount;
-//                    $session_in['con_1'] = $txns->platformTxId;
-//                    $session_in['con_2'] = $txns->roundId;
-//                    $session_in['con_3'] = $txns->gameCode;
-//                    $session_in['con_4'] = null;
-//                    $session_in['before_balance'] = $oldbalance;
-//                    $session_in['after_balance'] = $member->balance;
-//                    $session_in['date_create'] = now()->toDateTimeString();
-//                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                    GameLogProxy::create($session_in);
-//
-//                } else {
-//
-//                    $param = [
-//                        'status' => '1018',
-//                        'desc' => 'Not Enough Balance'
-//                    ];
-//                }
+                //                $balance = ($oldbalance - $txns->betAmount);
+                //                if ($balance >= 0) {
+                //                    $member->balance -= $txns->betAmount;
+                //                    $member->save();
+                //
+                //                    $param = [
+                //                        'status' => '0000',
+                //                        'balance' => (string)$member->balance,
+                //                        'balanceTs' => now()->toIso8601String()
+                //                    ];
+                //
+                //                    $session_in['input'] = $session;
+                //                    $session_in['output'] = $param;
+                //                    $session_in['company'] = 'SEXY';
+                //                    $session_in['game_user'] = $member->user_name;
+                //                    $session_in['method'] = 'voidsettle';
+                //                    $session_in['response'] = 'in';
+                //                    $session_in['amount'] = $txns->betAmount;
+                //                    $session_in['con_1'] = $txns->platformTxId;
+                //                    $session_in['con_2'] = $txns->roundId;
+                //                    $session_in['con_3'] = $txns->gameCode;
+                //                    $session_in['con_4'] = null;
+                //                    $session_in['before_balance'] = $oldbalance;
+                //                    $session_in['after_balance'] = $member->balance;
+                //                    $session_in['date_create'] = now()->toDateTimeString();
+                //                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                //                    GameLogProxy::create($session_in);
+                //
+                //                } else {
+                //
+                //                    $param = [
+                //                        'status' => '1018',
+                //                        'desc' => 'Not Enough Balance'
+                //                    ];
+                //                }
 
             }
 
@@ -972,16 +948,14 @@ class SexyGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
 
         }
-
 
         return $param;
     }
@@ -991,7 +965,6 @@ class SexyGamingController extends AppBaseController
 
         $txns = $session['subdata']->txns[0];
         $session['userId'] = $txns->userId;
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['userId'], 'enable' => 'Y']);
 
@@ -1014,12 +987,11 @@ class SexyGamingController extends AppBaseController
                 $param = [
                     'status' => '0000',
                     'desc' => 'success',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
             } else {
-
 
                 $member->balance += $txns->amount;
                 $member->save();
@@ -1027,8 +999,8 @@ class SexyGamingController extends AppBaseController
                 $param = [
                     'status' => '0000',
                     'desc' => 'success',
-                    'balance' => (string)$member->balance,
-                    'balanceTs' => now()->toIso8601String()
+                    'balance' => (string) $member->balance,
+                    'balanceTs' => now()->toIso8601String(),
                 ];
 
                 $session_in['input'] = $session;
@@ -1047,7 +1019,6 @@ class SexyGamingController extends AppBaseController
                 $session_in['date_create'] = now()->toDateTimeString();
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
-
 
             }
 
@@ -1068,18 +1039,15 @@ class SexyGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
 
             $param = [
                 'status' => '1000',
-                'desc' => 'Invalid user Id'
+                'desc' => 'Invalid user Id',
             ];
 
         }
 
-
         return $param;
     }
-
 }

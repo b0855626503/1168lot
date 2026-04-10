@@ -177,21 +177,21 @@ return [
     'environments' => [
         'production' => [
             'supervisor-topup' => [
-                'workers-name'  => env('APP_NAME', 'laravel') . '-topup',
-                'connection'    => 'redis',
-                'queue'         => ['topup'],
-                'balance'       => 'simple',   // หรือคง 'auto' + min/max > 1 ก็ได้
-                'minProcesses'  => 1,          // เดิม 1
-                'maxProcesses'  => 1,          // เดิม 1
-                'tries'         => 1,          // เดิม 0 (ไม่จำกัด) → กำหนดให้ชัด
-                'timeout'       => 60,         // ให้สอดคล้อง Job::$timeout
-                'sleep'         => 1,          // ลด latency ตอนคิวฟ้าแลบ
-                'memory'        => 128,
+                'workers-name' => env('APP_NAME', 'laravel').'-topup',
+                'connection' => 'redis',
+                'queue' => ['topup'],
+                'balance' => 'simple',   // หรือคง 'auto' + min/max > 1 ก็ได้
+                'minProcesses' => 1,          // เดิม 1
+                'maxProcesses' => 1,          // เดิม 1
+                'tries' => 1,          // เดิม 0 (ไม่จำกัด) → กำหนดให้ชัด
+                'timeout' => 60,         // ให้สอดคล้อง Job::$timeout
+                'sleep' => 1,          // ลด latency ตอนคิวฟ้าแลบ
+                'memory' => 128,
             ],
 
             // 🏦 broadcast แยกไว้โอเคแล้ว
             'supervisor-1' => [
-                'workers-name' => env('APP_NAME', 'laravel') . '-broadcasts',
+                'workers-name' => env('APP_NAME', 'laravel').'-broadcasts',
                 'connection' => 'redis',
                 'queue' => ['broadcasts'],
                 'balance' => 'simple',
@@ -205,21 +205,21 @@ return [
 
             // 📅 แยก kbank ออกจากงานรายวันถ้าต้องการความไว (ตัวเลือกแนะนำ)
             'supervisor-kbank' => [
-                'workers-name'  => env('APP_NAME', 'laravel') . '-kbank',
-                'connection'    => 'redis',
-                'queue'         => ['kbank'],
-                'balance'       => 'simple',
-                'minProcesses'  => 1,
-                'maxProcesses'  => 1,
-                'tries'         => 1,
-                'timeout'       => 60,
-                'sleep'         => 1,
-                'memory'        => 128,
+                'workers-name' => env('APP_NAME', 'laravel').'-kbank',
+                'connection' => 'redis',
+                'queue' => ['kbank'],
+                'balance' => 'simple',
+                'minProcesses' => 1,
+                'maxProcesses' => 1,
+                'tries' => 1,
+                'timeout' => 60,
+                'sleep' => 1,
+                'memory' => 128,
             ],
 
             // 📅 งานเบา รายวัน / batch อื่น ๆ
             'supervisor-daily' => [
-                'workers-name' => env('APP_NAME', 'laravel') . '-daily',
+                'workers-name' => env('APP_NAME', 'laravel').'-daily',
                 'connection' => 'redis',
                 'queue' => ['cashback', 'ic'],
                 'balance' => 'simple',

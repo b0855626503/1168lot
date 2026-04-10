@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class MicroGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -42,40 +40,36 @@ class MicroGamingController extends AppBaseController
 
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['playerId'], 'enable' => 'Y']);
 
         if ($member) {
 
             $param = [
-                'balance' => (float)$member->balance,
-                'currency' => 'THB'
+                'balance' => (float) $member->balance,
+                'currency' => 'THB',
             ];
 
         } else {
             $param = [
-                "code" => 404,
-                "message" => "player not found"
+                'code' => 404,
+                'message' => 'player not found',
             ];
         }
 
         return $param;
     }
 
-
     public function getBalance(Request $request)
     {
         $session = $request->all();
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['playerId'], 'enable' => 'Y']);
 
         if ($member) {
 
-
             $param = [
-                'balance' => (float)$member->balance,
-                'currency' => 'THB'
+                'balance' => (float) $member->balance,
+                'currency' => 'THB',
             ];
 
             $session_in['input'] = $session;
@@ -95,14 +89,12 @@ class MicroGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
-                "code" => 404,
-                "message" => "player not found"
+                'code' => 404,
+                'message' => 'player not found',
             ];
         }
-
 
         return $param;
     }
@@ -125,16 +117,16 @@ class MicroGamingController extends AppBaseController
     public function transferOut($session)
     {
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['playerId'], 'enable' => 'Y']);
 
         if ($member) {
 
             if ($session['amount'] < 0) {
                 $param = [
-                    "code" => 400,
-                    "message" => "Bad request"
+                    'code' => 400,
+                    'message' => 'Bad request',
                 ];
+
                 return $param;
             }
 
@@ -155,8 +147,8 @@ class MicroGamingController extends AppBaseController
 
                 $param = [
                     'extTxnId' => $session['txnId'],
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
                 ];
 
             } else {
@@ -175,8 +167,8 @@ class MicroGamingController extends AppBaseController
 
                     $param = [
                         'extTxnId' => $session['txnId'],
-                        'balance' => (float)$member->balance,
-                        'currency' => 'THB'
+                        'balance' => (float) $member->balance,
+                        'currency' => 'THB',
                     ];
 
                     $session_in['input'] = $session;
@@ -188,7 +180,7 @@ class MicroGamingController extends AppBaseController
                     $session_in['amount'] = $session['amount'];
                     $session_in['con_1'] = $session['txnId'];
                     $session_in['con_2'] = $session['betId'];
-//                    $session_in['con_2'] = null;
+                    //                    $session_in['con_2'] = null;
                     $session_in['con_3'] = null;
                     $session_in['con_4'] = null;
                     $session_in['before_balance'] = $oldbalance;
@@ -199,7 +191,6 @@ class MicroGamingController extends AppBaseController
 
                 } else {
 
-
                     $balance = ($oldbalance - $session['amount']);
 
                     if ($balance >= 0) {
@@ -209,8 +200,8 @@ class MicroGamingController extends AppBaseController
 
                         $param = [
                             'extTxnId' => $session['txnId'],
-                            'balance' => (float)$member->balance,
-                            'currency' => 'THB'
+                            'balance' => (float) $member->balance,
+                            'currency' => 'THB',
                         ];
 
                         $session_in['input'] = $session;
@@ -222,7 +213,7 @@ class MicroGamingController extends AppBaseController
                         $session_in['amount'] = $session['amount'];
                         $session_in['con_1'] = $session['txnId'];
                         $session_in['con_2'] = $session['betId'];
-//                        $session_in['con_2'] = null;
+                        //                        $session_in['con_2'] = null;
                         $session_in['con_3'] = null;
                         $session_in['con_4'] = null;
                         $session_in['before_balance'] = $oldbalance;
@@ -231,42 +222,39 @@ class MicroGamingController extends AppBaseController
                         $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                         GameLogProxy::create($session_in);
 
-
                     } else {
 
                         $param = [
-                            "code" => 402,
-                            "message" => "Not enough available balance"
+                            'code' => 402,
+                            'message' => 'Not enough available balance',
                         ];
                     }
                 }
             }
 
-//            $session_in['input'] = $session;
-//            $session_in['output'] = $param;
-//            $session_in['company'] = 'MICROGAMING';
-//            $session_in['game_user'] = $member->user_name;
-//            $session_in['method'] = 'bet';
-//            $session_in['response'] = 'out';
-//            $session_in['amount'] = $session['amount'];
-//            $session_in['con_1'] = $session['txnId'];
-//            $session_in['con_2'] = null;
-//            $session_in['con_3'] = null;
-//            $session_in['con_4'] = null;
-//            $session_in['before_balance'] = $oldbalance;
-//            $session_in['after_balance'] = $member->balance;
-//            $session_in['date_create'] = now()->toDateTimeString();
-//            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//            GameLogProxy::create($session_in);
-
+            //            $session_in['input'] = $session;
+            //            $session_in['output'] = $param;
+            //            $session_in['company'] = 'MICROGAMING';
+            //            $session_in['game_user'] = $member->user_name;
+            //            $session_in['method'] = 'bet';
+            //            $session_in['response'] = 'out';
+            //            $session_in['amount'] = $session['amount'];
+            //            $session_in['con_1'] = $session['txnId'];
+            //            $session_in['con_2'] = null;
+            //            $session_in['con_3'] = null;
+            //            $session_in['con_4'] = null;
+            //            $session_in['before_balance'] = $oldbalance;
+            //            $session_in['after_balance'] = $member->balance;
+            //            $session_in['date_create'] = now()->toDateTimeString();
+            //            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+            //            GameLogProxy::create($session_in);
 
         } else {
             $param = [
-                "code" => 404,
-                "message" => "player not found"
+                'code' => 404,
+                'message' => 'player not found',
             ];
         }
-
 
         return $param;
     }
@@ -274,16 +262,16 @@ class MicroGamingController extends AppBaseController
     public function transferIn($session)
     {
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['playerId'], 'enable' => 'Y']);
 
         if ($member) {
 
             if ($session['amount'] < 0) {
                 $param = [
-                    "code" => 400,
-                    "message" => "Bad request"
+                    'code' => 400,
+                    'message' => 'Bad request',
                 ];
+
                 return $param;
             }
 
@@ -304,8 +292,8 @@ class MicroGamingController extends AppBaseController
 
                 $param = [
                     'extTxnId' => $session['txnId'],
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
                 ];
 
             } else {
@@ -338,20 +326,19 @@ class MicroGamingController extends AppBaseController
                     if ($datasubs) {
 
                         $param = [
-                            "code" => 404,
-                            "message" => "player/transaction not found"
+                            'code' => 404,
+                            'message' => 'player/transaction not found',
                         ];
 
                     } else {
-
 
                         $member->balance += $session['amount'];
                         $member->save();
 
                         $param = [
                             'extTxnId' => $session['txnId'],
-                            'balance' => (float)$member->balance,
-                            'currency' => 'THB'
+                            'balance' => (float) $member->balance,
+                            'currency' => 'THB',
                         ];
 
                         $session_in['input'] = $session;
@@ -363,7 +350,7 @@ class MicroGamingController extends AppBaseController
                         $session_in['amount'] = $session['amount'];
                         $session_in['con_1'] = $session['txnId'];
                         $session_in['con_2'] = $session['betId'];
-//                    $session_in['con_2'] = null;
+                        //                    $session_in['con_2'] = null;
                         $session_in['con_3'] = null;
                         $session_in['con_4'] = null;
                         $session_in['before_balance'] = $oldbalance;
@@ -376,39 +363,37 @@ class MicroGamingController extends AppBaseController
                 } else {
 
                     $param = [
-                        "code" => 404,
-                        "message" => "player/transaction not found"
+                        'code' => 404,
+                        'message' => 'player/transaction not found',
                     ];
 
                 }
 
             }
 
-//            $session_in['input'] = $session;
-//            $session_in['output'] = $param;
-//            $session_in['company'] = 'MICROGAMING';
-//            $session_in['game_user'] = $member->user_name;
-//            $session_in['method'] = 'payout';
-//            $session_in['response'] = 'out';
-//            $session_in['amount'] = $session['amount'];
-//            $session_in['con_1'] = $session['txnId'];
-//            $session_in['con_2'] = null;
-//            $session_in['con_3'] = null;
-//            $session_in['con_4'] = null;
-//            $session_in['before_balance'] = $oldbalance;
-//            $session_in['after_balance'] = $member->balance;
-//            $session_in['date_create'] = now()->toDateTimeString();
-//            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//            GameLogProxy::create($session_in);
-
+            //            $session_in['input'] = $session;
+            //            $session_in['output'] = $param;
+            //            $session_in['company'] = 'MICROGAMING';
+            //            $session_in['game_user'] = $member->user_name;
+            //            $session_in['method'] = 'payout';
+            //            $session_in['response'] = 'out';
+            //            $session_in['amount'] = $session['amount'];
+            //            $session_in['con_1'] = $session['txnId'];
+            //            $session_in['con_2'] = null;
+            //            $session_in['con_3'] = null;
+            //            $session_in['con_4'] = null;
+            //            $session_in['before_balance'] = $oldbalance;
+            //            $session_in['after_balance'] = $member->balance;
+            //            $session_in['date_create'] = now()->toDateTimeString();
+            //            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+            //            GameLogProxy::create($session_in);
 
         } else {
             $param = [
-                "code" => 404,
-                "message" => "player not found"
+                'code' => 404,
+                'message' => 'player not found',
             ];
         }
-
 
         return $param;
     }
@@ -417,16 +402,16 @@ class MicroGamingController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['playerId'], 'enable' => 'Y']);
 
         if ($member) {
 
             if ($session['amount'] < 0) {
                 $param = [
-                    "code" => 400,
-                    "message" => "Bad request"
+                    'code' => 400,
+                    'message' => 'Bad request',
                 ];
+
                 return $param;
             }
 
@@ -446,8 +431,8 @@ class MicroGamingController extends AppBaseController
 
                 $param = [
                     'extTxnId' => $session['txnId'],
-                    'balance' => (float)$member->balance,
-                    'currency' => 'THB'
+                    'balance' => (float) $member->balance,
+                    'currency' => 'THB',
                 ];
 
             } else {
@@ -466,7 +451,6 @@ class MicroGamingController extends AppBaseController
 
                 if ($datasub) {
 
-
                     $datasubs = GameLogProxy::where('company', 'MICROGAMING')
                         ->where('response', 'in')
                         ->where('game_user', $member->user_name)
@@ -482,8 +466,8 @@ class MicroGamingController extends AppBaseController
                     if ($datasubs) {
 
                         $param = [
-                            "code" => 404,
-                            "message" => "player/transaction not found"
+                            'code' => 404,
+                            'message' => 'player/transaction not found',
                         ];
 
                     } else {
@@ -491,23 +475,22 @@ class MicroGamingController extends AppBaseController
                         $member->balance += $datasub['amount'];
                         $member->save();
 
-
-//                    if ($datasub['method'] == 'bet') {
-//
-//                        $member->balance += $session['amount'];
-//                        $member->save();
-//
-//                    } elseif ($datasub['method'] == 'payout') {
-//
-//                        $member->balance -= $session['amount'];
-//                        $member->save();
-//
-//                    }
+                        //                    if ($datasub['method'] == 'bet') {
+                        //
+                        //                        $member->balance += $session['amount'];
+                        //                        $member->save();
+                        //
+                        //                    } elseif ($datasub['method'] == 'payout') {
+                        //
+                        //                        $member->balance -= $session['amount'];
+                        //                        $member->save();
+                        //
+                        //                    }
 
                         $param = [
                             'extTxnId' => $session['txnId'],
-                            'balance' => (float)$member->balance,
-                            'currency' => 'THB'
+                            'balance' => (float) $member->balance,
+                            'currency' => 'THB',
                         ];
 
                         $session_in['input'] = $session;
@@ -542,8 +525,8 @@ class MicroGamingController extends AppBaseController
 
                     $param = [
                         'extTxnId' => $session['txnId'],
-                        'balance' => (float)$member->balance,
-                        'currency' => 'THB'
+                        'balance' => (float) $member->balance,
+                        'currency' => 'THB',
                     ];
 
                     $session_in['input'] = $session;
@@ -584,21 +567,15 @@ class MicroGamingController extends AppBaseController
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
 
-
         } else {
             $param = [
-                "code" => 404,
-                "message" => "player not found"
+                'code' => 404,
+                'message' => 'player not found',
             ];
         }
 
         return $param;
     }
 
-    public function lists(Request $request)
-    {
-
-    }
-
-
+    public function lists(Request $request) {}
 }

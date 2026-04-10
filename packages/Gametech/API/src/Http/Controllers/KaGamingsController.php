@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Models\MemberProxy;
@@ -23,10 +22,9 @@ class KaGamingsController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -38,7 +36,6 @@ class KaGamingsController extends AppBaseController
         $this->gameUserRepository = $gameUserRepo;
     }
 
-
     public function transaction(Request $request)
     {
         $param = [];
@@ -48,11 +45,11 @@ class KaGamingsController extends AppBaseController
                 'id' => $session['id'],
                 'statusCode' => 40003,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
+
             return $param;
         }
-
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
         if ($member) {
@@ -77,7 +74,7 @@ class KaGamingsController extends AppBaseController
                         'id' => $session['id'],
                         'statusCode' => 20002,
                         'productId' => $session['productId'],
-                        'timestampMillis' => now()->getTimestampMs()
+                        'timestampMillis' => now()->getTimestampMs(),
                     ];
                     break;
 
@@ -100,9 +97,9 @@ class KaGamingsController extends AppBaseController
                             'productId' => $session['productId'],
                             'timestampMillis' => now()->getTimestampMs(),
                             'currency' => 'THB',
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'username' => $session['username']
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'username' => $session['username'],
                         ];
 
                         $session_in['input'] = $session;
@@ -127,7 +124,7 @@ class KaGamingsController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 10002,
                             'productId' => $session['productId'],
-                            'timestampMillis' => now()->getTimestampMs()
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
                         break;
                     }
@@ -153,24 +150,21 @@ class KaGamingsController extends AppBaseController
 
             }
 
-
         } else {
 
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 10001,
                 'productId' => $session['productId'],
-                'timestampMillis' => now()->getTimestampMs()
+                'timestampMillis' => now()->getTimestampMs(),
             ];
 
         }
 
-
-        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        $path = storage_path('logs/seamless/KAGAME'.now()->format('Y_m_d').'.log');
         file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($session, true), FILE_APPEND);
         file_put_contents($path, print_r($param, true), FILE_APPEND);
-
 
         return $param;
     }
@@ -179,7 +173,6 @@ class KaGamingsController extends AppBaseController
     {
         $session = $request->all();
 
-
         $member = $this->memberRepository->findOneWhere(['user_name' => $session['username'], 'enable' => 'Y']);
 
         if ($member) {
@@ -187,13 +180,12 @@ class KaGamingsController extends AppBaseController
             $param = [
                 'id' => $session['id'],
                 'statusCode' => 0,
-                'currency' => "THB",
+                'currency' => 'THB',
                 'productId' => $session['productId'],
                 'username' => $member->user_name,
-                'balance' => (float)$member->balance,
-                'timestampMillis' => now()->getTimestampMs()
+                'balance' => (float) $member->balance,
+                'timestampMillis' => now()->getTimestampMs(),
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -218,14 +210,14 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- GET BALANCE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -258,8 +250,8 @@ class KaGamingsController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -285,9 +277,8 @@ class KaGamingsController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['betAmount'];
+                    //                    $amount += $item['betAmount'];
 
                     $data_sub = GameLogProxy::where('company', 'KAGAME')
                         ->where('response', 'in')
@@ -306,16 +297,15 @@ class KaGamingsController extends AppBaseController
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                     } else {
-
 
                         $datasub = GameLogProxy::where('company', 'KAGAME')
                             ->where('response', 'in')
@@ -334,8 +324,8 @@ class KaGamingsController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -350,19 +340,19 @@ class KaGamingsController extends AppBaseController
                             if ($balance >= 0) {
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance', abs($item['betAmount']));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-//                                $member->balance = $balance;
-//                                $member->save();
+                                //
+                                //                                $member->balance = $balance;
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                             } else {
@@ -371,8 +361,8 @@ class KaGamingsController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
@@ -427,16 +417,15 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- BET --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -466,13 +455,12 @@ class KaGamingsController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -480,7 +468,6 @@ class KaGamingsController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -500,7 +487,7 @@ class KaGamingsController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'KAGAME')
                         ->where('response', 'in')
@@ -515,18 +502,16 @@ class KaGamingsController extends AppBaseController
 
                     if ($datasub) {
 
-                        if($datasub['con_4'] == 'complete'){
+                        if ($datasub['con_4'] == 'complete') {
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
                         }
-
-
 
                         $datasub_s = GameLogProxy::where('company', 'KAGAME')
                             ->where('response', 'in')
@@ -545,13 +530,12 @@ class KaGamingsController extends AppBaseController
                                 'id' => $session['id'],
                                 'statusCode' => 20003,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         } else {
-
 
                             $datasubs = GameLogProxy::where('company', 'KAGAME')
                                 ->where('response', 'in')
@@ -566,52 +550,50 @@ class KaGamingsController extends AppBaseController
 
                             if ($datasubs) {
 
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 0,
-//                                    'currency' => "THB",
-//                                    'productId' => $session['productId'],
-//                                    'username' => $member->user_name,
-//                                    'balanceBefore' => (float)$oldbalance,
-//                                    'balanceAfter' => (float)$member->balance,
-//                                    'timestampMillis' => now()->getTimestampMs()
-//                                ];
+                                //                                $param = [
+                                //                                    'id' => $session['id'],
+                                //                                    'statusCode' => 0,
+                                //                                    'currency' => "THB",
+                                //                                    'productId' => $session['productId'],
+                                //                                    'username' => $member->user_name,
+                                //                                    'balanceBefore' => (float)$oldbalance,
+                                //                                    'balanceAfter' => (float)$member->balance,
+                                //                                    'timestampMillis' => now()->getTimestampMs()
+                                //                                ];
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 20002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
-
                             } else {
 
-//                            $datasub_s = GameLogProxy::where('company', 'KAGAME')
-//                                ->where('response', 'in')
-//                                ->where('game_user', $member->user_name)
-//                                ->where('method', 'unsettlesub')
-//                                ->where('con_1', $item['id'])
-//                                ->where('con_2', $item['roundId'])
-//                                ->where('con_3', $item['txnId'])
-//                                ->whereNull('con_4')
-//                                ->first();
-//
-//
-//                            if ($datasub_s) {
-//
-//                                $param = [
-//                                    'id' => $session['id'],
-//                                    'statusCode' => 20003,
-//                                    'timestampMillis' => now()->getTimestampMs(),
-//                                    'productId' => $session['productId']
-//                                ];
-//                                break;
-//
-//                            } else {
-
+                                //                            $datasub_s = GameLogProxy::where('company', 'KAGAME')
+                                //                                ->where('response', 'in')
+                                //                                ->where('game_user', $member->user_name)
+                                //                                ->where('method', 'unsettlesub')
+                                //                                ->where('con_1', $item['id'])
+                                //                                ->where('con_2', $item['roundId'])
+                                //                                ->where('con_3', $item['txnId'])
+                                //                                ->whereNull('con_4')
+                                //                                ->first();
+                                //
+                                //
+                                //                            if ($datasub_s) {
+                                //
+                                //                                $param = [
+                                //                                    'id' => $session['id'],
+                                //                                    'statusCode' => 20003,
+                                //                                    'timestampMillis' => now()->getTimestampMs(),
+                                //                                    'productId' => $session['productId']
+                                //                                ];
+                                //                                break;
+                                //
+                                //                            } else {
 
                                 if ($item['payoutAmount'] >= 0) {
                                     $amount = ($member->balance + $item['payoutAmount']);
@@ -623,20 +605,19 @@ class KaGamingsController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->increment('balance', abs($item['payoutAmount']));
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                                    $member->balance = $amount;
-//                                    $member->save();
+                                    //                                    $member->balance = $amount;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
-
 
                                     $session_in['input'] = $item;
                                     $session_in['output'] = $param;
@@ -661,25 +642,24 @@ class KaGamingsController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 20001,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
                                 }
-//                            }
-
+                                //                            }
 
                             }
 
-//                        $datasub_s = GameLogProxy::where('company', 'KAGAME')
-//                            ->where('response', 'in')
-//                            ->where('game_user', $member->user_name)
-//                            ->where('method', 'refundsub')
-//                            ->where('con_1', $item['id'])
-//                            ->where('con_2', $item['roundId'])
-//                            ->where('con_3', $item['txnId'])
-//                            ->whereNull('con_4');
+                            //                        $datasub_s = GameLogProxy::where('company', 'KAGAME')
+                            //                            ->where('response', 'in')
+                            //                            ->where('game_user', $member->user_name)
+                            //                            ->where('method', 'refundsub')
+                            //                            ->where('con_1', $item['id'])
+                            //                            ->where('con_2', $item['roundId'])
+                            //                            ->where('con_3', $item['txnId'])
+                            //                            ->whereNull('con_4');
                         }
 
                     } else {
@@ -688,8 +668,8 @@ class KaGamingsController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20001,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -723,16 +703,15 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- PAY --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -762,13 +741,12 @@ class KaGamingsController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -794,7 +772,6 @@ class KaGamingsController extends AppBaseController
                 $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                 GameLogProxy::create($session_in);
 
-
                 foreach ($session['txns'] as $item) {
 
                     $datasub = GameLogProxy::where('company', 'KAGAME')
@@ -810,13 +787,12 @@ class KaGamingsController extends AppBaseController
 
                     if ($datasub) {
 
-
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
@@ -841,12 +817,12 @@ class KaGamingsController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -878,7 +854,6 @@ class KaGamingsController extends AppBaseController
 
                         } else {
 
-
                             $datasubs = GameLogProxy::where('company', 'KAGAME')
                                 ->where('response', 'in')
                                 ->where('game_user', $member->user_name)
@@ -897,8 +872,8 @@ class KaGamingsController extends AppBaseController
                                     'id' => $session['id'],
                                     'statusCode' => 20004,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance,
+                                    'productId' => $session['productId'],
                                 ];
                                 break;
 
@@ -921,15 +896,14 @@ class KaGamingsController extends AppBaseController
 
                                 if ($datasubss) {
 
-//                                    if($datasubss['amount'] == $item['betAmount']){
-//                                        $amountsub = $datasubss['amount'];
-//                                    }else{
-//                                        $amountsub = $datasubss['amount'];
-//                                    }
+                                    //                                    if($datasubss['amount'] == $item['betAmount']){
+                                    //                                        $amountsub = $datasubss['amount'];
+                                    //                                    }else{
+                                    //                                        $amountsub = $datasubss['amount'];
+                                    //                                    }
                                     $amountsub = $datasubss['amount'];
 
-//                                $member->balance += $datasubss['amount'];
-
+                                    //                                $member->balance += $datasubss['amount'];
 
                                     MemberProxy::where('user_name', $session['username'])->increment('balance', $amountsub);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
@@ -937,12 +911,12 @@ class KaGamingsController extends AppBaseController
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -974,19 +948,19 @@ class KaGamingsController extends AppBaseController
                                         ->latest('id')
                                         ->update(['con_4' => 'complete']);
 
-//                                $member->save();
+                                    //                                $member->save();
 
                                 } else {
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1006,23 +980,21 @@ class KaGamingsController extends AppBaseController
                                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                                     GameLogProxy::create($session_in);
 
-//                                    $param = [
-//                                        'id' => $session['id'],
-//                                        'statusCode' => 20001,
-//                                        'timestampMillis' => now()->getTimestampMs(),
-//                                        'balance' => (float)$member->balance,
-//                                        'productId' => $session['productId']
-//                                    ];
+                                    //                                    $param = [
+                                    //                                        'id' => $session['id'],
+                                    //                                        'statusCode' => 20001,
+                                    //                                        'timestampMillis' => now()->getTimestampMs(),
+                                    //                                        'balance' => (float)$member->balance,
+                                    //                                        'productId' => $session['productId']
+                                    //                                    ];
                                     break;
 
                                 }
-
 
                             }
 
                         }
                     }
-
 
                 }
             }
@@ -1051,16 +1023,15 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- CANCEL --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1094,8 +1065,8 @@ class KaGamingsController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20002,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1136,7 +1107,7 @@ class KaGamingsController extends AppBaseController
                             ->latest('id')
                             ->first();
 
-                        if (!$datasub_main) {
+                        if (! $datasub_main) {
 
                             MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['betAmount']);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
@@ -1144,12 +1115,12 @@ class KaGamingsController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             $session_in['input'] = $item;
@@ -1186,7 +1157,6 @@ class KaGamingsController extends AppBaseController
 
                     }
 
-
                     $datasub = GameLogProxy::where('company', 'KAGAME')
                         ->where('response', 'in')
                         ->where('game_user', $member->user_name)
@@ -1201,18 +1171,18 @@ class KaGamingsController extends AppBaseController
 
                     if ($datasub) {
 
-//                        MemberProxy::where('user_name', $session['username'])->increment('balance', $item['payoutAmount']);
-//                        $member = MemberProxy::where('user_name', $session['username'])->first();
+                        //                        MemberProxy::where('user_name', $session['username'])->increment('balance', $item['payoutAmount']);
+                        //                        $member = MemberProxy::where('user_name', $session['username'])->first();
 
                         $param = [
                             'id' => $session['id'],
                             'statusCode' => 0,
-                            'currency' => "THB",
+                            'currency' => 'THB',
                             'productId' => $session['productId'],
                             'username' => $member->user_name,
-                            'balanceBefore' => (float)$oldbalance,
-                            'balanceAfter' => (float)$member->balance,
-                            'timestampMillis' => now()->getTimestampMs()
+                            'balanceBefore' => (float) $oldbalance,
+                            'balanceAfter' => (float) $member->balance,
+                            'timestampMillis' => now()->getTimestampMs(),
                         ];
 
                         $session_in['input'] = $item;
@@ -1246,9 +1216,7 @@ class KaGamingsController extends AppBaseController
 
                         break;
 
-
                     }
-
 
                     $datasubs = GameLogProxy::where('company', 'KAGAME')
                         ->where('response', 'in')
@@ -1267,14 +1235,13 @@ class KaGamingsController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
 
                         break;
 
                     } else {
-
 
                         $datasubss = GameLogProxy::where('company', 'KAGAME')
                             ->where('response', 'in')
@@ -1289,7 +1256,6 @@ class KaGamingsController extends AppBaseController
 
                         if ($datasubss) {
 
-
                             $balance = ($member->balance - $datasubss['amount']);
 
                             if ($balance >= 0) {
@@ -1297,16 +1263,15 @@ class KaGamingsController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->decrement('balance', $datasubss['amount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1337,15 +1302,14 @@ class KaGamingsController extends AppBaseController
                                     ->latest('id')
                                     ->update(['con_4' => 'complete']);
 
-
                             } else {
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 10002,
                                     'timestampMillis' => now()->getTimestampMs(),
-                                    'balance' => (float)$member->balance,
-                                    'productId' => $session['productId']
+                                    'balance' => (float) $member->balance,
+                                    'productId' => $session['productId'],
                                 ];
 
                                 break;
@@ -1374,19 +1338,18 @@ class KaGamingsController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance', $item['payoutAmount']);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                            $member->balance -= $item['payoutAmount'];
-//                            $member->save();
+                                    //                            $member->balance -= $item['payoutAmount'];
+                                    //                            $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1406,7 +1369,6 @@ class KaGamingsController extends AppBaseController
                                     $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                                     GameLogProxy::create($session_in);
 
-
                                     GameLogProxy::where('company', 'KAGAME')
                                         ->where('response', 'in')
                                         ->where('game_user', $member->user_name)
@@ -1419,15 +1381,14 @@ class KaGamingsController extends AppBaseController
                                         ->latest('id')
                                         ->update(['con_4' => 'complete']);
 
-
                                 } else {
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
 
                                     break;
@@ -1436,75 +1397,73 @@ class KaGamingsController extends AppBaseController
                             }
                         }
 
-
-//                                $datasubss = GameLogProxy::where('company', 'KAGAME')
-//                                    ->where('response', 'in')
-//                                    ->where('game_user', $member->user_name)
-//                                    ->where('method', 'betsub')
-//                                    ->where('con_1', $item['id'])
-//                                    ->where('con_2', $item['roundId'])
-//                                    ->where('con_3', $item['txnId'])
-//                                    ->whereNull('con_4')
-//                                    ->first();
-//
-//                                if ($datasubss) {
-//
-//                                    MemberProxy::where('user_name', $session['username'])->increment('balance', $datasubss['amount']);
-//                                    $member = MemberProxy::where('user_name', $session['username'])->first();
-//
-//                                    $param = [
-//                                        'id' => $session['id'],
-//                                        'statusCode' => 0,
-//                                        'currency' => "THB",
-//                                        'productId' => $session['productId'],
-//                                        'username' => $member->user_name,
-//                                        'balanceBefore' => (float)$oldbalance,
-//                                        'balanceAfter' => (float)$member->balance,
-//                                        'timestampMillis' => now()->getTimestampMs()
-//                                    ];
-//
-//                                    $session_in['input'] = $item;
-//                                    $session_in['output'] = $param;
-//                                    $session_in['company'] = 'KAGAME';
-//                                    $session_in['game_user'] = $member->user_name;
-//                                    $session_in['method'] = 'unsettlesub';
-//                                    $session_in['response'] = 'in';
-//                                    $session_in['amount'] = $datasubss['amount'];
-//                                    $session_in['con_1'] = $item['id'];
-//                                    $session_in['con_2'] = $item['roundId'];
-//                                    $session_in['con_3'] = $item['txnId'];
-//                                    $session_in['con_4'] = null;
-//                                    $session_in['before_balance'] = $oldbalance;
-//                                    $session_in['after_balance'] = $member->balance;
-//                                    $session_in['date_create'] = now()->toDateTimeString();
-//                                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                                    GameLogProxy::create($session_in);
-//
-//                                    GameLogProxy::where('company', 'KAGAME')
-//                                        ->where('response', 'in')
-//                                        ->where('game_user', $member->user_name)
-//                                        ->where('method', 'betsub')
-//                                        ->where('amount', $datasubss['amount'])
-//                                        ->where('con_1', $item['id'])
-//                                        ->where('con_2', $item['roundId'])
-//                                        ->where('con_3', $item['txnId'])
-//                                        ->whereNull('con_4')
-//                                        ->update(['con_4' => 'complete']);
-//
-//                                } else {
-//
-//                                    $param = [
-//                                        'id' => $session['id'],
-//                                        'statusCode' => 20001,
-//                                        'timestampMillis' => now()->getTimestampMs(),
-//                                        'balance' => (float)$member->balance,
-//                                        'productId' => $session['productId']
-//                                    ];
-//
-//                                    break;
-//
-//                                }
-
+                        //                                $datasubss = GameLogProxy::where('company', 'KAGAME')
+                        //                                    ->where('response', 'in')
+                        //                                    ->where('game_user', $member->user_name)
+                        //                                    ->where('method', 'betsub')
+                        //                                    ->where('con_1', $item['id'])
+                        //                                    ->where('con_2', $item['roundId'])
+                        //                                    ->where('con_3', $item['txnId'])
+                        //                                    ->whereNull('con_4')
+                        //                                    ->first();
+                        //
+                        //                                if ($datasubss) {
+                        //
+                        //                                    MemberProxy::where('user_name', $session['username'])->increment('balance', $datasubss['amount']);
+                        //                                    $member = MemberProxy::where('user_name', $session['username'])->first();
+                        //
+                        //                                    $param = [
+                        //                                        'id' => $session['id'],
+                        //                                        'statusCode' => 0,
+                        //                                        'currency' => "THB",
+                        //                                        'productId' => $session['productId'],
+                        //                                        'username' => $member->user_name,
+                        //                                        'balanceBefore' => (float)$oldbalance,
+                        //                                        'balanceAfter' => (float)$member->balance,
+                        //                                        'timestampMillis' => now()->getTimestampMs()
+                        //                                    ];
+                        //
+                        //                                    $session_in['input'] = $item;
+                        //                                    $session_in['output'] = $param;
+                        //                                    $session_in['company'] = 'KAGAME';
+                        //                                    $session_in['game_user'] = $member->user_name;
+                        //                                    $session_in['method'] = 'unsettlesub';
+                        //                                    $session_in['response'] = 'in';
+                        //                                    $session_in['amount'] = $datasubss['amount'];
+                        //                                    $session_in['con_1'] = $item['id'];
+                        //                                    $session_in['con_2'] = $item['roundId'];
+                        //                                    $session_in['con_3'] = $item['txnId'];
+                        //                                    $session_in['con_4'] = null;
+                        //                                    $session_in['before_balance'] = $oldbalance;
+                        //                                    $session_in['after_balance'] = $member->balance;
+                        //                                    $session_in['date_create'] = now()->toDateTimeString();
+                        //                                    $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                                    GameLogProxy::create($session_in);
+                        //
+                        //                                    GameLogProxy::where('company', 'KAGAME')
+                        //                                        ->where('response', 'in')
+                        //                                        ->where('game_user', $member->user_name)
+                        //                                        ->where('method', 'betsub')
+                        //                                        ->where('amount', $datasubss['amount'])
+                        //                                        ->where('con_1', $item['id'])
+                        //                                        ->where('con_2', $item['roundId'])
+                        //                                        ->where('con_3', $item['txnId'])
+                        //                                        ->whereNull('con_4')
+                        //                                        ->update(['con_4' => 'complete']);
+                        //
+                        //                                } else {
+                        //
+                        //                                    $param = [
+                        //                                        'id' => $session['id'],
+                        //                                        'statusCode' => 20001,
+                        //                                        'timestampMillis' => now()->getTimestampMs(),
+                        //                                        'balance' => (float)$member->balance,
+                        //                                        'productId' => $session['productId']
+                        //                                    ];
+                        //
+                        //                                    break;
+                        //
+                        //                                }
 
                     }
                 }
@@ -1535,16 +1494,15 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- UNSETTLE --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1578,8 +1536,8 @@ class KaGamingsController extends AppBaseController
                     'id' => $session['id'],
                     'statusCode' => 20001,
                     'timestampMillis' => now()->getTimestampMs(),
-                    'balance' => (float)$member->balance,
-                    'productId' => $session['productId']
+                    'balance' => (float) $member->balance,
+                    'productId' => $session['productId'],
                 ];
 
             } else {
@@ -1624,29 +1582,29 @@ class KaGamingsController extends AppBaseController
 
                         $newbalance = $member->balance - $adjust;
 
-                        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+                        $path = storage_path('logs/seamless/KAGAME'.now()->format('Y_m_d').'.log');
                         file_put_contents($path, print_r('-- CAL ADJUST --', true), FILE_APPEND);
-                        file_put_contents($path, print_r($item['betAmount'] . ' - ' . $datasub['amount'], true), FILE_APPEND);
+                        file_put_contents($path, print_r($item['betAmount'].' - '.$datasub['amount'], true), FILE_APPEND);
 
-//                        if ($adjust >= 0) {
+                        //                        if ($adjust >= 0) {
 
                         if ($newbalance >= 0) {
 
                             MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                             $member = MemberProxy::where('user_name', $session['username'])->first();
 
-//                            $member->balance = $member->balance - $adjust;
-//                            $member->save();
+                            //                            $member->balance = $member->balance - $adjust;
+                            //                            $member->save();
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
 
                             GameLogProxy::where('company', 'KAGAME')
@@ -1677,55 +1635,53 @@ class KaGamingsController extends AppBaseController
                             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
                             GameLogProxy::create($session_in);
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 10002,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
                         }
 
-//                        } else {
-//
-//                            $member->balance += abs($adjust);
-//                            $member->save();
-//
-//                            $param = [
-//                                'id' => $session['id'],
-//                                'statusCode' => 0,
-//                                'currency' => "THB",
-//                                'productId' => $session['productId'],
-//                                'username' => $member->user_name,
-//                                'balanceBefore' => (float)$oldbalance,
-//                                'balanceAfter' => (float)$member->balance,
-//                                'timestampMillis' => now()->getTimestampMs()
-//                            ];
-//
-//                            $session_in['input'] = $item;
-//                            $session_in['output'] = $param;
-//                            $session_in['company'] = 'KAGAME';
-//                            $session_in['game_user'] = $member->user_name;
-//                            $session_in['method'] = 'ajsub';
-//                            $session_in['response'] = 'in';
-//                            $session_in['amount'] = $item['betAmount'];
-//                            $session_in['con_1'] = $item['id'];
-//                            $session_in['con_2'] = $item['roundId'];
-//                            $session_in['con_3'] = $item['txnId'];
-//                            $session_in['con_4'] = null;
-//                            $session_in['before_balance'] = $oldbalance;
-//                            $session_in['after_balance'] = $member->balance;
-//                            $session_in['date_create'] = now()->toDateTimeString();
-//                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
-//                            GameLogProxy::create($session_in);
-//
-//                        }
-
+                        //                        } else {
+                        //
+                        //                            $member->balance += abs($adjust);
+                        //                            $member->save();
+                        //
+                        //                            $param = [
+                        //                                'id' => $session['id'],
+                        //                                'statusCode' => 0,
+                        //                                'currency' => "THB",
+                        //                                'productId' => $session['productId'],
+                        //                                'username' => $member->user_name,
+                        //                                'balanceBefore' => (float)$oldbalance,
+                        //                                'balanceAfter' => (float)$member->balance,
+                        //                                'timestampMillis' => now()->getTimestampMs()
+                        //                            ];
+                        //
+                        //                            $session_in['input'] = $item;
+                        //                            $session_in['output'] = $param;
+                        //                            $session_in['company'] = 'KAGAME';
+                        //                            $session_in['game_user'] = $member->user_name;
+                        //                            $session_in['method'] = 'ajsub';
+                        //                            $session_in['response'] = 'in';
+                        //                            $session_in['amount'] = $item['betAmount'];
+                        //                            $session_in['con_1'] = $item['id'];
+                        //                            $session_in['con_2'] = $item['roundId'];
+                        //                            $session_in['con_3'] = $item['txnId'];
+                        //                            $session_in['con_4'] = null;
+                        //                            $session_in['before_balance'] = $oldbalance;
+                        //                            $session_in['after_balance'] = $member->balance;
+                        //                            $session_in['date_create'] = now()->toDateTimeString();
+                        //                            $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
+                        //                            GameLogProxy::create($session_in);
+                        //
+                        //                        }
 
                     } else {
 
@@ -1753,19 +1709,18 @@ class KaGamingsController extends AppBaseController
                                     MemberProxy::where('user_name', $session['username'])->decrement('balance', $adjust);
                                     $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                    $member->balance -= $adjust;
-//                                    $member->save();
+                                    //                                    $member->balance -= $adjust;
+                                    //                                    $member->save();
 
                                     $param = [
                                         'id' => $session['id'],
                                         'statusCode' => 0,
-                                        'currency' => "THB",
+                                        'currency' => 'THB',
                                         'productId' => $session['productId'],
                                         'username' => $member->user_name,
-                                        'balanceBefore' => (float)$oldbalance,
-                                        'balanceAfter' => (float)$member->balance,
-                                        'timestampMillis' => now()->getTimestampMs()
+                                        'balanceBefore' => (float) $oldbalance,
+                                        'balanceAfter' => (float) $member->balance,
+                                        'timestampMillis' => now()->getTimestampMs(),
                                     ];
 
                                     $session_in['input'] = $item;
@@ -1791,8 +1746,8 @@ class KaGamingsController extends AppBaseController
                                         'id' => $session['id'],
                                         'statusCode' => 10002,
                                         'timestampMillis' => now()->getTimestampMs(),
-                                        'balance' => (float)$member->balance,
-                                        'productId' => $session['productId']
+                                        'balance' => (float) $member->balance,
+                                        'productId' => $session['productId'],
                                     ];
                                     break;
 
@@ -1803,19 +1758,18 @@ class KaGamingsController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance', abs($adjust));
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
-//                                $member->balance += abs($adjust);
-//                                $member->save();
+                                //                                $member->balance += abs($adjust);
+                                //                                $member->save();
 
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -1837,15 +1791,14 @@ class KaGamingsController extends AppBaseController
 
                             }
 
-
                         } else {
 
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 20001,
                                 'timestampMillis' => now()->getTimestampMs(),
-                                'balance' => (float)$member->balance,
-                                'productId' => $session['productId']
+                                'balance' => (float) $member->balance,
+                                'productId' => $session['productId'],
                             ];
                             break;
 
@@ -1878,16 +1831,15 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- ADJUST --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
@@ -1917,16 +1869,15 @@ class KaGamingsController extends AppBaseController
 
             if ($data) {
 
-
                 $param = [
                     'id' => $session['id'],
                     'statusCode' => 0,
-                    'currency' => "THB",
+                    'currency' => 'THB',
                     'productId' => $session['productId'],
                     'username' => $member->user_name,
-                    'balanceBefore' => (float)$oldbalance,
-                    'balanceAfter' => (float)$member->balance,
-                    'timestampMillis' => now()->getTimestampMs()
+                    'balanceBefore' => (float) $oldbalance,
+                    'balanceAfter' => (float) $member->balance,
+                    'timestampMillis' => now()->getTimestampMs(),
                 ];
 
             } else {
@@ -1934,7 +1885,6 @@ class KaGamingsController extends AppBaseController
                 foreach ($session['txns'] as $item) {
                     $amount += $item['payoutAmount'];
                 }
-
 
                 $session_in['input'] = $session;
                 $session_in['output'] = $param;
@@ -1954,8 +1904,7 @@ class KaGamingsController extends AppBaseController
                 GameLogProxy::create($session_in);
 
                 foreach ($session['txns'] as $item) {
-//                    $amount += $item['payoutAmount'];
-
+                    //                    $amount += $item['payoutAmount'];
 
                     $datasub = GameLogProxy::where('company', 'KAGAME')
                         ->where('response', 'in')
@@ -1973,14 +1922,12 @@ class KaGamingsController extends AppBaseController
                             'id' => $session['id'],
                             'statusCode' => 20002,
                             'timestampMillis' => now()->getTimestampMs(),
-                            'balance' => (float)$member->balance,
-                            'productId' => $session['productId']
+                            'balance' => (float) $member->balance,
+                            'productId' => $session['productId'],
                         ];
                         break;
 
-
                     } else {
-
 
                         $datasubs = GameLogProxy::where('company', 'KAGAME')
                             ->where('response', 'in')
@@ -2011,16 +1958,15 @@ class KaGamingsController extends AppBaseController
                                 MemberProxy::where('user_name', $session['username'])->increment('balance', $item['payoutAmount']);
                                 $member = MemberProxy::where('user_name', $session['username'])->first();
 
-
                                 $param = [
                                     'id' => $session['id'],
                                     'statusCode' => 0,
-                                    'currency' => "THB",
+                                    'currency' => 'THB',
                                     'productId' => $session['productId'],
                                     'username' => $member->user_name,
-                                    'balanceBefore' => (float)$oldbalance,
-                                    'balanceAfter' => (float)$member->balance,
-                                    'timestampMillis' => now()->getTimestampMs()
+                                    'balanceBefore' => (float) $oldbalance,
+                                    'balanceAfter' => (float) $member->balance,
+                                    'timestampMillis' => now()->getTimestampMs(),
                                 ];
 
                                 $session_in['input'] = $item;
@@ -2049,14 +1995,13 @@ class KaGamingsController extends AppBaseController
                             $param = [
                                 'id' => $session['id'],
                                 'statusCode' => 0,
-                                'currency' => "THB",
+                                'currency' => 'THB',
                                 'productId' => $session['productId'],
                                 'username' => $member->user_name,
-                                'balanceBefore' => (float)$oldbalance,
-                                'balanceAfter' => (float)$member->balance,
-                                'timestampMillis' => now()->getTimestampMs()
+                                'balanceBefore' => (float) $oldbalance,
+                                'balanceAfter' => (float) $member->balance,
+                                'timestampMillis' => now()->getTimestampMs(),
                             ];
-
 
                             $session_in['input'] = $item;
                             $session_in['output'] = $param;
@@ -2076,7 +2021,6 @@ class KaGamingsController extends AppBaseController
                             GameLogProxy::create($session_in);
 
                         }
-
 
                     }
 
@@ -2108,18 +2052,16 @@ class KaGamingsController extends AppBaseController
                 'statusCode' => 10001,
                 'timestampMillis' => now()->getTimestampMs(),
                 'balance' => 0,
-                'productId' => $session['productId']
+                'productId' => $session['productId'],
             ];
 
         }
 
-//        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
-//        file_put_contents($path, print_r($session, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        $path = storage_path('logs/seamless/KAGAME' . now()->format('Y_m_d') . '.log');
+        //        file_put_contents($path, print_r('-- WIN --', true), FILE_APPEND);
+        //        file_put_contents($path, print_r($session, true), FILE_APPEND);
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         return $param;
     }
-
 }

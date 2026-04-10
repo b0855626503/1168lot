@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Str;
 
-$app = Str::slug(env('APP_NAME','app'),'_');
+$app = Str::slug(env('APP_NAME', 'app'), '_');
 
 return [
 
@@ -76,11 +76,11 @@ return [
         ],
 
         'fanout' => [
-            'driver'      => 'redis',
-            'connection'  => 'fanout',  // ชี้ไป redis.fanout
-            'queue'      => 'broadcasts:'.$app,
+            'driver' => 'redis',
+            'connection' => 'fanout',  // ชี้ไป redis.fanout
+            'queue' => 'broadcasts:'.$app,
             'retry_after' => 90,
-            'block_for'   => null,
+            'block_for' => null,
         ],
 
     ],

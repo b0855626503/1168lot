@@ -2,7 +2,6 @@
 
 namespace Gametech\API\Http\Controllers;
 
-
 use Gametech\API\Models\GameLogProxy;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Member\Repositories\MemberRepository;
@@ -22,10 +21,9 @@ class BigGamingController extends AppBaseController
 
     public function __construct(
         BankPaymentRepository $repository,
-        MemberRepository      $memberRepo,
-        GameUserRepository    $gameUserRepo
-    )
-    {
+        MemberRepository $memberRepo,
+        GameUserRepository $gameUserRepo
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('api');
@@ -41,7 +39,7 @@ class BigGamingController extends AppBaseController
     {
         $param = [
             'code' => 50100,
-            'msg' => 'Acct Not Found'
+            'msg' => 'Acct Not Found',
         ];
 
         $session = $request->all();
@@ -81,7 +79,6 @@ class BigGamingController extends AppBaseController
         return $param;
     }
 
-
     public function verify(Request $request)
     {
         $session = $request->all();
@@ -95,17 +92,17 @@ class BigGamingController extends AppBaseController
                     'player_name' => $member->user_name,
                     'nickname' => $member->user_name,
                     'currency' => 'THB',
-                    'reminder_time' => now()->timestamp
+                    'reminder_time' => now()->timestamp,
                 ],
-                'error' => null
+                'error' => null,
             ];
         } else {
             $param = [
                 'data' => null,
                 'error' => [
                     'code' => 3004,
-                    'message' => "Player isn't exist"
-                ]
+                    'message' => "Player isn't exist",
+                ],
             ];
         }
 
@@ -121,11 +118,10 @@ class BigGamingController extends AppBaseController
 
             $param = [
                 'id' => $session['id'],
-                'result' => (float)$member->balance,
+                'result' => (float) $member->balance,
                 'error' => null,
-                'jsonrpc' => "2.0"
+                'jsonrpc' => '2.0',
             ];
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -151,18 +147,17 @@ class BigGamingController extends AppBaseController
                     'code' => 2405,
                     'message' => 'This user account does not exist',
                     'reason' => '',
-                    'action' => null
+                    'action' => null,
                 ],
                 'detail' => [
                     'cxt' => 'getbalance',
                     'method' => $session['method'],
                     'elapsed' => 1,
-                    'result' => null
+                    'result' => null,
                 ],
-                'jsonrpc' => "2.0"
+                'jsonrpc' => '2.0',
             ];
         }
-
 
         return $param;
     }
@@ -177,7 +172,6 @@ class BigGamingController extends AppBaseController
 
             $oldbalance = $member->balance;
 
-
             $balance = ($member->balance - abs($session['params']['amount']));
             if ($balance >= 0) {
 
@@ -188,12 +182,12 @@ class BigGamingController extends AppBaseController
                     'id' => $session['id'],
                     'result' => [
                         'userId' => $session['params']['userId'],
-                        'availableAmount' => (float)$member->balance,
+                        'availableAmount' => (float) $member->balance,
                         'orderResult' => 1,
-                        'tranId' => null
+                        'tranId' => null,
                     ],
                     'error' => null,
-                    'jsonrpc' => "2.0"
+                    'jsonrpc' => '2.0',
                 ];
 
                 $session_in['input'] = $session;
@@ -219,18 +213,17 @@ class BigGamingController extends AppBaseController
                         'code' => 2405,
                         'message' => 'This user account does not exist',
                         'reason' => '',
-                        'action' => null
+                        'action' => null,
                     ],
                     'detail' => [
                         'cxt' => 'placebet',
                         'method' => $session['method'],
                         'elapsed' => 1,
-                        'result' => null
+                        'result' => null,
                     ],
-                    'jsonrpc' => "2.0"
+                    'jsonrpc' => '2.0',
                 ];
             }
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -257,19 +250,18 @@ class BigGamingController extends AppBaseController
                     'code' => 2414,
                     'message' => 'Abnormal update record of fund withdrawal approval',
                     'reason' => '',
-                    'action' => null
+                    'action' => null,
                 ],
                 'detail' => [
                     'cxt' => 'placebet',
                     'method' => $session['method'],
                     'elapsed' => 1,
-                    'result' => null
+                    'result' => null,
                 ],
-                'jsonrpc' => "2.0"
+                'jsonrpc' => '2.0',
             ];
 
         }
-
 
         return $param;
     }
@@ -284,7 +276,6 @@ class BigGamingController extends AppBaseController
 
             $oldbalance = $member->balance;
 
-
             $member->balance += ($session['params']['amount']);
             $member->save();
 
@@ -292,12 +283,12 @@ class BigGamingController extends AppBaseController
                 'id' => $session['id'],
                 'result' => [
                     'userId' => $session['params']['userId'],
-                    'availableAmount' => (float)$member->balance,
+                    'availableAmount' => (float) $member->balance,
                     'orderResult' => 1,
-                    'tranId' => null
+                    'tranId' => null,
                 ],
                 'error' => null,
-                'jsonrpc' => "2.0"
+                'jsonrpc' => '2.0',
             ];
 
             $session_in['input'] = $session;
@@ -316,7 +307,6 @@ class BigGamingController extends AppBaseController
             $session_in['date_create'] = now()->toDateTimeString();
             $session_in['expireAt'] = new UTCDateTime(now()->addDays(2));
             GameLogProxy::create($session_in);
-
 
             $session_in['input'] = $session;
             $session_in['output'] = $param;
@@ -343,19 +333,18 @@ class BigGamingController extends AppBaseController
                     'code' => 2405,
                     'message' => 'This user account does not exist',
                     'reason' => '',
-                    'action' => null
+                    'action' => null,
                 ],
                 'detail' => [
                     'cxt' => 'placebet',
                     'method' => $session['method'],
                     'elapsed' => 1,
-                    'result' => null
+                    'result' => null,
                 ],
-                'jsonrpc' => "2.0"
+                'jsonrpc' => '2.0',
             ];
 
         }
-
 
         return $param;
     }
@@ -386,8 +375,8 @@ class BigGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
             } else {
@@ -401,8 +390,8 @@ class BigGamingController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'result' => [
-                            'balance' => (float)$member->balance
-                        ]
+                            'balance' => (float) $member->balance,
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -455,7 +444,6 @@ class BigGamingController extends AppBaseController
 
         }
 
-
         return $param;
     }
 
@@ -485,8 +473,8 @@ class BigGamingController extends AppBaseController
                 $param = [
                     'errorCode' => 0,
                     'result' => [
-                        'balance' => (float)$member->balance
-                    ]
+                        'balance' => (float) $member->balance,
+                    ],
                 ];
 
             } else {
@@ -500,8 +488,8 @@ class BigGamingController extends AppBaseController
                     $param = [
                         'errorCode' => 0,
                         'result' => [
-                            'balance' => (float)$member->balance
-                        ]
+                            'balance' => (float) $member->balance,
+                        ],
                     ];
 
                     $session_in['input'] = $session;
@@ -554,8 +542,6 @@ class BigGamingController extends AppBaseController
 
         }
 
-
         return $param;
     }
-
 }

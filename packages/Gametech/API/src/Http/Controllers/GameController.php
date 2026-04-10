@@ -7,7 +7,6 @@ use Gametech\Game\Repositories\GameTypeRepository;
 use Gametech\Game\Repositories\GameUserRepository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class GameController extends AppBaseController
 {
@@ -47,28 +46,28 @@ class GameController extends AppBaseController
         $method = $game_name->method;
         $transformedList = array_map(function ($item) use ($method) {
             return [
-                "id" => $item["code"],
-                "provider" => $item['product'], // ปรับจาก $item["product"] ถ้าอยาก map อัตโนมัติ
-                "providerLogo" => [
-                    "logoURL" => "",
-                    "logoMobileURL" => "",
-                    "logoTransparentURL" => ""
+                'id' => $item['code'],
+                'provider' => $item['product'], // ปรับจาก $item["product"] ถ้าอยาก map อัตโนมัติ
+                'providerLogo' => [
+                    'logoURL' => '',
+                    'logoMobileURL' => '',
+                    'logoTransparentURL' => '',
                 ],
-                "gameName" => $item["name"],
-                "gameCategory" => $method,
-                "gameType" => [$item["type"]],
-                "image" => [
-                    "vertical" => $item["img"],
-                    "horizontal" => $item["img"],
-                    "banner" => ""
+                'gameName' => $item['name'],
+                'gameCategory' => $method,
+                'gameType' => [$item['type']],
+                'image' => [
+                    'vertical' => $item['img'],
+                    'horizontal' => $item['img'],
+                    'banner' => '',
                 ],
-                "status" => $item["enable"] ? "ACTIVE" : "INACTIVE",
-                "rtp" => round(mt_rand(96000, 98000) / 1000, 8), // mock RTP
-                "online" => rand(50, 100) // mock online player count
+                'status' => $item['enable'] ? 'ACTIVE' : 'INACTIVE',
+                'rtp' => round(mt_rand(96000, 98000) / 1000, 8), // mock RTP
+                'online' => rand(50, 100), // mock online player count
             ];
         }, $gamelist);
 
-//        dd($transformedList);
+        //        dd($transformedList);
 
         return response()->json($transformedList);
     }
@@ -82,7 +81,7 @@ class GameController extends AppBaseController
             'status_open' => 'Y',
         ]);
 
-        if (!$gameType) {
+        if (! $gameType) {
             return response()->json([]);
         }
 
@@ -107,7 +106,7 @@ class GameController extends AppBaseController
                 'logoURL' => url($item['filepic']),
                 'logoTransparentURL' => url($item['filepic']),
                 'status' => $item['enable'] === 'Y' ? 'ACTIVE' : 'INACTIVE',
-                'detailStatus' => $item['status_open'] === 'Y'
+                'detailStatus' => $item['status_open'] === 'Y',
             ];
         }, $game);
 
