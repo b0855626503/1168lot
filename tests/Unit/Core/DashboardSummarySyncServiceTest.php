@@ -74,11 +74,20 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame('fallback-id', $nextPayload['source_id']);
     }
 
+    public function test_sync_bucket_chunks_risk_snapshot_upserts(): void
+    {
+        $content = file_get_contents(base_path('app/Services/Dashboard/DashboardSummarySyncService.php'));
+
+        $this->assertStringContainsString('RISK_SNAPSHOT_UPSERT_CHUNK_SIZE', $content);
+        $this->assertStringContainsString('array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE)', $content);
+        $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
+    }
+
     private function makeService(): DashboardSummarySyncService
     {
         return new DashboardSummarySyncService(
-            new DashboardBucketResolver(new DashboardWebCodeResolver()),
-            new DashboardWebCodeResolver(),
+            new DashboardBucketResolver(new DashboardWebCodeResolver),
+            new DashboardWebCodeResolver,
             Mockery::mock(DashboardSummaryProjector::class),
             Mockery::mock(DashboardSummaryBroadcastNotifier::class),
         );

@@ -13,6 +13,7 @@ class DashboardSummarySyncService
 {
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
     private const PENDING_BUCKET_KEY_PREFIX = 'dashboard:summary:pending';
+    private const RISK_SNAPSHOT_UPSERT_CHUNK_SIZE = 500;
 
     private DashboardBucketResolver $bucketResolver;
     private DashboardWebCodeResolver $webCodeResolver;
@@ -158,7 +159,7 @@ class DashboardSummarySyncService
             ? $this->webCodeResolver->resolve($requestedWebCode)
             : $this->webCodeResolver->resolve();
 
-        if (!Schema::hasTable('dashboard_summary_daily')) {
+        if (! Schema::hasTable('dashboard_summary_daily')) {
             Log::warning('Dashboard summary table does not exist; skip sync', [
                 'summary_date' => $summaryDate,
                 'web_code' => $webCode,
@@ -179,7 +180,7 @@ class DashboardSummarySyncService
             }
 
             $updateColumns = array_keys($payload);
-            $updateColumns = array_values(array_filter($updateColumns, fn ($column) => !in_array($column, ['summary_date', 'web_code'], true)));
+            $updateColumns = array_values(array_filter($updateColumns, fn ($column) => ! in_array($column, ['summary_date', 'web_code'], true)));
 
             DashboardSummaryDaily::query()->upsert(
                 [$payload],
@@ -194,8 +195,8 @@ class DashboardSummarySyncService
                 (array) ($lottoPayload['daily'] ?? []),
                 ['summary_date', 'web_code']
             );
-            if (!empty($dailyPayload) && Schema::hasTable('lotto_dashboard_summary_daily')) {
-                $updateColumns = array_values(array_filter(array_keys($dailyPayload), fn ($column) => !in_array($column, ['summary_date', 'web_code'], true)));
+            if (! empty($dailyPayload) && Schema::hasTable('lotto_dashboard_summary_daily')) {
+                $updateColumns = array_values(array_filter(array_keys($dailyPayload), fn ($column) => ! in_array($column, ['summary_date', 'web_code'], true)));
                 DB::table('lotto_dashboard_summary_daily')->upsert(
                     [$dailyPayload],
                     ['summary_date', 'web_code'],
@@ -211,13 +212,13 @@ class DashboardSummarySyncService
                         (array) $row,
                         ['summary_date', 'web_code', 'market_id', 'round_id']
                     );
-                    if (!empty($filtered)) {
+                    if (! empty($filtered)) {
                         $rows[] = $filtered;
                     }
                 }
 
-                if (!empty($rows)) {
-                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => !in_array($column, ['summary_date', 'web_code', 'market_id', 'round_id'], true)));
+                if (! empty($rows)) {
+                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['summary_date', 'web_code', 'market_id', 'round_id'], true)));
                     DB::table('lotto_dashboard_market_summary')->upsert(
                         $rows,
                         ['summary_date', 'web_code', 'market_id', 'round_id'],
@@ -234,18 +235,20 @@ class DashboardSummarySyncService
                         (array) $row,
                         ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
                     );
-                    if (!empty($filtered)) {
+                    if (! empty($filtered)) {
                         $rows[] = $filtered;
                     }
                 }
 
-                if (!empty($rows)) {
-                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => !in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
-                    DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                        $rows,
-                        ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                        $updateColumns
-                    );
+                if (! empty($rows)) {
+                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
+                    foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+                        DB::table('lotto_dashboard_risk_snapshot')->upsert(
+                            $chunk,
+                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
+                            $updateColumns
+                        );
+                    }
                 }
             }
 
@@ -261,15 +264,15 @@ class DashboardSummarySyncService
                         (array) $row,
                         ['summary_date', 'bet_type']
                     );
-                    if (!empty($filtered)) {
+                    if (! empty($filtered)) {
                         $rows[] = $filtered;
                     }
                 }
 
-                if (!empty($rows)) {
+                if (! empty($rows)) {
                     $updateColumns = array_values(array_filter(
                         array_keys($rows[0]),
-                        fn ($column) => !in_array($column, ['summary_date', 'bet_type'], true)
+                        fn ($column) => ! in_array($column, ['summary_date', 'bet_type'], true)
                     ));
                     DB::table('lotto_dashboard_bet_type_summary_daily')->upsert(
                         $rows,
@@ -291,15 +294,15 @@ class DashboardSummarySyncService
                         (array) $row,
                         ['summary_date', 'bet_type', 'number']
                     );
-                    if (!empty($filtered)) {
+                    if (! empty($filtered)) {
                         $rows[] = $filtered;
                     }
                 }
 
-                if (!empty($rows)) {
+                if (! empty($rows)) {
                     $updateColumns = array_values(array_filter(
                         array_keys($rows[0]),
-                        fn ($column) => !in_array($column, ['summary_date', 'bet_type', 'number'], true)
+                        fn ($column) => ! in_array($column, ['summary_date', 'bet_type', 'number'], true)
                     ));
                     DB::table('lotto_dashboard_bet_type_number_daily')->upsert(
                         $rows,
@@ -333,27 +336,27 @@ class DashboardSummarySyncService
     }
 
     /**
-     * @param array<string, mixed> $payload
-     * @param string[] $requiredColumns
+     * @param  array<string, mixed>  $payload
+     * @param  string[]  $requiredColumns
      * @return array<string, mixed>
      */
     private function filterPayloadByExistingColumns(string $table, array $payload, array $requiredColumns): array
     {
-        if (!Schema::hasTable($table)) {
+        if (! Schema::hasTable($table)) {
             return [];
         }
 
         $availableColumns = $this->tableColumns($table);
         $filtered = [];
         foreach ($payload as $key => $value) {
-            if (!in_array($key, $availableColumns, true)) {
+            if (! in_array($key, $availableColumns, true)) {
                 continue;
             }
             $filtered[$key] = $value;
         }
 
         foreach ($requiredColumns as $column) {
-            if (!array_key_exists($column, $filtered)) {
+            if (! array_key_exists($column, $filtered)) {
                 return [];
             }
         }
@@ -366,7 +369,7 @@ class DashboardSummarySyncService
      */
     private function tableColumns(string $table): array
     {
-        if (!array_key_exists($table, $this->columnListingCache)) {
+        if (! array_key_exists($table, $this->columnListingCache)) {
             $this->columnListingCache[$table] = Schema::hasTable($table)
                 ? Schema::getColumnListing($table)
                 : [];
@@ -393,7 +396,7 @@ class DashboardSummarySyncService
     }
 
     /**
-     * @param array<int,mixed> $sections
+     * @param  array<int,mixed>  $sections
      * @return array<int,string>
      */
     private function normalizeUpdatedSections(array $sections): array
