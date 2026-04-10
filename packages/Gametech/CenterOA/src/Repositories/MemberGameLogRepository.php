@@ -3,6 +3,7 @@
 namespace Gametech\CenterOA\Repositories;
 
 use Gametech\Core\Eloquent\Repository;
+use Gametech\Member\Models\Member;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -10,6 +11,7 @@ class MemberGameLogRepository extends Repository
 {
     protected $cacheMinutes = 0;
     protected $cacheOnly = [];
+
     /**
      * Specify Model class name
      *
@@ -17,7 +19,7 @@ class MemberGameLogRepository extends Repository
      */
     public function model(): string
     {
-        return \Gametech\Member\Models\Member::class;
+        return Member::class;
     }
 
     public function getAff($id)
@@ -52,10 +54,9 @@ class MemberGameLogRepository extends Repository
 
     public function getUser($search)
     {
-        return $this->with('user')->where('user_name',$search)->active()->orWhereHas('user', function (Builder $query) use ($search) {
-            $query->where('user_name',$search);
+        return $this->with('user')->where('user_name', $search)->active()->orWhereHas('user', function (Builder $query) use ($search) {
+            $query->where('user_name', $search);
         })->first();
-
 
     }
 
@@ -199,10 +200,9 @@ class MemberGameLogRepository extends Repository
 
     }
 
-
     public function loadBonus($id, $date_start = null, $date_stop = null)
     {
-        return $this->find($id)->bills()->active()->where('credit_bonus','>',0)->orderBy('date_create', 'desc')
+        return $this->find($id)->bills()->active()->where('credit_bonus', '>', 0)->orderBy('date_create', 'desc')
             ->select(['bills.*'])
             ->when($date_start, function ($query, $date_start) use ($date_stop) {
                 return $query->whereBetween('bills.date_create', [$date_start, $date_stop]);
@@ -241,16 +241,15 @@ class MemberGameLogRepository extends Repository
 
     }
 
-        public function loadTopup($id, $date_start = null, $date_stop = null)
-        {
-            return $this->find($id)->bankPayments()->income()->active()->orderBy('date_create', 'desc')
-                ->when($date_start, function ($query, $date_start) use ($date_stop) {
-                    return $query->whereBetween('date_create', [$date_start, $date_stop]);
-     //                return $query->whereRaw("DATE_FORMAT(date_create,'%Y-%m-%d') between ? and ?",[$date_start,$date_stop]);
-                })->limit(10)->get();
+    public function loadTopup($id, $date_start = null, $date_stop = null)
+    {
+        return $this->find($id)->bankPayments()->income()->active()->orderBy('date_create', 'desc')
+            ->when($date_start, function ($query, $date_start) use ($date_stop) {
+                return $query->whereBetween('date_create', [$date_start, $date_stop]);
+                //                return $query->whereRaw("DATE_FORMAT(date_create,'%Y-%m-%d') between ? and ?",[$date_start,$date_stop]);
+            })->limit(10)->get();
 
-
-        }
+    }
 
     public function loadDeposit($id, $date_start = null, $date_stop = null)
     {
@@ -474,12 +473,12 @@ class MemberGameLogRepository extends Repository
                 $value = Str::of($data->atranferer)->replace('*', '');
 
                 break;
-//            case 'ktb':
-//                $field = 'acc_no = ?';
-//                $acc = Str::of($data->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                $value = Str::of($acc)->replace('*', '');
-//
-//                break;
+                //            case 'ktb':
+                //                $field = 'acc_no = ?';
+                //                $acc = Str::of($data->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+                //                $value = Str::of($acc)->replace('*', '');
+                //
+                //                break;
         }
 
         $satang = $this->getSatang($data->value);
@@ -528,9 +527,9 @@ class MemberGameLogRepository extends Repository
             case 'TISCO':
                 $result = 9;
                 break;
-            //            case 'TMB':
-            //                $result = 19;
-            //                break;
+                //            case 'TMB':
+                //                $result = 19;
+                //                break;
             case 'BAY':
                 $result = 11;
                 break;

@@ -2,7 +2,6 @@
 
 namespace Gametech\CenterOA\Providers;
 
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class CenterOAServiceProvider extends ServiceProvider

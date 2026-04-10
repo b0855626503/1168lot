@@ -2,9 +2,7 @@
 
 namespace Gametech\CenterOA\Http\Controllers\Admin;
 
-
 use App\Exports\MembersExport;
-use Gametech\Admin\DataTables\MemberDataTable;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\CenterOA\Repositories\MemberGameLogRepository;
 use Gametech\Game\Repositories\GameRepository;
@@ -17,7 +15,6 @@ use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Validator;
@@ -25,7 +22,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use PragmaRX\Google2FA\Google2FA;
-
 
 class MemberGameLogController extends AppBaseController
 {
@@ -51,31 +47,23 @@ class MemberGameLogController extends AppBaseController
 
     /**
      * MemberController constructor.
-     * @param GameUserRepository $gameUserRepo
-     * @param GameRepository $gameRepo
-     * @param MemberRepository $memberRepo
-     * @param MemberCreditLogRepository $memberCreditLogRepo
-     * @param MemberPointLogRepository $memberPointLogRepo
-     * @param MemberDiamondLogRepository $memberDiamondLogRepo
-     * @param BankPaymentRepository $bankPaymentRepo
+     *
+     * @param  MemberRepository  $memberRepo
      */
-    public function __construct
-    (
-        GameUserRepository         $gameUserRepo,
-        GameRepository             $gameRepo,
-        MemberGameLogRepository           $memberRepo,
-        MemberCreditLogRepository  $memberCreditLogRepo,
-        MemberPointLogRepository   $memberPointLogRepo,
+    public function __construct(
+        GameUserRepository $gameUserRepo,
+        GameRepository $gameRepo,
+        MemberGameLogRepository $memberRepo,
+        MemberCreditLogRepository $memberCreditLogRepo,
+        MemberPointLogRepository $memberPointLogRepo,
         MemberDiamondLogRepository $memberDiamondLogRepo,
-        BankPaymentRepository      $bankPaymentRepo,
-        MemberRemarkRepository     $memberRemarkRepo
-    )
-
-    {
+        BankPaymentRepository $bankPaymentRepo,
+        MemberRemarkRepository $memberRemarkRepo
+    ) {
 
         $this->_config = request('_config');
 
-//        $this->middleware('admin');
+        //        $this->middleware('admin');
         $this->middleware(['auth', 'admin']);
 
         $this->gameUserRepository = $gameUserRepo;
@@ -94,10 +82,8 @@ class MemberGameLogController extends AppBaseController
 
         $this->memberRemarkRepository = $memberRemarkRepo;
 
-        $this->method = ['TOPUP' => Lang::get('app.status.refill') , 'WITHDRAW' => Lang::get('app.status.withdraw') , 'ROLLBACK' => Lang::get('app.status.rollback') , 'SETWALLET' => Lang::get('app.status.setwallet') , 'BONUS' => Lang::get('app.status.bonus')];
+        $this->method = ['TOPUP' => Lang::get('app.status.refill'), 'WITHDRAW' => Lang::get('app.status.withdraw'), 'ROLLBACK' => Lang::get('app.status.rollback'), 'SETWALLET' => Lang::get('app.status.setwallet'), 'BONUS' => Lang::get('app.status.bonus')];
     }
-
-
 
     public function gameLog(Request $request)
     {
@@ -149,8 +135,7 @@ class MemberGameLogController extends AppBaseController
                 break;
         }
 
-
-        $result['name'] = $member->firstname . ' ' . $member->lastname . '(' . $header . ')';
+        $result['name'] = $member->firstname.' '.$member->lastname.'('.$header.')';
         $result['list'] = $responses;
 
         return $this->sendResponseNew($result, 'complete');
@@ -162,7 +147,8 @@ class MemberGameLogController extends AppBaseController
         $games = collect($this->gameRepository->getGameUserById($id, false)->toArray())->whereNotNull('game_user');
 
         $games = $games->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'status' => '<span class="text-danger">db</span>',
                 'game_code' => $item->code,
@@ -171,14 +157,13 @@ class MemberGameLogController extends AppBaseController
                 'user_name' => $item->game_user['user_name'],
                 'user_pass' => $item->game_user['user_pass'],
                 'balance' => $item->game_user['balance'],
-                'promotion' => (!is_null($item->game_user['promotion']) ? $item->game_user['promotion']['name_th'] : '-'),
+                'promotion' => (! is_null($item->game_user['promotion']) ? $item->game_user['promotion']['name_th'] : '-'),
                 'turn' => ($item->game_user['pro_code'] > 0 ? $item->game_user['turnpro'] : '-'),
                 'amount_balance' => ($item->game_user['pro_code'] > 0 ? $item->game_user['amount_balance'] : '-'),
                 'withdraw_limit' => ($item->game_user['pro_code'] > 0 ? ($item->game_user['withdraw_limit'] > 0 ? $item->game_user['withdraw_limit'] : '-') : '-'),
-                'action' => '<button class="btn btn-xs icon-only ' . ($item->game_user['enable'] == 'Y' ? 'btn-warning' : 'btn-danger') . '" onclick="editdatasub(' . $item->game_user['code'] . "," . "'" . core()->flip($item->game_user['enable']) . "'" . "," . "'enable'" . ')">' . ($item->game_user['enable'] == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-trash"></i>') . '</button>',
-                'changepass' => '<button class="btn btn-xs icon-only btn-info" onclick="changegamepass(' . $item->game_user['code'] . ')"><i class="fa fa-edit"></i></button>',
+                'action' => '<button class="btn btn-xs icon-only '.($item->game_user['enable'] == 'Y' ? 'btn-warning' : 'btn-danger').'" onclick="editdatasub('.$item->game_user['code'].','."'".core()->flip($item->game_user['enable'])."'".','."'enable'".')">'.($item->game_user['enable'] == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-trash"></i>').'</button>',
+                'changepass' => '<button class="btn btn-xs icon-only btn-info" onclick="changegamepass('.$item->game_user['code'].')"><i class="fa fa-edit"></i></button>',
             ];
-
 
         });
 
@@ -191,7 +176,8 @@ class MemberGameLogController extends AppBaseController
         $responses = collect($this->memberCreditLogRepository->orderBy('date_create', 'desc')->findWhere(['member_code' => $id, 'kind' => 'SETWALLET', 'enable' => 'Y'])->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                 'credit_amount' => $item->total,
@@ -213,7 +199,8 @@ class MemberGameLogController extends AppBaseController
         $responses = collect(app('Gametech\Member\Repositories\MemberPointLogRepository')->orderBy('date_create', 'desc')->findWhere(['member_code' => $id, 'enable' => 'Y'])->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                 'credit_amount' => $item->point_amount,
@@ -235,7 +222,8 @@ class MemberGameLogController extends AppBaseController
         $responses = collect(app('Gametech\Member\Repositories\MemberDiamondLogRepository')->orderBy('date_create', 'desc')->findWhere(['member_code' => $id, 'enable' => 'Y'])->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                 'credit_amount' => $item->diamond_amount,
@@ -257,14 +245,15 @@ class MemberGameLogController extends AppBaseController
         $responses = collect($this->memberRepository->loadBill($id, '', '')->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
-                'id' => '#BL' . Str::of($item->code)->padLeft(8, 0),
+                'id' => '#BL'.Str::of($item->code)->padLeft(8, 0),
                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                 'amount' => $item->amount,
                 'game_name' => $item->game['name'],
                 'transfer' => $item->transfer_type == 1 ? '<span class="text-success">โยกเข้าเกม</span>' : '<span class="text-danger">โยกออกเกม</span>',
-                'status' => $item->enable == 'Y' ? '<span class="text-danger">สำเร็จ</span>' : '<span class="text-warning">ไม่สำเร็จ</span>'
+                'status' => $item->enable == 'Y' ? '<span class="text-danger">สำเร็จ</span>' : '<span class="text-warning">ไม่สำเร็จ</span>',
             ];
 
         });
@@ -275,10 +264,12 @@ class MemberGameLogController extends AppBaseController
     public function gamedeposit($id)
     {
 
-        $responses = collect($this->memberRepository->loadBillType($id,'TOPUP')->toArray());
-        if(!$responses)return [];
+        $responses = collect($this->memberRepository->loadBillType($id, 'TOPUP')->toArray());
+        if (! $responses) {
+            return [];
+        }
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
             $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
             $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel')];
             $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
@@ -307,11 +298,13 @@ class MemberGameLogController extends AppBaseController
 
     public function gamewithdraw($id)
     {
-        $responses = collect($this->memberRepository->loadBillType($id,'WITHDRAW')->toArray());
-//        $responses = collect($this->memberRepository->loadWithdraw($id, '', '')->toArray());
-        if(!$responses)return [];
+        $responses = collect($this->memberRepository->loadBillType($id, 'WITHDRAW')->toArray());
+        //        $responses = collect($this->memberRepository->loadWithdraw($id, '', '')->toArray());
+        if (! $responses) {
+            return [];
+        }
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
             $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
             $status = ['N' => Lang::get('app.status.wait'), 'Y' => Lang::get('app.status.success'), 'R' => Lang::get('app.status.cancel')];
             $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
@@ -342,7 +335,9 @@ class MemberGameLogController extends AppBaseController
     {
 
         $responses = collect($this->memberRepository->loadTopup($id));
-        if(!$responses)return [];
+        if (! $responses) {
+            return [];
+        }
         $responses = $responses->map(function ($item) {
 
             $image = ['N' => 'ic_fail', 'Y' => 'ic_success', 'R' => 'ic_fail'];
@@ -366,22 +361,23 @@ class MemberGameLogController extends AppBaseController
     {
         $banks = [
             'value' => '',
-            'text' => 'ธนาคาร'
+            'text' => 'ธนาคาร',
         ];
 
         $responses = collect(app('Gametech\Payment\Repositories\BankRepository')->all()->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'value' => $item->code,
-                'text' => $item->name_th
+                'text' => $item->name_th,
             ];
 
         })->prepend($banks);
 
-
         $result['banks'] = $responses;
+
         return $this->sendResponseNew($result, 'complete');
     }
 
@@ -389,73 +385,77 @@ class MemberGameLogController extends AppBaseController
     {
         $banks = [
             'value' => '0',
-            'text' => 'โปรดเลือก'
+            'text' => 'โปรดเลือก',
         ];
 
         $responses = collect(app('Gametech\Core\Repositories\ReferRepository')->where('enable', 'Y')->get()->toArray());
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'value' => $item->code,
-                'text' => $item->name
+                'text' => $item->name,
             ];
 
         })->prepend($banks);
 
-
         $result['refers'] = $responses;
+
         return $this->sendResponseNew($result, 'complete');
     }
 
     public function loadAf(Request $request)
     {
         $code = $request->input('af');
-//        dd($af);
+        //        dd($af);
         $member = app('Gametech\Member\Repositories\MemberRepository')->where('user_name', $code)->where('enable', 'Y')->first();
-        if(!$member){
+        if (! $member) {
             $data['name'] = '';
             $data['code'] = 0;
-            return $this->sendError('ไม่พบข้อมูล ผู้แนะนำ',200);
+
+            return $this->sendError('ไม่พบข้อมูล ผู้แนะนำ', 200);
         }
 
         $data['name'] = $member['name'];
         $data['code'] = $member['code'];
-        return $this->sendResponse($data,'complete');
-    }
 
+        return $this->sendResponse($data, 'complete');
+    }
 
     public function loadBankAccount()
     {
         $banks = [
             'value' => '',
-            'text' => 'เลือกช่องทางที่ฝาก'
+            'text' => 'เลือกช่องทางที่ฝาก',
         ];
 
-//        $responses = app('Gametech\Payment\Repositories\BankRepository')->getBankInAccountAll()->toArray();
+        //        $responses = app('Gametech\Payment\Repositories\BankRepository')->getBankInAccountAll()->toArray();
         $responses = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountInAllNew()->toArray();
 
-//        dd($responses);
+        //        dd($responses);
 
         $responses = collect($responses)->map(function ($items) {
-            $item = (object)$items;
-//            dd($item);
+            $item = (object) $items;
+
+            //            dd($item);
             return [
                 'value' => $item->code,
-                'text' => $item->bank['name_th'] . ' [' . $item->acc_no . ']'
+                'text' => $item->bank['name_th'].' ['.$item->acc_no.']',
             ];
 
         })->prepend($banks);
 
-//dd($responses);
+        // dd($responses);
 
         $result['banks'] = $responses;
+
         return $this->sendResponseNew($result, 'complete');
     }
 
     public function create(Request $request)
     {
-        $user = $this->user()->name . ' ' . $this->user()->surname;
+        $user = $this->user()->name.' '.$this->user()->surname;
         $data = json_decode($request['data'], true);
         $chk = $this->memberRepository->findOneWhere(['user_name' => $data['user_name']]);
         if ($chk) {
@@ -471,10 +471,9 @@ class MemberGameLogController extends AppBaseController
             $data['acc_no'] = $acc_no;
         }
 
-
         if ($bank_code == 18) {
             $acc_check = '';
-        } else if ($bank_code == 4) {
+        } elseif ($bank_code == 4) {
             $acc_check = substr($acc_no, -4);
         } else {
             $acc_check = substr($acc_no, -6);
@@ -486,7 +485,6 @@ class MemberGameLogController extends AppBaseController
             $acc_bay = substr($acc_no, -7);
         }
 
-
         $data['confirm'] = 'Y';
         $data['date_regis'] = now()->toDateString();
         $data['acc_check'] = $acc_check;
@@ -496,12 +494,11 @@ class MemberGameLogController extends AppBaseController
             $data['wallet_id'] = $data['tel'];
         }
 
-        $data['name'] = $data['firstname'] . ' ' . $data['lastname'];
+        $data['name'] = $data['firstname'].' '.$data['lastname'];
         $data['password'] = Hash::make($data['user_pass']);
 
         $data['user_create'] = $user;
         $data['user_update'] = $user;
-
 
         $wallet_id = trim($data['wallet_id']);
 
@@ -511,32 +508,32 @@ class MemberGameLogController extends AppBaseController
                 'digits_between:1,14',
                 Rule::unique('members', 'acc_no')->where(function ($query) use ($bank_code) {
                     return $query->where('bank_code', $bank_code);
-                })
+                }),
             ],
             'wallet_id' => [
                 'required',
                 Rule::unique('members', 'wallet_id')->where(function ($query) use ($wallet_id) {
                     return $query->where('wallet_id', $wallet_id);
-                })
+                }),
             ],
             'firstname' => 'required|string',
             'lastname' => 'required|string',
             'tel' => 'required|numeric|unique:members,tel',
             'user_name' => 'required|string|different:tel|unique:members,user_name|max:20|regex:/^[a-z][a-z0-9]*$/',
-            'bank_code' => 'required|numeric'
+            'bank_code' => 'required|numeric',
         ]);
-
 
         if ($validator->fails()) {
             $errors = $validator->errors();
 
             $message = implode(', ', $errors->all());
+
             return $this->sendError($message, 200);
 
         }
 
         $response = $this->memberRepository->create($data);
-        if (!$response->code) {
+        if (! $response->code) {
             return $this->sendError('ไม่สามารถบันทุึกข้อมูลได้', 200);
         }
 
@@ -545,9 +542,9 @@ class MemberGameLogController extends AppBaseController
             $res = $this->gameUserRepository->addGameUser(1, $member->code, $member, false);
             if ($res['success'] !== true) {
                 $this->memberRepository->delete($response->code);
+
                 return $this->sendError('ไม่สามารถเพิ่มข้อมูลที่ Agent ได้', 200);
             }
-
 
         }
 
@@ -558,17 +555,16 @@ class MemberGameLogController extends AppBaseController
 
         $this->gameUserRepository->create($datasub);
 
-
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
 
     }
 
     public function update($id, Request $request)
     {
-        $google2fa = new Google2FA();
+        $google2fa = new Google2FA;
 
         $acc_no = '';
-        $user   = $this->user()->name . ' ' . $this->user()->surname;
+        $user = $this->user()->name.' '.$this->user()->surname;
 
         // ปลอดภัยไว้ก่อน กรณี data ไม่มีหรือไม่ใช่ JSON
         $data = json_decode($request['data'] ?? '{}', true) ?: [];
@@ -588,7 +584,7 @@ class MemberGameLogController extends AppBaseController
 
         // acc_no: เหลือเลขล้วน ถ้าไม่ใช่ bank_code 18
         if ($bank_code !== 18) {
-            $acc_no = \Illuminate\Support\Str::of($data['acc_no'] ?? '')
+            $acc_no = Str::of($data['acc_no'] ?? '')
                 ->replaceMatches('/[^0-9]++/', '')
                 ->trim()
                 ->__toString();
@@ -598,12 +594,12 @@ class MemberGameLogController extends AppBaseController
         }
 
         // tel & user_name: บังคับเป็นเลข 10 หลัก (กันเคสมีขีด/เว้นวรรค/ตัวอักษรพิเศษ)
-        $data['tel'] = \Illuminate\Support\Str::of($data['tel'] ?? '')
+        $data['tel'] = Str::of($data['tel'] ?? '')
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
 
-        $data['user_name'] = \Illuminate\Support\Str::of($data['user_name'] ?? '')
+        $data['user_name'] = Str::of($data['user_name'] ?? '')
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
@@ -619,7 +615,7 @@ class MemberGameLogController extends AppBaseController
         $acc_bay = ($bank_code === 18) ? '' : substr($acc_no, -7);
 
         $data['acc_check'] = $acc_check ?: '';
-        $data['acc_bay']   = $acc_bay   ?: '';
+        $data['acc_bay'] = $acc_bay ?: '';
 
         // ===== Rules (ไม่ยุ่งกับ deleted_at เพราะไม่มีคอลัมน์นี้) =====
         $accNoRules = ['required', 'digits_between:1,15'];
@@ -644,8 +640,8 @@ class MemberGameLogController extends AppBaseController
         ];
 
         $validator = Validator::make($data, [
-            'acc_no'    => $accNoRules,
-            'tel'       => $telRules,
+            'acc_no' => $accNoRules,
+            'tel' => $telRules,
             'user_name' => $userNameRules,
         ]);
 
@@ -655,27 +651,27 @@ class MemberGameLogController extends AppBaseController
 
         // ===== หา record ปัจจุบันด้วย code =====
         $chk = $this->memberRepository->find($id); // โมเดลควร $primaryKey = 'code'
-        if (!$chk) {
+        if (! $chk) {
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
         // ===== ค่าเริ่มต้น & sanitize =====
         $data['firstname'] = strip_tags($data['firstname'] ?? '');
-        $data['lastname']  = strip_tags($data['lastname']  ?? '');
-        $data['tel']       = trim(strip_tags($data['tel']   ?? ''));
+        $data['lastname'] = strip_tags($data['lastname'] ?? '');
+        $data['tel'] = trim(strip_tags($data['tel'] ?? ''));
         $data['wallet_id'] = trim(strip_tags($data['wallet_id'] ?? ''));
 
         if ($data['wallet_id'] === '') {
             $data['wallet_id'] = $chk->tel; // fallback
         }
 
-        if (!empty($data['user_pass'])) {
-            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['user_pass']);
+        if (! empty($data['user_pass'])) {
+            $data['password'] = Hash::make($data['user_pass']);
         } else {
             unset($data['user_pass']);
         }
 
-        $data['name']        = trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? ''));
+        $data['name'] = trim(($data['firstname'] ?? '').' '.($data['lastname'] ?? ''));
         $data['user_update'] = $user;
 
         // ===== อัปเดต =====
@@ -684,13 +680,12 @@ class MemberGameLogController extends AppBaseController
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
     }
 
-
     public function loadData(Request $request)
     {
         $id = $request->input('id');
 
         $data = $this->memberRepository->find($id);
-        if (!$data) {
+        if (! $data) {
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
@@ -704,13 +699,13 @@ class MemberGameLogController extends AppBaseController
         $responses = collect($this->memberRemarkRepository->loadRemark($id));
 
         $responses = $responses->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
 
             return [
                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i:s'),
                 'remark' => $item->remark,
                 'emp_code' => (is_null($item->emp) ? '' : $item->emp->user_name),
-                'action' => '<button type="button" class="btn btn-warning btn-xs icon-only" onclick="delSub(' . $item->code . ')"><i class="fa fa-times"></i></button>'
+                'action' => '<button type="button" class="btn btn-warning btn-xs icon-only" onclick="delSub('.$item->code.')"><i class="fa fa-times"></i></button>',
 
             ];
 
@@ -723,10 +718,9 @@ class MemberGameLogController extends AppBaseController
 
     public function createsub(Request $request)
     {
-        $user = $this->user()->name . ' ' . $this->user()->surname;
+        $user = $this->user()->name.' '.$this->user()->surname;
         $id = $request->input('id');
         $data = $request->input('data');
-
 
         $data['member_code'] = $id;
         $data['emp_code'] = $this->id();
@@ -734,7 +728,6 @@ class MemberGameLogController extends AppBaseController
         $data['user_update'] = $user;
 
         $this->memberRemarkRepository->create($data);
-
 
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
 
@@ -744,19 +737,16 @@ class MemberGameLogController extends AppBaseController
     {
         $id = $request->input('id');
 
-
         $chk = $this->memberRemarkRepository->find($id);
 
-        if (!$chk) {
+        if (! $chk) {
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
         $this->memberRemarkRepository->delete($id);
 
-
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
     }
-
 
     public function balance(Request $request)
     {
@@ -771,7 +761,6 @@ class MemberGameLogController extends AppBaseController
         $item_list = $item_list['data'];
         $item = $item_list;
 
-
         $game = [
             'status' => '<span class="text-success">game</span>',
             'game_id' => $item['game']['id'],
@@ -780,17 +769,17 @@ class MemberGameLogController extends AppBaseController
             'user_name' => $item['user_name'],
             'user_pass' => $item['user_pass'],
             'balance' => $item['balance'],
-            'promotion' => (!is_null($item['promotion']) ? $item['promotion']['name_th'] : '-'),
+            'promotion' => (! is_null($item['promotion']) ? $item['promotion']['name_th'] : '-'),
             'turn' => ($item['pro_code'] > 0 ? $item['turnpro'] : '-'),
             'amount_balance' => ($item['pro_code'] > 0 ? $item['amount_balance'] : '-'),
             'withdraw_limit' => ($item['pro_code'] > 0 ? ($item['withdraw_limit'] > 0 ? $item['withdraw_limit'] : '-') : '-'),
-            'action' => '<button class="btn btn-xs icon-only ' . ($item['enable'] == 'Y' ? 'btn-warning' : 'btn-danger') . '" onclick="editdatasub(' . $item['code'] . "," . "'" . core()->flip($item['enable']) . "'" . "," . "'enable'" . ')">' . ($item['enable'] == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-trash"></i>') . '</button>',
-            'changepass' => '<button class="btn btn-xs icon-only btn-info" onclick="changegamepass(' . $item['code'] . ')"><i class="fa fa-edit"></i></button>',
+            'action' => '<button class="btn btn-xs icon-only '.($item['enable'] == 'Y' ? 'btn-warning' : 'btn-danger').'" onclick="editdatasub('.$item['code'].','."'".core()->flip($item['enable'])."'".','."'enable'".')">'.($item['enable'] == 'Y' ? '<i class="fa fa-check"></i>' : '<i class="fa fa-trash"></i>').'</button>',
+            'changepass' => '<button class="btn btn-xs icon-only btn-info" onclick="changegamepass('.$item['code'].')"><i class="fa fa-edit"></i></button>',
 
         ];
 
-
         $result['list'] = $game;
+
         return $this->sendResponseNew($result, 'ดำเนินการเสร็จสิ้น');
 
     }
@@ -800,7 +789,7 @@ class MemberGameLogController extends AppBaseController
         $id = $request->input('id');
         $password = $request->input('password');
         $game_user = $this->gameUserRepository->find($id);
-        if (!$game_user) {
+        if (! $game_user) {
             $result['success'] = false;
             $result['reload'] = false;
             $result['msg'] = 'ไม่พบข้อมูลรหัสเกมของ สมาชิก';
@@ -810,7 +799,7 @@ class MemberGameLogController extends AppBaseController
         }
 
         $game = $this->gameRepository->find($game_user->game_code);
-        if (!$game) {
+        if (! $game) {
             $result['success'] = false;
             $result['reload'] = false;
             $result['msg'] = 'ไม่พบข้อมูลเกม';
@@ -820,7 +809,7 @@ class MemberGameLogController extends AppBaseController
         }
 
         $member = $this->memberRepository->find($game_user->member_code);
-        if (!$member) {
+        if (! $member) {
             $result['success'] = false;
             $result['reload'] = false;
             $result['msg'] = 'ไม่พบข้อมูลสมาชิก';
@@ -851,34 +840,31 @@ class MemberGameLogController extends AppBaseController
             $result['reload'] = false;
         }
 
-
         return $this->sendResponseNew($result, $result['msg']);
 
     }
 
-
     public function export(Request $request)
     {
         $user = Auth::guard('admin')->user();
-        (new MembersExport)->queue('sheet','public')->chain([
-            new NotifyUserOfCompletedExport($user,'membersss.xlsx'),
-        ]);;
+        (new MembersExport)->queue('sheet', 'public')->chain([
+            new NotifyUserOfCompletedExport($user, 'membersss.xlsx'),
+        ]);
 
         return back()->withSuccess('Export started!');
-//        $filename = str::random(20).".xlsx";
-//        (new MembersExport)->queue($filename, 'local')->chain([
-//            new NotifyUserOfCompletedExport($this->user(),$filename ),
-//        ]);
-//
-//        return json_encode([
-//            'message' => "You will receive email with download link once export is complete."
-//        ]);
+        //        $filename = str::random(20).".xlsx";
+        //        (new MembersExport)->queue($filename, 'local')->chain([
+        //            new NotifyUserOfCompletedExport($this->user(),$filename ),
+        //        ]);
+        //
+        //        return json_encode([
+        //            'message' => "You will receive email with download link once export is complete."
+        //        ]);
 
-//        return Excel::store(new MembersExport, function(MembersExport $export) {
-//            return true;
-//        });
-//        new (new MembersExport)->store('members.xlsx');
-//        return Excel::store(new MembersExport, 'member_' . date('Y-m-d') . '.xlsx','public',\Maatwebsite\Excel\Excel::XLSX);
+        //        return Excel::store(new MembersExport, function(MembersExport $export) {
+        //            return true;
+        //        });
+        //        new (new MembersExport)->store('members.xlsx');
+        //        return Excel::store(new MembersExport, 'member_' . date('Y-m-d') . '.xlsx','public',\Maatwebsite\Excel\Excel::XLSX);
     }
-
 }
