@@ -3,6 +3,23 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-10 — Runtime Request Paths Must Not Query `information_schema` or Use Request-Time Schema Guards (APPROVED)
+
+- ปรับ policy runtime ของ web/api/admin hot paths
+- behavior ใหม่:
+  - request path ปกติของระบบห้าม query `information_schema` เด็ดขาด
+  - request path ห้ามใช้ `Schema::hasTable`, `Schema::hasColumn`, `Schema::getColumnListing` หรือ guard แบบเดียวกันเพื่อเช็ก schema ระหว่าง request
+  - ให้ถือว่า environment ปกติ migrate schema เป็นล่าสุดแล้ว
+  - ถ้าต้องมี fallback compatibility ให้ทำที่ระดับข้อมูล/ค่า เช่นอ่าน `wallet_transactions.meta.reason` เมื่อ `lotto_tickets.reason` ว่าง
+  - อนุญาต schema inspection ได้เฉพาะ:
+    - migration
+    - one-off maintenance command
+    - test/setup path ที่ไม่ได้อยู่ใน runtime request ปกติ
+- เหตุผล:
+  - audit performance พบว่า hot paths หลายจุดเสียเวลาไปกับ `information_schema` มากกว่าข้อมูลธุรกิจจริง
+  - schema ของ production/local ปกติควรถูก migrate ให้ทันอยู่แล้ว จึงไม่ควรจ่าย runtime cost เพื่อเช็กซ้ำทุก request
+  - ลด query noise และปิด class ปัญหา query regression ชุดเดิมไม่ให้กลับมาอีก
+
 ## 2026-04-10 — Admin `setWallet` Must Broadcast Member-Facing Realtime Message for Credit Adjustments (APPROVED)
 
 - ปรับ flow `Gametech\Admin\Http\Controllers\MemberController@setWallet`

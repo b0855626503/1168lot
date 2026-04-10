@@ -20,10 +20,9 @@ class LottoTicketCancelPolicyTest extends TestCase
 
         config(['broadcasting.default' => 'log']);
         $this->prepareSchema();
-        $this->app->instance(DashboardSummarySyncService::class, new class {
-            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
-            {
-            }
+        $this->app->instance(DashboardSummarySyncService::class, new class
+        {
+            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void {}
         });
     }
 
@@ -156,7 +155,7 @@ class LottoTicketCancelPolicyTest extends TestCase
 
     private function cancelResponse(Member $member, int $ticketId)
     {
-        $request = Request::create('/api/v1/lotto/tickets/' . $ticketId . '/cancel', 'POST');
+        $request = Request::create('/api/v1/lotto/tickets/'.$ticketId.'/cancel', 'POST');
         $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
 
         return $this->createTestResponse(
@@ -168,15 +167,15 @@ class LottoTicketCancelPolicyTest extends TestCase
     {
         DB::table('members')->insert([
             'code' => $memberCode,
-            'name' => 'Member ' . $memberCode,
+            'name' => 'Member '.$memberCode,
             'balance' => $balance,
             'date_create' => now(),
             'date_update' => now(),
         ]);
 
-        $member = new Member();
+        $member = new Member;
         $member->code = $memberCode;
-        $member->name = 'Member ' . $memberCode;
+        $member->name = 'Member '.$memberCode;
         $member->exists = true;
 
         return $member;
@@ -187,7 +186,7 @@ class LottoTicketCancelPolicyTest extends TestCase
         DB::table('lotto_markets')->insert([
             'id' => $marketId,
             'group_id' => 1,
-            'name' => 'Market ' . $marketId,
+            'name' => 'Market '.$marketId,
             'is_enabled' => 1,
         ]);
 
@@ -264,7 +263,7 @@ class LottoTicketCancelPolicyTest extends TestCase
             'ref_type' => 'LOTTO_BET',
             'ref_id' => $ticketId,
             'ref_code' => (string) $ticketId,
-            'group_code' => 'LOTTO_BET_' . $ticketId,
+            'group_code' => 'LOTTO_BET_'.$ticketId,
             'related_txn_id' => null,
             'status' => 'SUCCESS',
             'description' => 'เดิมพันหวย',
@@ -294,7 +293,7 @@ class LottoTicketCancelPolicyTest extends TestCase
             'ref_type' => 'LOTTO_CANCEL',
             'ref_id' => $ticketId,
             'ref_code' => (string) $ticketId,
-            'group_code' => 'LOTTO_CANCEL_' . $ticketId,
+            'group_code' => 'LOTTO_CANCEL_'.$ticketId,
             'related_txn_id' => null,
             'status' => 'SUCCESS',
             'description' => 'คืนเงินจากการยกเลิกโพยหวย',
@@ -361,6 +360,8 @@ class LottoTicketCancelPolicyTest extends TestCase
             $table->decimal('total_win_amount', 12, 2)->default(0);
             $table->string('status')->default('active');
             $table->dateTime('cancelled_at')->nullable();
+            $table->unsignedBigInteger('cancelled_by')->nullable();
+            $table->text('reason')->nullable();
             $table->decimal('refund_amount', 12, 2)->nullable();
             $table->timestamps();
         });

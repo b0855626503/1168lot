@@ -21,16 +21,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
-    /** @var array<string,bool> */
-    private array $schemaTableCache = [];
-
-    /** @var array<string,bool> */
-    private array $schemaColumnCache = [];
-
     /** @var array<int,string> */
     private array $memberNameCache = [];
 
@@ -534,7 +527,10 @@ class LottoController extends BaseController
                 return $this->sendError('ไม่พบโพยที่ระบุ', 404);
             }
 
-            $payload = $this->mapTicketSummary($ticket);
+            $payload = $this->mapTicketSummary(
+                $ticket,
+                $this->buildTicketSummaryContext(collect([$ticket]))
+            );
             $payload['items'] = $ticket->items->map(static function ($item): array {
                 $rawStatus = $item->result_status;
                 $itemResultStatus = in_array($rawStatus, ['win', 'lose'], true)
@@ -611,14 +607,12 @@ class LottoController extends BaseController
                     $exposure->update(['sold_amount' => $nextAmount]);
                 }
 
-                $debitTxn = $this->hasTableCached('wallet_transactions')
-                    ? DB::table('wallet_transactions')
-                        ->where('member_id', $memberId)
-                        ->where('ref_type', 'LOTTO_BET')
-                        ->where('ref_id', (int) $ticket->id)
-                        ->orderByDesc('id')
-                        ->first(['id'])
-                    : null;
+                $debitTxn = DB::table('wallet_transactions')
+                    ->where('member_id', $memberId)
+                    ->where('ref_type', 'LOTTO_BET')
+                    ->where('ref_id', (int) $ticket->id)
+                    ->orderByDesc('id')
+                    ->first(['id']);
 
                 $refundAmount = (float) ($ticket->total_net_amount ?? $ticket->total_amount ?? 0);
                 app(WalletTransactionService::class)->creditMemberBalance(
@@ -641,12 +635,10 @@ class LottoController extends BaseController
                 $updatePayload = [
                     'status' => 'cancelled',
                     'cancelled_at' => now(),
+                    'cancelled_by' => $memberId,
                     'refund_amount' => $refundAmount,
+                    'reason' => null,
                 ];
-
-                if ($this->hasColumnCached('lotto_tickets', 'cancelled_by')) {
-                    $updatePayload['cancelled_by'] = $memberId;
-                }
 
                 $ticket->update($updatePayload);
             });
@@ -1336,10 +1328,6 @@ class LottoController extends BaseController
 
     private function guardDailyCancelLimit(int $memberId): void
     {
-        if (! $this->hasTableCached('wallet_transactions')) {
-            return;
-        }
-
         $dailyCancelledCount = DB::table('wallet_transactions')
             ->where('member_id', $memberId)
             ->where('ref_type', 'LOTTO_CANCEL')
@@ -1358,21 +1346,19 @@ class LottoController extends BaseController
      */
     private function resolveCancellationInfo(LottoTicket $ticket): array
     {
-        if ($this->hasTableCached('wallet_transactions')) {
-            $cancelTxn = DB::table('wallet_transactions')
-                ->where('ref_type', 'LOTTO_CANCEL')
-                ->where('ref_id', (int) $ticket->id)
-                ->orderByDesc('id')
-                ->first(['created_by_type', 'created_by_id']);
+        $cancelTxn = DB::table('wallet_transactions')
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('ref_id', (int) $ticket->id)
+            ->orderByDesc('id')
+            ->first(['created_by_type', 'created_by_id']);
 
-            if ($cancelTxn && ! empty($cancelTxn->created_by_type) && ! empty($cancelTxn->created_by_id)) {
-                $name = $this->resolveActorName((string) $cancelTxn->created_by_type, (int) $cancelTxn->created_by_id);
-                if ($name !== '') {
-                    return [
-                        'name' => $name,
-                        'type' => (string) $cancelTxn->created_by_type,
-                    ];
-                }
+        if ($cancelTxn && ! empty($cancelTxn->created_by_type) && ! empty($cancelTxn->created_by_id)) {
+            $name = $this->resolveActorName((string) $cancelTxn->created_by_type, (int) $cancelTxn->created_by_id);
+            if ($name !== '') {
+                return [
+                    'name' => $name,
+                    'type' => (string) $cancelTxn->created_by_type,
+                ];
             }
         }
 
@@ -1406,12 +1392,9 @@ class LottoController extends BaseController
 
     private function resolveTicketReason(LottoTicket $ticket): string
     {
-        if ($this->hasTicketReasonColumn()) {
-            return trim((string) ($ticket->reason ?? ''));
-        }
-
-        if (! $this->hasTableCached('wallet_transactions')) {
-            return '';
+        $ticketReason = trim((string) ($ticket->reason ?? ''));
+        if ($ticketReason !== '') {
+            return $ticketReason;
         }
 
         $cancelTxnMeta = DB::table('wallet_transactions')
@@ -1427,11 +1410,6 @@ class LottoController extends BaseController
         $decoded = json_decode($cancelTxnMeta, true);
 
         return is_array($decoded) ? trim((string) ($decoded['reason'] ?? '')) : '';
-    }
-
-    private function hasTicketReasonColumn(): bool
-    {
-        return $this->hasColumnCached('lotto_tickets', 'reason');
     }
 
     /**
@@ -1459,29 +1437,27 @@ class LottoController extends BaseController
             ];
         }
 
+        $latestCancelTxnSubQuery = DB::table('wallet_transactions')
+            ->selectRaw('MAX(id) as id, ref_id')
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->whereIn('ref_id', $ticketIds)
+            ->groupBy('ref_id');
+
+        $cancelTxns = DB::table('wallet_transactions as wt')
+            ->joinSub($latestCancelTxnSubQuery, 'latest_cancel', static function ($join): void {
+                $join->on('wt.id', '=', 'latest_cancel.id');
+            })
+            ->select([
+                'wt.ref_id',
+                'wt.created_by_type',
+                'wt.created_by_id',
+                'wt.meta',
+            ])
+            ->get();
+
         $cancelTxnByTicket = [];
-        if ($this->hasTableCached('wallet_transactions')) {
-            $latestCancelTxnSubQuery = DB::table('wallet_transactions')
-                ->selectRaw('MAX(id) as id, ref_id')
-                ->where('ref_type', 'LOTTO_CANCEL')
-                ->whereIn('ref_id', $ticketIds)
-                ->groupBy('ref_id');
-
-            $cancelTxns = DB::table('wallet_transactions as wt')
-                ->joinSub($latestCancelTxnSubQuery, 'latest_cancel', static function ($join): void {
-                    $join->on('wt.id', '=', 'latest_cancel.id');
-                })
-                ->select([
-                    'wt.ref_id',
-                    'wt.created_by_type',
-                    'wt.created_by_id',
-                    'wt.meta',
-                ])
-                ->get();
-
-            foreach ($cancelTxns as $cancelTxn) {
-                $cancelTxnByTicket[(int) ($cancelTxn->ref_id ?? 0)] = $cancelTxn;
-            }
+        foreach ($cancelTxns as $cancelTxn) {
+            $cancelTxnByTicket[(int) ($cancelTxn->ref_id ?? 0)] = $cancelTxn;
         }
 
         $memberIds = [];
@@ -1499,9 +1475,7 @@ class LottoController extends BaseController
                 } elseif ($actorType === 'admin' && $actorId > 0) {
                     $adminIds[] = $actorId;
                 }
-            }
-
-            if ($cancelledBy > 0) {
+            } elseif ($cancelledBy > 0) {
                 $memberIds[] = $cancelledBy;
                 $adminIds[] = $cancelledBy;
             }
@@ -1509,7 +1483,6 @@ class LottoController extends BaseController
 
         $memberNames = $this->loadMemberNames($memberIds);
         $adminNames = $this->loadAdminNames($adminIds);
-        $hasReasonColumn = $this->hasTicketReasonColumn();
 
         foreach ($tickets as $ticket) {
             $ticketId = (int) $ticket->id;
@@ -1550,13 +1523,11 @@ class LottoController extends BaseController
                 'type' => $type,
             ];
 
-            if ($hasReasonColumn) {
-                $reasonByTicket[$ticketId] = trim((string) ($ticket->reason ?? ''));
-
+            $reasonByTicket[$ticketId] = trim((string) ($ticket->reason ?? ''));
+            if ($reasonByTicket[$ticketId] !== '') {
                 continue;
             }
 
-            $reasonByTicket[$ticketId] = '';
             if (! $cancelTxn || ! is_string($cancelTxn->meta) || trim($cancelTxn->meta) === '') {
                 continue;
             }
@@ -1579,10 +1550,6 @@ class LottoController extends BaseController
      */
     private function loadMemberNames(array $memberIds): array
     {
-        if (! $this->hasTableCached('members')) {
-            return [];
-        }
-
         $ids = collect($memberIds)
             ->map(static fn ($id): int => (int) $id)
             ->filter(static fn (int $id): bool => $id > 0)
@@ -1617,10 +1584,6 @@ class LottoController extends BaseController
      */
     private function loadAdminNames(array $adminIds): array
     {
-        if (! $this->hasTableCached('employees')) {
-            return [];
-        }
-
         $ids = collect($adminIds)
             ->map(static fn ($id): int => (int) $id)
             ->filter(static fn (int $id): bool => $id > 0)
@@ -1651,7 +1614,7 @@ class LottoController extends BaseController
 
     private function resolveMemberName(int $actorId): string
     {
-        if ($actorId <= 0 || ! $this->hasTableCached('members')) {
+        if ($actorId <= 0) {
             return '';
         }
 
@@ -1671,7 +1634,7 @@ class LottoController extends BaseController
 
     private function resolveAdminName(int $actorId): string
     {
-        if ($actorId <= 0 || ! $this->hasTableCached('employees')) {
+        if ($actorId <= 0) {
             return '';
         }
 
@@ -1683,29 +1646,6 @@ class LottoController extends BaseController
         $this->adminNameCache[$actorId] = $name;
 
         return $name;
-    }
-
-    private function hasTableCached(string $table): bool
-    {
-        if (! array_key_exists($table, $this->schemaTableCache)) {
-            $this->schemaTableCache[$table] = Schema::hasTable($table);
-        }
-
-        return $this->schemaTableCache[$table];
-    }
-
-    private function hasColumnCached(string $table, string $column): bool
-    {
-        $cacheKey = $table.'.'.$column;
-        if (! array_key_exists($cacheKey, $this->schemaColumnCache)) {
-            if (! $this->hasTableCached($table)) {
-                $this->schemaColumnCache[$cacheKey] = false;
-            } else {
-                $this->schemaColumnCache[$cacheKey] = Schema::hasColumn($table, $column);
-            }
-        }
-
-        return $this->schemaColumnCache[$cacheKey];
     }
 
     private function responsePayload(JsonResponse $response): array

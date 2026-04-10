@@ -16,18 +16,19 @@ class LottoTicketBadgeLoadcntTest extends TestCase
 
     public function test_dashboard_loadcnt_includes_lotto_ticket_count(): void
     {
-        $controller = file_get_contents($this->rootPath . '/packages/Gametech/Admin/src/Http/Controllers/DashboardController.php');
+        $controller = file_get_contents($this->rootPath.'/packages/Gametech/Admin/src/Http/Controllers/DashboardController.php');
 
         $this->assertNotFalse($controller);
         $this->assertStringContainsString("\$result['lotto_tickets'] = \$this->countActiveLottoTickets();", $controller);
-        $this->assertStringContainsString("private function countActiveLottoTickets(): int", $controller);
-        $this->assertStringContainsString("Schema::hasTable('lotto_tickets')", $controller);
+        $this->assertStringContainsString('private function countActiveLottoTickets(): int', $controller);
         $this->assertStringContainsString("->where('status', 'active')", $controller);
+        $this->assertStringNotContainsString("Schema::hasTable('lotto_tickets')", $controller);
+        $this->assertStringNotContainsString("Schema::hasColumn('lotto_tickets', 'status')", $controller);
     }
 
     public function test_lotto_ticket_badge_is_no_longer_fetched_from_ticket_datatable_xhr(): void
     {
-        $ticketTableView = file_get_contents($this->rootPath . '/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets/table.blade.php');
+        $ticketTableView = file_get_contents($this->rootPath.'/packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/tickets/table.blade.php');
 
         $this->assertNotFalse($ticketTableView);
         $this->assertStringNotContainsString('xhr.dt.lottoTicketsBadge', $ticketTableView);
@@ -46,7 +47,7 @@ class LottoTicketBadgeLoadcntTest extends TestCase
         ];
 
         foreach ($files as $file) {
-            $contents = file_get_contents($this->rootPath . $file);
+            $contents = file_get_contents($this->rootPath.$file);
 
             $this->assertNotFalse($contents, $file);
             $this->assertStringContainsString('lotto_tickets', $contents, $file);
@@ -55,7 +56,7 @@ class LottoTicketBadgeLoadcntTest extends TestCase
 
     public function test_lotto_datatable_pages_still_use_shared_loadcnt_flow(): void
     {
-        $datatableJs = file_get_contents($this->rootPath . '/packages/Gametech/Admin/src/Resources/views/layouts/datatables_js.blade.php');
+        $datatableJs = file_get_contents($this->rootPath.'/packages/Gametech/Admin/src/Resources/views/layouts/datatables_js.blade.php');
 
         $this->assertNotFalse($datatableJs);
         $this->assertStringContainsString('this.loadCnt();', $datatableJs);
@@ -88,7 +89,7 @@ class LottoTicketBadgeLoadcntTest extends TestCase
         ];
 
         foreach ($files as $file) {
-            $contents = file_get_contents($this->rootPath . $file);
+            $contents = file_get_contents($this->rootPath.$file);
 
             $this->assertNotFalse($contents, $file);
             $this->assertStringContainsString("@include('admin::layouts.loadcnt_js')", $contents, $file);

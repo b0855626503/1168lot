@@ -2,6 +2,7 @@
 
 namespace Gametech\Admin\Services;
 
+use App\Services\Dashboard\DashboardSummaryProjector;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use App\Services\Dashboard\DashboardWebCodeResolver;
 use App\Services\Dashboard\LottoDashboardMetricConfig;
@@ -18,6 +19,63 @@ class DashboardService
     public const CACHE_TTL_SECONDS = 45;
     private const ACTIVITY_CACHE_TTL_SECONDS = 5;
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
+    private const ASSUMED_RUNTIME_TABLES = [
+        'bank_payment' => true,
+        'dashboard_summary_daily' => true,
+        'lotto_dashboard_bet_type_number_daily' => true,
+        'lotto_dashboard_bet_type_summary_daily' => true,
+        'lotto_dashboard_risk_snapshot' => true,
+        'lotto_dashboard_summary_daily' => true,
+        'lotto_draws' => true,
+        'lotto_groups' => true,
+        'lotto_markets' => true,
+        'lotto_tickets' => true,
+        'members' => true,
+        'members_credit_free_log' => true,
+        'wallet_transactions' => true,
+    ];
+    private const ASSUMED_RUNTIME_COLUMNS = [
+        'bank_payment' => [
+            'channel',
+            'code',
+            'date_approve',
+            'date_create',
+            'date_topup',
+            'id',
+            'member_code',
+            'member_topup',
+            'status',
+        ],
+        'dashboard_summary_daily' => ['*'],
+        'lotto_dashboard_risk_snapshot' => ['snapshot_at'],
+        'lotto_tickets' => ['bet_type_summary'],
+        'members' => [
+            'campaign_id',
+            'code',
+            'confirm',
+            'count_deposit',
+            'date_create',
+            'date_regis',
+            'deposit',
+            'firstname',
+            'id',
+            'lastname',
+            'name',
+            'tel',
+            'upline_code',
+            'upline_id',
+            'user_name',
+            'username',
+        ],
+        'wallet_transactions' => [
+            'amount',
+            'created_at',
+            'direction',
+            'ref_type',
+            'scope',
+            'status',
+        ],
+    ];
     private array $columnCache = [];
     private array $columnListingCache = [];
     private array $tableCache = [];
@@ -620,7 +678,7 @@ class DashboardService
                     $timeValue = $row->date_approve ?? $row->date_create ?? $row->date_update;
                     $timeText = '-';
                     $sortAt = 0;
-                    if (!empty($timeValue) && !in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
+                    if (! empty($timeValue) && ! in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
                         try {
                             $parsedTime = Carbon::parse($timeValue);
                             $timeText = $parsedTime->format('Y-m-d H:i');
@@ -681,13 +739,14 @@ class DashboardService
                     $deposited = $depositCount > 0 ? 'ฝากแล้ว' : 'ยังไม่ฝาก';
                     $timeText = '-';
                     $timeValue = $row->{$dateColumn} ?? null;
-                    if (!empty($timeValue) && !in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
+                    if (! empty($timeValue) && ! in_array($timeValue, ['0000-00-00', '0000-00-00 00:00:00'], true)) {
                         try {
                             $timeText = Carbon::parse($timeValue)->format('Y-m-d');
                         } catch (\Throwable $e) {
                             $timeText = '-';
                         }
                     }
+
                     return [
                         'time' => $timeText,
                         'username' => $row->user_name ?? '-',
@@ -716,7 +775,7 @@ class DashboardService
                 $rows = $staffQuery->get()->map(function ($row) {
                     $sortAt = 0;
                     $time = '-';
-                    if (!empty($row->date_create)) {
+                    if (! empty($row->date_create)) {
                         try {
                             $parsedTime = Carbon::parse($row->date_create);
                             $time = $parsedTime->format('Y-m-d H:i');
@@ -770,10 +829,10 @@ class DashboardService
         $limit = max(1, min($limit, 20));
 
         if (
-            !$this->hasTable('lotto_tickets')
-            || !$this->hasTable('lotto_draws')
-            || !$this->hasTable('lotto_markets')
-            || !$this->hasTable('lotto_groups')
+            ! $this->hasTable('lotto_tickets')
+            || ! $this->hasTable('lotto_draws')
+            || ! $this->hasTable('lotto_markets')
+            || ! $this->hasTable('lotto_groups')
         ) {
             return [];
         }
@@ -794,7 +853,7 @@ class DashboardService
             ])
             ->selectRaw(
                 ($this->hasColumn('lotto_tickets', 'bet_type_summary') ? 't.bet_type_summary' : "''")
-                . ' as bet_type_summary'
+                .' as bet_type_summary'
             )
             ->orderByDesc('t.created_at')
             ->orderByDesc('t.id');
@@ -802,10 +861,10 @@ class DashboardService
         $memberUsernameColumn = $this->memberUsernameColumn();
         $memberKeyColumn = $this->memberKeyColumn();
         if ($this->hasTable('members') && $this->hasColumn('members', $memberKeyColumn)) {
-            $query->leftJoin('members as member', 'member.' . $memberKeyColumn, '=', 't.member_id');
+            $query->leftJoin('members as member', 'member.'.$memberKeyColumn, '=', 't.member_id');
 
             if ($memberUsernameColumn) {
-                $query->addSelect('member.' . $memberUsernameColumn . ' as member_username');
+                $query->addSelect('member.'.$memberUsernameColumn.' as member_username');
             }
         }
 
@@ -817,7 +876,7 @@ class DashboardService
 
         return $rows->map(function ($row): array {
             $time = '-';
-            if (!empty($row->created_at)) {
+            if (! empty($row->created_at)) {
                 try {
                     $time = Carbon::parse($row->created_at)->format('Y-m-d H:i');
                 } catch (\Throwable $e) {
@@ -1009,12 +1068,12 @@ class DashboardService
         $query = $this->applyMemberFilters($query, $filters);
 
         $select = [
-            'members.' . $memberKey . ' as member_key',
+            'members.'.$memberKey.' as member_key',
         ];
 
         $usernameColumn = $this->memberUsernameColumn();
         if ($usernameColumn) {
-            $select[] = 'members.' . $usernameColumn . ' as username';
+            $select[] = 'members.'.$usernameColumn.' as username';
         }
         if ($this->hasColumn('members', 'name')) {
             $select[] = 'members.name';
@@ -1026,7 +1085,7 @@ class DashboardService
             $select[] = 'members.lastname';
         }
         if ($this->hasColumn('members', $dateColumn)) {
-            $select[] = 'members.' . $dateColumn . ' as register_at';
+            $select[] = 'members.'.$dateColumn.' as register_at';
         }
         if ($this->hasColumn('members', 'date_create')) {
             $select[] = 'members.date_create as register_date_create';
@@ -1053,11 +1112,11 @@ class DashboardService
             }
 
             if ($inviterJoinColumn) {
-                $query->leftJoin('members as inviter', 'inviter.' . $memberKey, '=', 'members.' . $inviterJoinColumn);
-                $select[] = DB::raw('inviter.' . $memberKey . ' as inviter_id');
+                $query->leftJoin('members as inviter', 'inviter.'.$memberKey, '=', 'members.'.$inviterJoinColumn);
+                $select[] = DB::raw('inviter.'.$memberKey.' as inviter_id');
 
                 if ($usernameColumn) {
-                    $select[] = DB::raw('inviter.' . $usernameColumn . ' as inviter_username');
+                    $select[] = DB::raw('inviter.'.$usernameColumn.' as inviter_username');
                 }
                 if ($this->hasColumn('members', 'name')) {
                     $select[] = DB::raw('inviter.name as inviter_name');
@@ -1078,23 +1137,23 @@ class DashboardService
 
             $paymentStats = clone $paymentBase;
             $statsSub = $paymentStats
-                ->selectRaw($paymentMemberKey . ' as member_key, COUNT(*) as deposit_count, SUM(value) as deposit_sum, MAX(date_create) as last_deposit_at')
+                ->selectRaw($paymentMemberKey.' as member_key, COUNT(*) as deposit_count, SUM(value) as deposit_sum, MAX(date_create) as last_deposit_at')
                 ->groupBy($paymentMemberKey)
                 ->toBase();
 
             $paymentFirst = clone $paymentBase;
             $firstSub = $paymentFirst
-                ->selectRaw($paymentMemberKey . ' as member_key, MIN(code) as first_code')
+                ->selectRaw($paymentMemberKey.' as member_key, MIN(code) as first_code')
                 ->groupBy($paymentMemberKey)
                 ->toBase();
 
             $query->leftJoinSub($statsSub, 'ds', function ($join) use ($memberKey) {
-                $join->on('members.' . $memberKey, '=', 'ds.member_key');
+                $join->on('members.'.$memberKey, '=', 'ds.member_key');
             });
             $query->leftJoinSub($firstSub, 'fd', function ($join) use ($memberKey) {
-                $join->on('members.' . $memberKey, '=', 'fd.member_key');
+                $join->on('members.'.$memberKey, '=', 'fd.member_key');
             });
-            $query->leftJoin('bank_payment as bp_first', 'bp_first.' . $paymentKey, '=', 'fd.first_code');
+            $query->leftJoin('bank_payment as bp_first', 'bp_first.'.$paymentKey, '=', 'fd.first_code');
 
             $select[] = DB::raw('ds.deposit_count as deposit_count');
             $select[] = DB::raw('ds.deposit_sum as deposit_sum');
@@ -1120,19 +1179,19 @@ class DashboardService
         }
 
         if (in_array($type, ['register_deposit', 'register_repeat_deposit', 'register_not_deposit', 'referral_total', 'referral_deposit', 'referral_not_deposit'], true)) {
-            $this->applyDateTimeWindow($query, 'members.' . $dateColumn, $startDate, $endDate);
+            $this->applyDateTimeWindow($query, 'members.'.$dateColumn, $startDate, $endDate);
         }
 
         if (in_array($type, ['register_deposit', 'register_repeat_deposit', 'referral_deposit'], true)) {
             $query->whereExists(function ($q) use ($startDate, $endDate, $memberKey, $paymentMemberKey, $paymentDateColumn, $filters) {
                 $q->select(DB::raw(1))
                     ->from('bank_payment as bp_range')
-                    ->whereColumn('bp_range.' . $paymentMemberKey, 'members.' . $memberKey)
+                    ->whereColumn('bp_range.'.$paymentMemberKey, 'members.'.$memberKey)
                     ->where('bp_range.enable', 'Y')
                     ->where('bp_range.status', 1)
                     ->where('bp_range.value', '>', 0);
-                $this->applyDateTimeWindow($q, 'bp_range.' . $paymentDateColumn, $startDate, $endDate);
-                if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+                $this->applyDateTimeWindow($q, 'bp_range.'.$paymentDateColumn, $startDate, $endDate);
+                if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                     $q->where('bp_range.channel', $filters['deposit_channel']);
                 }
             });
@@ -1141,14 +1200,14 @@ class DashboardService
                 $query->whereExists(function ($q) use ($memberKey, $paymentMemberKey, $filters) {
                     $q->select(DB::raw(1))
                         ->from('bank_payment as bp_life')
-                        ->whereColumn('bp_life.' . $paymentMemberKey, 'members.' . $memberKey)
+                        ->whereColumn('bp_life.'.$paymentMemberKey, 'members.'.$memberKey)
                         ->where('bp_life.enable', 'Y')
                         ->where('bp_life.status', 1)
                         ->where('bp_life.value', '>', 0)
-                        ->groupBy('bp_life.' . $paymentMemberKey)
+                        ->groupBy('bp_life.'.$paymentMemberKey)
                         ->havingRaw('COUNT(*) >= 2');
 
-                    if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+                    if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                         $q->where('bp_life.channel', $filters['deposit_channel']);
                     }
                 });
@@ -1157,19 +1216,19 @@ class DashboardService
             $query->whereNotExists(function ($q) use ($startDate, $endDate, $memberKey, $paymentMemberKey, $paymentDateColumn, $filters) {
                 $q->select(DB::raw(1))
                     ->from('bank_payment as bp_range')
-                    ->whereColumn('bp_range.' . $paymentMemberKey, 'members.' . $memberKey)
+                    ->whereColumn('bp_range.'.$paymentMemberKey, 'members.'.$memberKey)
                     ->where('bp_range.enable', 'Y')
                     ->where('bp_range.status', 1)
                     ->where('bp_range.value', '>', 0);
-                $this->applyDateTimeWindow($q, 'bp_range.' . $paymentDateColumn, $startDate, $endDate);
-                if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+                $this->applyDateTimeWindow($q, 'bp_range.'.$paymentDateColumn, $startDate, $endDate);
+                if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                     $q->where('bp_range.channel', $filters['deposit_channel']);
                 }
             });
         } elseif ($type === 'first_deposit') {
             $this->applyDateTimeWindow($query, 'bp_first.date_create', $startDate, $endDate);
         } elseif ($type === 'repeat_deposit') {
-            if (!$this->hasTable('bank_payment')) {
+            if (! $this->hasTable('bank_payment')) {
                 $query->whereRaw('1 = 0');
             } else {
                 $query->whereNotNull('ds.deposit_count')
@@ -1177,13 +1236,13 @@ class DashboardService
                     ->whereExists(function ($q) use ($startDate, $endDate, $memberKey, $paymentMemberKey, $paymentDateColumn, $filters) {
                         $q->select(DB::raw(1))
                             ->from('bank_payment as bp_repeat')
-                            ->whereColumn('bp_repeat.' . $paymentMemberKey, 'members.' . $memberKey)
+                            ->whereColumn('bp_repeat.'.$paymentMemberKey, 'members.'.$memberKey)
                             ->where('bp_repeat.enable', 'Y')
                             ->where('bp_repeat.status', 1)
                             ->where('bp_repeat.value', '>', 0);
-                        $this->applyDateTimeWindow($q, 'bp_repeat.' . $paymentDateColumn, $startDate, $endDate);
+                        $this->applyDateTimeWindow($q, 'bp_repeat.'.$paymentDateColumn, $startDate, $endDate);
 
-                        if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+                        if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                             $q->where('bp_repeat.channel', $filters['deposit_channel']);
                         }
                     });
@@ -1195,7 +1254,7 @@ class DashboardService
         } elseif (in_array($type, ['repeat_deposit', 'register_repeat_deposit'], true) && $this->hasTable('bank_payment')) {
             $query->orderByDesc('ds.last_deposit_at');
         } else {
-            $query->orderByDesc('members.' . $dateColumn);
+            $query->orderByDesc('members.'.$dateColumn);
         }
 
         $total = (clone $query)->count();
@@ -1224,7 +1283,7 @@ class DashboardService
                 if ($inviterName === '') {
                     $inviterFirst = trim((string) ($row->inviter_firstname ?? ''));
                     $inviterLast = trim((string) ($row->inviter_lastname ?? ''));
-                    $inviterFullName = trim($inviterFirst . ' ' . $inviterLast);
+                    $inviterFullName = trim($inviterFirst.' '.$inviterLast);
                     $inviterName = $inviterFullName !== '' ? $inviterFullName : '-';
                 }
             }
@@ -1249,6 +1308,7 @@ class DashboardService
 
             if ($type === 'first_deposit') {
                 $registerAtFromCreate = $row->register_date_create ?? $row->register_at ?? null;
+
                 return [
                     'username' => $username,
                     'name' => $name,
@@ -1291,7 +1351,7 @@ class DashboardService
         $filters = $this->normalizeFilters($filters);
         [$startDate, $endDate] = $this->range($filters);
 
-        if (!$this->hasTable('dashboard_summary_daily')) {
+        if (! $this->hasTable('dashboard_summary_daily')) {
             return [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
@@ -1698,7 +1758,7 @@ class DashboardService
 
     private function aggregateSummaryRange(string $startDate, string $endDate): array
     {
-        if (!$this->hasTable('dashboard_summary_daily')) {
+        if (! $this->hasTable('dashboard_summary_daily')) {
             return [];
         }
 
@@ -1727,16 +1787,16 @@ class DashboardService
             'COALESCE(SUM(withdraw_total_users), 0) as withdraw_total_users',
             'COALESCE(SUM(withdraw_pending_amount), 0) as withdraw_pending_amount',
             'COALESCE(SUM(withdraw_pending_count), 0) as withdraw_pending_count',
-            $this->summarySumExpression('withdraw_main_total_amount') . ' as withdraw_main_total_amount',
-            $this->summarySumExpression('withdraw_main_total_count') . ' as withdraw_main_total_count',
-            $this->summarySumExpression('withdraw_main_total_users') . ' as withdraw_main_total_users',
-            $this->summarySumExpression('withdraw_main_pending_amount') . ' as withdraw_main_pending_amount',
-            $this->summarySumExpression('withdraw_main_pending_count') . ' as withdraw_main_pending_count',
-            $this->summarySumExpression('withdraw_free_total_amount') . ' as withdraw_free_total_amount',
-            $this->summarySumExpression('withdraw_free_total_count') . ' as withdraw_free_total_count',
-            $this->summarySumExpression('withdraw_free_total_users') . ' as withdraw_free_total_users',
-            $this->summarySumExpression('withdraw_free_pending_amount') . ' as withdraw_free_pending_amount',
-            $this->summarySumExpression('withdraw_free_pending_count') . ' as withdraw_free_pending_count',
+            $this->summarySumExpression('withdraw_main_total_amount').' as withdraw_main_total_amount',
+            $this->summarySumExpression('withdraw_main_total_count').' as withdraw_main_total_count',
+            $this->summarySumExpression('withdraw_main_total_users').' as withdraw_main_total_users',
+            $this->summarySumExpression('withdraw_main_pending_amount').' as withdraw_main_pending_amount',
+            $this->summarySumExpression('withdraw_main_pending_count').' as withdraw_main_pending_count',
+            $this->summarySumExpression('withdraw_free_total_amount').' as withdraw_free_total_amount',
+            $this->summarySumExpression('withdraw_free_total_count').' as withdraw_free_total_count',
+            $this->summarySumExpression('withdraw_free_total_users').' as withdraw_free_total_users',
+            $this->summarySumExpression('withdraw_free_pending_amount').' as withdraw_free_pending_amount',
+            $this->summarySumExpression('withdraw_free_pending_count').' as withdraw_free_pending_count',
             'COALESCE(SUM(bonus_deposit_amount), 0) as bonus_deposit_amount',
             'COALESCE(SUM(bonus_deposit_count), 0) as bonus_deposit_count',
             'COALESCE(SUM(bonus_activity_amount), 0) as bonus_activity_amount',
@@ -1745,10 +1805,10 @@ class DashboardService
             'COALESCE(SUM(bonus_manual_count), 0) as bonus_manual_count',
             'COALESCE(SUM(bonus_total_amount), 0) as bonus_total_amount',
             'COALESCE(SUM(bonus_total_count), 0) as bonus_total_count',
-            $this->summarySumExpression('lotto_sales_cash') . ' as lotto_sales_cash',
-            $this->summarySumExpression('lotto_payout_cash') . ' as lotto_payout_cash',
-            $this->summarySumExpression('lotto_refund_cash') . ' as lotto_refund_cash',
-            $this->summarySumExpression('lotto_net_cash') . ' as lotto_net_cash',
+            $this->summarySumExpression('lotto_sales_cash').' as lotto_sales_cash',
+            $this->summarySumExpression('lotto_payout_cash').' as lotto_payout_cash',
+            $this->summarySumExpression('lotto_refund_cash').' as lotto_refund_cash',
+            $this->summarySumExpression('lotto_net_cash').' as lotto_net_cash',
             'COALESCE(SUM(net_amount), 0) as net_amount',
             'COALESCE(SUM(first_deposit_count), 0) as first_deposit_count',
             'COALESCE(SUM(repeat_deposit_count), 0) as repeat_deposit_count',
@@ -1820,7 +1880,7 @@ class DashboardService
 
     private function ensureSummaryRangeReady(string $startDate, string $endDate): void
     {
-        if (!$this->hasTable('dashboard_summary_daily')) {
+        if (! $this->hasTable('dashboard_summary_daily')) {
             return;
         }
 
@@ -1841,6 +1901,7 @@ class DashboardService
         $dateRange = core()->generateDateRange($startDate, $endDate);
         if (empty($dateRange)) {
             $this->summaryWarmCache[$warmKey] = true;
+
             return;
         }
 
@@ -1857,17 +1918,18 @@ class DashboardService
 
         $datesToSync = [];
         foreach ($dateRange as $date) {
-            if (!isset($existingMap[$date])) {
+            if (! isset($existingMap[$date])) {
                 $datesToSync[] = $date;
+
                 continue;
             }
 
-            if ($existingMap[$date] < \App\Services\Dashboard\DashboardSummaryProjector::METRIC_VERSION) {
+            if ($existingMap[$date] < DashboardSummaryProjector::METRIC_VERSION) {
                 $datesToSync[] = $date;
             }
         }
 
-        if (!empty($datesToSync)) {
+        if (! empty($datesToSync)) {
             $syncService = app(DashboardSummarySyncService::class);
             foreach (array_values(array_unique($datesToSync)) as $date) {
                 try {
@@ -1951,7 +2013,7 @@ class DashboardService
     {
         $version = (string) Cache::get(self::CACHE_VERSION_KEY, '0');
 
-        return 'dashboard:' . $name . ':v' . $version . ':' . md5(json_encode($filters));
+        return 'dashboard:'.$name.':v'.$version.':'.md5(json_encode($filters));
     }
 
     private function forgetDashboardCaches(array $filters): void
@@ -1964,6 +2026,7 @@ class DashboardService
     private function memberQuery(array $filters)
     {
         $query = app('Gametech\\Member\\Repositories\\MemberRepository');
+
         return $this->applyMemberFilters($query, $filters);
     }
 
@@ -1971,7 +2034,7 @@ class DashboardService
     {
         $hasUpline = $this->hasColumn('members', 'upline_code');
 
-        if (!empty($filters['register_channel'])) {
+        if (! empty($filters['register_channel'])) {
             switch ($filters['register_channel']) {
                 case 'direct':
                     if ($hasUpline) {
@@ -1993,7 +2056,7 @@ class DashboardService
 
     private function applyPaymentFilters($query, array $filters)
     {
-        if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+        if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
             $query->where('channel', $filters['deposit_channel']);
         }
 
@@ -2002,7 +2065,7 @@ class DashboardService
 
     private function applyMemberRelationFilters($query, array $filters)
     {
-        if (!empty($filters['register_channel'])) {
+        if (! empty($filters['register_channel'])) {
             $query->whereHas('member', function ($q) use ($filters) {
                 $this->applyMemberFilters($q, $filters);
             });
@@ -2319,19 +2382,19 @@ class DashboardService
         $memberColumn = $source['member_column'] ?? null;
 
         if (
-            !$this->hasTable($table)
-            || !$this->hasColumn($table, $dateColumn)
-            || !$this->hasColumn($table, $amountColumn)
+            ! $this->hasTable($table)
+            || ! $this->hasColumn($table, $dateColumn)
+            || ! $this->hasColumn($table, $amountColumn)
         ) {
             return null;
         }
 
-        if ($memberColumn && !$this->hasColumn($table, $memberColumn)) {
+        if ($memberColumn && ! $this->hasColumn($table, $memberColumn)) {
             return null;
         }
 
         foreach ($source['conditions'] ?? [] as $condition) {
-            if (!$this->hasColumn($table, $condition[0])) {
+            if (! $this->hasColumn($table, $condition[0])) {
                 return null;
             }
         }
@@ -2341,7 +2404,7 @@ class DashboardService
         $this->applyBonusConditions($query, $source['conditions'] ?? []);
 
         if ($memberColumn) {
-            $query = $this->applyMemberCodeFilter($query, $table . '.' . $memberColumn, $filters);
+            $query = $this->applyMemberCodeFilter($query, $table.'.'.$memberColumn, $filters);
         }
 
         return $query;
@@ -2352,6 +2415,7 @@ class DashboardService
         foreach ($conditions as [$column, $operator, $value]) {
             if ($operator === 'in') {
                 $query->whereIn($column, $value);
+
                 continue;
             }
 
@@ -2361,7 +2425,7 @@ class DashboardService
 
     private function applyMemberCodeFilter($query, string $qualifiedMemberColumn, array $filters)
     {
-        if (empty($filters['register_channel']) || !$this->hasTable('members')) {
+        if (empty($filters['register_channel']) || ! $this->hasTable('members')) {
             return $query;
         }
 
@@ -2382,7 +2446,7 @@ class DashboardService
         string $endDate,
         ?string $requiredTable = null
     ): array {
-        if ($requiredTable && !$this->hasTable($requiredTable)) {
+        if ($requiredTable && ! $this->hasTable($requiredTable)) {
             return $this->staffMetricPayload(0, 0, 0);
         }
 
@@ -2448,12 +2512,12 @@ class DashboardService
         ];
 
         if (
-            !$this->hasTable('wallet_transactions')
-            || !$this->hasColumn('wallet_transactions', 'created_at')
-            || !$this->hasColumn('wallet_transactions', 'status')
-            || !$this->hasColumn('wallet_transactions', 'direction')
-            || !$this->hasColumn('wallet_transactions', 'ref_type')
-            || !$this->hasColumn('wallet_transactions', 'amount')
+            ! $this->hasTable('wallet_transactions')
+            || ! $this->hasColumn('wallet_transactions', 'created_at')
+            || ! $this->hasColumn('wallet_transactions', 'status')
+            || ! $this->hasColumn('wallet_transactions', 'direction')
+            || ! $this->hasColumn('wallet_transactions', 'ref_type')
+            || ! $this->hasColumn('wallet_transactions', 'amount')
         ) {
             return $defaults;
         }
@@ -2501,7 +2565,7 @@ class DashboardService
             'settled_tickets' => 0,
         ];
 
-        if (!$this->hasTable('lotto_dashboard_summary_daily')) {
+        if (! $this->hasTable('lotto_dashboard_summary_daily')) {
             return $defaults;
         }
 
@@ -2520,7 +2584,7 @@ class DashboardService
             ]))
             ->first();
 
-        if (!$row) {
+        if (! $row) {
             return $defaults;
         }
 
@@ -2549,8 +2613,8 @@ class DashboardService
         ];
 
         if (
-            !$this->hasTable('lotto_dashboard_risk_snapshot')
-            || !$this->hasColumn('lotto_dashboard_risk_snapshot', 'snapshot_at')
+            ! $this->hasTable('lotto_dashboard_risk_snapshot')
+            || ! $this->hasColumn('lotto_dashboard_risk_snapshot', 'snapshot_at')
         ) {
             return $defaults;
         }
@@ -2572,7 +2636,7 @@ class DashboardService
             ]))
             ->first();
 
-        if (!$row) {
+        if (! $row) {
             return $defaults;
         }
 
@@ -2593,8 +2657,8 @@ class DashboardService
     private function lottoBetTypeInsightsSummary(string $startDate, string $endDate): array
     {
         if (
-            !$this->hasTable('lotto_dashboard_bet_type_summary_daily')
-            || !$this->hasTable('lotto_dashboard_bet_type_number_daily')
+            ! $this->hasTable('lotto_dashboard_bet_type_summary_daily')
+            || ! $this->hasTable('lotto_dashboard_bet_type_number_daily')
         ) {
             return [];
         }
@@ -2643,12 +2707,13 @@ class DashboardService
             $count = (int) ($row->item_count ?? 0);
             $number = (string) ($row->number ?? '');
 
-            if (!isset($topByType[$type])) {
+            if (! isset($topByType[$type])) {
                 $topByType[$type] = [
                     'top_number' => $number,
                     'top_number_amount_raw' => $amount,
                     'top_number_item_count' => $count,
                 ];
+
                 continue;
             }
 
@@ -2760,7 +2825,7 @@ class DashboardService
 
     private function registerDepositCount(array $filters, string $startDate, string $endDate): int
     {
-        if (!$this->hasTable('bank_payment')) {
+        if (! $this->hasTable('bank_payment')) {
             return 0;
         }
 
@@ -2772,7 +2837,7 @@ class DashboardService
                     ->where('value', '>', 0);
                 $this->applyDateTimeWindow($query, 'date_create', $startDate, $endDate);
 
-                if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+                if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                     $query->where('channel', $filters['deposit_channel']);
                 }
             });
@@ -2783,7 +2848,7 @@ class DashboardService
 
     private function registerRepeatDepositCount(array $filters, string $startDate, string $endDate): int
     {
-        if (!$this->hasTable('bank_payment')) {
+        if (! $this->hasTable('bank_payment')) {
             return 0;
         }
 
@@ -2792,7 +2857,7 @@ class DashboardService
         $paymentMemberKey = $this->paymentMemberKeyColumn();
         $paymentDateColumn = $this->paymentDateColumn();
 
-        if (!$this->hasColumn('bank_payment', $paymentMemberKey)) {
+        if (! $this->hasColumn('bank_payment', $paymentMemberKey)) {
             return 0;
         }
 
@@ -2803,13 +2868,13 @@ class DashboardService
         $query->whereExists(function ($q) use ($startDate, $endDate, $paymentMemberKey, $memberKey, $paymentDateColumn, $filters) {
             $q->select(DB::raw(1))
                 ->from('bank_payment as bp_range')
-                ->whereColumn('bp_range.' . $paymentMemberKey, 'members.' . $memberKey)
+                ->whereColumn('bp_range.'.$paymentMemberKey, 'members.'.$memberKey)
                 ->where('bp_range.enable', 'Y')
                 ->where('bp_range.status', 1)
                 ->where('bp_range.value', '>', 0);
-            $this->applyDateTimeWindow($q, 'bp_range.' . $paymentDateColumn, $startDate, $endDate);
+            $this->applyDateTimeWindow($q, 'bp_range.'.$paymentDateColumn, $startDate, $endDate);
 
-            if (!empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
+            if (! empty($filters['deposit_channel']) && $this->hasColumn('bank_payment', 'channel')) {
                 $q->where('bp_range.channel', $filters['deposit_channel']);
             }
         });
@@ -2830,14 +2895,14 @@ class DashboardService
 
         return (int) $query
             ->joinSub($lifetimeRepeatSub, 'life_repeat', function ($join) use ($memberKey) {
-                $join->on('life_repeat.member_key', '=', 'members.' . $memberKey);
+                $join->on('life_repeat.member_key', '=', 'members.'.$memberKey);
             })
             ->count();
     }
 
     private function repeatDepositCount(array $filters, string $startDate, string $endDate): int
     {
-        if (!$this->hasTable('bank_payment') || !$this->hasColumn('bank_payment', 'member_topup')) {
+        if (! $this->hasTable('bank_payment') || ! $this->hasColumn('bank_payment', 'member_topup')) {
             return 0;
         }
 
@@ -2913,7 +2978,7 @@ class DashboardService
 
             if ($mode === 'hour') {
                 $rows = $query
-                    ->selectRaw('HOUR(' . $source['date_column'] . ') as k, SUM(' . $source['amount_column'] . ') as v')
+                    ->selectRaw('HOUR('.$source['date_column'].') as k, SUM('.$source['amount_column'].') as v')
                     ->groupBy('k')
                     ->pluck('v', 'k')
                     ->toArray();
@@ -3074,7 +3139,7 @@ class DashboardService
 
         $first = trim((string) ($row->firstname ?? ''));
         $last = trim((string) ($row->lastname ?? ''));
-        $full = trim($first . ' ' . $last);
+        $full = trim($first.' '.$last);
 
         return $full !== '' ? $full : '-';
     }
@@ -3104,7 +3169,7 @@ class DashboardService
 
     private function bankLabel($bank): string
     {
-        if (!$bank) {
+        if (! $bank) {
             return '-';
         }
 
@@ -3113,7 +3178,7 @@ class DashboardService
         $nameEn = $this->normalizeText($bank->name_en ?? '');
 
         if ($shortcode !== '-' && $nameTh !== '-' && strtolower($shortcode) !== strtolower($nameTh)) {
-            return $shortcode . ' - ' . $nameTh;
+            return $shortcode.' - '.$nameTh;
         }
 
         if ($shortcode !== '-') {
@@ -3144,7 +3209,7 @@ class DashboardService
 
     private function bankLogo($bank): string
     {
-        if (!$bank) {
+        if (! $bank) {
             return '';
         }
 
@@ -3154,7 +3219,7 @@ class DashboardService
         }
 
         try {
-            return Storage::url('bank_img/' . $filepic);
+            return Storage::url('bank_img/'.$filepic);
         } catch (\Throwable $e) {
             return '';
         }
@@ -3216,13 +3281,13 @@ class DashboardService
         $minutes = (int) $diff->i;
 
         if ($days > 0) {
-            return $days . ' วัน ' . $hours . ' ชม.';
+            return $days.' วัน '.$hours.' ชม.';
         }
         if ($hours > 0) {
-            return $hours . ' ชม. ' . $minutes . ' นาที';
+            return $hours.' ชม. '.$minutes.' นาที';
         }
 
-        return $minutes . ' นาที';
+        return $minutes.' นาที';
     }
 
     private function summarySumExpression(string $column): string
@@ -3236,7 +3301,11 @@ class DashboardService
 
     private function hasTable(string $table): bool
     {
-        if (!array_key_exists($table, $this->tableCache)) {
+        if ($this->shouldAssumeCurrentSchema()) {
+            return self::ASSUMED_RUNTIME_TABLES[$table] ?? false;
+        }
+
+        if (! array_key_exists($table, $this->tableCache)) {
             $this->tableCache[$table] = Schema::hasTable($table);
         }
 
@@ -3245,12 +3314,18 @@ class DashboardService
 
     private function hasColumn(string $table, string $column): bool
     {
-        $key = $table . '.' . $column;
-        if (!array_key_exists($key, $this->columnCache)) {
-            if (!$this->hasTable($table)) {
+        if ($this->shouldAssumeCurrentSchema()) {
+            $columns = self::ASSUMED_RUNTIME_COLUMNS[$table] ?? [];
+
+            return in_array('*', $columns, true) || in_array($column, $columns, true);
+        }
+
+        $key = $table.'.'.$column;
+        if (! array_key_exists($key, $this->columnCache)) {
+            if (! $this->hasTable($table)) {
                 $this->columnCache[$key] = false;
             } else {
-                if (!array_key_exists($table, $this->columnListingCache)) {
+                if (! array_key_exists($table, $this->columnListingCache)) {
                     $this->columnListingCache[$table] = Schema::getColumnListing($table);
                 }
                 $this->columnCache[$key] = in_array($column, $this->columnListingCache[$table], true);
@@ -3258,5 +3333,10 @@ class DashboardService
         }
 
         return $this->columnCache[$key];
+    }
+
+    private function shouldAssumeCurrentSchema(): bool
+    {
+        return ! app()->runningUnitTests();
     }
 }

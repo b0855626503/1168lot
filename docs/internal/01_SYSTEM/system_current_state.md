@@ -17,6 +17,21 @@
   - `php artisan --version` และ `php artisan about --only=environment` boot ผ่านบน Laravel 10
   - `php artisan route:list` ไม่ถูก block จาก controller constructor ที่ยิง DB ระหว่าง console bootstrap แล้ว
 
+## นโยบาย Runtime Schema
+
+- environment ปกติของระบบต้องถือว่า migrate schema เป็นล่าสุดแล้ว
+- web/api/admin request path ห้าม query `information_schema` เด็ดขาด
+- web/api/admin request path ห้ามใช้ request-time schema guards เช่น:
+  - `Schema::hasTable(...)`
+  - `Schema::hasColumn(...)`
+  - `Schema::getColumnListing(...)`
+- ถ้าต้องมี compatibility ระหว่างข้อมูลเก่า/ใหม่ ให้ fallback ที่ระดับข้อมูลแทน
+  - ตัวอย่าง: อ่าน `wallet_transactions.meta.reason` เมื่อ `lotto_tickets.reason` ยังว่าง
+- schema inspection อนุญาตเฉพาะใน:
+  - migration
+  - one-off maintenance/diagnostic command
+  - test/setup path ที่ไม่ใช่ runtime ปกติ
+
 ## Admin Maintenance / Version Display
 
 - admin login และ admin header ยังแสดง installed version ได้จาก config `self-update.version_installed`
@@ -186,10 +201,10 @@
     - คืนเงินสมาชิกด้วย `wallet_transactions(ref_type=LOTTO_CANCEL, created_by_type=admin)`
     - update ticket เป็น `cancelled`
     - เก็บ `reason`, `cancelled_at`, `cancelled_by`, `refund_amount`
-  - rollout compatibility:
-    - ถ้า DB ยังไม่ migrate คอลัมน์ `lotto_tickets.reason`
-    - flow ยกเลิกยังต้องทำงานได้ และเก็บสาเหตุไว้ใน `wallet_transactions.meta.reason`
-    - หลัง migrate แล้วจึงเก็บลง `lotto_tickets.reason` ตามปกติ
+  - runtime policy:
+    - request path นี้ต้องถือว่า DB มีคอลัมน์ `lotto_tickets.reason` แล้ว
+    - ห้ามเช็ก schema ระหว่าง request เพื่อ branching flow
+    - ถ้าต้องอ่านข้อมูลเก่า ให้ fallback จาก `wallet_transactions.meta.reason` เมื่อ field บน ticket ว่างเท่านั้น
 - modal รายละเอียดโพย (`tickets/loaddata`) ส่งข้อมูล cancel context เพิ่มเมื่อมี:
   - `reason`
   - `cancelled_at`
@@ -214,7 +229,8 @@
     - ถ้าไม่พบ ค่อย fallback จาก `lotto_tickets.cancelled_by`
   - การ resolve สาเหตุ:
     - อ่าน `lotto_tickets.reason` เป็นหลัก
-    - ถ้า environment ยังไม่มีคอลัมน์ `reason` ให้ fallback จาก `wallet_transactions.meta.reason`
+    - ถ้า field ว่าง ให้ fallback จาก `wallet_transactions.meta.reason`
+    - ห้ามเช็ก schema ระหว่าง request เพื่อเลือก path
 
 ## นโยบาย Frontend API ประวัติการเงิน (`/api/v1/wallet/transactions`)
 

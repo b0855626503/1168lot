@@ -4,6 +4,7 @@ namespace Tests\Feature\Lotto;
 
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Gametech\Lotto\Http\Controllers\Admin\LottoTicketController;
+use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Database\Schema\Blueprint;
@@ -21,10 +22,9 @@ class AdminLottoTicketCancelSchemaFallbackTest extends TestCase
 
         config(['broadcasting.default' => 'log']);
         $this->prepareSchema();
-        $this->app->instance(DashboardSummarySyncService::class, new class {
-            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
-            {
-            }
+        $this->app->instance(DashboardSummarySyncService::class, new class
+        {
+            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void {}
         });
         $this->mockAdminGuard(1);
     }
@@ -45,7 +45,7 @@ class AdminLottoTicketCancelSchemaFallbackTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_admin_cancel_does_not_fail_when_reason_column_is_not_migrated_yet(): void
+    public function test_admin_cancel_writes_reason_to_ticket_and_transaction_meta(): void
     {
         $this->seedFixture();
 
@@ -54,13 +54,14 @@ class AdminLottoTicketCancelSchemaFallbackTest extends TestCase
         ]);
 
         $response = $this->createTestResponse(
-            app(LottoTicketController::class)->cancel($request, 202, app(\Gametech\Lotto\Services\WalletTransactionService::class))
+            app(LottoTicketController::class)->cancel($request, 202, app(WalletTransactionService::class))
         );
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
 
         $this->assertSame('cancelled', DB::table('lotto_tickets')->where('id', 202)->value('status'));
+        $this->assertSame('เทส', DB::table('lotto_tickets')->where('id', 202)->value('reason'));
         $cancelTxn = DB::table('wallet_transactions')
             ->where('ref_type', 'LOTTO_CANCEL')
             ->where('ref_id', 202)
@@ -77,7 +78,7 @@ class AdminLottoTicketCancelSchemaFallbackTest extends TestCase
         $guard = Mockery::mock(Guard::class);
         $guard->shouldReceive('user')->andReturn((object) [
             'code' => $adminCode,
-            'user_name' => 'staff' . $adminCode,
+            'user_name' => 'staff'.$adminCode,
         ]);
         $guard->shouldReceive('id')->andReturn($adminCode);
 
@@ -256,6 +257,7 @@ class AdminLottoTicketCancelSchemaFallbackTest extends TestCase
             $table->string('status')->default('active');
             $table->dateTime('cancelled_at')->nullable();
             $table->unsignedBigInteger('cancelled_by')->nullable();
+            $table->text('reason')->nullable();
             $table->decimal('refund_amount', 12, 2)->nullable();
             $table->timestamps();
         });
