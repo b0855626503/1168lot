@@ -19,9 +19,12 @@ use Gametech\Member\Repositories\MemberPromotionLogRepository;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Member\Repositories\MemberSelectProRepository;
 use Gametech\Payment\Models\BankAccount;
+use Gametech\Payment\Models\BankPayment;
 use Gametech\Promotion\Repositories\PromotionRepository;
 use Illuminate\Container\Container as App;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
@@ -258,6 +261,57 @@ class BankPaymentRepository extends Repository
             ]);
     }
 
+    private function resolveAccountDailyDepositTotal($payment): float
+    {
+        $accountCode = (string) ($payment->account_code ?? '');
+        if ($accountCode === '') {
+            return 0.0;
+        }
+
+        $summaryDate = Carbon::parse(
+            $payment->date_topup ?? $payment->date_approve ?? $payment->date_create ?? now()
+        )->toDateString();
+
+        $cacheKey = $this->accountDailyDepositTotalCacheKey($accountCode, $summaryDate);
+        $cacheTtl = Carbon::parse($summaryDate)->addDay()->startOfDay()->addHour();
+
+        if (Cache::has($cacheKey)) {
+            $sumToday = round((float) Cache::get($cacheKey, 0) + (float) ($payment->value ?? 0), 2);
+            Cache::put($cacheKey, $sumToday, $cacheTtl);
+
+            return $sumToday;
+        }
+
+        [$rangeStart, $rangeEndExclusive] = $this->accountDailyDepositRange($summaryDate);
+        $sumToday = (float) $this->income()
+            ->active()
+            ->complete()
+            ->where('account_code', $accountCode)
+            ->where('date_topup', '>=', $rangeStart)
+            ->where('date_topup', '<', $rangeEndExclusive)
+            ->sum('value');
+
+        Cache::put($cacheKey, $sumToday, $cacheTtl);
+
+        return $sumToday;
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function accountDailyDepositRange(string $summaryDate): array
+    {
+        $rangeStart = Carbon::parse($summaryDate)->startOfDay();
+        $rangeEndExclusive = (clone $rangeStart)->addDay();
+
+        return [$rangeStart->toDateTimeString(), $rangeEndExclusive->toDateTimeString()];
+    }
+
+    private function accountDailyDepositTotalCacheKey(string $accountCode, string $summaryDate): string
+    {
+        return 'bank-payment:account-daily-total:'.$accountCode.':'.$summaryDate;
+    }
+
     public function refillPaymentSingle($data): bool
     {
         $ip = request()->ip();
@@ -272,11 +326,11 @@ class BankPaymentRepository extends Repository
         $finalizeOnly = false;
         $staleSeconds = 180; // 3 นาที (ใช้สำหรับ assume DEPOSITING ว่าฝากแล้ว เพื่อกันฝากซ้ำ)
 
-        $paymentId   = Arr::get($data, 'code');
-        $memberCode  = Arr::get($data, 'member_topup');
+        $paymentId = Arr::get($data, 'code');
+        $memberCode = Arr::get($data, 'member_topup');
         $accountCode = Arr::get($data, 'account_code');
-        $amount      = (float) Arr::get($data, 'value', 0);
-        $empTopup    = Arr::get($data, 'emp_topup');
+        $amount = (float) Arr::get($data, 'value', 0);
+        $empTopup = Arr::get($data, 'emp_topup');
 
         if (! $paymentId || ! $memberCode || ! $accountCode || $amount <= 0) {
             return false;
@@ -286,7 +340,7 @@ class BankPaymentRepository extends Repository
         $payment = null;
         try {
             DB::transaction(function () use (&$payment, &$finalizeOnly, $paymentId, $datenow, $now, $staleSeconds, $amount, $memberCode, $ip) {
-                $payment = \Gametech\Payment\Models\BankPayment::query()
+                $payment = BankPayment::query()
                     ->where('code', $paymentId)
                     ->lockForUpdate()
                     ->first();
@@ -297,15 +351,15 @@ class BankPaymentRepository extends Repository
 
                 // ถ้ารายการนี้เติมสำเร็จแล้ว กันยิงซ้ำ
                 if ((int) $payment->status === 1) {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'รายการนี้สถานะสำเร็จแล้ว (payment.status=1) ข้ามการทำงาน');
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'รายการนี้สถานะสำเร็จแล้ว (payment.status=1) ข้ามการทำงาน');
                     $payment = null;
+
                     return;
                 }
 
                 $ds = strtoupper((string) ($payment->deposit_status ?? 'NEW'));
                 $startedAt = $payment->deposit_started_at ? Carbon::parse($payment->deposit_started_at) : null;
                 $isStale = $startedAt ? $startedAt->diffInSeconds($now) > $staleSeconds : false;
-
 
                 // ── policy: ถ้า DEPOSITING ค้างเกิน window ให้ "assume" ว่าค่ายฝากแล้ว เพื่อกันฝากซ้ำ
                 // หมายเหตุ: เคสนี้อาจทำให้บางครั้งค่ายไม่ได้ฝากจริง แต่ระบบจะไป finalize (ตาม policy ที่เลือก)
@@ -314,77 +368,80 @@ class BankPaymentRepository extends Repository
                     $payment->deposit_status = 'DEPOSITED';
                     $payment->deposited_at = $datenow;
                     if (array_key_exists('deposit_last_error', $payment->getAttributes())) {
-                        $payment->deposit_last_error = trim((string) ($payment->deposit_last_error ?? '') . ' ASSUMED_DEPOSITED_FROM_STALE_DEPOSITING');
+                        $payment->deposit_last_error = trim((string) ($payment->deposit_last_error ?? '').' ASSUMED_DEPOSITED_FROM_STALE_DEPOSITING');
                     }
                     $payment->save();
 
                     $finalizeOnly = true;
                     try {
-                    $this->memberCreditLogRepository->create([
-                        'ip' => $ip,
-                        'credit_type' => 'D',
-                        'game_code' => 0,
-                        'gameuser_code' => 0,
-                        'amount' => $amount,
-                        'bonus' => 0,
-                        'total' => $amount,
-                        'balance_before' => 0,
-                        'balance_after' => 0,
-                        'credit' => $amount,
-                        'credit_bonus' => 0,
-                        'credit_total' => $amount,
-                        'credit_before' => 0,
-                        'credit_after' => 0,
-                        'member_code' => $memberCode,
-                        'user_name' => '',
-                        'pro_code' => 0,
-                        'pro_name' => '',
-                        'bank_code' => 0,
-                        'refer_code' => $paymentId,
-                        'refer_table' => 'bank_payment',
-                        'emp_code' => 0,
-                        'auto' => 'Y',
-                        'remark' => 'เหมือนรายการเติมเงิน รายการ #'.$paymentId.' จะมีปัญหาเติมไม่เข้า โปรดตรวจสอบ',
-                        'kind' => 'LOG',
-                        'user_create' => 'System Auto',
-                        'user_update' => 'System Auto',
-                    ]);
+                        $this->memberCreditLogRepository->create([
+                            'ip' => $ip,
+                            'credit_type' => 'D',
+                            'game_code' => 0,
+                            'gameuser_code' => 0,
+                            'amount' => $amount,
+                            'bonus' => 0,
+                            'total' => $amount,
+                            'balance_before' => 0,
+                            'balance_after' => 0,
+                            'credit' => $amount,
+                            'credit_bonus' => 0,
+                            'credit_total' => $amount,
+                            'credit_before' => 0,
+                            'credit_after' => 0,
+                            'member_code' => $memberCode,
+                            'user_name' => '',
+                            'pro_code' => 0,
+                            'pro_name' => '',
+                            'bank_code' => 0,
+                            'refer_code' => $paymentId,
+                            'refer_table' => 'bank_payment',
+                            'emp_code' => 0,
+                            'auto' => 'Y',
+                            'remark' => 'เหมือนรายการเติมเงิน รายการ #'.$paymentId.' จะมีปัญหาเติมไม่เข้า โปรดตรวจสอบ',
+                            'kind' => 'LOG',
+                            'user_create' => 'System Auto',
+                            'user_update' => 'System Auto',
+                        ]);
 
-                    broadcast(new RealTimeNewMessage(
-                        'รายการฝากเงิน #'.$payment->code.' ยอดเงิน '.$payment->amount.' เหมือนจะมีปัญหา ฝากเงินไม่ได้ รายการถูกสิ้นสุด โปรดตรวจสอบ และเติมมือให้ลูกค้า',
-                        [
-                            'ui' => 'toast',
-                            'as' => 'RealTime.Message.All',
-                            'sound' => 'withdraw',
-                            'toast' => [
-                                'className' => 'gt-toast gt-toast-error',
-                                'duration' => 30000,
-                                'gravity' => 'top',
-                                'position' => 'right',
-                                'avatar' => '/assets/admin/icons/deposit.webp',
-                            ],
-                        ]
-                    ));
-                    } catch (Throwable $e) {}
-
+                        broadcast(new RealTimeNewMessage(
+                            'รายการฝากเงิน #'.$payment->code.' ยอดเงิน '.$payment->amount.' เหมือนจะมีปัญหา ฝากเงินไม่ได้ รายการถูกสิ้นสุด โปรดตรวจสอบ และเติมมือให้ลูกค้า',
+                            [
+                                'ui' => 'toast',
+                                'as' => 'RealTime.Message.All',
+                                'sound' => 'withdraw',
+                                'toast' => [
+                                    'className' => 'gt-toast gt-toast-error',
+                                    'duration' => 30000,
+                                    'gravity' => 'top',
+                                    'position' => 'right',
+                                    'avatar' => '/assets/admin/icons/deposit.webp',
+                                ],
+                            ]
+                        ));
+                    } catch (Throwable $e) {
+                    }
 
                     return; // ไป finalize ต่อ (ห้ามเรียก UserDeposit ซ้ำ)
                 }
 
                 if ($ds === 'FINALIZED') {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'รายการนี้ deposit_status=FINALIZED ข้ามการทำงาน');
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'รายการนี้ deposit_status=FINALIZED ข้ามการทำงาน');
                     $payment = null;
+
                     return;
                 }
 
                 if (in_array($ds, ['DEPOSITED', 'FINALIZING'], true)) {
                     $finalizeOnly = true;
+
                     return; // ไป finalize ต่อ
                 }
 
                 if (in_array($ds, ['PROCESSING', 'DEPOSITING'], true) && ! $isStale) {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'รายการนี้ deposit_status=' . $ds . ' และยังไม่ stale ข้ามการทำงาน');
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'รายการนี้ deposit_status='.$ds.' และยังไม่ stale ข้ามการทำงาน');
                     $payment = null;
+
                     return;
                 }
 
@@ -398,14 +455,13 @@ class BankPaymentRepository extends Repository
             });
         } catch (Throwable $e) {
             report($e);
+
             return false;
         }
-
 
         if (! $payment) {
             return false;
         }
-
 
         $member = $this->memberRepository->find($memberCode);
         if (! $member) {
@@ -429,16 +485,17 @@ class BankPaymentRepository extends Repository
         ]);
 
         if (! $game_user) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+
             return false;
         }
 
-        $game_code    = $game->code;
-        $game_name    = $game->name;
+        $game_code = $game->code;
+        $game_name = $game->name;
         $game_balance = (float) $game_user->balance;
 
-        $user_name   = $game_user->user_name;
-        $user_code   = $game_user->code;
+        $user_name = $game_user->user_name;
+        $user_code = $game_user->code;
         $member_code = $member->code;
 
         // ====== โปรโมชั่นที่เลือก ======
@@ -453,7 +510,7 @@ class BankPaymentRepository extends Repository
 
         // ✅ bank_payment.pro_id เป็น source of truth (กัน rerun แล้วโปรหลุด)
         if ((int) ($payment->pro_id ?? 0) > 0) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบ pro_id บน bank_payment (' . (int) $payment->pro_id . ') ข้ามการเช็ค selectpro', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบ pro_id บน bank_payment ('.(int) $payment->pro_id.') ข้ามการเช็ค selectpro', $member->code);
 
             $promotion = $this->promotionRepository->checkSelectPro(
                 (int) $payment->pro_id,
@@ -478,6 +535,7 @@ class BankPaymentRepository extends Repository
                 $payment->save();
             } catch (Throwable $e) {
                 report($e);
+
                 return false;
             }
 
@@ -486,10 +544,10 @@ class BankPaymentRepository extends Repository
             $selectpro = $this->memberSelectProRepository->findOneWhere(['member_code' => $member_code]);
 
             if ($selectpro) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส '.$selectpro->pro_code, $member->code);
 
                 if ($game_balance <= (float) $config->pro_reset) {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
 
                     $promotion = $this->promotionRepository->checkSelectPro(
                         $selectpro->pro_code,
@@ -507,7 +565,7 @@ class BankPaymentRepository extends Repository
                     $withdraw_limit = (float) ($promotion['withdraw_limit'] ?? 0);
                     $withdraw_limit_rate = (float) ($promotion['withdraw_limit_rate'] ?? 0);
                 } else {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
                 }
 
                 // ✅ ต้อง save pro_id/pro_amount ลง bank_payment ก่อนฝาก เพื่อกัน rerun แล้วโปรหาย
@@ -518,6 +576,7 @@ class BankPaymentRepository extends Repository
                         $payment->save();
                     } catch (Throwable $e) {
                         report($e);
+
                         return false;
                     }
                 }
@@ -528,22 +587,22 @@ class BankPaymentRepository extends Repository
                     report($e);
                 }
             } else {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่ได้กดรับโปร', $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่ได้กดรับโปร', $member->code);
             }
 
         }
 
         // ====== เงื่อนไขพิเศษตามบัญชีที่เติมเข้า ======
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา ' . $bank_acc->acc_no, $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา '.$bank_acc->acc_no, $member->code);
 
         if ((float) $bank_acc->bonus > 0) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบบัญชีมีโบนัสเพิ่ม ' . $bank_acc->bonus . '% ของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบบัญชีมีโบนัสเพิ่ม '.$bank_acc->bonus.'% ของ บช '.$bank_acc->acc_no, $member->code);
 
             $isActive = $this->isBetweenDates($bank_acc->start_at, $bank_acc->end_at, $now);
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช '.$bank_acc->acc_no, $member->code);
 
             if ($isActive) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช ' . $bank_acc->acc_no, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช '.$bank_acc->acc_no, $member->code);
 
                 if ($pro_code === 0) {
                     $bonusSpecial = ($amount * (float) $bank_acc->bonus) / 100;
@@ -553,19 +612,19 @@ class BankPaymentRepository extends Repository
                     }
 
                     ActivityLoggerUser::activity(
-                        'Single Topup ID : ' . $paymentId,
-                        'คำนวนโบนัสพิเศษจากยอดฝาก ' . $amount . ' ได้โบนัส ' . $bonusSpecial . ' (' . $bank_acc->bonus . '%) บช ' . $bank_acc->acc_no,
+                        'Single Topup ID : '.$paymentId,
+                        'คำนวนโบนัสพิเศษจากยอดฝาก '.$amount.' ได้โบนัส '.$bonusSpecial.' ('.$bank_acc->bonus.'%) บช '.$bank_acc->acc_no,
                         $member->code
                     );
 
                     $bonus = $bonusSpecial;
-                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น ' . $bank_acc->bonus . '% จากยอดฝาก';
+                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น '.$bank_acc->bonus.'% จากยอดฝาก';
                     $total = $total + $bonus;
                     $special = true;
                 }
             }
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช '.$bank_acc->acc_no, $member->code);
         }
 
         $point = 0;
@@ -573,15 +632,15 @@ class BankPaymentRepository extends Repository
         $count_deposit = 1;
 
         // checkpoint: บางเคส relation bank มีปัญหา/DB สะดุด จะได้รู้ว่าตายตรงนี้หรือไม่
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'กำลังดึง bank_code จาก bank_acc', $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'กำลังดึง bank_code จาก bank_acc', $member->code);
         $bank_code = optional($bank_acc->bank)->code ?? 0;
 
         $credit_before = $game_balance;
-        $credit_after  = $credit_before + $total;
+        $credit_after = $credit_before + $total;
 
         // ✅ ถ้าค่ายฝากสำเร็จแล้ว (deposit_status=DEPOSITED/FINALIZING) ให้ข้ามฝากซ้ำ และไป finalize-only
         if ($finalizeOnly) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'deposit_status=DEPOSITED/FINALIZING -> ข้าม UserDeposit() และจะ finalize-only', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'deposit_status=DEPOSITED/FINALIZING -> ข้าม UserDeposit() และจะ finalize-only', $member->code);
             $response = [
                 'success' => true,
                 'before' => $payment->before_credit ?? 0,
@@ -602,12 +661,12 @@ class BankPaymentRepository extends Repository
         $chk = $this->allLogRepository->findOneByField('bank_payment_id', $paymentId);
         if ($chk) {
             if ($finalizeOnly) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบ alllog และเป็น finalize-only -> จะไม่ลบ alllog', $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบ alllog และเป็น finalize-only -> จะไม่ลบ alllog', $member->code);
                 $alllog = $chk;
             } else {
                 // ถ้า payment ยังไม่สำเร็จ ถือว่า alllog อาจค้างจาก crash/exception รอบก่อน
                 if ((int) $payment->status !== 1) {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบ alllog ค้างแต่ payment ยังไม่ complete -> จะลบ/mark failed เพื่อให้ทำงานต่อได้', $member->code);
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบ alllog ค้างแต่ payment ยังไม่ complete -> จะลบ/mark failed เพื่อให้ทำงานต่อได้', $member->code);
 
                     try {
                         // พยายามลบก่อน (คง behavior เดิม)
@@ -616,7 +675,7 @@ class BankPaymentRepository extends Repository
                         // ถ้าลบไม่ได้อย่างน้อย mark ไว้ว่าเสีย เพื่อไม่ block รอบหน้า
                         try {
                             $chk->status_log = 9; // failed/orphan
-                            $chk->remark = trim((string) $chk->remark) . ' [AUTO] orphan cleanup failed delete @ ' . $datenow;
+                            $chk->remark = trim((string) $chk->remark).' [AUTO] orphan cleanup failed delete @ '.$datenow;
                             $chk->user_update = 'System Auto';
                             $chk->save();
                         } catch (Throwable $ex) {
@@ -624,10 +683,12 @@ class BankPaymentRepository extends Repository
                         }
 
                         report($e);
+
                         return false;
                     }
                 } else {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+
                     return false;
                 }
             }
@@ -656,16 +717,17 @@ class BankPaymentRepository extends Repository
                     'user_update' => 'System Auto',
                 ]);
             } catch (Throwable $e) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
                 report($e);
+
                 return false;
             }
         }
 
-        $money_text = 'User ' . $member->user_name . ' Game ID : ' . $user_name . ' จำนวนเงิน ' . $amount . ' โบนัส ' . $bonus . ' จากโปร ' . $pro_name . ' รวมเป็น ' . $total;
+        $money_text = 'User '.$member->user_name.' Game ID : '.$user_name.' จำนวนเงิน '.$amount.' โบนัส '.$bonus.' จากโปร '.$pro_name.' รวมเป็น '.$total;
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เริ่มรายการเติมเงินให้กับ User : ' . $member->user_name . ' Game ID : ' . $user_name);
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, $money_text);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เริ่มรายการเติมเงินให้กับ User : '.$member->user_name.' Game ID : '.$user_name);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, $money_text);
 
         /**
          * ===========================
@@ -684,15 +746,16 @@ class BankPaymentRepository extends Repository
                     $payment->save();
                 } catch (Throwable $e) {
                     report($e);
+
                     return false;
                 }
 
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'กำลังเรียก UserDeposit() ฝากเข้าเกม', $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'กำลังเรียก UserDeposit() ฝากเข้าเกม', $member->code);
                 $response = $this->gameUserRepository->UserDeposit($game_code, $user_name, $total, false);
             } catch (Throwable $e) {
                 ActivityLoggerUser::activity(
-                    'Single ฝากเงินเข้าเกม ' . $game_name,
-                    $money_text . ' เกิด exception ตอนฝากเข้าเกม (จะลบ/mark failed alllog)'
+                    'Single ฝากเงินเข้าเกม '.$game_name,
+                    $money_text.' เกิด exception ตอนฝากเข้าเกม (จะลบ/mark failed alllog)'
                 );
 
                 try {
@@ -700,7 +763,7 @@ class BankPaymentRepository extends Repository
                 } catch (Throwable $ex) {
                     try {
                         $alllog->status_log = 9; // failed
-                        $alllog->remark = trim((string) $alllog->remark) . ' [AUTO] delete failed after deposit exception @ ' . $datenow;
+                        $alllog->remark = trim((string) $alllog->remark).' [AUTO] delete failed after deposit exception @ '.$datenow;
                         $alllog->user_update = 'System Auto';
                         $alllog->save();
                     } catch (Throwable $ex2) {
@@ -710,6 +773,7 @@ class BankPaymentRepository extends Repository
                 }
 
                 report($e);
+
                 return false;
             }
 
@@ -721,27 +785,27 @@ class BankPaymentRepository extends Repository
             if (! ($response['success'] ?? false)) {
 
                 // update deposit_status=FAILED เพื่อกันรอบถัดไปถูก assume เป็น DEPOSITED
-//                try {
-//                    $payment->deposit_status = 'FAILED';
-//                    if (array_key_exists('deposit_last_error', $payment->getAttributes())) {
-//                        $msg = (string) ($response['msg'] ?? $response['message'] ?? '');
-//                        $msg = $msg !== '' ? (' PROVIDER_FAILED:' . $msg) : ' PROVIDER_FAILED';
-//                        $payment->deposit_last_error = trim((string) ($payment->deposit_last_error ?? '') . $msg);
-//                    }
-//                    $payment->save();
-//                } catch (Throwable $ex3) {
-//                    report($ex3);
-//                }
+                //                try {
+                //                    $payment->deposit_status = 'FAILED';
+                //                    if (array_key_exists('deposit_last_error', $payment->getAttributes())) {
+                //                        $msg = (string) ($response['msg'] ?? $response['message'] ?? '');
+                //                        $msg = $msg !== '' ? (' PROVIDER_FAILED:' . $msg) : ' PROVIDER_FAILED';
+                //                        $payment->deposit_last_error = trim((string) ($payment->deposit_last_error ?? '') . $msg);
+                //                    }
+                //                    $payment->save();
+                //                } catch (Throwable $ex3) {
+                //                    report($ex3);
+                //                }
 
                 ActivityLoggerUser::activity(
-                    'Single ฝากเงินเข้าเกม ' . $game_name,
-                    $money_text . ' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
+                    'Single ฝากเงินเข้าเกม '.$game_name,
+                    $money_text.' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
                 );
 
                 try {
                     $alllog->delete();
                 } catch (Throwable $e) {
-                    ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
+                    ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
                     report($e);
                 }
 
@@ -758,22 +822,21 @@ class BankPaymentRepository extends Repository
                 $payment->save();
             } catch (Throwable $e) {
                 report($e);
+
                 return false;
             }
 
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน ' . ($response['before'] ?? '-') . ' ยอดหลัง ' . ($response['after'] ?? '-')
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน '.($response['before'] ?? '-').' ยอดหลัง '.($response['after'] ?? '-')
             );
         }
-
 
         try {
             DB::transaction(function () use (
                 $ip,
                 $paymentId,
                 $datenow,
-                $today,
                 $config,
                 $special,
                 $bank_acc,
@@ -800,10 +863,10 @@ class BankPaymentRepository extends Repository
                 &$point,
                 &$diamond
             ) {
-                /** @var \Illuminate\Database\Eloquent\Model $lockedGameUser */
+                /** @var Model $lockedGameUser */
                 $lockedGameUser = $this->gameUserRepository->find($user_code);
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
                     throw new \RuntimeException('Missing game_user');
                 }
 
@@ -816,21 +879,21 @@ class BankPaymentRepository extends Repository
                     ->first();
 
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
                     throw new \RuntimeException('Lock game_user failed');
                 }
 
-                $sum_amount_turn  = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
+                $sum_amount_turn = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
                 $sum_amount_limit = ((float) $lockedGameUser->balance + (($amount + $bonus) * (float) $withdraw_limit_rate));
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(sum): locked_balance=' . (float) $lockedGameUser->balance
-                    . ' total=' . $total
-                    . ' turnpro=' . (float) $turnpro
-                    . ' rate=' . (float) $withdraw_limit_rate
-                    . ' => sum_turn=' . $sum_amount_turn
-                    . ' sum_limit=' . $sum_amount_limit,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(sum): locked_balance='.(float) $lockedGameUser->balance
+                    .' total='.$total
+                    .' turnpro='.(float) $turnpro
+                    .' rate='.(float) $withdraw_limit_rate
+                    .' => sum_turn='.$sum_amount_turn
+                    .' sum_limit='.$sum_amount_limit,
                     $member->code
                 );
 
@@ -842,13 +905,13 @@ class BankPaymentRepository extends Repository
                 ]);
 
                 if ($chknew) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
                     throw new \RuntimeException('Duplicate member_credit_log');
                 }
 
                 $remark = $special
-                    ? ('ช่วงเวลาสุดพิเศษ ' . $bank_acc->start_at . ' ถึง ' . $bank_acc->end_at . ' รับเพิ่ม ' . $bank_acc->bonus . '% อิงรายการฝาก ID ' . $paymentId)
-                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . ($response['ref_id'] ?? ''));
+                    ? ('ช่วงเวลาสุดพิเศษ '.$bank_acc->start_at.' ถึง '.$bank_acc->end_at.' รับเพิ่ม '.$bank_acc->bonus.'% อิงรายการฝาก ID '.$paymentId)
+                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.($response['ref_id'] ?? ''));
 
                 $bill = $this->memberCreditLogRepository->create([
                     'ip' => $ip,
@@ -905,14 +968,14 @@ class BankPaymentRepository extends Repository
                         'refer_table' => 'bank_payment',
                         'emp_code' => $empTopup,
                         'auto' => 'Y',
-                        'remark' => 'อ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . ($response['ref_id'] ?? '') . ' ได้โบนัสจากช่องทางการฝาก เพิ่ม ' . $bank_acc->bonus . '%',
+                        'remark' => 'อ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.($response['ref_id'] ?? '').' ได้โบนัสจากช่องทางการฝาก เพิ่ม '.$bank_acc->bonus.'%',
                         'kind' => 'G_BONUS',
                         'user_create' => 'System Auto',
                         'user_update' => 'System Auto',
                     ]);
                 }
 
-                $alllog->remark = 'Auto Topup and Refer Credit Log ID : ' . $bill->code;
+                $alllog->remark = 'Auto Topup and Refer Credit Log ID : '.$bill->code;
                 $alllog->user_update = 'System Auto';
                 $alllog->save();
 
@@ -928,7 +991,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->points . ' ได้รับ 1 แต้ม สรุปได้รับ ' . $point,
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท เติม '.$config->points.' ได้รับ 1 แต้ม สรุปได้รับ '.$point,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -945,7 +1008,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->points_topup . ' ได้รับ ' . $point . ' แต้ม',
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->points_topup.' ได้รับ '.$point.' แต้ม',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -967,7 +1030,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->diamonds . ' ได้รับ 1 เม็ด สรุปได้รับ ' . $diamond,
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท เติม '.$config->diamonds.' ได้รับ 1 เม็ด สรุปได้รับ '.$diamond,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -984,7 +1047,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->diamonds_topup . ' ได้รับ ' . $diamond . ' เม็ด',
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->diamonds_topup.' ได้รับ '.$diamond.' เม็ด',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -1006,7 +1069,7 @@ class BankPaymentRepository extends Repository
                 $payment->date_topup = $datenow;
                 $payment->date_approve = $datenow;
                 $payment->autocheck = 'Y';
-                $payment->remark_admin = trim((string) $payment->remark_admin) . ' (เติมแล้ว)';
+                $payment->remark_admin = trim((string) $payment->remark_admin).' (เติมแล้ว)';
                 $payment->topup_by = 'System Auto';
                 $payment->ip_topup = $ip;
                 $payment->deposit_status = 'FINALIZED';
@@ -1046,9 +1109,9 @@ class BankPaymentRepository extends Repository
                 $billcode = 0;
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(beforeUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(beforeUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -1114,9 +1177,9 @@ class BankPaymentRepository extends Repository
                 }
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(afterUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(afterUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -1138,15 +1201,15 @@ class BankPaymentRepository extends Repository
                 $this->updateMemberDepositStatsOnSuccess((int) $member->code, (float) $amount);
             });
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบปัญหาใน Transaction');
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'Rollback Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบปัญหาใน Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'Rollback Transaction');
 
             try {
                 $rollbackRes = $this->gameUserRepository->UserWithdraw($game_code, $user_name, $total);
                 if (($rollbackRes['success'] ?? false) === true) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
                 } else {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
                 }
             } catch (Throwable $ex) {
                 report($ex);
@@ -1159,22 +1222,16 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เติมเงินสำเร็จให้กับ User : ' . $member->user_name);
-        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete') . $total));
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เติมเงินสำเร็จให้กับ User : '.$member->user_name);
+        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete').$total));
 
         // ====== update sum_deposit account ======
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -1209,11 +1266,11 @@ class BankPaymentRepository extends Repository
         $config = $this->getCoreConfig();
         $special = false;
 
-        $paymentId   = Arr::get($data, 'code');
-        $memberCode  = Arr::get($data, 'member_topup');
+        $paymentId = Arr::get($data, 'code');
+        $memberCode = Arr::get($data, 'member_topup');
         $accountCode = Arr::get($data, 'account_code');
-        $amount      = (float) Arr::get($data, 'value', 0);
-        $empTopup    = Arr::get($data, 'emp_topup');
+        $amount = (float) Arr::get($data, 'value', 0);
+        $empTopup = Arr::get($data, 'emp_topup');
 
         if (! $paymentId || ! $memberCode || ! $accountCode || $amount <= 0) {
             return false;
@@ -1226,7 +1283,8 @@ class BankPaymentRepository extends Repository
 
         // ถ้ารายการนี้เติมสำเร็จแล้ว กันยิงซ้ำ
         if ((int) $payment->status === 1) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'รายการนี้สถานะสำเร็จแล้ว (payment.status=1) ข้ามการทำงาน');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'รายการนี้สถานะสำเร็จแล้ว (payment.status=1) ข้ามการทำงาน');
+
             return false;
         }
 
@@ -1252,16 +1310,17 @@ class BankPaymentRepository extends Repository
         ]);
 
         if (! $game_user) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+
             return false;
         }
 
-        $game_code    = $game->code;
-        $game_name    = $game->name;
+        $game_code = $game->code;
+        $game_name = $game->name;
         $game_balance = (float) $game_user->balance;
 
-        $user_name   = $game_user->user_name;
-        $user_code   = $game_user->code;
+        $user_name = $game_user->user_name;
+        $user_code = $game_user->code;
         $member_code = $member->code;
 
         // ====== โปรโมชั่นที่เลือก ======
@@ -1277,10 +1336,10 @@ class BankPaymentRepository extends Repository
         $selectpro = $this->memberSelectProRepository->findOneWhere(['member_code' => $member_code]);
 
         if ($selectpro) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส ' . $selectpro->pro_code, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส '.$selectpro->pro_code, $member->code);
 
             if ($game_balance <= (float) $config->pro_reset) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
 
                 $promotion = $this->promotionRepository->checkSelectPro(
                     $selectpro->pro_code,
@@ -1298,7 +1357,7 @@ class BankPaymentRepository extends Repository
                 $withdraw_limit = (float) ($promotion['withdraw_limit'] ?? 0);
                 $withdraw_limit_rate = (float) ($promotion['withdraw_limit_rate'] ?? 0);
             } else {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
             }
 
             try {
@@ -1307,20 +1366,20 @@ class BankPaymentRepository extends Repository
                 report($e);
             }
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่ได้กดรับโปร', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่ได้กดรับโปร', $member->code);
         }
 
         // ====== เงื่อนไขพิเศษตามบัญชีที่เติมเข้า ======
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา ' . $bank_acc->acc_no, $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา '.$bank_acc->acc_no, $member->code);
 
         if ((float) $bank_acc->bonus > 0) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบบัญชีมีโบนัสเพิ่ม ' . $bank_acc->bonus . '% ของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบบัญชีมีโบนัสเพิ่ม '.$bank_acc->bonus.'% ของ บช '.$bank_acc->acc_no, $member->code);
 
             $isActive = $this->isBetweenDates($bank_acc->start_at, $bank_acc->end_at, $now);
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช '.$bank_acc->acc_no, $member->code);
 
             if ($isActive) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช ' . $bank_acc->acc_no, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช '.$bank_acc->acc_no, $member->code);
 
                 if ($pro_code === 0) {
                     $bonusSpecial = ($amount * (float) $bank_acc->bonus) / 100;
@@ -1330,19 +1389,19 @@ class BankPaymentRepository extends Repository
                     }
 
                     ActivityLoggerUser::activity(
-                        'Single Topup ID : ' . $paymentId,
-                        'คำนวนโบนัสพิเศษจากยอดฝาก ' . $amount . ' ได้โบนัส ' . $bonusSpecial . ' (' . $bank_acc->bonus . '%) บช ' . $bank_acc->acc_no,
+                        'Single Topup ID : '.$paymentId,
+                        'คำนวนโบนัสพิเศษจากยอดฝาก '.$amount.' ได้โบนัส '.$bonusSpecial.' ('.$bank_acc->bonus.'%) บช '.$bank_acc->acc_no,
                         $member->code
                     );
 
                     $bonus = $bonusSpecial;
-                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น ' . $bank_acc->bonus . '% จากยอดฝาก';
+                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น '.$bank_acc->bonus.'% จากยอดฝาก';
                     $total = $total + $bonus;
                     $special = true;
                 }
             }
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช '.$bank_acc->acc_no, $member->code);
         }
 
         $point = 0;
@@ -1350,11 +1409,11 @@ class BankPaymentRepository extends Repository
         $count_deposit = 1;
 
         // checkpoint: บางเคส relation bank มีปัญหา/DB สะดุด จะได้รู้ว่าตายตรงนี้หรือไม่
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'กำลังดึง bank_code จาก bank_acc', $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'กำลังดึง bank_code จาก bank_acc', $member->code);
         $bank_code = optional($bank_acc->bank)->code ?? 0;
 
         $credit_before = $game_balance;
-        $credit_after  = $credit_before + $total;
+        $credit_after = $credit_before + $total;
 
         /**
          * ===========================
@@ -1368,7 +1427,7 @@ class BankPaymentRepository extends Repository
         if ($chk) {
             // ถ้า payment ยังไม่สำเร็จ ถือว่า alllog อาจค้างจาก crash/exception รอบก่อน
             if ((int) $payment->status !== 1) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบ alllog ค้างแต่ payment ยังไม่ complete -> จะลบ/mark failed เพื่อให้ทำงานต่อได้', $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบ alllog ค้างแต่ payment ยังไม่ complete -> จะลบ/mark failed เพื่อให้ทำงานต่อได้', $member->code);
 
                 try {
                     // พยายามลบก่อน (คง behavior เดิม)
@@ -1377,7 +1436,7 @@ class BankPaymentRepository extends Repository
                     // ถ้าลบไม่ได้อย่างน้อย mark ไว้ว่าเสีย เพื่อไม่ block รอบหน้า
                     try {
                         $chk->status_log = 9; // failed/orphan
-                        $chk->remark = trim((string) $chk->remark) . ' [AUTO] orphan cleanup failed delete @ ' . $datenow;
+                        $chk->remark = trim((string) $chk->remark).' [AUTO] orphan cleanup failed delete @ '.$datenow;
                         $chk->user_update = 'System Auto';
                         $chk->save();
                     } catch (Throwable $ex) {
@@ -1385,10 +1444,12 @@ class BankPaymentRepository extends Repository
                     }
 
                     report($e);
+
                     return false;
                 }
             } else {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+
                 return false;
             }
         }
@@ -1415,15 +1476,16 @@ class BankPaymentRepository extends Repository
                 'user_update' => 'System Auto',
             ]);
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
             report($e);
+
             return false;
         }
 
-        $money_text = 'User ' . $member->user_name . ' Game ID : ' . $user_name . ' จำนวนเงิน ' . $amount . ' โบนัส ' . $bonus . ' จากโปร ' . $pro_name . ' รวมเป็น ' . $total;
+        $money_text = 'User '.$member->user_name.' Game ID : '.$user_name.' จำนวนเงิน '.$amount.' โบนัส '.$bonus.' จากโปร '.$pro_name.' รวมเป็น '.$total;
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เริ่มรายการเติมเงินให้กับ User : ' . $member->user_name . ' Game ID : ' . $user_name);
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, $money_text);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เริ่มรายการเติมเงินให้กับ User : '.$member->user_name.' Game ID : '.$user_name);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, $money_text);
 
         /**
          * ===========================
@@ -1432,12 +1494,12 @@ class BankPaymentRepository extends Repository
          * ===========================
          */
         try {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'กำลังเรียก UserDeposit() ฝากเข้าเกม', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'กำลังเรียก UserDeposit() ฝากเข้าเกม', $member->code);
             $response = $this->gameUserRepository->UserDeposit($game_code, $user_name, $total, false);
         } catch (Throwable $e) {
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' เกิด exception ตอนฝากเข้าเกม (จะลบ/mark failed alllog)'
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' เกิด exception ตอนฝากเข้าเกม (จะลบ/mark failed alllog)'
             );
 
             try {
@@ -1445,7 +1507,7 @@ class BankPaymentRepository extends Repository
             } catch (Throwable $ex) {
                 try {
                     $alllog->status_log = 9; // failed
-                    $alllog->remark = trim((string) $alllog->remark) . ' [AUTO] delete failed after deposit exception @ ' . $datenow;
+                    $alllog->remark = trim((string) $alllog->remark).' [AUTO] delete failed after deposit exception @ '.$datenow;
                     $alllog->user_update = 'System Auto';
                     $alllog->save();
                 } catch (Throwable $ex2) {
@@ -1455,6 +1517,7 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
@@ -1465,14 +1528,14 @@ class BankPaymentRepository extends Repository
 
         if (! ($response['success'] ?? false)) {
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
             );
 
             try {
                 $alllog->delete();
             } catch (Throwable $e) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
                 report($e);
             }
 
@@ -1480,8 +1543,8 @@ class BankPaymentRepository extends Repository
         }
 
         ActivityLoggerUser::activity(
-            'Single ฝากเงินเข้าเกม ' . $game_name,
-            $money_text . ' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน ' . ($response['before'] ?? '-') . ' ยอดหลัง ' . ($response['after'] ?? '-')
+            'Single ฝากเงินเข้าเกม '.$game_name,
+            $money_text.' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน '.($response['before'] ?? '-').' ยอดหลัง '.($response['after'] ?? '-')
         );
 
         try {
@@ -1489,7 +1552,6 @@ class BankPaymentRepository extends Repository
                 $ip,
                 $paymentId,
                 $datenow,
-                $today,
                 $config,
                 $special,
                 $bank_acc,
@@ -1516,10 +1578,10 @@ class BankPaymentRepository extends Repository
                 &$point,
                 &$diamond
             ) {
-                /** @var \Illuminate\Database\Eloquent\Model $lockedGameUser */
+                /** @var Model $lockedGameUser */
                 $lockedGameUser = $this->gameUserRepository->find($user_code);
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
                     throw new \RuntimeException('Missing game_user');
                 }
 
@@ -1532,21 +1594,21 @@ class BankPaymentRepository extends Repository
                     ->first();
 
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
                     throw new \RuntimeException('Lock game_user failed');
                 }
 
-                $sum_amount_turn  = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
+                $sum_amount_turn = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
                 $sum_amount_limit = ((float) $lockedGameUser->balance + (($amount + $bonus) * (float) $withdraw_limit_rate));
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(sum): locked_balance=' . (float) $lockedGameUser->balance
-                    . ' total=' . $total
-                    . ' turnpro=' . (float) $turnpro
-                    . ' rate=' . (float) $withdraw_limit_rate
-                    . ' => sum_turn=' . $sum_amount_turn
-                    . ' sum_limit=' . $sum_amount_limit,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(sum): locked_balance='.(float) $lockedGameUser->balance
+                    .' total='.$total
+                    .' turnpro='.(float) $turnpro
+                    .' rate='.(float) $withdraw_limit_rate
+                    .' => sum_turn='.$sum_amount_turn
+                    .' sum_limit='.$sum_amount_limit,
                     $member->code
                 );
 
@@ -1558,13 +1620,13 @@ class BankPaymentRepository extends Repository
                 ]);
 
                 if ($chknew) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
                     throw new \RuntimeException('Duplicate member_credit_log');
                 }
 
                 $remark = $special
-                    ? ('ช่วงเวลาสุดพิเศษ ' . $bank_acc->start_at . ' ถึง ' . $bank_acc->end_at . ' รับเพิ่ม ' . $bank_acc->bonus . '% อิงรายการฝาก ID ' . $paymentId)
-                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . ($response['ref_id'] ?? ''));
+                    ? ('ช่วงเวลาสุดพิเศษ '.$bank_acc->start_at.' ถึง '.$bank_acc->end_at.' รับเพิ่ม '.$bank_acc->bonus.'% อิงรายการฝาก ID '.$paymentId)
+                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.($response['ref_id'] ?? ''));
 
                 $bill = $this->memberCreditLogRepository->create([
                     'ip' => $ip,
@@ -1621,14 +1683,14 @@ class BankPaymentRepository extends Repository
                         'refer_table' => 'bank_payment',
                         'emp_code' => $empTopup,
                         'auto' => 'Y',
-                        'remark' => 'อ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . ($response['ref_id'] ?? '') . ' ได้โบนัสจากช่องทางการฝาก เพิ่ม ' . $bank_acc->bonus . '%',
+                        'remark' => 'อ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.($response['ref_id'] ?? '').' ได้โบนัสจากช่องทางการฝาก เพิ่ม '.$bank_acc->bonus.'%',
                         'kind' => 'G_BONUS',
                         'user_create' => 'System Auto',
                         'user_update' => 'System Auto',
                     ]);
                 }
 
-                $alllog->remark = 'Auto Topup and Refer Credit Log ID : ' . $bill->code;
+                $alllog->remark = 'Auto Topup and Refer Credit Log ID : '.$bill->code;
                 $alllog->user_update = 'System Auto';
                 $alllog->save();
 
@@ -1644,7 +1706,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->points . ' ได้รับ 1 แต้ม สรุปได้รับ ' . $point,
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท เติม '.$config->points.' ได้รับ 1 แต้ม สรุปได้รับ '.$point,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -1661,7 +1723,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->points_topup . ' ได้รับ ' . $point . ' แต้ม',
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->points_topup.' ได้รับ '.$point.' แต้ม',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -1683,7 +1745,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->diamonds . ' ได้รับ 1 เม็ด สรุปได้รับ ' . $diamond,
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท เติม '.$config->diamonds.' ได้รับ 1 เม็ด สรุปได้รับ '.$diamond,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -1700,7 +1762,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->diamonds_topup . ' ได้รับ ' . $diamond . ' เม็ด',
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->diamonds_topup.' ได้รับ '.$diamond.' เม็ด',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -1722,7 +1784,7 @@ class BankPaymentRepository extends Repository
                 $payment->date_topup = $datenow;
                 $payment->date_approve = $datenow;
                 $payment->autocheck = 'Y';
-                $payment->remark_admin = trim((string) $payment->remark_admin) . ' (เติมแล้ว)';
+                $payment->remark_admin = trim((string) $payment->remark_admin).' (เติมแล้ว)';
                 $payment->topup_by = 'System Auto';
                 $payment->ip_topup = $ip;
                 $payment->save();
@@ -1760,9 +1822,9 @@ class BankPaymentRepository extends Repository
                 $billcode = 0;
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(beforeUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(beforeUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -1828,9 +1890,9 @@ class BankPaymentRepository extends Repository
                 }
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(afterUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(afterUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -1852,15 +1914,15 @@ class BankPaymentRepository extends Repository
                 $this->updateMemberDepositStatsOnSuccess((int) $member->code, (float) $amount);
             });
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบปัญหาใน Transaction');
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'Rollback Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบปัญหาใน Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'Rollback Transaction');
 
             try {
                 $rollbackRes = $this->gameUserRepository->UserWithdraw($game_code, $user_name, $total);
                 if (($rollbackRes['success'] ?? false) === true) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
                 } else {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
                 }
             } catch (Throwable $ex) {
                 report($ex);
@@ -1873,22 +1935,16 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เติมเงินสำเร็จให้กับ User : ' . $member->user_name);
-        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete') . $total));
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เติมเงินสำเร็จให้กับ User : '.$member->user_name);
+        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete').$total));
 
         // ====== update sum_deposit account ======
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -1960,7 +2016,8 @@ class BankPaymentRepository extends Repository
         ]);
 
         if (! $game_user) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+
             return false;
         }
 
@@ -1985,10 +2042,10 @@ class BankPaymentRepository extends Repository
         $selectpro = $this->memberSelectProRepository->findOneWhere(['member_code' => $member_code]);
 
         if ($selectpro) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส ' . $selectpro->pro_code, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส '.$selectpro->pro_code, $member->code);
 
             if ($game_balance <= (float) $config->pro_reset) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
 
                 $promotion = $this->promotionRepository->checkSelectPro(
                     $selectpro->pro_code,
@@ -2006,25 +2063,25 @@ class BankPaymentRepository extends Repository
                 $withdraw_limit = (float) ($promotion['withdraw_limit'] ?? 0);
                 $withdraw_limit_rate = (float) ($promotion['withdraw_limit_rate'] ?? 0);
             } else {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
             }
 
             $selectpro->delete();
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่ได้กดรับโปร', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่ได้กดรับโปร', $member->code);
         }
 
         // ====== เงื่อนไขพิเศษตามบัญชีที่เติมเข้า ======
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา ' . $bank_acc->acc_no, $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา '.$bank_acc->acc_no, $member->code);
 
         if ((float) $bank_acc->bonus > 0) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบบัญชีมีโบนัสเพิ่ม ' . $bank_acc->bonus . '% ของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบบัญชีมีโบนัสเพิ่ม '.$bank_acc->bonus.'% ของ บช '.$bank_acc->acc_no, $member->code);
 
             $isActive = $this->isBetweenDates($bank_acc->start_at, $bank_acc->end_at, $now);
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช '.$bank_acc->acc_no, $member->code);
 
             if ($isActive) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช ' . $bank_acc->acc_no, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช '.$bank_acc->acc_no, $member->code);
 
                 if ($pro_code === 0) {
                     $bonusSpecial = ($amount * (float) $bank_acc->bonus) / 100;
@@ -2034,19 +2091,19 @@ class BankPaymentRepository extends Repository
                     }
 
                     ActivityLoggerUser::activity(
-                        'Single Topup ID : ' . $paymentId,
-                        'คำนวนโบนัสพิเศษจากยอดฝาก ' . $amount . ' ได้โบนัส ' . $bonusSpecial . ' (' . $bank_acc->bonus . '%) บช ' . $bank_acc->acc_no,
+                        'Single Topup ID : '.$paymentId,
+                        'คำนวนโบนัสพิเศษจากยอดฝาก '.$amount.' ได้โบนัส '.$bonusSpecial.' ('.$bank_acc->bonus.'%) บช '.$bank_acc->acc_no,
                         $member->code
                     );
 
                     $bonus = $bonusSpecial;
-                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น ' . $bank_acc->bonus . '% จากยอดฝาก';
+                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น '.$bank_acc->bonus.'% จากยอดฝาก';
                     $total = $total + $bonus;
                     $special = true;
                 }
             }
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช '.$bank_acc->acc_no, $member->code);
         }
 
         $point = 0;
@@ -2060,7 +2117,8 @@ class BankPaymentRepository extends Repository
 
         $chk = $this->allLogRepository->findOneByField('bank_payment_id', $paymentId);
         if ($chk) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+
             return false;
         }
 
@@ -2086,15 +2144,16 @@ class BankPaymentRepository extends Repository
                 'user_update' => 'System Auto',
             ]);
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
             report($e);
+
             return false;
         }
 
-        $money_text = 'User ' . $member->user_name . ' Game ID : ' . $user_name . ' จำนวนเงิน ' . $amount . ' โบนัส ' . $bonus . ' จากโปร ' . $pro_name . ' รวมเป็น ' . $total;
+        $money_text = 'User '.$member->user_name.' Game ID : '.$user_name.' จำนวนเงิน '.$amount.' โบนัส '.$bonus.' จากโปร '.$pro_name.' รวมเป็น '.$total;
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เริ่มรายการเติมเงินให้กับ User : ' . $member->user_name . ' Game ID : ' . $user_name);
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, $money_text);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เริ่มรายการเติมเงินให้กับ User : '.$member->user_name.' Game ID : '.$user_name);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, $money_text);
 
         // =========================================================
         // ✅ สำคัญ: ครอบ UserDeposit กัน exception หลุด (กัน alllog ค้าง)
@@ -2103,18 +2162,19 @@ class BankPaymentRepository extends Repository
             $response = $this->gameUserRepository->UserDeposit($game_code, $user_name, $total, false);
         } catch (Throwable $e) {
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' เกิด exception ตอนฝากเงินเข้าเกม ระบบจะลบรายการ all log ที่สร้างไว้'
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' เกิด exception ตอนฝากเงินเข้าเกม ระบบจะลบรายการ all log ที่สร้างไว้'
             );
 
             try {
                 $alllog->delete();
             } catch (Throwable $ex) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ลบ all log ไม่สำเร็จ หลังจากเกิด exception ตอนฝากเงินเข้าเกม');
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ลบ all log ไม่สำเร็จ หลังจากเกิด exception ตอนฝากเงินเข้าเกม');
                 report($ex);
             }
 
             report($e);
+
             return false;
         }
 
@@ -2125,14 +2185,14 @@ class BankPaymentRepository extends Repository
 
         if (! ($response['success'] ?? false)) {
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
             );
 
             try {
                 $alllog->delete();
             } catch (Throwable $e) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
                 report($e);
             }
 
@@ -2140,8 +2200,8 @@ class BankPaymentRepository extends Repository
         }
 
         ActivityLoggerUser::activity(
-            'Single ฝากเงินเข้าเกม ' . $game_name,
-            $money_text . ' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน ' . $response['before'] . ' ยอดหลัง ' . $response['after']
+            'Single ฝากเงินเข้าเกม '.$game_name,
+            $money_text.' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน '.$response['before'].' ยอดหลัง '.$response['after']
         );
 
         try {
@@ -2149,7 +2209,6 @@ class BankPaymentRepository extends Repository
                 $ip,
                 $paymentId,
                 $datenow,
-                $today,
                 $config,
                 $special,
                 $bank_acc,
@@ -2179,10 +2238,10 @@ class BankPaymentRepository extends Repository
                 // =========================================================
                 // ✅ สำคัญ: โหลด game_user ใหม่ใน transaction + lockForUpdate
                 // =========================================================
-                /** @var \Illuminate\Database\Eloquent\Model $lockedGameUser */
+                /** @var Model $lockedGameUser */
                 $lockedGameUser = $this->gameUserRepository->find($user_code);
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'ไม่พบ game_user ระหว่างทำ transaction (จะ rollback)');
                     throw new \RuntimeException('Missing game_user');
                 }
 
@@ -2195,21 +2254,21 @@ class BankPaymentRepository extends Repository
                     ->first();
 
                 if (! $lockedGameUser) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'lockForUpdate ไม่เจอแถว game_user (จะ rollback)');
                     throw new \RuntimeException('Lock game_user failed');
                 }
 
-                $sum_amount_turn  = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
+                $sum_amount_turn = ((float) $lockedGameUser->balance + ($total * (float) $turnpro));
                 $sum_amount_limit = ((float) $lockedGameUser->balance + (($amount + $bonus) * (float) $withdraw_limit_rate));
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(sum): locked_balance=' . (float) $lockedGameUser->balance
-                    . ' total=' . $total
-                    . ' turnpro=' . (float) $turnpro
-                    . ' rate=' . (float) $withdraw_limit_rate
-                    . ' => sum_turn=' . $sum_amount_turn
-                    . ' sum_limit=' . $sum_amount_limit,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(sum): locked_balance='.(float) $lockedGameUser->balance
+                    .' total='.$total
+                    .' turnpro='.(float) $turnpro
+                    .' rate='.(float) $withdraw_limit_rate
+                    .' => sum_turn='.$sum_amount_turn
+                    .' sum_limit='.$sum_amount_limit,
                     $member->code
                 );
 
@@ -2221,13 +2280,13 @@ class BankPaymentRepository extends Repository
                 ]);
 
                 if ($chknew) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
                     throw new \RuntimeException('Duplicate member_credit_log');
                 }
 
                 $remark = $special
-                    ? ('ช่วงเวลาสุดพิเศษ ' . $bank_acc->start_at . ' ถึง ' . $bank_acc->end_at . ' รับเพิ่ม ' . $bank_acc->bonus . '% อิงรายการฝาก ID ' . $paymentId)
-                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . $response['ref_id']);
+                    ? ('ช่วงเวลาสุดพิเศษ '.$bank_acc->start_at.' ถึง '.$bank_acc->end_at.' รับเพิ่ม '.$bank_acc->bonus.'% อิงรายการฝาก ID '.$paymentId)
+                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.$response['ref_id']);
 
                 $bill = $this->memberCreditLogRepository->create([
                     'ip' => $ip,
@@ -2284,14 +2343,14 @@ class BankPaymentRepository extends Repository
                         'refer_table' => 'bank_payment',
                         'emp_code' => $empTopup,
                         'auto' => 'Y',
-                        'remark' => 'อ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . $response['ref_id'] . ' ได้โบนัสจากช่องทางการฝาก เพิ่ม ' . $bank_acc->bonus . '%',
+                        'remark' => 'อ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.$response['ref_id'].' ได้โบนัสจากช่องทางการฝาก เพิ่ม '.$bank_acc->bonus.'%',
                         'kind' => 'G_BONUS',
                         'user_create' => 'System Auto',
                         'user_update' => 'System Auto',
                     ]);
                 }
 
-                $alllog->remark = 'Auto Topup and Refer Credit Log ID : ' . $bill->code;
+                $alllog->remark = 'Auto Topup and Refer Credit Log ID : '.$bill->code;
                 $alllog->user_update = 'System Auto';
                 $alllog->save();
 
@@ -2307,7 +2366,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->points . ' ได้รับ 1 แต้ม สรุปได้รับ ' . $point,
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท เติม '.$config->points.' ได้รับ 1 แต้ม สรุปได้รับ '.$point,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2324,7 +2383,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->points_topup . ' ได้รับ ' . $point . ' แต้ม',
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->points_topup.' ได้รับ '.$point.' แต้ม',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2346,7 +2405,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->diamonds . ' ได้รับ 1 เม็ด สรุปได้รับ ' . $diamond,
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท เติม '.$config->diamonds.' ได้รับ 1 เม็ด สรุปได้รับ '.$diamond,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2363,7 +2422,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->diamonds_topup . ' ได้รับ ' . $diamond . ' เม็ด',
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->diamonds_topup.' ได้รับ '.$diamond.' เม็ด',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2385,7 +2444,7 @@ class BankPaymentRepository extends Repository
                 $payment->date_topup = $datenow;
                 $payment->date_approve = $datenow;
                 $payment->autocheck = 'Y';
-                $payment->remark_admin = trim((string) $payment->remark_admin) . ' (เติมแล้ว)';
+                $payment->remark_admin = trim((string) $payment->remark_admin).' (เติมแล้ว)';
                 $payment->topup_by = 'System Auto';
                 $payment->ip_topup = $ip;
                 $payment->save();
@@ -2423,9 +2482,9 @@ class BankPaymentRepository extends Repository
                 $billcode = 0;
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(beforeUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(beforeUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -2491,9 +2550,9 @@ class BankPaymentRepository extends Repository
                 }
 
                 ActivityLoggerUser::activity(
-                    'Single Topup ID : ' . $paymentId,
-                    'DEBUG(afterUpdate): amount_balance=' . (float) $lockedGameUser->amount_balance
-                    . ' withdraw_limit_amount=' . (float) $lockedGameUser->withdraw_limit_amount,
+                    'Single Topup ID : '.$paymentId,
+                    'DEBUG(afterUpdate): amount_balance='.(float) $lockedGameUser->amount_balance
+                    .' withdraw_limit_amount='.(float) $lockedGameUser->withdraw_limit_amount,
                     $member->code
                 );
 
@@ -2515,15 +2574,15 @@ class BankPaymentRepository extends Repository
                 $this->updateMemberDepositStatsOnSuccess((int) $member->code, (float) $amount);
             });
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบปัญหาใน Transaction');
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'Rollback Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบปัญหาใน Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'Rollback Transaction');
 
             try {
                 $rollbackRes = $this->gameUserRepository->UserWithdraw($game_code, $user_name, $total);
                 if (($rollbackRes['success'] ?? false) === true) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
                 } else {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
                 }
             } catch (Throwable $ex) {
                 report($ex);
@@ -2536,22 +2595,16 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เติมเงินสำเร็จให้กับ User : ' . $member->user_name);
-        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete') . $total));
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เติมเงินสำเร็จให้กับ User : '.$member->user_name);
+        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete').$total));
 
         // ====== update sum_deposit account ======
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -2574,8 +2627,6 @@ class BankPaymentRepository extends Repository
 
         return true;
     }
-
-
 
     public function refillPaymentSingle_last($data): bool
     {
@@ -2625,7 +2676,8 @@ class BankPaymentRepository extends Repository
         ]);
 
         if (! $game_user) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+
             return false;
         }
 
@@ -2650,10 +2702,10 @@ class BankPaymentRepository extends Repository
         $selectpro = $this->memberSelectProRepository->findOneWhere(['member_code' => $member_code]);
 
         if ($selectpro) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส ' . $selectpro->pro_code, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'มีการเลือกโปรโมชั่น โปรรหัส '.$selectpro->pro_code, $member->code);
 
             if ($game_balance <= (float) $config->pro_reset) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
 
                 $promotion = $this->promotionRepository->checkSelectPro(
                     $selectpro->pro_code,
@@ -2671,25 +2723,25 @@ class BankPaymentRepository extends Repository
                 $withdraw_limit = (float) ($promotion['withdraw_limit'] ?? 0);
                 $withdraw_limit_rate = (float) ($promotion['withdraw_limit_rate'] ?? 0);
             } else {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส '.$selectpro->pro_code, $member->code);
             }
 
             $selectpro->delete();
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่ได้กดรับโปร', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่ได้กดรับโปร', $member->code);
         }
 
         // ====== เงื่อนไขพิเศษตามบัญชีที่เติมเข้า ======
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา ' . $bank_acc->acc_no, $member->code);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เช็คเงื่อนไขพิเศษของ บช ที่เติมเข้ามา '.$bank_acc->acc_no, $member->code);
 
         if ((float) $bank_acc->bonus > 0) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบบัญชีมีโบนัสเพิ่ม ' . $bank_acc->bonus . '% ของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบบัญชีมีโบนัสเพิ่ม '.$bank_acc->bonus.'% ของ บช '.$bank_acc->acc_no, $member->code);
 
             $isActive = $this->isBetweenDates($bank_acc->start_at, $bank_acc->end_at, $now);
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ตรวจสอบช่วงเวลาโบนัสของ บช '.$bank_acc->acc_no, $member->code);
 
             if ($isActive) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช ' . $bank_acc->acc_no, $member->code);
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'อยู่ในช่วงกิจกรรมโบนัส บช '.$bank_acc->acc_no, $member->code);
 
                 if ($pro_code === 0) {
                     $bonusSpecial = ($amount * (float) $bank_acc->bonus) / 100;
@@ -2699,19 +2751,19 @@ class BankPaymentRepository extends Repository
                     }
 
                     ActivityLoggerUser::activity(
-                        'Single Topup ID : ' . $paymentId,
-                        'คำนวนโบนัสพิเศษจากยอดฝาก ' . $amount . ' ได้โบนัส ' . $bonusSpecial . ' (' . $bank_acc->bonus . '%) บช ' . $bank_acc->acc_no,
+                        'Single Topup ID : '.$paymentId,
+                        'คำนวนโบนัสพิเศษจากยอดฝาก '.$amount.' ได้โบนัส '.$bonusSpecial.' ('.$bank_acc->bonus.'%) บช '.$bank_acc->acc_no,
                         $member->code
                     );
 
                     $bonus = $bonusSpecial;
-                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น ' . $bank_acc->bonus . '% จากยอดฝาก';
+                    $pro_name = 'ช่วงเวลา พิเศษ รับยอดเพิ่มขึ้น '.$bank_acc->bonus.'% จากยอดฝาก';
                     $total = $total + $bonus;
                     $special = true;
                 }
             }
         } else {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช ' . $bank_acc->acc_no, $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'บัญชีนี้ไม่มีโบนัสเพิ่ม บช '.$bank_acc->acc_no, $member->code);
         }
 
         $point = 0;
@@ -2725,7 +2777,8 @@ class BankPaymentRepository extends Repository
 
         $chk = $this->allLogRepository->findOneByField('bank_payment_id', $paymentId);
         if ($chk) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+
             return false;
         }
 
@@ -2751,28 +2804,29 @@ class BankPaymentRepository extends Repository
                 'user_update' => 'System Auto',
             ]);
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
             report($e);
+
             return false;
         }
 
-        $money_text = 'User ' . $member->user_name . ' Game ID : ' . $user_name . ' จำนวนเงิน ' . $amount . ' โบนัส ' . $bonus . ' จากโปร ' . $pro_name . ' รวมเป็น ' . $total;
+        $money_text = 'User '.$member->user_name.' Game ID : '.$user_name.' จำนวนเงิน '.$amount.' โบนัส '.$bonus.' จากโปร '.$pro_name.' รวมเป็น '.$total;
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เริ่มรายการเติมเงินให้กับ User : ' . $member->user_name . ' Game ID : ' . $user_name);
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, $money_text);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เริ่มรายการเติมเงินให้กับ User : '.$member->user_name.' Game ID : '.$user_name);
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, $money_text);
 
         $response = $this->gameUserRepository->UserDeposit($game_code, $user_name, $total, false);
 
         if (! ($response['success'] ?? false)) {
             ActivityLoggerUser::activity(
-                'Single ฝากเงินเข้าเกม ' . $game_name,
-                $money_text . ' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
+                'Single ฝากเงินเข้าเกม '.$game_name,
+                $money_text.' ไม่สามารถฝากเงินเข้าเกมได้ ระบบจะลบรายการ all log ที่สร้างไว้'
             );
 
             try {
                 $alllog->delete();
             } catch (Throwable $e) {
-                ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
+                ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ลบ all log ไม่สำเร็จ หลังจากฝากเงินเข้าเกมไม่สำเร็จ');
                 report($e);
             }
 
@@ -2780,8 +2834,8 @@ class BankPaymentRepository extends Repository
         }
 
         ActivityLoggerUser::activity(
-            'Single ฝากเงินเข้าเกม ' . $game_name,
-            $money_text . ' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน ' . $response['before'] . ' ยอดหลัง ' . $response['after']
+            'Single ฝากเงินเข้าเกม '.$game_name,
+            $money_text.' ระบบทำการฝากเงินเข้าเกมแล้ว ยอดก่อน '.$response['before'].' ยอดหลัง '.$response['after']
         );
 
         try {
@@ -2789,7 +2843,6 @@ class BankPaymentRepository extends Repository
                 $ip,
                 $paymentId,
                 $datenow,
-                $today,
                 $config,
                 $special,
                 $bank_acc,
@@ -2825,13 +2878,13 @@ class BankPaymentRepository extends Repository
                 ]);
 
                 if ($chknew) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'หยุดการทำงาน เนื่องจาก Log ซ้ำ (จะ rollback)');
                     throw new \RuntimeException('Duplicate member_credit_log');
                 }
 
                 $remark = $special
-                    ? ('ช่วงเวลาสุดพิเศษ ' . $bank_acc->start_at . ' ถึง ' . $bank_acc->end_at . ' รับเพิ่ม ' . $bank_acc->bonus . '% อิงรายการฝาก ID ' . $paymentId)
-                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . $response['ref_id']);
+                    ? ('ช่วงเวลาสุดพิเศษ '.$bank_acc->start_at.' ถึง '.$bank_acc->end_at.' รับเพิ่ม '.$bank_acc->bonus.'% อิงรายการฝาก ID '.$paymentId)
+                    : ('เติมเงินฝากอ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.$response['ref_id']);
 
                 $bill = $this->memberCreditLogRepository->create([
                     'ip' => $ip,
@@ -2888,14 +2941,14 @@ class BankPaymentRepository extends Repository
                         'refer_table' => 'bank_payment',
                         'emp_code' => $empTopup,
                         'auto' => 'Y',
-                        'remark' => 'อ้างอิงรายการฝาก ID : ' . $paymentId . ' RefID : ' . $response['ref_id'] . ' ได้โบนัสจากช่องทางการฝาก เพิ่ม ' . $bank_acc->bonus . '%',
+                        'remark' => 'อ้างอิงรายการฝาก ID : '.$paymentId.' RefID : '.$response['ref_id'].' ได้โบนัสจากช่องทางการฝาก เพิ่ม '.$bank_acc->bonus.'%',
                         'kind' => 'G_BONUS',
                         'user_create' => 'System Auto',
                         'user_update' => 'System Auto',
                     ]);
                 }
 
-                $alllog->remark = 'Auto Topup and Refer Credit Log ID : ' . $bill->code;
+                $alllog->remark = 'Auto Topup and Refer Credit Log ID : '.$bill->code;
                 $alllog->user_update = 'System Auto';
                 $alllog->save();
 
@@ -2911,7 +2964,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->points . ' ได้รับ 1 แต้ม สรุปได้รับ ' . $point,
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท เติม '.$config->points.' ได้รับ 1 แต้ม สรุปได้รับ '.$point,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2928,7 +2981,7 @@ class BankPaymentRepository extends Repository
                                 'point_before' => $member->point_deposit,
                                 'point_balance' => ($member->point_deposit + $point),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับ Point จากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->points_topup . ' ได้รับ ' . $point . ' แต้ม',
+                                'remark' => 'ได้รับ Point จากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->points_topup.' ได้รับ '.$point.' แต้ม',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2950,7 +3003,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท เติม ' . $config->diamonds . ' ได้รับ 1 เม็ด สรุปได้รับ ' . $diamond,
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท เติม '.$config->diamonds.' ได้รับ 1 เม็ด สรุปได้รับ '.$diamond,
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2967,7 +3020,7 @@ class BankPaymentRepository extends Repository
                                 'diamond_before' => $member->diamond,
                                 'diamond_balance' => ($member->diamond + $diamond),
                                 'member_code' => $member->code,
-                                'remark' => 'ได้รับเพชรจากการเติมเงิน ' . $amount . ' บาท (นับเป็นบิล) เติมยอด >= ' . $config->diamonds_topup . ' ได้รับ ' . $diamond . ' เม็ด',
+                                'remark' => 'ได้รับเพชรจากการเติมเงิน '.$amount.' บาท (นับเป็นบิล) เติมยอด >= '.$config->diamonds_topup.' ได้รับ '.$diamond.' เม็ด',
                                 'emp_code' => $empTopup,
                                 'ip' => $ip,
                                 'user_create' => 'System Auto',
@@ -2989,11 +3042,10 @@ class BankPaymentRepository extends Repository
                 $payment->date_topup = $datenow;
                 $payment->date_approve = $datenow;
                 $payment->autocheck = 'Y';
-                $payment->remark_admin = trim((string) $payment->remark_admin) . ' (เติมแล้ว)';
+                $payment->remark_admin = trim((string) $payment->remark_admin).' (เติมแล้ว)';
                 $payment->topup_by = 'System Auto';
                 $payment->ip_topup = $ip;
                 $payment->save();
-
 
                 $sum_amount_turn = ($game_user->balance + ($total * $turnpro));
                 $sum_amount_limit = ($game_user->balance + (($amount + $bonus) * $withdraw_limit_rate));
@@ -3108,15 +3160,15 @@ class BankPaymentRepository extends Repository
                 $this->updateMemberDepositStatsOnSuccess((int) $member->code, (float) $amount);
             });
         } catch (Throwable $e) {
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'พบปัญหาใน Transaction');
-            ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'Rollback Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบปัญหาใน Transaction');
+            ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'Rollback Transaction');
 
             try {
                 $rollbackRes = $this->gameUserRepository->UserWithdraw($game_code, $user_name, $total);
                 if (($rollbackRes['success'] ?? false) === true) {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ถอนเงินออกจากเกมแล้ว');
                 } else {
-                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม ' . $game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
+                    ActivityLoggerUser::activity('Single ฝากเงินเข้าเกม '.$game_name, 'Rollback: ไม่สามารถถอนเงินออกจากเกมได้');
                 }
             } catch (Throwable $ex) {
                 report($ex);
@@ -3129,22 +3181,16 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
-        ActivityLoggerUser::activity('Single Topup ID : ' . $paymentId, 'เติมเงินสำเร็จให้กับ User : ' . $member->user_name);
-        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete') . $total));
+        ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'เติมเงินสำเร็จให้กับ User : '.$member->user_name);
+        Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete').$total));
 
         // ====== update sum_deposit account ======
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -3739,14 +3785,7 @@ class BankPaymentRepository extends Repository
 
         // ====== update sum_deposit account ======
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -3819,6 +3858,7 @@ class BankPaymentRepository extends Repository
 
         if (! $game_user) {
             ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่พบ game user ที่ enable=Y ของสมาชิก', $member->code);
+
             return false;
         }
 
@@ -3917,6 +3957,7 @@ class BankPaymentRepository extends Repository
         $chk = $this->allLogRepository->findOneByField('bank_payment_id', $paymentId);
         if ($chk) {
             ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'พบรายการเติมเงินนี้ในระบบแล้ว', $member->code);
+
             return false;
         }
 
@@ -3944,6 +3985,7 @@ class BankPaymentRepository extends Repository
         } catch (Throwable $e) {
             ActivityLoggerUser::activity('Single Topup ID : '.$paymentId, 'ไม่สามารถเพิ่มรายการ all log ได้');
             report($e);
+
             return false;
         }
 
@@ -3980,7 +4022,6 @@ class BankPaymentRepository extends Repository
                 $ip,
                 $paymentId,
                 $datenow,
-                $today,
                 $config,
                 $special,
                 $bank_acc,
@@ -4353,6 +4394,7 @@ class BankPaymentRepository extends Repository
             }
 
             report($e);
+
             return false;
         }
 
@@ -4360,14 +4402,7 @@ class BankPaymentRepository extends Repository
         Notification::send($member, new RealTimeNotification(Lang::get('app.topup.complete').$total));
 
         $account = $payment->bank_account;
-
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()
-            ->active()
-            ->complete()
-            ->where('account_code', $payment->account_code)
-            ->whereDate('date_topup', $today)
-            ->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
 
         $account->update(['sum_deposit' => $sumToday]);
 
@@ -4879,7 +4914,7 @@ class BankPaymentRepository extends Repository
 
         $account = $payment->bank_account;
 
-        $sumToday = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->complete()->where('account_code', $payment->account_code)->whereDate('date_topup', $today)->sum('value');
+        $sumToday = $this->resolveAccountDailyDepositTotal($payment);
         $account->update(['sum_deposit' => $sumToday]);
 
         if ($account->sum_limit > 0) {
@@ -4909,7 +4944,7 @@ class BankPaymentRepository extends Repository
      */
     public function model(): string
     {
-        return \Gametech\Payment\Models\BankPayment::class;
+        return BankPayment::class;
 
     }
 
@@ -4970,10 +5005,10 @@ class BankPaymentRepository extends Repository
             'ref_type' => 'DEPOSIT',
             'ref_id' => (int) $paymentCode,
             'ref_code' => $paymentCode,
-            'group_code' => 'DEPOSIT_' . $paymentCode,
+            'group_code' => 'DEPOSIT_'.$paymentCode,
             'related_txn_id' => null,
             'status' => 'SUCCESS',
-            'description' => 'Auto topup from bank payment #' . $paymentCode,
+            'description' => 'Auto topup from bank payment #'.$paymentCode,
             'meta' => json_encode([
                 'source' => 'BankPaymentRepository::refillPaymentSeamless',
                 'bank_account_code' => $bankAccountCode,

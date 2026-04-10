@@ -18,6 +18,7 @@ class DashboardService
 {
     public const CACHE_TTL_SECONDS = 45;
     private const ACTIVITY_CACHE_TTL_SECONDS = 5;
+    private const ACTIVITY_FEED_LIMIT = 10;
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
     private const ASSUMED_RUNTIME_TABLES = [
         'bank_payment' => true,
@@ -638,13 +639,13 @@ class DashboardService
 
             $depositQuery = (clone $depositBase)
                 ->orderBy('date_create', 'desc')
-                ->take(100)
+                ->take(self::ACTIVITY_FEED_LIMIT)
                 ->with(['member.bank', 'bank_account.bank', 'admin']);
 
             $depositManualQuery = (clone $depositBase)
                 ->where('channel', 'MANUAL')
                 ->orderBy('date_create', 'desc')
-                ->take(100)
+                ->take(self::ACTIVITY_FEED_LIMIT)
                 ->with(['member.bank', 'bank_account.bank', 'admin']);
 
             $deposits = $depositQuery->get()->map($mapDeposit);
@@ -670,7 +671,7 @@ class DashboardService
                 $withdrawQuery = $this->applyMemberRelationFilters($withdrawQuery, $filters);
                 $withdrawQuery
                     ->orderByRaw('COALESCE(date_approve, date_create, date_update) DESC')
-                    ->take(10);
+                    ->take(self::ACTIVITY_FEED_LIMIT);
                 $this->applyDateTimeWindow($withdrawQuery, 'date_create', $startDate, $endDate);
                 $withdrawQuery->with(['bank_tran.bank', 'bank', 'member.bank']);
 
@@ -730,7 +731,7 @@ class DashboardService
 
             $registerQuery = $this->memberQuery($filters)
                 ->orderBy($dateColumn, 'desc')
-                ->take(10);
+                ->take(self::ACTIVITY_FEED_LIMIT);
             $this->applyDateTimeWindow($registerQuery, $dateColumn, $startDate, $endDate);
             $registers = $registerQuery->get()
                 ->map(function ($row) use ($depositCountColumn, $dateColumn) {
@@ -768,7 +769,7 @@ class DashboardService
             foreach ($staffQueries as $staffQuery) {
                 $staffQuery
                     ->orderBy('date_create', 'desc')
-                    ->take(10);
+                    ->take(self::ACTIVITY_FEED_LIMIT);
                 $this->applyDateTimeWindow($staffQuery, 'date_create', $startDate, $endDate);
                 $staffQuery = $this->applyMemberRelationFilters($staffQuery, $filters);
 

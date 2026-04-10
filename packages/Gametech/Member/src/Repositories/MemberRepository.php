@@ -3,6 +3,7 @@
 namespace Gametech\Member\Repositories;
 
 use Gametech\Core\Eloquent\Repository;
+use Gametech\Member\Models\Member;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -10,6 +11,7 @@ class MemberRepository extends Repository
 {
     protected $cacheMinutes = 0;
     protected $cacheOnly = [];
+
     /**
      * Specify Model class name
      *
@@ -17,7 +19,7 @@ class MemberRepository extends Repository
      */
     public function model(): string
     {
-        return \Gametech\Member\Models\Member::class;
+        return Member::class;
     }
 
     public function getAff($id)
@@ -52,11 +54,15 @@ class MemberRepository extends Repository
 
     public function getUser($search)
     {
-        return $this->with('user')->where('user_name',$search)->active()->orWhereHas('user', function (Builder $query) use ($search) {
-            $query->where('user_name',$search);
-        })->first();
-
-
+        return $this->with('user')
+            ->active()
+            ->where(function (Builder $query) use ($search) {
+                $query->where('user_name', $search)
+                    ->orWhereHas('user', function (Builder $userQuery) use ($search) {
+                        $userQuery->where('user_name', $search);
+                    });
+            })
+            ->first();
     }
 
     public function getPro($id): int
@@ -209,10 +215,9 @@ class MemberRepository extends Repository
 
     }
 
-
     public function loadBonus($id, $date_start = null, $date_stop = null)
     {
-        return $this->find($id)->bills()->active()->where('credit_bonus','>',0)->orderBy('date_create', 'desc')
+        return $this->find($id)->bills()->active()->where('credit_bonus', '>', 0)->orderBy('date_create', 'desc')
             ->select(['bills.*'])
             ->when($date_start, function ($query, $date_start) use ($date_stop) {
                 return $query->whereBetween('bills.date_create', [$date_start, $date_stop]);
@@ -484,12 +489,12 @@ class MemberRepository extends Repository
                 $value = Str::of($data->atranferer)->replace('*', '');
 
                 break;
-//            case 'ktb':
-//                $field = 'acc_no = ?';
-//                $acc = Str::of($data->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
-//                $value = Str::of($acc)->replace('*', '');
-//
-//                break;
+                //            case 'ktb':
+                //                $field = 'acc_no = ?';
+                //                $acc = Str::of($data->atranferer)->replaceMatches('/[^0-9]/', '')->trim();
+                //                $value = Str::of($acc)->replace('*', '');
+                //
+                //                break;
         }
 
         $satang = $this->getSatang($data->value);
@@ -538,9 +543,9 @@ class MemberRepository extends Repository
             case 'TISCO':
                 $result = 9;
                 break;
-            //            case 'TMB':
-            //                $result = 19;
-            //                break;
+                //            case 'TMB':
+                //                $result = 19;
+                //                break;
             case 'BAY':
                 $result = 11;
                 break;

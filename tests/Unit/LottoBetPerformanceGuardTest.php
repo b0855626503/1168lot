@@ -27,6 +27,9 @@ class LottoBetPerformanceGuardTest extends TestCase
         $this->assertStringContainsString('JSON_THROW_ON_ERROR', $content);
         $this->assertStringContainsString('packagePayloadCache', $content);
         $this->assertStringContainsString('blockModeCache', $content);
+        $this->assertStringContainsString('preloadBlockModes', $content);
+        $this->assertStringContainsString("join('lotto_draws as block_draws'", $content);
+        $this->assertStringContainsString("where('block_draws.draw_date', '<', \$currentDrawDate->toDateString())", $content);
     }
 
     public function test_exposure_service_uses_insert_or_ignore_for_bulk_row_bootstrap(): void

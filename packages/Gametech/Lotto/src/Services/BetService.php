@@ -67,7 +67,7 @@ class BetService
             $totalBetAmount = 0.0;
             $totalDiscountAmount = 0.0;
             $totalNetAmount = 0.0;
-            $blockModeCache = [];
+            $blockModeCache = $this->preloadBlockModes($draw, $items);
             $packagePayloadCache = [];
 
             foreach ($items as $item) {
@@ -245,31 +245,10 @@ class BetService
      */
     private function resolveBlockMode(LottoDraw $draw, string $betType, string $number): ?string
     {
-        $currentDrawDate = $draw->draw_date;
-
-        if (! $currentDrawDate) {
-            return null;
-        }
-
-        $record = LottoNumberBlock::query()
-            ->where('bet_type', $betType)
-            ->where('number', $number)
-            ->where(function ($query) use ($draw, $currentDrawDate) {
-                $query->where(function ($subQuery) use ($draw) {
-                    $subQuery->where('mode', 'block')
-                        ->where('draw_id', $draw->id);
-                })->orWhere(function ($subQuery) use ($draw, $currentDrawDate) {
-                    $subQuery->where('mode', 'limit_future')
-                        ->whereHas('draw', function ($drawQuery) use ($draw, $currentDrawDate) {
-                            $drawQuery->where('market_id', $draw->market_id)
-                                ->whereDate('draw_date', '<', $currentDrawDate);
-                        });
-                });
-            })
-            ->orderByRaw("case when mode = 'block' then 0 else 1 end")
-            ->first(['mode']);
-
-        return $record?->mode;
+        return $this->preloadBlockModes($draw, [[
+            'bet_type' => $betType,
+            'number' => $number,
+        ]])[$this->exposureKey($betType, $number)] ?? null;
     }
 
     /**
@@ -454,5 +433,72 @@ class BetService
     private function exposureKey(string $betType, string $number): string
     {
         return $betType.'|'.$number;
+    }
+
+    /**
+     * @param  array<int, array{bet_type:mixed, number:mixed}>  $items
+     * @return array<string, string|null>
+     */
+    private function preloadBlockModes(LottoDraw $draw, array $items): array
+    {
+        $requestedPairs = collect($items)
+            ->map(function (array $item): array {
+                return [
+                    'bet_type' => (string) ($item['bet_type'] ?? ''),
+                    'number' => (string) ($item['number'] ?? ''),
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['bet_type'] !== '' && $item['number'] !== '')
+            ->unique(fn (array $item): string => $this->exposureKey($item['bet_type'], $item['number']))
+            ->values();
+
+        if ($requestedPairs->isEmpty()) {
+            return [];
+        }
+
+        $resolvedModes = $requestedPairs
+            ->mapWithKeys(fn (array $item): array => [$this->exposureKey($item['bet_type'], $item['number']) => null])
+            ->all();
+
+        $currentDrawDate = $draw->draw_date;
+        if (! $currentDrawDate) {
+            return $resolvedModes;
+        }
+
+        $rows = LottoNumberBlock::query()
+            ->select(['lotto_number_blocks.bet_type', 'lotto_number_blocks.number', 'lotto_number_blocks.mode'])
+            ->join('lotto_draws as block_draws', 'block_draws.id', '=', 'lotto_number_blocks.draw_id')
+            ->where(function ($query) use ($draw, $currentDrawDate): void {
+                $query->where(function ($subQuery) use ($draw): void {
+                    $subQuery->where('lotto_number_blocks.mode', self::BLOCK_MODE_BLOCK)
+                        ->where('lotto_number_blocks.draw_id', $draw->id);
+                })->orWhere(function ($subQuery) use ($draw, $currentDrawDate): void {
+                    $subQuery->where('lotto_number_blocks.mode', self::BLOCK_MODE_LIMIT_FUTURE)
+                        ->where('block_draws.market_id', $draw->market_id)
+                        ->where('block_draws.draw_date', '<', $currentDrawDate->toDateString());
+                });
+            })
+            ->where(function ($query) use ($requestedPairs): void {
+                foreach ($requestedPairs as $pair) {
+                    $query->orWhere(function ($subQuery) use ($pair): void {
+                        $subQuery->where('lotto_number_blocks.bet_type', $pair['bet_type'])
+                            ->where('lotto_number_blocks.number', $pair['number']);
+                    });
+                }
+            })
+            ->orderByRaw("case when lotto_number_blocks.mode = 'block' then 0 else 1 end")
+            ->get();
+
+        foreach ($rows as $row) {
+            $key = $this->exposureKey((string) $row->bet_type, (string) $row->number);
+
+            if (! array_key_exists($key, $resolvedModes) || $resolvedModes[$key] !== null) {
+                continue;
+            }
+
+            $resolvedModes[$key] = (string) $row->mode;
+        }
+
+        return $resolvedModes;
     }
 }

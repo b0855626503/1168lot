@@ -6,6 +6,7 @@ use App\Libraries\KbankOut;
 use App\Libraries\ScbOut;
 use App\Services\Dashboard\DashboardWebCodeResolver;
 use App\Services\Online\MemberOnlineService;
+use App\Services\RealtimeCounterService;
 use Carbon\Carbon;
 use Gametech\Admin\Services\DashboardService;
 use Gametech\Lotto\Models\LotteryMarket;
@@ -109,56 +110,7 @@ class DashboardController extends AppBaseController
 
     public function loadCnt()
     {
-        $startdate = now()->toDateString().' 00:00:00';
-        $enddate = now()->toDateString().' 23:59:59';
-        $today = now()->toDateString();
-
-        $config = core()->getConfigData();
-
-        $bank_in_today = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()->active()->waiting()
-            ->whereDate('date_create', $today)
-//            ->whereIn('autocheck', ['N', 'W'])
-            ->count();
-
-        $bank_in = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->income()->active()->waiting()
-            ->whereDate('date_create', '<', $today)
-//            ->whereIn('autocheck', ['N', 'W'])
-            ->count();
-
-        $bank_out = app('Gametech\Payment\Repositories\BankPaymentRepository')
-            ->profit()->active()->waiting()
-            ->where('autocheck', 'N')
-            ->whereBetween('date_create', [$startdate, $enddate])
-            ->count();
-
-        if ($config->seamless == 'Y') {
-            $withdraw = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')
-                ->active()->waiting()
-                ->count();
-            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawSeamlessFreeRepository')
-                ->active()->waiting()
-                ->count();
-
-            //            $withdraw_free = 0;
-        } else {
-            $withdraw = app('Gametech\Payment\Repositories\WithdrawRepository')
-                ->active()->waiting()
-                ->count();
-            $withdraw_free = app('Gametech\Payment\Repositories\WithdrawFreeRepository')
-                ->active()->waiting()
-                ->count();
-        }
-
-        $payment_waiting = app('Gametech\Payment\Repositories\PaymentWaitingRepository')
-            ->whereDate('date_create', '>', '2021-04-05')
-            ->active()->waiting()
-            ->count();
-
-        $member_confirm = app('Gametech\Member\Repositories\MemberRepository')
-            ->active()->waiting()
-            ->count();
+        $counts = app(RealtimeCounterService::class)->getCounts();
 
         $announce = [
             'content' => '',
@@ -195,13 +147,7 @@ class DashboardController extends AppBaseController
             }
         }
 
-        $result['member_confirm'] = $member_confirm;
-        $result['bank_in_today'] = $bank_in_today;
-        $result['bank_in'] = $bank_in;
-        $result['bank_out'] = $bank_out;
-        $result['withdraw'] = $withdraw;
-        $result['withdraw_free'] = $withdraw_free;
-        $result['payment_waiting'] = $payment_waiting;
+        $result = $counts;
         $result['announce'] = $announce['content'];
         $result['announce_new'] = $announce_new;
         $result['lotto_tickets'] = $this->countActiveLottoTickets();
@@ -238,28 +184,33 @@ class DashboardController extends AppBaseController
         $endDate = $rangeEnd->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
         $monthEnd = now()->endOfMonth()->toDateString();
-        $calc = function ($method) use ($config, $startDate, $endDate, $monthStart, $monthEnd) {
+        [$startDateTime, $endDateTimeExclusive] = $this->resolveDateTimeRange($startDate, $endDate);
+        [$monthStartDateTime, $monthEndDateTimeExclusive] = $this->resolveDateTimeRange($monthStart, $monthEnd);
+
+        $calc = function ($method) use (
+            $config,
+            $startDateTime,
+            $endDateTimeExclusive,
+            $monthStartDateTime,
+            $monthEndDateTimeExclusive
+        ) {
             $data = 0;
             switch ($method) {
                 case 'setdeposit':
                     $data = app('Gametech\Member\Repositories\MemberCreditLogRepository')->active()->where('kind', 'SETWALLET')->where('credit_type', 'D')
-//                    ->whereDate('date_create', $startdate)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
                         ->sum('amount');
                     $data = core()->currency($data);
                     break;
                 case 'setwithdraw':
                     $data = app('Gametech\Member\Repositories\MemberCreditLogRepository')->active()->where('kind', 'SETWALLET')->where('credit_type', 'W')
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-//                    ->whereDate('date_create', $startdate)
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
                         ->sum('amount');
                     $data = core()->currency($data);
                     break;
                 case 'deposit':
                     $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-//                    ->whereDate('date_create', $startdate)
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
                         ->sum('value');
 
                     //                $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->complete()->whereDate('date_create', $startdate)->sum('value');
@@ -268,9 +219,7 @@ class DashboardController extends AppBaseController
 
                 case 'deposit-today':
                     $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-//                    ->whereDate('date_create', $startdate)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
                         ->sum('value');
 
                     //                $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->complete()->whereDate('date_create', $startdate)->sum('value');
@@ -279,7 +228,8 @@ class DashboardController extends AppBaseController
                 case 'deposit_wait':
                     $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->waiting()
                         ->where('autocheck', 'Y')
-                        ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])->sum('value');
+                        ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                        ->sum('value');
 
                     //                    ->whereDate('date_create', $startdate)
                     //                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
@@ -289,12 +239,11 @@ class DashboardController extends AppBaseController
                 case 'withdraw':
                     if ($config->seamless == 'Y') {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-//                        ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])->sum('amount');
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])->sum('amount');
 
                     } else {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])->sum('amount');
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])->sum('amount');
                     }
                     //                $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
                     //                $data2 = app('Gametech\Payment\Repositories\WithdrawFreeRepository')->active()->complete()->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
@@ -304,12 +253,11 @@ class DashboardController extends AppBaseController
                 case 'withdraw-today':
                     if ($config->seamless == 'Y') {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-//                        ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])->sum('amount');
 
                     } else {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])->sum('amount');
                     }
                     //                $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
                     //                $data2 = app('Gametech\Payment\Repositories\WithdrawFreeRepository')->active()->complete()->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
@@ -317,41 +265,36 @@ class DashboardController extends AppBaseController
                     break;
                 case 'bonus':
                     $data1 = app('Gametech\Payment\Repositories\PaymentPromotionRepository')->active()->aff()
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])->sum('credit_bonus');
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])->sum('credit_bonus');
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])->sum('credit_bonus');
 
                     $data2 = app('Gametech\Payment\Repositories\BillRepository')->active()->getpro()->where('transfer_type', 1)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
                         ->sum('credit_bonus');
                     $data = core()->currency($data1 + $data2);
                     break;
 
                 case 'bonus-today':
                     $data1 = app('Gametech\Payment\Repositories\PaymentPromotionRepository')->active()->aff()
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])->sum('credit_bonus');
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])->sum('credit_bonus');
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])->sum('credit_bonus');
 
                     $data2 = app('Gametech\Payment\Repositories\BillRepository')->active()->getpro()->where('transfer_type', 1)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
                         ->sum('credit_bonus');
                     $data = core()->currency($data1 + $data2);
                     break;
                 case 'balance':
                     //                $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->complete()->whereDate('date_create', $startdate)->sum('value');
                     $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-//                    ->whereDate('date_create', $startdate)
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
-
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
                         ->sum('value');
                     if ($config->seamless == 'Y') {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])->sum('amount');
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])->sum('amount');
                         //                        ->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
                         //
                     } else {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])->sum('amount');
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])->sum('amount');
 
                         //                        ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
                         //
@@ -367,19 +310,16 @@ class DashboardController extends AppBaseController
                 case 'balance-today':
                     //                $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->complete()->whereDate('date_create', $startdate)->sum('value');
                     $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-//                    ->whereDate('date_create', $startdate)
-//                    ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
                         ->sum('value');
                     if ($config->seamless == 'Y') {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])->sum('amount');
                         //                        ->whereRaw(DB::raw("DATE_FORMAT(date_approve,'%Y-%m-%d') = ?"), [$startdate])->sum('amount');
                         //
                     } else {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])->sum('amount');
 
                         //                        ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])->sum('amount');
                         //
@@ -394,9 +334,9 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-deposit-month':
                     $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
-                        ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                         })
                         ->sum('value');
 
@@ -406,16 +346,16 @@ class DashboardController extends AppBaseController
                 case 'new-member-withdraw-month':
                     if ($config->seamless == 'Y') {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])
-                            ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                             })
                             ->sum('amount');
                     } else {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])
-                            ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                             })
                             ->sum('amount');
                     }
@@ -425,15 +365,15 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-bonus-month':
                     $data1 = app('Gametech\Payment\Repositories\PaymentPromotionRepository')->active()->aff()
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
-                        ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                         })
                         ->sum('credit_bonus');
                     $data2 = app('Gametech\Payment\Repositories\BillRepository')->active()->getpro()->where('transfer_type', 1)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
-                        ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                         })
                         ->sum('credit_bonus');
                     $data = core()->currency($data1 + $data2);
@@ -441,23 +381,23 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-balance-month':
                     $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$monthStart, $monthEnd])
-                        ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                        ->whereBetween('date_create', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                         })
                         ->sum('value');
                     if ($config->seamless == 'Y') {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])
-                            ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                             })
                             ->sum('amount');
                     } else {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$monthStart, $monthEnd])
-                            ->whereHas('member', function ($query) use ($monthStart, $monthEnd) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$monthStart, $monthEnd]);
+                            ->whereBetween('date_approve', [$monthStartDateTime, $monthEndDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($monthStartDateTime, $monthEndDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$monthStartDateTime, $monthEndDateTimeExclusive]);
                             })
                             ->sum('amount');
                     }
@@ -467,9 +407,9 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-deposit-today':
                     $data = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->sum('value');
 
@@ -479,16 +419,16 @@ class DashboardController extends AppBaseController
                 case 'new-member-withdraw-today':
                     if ($config->seamless == 'Y') {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-                            ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                             })
                             ->sum('amount');
                     } else {
                         $data1 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-                            ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                             })
                             ->sum('amount');
                     }
@@ -498,15 +438,15 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-bonus-today':
                     $data1 = app('Gametech\Payment\Repositories\PaymentPromotionRepository')->active()->aff()
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->sum('credit_bonus');
                     $data2 = app('Gametech\Payment\Repositories\BillRepository')->active()->getpro()->where('transfer_type', 1)
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->sum('credit_bonus');
                     $data = core()->currency($data1 + $data2);
@@ -514,23 +454,23 @@ class DashboardController extends AppBaseController
 
                 case 'new-member-balance-today':
                     $data1 = app('Gametech\Payment\Repositories\BankPaymentRepository')->income()->active()->whereIn('status', [0, 1])
-                        ->whereBetween(DB::raw('DATE(date_create)'), [$startDate, $endDate])
-                        ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                            $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                        ->whereBetween('date_create', [$startDateTime, $endDateTimeExclusive])
+                        ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                            $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->sum('value');
                     if ($config->seamless == 'Y') {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawSeamlessRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-                            ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                             })
                             ->sum('amount');
                     } else {
                         $data2 = app('Gametech\Payment\Repositories\WithdrawRepository')->active()->complete()
-                            ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-                            ->whereHas('member', function ($query) use ($startDate, $endDate) {
-                                $query->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                            ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive])
+                            ->whereHas('member', function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                                $query->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive]);
                             })
                             ->sum('amount');
                     }
@@ -541,21 +481,17 @@ class DashboardController extends AppBaseController
                 case 'register-today':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')->active()
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereDate('date_regis', now()->toDateString())
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
                         ->count();
                     break;
 
                 case 'register-deposit':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereDate('date_regis', now()->toDateString())
-                        ->whereHas('payment', function ($query) use ($startDate, $endDate) {
-                            // จะกรองให้เฉพาะ member ที่มีรายการฝาก
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
+                        ->whereHas('payment', function ($query) {
                             $query->where('status', 1)->where('enable', 'Y')
-                                ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
-                            //                            ->whereDate('date_approve', now()->toDateString());
+                                ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->count();
 
@@ -564,14 +500,13 @@ class DashboardController extends AppBaseController
                 case 'register-all-deposit':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')
-                        ->whereNotBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-
-//                    ->whereDate('date_regis', '!=', now()->toDateString())
-                        ->whereHas('payment', function ($query) use ($startDate, $endDate) {
-                            // จะกรองให้เฉพาะ member ที่มีรายการฝาก
+                        ->where(function ($query) use ($startDateTime, $endDateTimeExclusive) {
+                            $query->where('date_regis', '<', $startDateTime)
+                                ->orWhere('date_regis', '>=', $endDateTimeExclusive);
+                        })
+                        ->whereHas('payment', function ($query) {
                             $query->where('status', 1)->where('enable', 'Y')
-                                ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
-                            //                            ->whereDate('date_approve', now()->toDateString());
+                                ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->count();
 
@@ -580,13 +515,10 @@ class DashboardController extends AppBaseController
                 case 'register-not-deposit':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereDate('date_regis', now()->toDateString())
-                        ->whereDoesntHave('payment', function ($query) use ($startDate, $endDate) {
-                            // จะกรองให้เฉพาะ member ที่มีรายการฝาก
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
+                        ->whereDoesntHave('payment', function ($query) {
                             $query->where('status', 1)->where('enable', 'Y')
-                                ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
-                            //                            ->whereDate('date_approve', now()->toDateString());
+                                ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->count();
 
@@ -595,8 +527,7 @@ class DashboardController extends AppBaseController
                 case 'register-downline':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')->active()
-//                    ->whereDate('date_regis', now()->toDateString())
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
                         ->where('upline_code', '>', 0)
                         ->count();
                     break;
@@ -604,14 +535,11 @@ class DashboardController extends AppBaseController
                 case 'register-downline-deposit':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereDate('date_regis', now()->toDateString())
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
                         ->where('upline_code', '>', 0)
-                        ->whereHas('payment', function ($query) use ($startDate, $endDate) {
-                            // จะกรองให้เฉพาะ member ที่มีรายการฝาก
+                        ->whereHas('payment', function ($query) {
                             $query->where('status', 1)->where('enable', 'Y')
-                                ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
-                            //                            ->whereDate('date_approve', now()->toDateString());
+                                ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->count();
 
@@ -620,12 +548,11 @@ class DashboardController extends AppBaseController
                 case 'register-downline-not-deposit':
 
                     $data = app('Gametech\Member\Repositories\MemberRepository')
-                        ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
+                        ->whereBetween('date_regis', [$startDateTime, $endDateTimeExclusive])
                         ->where('upline_code', '>', 0)
-                        ->whereDoesntHave('payment', function ($query) use ($startDate, $endDate) {
-                            // จะกรองให้เฉพาะ member ที่มีรายการฝาก
+                        ->whereDoesntHave('payment', function ($query) use ($startDateTime, $endDateTimeExclusive) {
                             $query->where('status', 1)->where('enable', 'Y')
-                                ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
+                                ->whereBetween('date_approve', [$startDateTime, $endDateTimeExclusive]);
                         })
                         ->count();
 
@@ -794,6 +721,17 @@ class DashboardController extends AppBaseController
         }
 
         return $this->sendResponseNew($result, 'Complete');
+    }
+
+    private function resolveDateTimeRange(string $startDate, string $endDate): array
+    {
+        $rangeStart = Carbon::parse($startDate)->startOfDay();
+        $rangeEndExclusive = Carbon::parse($endDate)->addDay()->startOfDay();
+
+        return [
+            $rangeStart->toDateTimeString(),
+            $rangeEndExclusive->toDateTimeString(),
+        ];
     }
 
     public function loadBank(Request $request)

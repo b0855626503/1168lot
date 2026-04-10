@@ -349,13 +349,29 @@ class LottoController extends BaseController
                 ->orderByDesc('id');
 
             if ($statusFilter !== '') {
-                $tickets = $query->get();
-                $summaryContext = $this->buildTicketSummaryContext($tickets);
-                $rows = $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))
+                $filteredTicketIds = $this->ticketStatusQuery($memberId)
+                    ->orderByDesc('id')
+                    ->get()
+                    ->map(fn (LottoTicket $ticket): array => [
+                        'id' => (int) $ticket->id,
+                        'status' => $this->ticketDisplayStatus((string) $ticket->status, $this->ticketResultContext($ticket)),
+                    ]);
+
+                $filteredTicketIds = $this->filterTicketRowsByStatus($filteredTicketIds, $statusFilter)
+                    ->pluck('id')
+                    ->map(static fn ($id): int => (int) $id)
                     ->values();
-                $rows = $this->filterTicketRowsByStatus($rows, $statusFilter)->values();
-                $total = $rows->count();
-                $pagedRows = $rows->forPage($page, $limit)->values();
+
+                $total = $filteredTicketIds->count();
+                $pageIds = $filteredTicketIds->forPage($page, $limit)->values()->all();
+                $tickets = empty($pageIds)
+                    ? collect()
+                    : $query->whereIn('id', $pageIds)->get()->sortBy(
+                        static fn (LottoTicket $ticket): int => array_search((int) $ticket->id, $pageIds, true)
+                    )->values();
+                $summaryContext = $this->buildTicketSummaryContext($tickets);
+                $pagedRows = $tickets->map(fn (LottoTicket $ticket): array => $this->mapTicketSummary($ticket, $summaryContext))
+                    ->values();
 
                 $response = $this->sendResponse(
                     $pagedRows->all(),
@@ -1207,6 +1223,20 @@ class LottoController extends BaseController
     {
         return LottoTicket::query()
             ->with(['draw.market', 'items'])
+            ->where('member_id', $memberId);
+    }
+
+    private function ticketStatusQuery(int $memberId)
+    {
+        return LottoTicket::query()
+            ->with('draw')
+            ->select([
+                'id',
+                'member_id',
+                'draw_id',
+                'status',
+                'total_win_amount',
+            ])
             ->where('member_id', $memberId);
     }
 

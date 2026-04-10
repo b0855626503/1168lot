@@ -3,6 +3,7 @@
 namespace Gametech\Marketing\Http\Controllers\Admin;
 
 use App\Http\Controllers\AppBaseController;
+use Carbon\Carbon;
 use Gametech\Marketing\DataTables\MarketingCampaignDataTable;
 use Gametech\Marketing\DataTables\MarketingMemberDataTable;
 use Gametech\Marketing\Repositories\MarketingCampaignRepository;
@@ -212,6 +213,10 @@ class MarketingCampaignController extends AppBaseController
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
+        [$startDate, $endDate] = $this->normalizeDateRange($startDate, $endDate);
+        [$reportStartAt, $reportEndAt] = $this->dateTimeRange($startDate, $endDate);
+        [$singleDateStartAt, $singleDateEndAt] = $this->dateTimeRange($date, $date);
+
         switch ($method) {
             case 'register-all':
                 $data = $campaign->members()->count();
@@ -220,57 +225,60 @@ class MarketingCampaignController extends AppBaseController
 
             case 'register-today':
                 $data = $campaign->members()
-                    ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
+                    ->whereBetween('date_regis', [$startDate, $endDate])
                     ->count();
                 $result['sum'] = $data;
                 break;
 
             case 'register-all-deposit':
                 $data = $campaign->members()
-//                    ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-                    ->whereNotBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-                    ->whereHas('deposits', function ($query) use ($date) {
-                        // จะกรองให้เฉพาะ member ที่มีรายการฝาก
-                        $query->where('status', 1)->where('enable', 'Y')->whereDate('date_approve', $date);
+                    ->where(function ($query) use ($startDate, $endDate) {
+                        $query->where('date_regis', '<', $startDate)
+                            ->orWhere('date_regis', '>', $endDate);
+                    })
+                    ->whereHas('deposits', function ($query) use ($singleDateStartAt, $singleDateEndAt) {
+                        $query->where('status', 1)
+                            ->where('enable', 'Y')
+                            ->where('date_approve', '>=', $singleDateStartAt)
+                            ->where('date_approve', '<', $singleDateEndAt);
                     })
                     ->count();
                 $result['sum'] = $data;
                 break;
 
             case 'member-all-first-deposit':
-                $data = $campaign->members()
-                    ->whereHas('firstDeposit', function ($q) use ($startDate,$endDate) {
-                        $q->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
+                $firstDepositDates = DB::table('bank_payment')
+                    ->select('member_topup', DB::raw('MIN(date_approve) as first_date_approve'))
+                    ->where('status', 1)
+                    ->where('enable', 'Y')
+                    ->whereNotNull('member_topup')
+                    ->groupBy('member_topup');
+
+                $data = (float) DB::table('members')
+                    ->joinSub($firstDepositDates, 'first_deposits', function ($join) {
+                        $join->on('first_deposits.member_topup', '=', 'members.code');
                     })
-                    ->whereDoesntHave('deposits', function ($q) use ($startDate) {
-                        $q->where('status', 1)
-                            ->where('enable', 'Y')
-                            ->whereDate('date_approve', '<', $startDate);
+                    ->join('bank_payment as first_payment', function ($join) {
+                        $join->on('first_payment.member_topup', '=', 'first_deposits.member_topup')
+                            ->on('first_payment.date_approve', '=', 'first_deposits.first_date_approve');
                     })
-                    ->with(['firstDeposit' => function ($q) {
-                        $q->select('member_topup', 'value', 'date_approve')
-                            ->where('status', 1)
-                            ->where('enable', 'Y')
-                            ->orderBy('date_approve', 'asc');
-                    }])->get()->sum(function ($member) {
-                        return $member->firstDeposit->value ?? 0;
-                    });
-//                    ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereNotBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-//                    ->whereHas('deposits', function ($query) use ($date) {
-//                        // จะกรองให้เฉพาะ member ที่มีรายการฝาก
-//                        $query->where('status', 1)->where('enable', 'Y')->whereDate('date_approve', $date);
-//                    })
-//                    ->count();
+                    ->where('members.campaign_id', $campaign->id)
+                    ->where('first_payment.status', 1)
+                    ->where('first_payment.enable', 'Y')
+                    ->where('first_deposits.first_date_approve', '>=', $reportStartAt)
+                    ->where('first_deposits.first_date_approve', '<', $reportEndAt)
+                    ->sum('first_payment.value');
                 $result['sum'] = $data;
                 break;
 
             case 'register-deposit':
                 $data = $campaign->members()
-                    ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-                    ->whereHas('deposits', function ($query) use ($startDate,$endDate) {
-                        // จะกรองให้เฉพาะ member ที่มีรายการฝาก
-                        $query->where('status', 1)->where('enable', 'Y')->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
+                    ->whereBetween('date_regis', [$startDate, $endDate])
+                    ->whereHas('deposits', function ($query) use ($reportStartAt, $reportEndAt) {
+                        $query->where('status', 1)
+                            ->where('enable', 'Y')
+                            ->where('date_approve', '>=', $reportStartAt)
+                            ->where('date_approve', '<', $reportEndAt);
                     })
                     ->count();
                 $result['sum'] = $data;
@@ -278,10 +286,12 @@ class MarketingCampaignController extends AppBaseController
 
             case 'register-not-deposit':
                 $data = $campaign->members()
-                    ->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate])
-                    ->whereDoesntHave('deposits', function ($query) use ($startDate, $endDate) {
-                        // จะกรองให้เฉพาะ member ที่มีรายการฝาก
-                        $query->where('status', 1)->where('enable', 'Y')->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate]);
+                    ->whereBetween('date_regis', [$startDate, $endDate])
+                    ->whereDoesntHave('deposits', function ($query) use ($reportStartAt, $reportEndAt) {
+                        $query->where('status', 1)
+                            ->where('enable', 'Y')
+                            ->where('date_approve', '>=', $reportStartAt)
+                            ->where('date_approve', '<', $reportEndAt);
                     })
                     ->count();
                 $result['sum'] = $data;
@@ -304,12 +314,12 @@ class MarketingCampaignController extends AppBaseController
             case 'bonus-today':
                 $data = BankPaymentProxy::where('status', 1)
                     ->where('pro_id', '>', 0)
-                    ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-//                    ->whereDate('date_approve', $date)
+                    ->where('date_approve', '>=', $reportStartAt)
+                    ->where('date_approve', '<', $reportEndAt)
                     ->where('enable', 'Y')
                     ->whereIn('member_topup', function ($q) use ($campaign) {
                         $q->select('code')
-                            ->from('members') // หรือ table ของ MemberProxy
+                            ->from('members')
                             ->where('campaign_id', $campaign->id);
                     })
                     ->sum('pro_amount');
@@ -331,12 +341,12 @@ class MarketingCampaignController extends AppBaseController
 
             case 'deposit-today':
                 $data = BankPaymentProxy::where('status', 1)
-                    ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-//                    ->whereDate('date_approve', $date)
+                    ->where('date_approve', '>=', $reportStartAt)
+                    ->where('date_approve', '<', $reportEndAt)
                     ->where('enable', 'Y')
                     ->whereIn('member_topup', function ($q) use ($campaign) {
                         $q->select('code')
-                            ->from('members') // หรือ table ของ MemberProxy
+                            ->from('members')
                             ->where('campaign_id', $campaign->id);
                     })
                     ->sum('value');
@@ -345,13 +355,14 @@ class MarketingCampaignController extends AppBaseController
 
             case 'deposit-register-today':
                 $data = BankPaymentProxy::where('status', 1)
-                    ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-//                    ->whereDate('date_approve', $date)
+                    ->where('date_approve', '>=', $reportStartAt)
+                    ->where('date_approve', '<', $reportEndAt)
                     ->where('enable', 'Y')
-                    ->whereIn('member_topup', function ($q) use ($campaign,$startDate, $endDate) {
+                    ->whereIn('member_topup', function ($q) use ($campaign, $startDate, $endDate) {
                         $q->select('code')
-                            ->from('members') // หรือ table ของ MemberProxy
-                            ->where('campaign_id', $campaign->id)->whereBetween(DB::raw('DATE(date_regis)'), [$startDate, $endDate]);
+                            ->from('members')
+                            ->where('campaign_id', $campaign->id)
+                            ->whereBetween('date_regis', [$startDate, $endDate]);
                     })
                     ->sum('value');
                 $result['sum'] = $data;
@@ -372,12 +383,12 @@ class MarketingCampaignController extends AppBaseController
 
             case 'withdraw-today':
                 $data = WithdrawProxy::where('status', 1)
-                    ->whereBetween(DB::raw('DATE(date_approve)'), [$startDate, $endDate])
-//                    ->whereDate('date_approve', $date)
+                    ->where('date_approve', '>=', $reportStartAt)
+                    ->where('date_approve', '<', $reportEndAt)
                     ->where('enable', 'Y')
                     ->whereIn('member_code', function ($q) use ($campaign) {
                         $q->select('code')
-                            ->from('members') // หรือ table ของ MemberProxy
+                            ->from('members')
                             ->where('campaign_id', $campaign->id);
                     })
                     ->sum('amount');
@@ -392,8 +403,8 @@ class MarketingCampaignController extends AppBaseController
 
             case 'click-today':
                 $data = $campaign->registrationLink->clicks()
-                    ->whereBetween(DB::raw('DATE(created_at)'), [$startDate, $endDate])
-//                    ->whereDate('created_at', $date)
+                    ->where('created_at', '>=', $reportStartAt)
+                    ->where('created_at', '<', $reportEndAt)
                     ->count();
                 $result['sum'] = $data;
                 break;
@@ -486,5 +497,31 @@ class MarketingCampaignController extends AppBaseController
         }
 
         return $this->sendResponseNew($result, 'ดำเนินการเสร็จสิ้น');
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function normalizeDateRange(string $startDate, string $endDate): array
+    {
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->startOfDay();
+        if ($end->lt($start)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        return [$start->toDateString(), $end->toDateString()];
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function dateTimeRange(string $startDate, string $endDate): array
+    {
+        [$normalizedStart, $normalizedEnd] = $this->normalizeDateRange($startDate, $endDate);
+        $startAt = Carbon::parse($normalizedStart)->startOfDay();
+        $endAt = Carbon::parse($normalizedEnd)->addDay()->startOfDay();
+
+        return [$startAt->toDateTimeString(), $endAt->toDateTimeString()];
     }
 }

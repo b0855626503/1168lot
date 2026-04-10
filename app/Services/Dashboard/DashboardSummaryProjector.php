@@ -160,7 +160,7 @@ class DashboardSummaryProjector
             'deposit_deleted_users' => 0,
         ];
 
-        if (!$this->hasTable('bank_payment')) {
+        if (! $this->hasTable('bank_payment')) {
             return $defaults;
         }
 
@@ -263,7 +263,7 @@ class DashboardSummaryProjector
             'register_confirmed_count' => 0,
         ];
 
-        if (!$this->hasTable('members')) {
+        if (! $this->hasTable('members')) {
             return $defaults;
         }
 
@@ -308,7 +308,7 @@ class DashboardSummaryProjector
                 ->count();
         }
 
-        if (!$this->hasTable('bank_payment') || !$this->hasColumn('bank_payment', 'member_topup')) {
+        if (! $this->hasTable('bank_payment') || ! $this->hasColumn('bank_payment', 'member_topup')) {
             return $defaults;
         }
 
@@ -420,7 +420,7 @@ class DashboardSummaryProjector
             'staff_adjust_count' => 0,
         ];
 
-        if (!$this->hasTable('members_credit_log')) {
+        if (! $this->hasTable('members_credit_log')) {
             return $defaults;
         }
 
@@ -528,7 +528,7 @@ class DashboardSummaryProjector
             'lotto_net_cash' => 0.0,
         ];
 
-        if (!$this->hasTable('wallet_transactions')) {
+        if (! $this->hasTable('wallet_transactions')) {
             return $defaults;
         }
 
@@ -590,7 +590,7 @@ class DashboardSummaryProjector
             'created_at' => now()->toDateTimeString(),
         ];
 
-        if (!$this->hasTable('lotto_tickets')) {
+        if (! $this->hasTable('lotto_tickets')) {
             return $defaults;
         }
 
@@ -620,7 +620,7 @@ class DashboardSummaryProjector
 
             $defaults['settled_tickets'] = (int) (clone $settledBase)->count();
             $winAmountColumn = $this->lottoTicketWinAmountExpression('lotto_tickets', 'lt');
-            $defaults['win_tickets'] = (int) (clone $settledBase)->whereRaw($winAmountColumn . ' > 0')->count();
+            $defaults['win_tickets'] = (int) (clone $settledBase)->whereRaw($winAmountColumn.' > 0')->count();
             $defaults['lose_tickets'] = max(0, $defaults['settled_tickets'] - $defaults['win_tickets']);
             $defaults['total_payout'] = (float) (clone $settledBase)->sum(DB::raw($winAmountColumn));
 
@@ -639,7 +639,7 @@ class DashboardSummaryProjector
     private function lottoMarketSummaryMetrics(string $summaryDate, string $webCode): array
     {
         [$rangeStart, $rangeEnd] = $this->dayRange($summaryDate);
-        if (!$this->hasTable('lotto_tickets') || !$this->hasTable('lotto_draws')) {
+        if (! $this->hasTable('lotto_tickets') || ! $this->hasTable('lotto_draws')) {
             return [];
         }
 
@@ -648,7 +648,7 @@ class DashboardSummaryProjector
             ->select([
                 'ld.market_id',
                 'lt.draw_id as round_id',
-                DB::raw('COALESCE(SUM(' . $this->lottoTicketNetAmountExpression('lotto_tickets', 'lt') . '), 0) as total_sales'),
+                DB::raw('COALESCE(SUM('.$this->lottoTicketNetAmountExpression('lotto_tickets', 'lt').'), 0) as total_sales'),
                 DB::raw('COUNT(*) as total_tickets'),
                 DB::raw('COUNT(DISTINCT lt.member_id) as total_players'),
                 DB::raw('MAX(ld.status) as status'),
@@ -664,7 +664,7 @@ class DashboardSummaryProjector
             ->select([
                 'ld.market_id',
                 'lt.draw_id as round_id',
-                DB::raw('COALESCE(SUM(' . $this->lottoTicketWinAmountExpression('lotto_tickets', 'lt') . '), 0) as total_payout'),
+                DB::raw('COALESCE(SUM('.$this->lottoTicketWinAmountExpression('lotto_tickets', 'lt').'), 0) as total_payout'),
                 DB::raw('MAX(ld.status) as status'),
             ])
             ->where('ld.result_at', '>=', $rangeStart)
@@ -676,7 +676,7 @@ class DashboardSummaryProjector
 
         $map = [];
         foreach ($salesRows as $row) {
-            $key = (int) $row->market_id . ':' . (int) $row->round_id;
+            $key = (int) $row->market_id.':'.(int) $row->round_id;
             $map[$key] = [
                 'summary_date' => $summaryDate,
                 'web_code' => $webCode,
@@ -694,8 +694,8 @@ class DashboardSummaryProjector
         }
 
         foreach ($payoutRows as $row) {
-            $key = (int) $row->market_id . ':' . (int) $row->round_id;
-            if (!isset($map[$key])) {
+            $key = (int) $row->market_id.':'.(int) $row->round_id;
+            if (! isset($map[$key])) {
                 $map[$key] = [
                     'summary_date' => $summaryDate,
                     'web_code' => $webCode,
@@ -726,7 +726,7 @@ class DashboardSummaryProjector
      */
     private function lottoRiskSnapshotMetrics(string $summaryDate, string $webCode): array
     {
-        if (!$this->hasTable('lotto_number_exposures') || !$this->hasTable('lotto_draws')) {
+        if (! $this->hasTable('lotto_number_exposures') || ! $this->hasTable('lotto_draws')) {
             return [];
         }
 
@@ -746,7 +746,7 @@ class DashboardSummaryProjector
                 DB::raw('COALESCE(e.sold_amount, 0) as stake_total'),
                 DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
             ])
-            ->whereDate('d.draw_date', '<=', $summaryDate)
+            ->where('d.draw_date', '<=', $summaryDate)
             ->get();
 
         return $rows->map(function ($row) use ($snapshotAt, $webCode) {
@@ -776,11 +776,11 @@ class DashboardSummaryProjector
      */
     private function lottoBetTypeInsightMetrics(string $summaryDate): array
     {
-        if (!$this->hasTable('lotto_ticket_items') || !$this->hasTable('lotto_tickets')) {
+        if (! $this->hasTable('lotto_ticket_items') || ! $this->hasTable('lotto_tickets')) {
             return ['daily' => [], 'numbers' => []];
         }
 
-        if (!$this->hasColumn('lotto_tickets', 'bet_confirmed_at')) {
+        if (! $this->hasColumn('lotto_tickets', 'bet_confirmed_at')) {
             return ['daily' => [], 'numbers' => []];
         }
 
@@ -830,7 +830,7 @@ class DashboardSummaryProjector
             $amount = $this->toDecimal((float) ($row->amount ?? 0));
             $memberId = (string) ($row->member_id ?? '');
 
-            if (!isset($daily[$betType])) {
+            if (! isset($daily[$betType])) {
                 $daily[$betType] = [
                     'summary_date' => $summaryDate,
                     'bet_type' => $betType,
@@ -852,8 +852,8 @@ class DashboardSummaryProjector
                 $dailyPlayers[$betType][$memberId] = true;
             }
 
-            $numberKey = $betType . '|' . $number;
-            if (!isset($numbers[$numberKey])) {
+            $numberKey = $betType.'|'.$number;
+            if (! isset($numbers[$numberKey])) {
                 $numbers[$numberKey] = [
                     'summary_date' => $summaryDate,
                     'bet_type' => $betType,
@@ -1008,13 +1008,13 @@ class DashboardSummaryProjector
     private function applyWebScope($query, string $table, string $webCode, ?string $alias = null)
     {
         $column = $this->webColumn($table);
-        if (!$column) {
+        if (! $column) {
             return $query;
         }
 
-        $target = $alias ? $alias . '.' . $column : $column;
+        $target = $alias ? $alias.'.'.$column : $column;
 
-        if (in_array($column, ['webcode', 'team_id'], true) && !ctype_digit($webCode)) {
+        if (in_array($column, ['webcode', 'team_id'], true) && ! ctype_digit($webCode)) {
             return $query;
         }
 
@@ -1028,26 +1028,26 @@ class DashboardSummaryProjector
         $tableMemberKey = $this->memberForeignKey($table);
         $memberWebColumn = $this->webColumn('members');
 
-        if (!$tableMemberKey || !$memberWebColumn || !$this->hasTable('members')) {
+        if (! $tableMemberKey || ! $memberWebColumn || ! $this->hasTable('members')) {
             return $query;
         }
 
-        if (in_array($memberWebColumn, ['webcode', 'team_id'], true) && !ctype_digit($webCode)) {
+        if (in_array($memberWebColumn, ['webcode', 'team_id'], true) && ! ctype_digit($webCode)) {
             return $query;
         }
 
         $value = ctype_digit($webCode) ? (int) $webCode : $webCode;
 
-        $prefix = $alias ? $alias . '.' : $table . '.';
+        $prefix = $alias ? $alias.'.' : $table.'.';
 
         return $query
-            ->join('members as m_scope', 'm_scope.code', '=', $prefix . $tableMemberKey)
-            ->where('m_scope.' . $memberWebColumn, $value);
+            ->join('members as m_scope', 'm_scope.code', '=', $prefix.$tableMemberKey)
+            ->where('m_scope.'.$memberWebColumn, $value);
     }
 
     private function countDistinctMembers($query, string $table, string $memberColumn): int
     {
-        if (!$this->hasColumn($table, $memberColumn)) {
+        if (! $this->hasColumn($table, $memberColumn)) {
             return 0;
         }
 
@@ -1092,14 +1092,14 @@ class DashboardSummaryProjector
 
     private function lottoTicketNetAmountExpression(string $table, ?string $alias = null): string
     {
-        $prefix = $alias ? $alias . '.' : '';
+        $prefix = $alias ? $alias.'.' : '';
 
         if ($this->hasColumn($table, 'total_net_amount')) {
-            return 'COALESCE(' . $prefix . 'total_net_amount, ' . $prefix . 'total_amount, 0)';
+            return 'COALESCE('.$prefix.'total_net_amount, '.$prefix.'total_amount, 0)';
         }
 
         if ($this->hasColumn($table, 'total_amount')) {
-            return 'COALESCE(' . $prefix . 'total_amount, 0)';
+            return 'COALESCE('.$prefix.'total_amount, 0)';
         }
 
         return '0';
@@ -1107,10 +1107,10 @@ class DashboardSummaryProjector
 
     private function lottoTicketWinAmountExpression(string $table, ?string $alias = null): string
     {
-        $prefix = $alias ? $alias . '.' : '';
+        $prefix = $alias ? $alias.'.' : '';
 
         if ($this->hasColumn($table, 'total_win_amount')) {
-            return 'COALESCE(' . $prefix . 'total_win_amount, 0)';
+            return 'COALESCE('.$prefix.'total_win_amount, 0)';
         }
 
         return '0';
@@ -1141,7 +1141,7 @@ class DashboardSummaryProjector
 
     private function hasTable(string $table): bool
     {
-        if (!array_key_exists($table, $this->tableCache)) {
+        if (! array_key_exists($table, $this->tableCache)) {
             $this->tableCache[$table] = Schema::hasTable($table);
         }
 
@@ -1150,12 +1150,12 @@ class DashboardSummaryProjector
 
     private function hasColumn(string $table, string $column): bool
     {
-        $key = $table . '.' . $column;
-        if (!array_key_exists($key, $this->columnCache)) {
-            if (!$this->hasTable($table)) {
+        $key = $table.'.'.$column;
+        if (! array_key_exists($key, $this->columnCache)) {
+            if (! $this->hasTable($table)) {
                 $this->columnCache[$key] = false;
             } else {
-                if (!array_key_exists($table, $this->columnListingCache)) {
+                if (! array_key_exists($table, $this->columnListingCache)) {
                     $this->columnListingCache[$table] = Schema::getColumnListing($table);
                 }
                 $this->columnCache[$key] = in_array($column, $this->columnListingCache[$table], true);

@@ -13,6 +13,7 @@ use Gametech\Auto\Jobs\TopupPayments as TopupPaymentsJob;
 use Gametech\Core\Models\Log;
 use Gametech\Payment\Models\BankAccount;
 use Gametech\Payment\Models\BankPayment as EventData;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class BankPaymentObserver
     private const TELEGRAM_MESSAGE_FLAG_ENV = 'PAYMENT_DEPOSIT_OBSERVER_TELEGRAM_MESSAGE';
 
     private const DASHBOARD_CACHE_VERSION_KEY = 'dashboard:summary:version';
+    private const PENDING_DEPOSIT_CACHE_KEY_PREFIX = 'payment:pending-deposit-count:';
 
     public function created(EventData $data): void
     {
@@ -35,7 +37,7 @@ class BankPaymentObserver
 
         DB::afterCommit(function () use ($data, $bankShortcode) {
             $this->touchDashboardCacheVersion();
-            $this->broadcastCount('created', $data->code);
+            $this->broadcastCount('created', $data->code, $this->pendingDepositCountDeltaForCreate($data));
             $this->dispatchDashboardSync($data);
 
             if ($this->shouldSendTelegramMessage() && (int) $data->member_topup > 0) {
@@ -64,7 +66,7 @@ class BankPaymentObserver
         DB::afterCommit(function () use ($data, $shouldRecountPending, $shouldSyncDashboard, $shouldSendTelegramMessage) {
             $this->touchDashboardCacheVersion();
             if ($shouldRecountPending) {
-                $this->broadcastCount('updated', $data->code);
+                $this->broadcastCount('updated', $data->code, $this->pendingDepositCountDeltaForUpdate($data));
             }
 
             $this->broadcastMemberBalanceUpdated($data);
@@ -85,7 +87,7 @@ class BankPaymentObserver
 
         DB::afterCommit(function () use ($data) {
             $this->touchDashboardCacheVersion();
-            $this->broadcastCount('deleted', $data->code);
+            $this->broadcastCount('deleted', $data->code, $this->pendingDepositCountDeltaForDelete($data));
             $this->dispatchDashboardSync($data);
         });
     }
@@ -159,11 +161,110 @@ class BankPaymentObserver
         $log->save();
     }
 
-    private function broadcastCount(string $action, string $code): void
+    private function broadcastCount(string $action, string $code, ?int $delta = null): void
     {
-        $count = app('Gametech\Payment\Repositories\BankPaymentRepository')->where('status', 0)->where('enable', 'Y')->whereDate('date_create', today())->count();
+        $count = $this->resolvePendingDepositCount($delta);
 
         broadcast(new SumNewPayment($count, $action, $code));
+    }
+
+    private function resolvePendingDepositCount(?int $delta = null): int
+    {
+        $today = today();
+        $cacheKey = $this->pendingDepositCountCacheKey($today);
+        $cachedCount = Cache::get($cacheKey);
+
+        if ($delta !== null && is_numeric($cachedCount)) {
+            $nextCount = max(0, (int) $cachedCount + $delta);
+            Cache::put($cacheKey, $nextCount, now()->addMinutes(5));
+
+            return $nextCount;
+        }
+
+        $count = $this->queryPendingDepositCount($today);
+        Cache::put($cacheKey, $count, now()->addMinutes(5));
+
+        return $count;
+    }
+
+    private function queryPendingDepositCount(Carbon $date): int
+    {
+        [$rangeStart, $rangeEndExclusive] = $this->resolveDayRange($date);
+
+        return (int) app('Gametech\Payment\Repositories\BankPaymentRepository')
+            ->where('status', 0)
+            ->where('enable', 'Y')
+            ->where('date_create', '>=', $rangeStart)
+            ->where('date_create', '<', $rangeEndExclusive)
+            ->count();
+    }
+
+    private function pendingDepositCountDeltaForCreate(EventData $data): int
+    {
+        return $this->matchesPendingDepositSnapshot(
+            (int) ($data->status ?? 0),
+            (string) ($data->enable ?? ''),
+            $data->date_create
+        ) ? 1 : 0;
+    }
+
+    private function pendingDepositCountDeltaForDelete(EventData $data): int
+    {
+        return $this->matchesPendingDepositSnapshot(
+            (int) ($data->status ?? 0),
+            (string) ($data->enable ?? ''),
+            $data->date_create
+        ) ? -1 : 0;
+    }
+
+    private function pendingDepositCountDeltaForUpdate(EventData $data): int
+    {
+        $wasPending = $this->matchesPendingDepositSnapshot(
+            (int) ($data->getOriginal('status') ?? 0),
+            (string) ($data->getOriginal('enable') ?? ''),
+            $data->getOriginal('date_create')
+        );
+
+        $isPending = $this->matchesPendingDepositSnapshot(
+            (int) ($data->status ?? 0),
+            (string) ($data->enable ?? ''),
+            $data->date_create
+        );
+
+        return ((int) $isPending) - ((int) $wasPending);
+    }
+
+    private function matchesPendingDepositSnapshot(int $status, string $enable, mixed $dateCreate): bool
+    {
+        if ($status !== 0 || $enable !== 'Y' || empty($dateCreate)) {
+            return false;
+        }
+
+        try {
+            $date = $dateCreate instanceof Carbon ? $dateCreate : Carbon::parse((string) $dateCreate);
+        } catch (Throwable) {
+            return false;
+        }
+
+        [$rangeStart, $rangeEndExclusive] = $this->resolveDayRange(today());
+
+        return $date->greaterThanOrEqualTo($rangeStart) && $date->lessThan($rangeEndExclusive);
+    }
+
+    /**
+     * @return array{0:Carbon,1:Carbon}
+     */
+    private function resolveDayRange(Carbon $date): array
+    {
+        $start = $date->copy()->startOfDay();
+        $endExclusive = $start->copy()->addDay();
+
+        return [$start, $endExclusive];
+    }
+
+    private function pendingDepositCountCacheKey(Carbon $date): string
+    {
+        return self::PENDING_DEPOSIT_CACHE_KEY_PREFIX.$date->toDateString();
     }
 
     private function broadcastMemberBalanceUpdated(EventData $data): void

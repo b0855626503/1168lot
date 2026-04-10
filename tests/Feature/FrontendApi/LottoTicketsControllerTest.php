@@ -6,8 +6,8 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\Member\Models\Member;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
-use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class LottoTicketsControllerTest extends TestCase
@@ -176,9 +176,32 @@ class LottoTicketsControllerTest extends TestCase
         $response->assertJsonPath('data.result_message', 'โพยนี้ถูกยกเลิกแล้ว');
     }
 
+    public function test_tickets_endpoint_filters_and_paginates_status_without_loading_full_result_set_payload(): void
+    {
+        $member = $this->customer();
+        $this->seedBaseData();
+
+        $request = Request::create('/api/v1/lotto/tickets?status=won&page=1&limit=1', 'GET');
+        $request->attributes->set('frontend_language', 'th');
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+
+        $response = TestResponse::fromBaseResponse(
+            app(LottoController::class)->tickets($request)
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', 1001);
+        $response->assertJsonPath('data.0.status', 'won');
+        $response->assertJsonPath('pagination.total', 1);
+        $response->assertJsonPath('pagination.count', 1);
+        $response->assertJsonPath('pagination.has_more', false);
+    }
+
     private function customer(int $memberCode = 9001): Member
     {
-        $member = new Member();
+        $member = new Member;
         $member->code = $memberCode;
         $member->name = 'Ticket Member';
         $member->exists = true;
