@@ -24,14 +24,14 @@ class LotteryRelayStream
         $redis = Redis::connection($connection);
 
         try {
-            if (method_exists($redis, 'xgroup')) {
-                $redis->xgroup('CREATE', $stream, $group, '$', true);
+            $redis->xgroup('CREATE', $stream, $group, '$', true);
+        } catch (\Throwable $exception) {
+            if ($this->shouldFallbackToRawCommand($exception)) {
+                $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
 
                 return;
             }
 
-            $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
-        } catch (\Throwable $exception) {
             if (! str_contains(strtoupper($exception->getMessage()), 'BUSYGROUP')) {
                 throw $exception;
             }
@@ -52,17 +52,15 @@ class LotteryRelayStream
         $redis = Redis::connection($connection);
 
         try {
-            if (method_exists($redis, 'xreadgroup')) {
-                $response = $redis->xreadgroup(
-                    $group,
-                    $consumer,
-                    [$stream => '>'],
-                    max(1, $count),
-                    max(0, $blockMs)
-                );
+            $response = $redis->xreadgroup(
+                $group,
+                $consumer,
+                [$stream => '>'],
+                max(1, $count),
+                max(0, $blockMs)
+            );
 
-                return $this->normalizeReadGroupResponse($response);
-            }
+            return $this->normalizeReadGroupResponse($response);
         } catch (\Throwable $exception) {
             if (! $this->shouldFallbackToRawCommand($exception)) {
                 throw $exception;
@@ -83,10 +81,14 @@ class LotteryRelayStream
     {
         $redis = Redis::connection($connection);
 
-        if (method_exists($redis, 'xack')) {
+        try {
             $redis->xack($stream, $group, [$id]);
 
             return;
+        } catch (\Throwable $exception) {
+            if (! $this->shouldFallbackToRawCommand($exception)) {
+                throw $exception;
+            }
         }
 
         $redis->command('XACK', [$stream, $group, $id]);
