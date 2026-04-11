@@ -184,9 +184,6 @@ class LottoServiceProvider extends ServiceProvider
         LottoDraw::observe(LottoDashboardSummaryObserver::class);
         LottoDraw::observe(LottoDrawAutoResultObserver::class);
         LottoDrawProxy::observe(LottoAuditObserver::class);
-        LottoDrawProxy::observe(LottoDrawRealtimeObserver::class);
-        LottoDrawProxy::observe(LottoDashboardSummaryObserver::class);
-        LottoDrawProxy::observe(LottoDrawAutoResultObserver::class);
         LottoDrawBetSettingProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoDashboardSummaryObserver::class);

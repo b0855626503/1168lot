@@ -22,6 +22,7 @@
   - มี Redis connection `lotto` (db 4) สำหรับ relay stream + markers
   - Redis connection `lotto` ต้องใช้ prefix กลางร่วมกันทุกเว็บผ่าน `REDIS_LOTTO_PREFIX` (default `lotto_relay:`) ไม่ใช้ app prefix ปกติ
   - มี queue/horizon แยก `lotto`
+  - draw observer ชุด realtime/dashboard/auto-result register เฉพาะบน `LottoDraw` model ตัวจริง ไม่ register ซ้ำบน `LottoDrawProxy` เพื่อกัน event/ประกาศผลซ้ำ
 
 ## นโยบาย Runtime Schema
 
