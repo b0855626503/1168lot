@@ -11,13 +11,26 @@ class LotteryRelayStream
      */
     public function publish(string $connection, string $stream, array $payload, int $maxLen): string
     {
-        return (string) Redis::connection($connection)->xadd($stream, '*', $payload, $maxLen, true);
+        $arguments = array_merge(
+            [$stream, 'MAXLEN', '~', (string) $maxLen, '*'],
+            $this->flattenFields($payload)
+        );
+
+        return (string) Redis::connection($connection)->command('XADD', $arguments);
     }
 
     public function ensureConsumerGroup(string $connection, string $stream, string $group): void
     {
+        $redis = Redis::connection($connection);
+
         try {
-            Redis::connection($connection)->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
+            if (method_exists($redis, 'xgroup')) {
+                $redis->xgroup('CREATE', $stream, $group, '$', true);
+
+                return;
+            }
+
+            $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
         } catch (\Throwable $exception) {
             if (! str_contains(strtoupper($exception->getMessage()), 'BUSYGROUP')) {
                 throw $exception;
@@ -36,10 +49,30 @@ class LotteryRelayStream
         int $count,
         int $blockMs
     ): array {
-        $response = Redis::connection($connection)->command('XREADGROUP', [
+        $redis = Redis::connection($connection);
+
+        try {
+            if (method_exists($redis, 'xreadgroup')) {
+                $response = $redis->xreadgroup(
+                    $group,
+                    $consumer,
+                    [$stream => '>'],
+                    max(1, $count),
+                    max(0, $blockMs)
+                );
+
+                return $this->normalizeReadGroupResponse($response);
+            }
+        } catch (\Throwable $exception) {
+            if (! $this->shouldFallbackToRawCommand($exception)) {
+                throw $exception;
+            }
+        }
+
+        $response = $redis->command('XREADGROUP', [
             'GROUP', $group, $consumer,
-            'COUNT', (string) $count,
-            'BLOCK', (string) $blockMs,
+            'COUNT', (string) max(1, $count),
+            'BLOCK', (string) max(0, $blockMs),
             'STREAMS', $stream, '>',
         ]);
 
@@ -48,7 +81,15 @@ class LotteryRelayStream
 
     public function ack(string $connection, string $stream, string $group, string $id): void
     {
-        Redis::connection($connection)->command('XACK', [$stream, $group, $id]);
+        $redis = Redis::connection($connection);
+
+        if (method_exists($redis, 'xack')) {
+            $redis->xack($stream, $group, [$id]);
+
+            return;
+        }
+
+        $redis->command('XACK', [$stream, $group, $id]);
     }
 
     public function get(string $connection, string $key): ?string
@@ -70,12 +111,23 @@ class LotteryRelayStream
     private function flattenFields(array $payload): array
     {
         $flattened = [];
+
         foreach ($payload as $field => $value) {
             $flattened[] = (string) $field;
             $flattened[] = (string) $value;
         }
 
         return $flattened;
+    }
+
+    private function shouldFallbackToRawCommand(\Throwable $exception): bool
+    {
+        $message = strtoupper($exception->getMessage());
+
+        return str_contains($message, 'XREADGROUP')
+            || str_contains($message, 'ARGUMENT')
+            || str_contains($message, 'EXPECTS AT MOST')
+            || str_contains($message, 'WRONG NUMBER OF ARGUMENTS');
     }
 
     /**
@@ -88,7 +140,23 @@ class LotteryRelayStream
         }
 
         $messages = [];
-        foreach ($response as $streamEntry) {
+
+        foreach ($response as $streamKey => $streamEntry) {
+            if (is_string($streamKey) && is_array($streamEntry)) {
+                foreach ($streamEntry as $messageId => $fields) {
+                    if (! is_array($fields)) {
+                        continue;
+                    }
+
+                    $messages[] = [
+                        'id' => (string) $messageId,
+                        'fields' => $this->normalizeFields($fields),
+                    ];
+                }
+
+                continue;
+            }
+
             if (! is_array($streamEntry)) {
                 continue;
             }
@@ -147,6 +215,7 @@ class LotteryRelayStream
             for ($index = 0; $index < count($fields); $index += 2) {
                 $field = $fields[$index] ?? null;
                 $value = $fields[$index + 1] ?? null;
+
                 if ($field === null) {
                     continue;
                 }
