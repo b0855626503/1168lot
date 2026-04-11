@@ -11,9 +11,7 @@ class LotteryRelayStream
      */
     public function publish(string $connection, string $stream, array $payload, int $maxLen): string
     {
-        $arguments = array_merge([$stream, 'MAXLEN', '~', (string) $maxLen, '*'], $this->flattenFields($payload));
-
-        return (string) Redis::connection($connection)->command('XADD', $arguments);
+        return (string) Redis::connection($connection)->xadd($stream, '*', $payload, $maxLen, true);
     }
 
     public function ensureConsumerGroup(string $connection, string $stream, string $group): void
