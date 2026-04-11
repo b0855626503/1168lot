@@ -3,6 +3,7 @@
 namespace Tests\Feature\Lotto;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -35,6 +36,27 @@ class CentralLotteryResultEndpointTest extends TestCase
             $table->string('game_user', 255)->nullable();
             $table->timestamps();
         });
+
+        Schema::dropIfExists('lotto_result_sources');
+        Schema::dropIfExists('lotto_markets');
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->id();
+            $table->string('code');
+        });
+        Schema::create('lotto_result_sources', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('market_id');
+            $table->boolean('is_active')->default(true);
+            $table->string('lookup_date_mode')->default('ROUND_DATE');
+            $table->integer('lookup_date_offset_days')->default(0);
+        });
+
+        // downjone-star uses ROUND_DATE_MINUS_DAYS offset 1 (dowjonestar type)
+        DB::table('lotto_markets')->insert(['id' => 38, 'code' => 'downjone-star']);
+        DB::table('lotto_result_sources')->insert([
+            'market_id' => 38, 'is_active' => 1,
+            'lookup_date_mode' => 'ROUND_DATE_MINUS_DAYS', 'lookup_date_offset_days' => 1,
+        ]);
     }
 
     private function getLotteryJson(string $uri)
@@ -140,4 +162,39 @@ class CentralLotteryResultEndpointTest extends TestCase
         $response->assertJsonValidationErrors(['date']);
     }
 
+    public function test_get_lottery_applies_lookup_date_offset_for_downjone_star(): void
+    {
+        config()->set('lottery_result_relay.upstream_get_lottery_url', 'http://203.146.127.170/~anan/get_lottery.php');
+
+        $capturedUrl = null;
+        Http::fake([
+            'http://203.146.127.170/~anan/get_lottery.php*' => function (Request $request) use (&$capturedUrl) {
+                $capturedUrl = $request->url();
+
+                return Http::response([
+                    'type' => 'downjone-star',
+                    'nameTH' => 'ดาวโจนส์ Star',
+                    'date' => '2026-04-10',
+                    'page' => 1,
+                    'count' => 1,
+                    'results' => [[
+                        'lottosName' => 'downjone-star',
+                        'lottosTH' => 'ดาวโจนส์ Star',
+                        'lottosDate' => '2026-04-09T17:00:00.000Z',
+                        'lottosTime' => '16:30',
+                        'lottosNumber' => '99999',
+                        'lottosUnder' => '55',
+                    ]],
+                ], 200);
+            },
+        ]);
+
+        // business date = 2026-04-11, but offset -1 → upstream should receive 2026-04-10
+        // canonical type is 'dowjonestar' (value in registry), market code is 'downjone-star' (key)
+        $this->getLotteryJson('/api/v1/get_lottery?type=dowjonestar&date=2026-04-11');
+
+        $this->assertNotNull($capturedUrl, 'Upstream was never called');
+        $this->assertStringContainsString('date=2026-04-10', $capturedUrl, 'Upstream should receive date minus 1 day');
+        $this->assertStringNotContainsString('date=2026-04-11', $capturedUrl, 'Upstream must not receive the original business date');
+    }
 }

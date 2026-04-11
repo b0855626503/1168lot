@@ -3,6 +3,8 @@
 namespace Gametech\Lotto\Services;
 
 use Carbon\CarbonImmutable;
+use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 use Gametech\Lotto\Services\InternalResultSources\InternalResultService;
 use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
@@ -72,6 +74,40 @@ class CentralLotteryResultService
         ];
     }
 
+    private function resolveLookupDate(string $canonicalType, string $date): string
+    {
+        $marketCodes = $this->typeRegistry->marketCodesForCanonicalType($canonicalType);
+        if ($marketCodes === []) {
+            return $date;
+        }
+
+        $marketIds = LotteryMarket::query()->whereIn('code', $marketCodes)->pluck('id');
+        $source = LottoResultSource::query()
+            ->whereIn('market_id', $marketIds)
+            ->where('is_active', 1)
+            ->first(['lookup_date_mode', 'lookup_date_offset_days']);
+
+        if ($source === null) {
+            return $date;
+        }
+
+        $mode = (string) ($source->lookup_date_mode ?? 'ROUND_DATE');
+        $offsetDays = (int) ($source->lookup_date_offset_days ?? 0);
+
+        if ($offsetDays === 0 || ! in_array($mode, ['ROUND_DATE_MINUS_DAYS', 'ROUND_DATE_PLUS_DAYS'], true)) {
+            return $date;
+        }
+
+        $base = CarbonImmutable::createFromFormat('Y-m-d', $date);
+        if ($base === false) {
+            return $date;
+        }
+
+        return $mode === 'ROUND_DATE_MINUS_DAYS'
+            ? $base->subDays($offsetDays)->format('Y-m-d')
+            : $base->addDays($offsetDays)->format('Y-m-d');
+    }
+
     private function resolveSource(string $canonicalType): ?string
     {
         if (in_array($canonicalType, ['dowjones-midnight', 'dowjones-extra'], true)) {
@@ -99,7 +135,8 @@ class CentralLotteryResultService
             ]]);
         }
 
-        $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $canonicalType, 'date' => $date], 15);
+        $lookupDate = $this->resolveLookupDate($canonicalType, $date);
+        $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $canonicalType, 'date' => $lookupDate], 15);
 
         if (! ($fetch['ok'] ?? false)) {
             return $this->buildFailurePayload($canonicalType, $date, [[
