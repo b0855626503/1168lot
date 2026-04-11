@@ -857,27 +857,42 @@ class DashboardController extends AppBaseController
 
     public function summary(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getSummary($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getSummary($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function conversion(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getConversion($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getConversion($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function trends(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getTrends($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getTrends($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function activity(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getActivity($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getActivity($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function funnel(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getFunnel($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getFunnel($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function memberList(Request $request, DashboardService $service)
@@ -885,7 +900,7 @@ class DashboardController extends AppBaseController
         $type = (string) $request->input('type', '');
 
         return $this->sendResponseNew(
-            $service->getMemberList($request->all(), $type),
+            $service->withBoa155Contract($service->getMemberList($request->all(), $type), $request->all()),
             'Complete'
         );
     }
@@ -899,12 +914,15 @@ class DashboardController extends AppBaseController
 
         $result = $service->syncSummaryRange($request->all());
 
-        return $this->sendResponseNew($result, 'Complete');
+        return $this->sendResponseNew($service->withBoa155Contract($result, $request->all()), 'Complete');
     }
 
     public function alerts(Request $request, DashboardService $service)
     {
-        return $this->sendResponseNew($service->getAlerts($request->all()), 'Complete');
+        return $this->sendResponseNew(
+            $service->withBoa155Contract($service->getAlerts($request->all()), $request->all()),
+            'Complete'
+        );
     }
 
     public function getAnnounce()

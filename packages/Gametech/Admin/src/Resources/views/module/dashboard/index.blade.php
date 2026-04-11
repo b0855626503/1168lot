@@ -521,6 +521,7 @@
             min-height: 0;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         .member-list-toolbar {
             display: flex;
@@ -540,6 +541,32 @@
             overflow: auto;
             border: 1px solid #e9ecef;
             border-radius: 4px;
+        }
+        .top-risky-detail-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 62vh;
+            overflow: auto;
+            position: relative;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        .top-risky-detail-scroll .member-list-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f8f9fa;
+            box-shadow: inset 0 -1px 0 #dee2e6;
+        }
+        .top-risky-detail-sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .top-risky-detail-empty {
+            padding: 16px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
         }
         @media (max-width: 767.98px) {
             .lotto-section-grid {
@@ -777,7 +804,7 @@
                                         </div>
                                         <div class="lotto-recent-wrap mt-2">
                                             <div class="lotto-recent-head">
-                                                <div class="lotto-recent-title">เลขเสี่ยงสูงสุด (Top Risky Numbers)</div>
+                                                <div class="lotto-recent-title">เลขเสี่ยงสูงสุด (Top 10 Risky Numbers)</div>
                                             </div>
                                             <div class="table-responsive">
                                                 <table class="table table-sm table-hover lotto-recent-table">
@@ -787,8 +814,8 @@
                                                             <th>ประเภท</th>
                                                             <th class="text-right">ยอดแทง</th>
                                                             <th class="text-right">ความเสี่ยง</th>
-                                                            <th class="text-right">ตลาด</th>
-                                                            <th class="text-right">งวด</th>
+                                                            <th class="text-right" title="จำนวนตลาดที่เลขนี้ติดความเสี่ยงในช่วงวันที่ที่เลือก">จำนวนตลาด</th>
+                                                            <th class="text-right" title="จำนวนรอบออกรางวัล (draw) ที่เลขนี้ติดความเสี่ยงในช่วงวันที่ที่เลือก">จำนวนงวด (เสี่ยง)</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -797,8 +824,12 @@
                                                             <td>@{{ formatLottoRiskBetType(row.bet_type) }}</td>
                                                             <td class="text-right">@{{ uiValue(row.stake_total, '0.00') }}</td>
                                                             <td class="text-right">@{{ uiValue(row.exposure_total, '0.00') }}</td>
-                                                            <td class="text-right">@{{ uiCount(row.market_count) }}</td>
-                                                            <td class="text-right">@{{ uiCount(row.round_count) }}</td>
+                                                            <td class="text-right">
+                                                                <a href="#" class="dashboard-clickable" @click.prevent="openTopRiskyDetail('markets', row)">@{{ uiCount(row.market_count) }}</a>
+                                                            </td>
+                                                            <td class="text-right">
+                                                                <a href="#" class="dashboard-clickable" @click.prevent="openTopRiskyDetail('rounds', row)">@{{ uiCount(row.round_count) }}</a>
+                                                            </td>
                                                         </tr>
                                                         <tr v-if="summary.top_risky_numbers.length === 0">
                                                             <td colspan="6" class="text-center text-muted">ไม่มีข้อมูล top risky numbers</td>
@@ -815,13 +846,13 @@
                                                 <table class="table table-sm table-hover lotto-recent-table">
                                                     <thead class="thead-light">
                                                         <tr>
-                                                            <th>Bet Type</th>
+                                                            <th>ประเภท</th>
                                                             <th class="text-right">รายการ</th>
                                                             <th class="text-right">ยอดรวม</th>
                                                             <th class="text-right">ผู้เล่น</th>
                                                             <th>เลขแทงสูงสุด</th>
                                                             <th class="text-right">ยอดเลขแทงสูงสุด</th>
-                                                            <th class="text-right">ยอดความเสี่ยงรวม</th>
+                                                            <th class="text-right">Max Risk (per number)</th>
                                                             <th>เลขเสี่ยงสูงสุด</th>
                                                             <th class="text-right">มูลค่าเสี่ยงสูงสุด</th>
                                                         </tr>
@@ -840,6 +871,39 @@
                                                         </tr>
                                                         <tr v-if="summary.lotto_bet_type_insights.length === 0">
                                                             <td colspan="9" class="text-center text-muted">ไม่มีข้อมูลสรุปตามประเภทในช่วงวันที่ที่เลือก</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div class="lotto-recent-wrap mt-2">
+                                            <div class="lotto-recent-head">
+                                                <div class="lotto-recent-title">ผู้เล่นเสี่ยงสูงสุด (Top Risk Users)</div>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover lotto-recent-table">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th class="text-right">อันดับ</th>
+                                                            <th>สมาชิก</th>
+                                                            <th class="text-right">Max Risk (per user-number)</th>
+                                                            <th class="text-right">สัดส่วนความเสี่ยง</th>
+                                                            <th>ตลาดหลัก</th>
+                                                            <th class="text-right">จำนวนโพย</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr v-for="row in summary.lotto_top_risk_users" :key="'lotto-risk-user-' + row.member_id">
+                                                            <td class="text-right">@{{ uiCount(row.rank) }}</td>
+                                                            <td>@{{ uiValue(row.member_username, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.total_exposure, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.contribution_percent, 0).toFixed ? uiValue(row.contribution_percent, 0).toFixed(2) : uiValue(row.contribution_percent, '0.00') }}%</td>
+                                                            <td>@{{ uiValue(row.main_market, '-') }}</td>
+                                                            <td class="text-right">@{{ uiCount(row.bet_count) }}</td>
+                                                        </tr>
+                                                        <tr v-if="summary.lotto_top_risk_users.length === 0">
+                                                            <td colspan="6" class="text-center text-muted">ไม่มีข้อมูลผู้เล่นเสี่ยงสูงสุดในช่วงวันที่ที่เลือก</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -869,6 +933,9 @@
                                                             <th>กลุ่ม/รายการ</th>
                                                             <th>ประเภท</th>
                                                             <th class="text-right">ยอดแทง</th>
+                                                            <th class="text-right">ยอดจ่ายถ้าถูกทั้งหมด</th>
+                                                            <th class="text-right">ยอดจ่ายจริง</th>
+                                                            <th class="text-right">กำไร/ขาดทุนสุทธิ</th>
                                                             <th class="text-center">สถานะ</th>
                                                             <th class="text-right">ยอดถูก</th>
                                                         </tr>
@@ -880,6 +947,9 @@
                                                             <td>@{{ uiValue(row.group_name, '-') }} / @{{ uiValue(row.market_name, '-') }}</td>
                                                             <td class="summary-col" :title="uiValue(row.bet_type_summary, '-')">@{{ uiValue(row.bet_type_summary, '-') }}</td>
                                                             <td class="text-right">@{{ uiValue(row.amount, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.potential_payout, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.actual_payout, '0.00') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.net_result, '0.00') }}</td>
                                                             <td class="text-center">
                                                                 <span class="badge"
                                                                       :class="{
@@ -894,7 +964,7 @@
                                                             <td class="text-right">@{{ uiValue(row.win_amount, '0.00') }}</td>
                                                         </tr>
                                                         <tr v-if="activity.lotto_recent_bets.length === 0">
-                                                            <td colspan="7" class="text-center text-muted">ไม่มีรายการแทงล่าสุด</td>
+                                                            <td colspan="10" class="text-center text-muted">ไม่มีรายการแทงล่าสุด</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1420,9 +1490,65 @@
                         :limit="memberList.limit"
                         :loading="memberList.loading"
                 ></member-list-modal>
+
+                <top-risky-detail-modal
+                        :title="topRiskyDetail.title"
+                        :subtitle="topRiskyDetail.subtitle"
+                        :items="topRiskyDetail.items"
+                        :fields="topRiskyDetail.fields"
+                ></top-risky-detail-modal>
             </div>
         </section>
 
+    </script>
+
+    <script type="text/x-template" id="top-risky-detail-modal-template">
+        <div class="modal fade modal-member-list" id="top-risky-detail-modal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <div class="modal-title">@{{ title }}</div>
+                            <small class="text-muted">@{{ subtitle }}</small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="top-risky-detail-scroll">
+                            <table class="table table-sm table-hover table-bordered mb-0 member-list-table">
+                                <thead class="thead-light">
+                                <tr>
+                                    <th v-for="field in normalizedFields"
+                                        :key="field.key"
+                                        :class="[field.class || '', field.sortable ? 'top-risky-detail-sortable' : '']"
+                                        @click="toggleSort(field)">
+                                        @{{ field.label }}
+                                        <span v-if="field.sortable">
+                                            <span v-if="sortKey === field.key && sortDesc">▼</span>
+                                            <span v-else-if="sortKey === field.key">▲</span>
+                                            <span v-else>↕</span>
+                                        </span>
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="(item, index) in sortedItems" :key="'top-risky-row-' + index">
+                                    <td v-for="field in normalizedFields"
+                                        :key="field.key"
+                                        :class="field.class || ''">
+                                        @{{ item[field.key] }}
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <div v-if="sortedItems.length === 0" class="top-risky-detail-empty">ไม่มีข้อมูลที่เกี่ยวข้อง</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </script>
 
     <script type="text/x-template" id="online-slot-template">
@@ -1674,6 +1800,89 @@
             }
         });
 
+        Vue.component('top-risky-detail-modal', {
+            template: '#top-risky-detail-modal-template',
+            props: {
+                title: { type: String, default: '' },
+                subtitle: { type: String, default: '' },
+                items: { type: Array, default: () => [] },
+                fields: { type: Array, default: () => [] },
+            },
+            data: function () {
+                return {
+                    sortKey: '',
+                    sortDesc: false,
+                };
+            },
+            computed: {
+                normalizedFields: function () {
+                    return Array.isArray(this.fields) ? this.fields : [];
+                },
+                sortedItems: function () {
+                    const rows = Array.isArray(this.items) ? this.items.slice() : [];
+                    if (!this.sortKey) {
+                        return rows;
+                    }
+
+                    const sortKey = this.sortKey;
+                    const multiplier = this.sortDesc ? -1 : 1;
+
+                    return rows.sort((left, right) => {
+                        const leftValue = left && left[sortKey] !== undefined && left[sortKey] !== null ? left[sortKey] : '';
+                        const rightValue = right && right[sortKey] !== undefined && right[sortKey] !== null ? right[sortKey] : '';
+
+                        const leftNumber = typeof leftValue === 'number' ? leftValue : Number(String(leftValue).replace(/,/g, ''));
+                        const rightNumber = typeof rightValue === 'number' ? rightValue : Number(String(rightValue).replace(/,/g, ''));
+                        const leftIsNumber = Number.isFinite(leftNumber);
+                        const rightIsNumber = Number.isFinite(rightNumber);
+
+                        if (leftIsNumber && rightIsNumber) {
+                            if (leftNumber === rightNumber) {
+                                return 0;
+                            }
+
+                            return leftNumber > rightNumber ? multiplier : -multiplier;
+                        }
+
+                        const leftText = String(leftValue);
+                        const rightText = String(rightValue);
+
+                        if (leftText === rightText) {
+                            return 0;
+                        }
+
+                        return leftText.localeCompare(rightText, undefined, { numeric: true }) * multiplier;
+                    });
+                }
+            },
+            watch: {
+                fields: function (nextFields) {
+                    const firstSortable = (Array.isArray(nextFields) ? nextFields : []).find((field) => field && field.sortable);
+                    this.sortKey = firstSortable ? firstSortable.key : '';
+                    this.sortDesc = false;
+                }
+            },
+            mounted: function () {
+                const firstSortable = this.normalizedFields.find((field) => field && field.sortable);
+                this.sortKey = firstSortable ? firstSortable.key : '';
+            },
+            methods: {
+                toggleSort: function (field) {
+                    if (!field || !field.sortable) {
+                        return;
+                    }
+
+                    if (this.sortKey === field.key) {
+                        this.sortDesc = !this.sortDesc;
+                        return;
+                    }
+
+                    this.sortKey = field.key;
+                    this.sortDesc = false;
+                }
+            }
+        });
+
         Vue.component('admin-dashboard', {
             template: '#admin-dashboard-template',
             data: function () {
@@ -1746,6 +1955,7 @@
                             sales_direction: 'flat',
                         },
                         lotto_bet_type_insights: [],
+                        lotto_top_risk_users: [],
                         net: { amount: '-', amount_raw: 0, change_pct: 0 },
                         register: { total: 0, normal: 0, referral: 0, campaign: 0 },
                         first_deposit: { count: 0, rate: 0 }
@@ -1777,6 +1987,12 @@
                         total: 0,
                         limit: 200,
                         loading: false
+                    },
+                    topRiskyDetail: {
+                        title: '',
+                        subtitle: '',
+                        items: [],
+                        fields: [],
                     },
                     trendMode: 'hour',
                     charts: { money: null, funnel: null },
@@ -3059,6 +3275,90 @@
                         .then(() => {
                             this.memberList.loading = false;
                         });
+                },
+                openTopRiskyDetail(type, row) {
+                    const detailType = type === 'rounds' ? 'rounds' : 'markets';
+                    const rowNumber = this.uiValue(row && row.number, '-');
+                    const rowBetType = this.formatLottoRiskBetType(row && row.bet_type);
+                    const rounds = Array.isArray(row && row.rounds) ? row.rounds : [];
+
+                    if (detailType === 'markets') {
+                        const markets = Array.isArray(row && row.markets) ? row.markets : [];
+                        this.topRiskyDetail.title = 'รายการความเสี่ยงรายตลาด';
+                        this.topRiskyDetail.subtitle = `เลข ${rowNumber} (${rowBetType})`;
+                        this.topRiskyDetail.fields = [
+                            { key: 'rank', label: 'อันดับ', sortable: true, class: 'text-right' },
+                            { key: 'name', label: 'ตลาด', sortable: true },
+                            { key: 'total_stake', label: 'ยอดแทง', sortable: true, class: 'text-right' },
+                            { key: 'total_risk', label: 'Liability (ประมาณการ)', sortable: true, class: 'text-right' },
+                            { key: 'contribution_display', label: 'สัดส่วนความเสี่ยง', sortable: true, class: 'text-right' },
+                        ];
+                        this.topRiskyDetail.items = markets.map((market) => ({
+                            rank: Number((market && market.rank) || 0),
+                            name: this.uiValue(market && market.name, '-'),
+                            total_stake: this.uiValue(market && market.total_stake, '0.00'),
+                            total_risk: this.uiValue(market && market.total_risk, '0.00'),
+                            contribution_display: `${Number((market && market.contribution_percent) || 0).toFixed(2)}%`,
+                        }));
+                    } else {
+                        this.topRiskyDetail.title = 'รายการความเสี่ยงรายงวด';
+                        this.topRiskyDetail.subtitle = `เลข ${rowNumber} (${rowBetType})`;
+                        this.topRiskyDetail.fields = [
+                            { key: 'rank', label: 'อันดับ', sortable: true, class: 'text-right' },
+                            { key: 'id', label: 'รหัสงวด', sortable: true },
+                            { key: 'draw_date', label: 'วันที่ออกรางวัล', sortable: true },
+                            { key: 'market_name', label: 'ตลาด', sortable: true },
+                            { key: 'result_number_display', label: 'เลขที่ออก', sortable: true },
+                            { key: 'total_risk', label: 'Liability (ประมาณการ)', sortable: true, class: 'text-right' },
+                            { key: 'potential_payout', label: 'Potential Payout', sortable: true, class: 'text-right' },
+                            { key: 'actual_payout', label: 'Actual Payout', sortable: true, class: 'text-right' },
+                            { key: 'net_result', label: 'Gap (Potential-Actual)', sortable: true, class: 'text-right' },
+                            { key: 'draw_status', label: 'สถานะงวด', sortable: true },
+                        ];
+                        this.topRiskyDetail.items = rounds.map((round) => ({
+                            rank: Number((round && round.rank) || 0),
+                            id: Number((round && round.id) || 0),
+                            draw_date: this.uiValue(round && round.draw_date, '-'),
+                            market_name: this.uiValue(round && round.market_name, '-'),
+                            result_number_display: this.uiValue(round && round.result_number_display, '-'),
+                            total_risk: this.uiValue(round && round.total_risk, '0.00'),
+                            potential_payout: this.uiValue(round && round.potential_payout, '0.00'),
+                            actual_payout: round && round.actual_settlement_pending ? '-' : this.uiValue(round && round.actual_payout, '0.00'),
+                            net_result: round && round.actual_settlement_pending ? '-' : this.uiValue(round && round.net_result, '0.00'),
+                            draw_status: this.topRiskyRoundStatusLabel(round),
+                        }));
+                    }
+
+                    const $modal = $('#top-risky-detail-modal');
+                    if ($modal && typeof $modal.modal === 'function') {
+                        $modal.modal('show');
+                    }
+                },
+                topRiskyRoundStatusLabel(round) {
+                    const status = String((round && round.status) || '').trim().toLowerCase();
+                    if (status === 'resulted') return 'ออกผลแล้ว';
+                    if (status === 'closed') return 'ปิดรับรอผล';
+                    if (status === 'open') return 'เปิดรับแทง';
+                    if (status === 'cancelled') return 'ยกเลิก';
+                    return status ? status : '-';
+                },
+                topRiskyRoundResultTime(round) {
+                    const resultAt = String((round && round.result_at) || '').trim();
+                    if (resultAt) {
+                        return resultAt;
+                    }
+
+                    const status = String((round && round.status) || '').trim().toLowerCase();
+                    if (status === 'resulted') {
+                        return 'ออกผลแล้ว (ไม่พบเวลา)';
+                    }
+
+                    const closeAt = String((round && round.close_at) || '').trim();
+                    if (closeAt && (status === 'closed' || status === 'open' || status === 'draft')) {
+                        return `ยังไม่ออกผล (ปิดรับ ${closeAt})`;
+                    }
+
+                    return 'ยังไม่ออกผล';
                 }
             }
         });
@@ -3391,3 +3691,4 @@
         });
     </script>
 @endpush
+

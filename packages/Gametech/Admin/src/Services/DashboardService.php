@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Storage;
 class DashboardService
 {
     public const CACHE_TTL_SECONDS = 45;
+    private const BOA155_CONTRACT_VERSION = 'BOA-155-2026-04-11';
+    private const DASHBOARD_CONTRACT_TZ = 'Asia/Bangkok';
     private const ACTIVITY_CACHE_TTL_SECONDS = 5;
     private const ACTIVITY_FEED_LIMIT = 10;
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
@@ -31,6 +33,9 @@ class DashboardService
         'lotto_draws' => true,
         'lotto_groups' => true,
         'lotto_markets' => true,
+        'lotto_number_exposures' => true,
+        'lotto_draw_bet_settings' => true,
+        'lotto_ticket_items' => true,
         'lotto_tickets' => true,
         'members' => true,
         'members_credit_free_log' => true,
@@ -51,7 +56,11 @@ class DashboardService
         'dashboard_summary_daily' => ['*'],
         'lotto_dashboard_risk_aggregates' => ['summary_date'],
         'lotto_dashboard_risk_snapshot' => ['snapshot_at'],
-        'lotto_tickets' => ['bet_type_summary'],
+        'lotto_draws' => ['id', 'status', 'result_at', 'result_number', 'result_applied_at', 'close_at', 'open_at', 'draw_date', 'market_id'],
+        'lotto_number_exposures' => ['draw_id', 'bet_type', 'number', 'sold_amount'],
+        'lotto_draw_bet_settings' => ['draw_id', 'bet_type', 'payout'],
+        'lotto_ticket_items' => ['ticket_id', 'bet_type', 'number', 'amount', 'payout_at_time', 'win_amount'],
+        'lotto_tickets' => ['id', 'draw_id', 'member_id', 'status', 'bet_type_summary', 'total_win_amount'],
         'members' => [
             'campaign_id',
             'code',
@@ -223,6 +232,7 @@ class DashboardService
             $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
             $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
             $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
+            $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary($startDate, $endDate);
 
             $net = $depositSuccessAmount - $withdrawAmount;
             $prevNet = $this->netCashflow($filters, $prevStart, $prevEnd);
@@ -382,6 +392,7 @@ class DashboardService
                 'lotto_risk_trend' => $lottoRiskTrend,
                 'lotto_risk_alerts' => $lottoRiskAlerts,
                 'lotto_bet_type_insights' => $lottoBetTypeInsights,
+                'lotto_top_risk_users' => $lottoTopRiskUsers,
                 'net' => [
                     'amount' => core()->currency($net),
                     'amount_raw' => $net,
@@ -399,6 +410,50 @@ class DashboardService
                 ],
             ];
         });
+    }
+
+    public function withBoa155Contract(array $payload, array $filters): array
+    {
+        $normalized = $this->normalizeFilters($filters);
+        if (array_key_exists('time_scope', $filters)) {
+            $normalized['time_scope'] = $filters['time_scope'];
+        }
+
+        return $this->withBoa155ContractEnvelope($payload, $normalized);
+    }
+
+    private function withBoa155ContractEnvelope(array $payload, array $filters): array
+    {
+        [$startDate, $endDate] = $this->range($filters);
+        $timeScope = $this->resolveBoa155TimeScope($filters);
+
+        $contract = [
+            'contract_version' => self::BOA155_CONTRACT_VERSION,
+            'timezone' => self::DASHBOARD_CONTRACT_TZ,
+            'time_scope_used' => $timeScope,
+            'date_scope_start' => $startDate,
+            'date_scope_end' => $endDate,
+        ];
+
+        $payload['contract'] = isset($payload['contract']) && is_array($payload['contract'])
+            ? array_merge($payload['contract'], $contract)
+            : $contract;
+        $payload['contract_version'] = $contract['contract_version'];
+        $payload['time_scope_used'] = $contract['time_scope_used'];
+        $payload['date_scope_start'] = $contract['date_scope_start'];
+        $payload['date_scope_end'] = $contract['date_scope_end'];
+
+        return $payload;
+    }
+
+    private function resolveBoa155TimeScope(array $filters): string
+    {
+        $scope = strtolower((string) ($filters['time_scope'] ?? 'snapshot_time'));
+        if (! in_array($scope, ['bet_time', 'draw_time', 'snapshot_time'], true)) {
+            return 'snapshot_time';
+        }
+
+        return $scope;
     }
 
     public function getConversion(array $filters): array
@@ -907,8 +962,37 @@ class DashboardService
         }
 
         $rows = $query->limit($limit)->get();
+        $ticketImpactById = [];
+        $ticketIds = $rows->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
 
-        return $rows->map(function ($row): array {
+        if (
+            $ticketIds->isNotEmpty()
+            && $this->hasTable('lotto_ticket_items')
+            && $this->hasColumn('lotto_ticket_items', 'ticket_id')
+            && $this->hasColumn('lotto_ticket_items', 'amount')
+            && $this->hasColumn('lotto_ticket_items', 'payout_at_time')
+        ) {
+            $itemsQuery = DB::table('lotto_ticket_items')
+                ->whereIn('ticket_id', $ticketIds->all())
+                ->selectRaw('ticket_id, COALESCE(SUM(amount * payout_at_time), 0) as potential_payout_raw');
+
+            if ($this->hasColumn('lotto_ticket_items', 'win_amount')) {
+                $itemsQuery->selectRaw('COALESCE(SUM(win_amount), 0) as actual_payout_raw');
+            } else {
+                $itemsQuery->selectRaw('0 as actual_payout_raw');
+            }
+
+            $ticketImpactById = $itemsQuery
+                ->groupBy('ticket_id')
+                ->get()
+                ->keyBy(static fn ($itemRow) => (int) ($itemRow->ticket_id ?? 0))
+                ->toArray();
+        }
+
+        return $rows->map(function ($row) use ($ticketImpactById): array {
             $time = '-';
             if (! empty($row->created_at)) {
                 try {
@@ -927,6 +1011,11 @@ class DashboardService
                 $status = $winAmount > 0 ? 'win' : 'lose';
             }
 
+            $impact = $ticketImpactById[(int) ($row->id ?? 0)] ?? null;
+            $potentialPayoutRaw = $impact ? (float) ($impact->potential_payout_raw ?? 0) : 0.0;
+            $actualPayoutRaw = $impact ? (float) ($impact->actual_payout_raw ?? 0) : $winAmount;
+            $netResultRaw = round((float) ($row->total_net_amount ?? 0) - $actualPayoutRaw, 2);
+
             return [
                 'ticket_id' => (int) ($row->id ?? 0),
                 'bet_at' => $time,
@@ -938,6 +1027,12 @@ class DashboardService
                 'amount' => core()->currency((float) ($row->total_net_amount ?? 0)),
                 'status' => $status,
                 'win_amount' => core()->currency($winAmount),
+                'potential_payout' => core()->currency($potentialPayoutRaw),
+                'potential_payout_raw' => $potentialPayoutRaw,
+                'actual_payout' => core()->currency($actualPayoutRaw),
+                'actual_payout_raw' => $actualPayoutRaw,
+                'net_result' => core()->currency($netResultRaw),
+                'net_result_raw' => $netResultRaw,
             ];
         })->values()->all();
     }
@@ -1394,14 +1489,21 @@ class DashboardService
     {
         $filters = $this->normalizeFilters($filters);
         [$startDate, $endDate] = $this->range($filters);
+        $lastSyncTime = now()->toDateTimeString();
 
         if (! $this->hasTable('dashboard_summary_daily')) {
             return [
+                'sync_status' => 'failed',
+                'sync_scope' => [
+                    'date_scope_start' => $startDate,
+                    'date_scope_end' => $endDate,
+                ],
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'requested_days' => 0,
                 'synced_days' => 0,
                 'failed_days' => 0,
+                'last_sync_time' => $lastSyncTime,
                 'message' => 'dashboard_summary_daily not found',
             ];
         }
@@ -1433,13 +1535,24 @@ class DashboardService
 
         $this->summaryWarmCache = [];
         $this->forgetDashboardCaches($filters);
+        $requestedDays = count($dateRange);
+        $failedDays = count($failed);
+        $syncStatus = $failedDays > 0
+            ? ($syncedDays > 0 ? 'partial' : 'failed')
+            : 'success';
 
         return [
+            'sync_status' => $syncStatus,
+            'sync_scope' => [
+                'date_scope_start' => $startDate,
+                'date_scope_end' => $endDate,
+            ],
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'requested_days' => count($dateRange),
+            'requested_days' => $requestedDays,
             'synced_days' => $syncedDays,
-            'failed_days' => count($failed),
+            'failed_days' => $failedDays,
+            'last_sync_time' => $lastSyncTime,
             'failed' => $failed,
         ];
     }
@@ -1555,6 +1668,7 @@ class DashboardService
         $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
         $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
         $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
+        $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary($startDate, $endDate);
 
         $net = $depositSuccessAmount - $withdrawAmount;
         $prevNet = (float) ($previous['deposit_success_amount'] ?? 0) - (float) ($previous['withdraw_total_amount'] ?? 0);
@@ -1715,6 +1829,7 @@ class DashboardService
             'lotto_risk_trend' => $lottoRiskTrend,
             'lotto_risk_alerts' => $lottoRiskAlerts,
             'lotto_bet_type_insights' => $lottoBetTypeInsights,
+            'lotto_top_risk_users' => $lottoTopRiskUsers,
             'net' => [
                 'amount' => core()->currency($net),
                 'amount_raw' => $net,
@@ -2933,8 +3048,6 @@ class DashboardService
                 'stake_total',
                 'exposure_total',
                 'liability_total',
-                'market_count',
-                'round_count',
                 'market_ids_json',
                 'round_ids_json',
             ]);
@@ -2983,6 +3096,7 @@ class DashboardService
                     $grouped[$key]['market_ids'][(string) ((int) $marketId)] = true;
                 }
             }
+
             $roundJson = json_decode((string) ($row->round_ids_json ?? '[]'), true);
             if (is_array($roundJson)) {
                 foreach ($roundJson as $roundId) {
@@ -2991,7 +3105,7 @@ class DashboardService
             }
         }
 
-        return collect(array_values($grouped))
+        $topRows = collect(array_values($grouped))
             ->sortBy([
                 ['exposure_total_raw', 'desc'],
                 ['stake_total_raw', 'desc'],
@@ -2999,7 +3113,592 @@ class DashboardService
                 ['bet_type', 'asc'],
             ])
             ->take($limit)
-            ->map(function (array $row): array {
+            ->values();
+
+        if ($topRows->isEmpty()) {
+            return [];
+        }
+
+        $topKeys = $topRows
+            ->map(static fn (array $row): string => (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? ''))
+            ->filter(static fn (string $key): bool => $key !== '|')
+            ->values();
+
+        $marketIds = $topRows
+            ->flatMap(static fn (array $row): array => array_keys((array) ($row['market_ids'] ?? [])))
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $roundIds = $topRows
+            ->flatMap(static fn (array $row): array => array_keys((array) ($row['round_ids'] ?? [])))
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $marketMeta = [];
+        if ($marketIds->isNotEmpty() && $this->hasTable('lotto_markets')) {
+            $marketMeta = DB::table('lotto_markets')
+                ->whereIn('id', $marketIds->all())
+                ->get(['id', 'name'])
+                ->keyBy(static fn ($market) => (string) ($market->id ?? ''))
+                ->map(static function ($market): array {
+                    return [
+                        'id' => (int) ($market->id ?? 0),
+                        'name' => (string) ($market->name ?? ''),
+                    ];
+                })
+                ->toArray();
+        }
+
+        $roundMeta = [];
+        if ($roundIds->isNotEmpty() && $this->hasTable('lotto_draws')) {
+            $drawColumns = ['id', 'market_id', 'draw_date'];
+            if ($this->hasColumn('lotto_draws', 'status')) {
+                $drawColumns[] = 'status';
+            }
+            if ($this->hasColumn('lotto_draws', 'result_at')) {
+                $drawColumns[] = 'result_at';
+            }
+            if ($this->hasColumn('lotto_draws', 'result_number')) {
+                $drawColumns[] = 'result_number';
+            }
+            if ($this->hasColumn('lotto_draws', 'result_applied_at')) {
+                $drawColumns[] = 'result_applied_at';
+            }
+            if ($this->hasColumn('lotto_draws', 'close_at')) {
+                $drawColumns[] = 'close_at';
+            }
+            if ($this->hasColumn('lotto_draws', 'open_at')) {
+                $drawColumns[] = 'open_at';
+            }
+
+            $roundMeta = DB::table('lotto_draws')
+                ->whereIn('id', $roundIds->all())
+                ->get($drawColumns)
+                ->keyBy(static fn ($round) => (string) ($round->id ?? ''))
+                ->map(static function ($round) use ($marketMeta): array {
+                    $marketId = (int) ($round->market_id ?? 0);
+                    $market = $marketMeta[(string) $marketId] ?? null;
+
+                    return [
+                        'id' => (int) ($round->id ?? 0),
+                        'market_id' => $marketId,
+                        'market_name' => (string) ($market['name'] ?? ''),
+                        'draw_date' => (string) ($round->draw_date ?? ''),
+                        'status' => (string) ($round->status ?? ''),
+                        'result_at' => (string) ($round->result_at ?? ''),
+                        'result_number' => (string) ($round->result_number ?? ''),
+                        'result_applied_at' => (string) ($round->result_applied_at ?? ''),
+                        'close_at' => (string) ($round->close_at ?? ''),
+                        'open_at' => (string) ($round->open_at ?? ''),
+                    ];
+                })
+                ->toArray();
+        }
+
+        $marketRiskByKey = [];
+        $roundRiskByKey = [];
+        if (
+            $topKeys->isNotEmpty()
+            && $this->hasTable('lotto_dashboard_risk_snapshot')
+        ) {
+            $snapshotStartAt = Carbon::parse($startDate)->startOfDay()->format('Y-m-d H:i:s');
+            $snapshotEndAt = Carbon::parse($endDate)->endOfDay()->format('Y-m-d H:i:s');
+            $snapshotBase = DB::table('lotto_dashboard_risk_snapshot')
+                ->where('web_code', $this->dashboardWebCode())
+                ->whereIn('bet_type', $topRows->pluck('bet_type')->unique()->values()->all())
+                ->whereIn('number', $topRows->pluck('number')->unique()->values()->all());
+
+            $snapshotColumns = [
+                'market_id',
+                'round_id',
+                'bet_type',
+                'number',
+                'stake_total',
+                'payout_if_hit',
+                'liability',
+            ];
+
+            $snapshotRows = (clone $snapshotBase)
+                ->whereBetween('snapshot_at', [$snapshotStartAt, $snapshotEndAt])
+                ->get($snapshotColumns);
+
+            if ($snapshotRows->isEmpty()) {
+                $fallbackSnapshotAt = (clone $snapshotBase)
+                    ->where('snapshot_at', '<=', $snapshotEndAt)
+                    ->max('snapshot_at');
+
+                if (empty($fallbackSnapshotAt)) {
+                    $fallbackSnapshotAt = (clone $snapshotBase)
+                        ->where('snapshot_at', '>=', $snapshotStartAt)
+                        ->min('snapshot_at');
+                }
+
+                if (! empty($fallbackSnapshotAt)) {
+                    $snapshotRows = (clone $snapshotBase)
+                        ->where('snapshot_at', $fallbackSnapshotAt)
+                        ->get($snapshotColumns);
+                }
+            }
+
+            foreach ($snapshotRows as $snapshotRow) {
+                $key = trim((string) ($snapshotRow->bet_type ?? '')).'|'.trim((string) ($snapshotRow->number ?? ''));
+                if (! $topKeys->contains($key)) {
+                    continue;
+                }
+
+                $marketId = (int) ($snapshotRow->market_id ?? 0);
+                $roundId = (int) ($snapshotRow->round_id ?? 0);
+                $stakeTotal = (float) ($snapshotRow->stake_total ?? 0);
+                $totalRisk = (float) ($snapshotRow->liability ?? $snapshotRow->payout_if_hit ?? 0);
+                $potentialPayout = (float) ($snapshotRow->payout_if_hit ?? 0);
+
+                if ($marketId > 0) {
+                    $marketKey = (string) $marketId;
+                    if (! isset($marketRiskByKey[$key][$marketKey])) {
+                        $marketRiskByKey[$key][$marketKey] = [
+                            'market_id' => $marketId,
+                            'total_stake_raw' => 0.0,
+                            'total_risk_raw' => 0.0,
+                            'potential_payout_raw' => 0.0,
+                            'round_ids' => [],
+                        ];
+                    }
+
+                    $marketRiskByKey[$key][$marketKey]['total_stake_raw'] = round(
+                        (float) $marketRiskByKey[$key][$marketKey]['total_stake_raw'] + $stakeTotal,
+                        2
+                    );
+                    $marketRiskByKey[$key][$marketKey]['total_risk_raw'] = round(
+                        (float) $marketRiskByKey[$key][$marketKey]['total_risk_raw'] + $totalRisk,
+                        2
+                    );
+                    $marketRiskByKey[$key][$marketKey]['potential_payout_raw'] = round(
+                        (float) $marketRiskByKey[$key][$marketKey]['potential_payout_raw'] + $potentialPayout,
+                        2
+                    );
+                    if ($roundId > 0) {
+                        $marketRiskByKey[$key][$marketKey]['round_ids'][(string) $roundId] = true;
+                    }
+                }
+
+                if ($roundId > 0) {
+                    $roundKey = (string) $roundId;
+                    if (! isset($roundRiskByKey[$key][$roundKey])) {
+                        $roundRiskByKey[$key][$roundKey] = [
+                            'round_id' => $roundId,
+                            'total_stake_raw' => 0.0,
+                            'total_risk_raw' => 0.0,
+                            'potential_payout_raw' => 0.0,
+                        ];
+                    }
+
+                    $roundRiskByKey[$key][$roundKey]['total_stake_raw'] = round(
+                        (float) $roundRiskByKey[$key][$roundKey]['total_stake_raw'] + $stakeTotal,
+                        2
+                    );
+                    $roundRiskByKey[$key][$roundKey]['total_risk_raw'] = round(
+                        (float) $roundRiskByKey[$key][$roundKey]['total_risk_raw'] + $totalRisk,
+                        2
+                    );
+                    $roundRiskByKey[$key][$roundKey]['potential_payout_raw'] = round(
+                        (float) $roundRiskByKey[$key][$roundKey]['potential_payout_raw'] + $potentialPayout,
+                        2
+                    );
+                }
+            }
+        }
+
+        if (
+            $topRows->isNotEmpty()
+                && $this->hasTable('lotto_number_exposures')
+                && $this->hasTable('lotto_draw_bet_settings')
+                && $this->hasColumn('lotto_number_exposures', 'draw_id')
+                && $this->hasColumn('lotto_number_exposures', 'bet_type')
+                && $this->hasColumn('lotto_number_exposures', 'number')
+                && $this->hasColumn('lotto_number_exposures', 'sold_amount')
+                && $this->hasColumn('lotto_draw_bet_settings', 'draw_id')
+                && $this->hasColumn('lotto_draw_bet_settings', 'bet_type')
+                && $this->hasColumn('lotto_draw_bet_settings', 'payout')
+        ) {
+            foreach ($topRows as $topRow) {
+                $topKey = (string) ($topRow['bet_type'] ?? '').'|'.(string) ($topRow['number'] ?? '');
+                if ($topKey === '|') {
+                    continue;
+                }
+
+                if (! empty($roundRiskByKey[$topKey])) {
+                    continue;
+                }
+
+                $topRoundIds = collect(array_keys((array) ($topRow['round_ids'] ?? [])))
+                    ->map(static fn ($id): int => (int) $id)
+                    ->filter(static fn (int $id): bool => $id > 0)
+                    ->values();
+
+                if ($topRoundIds->isEmpty()) {
+                    continue;
+                }
+
+                $fallbackRows = DB::table('lotto_number_exposures as e')
+                    ->leftJoin('lotto_draw_bet_settings as s', function ($join): void {
+                        $join->on('s.draw_id', '=', 'e.draw_id')
+                            ->on('s.bet_type', '=', 'e.bet_type');
+                    })
+                    ->whereIn('e.draw_id', $topRoundIds->all())
+                    ->where('e.bet_type', (string) ($topRow['bet_type'] ?? ''))
+                    ->where('e.number', (string) ($topRow['number'] ?? ''))
+                    ->selectRaw(
+                        'e.draw_id as round_id, '.
+                        'COALESCE(SUM(e.sold_amount), 0) as total_stake_raw, '.
+                        'COALESCE(SUM(e.sold_amount * COALESCE(s.payout, 0)), 0) as potential_payout_raw'
+                    )
+                    ->groupBy('e.draw_id')
+                    ->get();
+
+                foreach ($fallbackRows as $fallbackRow) {
+                    $roundId = (int) ($fallbackRow->round_id ?? 0);
+                    if ($roundId <= 0) {
+                        continue;
+                    }
+
+                    $stakeTotal = round((float) ($fallbackRow->total_stake_raw ?? 0), 2);
+                    $potentialPayout = round((float) ($fallbackRow->potential_payout_raw ?? 0), 2);
+                    $totalRisk = $potentialPayout;
+
+                    $roundKey = (string) $roundId;
+                    $roundRiskByKey[$topKey][$roundKey] = [
+                        'round_id' => $roundId,
+                        'total_stake_raw' => $stakeTotal,
+                        'total_risk_raw' => $totalRisk,
+                        'potential_payout_raw' => $potentialPayout,
+                    ];
+
+                    $marketId = (int) (($roundMeta[$roundKey]['market_id'] ?? 0));
+                    if ($marketId <= 0) {
+                        continue;
+                    }
+
+                    $marketKey = (string) $marketId;
+                    if (! isset($marketRiskByKey[$topKey][$marketKey])) {
+                        $marketRiskByKey[$topKey][$marketKey] = [
+                            'market_id' => $marketId,
+                            'total_stake_raw' => 0.0,
+                            'total_risk_raw' => 0.0,
+                            'potential_payout_raw' => 0.0,
+                            'round_ids' => [],
+                        ];
+                    }
+
+                    $marketRiskByKey[$topKey][$marketKey]['total_stake_raw'] = round(
+                        (float) $marketRiskByKey[$topKey][$marketKey]['total_stake_raw'] + $stakeTotal,
+                        2
+                    );
+                    $marketRiskByKey[$topKey][$marketKey]['total_risk_raw'] = round(
+                        (float) $marketRiskByKey[$topKey][$marketKey]['total_risk_raw'] + $totalRisk,
+                        2
+                    );
+                    $marketRiskByKey[$topKey][$marketKey]['potential_payout_raw'] = round(
+                        (float) $marketRiskByKey[$topKey][$marketKey]['potential_payout_raw'] + $potentialPayout,
+                        2
+                    );
+                    $marketRiskByKey[$topKey][$marketKey]['round_ids'][$roundKey] = true;
+                }
+
+                if (
+                    empty($roundRiskByKey[$topKey])
+                    && $this->hasTable('lotto_ticket_items')
+                    && $this->hasTable('lotto_tickets')
+                    && $this->hasColumn('lotto_ticket_items', 'ticket_id')
+                    && $this->hasColumn('lotto_ticket_items', 'bet_type')
+                    && $this->hasColumn('lotto_ticket_items', 'number')
+                    && $this->hasColumn('lotto_ticket_items', 'amount')
+                    && $this->hasColumn('lotto_ticket_items', 'payout_at_time')
+                    && $this->hasColumn('lotto_tickets', 'id')
+                    && $this->hasColumn('lotto_tickets', 'draw_id')
+                ) {
+                    $fallbackRows = DB::table('lotto_ticket_items as i')
+                        ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+                        ->whereIn('t.draw_id', $topRoundIds->all())
+                        ->where('i.bet_type', (string) ($topRow['bet_type'] ?? ''))
+                        ->where('i.number', (string) ($topRow['number'] ?? ''))
+                        ->selectRaw(
+                            't.draw_id as round_id, '.
+                            'COALESCE(SUM(i.amount), 0) as total_stake_raw, '.
+                            'COALESCE(SUM(i.amount * i.payout_at_time), 0) as potential_payout_raw'
+                        )
+                        ->groupBy('t.draw_id')
+                        ->get();
+
+                    foreach ($fallbackRows as $fallbackRow) {
+                        $roundId = (int) ($fallbackRow->round_id ?? 0);
+                        if ($roundId <= 0) {
+                            continue;
+                        }
+
+                        $stakeTotal = round((float) ($fallbackRow->total_stake_raw ?? 0), 2);
+                        $potentialPayout = round((float) ($fallbackRow->potential_payout_raw ?? 0), 2);
+                        $totalRisk = $potentialPayout;
+
+                        $roundKey = (string) $roundId;
+                        $roundRiskByKey[$topKey][$roundKey] = [
+                            'round_id' => $roundId,
+                            'total_stake_raw' => $stakeTotal,
+                            'total_risk_raw' => $totalRisk,
+                            'potential_payout_raw' => $potentialPayout,
+                        ];
+
+                        $marketId = (int) (($roundMeta[$roundKey]['market_id'] ?? 0));
+                        if ($marketId <= 0) {
+                            continue;
+                        }
+
+                        $marketKey = (string) $marketId;
+                        if (! isset($marketRiskByKey[$topKey][$marketKey])) {
+                            $marketRiskByKey[$topKey][$marketKey] = [
+                                'market_id' => $marketId,
+                                'total_stake_raw' => 0.0,
+                                'total_risk_raw' => 0.0,
+                                'potential_payout_raw' => 0.0,
+                                'round_ids' => [],
+                            ];
+                        }
+
+                        $marketRiskByKey[$topKey][$marketKey]['total_stake_raw'] = round(
+                            (float) $marketRiskByKey[$topKey][$marketKey]['total_stake_raw'] + $stakeTotal,
+                            2
+                        );
+                        $marketRiskByKey[$topKey][$marketKey]['total_risk_raw'] = round(
+                            (float) $marketRiskByKey[$topKey][$marketKey]['total_risk_raw'] + $totalRisk,
+                            2
+                        );
+                        $marketRiskByKey[$topKey][$marketKey]['potential_payout_raw'] = round(
+                            (float) $marketRiskByKey[$topKey][$marketKey]['potential_payout_raw'] + $potentialPayout,
+                            2
+                        );
+                        $marketRiskByKey[$topKey][$marketKey]['round_ids'][$roundKey] = true;
+                    }
+                }
+            }
+        }
+
+        $ticketImpactByKeyRound = [];
+        if (
+            $topKeys->isNotEmpty()
+            && $roundIds->isNotEmpty()
+            && $this->hasTable('lotto_ticket_items')
+            && $this->hasTable('lotto_tickets')
+        ) {
+            $actualRows = DB::table('lotto_ticket_items as i')
+                ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+                ->whereIn('t.draw_id', $roundIds->all())
+                ->whereIn('i.bet_type', $topRows->pluck('bet_type')->unique()->values()->all())
+                ->whereIn('i.number', $topRows->pluck('number')->unique()->values()->all())
+                ->selectRaw(
+                    't.draw_id as round_id, i.bet_type, i.number, '.
+                    'COALESCE(SUM(i.amount), 0) as total_stake_raw, '.
+                    'COALESCE(SUM(i.amount * i.payout_at_time), 0) as potential_payout_raw, '.
+                    'COALESCE(SUM(i.win_amount), 0) as actual_payout_raw'
+                )
+                ->groupBy('t.draw_id', 'i.bet_type', 'i.number')
+                ->get();
+
+            foreach ($actualRows as $actualRow) {
+                $key = trim((string) ($actualRow->bet_type ?? '')).'|'.trim((string) ($actualRow->number ?? ''));
+                if (! $topKeys->contains($key)) {
+                    continue;
+                }
+                $ticketImpactByKeyRound[$key][(string) ((int) ($actualRow->round_id ?? 0))] = [
+                    'total_stake_raw' => round((float) ($actualRow->total_stake_raw ?? 0), 2),
+                    'potential_payout_raw' => round((float) ($actualRow->potential_payout_raw ?? 0), 2),
+                    'actual_payout_raw' => round((float) ($actualRow->actual_payout_raw ?? 0), 2),
+                ];
+            }
+        }
+
+        return $topRows
+            ->map(function (array $row) use ($marketMeta, $roundMeta, $marketRiskByKey, $roundRiskByKey, $ticketImpactByKeyRound): array {
+                $key = (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? '');
+                $marketIds = collect(array_keys((array) ($row['market_ids'] ?? [])))
+                    ->map(static fn ($id): int => (int) $id)
+                    ->filter(static fn (int $id): bool => $id > 0)
+                    ->values();
+                $roundIds = collect(array_keys((array) ($row['round_ids'] ?? [])))
+                    ->map(static fn ($id): int => (int) $id)
+                    ->filter(static fn (int $id): bool => $id > 0)
+                    ->values();
+
+                $marketRiskMap = $marketRiskByKey[$key] ?? [];
+                $roundRiskMap = $roundRiskByKey[$key] ?? [];
+                $totalRiskRaw = max(0.0, (float) ($row['exposure_total_raw'] ?? 0));
+                $marketRiskTotalRaw = collect($marketRiskMap)->sum(static fn (array $market): float => (float) ($market['total_risk_raw'] ?? 0));
+                if ($marketRiskTotalRaw > 0) {
+                    $totalRiskRaw = (float) $marketRiskTotalRaw;
+                }
+
+                $markets = collect($marketIds->all())
+                    ->map(static function (int $id) use ($marketMeta, $marketRiskMap, $totalRiskRaw): array {
+                        $meta = $marketMeta[(string) $id] ?? null;
+                        $risk = $marketRiskMap[(string) $id] ?? null;
+                        $marketRiskRaw = (float) ($risk['total_risk_raw'] ?? 0);
+                        $contribution = $totalRiskRaw > 0
+                            ? round(($marketRiskRaw / $totalRiskRaw) * 100, 2)
+                            : 0.0;
+
+                        return [
+                            'id' => $id,
+                            'name' => (string) ($meta['name'] ?? ('ตลาด #'.$id)),
+                            'total_stake' => core()->currency((float) ($risk['total_stake_raw'] ?? 0)),
+                            'total_stake_raw' => (float) ($risk['total_stake_raw'] ?? 0),
+                            'total_risk' => core()->currency($marketRiskRaw),
+                            'total_risk_raw' => $marketRiskRaw,
+                            'potential_payout' => core()->currency((float) ($risk['potential_payout_raw'] ?? 0)),
+                            'potential_payout_raw' => (float) ($risk['potential_payout_raw'] ?? 0),
+                            'contribution_percent' => $contribution,
+                            'round_count' => count((array) ($risk['round_ids'] ?? [])),
+                        ];
+                    })
+                    ->sortByDesc('total_risk_raw')
+                    ->values()
+                    ->map(static function (array $market, int $index): array {
+                        $market['rank'] = $index + 1;
+
+                        return $market;
+                    })
+                    ->all();
+
+                $betType = (string) ($row['bet_type'] ?? '');
+
+                $rounds = collect($roundIds->all())
+                    ->map(static function (int $id) use ($roundMeta, $roundRiskMap, $ticketImpactByKeyRound, $key, $totalRiskRaw, $betType): array {
+                        $meta = $roundMeta[(string) $id] ?? null;
+                        $risk = $roundRiskMap[(string) $id] ?? null;
+                        $ticketImpact = (array) ($ticketImpactByKeyRound[$key][(string) $id] ?? []);
+                        $ticketStakeRaw = (float) ($ticketImpact['total_stake_raw'] ?? 0);
+                        $ticketPotentialRaw = (float) ($ticketImpact['potential_payout_raw'] ?? 0);
+                        $roundStakeRaw = (float) ($risk['total_stake_raw'] ?? 0);
+                        if ($roundStakeRaw <= 0 && $ticketStakeRaw > 0) {
+                            $roundStakeRaw = $ticketStakeRaw;
+                        }
+                        $potentialPayoutRaw = (float) ($risk['potential_payout_raw'] ?? 0);
+                        if ($potentialPayoutRaw <= 0 && $ticketPotentialRaw > 0) {
+                            $potentialPayoutRaw = $ticketPotentialRaw;
+                        }
+                        $roundRiskRaw = (float) ($risk['total_risk_raw'] ?? 0);
+                        if ($roundRiskRaw <= 0 && $potentialPayoutRaw > 0) {
+                            $roundRiskRaw = $potentialPayoutRaw;
+                        }
+                        $actualPayoutRaw = (float) ($ticketImpact['actual_payout_raw'] ?? 0);
+                        $actualSettlementPending = strtolower((string) ($meta['status'] ?? '')) === 'resulted'
+                            && trim((string) ($meta['result_applied_at'] ?? '')) === '';
+                        $contribution = $totalRiskRaw > 0
+                            ? round(($roundRiskRaw / $totalRiskRaw) * 100, 2)
+                            : 0.0;
+
+                        return [
+                            'id' => $id,
+                            'draw_date' => (string) ($meta['draw_date'] ?? ''),
+                            'market_id' => (int) ($meta['market_id'] ?? 0),
+                            'market_name' => (string) ($meta['market_name'] ?? ''),
+                            'status' => (string) ($meta['status'] ?? ''),
+                            'result_at' => (string) ($meta['result_at'] ?? ''),
+                            'result_applied_at' => (string) ($meta['result_applied_at'] ?? ''),
+                            'close_at' => (string) ($meta['close_at'] ?? ''),
+                            'open_at' => (string) ($meta['open_at'] ?? ''),
+                            'result_number_display' => (static function () use ($meta, $betType): string {
+                                $rawResultNumber = trim((string) ($meta['result_number'] ?? ''));
+                                if ($rawResultNumber === '') {
+                                    return '';
+                                }
+
+                                $decoded = json_decode($rawResultNumber, true);
+                                if (is_array($decoded)) {
+                                    $statusLabel = trim((string) ($decoded['label'] ?? ''));
+                                    if ($statusLabel !== '') {
+                                        return $statusLabel;
+                                    }
+
+                                    $noResultReason = trim((string) ($decoded['no_result_reason'] ?? ''));
+                                    if ($noResultReason !== '') {
+                                        return $noResultReason;
+                                    }
+
+                                    $typedResult = trim((string) ($decoded[$betType] ?? ''));
+                                    if ($typedResult !== '') {
+                                        return $typedResult;
+                                    }
+
+                                    $firstPrize = trim((string) ($decoded['first_prize'] ?? ''));
+                                    if ($firstPrize !== '') {
+                                        return $firstPrize;
+                                    }
+                                }
+
+                                return $rawResultNumber;
+                            })(),
+                            'total_stake' => core()->currency($roundStakeRaw),
+                            'total_stake_raw' => $roundStakeRaw,
+                            'total_risk' => core()->currency($roundRiskRaw),
+                            'total_risk_raw' => $roundRiskRaw,
+                            'potential_payout' => core()->currency($potentialPayoutRaw),
+                            'potential_payout_raw' => $potentialPayoutRaw,
+                            'actual_payout' => core()->currency($actualPayoutRaw),
+                            'actual_payout_raw' => $actualPayoutRaw,
+                            'actual_settlement_pending' => $actualSettlementPending,
+                            'net_result' => core()->currency(round($potentialPayoutRaw - $actualPayoutRaw, 2)),
+                            'net_result_raw' => round($potentialPayoutRaw - $actualPayoutRaw, 2),
+                            'contribution_percent' => $contribution,
+                        ];
+                    })
+                    ->sortByDesc('total_risk_raw')
+                    ->values()
+                    ->map(static function (array $round, int $index): array {
+                        $round['rank'] = $index + 1;
+
+                        return $round;
+                    })
+                    ->all();
+
+                if (collect($markets)->sum('total_risk_raw') <= 0 && ! empty($rounds)) {
+                    $markets = collect($rounds)
+                        ->groupBy(static fn (array $round): int => (int) ($round['market_id'] ?? 0))
+                        ->map(static function ($group, $marketId) use ($marketMeta): array {
+                            $marketId = (int) $marketId;
+                            $groupCollection = collect($group);
+                            $totalStakeRaw = (float) $groupCollection->sum('total_stake_raw');
+                            $totalRiskRawByMarket = (float) $groupCollection->sum('total_risk_raw');
+                            $potentialPayoutRawByMarket = (float) $groupCollection->sum('potential_payout_raw');
+
+                            return [
+                                'id' => $marketId,
+                                'name' => (string) ($marketMeta[(string) $marketId]['name'] ?? ('ตลาด #'.$marketId)),
+                                'total_stake' => core()->currency($totalStakeRaw),
+                                'total_stake_raw' => $totalStakeRaw,
+                                'total_risk' => core()->currency($totalRiskRawByMarket),
+                                'total_risk_raw' => $totalRiskRawByMarket,
+                                'potential_payout' => core()->currency($potentialPayoutRawByMarket),
+                                'potential_payout_raw' => $potentialPayoutRawByMarket,
+                                'contribution_percent' => 0.0,
+                                'round_count' => $groupCollection->count(),
+                            ];
+                        })
+                        ->values()
+                        ->sortByDesc('total_risk_raw')
+                        ->values()
+                        ->map(static function (array $market, int $index) use ($totalRiskRaw): array {
+                            $market['rank'] = $index + 1;
+                            $market['contribution_percent'] = $totalRiskRaw > 0
+                                ? round(((float) ($market['total_risk_raw'] ?? 0) / $totalRiskRaw) * 100, 2)
+                                : 0.0;
+
+                            return $market;
+                        })
+                        ->all();
+                }
+
                 return [
                     'number' => (string) $row['number'],
                     'bet_type' => (string) $row['bet_type'],
@@ -3009,8 +3708,10 @@ class DashboardService
                     'exposure_total_raw' => (float) $row['exposure_total_raw'],
                     'liability_total' => core()->currency((float) $row['liability_total_raw']),
                     'liability_total_raw' => (float) $row['liability_total_raw'],
-                    'market_count' => count((array) ($row['market_ids'] ?? [])),
-                    'round_count' => count((array) ($row['round_ids'] ?? [])),
+                    'market_count' => $marketIds->count(),
+                    'round_count' => $roundIds->count(),
+                    'markets' => $markets,
+                    'rounds' => $rounds,
                 ];
             })
             ->values()
@@ -3020,6 +3721,182 @@ class DashboardService
     /**
      * @return array<int, array<string, mixed>>
      */
+    private function lottoTopRiskUsersSummary(string $startDate, string $endDate, int $limit = 10): array
+    {
+        $limit = max(1, min(100, $limit));
+
+        if (
+            ! $this->hasTable('lotto_ticket_items')
+            || ! $this->hasTable('lotto_tickets')
+            || ! $this->hasTable('lotto_draws')
+        ) {
+            return [];
+        }
+
+        $base = DB::table('lotto_ticket_items as i')
+            ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+            ->join('lotto_draws as d', 'd.id', '=', 't.draw_id')
+            ->whereBetween('d.draw_date', [$startDate, $endDate]);
+
+        if ($this->hasColumn('lotto_tickets', 'status')) {
+            $base->whereNotIn('t.status', ['cancelled']);
+        }
+
+        $rows = $base->selectRaw(
+            't.member_id as member_id, d.market_id as market_id, i.bet_type as bet_type, i.number as number, '.
+            'COALESCE(SUM(i.amount * i.payout_at_time), 0) as total_exposure_raw, '.
+            'COUNT(DISTINCT t.id) as bet_count'
+        )
+            ->groupBy('t.member_id', 'd.market_id', 'i.bet_type', 'i.number')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $marketIds = collect($rows)->pluck('market_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $marketMeta = [];
+        if ($marketIds->isNotEmpty() && $this->hasTable('lotto_markets')) {
+            $marketMeta = DB::table('lotto_markets')
+                ->whereIn('id', $marketIds->all())
+                ->get(['id', 'name'])
+                ->keyBy(static fn ($market) => (int) ($market->id ?? 0))
+                ->map(static fn ($market): string => (string) ($market->name ?? ''))
+                ->toArray();
+        }
+
+        $memberPairMap = [];
+        foreach ($rows as $row) {
+            $memberId = (string) ($row->member_id ?? '');
+            if ($memberId === '') {
+                continue;
+            }
+
+            $marketId = (int) ($row->market_id ?? 0);
+            $betType = trim((string) ($row->bet_type ?? ''));
+            $number = trim((string) ($row->number ?? ''));
+            if ($betType === '' || $number === '') {
+                continue;
+            }
+
+            $pairKey = $memberId.'|'.$betType.'|'.$number;
+            $exposureRaw = round((float) ($row->total_exposure_raw ?? 0), 2);
+            $betCount = (int) ($row->bet_count ?? 0);
+
+            if (! isset($memberPairMap[$pairKey])) {
+                $memberPairMap[$pairKey] = [
+                    'member_id' => $memberId,
+                    'bet_type' => $betType,
+                    'number' => $number,
+                    'total_exposure_raw' => 0.0,
+                    'bet_count' => 0,
+                    'market_breakdown' => [],
+                ];
+            }
+
+            $memberPairMap[$pairKey]['total_exposure_raw'] = round(
+                (float) $memberPairMap[$pairKey]['total_exposure_raw'] + $exposureRaw,
+                2
+            );
+            $memberPairMap[$pairKey]['bet_count'] += $betCount;
+
+            $marketKey = (string) $marketId;
+            if (! isset($memberPairMap[$pairKey]['market_breakdown'][$marketKey])) {
+                $memberPairMap[$pairKey]['market_breakdown'][$marketKey] = 0.0;
+            }
+            $memberPairMap[$pairKey]['market_breakdown'][$marketKey] = round(
+                (float) $memberPairMap[$pairKey]['market_breakdown'][$marketKey] + $exposureRaw,
+                2
+            );
+        }
+
+        $memberMap = [];
+        foreach ($memberPairMap as $pairRow) {
+            $memberId = (string) ($pairRow['member_id'] ?? '');
+            if ($memberId === '') {
+                continue;
+            }
+
+            $currentExposure = (float) ($pairRow['total_exposure_raw'] ?? 0);
+            $bestExposure = (float) ($memberMap[$memberId]['total_exposure_raw'] ?? 0);
+            $currentNumber = (string) ($pairRow['number'] ?? '');
+            $bestNumber = (string) ($memberMap[$memberId]['number'] ?? '');
+            $currentBetType = (string) ($pairRow['bet_type'] ?? '');
+            $bestBetType = (string) ($memberMap[$memberId]['bet_type'] ?? '');
+
+            $shouldReplace = ! isset($memberMap[$memberId])
+                || $currentExposure > $bestExposure
+                || (
+                    $currentExposure === $bestExposure
+                    && (
+                        strcmp($currentNumber, $bestNumber) < 0
+                        || ($currentNumber === $bestNumber && strcmp($currentBetType, $bestBetType) < 0)
+                    )
+                );
+
+            if ($shouldReplace) {
+                $memberMap[$memberId] = $pairRow;
+            }
+        }
+
+        $totalExposure = round(
+            (float) collect($memberMap)->sum(static fn (array $memberRow): float => (float) ($memberRow['total_exposure_raw'] ?? 0)),
+            2
+        );
+
+        $memberUsernameById = [];
+        $memberIds = collect(array_keys($memberMap))
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        $memberKeyColumn = $this->memberKeyColumn();
+        $memberUsernameColumn = $this->memberUsernameColumn();
+        if (
+            $memberIds->isNotEmpty()
+            && $this->hasTable('members')
+            && $this->hasColumn('members', $memberKeyColumn)
+            && $memberUsernameColumn !== null
+        ) {
+            $memberUsernameById = DB::table('members')
+                ->whereIn($memberKeyColumn, $memberIds->all())
+                ->pluck($memberUsernameColumn, $memberKeyColumn)
+                ->mapWithKeys(static fn ($username, $id): array => [(string) $id => (string) $username])
+                ->toArray();
+        }
+
+        return collect(array_values($memberMap))
+            ->sortByDesc('total_exposure_raw')
+            ->take($limit)
+            ->values()
+            ->map(function (array $memberRow, int $index) use ($totalExposure, $marketMeta, $memberUsernameById): array {
+                arsort($memberRow['market_breakdown']);
+                $mainMarketId = (int) (array_key_first($memberRow['market_breakdown']) ?? 0);
+
+                return [
+                    'rank' => $index + 1,
+                    'member_id' => (string) ($memberRow['member_id'] ?? ''),
+                    'member_username' => (string) ($memberUsernameById[(string) ($memberRow['member_id'] ?? '')] ?? ('สมาชิก #'.(string) ($memberRow['member_id'] ?? '-'))),
+                    'risk_bet_type' => (string) ($memberRow['bet_type'] ?? ''),
+                    'risk_number' => (string) ($memberRow['number'] ?? ''),
+                    'total_exposure' => core()->currency((float) ($memberRow['total_exposure_raw'] ?? 0)),
+                    'total_exposure_raw' => (float) ($memberRow['total_exposure_raw'] ?? 0),
+                    'contribution_percent' => $totalExposure > 0
+                        ? round((((float) ($memberRow['total_exposure_raw'] ?? 0)) / $totalExposure) * 100, 2)
+                        : 0.0,
+                    'main_market_id' => $mainMarketId,
+                    'main_market' => (string) ($marketMeta[$mainMarketId] ?? ($mainMarketId > 0 ? 'ตลาด #'.$mainMarketId : '-')),
+                    'bet_count' => (int) ($memberRow['bet_count'] ?? 0),
+                ];
+            })
+            ->all();
+    }
+
     private function lottoBetTypeInsightsSummary(string $startDate, string $endDate): array
     {
         if (
@@ -3048,6 +3925,7 @@ class DashboardService
         }
 
         $riskByType = [];
+
         if ($this->hasTable('lotto_dashboard_risk_aggregates')) {
             $riskRows = DB::table('lotto_dashboard_risk_aggregates')
                 ->where('web_code', $this->dashboardWebCode())
@@ -3062,14 +3940,85 @@ class DashboardService
                 ->orderBy('number')
                 ->get();
 
+            $maxByTypeNumber = [];
             foreach ($riskRows as $row) {
                 $betType = trim((string) ($row->bet_type ?? ''));
-                if ($betType === '') {
+                $number = trim((string) ($row->number ?? ''));
+                if ($betType === '' || $number === '') {
                     continue;
                 }
 
                 $exposureValue = round((float) ($row->exposure_total ?? 0), 2);
+                if (! isset($maxByTypeNumber[$betType][$number])) {
+                    $maxByTypeNumber[$betType][$number] = 0.0;
+                }
+                if ($exposureValue > (float) $maxByTypeNumber[$betType][$number]) {
+                    $maxByTypeNumber[$betType][$number] = $exposureValue;
+                }
+            }
+
+            foreach ($maxByTypeNumber as $betType => $numberRows) {
+                $maxRiskNumber = '';
+                $maxRiskValue = 0.0;
+                foreach ($numberRows as $number => $riskValue) {
+                    $riskValue = (float) $riskValue;
+                    if (
+                        $riskValue > $maxRiskValue
+                        || (
+                            $riskValue === $maxRiskValue
+                            && ($maxRiskNumber === '' || strcmp((string) $number, $maxRiskNumber) < 0)
+                        )
+                    ) {
+                        $maxRiskNumber = (string) $number;
+                        $maxRiskValue = $riskValue;
+                    }
+                }
+
+                $riskByType[$betType] = [
+                    'risk_exposure_total_raw' => round($maxRiskValue, 2),
+                    'max_risk_number' => $maxRiskNumber,
+                    'max_risk_value_raw' => round($maxRiskValue, 2),
+                ];
+            }
+        } elseif (
+            $this->hasTable('lotto_ticket_items')
+            && $this->hasTable('lotto_tickets')
+            && $this->hasTable('lotto_draws')
+            && $this->hasColumn('lotto_ticket_items', 'ticket_id')
+            && $this->hasColumn('lotto_ticket_items', 'bet_type')
+            && $this->hasColumn('lotto_ticket_items', 'number')
+            && $this->hasColumn('lotto_ticket_items', 'amount')
+            && $this->hasColumn('lotto_ticket_items', 'payout_at_time')
+            && $this->hasColumn('lotto_tickets', 'id')
+            && $this->hasColumn('lotto_tickets', 'draw_id')
+            && $this->hasColumn('lotto_draws', 'id')
+            && $this->hasColumn('lotto_draws', 'draw_date')
+        ) {
+            $liabilityRows = DB::table('lotto_ticket_items as i')
+                ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+                ->join('lotto_draws as d', 'd.id', '=', 't.draw_id')
+                ->whereBetween('d.draw_date', [$startDate, $endDate]);
+
+            if ($this->hasColumn('lotto_tickets', 'status')) {
+                $liabilityRows->whereNotIn('t.status', ['cancelled']);
+            }
+
+            $liabilityRows = $liabilityRows
+                ->selectRaw(
+                    'i.bet_type, i.number, '.
+                    'COALESCE(SUM(i.amount * i.payout_at_time), 0) as liability_raw'
+                )
+                ->groupBy('i.bet_type', 'i.number')
+                ->get();
+
+            foreach ($liabilityRows as $row) {
+                $betType = trim((string) ($row->bet_type ?? ''));
                 $number = trim((string) ($row->number ?? ''));
+                if ($betType === '' || $number === '') {
+                    continue;
+                }
+
+                $liabilityValue = round((float) ($row->liability_raw ?? 0), 2);
 
                 if (! isset($riskByType[$betType])) {
                     $riskByType[$betType] = [
@@ -3079,30 +4028,22 @@ class DashboardService
                     ];
                 }
 
-                $riskByType[$betType]['risk_exposure_total_raw'] = round(
-                    (float) $riskByType[$betType]['risk_exposure_total_raw'] + $exposureValue,
-                    2
-                );
-
                 if (
-                    $number !== ''
-                    && (
-                        $exposureValue > (float) $riskByType[$betType]['max_risk_value_raw']
-                        || (
-                            $exposureValue === (float) $riskByType[$betType]['max_risk_value_raw']
-                            && (
-                                $riskByType[$betType]['max_risk_number'] === ''
-                                || strcmp($number, (string) $riskByType[$betType]['max_risk_number']) < 0
-                            )
+                    $liabilityValue > (float) $riskByType[$betType]['max_risk_value_raw']
+                    || (
+                        $liabilityValue === (float) $riskByType[$betType]['max_risk_value_raw']
+                        && (
+                            $riskByType[$betType]['max_risk_number'] === ''
+                            || strcmp($number, (string) $riskByType[$betType]['max_risk_number']) < 0
                         )
                     )
                 ) {
                     $riskByType[$betType]['max_risk_number'] = $number;
-                    $riskByType[$betType]['max_risk_value_raw'] = $exposureValue;
+                    $riskByType[$betType]['max_risk_value_raw'] = $liabilityValue;
+                    $riskByType[$betType]['risk_exposure_total_raw'] = $liabilityValue;
                 }
             }
         }
-
         $numberRows = DB::table('lotto_dashboard_bet_type_number_daily')
             ->whereBetween('summary_date', [$startDate, $endDate])
             ->selectRaw(implode(",\n", [
