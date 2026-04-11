@@ -57,6 +57,8 @@ class LottoDrawDataTable extends DataTable
         $status = (string) request('status', '');
         if (in_array($status, ['draft', 'open', 'closed', 'resulted'], true)) {
             $query->where('status', $status);
+        } else {
+            $query->orderByRaw("CASE status WHEN 'closed' THEN 0 WHEN 'open' THEN 1 ELSE 2 END");
         }
 
         return $query;
