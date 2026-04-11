@@ -190,6 +190,7 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', 6379),
             'database' => env('REDIS_LOTTO_DB', 4),
+            'prefix' => env('REDIS_LOTTO_PREFIX', 'lotto_relay:'),
             'persistent' => env('REDIS_PERSISTENT', false),
             'persistent_id' => env('APP_NAME', 'laravel').'_lotto',
         ],

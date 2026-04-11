@@ -20,6 +20,7 @@
   - มี config กลาง `config/lottery_result_relay.php`
   - runtime mode รองรับ `primary`, `clone`, `disabled`
   - มี Redis connection `lotto` (db 4) สำหรับ relay stream + markers
+  - Redis connection `lotto` ต้องใช้ prefix กลางร่วมกันทุกเว็บผ่าน `REDIS_LOTTO_PREFIX` (default `lotto_relay:`) ไม่ใช้ app prefix ปกติ
   - มี queue/horizon แยก `lotto`
 
 ## นโยบาย Runtime Schema
@@ -893,6 +894,7 @@
     - `primary` ใช้ publish `lottery.ready` ผ่าน Redis Streams เมื่อ `result_fetch_status=APPLIED` และมี `result_hash`
     - publish ใช้ dedupe marker ต่อ `canonical type + business date + checksum`
     - latest marker ล่าสุดของแต่ละ type ถูกเก็บไว้ใต้ prefix `lotto:relay:latest:*`
+    - Redis connection `lotto` ต้อง override prefix เฉพาะ connection เพื่อไม่ให้ `APP_NAME` ของแต่ละเว็บแยก stream/marker key ออกจากกัน
     - `clone` จะไม่รัน periodic `lotto:fetch-auto-results` แบบ sweep ปกติ
     - `clone` ใช้ `lotto:relay:consume-stream` รับ event แล้ว dispatch `FetchRelayLotteryResultJob` เข้า queue `lotto`
     - job จะ resolve draw จาก `canonical type + business date` แล้ว reuse `AutoResultPipelineService` เดิม

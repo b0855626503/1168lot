@@ -30,6 +30,7 @@
   - infra policy:
     - แยก Horizon supervisor `lotto`
     - เพิ่ม wait threshold `redis:lotto`
+    - Redis connection `lotto` ต้องใช้ prefix กลางร่วมกันทุกเว็บ (`REDIS_LOTTO_PREFIX`, default `lotto_relay:`) ไม่ใช้ app-specific `REDIS_PREFIX`
   - ops/migration ขั้นต่ำ:
     - เพิ่ม `lotto:relay:health`
     - เพิ่ม `lotto:migrate-relay-result-sources`
