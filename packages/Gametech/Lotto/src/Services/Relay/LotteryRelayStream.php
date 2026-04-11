@@ -11,12 +11,28 @@ class LotteryRelayStream
      */
     public function publish(string $connection, string $stream, array $payload, int $maxLen): string
     {
+        $redis = Redis::connection($connection);
+
+        try {
+            return (string) $redis->xadd(
+                $stream,
+                '*',
+                $payload,
+                max(1, $maxLen),
+                true
+            );
+        } catch (\Throwable $exception) {
+            if (! $this->shouldFallbackToRawCommand($exception)) {
+                throw $exception;
+            }
+        }
+
         $arguments = array_merge(
-            [$stream, 'MAXLEN', '~', (string) $maxLen, '*'],
+            [$stream, 'MAXLEN', '~', (string) max(1, $maxLen), '*'],
             $this->flattenFields($payload)
         );
 
-        return (string) Redis::connection($connection)->command('XADD', $arguments);
+        return (string) $redis->command('XADD', $arguments);
     }
 
     public function ensureConsumerGroup(string $connection, string $stream, string $group): void
@@ -127,6 +143,7 @@ class LotteryRelayStream
         $message = strtoupper($exception->getMessage());
 
         return str_contains($message, 'XREADGROUP')
+            || str_contains($message, 'XADD')
             || str_contains($message, 'ARGUMENT')
             || str_contains($message, 'EXPECTS AT MOST')
             || str_contains($message, 'WRONG NUMBER OF ARGUMENTS');
