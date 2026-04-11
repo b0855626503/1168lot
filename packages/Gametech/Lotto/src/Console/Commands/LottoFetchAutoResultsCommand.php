@@ -6,6 +6,7 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\AutoResult\AutoResultPipelineService;
 use Gametech\Lotto\Services\AutoResultHardeningService;
+use Gametech\Lotto\Services\Relay\LotteryRelayRuntime;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -24,8 +25,11 @@ class LottoFetchAutoResultsCommand extends Command
 
     protected $description = 'Fetch and apply lotto auto-results for eligible closed draws';
 
-    public function handle(AutoResultPipelineService $pipeline, AutoResultHardeningService $hardening): int
-    {
+    public function handle(
+        AutoResultPipelineService $pipeline,
+        AutoResultHardeningService $hardening,
+        LotteryRelayRuntime $relayRuntime
+    ): int {
         $now = now((string) config('lotto_auto_result.timezone', (string) config('app.timezone', 'Asia/Bangkok')));
         $runId = (string) ($this->option('run-id') ?: sprintf('cmd_%s', $now->format('YmdHisv')));
 
@@ -39,7 +43,12 @@ class LottoFetchAutoResultsCommand extends Command
         $hasExplicitDrawId = $drawId !== null && $drawId !== '';
         $hasExplicitDrawDate = $drawDate !== '';
         $hasExplicitBackfillSelection = $hasExplicitDrawId || $hasExplicitDrawDate;
-        $forceSingleDrawRetry = $manualRetry && $hasExplicitDrawId;
+
+        if ($relayRuntime->isClone() && ! $hasExplicitBackfillSelection) {
+            $this->line('Clone mode skips periodic auto-result sweep; relay-triggered jobs must select draw explicitly.');
+
+            return self::SUCCESS;
+        }
 
         if ($hasExplicitDrawId) {
             $query = LottoDraw::query()

@@ -2,17 +2,20 @@
 
 namespace Gametech\Lotto\Providers;
 
+use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMissingResultSourcesCommand;
-use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\InsertInternalResultSourceMappingsCommand;
-use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
+use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
+use Gametech\Lotto\Console\Commands\LottoRelayConsumeStreamCommand;
+use Gametech\Lotto\Console\Commands\LottoRelayHealthCommand;
 use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointCommand;
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
+use Gametech\Lotto\Console\Commands\MigrateRelayResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
 use Gametech\Lotto\Models\LotteryMarketProxy;
@@ -35,6 +38,10 @@ use Gametech\Lotto\Services\ExposureService;
 use Gametech\Lotto\Services\LottoConfigResolver;
 use Gametech\Lotto\Services\LottoPackageResolver;
 use Gametech\Lotto\Services\MemberMarketPolicyService;
+use Gametech\Lotto\Services\Relay\LotteryRelayPublisher;
+use Gametech\Lotto\Services\Relay\LotteryRelayRuntime;
+use Gametech\Lotto\Services\Relay\LotteryRelayStream;
+use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Support\Facades\Event;
@@ -60,11 +67,11 @@ class LottoServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ExposureService::class, function ($app) {
-            return new ExposureService();
+            return new ExposureService;
         });
 
         $this->app->singleton(DrawService::class, function ($app) {
-            return new DrawService();
+            return new DrawService;
         });
 
         $this->app->singleton(SettlementService::class, function ($app) {
@@ -74,23 +81,43 @@ class LottoServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(LottoConfigResolver::class, function ($app) {
-            return new LottoConfigResolver();
+            return new LottoConfigResolver;
         });
 
         $this->app->singleton(LottoPackageResolver::class, function ($app) {
-            return new LottoPackageResolver();
+            return new LottoPackageResolver;
         });
 
         $this->app->singleton(MemberMarketPolicyService::class, function ($app) {
-            return new MemberMarketPolicyService();
+            return new MemberMarketPolicyService;
         });
 
         $this->app->singleton(WalletTransactionService::class, function ($app) {
-            return new WalletTransactionService();
+            return new WalletTransactionService;
         });
 
         $this->app->singleton(AutoResultHardeningService::class, function ($app) {
-            return new AutoResultHardeningService();
+            return new AutoResultHardeningService;
+        });
+
+        $this->app->singleton(LotteryRelayRuntime::class, function () {
+            return new LotteryRelayRuntime;
+        });
+
+        $this->app->singleton(LotteryRelayTypeRegistry::class, function () {
+            return new LotteryRelayTypeRegistry;
+        });
+
+        $this->app->singleton(LotteryRelayStream::class, function () {
+            return new LotteryRelayStream;
+        });
+
+        $this->app->singleton(LotteryRelayPublisher::class, function ($app) {
+            return new LotteryRelayPublisher(
+                $app->make(LotteryRelayRuntime::class),
+                $app->make(LotteryRelayTypeRegistry::class),
+                $app->make(LotteryRelayStream::class)
+            );
         });
 
         $this->commands([
@@ -102,22 +129,25 @@ class LottoServiceProvider extends ServiceProvider
             InsertInternalResultSourceMappingsCommand::class,
             LottoFetchAutoResultsCommand::class,
             LottoAutoResultMetricsCommand::class,
+            LottoRelayConsumeStreamCommand::class,
+            LottoRelayHealthCommand::class,
             MigrateExphuaySourcesToExternalEndpointCommand::class,
             MigrateInternalResultEndpointsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
+            MigrateRelayResultSourcesCommand::class,
             SyncLottoDrawStatusesCommand::class,
         ]);
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
 
-        $this->loadRoutesFrom(__DIR__ . '/../Routes/admin.php');
-        $this->loadRoutesFrom(__DIR__ . '/../Routes/api.php');
+        $this->loadRoutesFrom(__DIR__.'/../Routes/admin.php');
+        $this->loadRoutesFrom(__DIR__.'/../Routes/api.php');
 
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views/admin', 'admin');
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'lotto');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views/admin', 'admin');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'lotto');
 
         $this->registerObservers();
 
@@ -133,11 +163,11 @@ class LottoServiceProvider extends ServiceProvider
     protected function registerConfig(): void
     {
         $this->mergeConfigFrom(
-            dirname(__DIR__) . '/Config/admin-menu.php', 'menu.admin'
+            dirname(__DIR__).'/Config/admin-menu.php', 'menu.admin'
         );
 
         $this->mergeConfigFrom(
-            dirname(__DIR__) . '/Config/acl.php', 'acl'
+            dirname(__DIR__).'/Config/acl.php', 'acl'
         );
     }
 

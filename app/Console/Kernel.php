@@ -2,9 +2,8 @@
 
 namespace App\Console;
 
-use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
 use App\Console\Commands\BackfillLottoBetConfirmedAtCommand;
-use App\Console\Commands\GenerateGameIdsForPayments;
+use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
 use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
 use Gametech\Auto\Console\Commands\AddCashbackSeamless;
@@ -32,6 +31,7 @@ use Gametech\Auto\Console\Commands\PostUpdate;
 use Gametech\Auto\Console\Commands\PreUpdate;
 use Gametech\Auto\Console\Commands\TopupPayment;
 use Gametech\Auto\Console\Commands\UpdateHash;
+use Gametech\Lotto\Services\Relay\LotteryRelayRuntime;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -81,25 +81,26 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $relayRuntime = $this->app->make(LotteryRelayRuntime::class);
         $yesterday = now()->subDays(1)->toDateString();
 
-//        $schedule->command('cashback:start')
-//            ->weeklyOn(1, '0:05')
-//            ->runInBackground();
-//
-//        $schedule->command('clear:cashback')
-//            ->weeklyOn(2, '0:00')
-//            ->runInBackground();
+        //        $schedule->command('cashback:start')
+        //            ->weeklyOn(1, '0:05')
+        //            ->runInBackground();
+        //
+        //        $schedule->command('clear:cashback')
+        //            ->weeklyOn(2, '0:00')
+        //            ->runInBackground();
 
         $schedule->command('newcashback2:list')->dailyAt('00:05');
 
-//        $schedule->command('newic2:list')->dailyAt('12:00');
+        //        $schedule->command('newic2:list')->dailyAt('12:00');
 
         $schedule->command('cleanup:inactive-users')->everyFiveMinutes();
 
-//        $schedule->command('cleardb:start')->dailyAt('13:00')->runInBackground();
+        //        $schedule->command('cleardb:start')->dailyAt('13:00')->runInBackground();
 
-        $schedule->command('dailystat:check ' . $yesterday)->dailyAt('00:05')->runInBackground();
+        $schedule->command('dailystat:check '.$yesterday)->dailyAt('00:05')->runInBackground();
 
         $schedule->command('lada-cache:flush')->dailyAt('12:30');
         $schedule->command('lada-cache:flush')->dailyAt('00:18');
@@ -108,19 +109,19 @@ class Kernel extends ConsoleKernel
         $schedule->command('migrate --force')->dailyAt('23:28');
         //        $schedule->command('postupdate:work')->everyFiveMinutes();
 
-//        $schedule->command('payment:get kbank')->everyMinute()
-//            ->after(function () {
-////                $this->call('payment:get scb');
-////                $this->call('payment:get gsb');
-////                $this->call('payment:get ktb');
-//                $this->call('payment:check tw 10');
-////                $this->call('payment:check bay 10');
-//                $this->call('payment:check scb 10');
-//                $this->call('payment:check kbank 10');
-////                $this->call('payment:check ttb 10');
-//            });
+        //        $schedule->command('payment:get kbank')->everyMinute()
+        //            ->after(function () {
+        // //                $this->call('payment:get scb');
+        // //                $this->call('payment:get gsb');
+        // //                $this->call('payment:get ktb');
+        //                $this->call('payment:check tw 10');
+        // //                $this->call('payment:check bay 10');
+        //                $this->call('payment:check scb 10');
+        //                $this->call('payment:check kbank 10');
+        // //                $this->call('payment:check ttb 10');
+        //            });
 
-//        $schedule->command('payment:emp-topup 50')->everyMinute();
+        //        $schedule->command('payment:emp-topup 50')->everyMinute();
 
         // Keep draw status in sync even when nobody opens admin draw page.
         $schedule->command('lotto:sync-draw-statuses')
@@ -137,6 +138,13 @@ class Kernel extends ConsoleKernel
         // End-to-end auto-result pipeline runner (resolve->build->fetch->parse->map->validate->apply).
         $schedule->command('lotto:fetch-auto-results --limit=100')
             ->everyMinute()
+            ->when(static fn (): bool => $relayRuntime->shouldRunLegacyAutoResultSweep())
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        $schedule->command('lotto:relay:consume-stream --once --count=50 --block-ms=1000')
+            ->everyMinute()
+            ->when(static fn (): bool => $relayRuntime->shouldConsumeRelayStream())
             ->withoutOverlapping()
             ->runInBackground();
 
@@ -161,8 +169,8 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__ . '/Commands');
-        $this->load(__DIR__ . '/../../packages/Gametech/Auto/src/Console/Commands');
+        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__.'/../../packages/Gametech/Auto/src/Console/Commands');
 
         require base_path('routes/console.php');
     }

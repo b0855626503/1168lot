@@ -3,7 +3,9 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Gametech\FrontendApi\Exceptions\RegisterFailureException;
+use Gametech\FrontendApi\Http\Requests\ResolveRegisterBankAccountRequest;
 use Gametech\FrontendApi\Services\FrontendTokenService;
+use Gametech\FrontendApi\Services\RegisterBankAccountNameService;
 use Gametech\Member\Models\MemberProxy;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Http\JsonResponse;
@@ -12,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -20,10 +21,14 @@ use Illuminate\Validation\Rule;
 class AuthController extends BaseController
 {
     private FrontendTokenService $tokenService;
+    private RegisterBankAccountNameService $registerBankAccountNameService;
 
-    public function __construct(FrontendTokenService $tokenService)
-    {
+    public function __construct(
+        FrontendTokenService $tokenService,
+        RegisterBankAccountNameService $registerBankAccountNameService
+    ) {
         $this->tokenService = $tokenService;
+        $this->registerBankAccountNameService = $registerBankAccountNameService;
     }
 
     public function register(Request $request)
@@ -59,6 +64,41 @@ class AuthController extends BaseController
         }
     }
 
+    public function resolveRegisterBankAccount(ResolveRegisterBankAccountRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $bankCode = (int) $validated['bank'];
+        $accountNumber = (string) $validated['acc_no'];
+
+        try {
+            $result = $this->registerBankAccountNameService->resolve($bankCode, $accountNumber);
+
+            return $this->sendResponse([
+                'valid' => false,
+                'bank' => $bankCode,
+                'acc_no' => $accountNumber,
+                'bank_shortcode' => $result['bank_shortcode'],
+                'account_name' => $result['account_name'],
+                'firstname' => $result['firstname'],
+                'lastname' => $result['lastname'],
+            ], 'ตรวจสอบชื่อบัญชีสำเร็จ');
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'UNSUPPORTED_BANK') {
+                return $this->sendResponseFail([
+                    'valid' => true,
+                ], 'ยังไม่รองรับรหัสธนาคารนี้', 422);
+            }
+
+            return $this->sendResponseFail([
+                'valid' => true,
+            ], 'ไม่สามารถตรวจสอบชื่อบัญชีได้ในขณะนี้', 422);
+        } catch (\Throwable $e) {
+            return $this->sendResponseFail([
+                'valid' => true,
+            ], 'ไม่สามารถตรวจสอบชื่อบัญชีได้ในขณะนี้', 422);
+        }
+    }
+
     /**
      * @return array{path:string,url:string}
      */
@@ -71,15 +111,17 @@ class AuthController extends BaseController
 
         if (Str::startsWith($filepic, ['http://', 'https://'])) {
             $url = $this->appendMediaCacheBust($filepic);
+
             return ['path' => $url, 'url' => $url];
         }
 
         if (Str::startsWith($filepic, '/')) {
             $path = $this->appendMediaCacheBust($filepic);
+
             return ['path' => $path, 'url' => url($path)];
         }
 
-        return $this->storageMediaUrls('bank_img/' . ltrim($filepic, '/'));
+        return $this->storageMediaUrls('bank_img/'.ltrim($filepic, '/'));
     }
 
     public function login(Request $request): JsonResponse
@@ -243,7 +285,7 @@ class AuthController extends BaseController
             return $this->validationErrorResponse($validator);
         }
 
-        $name = trim(strip_tags((string) $data['firstname'])) . ' ' . trim(strip_tags((string) $data['lastname']));
+        $name = trim(strip_tags((string) $data['firstname'])).' '.trim(strip_tags((string) $data['lastname']));
         $pass = (string) $data['password'];
         $verify = ((string) ($config->verify_open ?? 'N') === 'Y') ? 'N' : 'Y';
         $freecredit = ((string) ($config->freecredit_all ?? 'N') === 'Y') ? 'Y' : 'N';
@@ -611,7 +653,7 @@ class AuthController extends BaseController
 
         return new RegisterFailureException(
             $resultMessage !== ''
-                ? 'สร้างบัญชีเกมไม่สำเร็จ: ' . $resultMessage
+                ? 'สร้างบัญชีเกมไม่สำเร็จ: '.$resultMessage
                 : 'ไม่สามารถสร้างบัญชีเกมได้ในขณะนี้',
             'REGISTER_GAME_ACCOUNT_CREATE_FAILED',
             $details
@@ -666,7 +708,7 @@ class AuthController extends BaseController
     }
 
     /**
-     * @param array<string, mixed> $details
+     * @param  array<string, mixed>  $details
      */
     private function registerFailureResponse(string $message, string $errorCode, array $details = [], int $status = 422): JsonResponse
     {

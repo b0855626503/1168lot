@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-11
 
 ## ภาพรวมระบบ
 
@@ -16,6 +16,11 @@
 - validation baseline หลังอัปเกรด:
   - `php artisan --version` และ `php artisan about --only=environment` boot ผ่านบน Laravel 10
   - `php artisan route:list` ไม่ถูก block จาก controller constructor ที่ยิง DB ระหว่าง console bootstrap แล้ว
+- lottery relay baseline:
+  - มี config กลาง `config/lottery_result_relay.php`
+  - runtime mode รองรับ `primary`, `clone`, `disabled`
+  - มี Redis connection `lotto` (db 4) สำหรับ relay stream + markers
+  - มี queue/horizon แยก `lotto`
 
 ## นโยบาย Runtime Schema
 
@@ -538,10 +543,22 @@
   - ต้องไม่ซ้ำกันทั้งระบบ (unique)
 - ฝั่ง request รองรับรหัสแนะนำใน field `referral_code` (alias: `invite_code`, `recommend_code`)
   - ระบบ normalize เป็นตัวพิมพ์ใหญ่ และแทน `O` เป็น `0` ก่อนเทียบ
-  - ถ้าเทียบแล้วตรงกับ `members.referral_code` ของสมาชิกใด ให้ set `members.upline_code` ของผู้สมัครเป็น `members.code` ของสมาชิกนั้น
+- ถ้าเทียบแล้วตรงกับ `members.referral_code` ของสมาชิกใด ให้ set `members.upline_code` ของผู้สมัครเป็น `members.code` ของสมาชิกนั้น
 - สำหรับสมาชิกเก่าที่ยังไม่มี `referral_code` ใช้คำสั่ง:
   - `php artisan member:backfill-referral-codes` (dry-run)
   - `php artisan member:backfill-referral-codes --apply` (เขียนจริง)
+
+## นโยบาย Frontend API v1 Register Bank Account Name Lookup
+
+- `POST /api/v1/auth/register/bank-account-name` เป็น public endpoint สำหรับหน้า register
+- `FrontendApi` รับ `bank` และ `acc_no`, ตรวจ duplicate ใน `members`/`banks_account`, แล้วค่อยยิง upstream เพื่อ resolve ชื่อบัญชี
+- upstream bank lookup ถูกห่อด้วย service ภายใน `packages/Gametech/FrontendApi/src/Services/RegisterBankAccountNameService.php`
+- response หลักคืน:
+  - `account_name`
+  - `firstname`
+  - `lastname`
+  - `bank_shortcode`
+  - และ `valid` สำหรับ compatibility กับ flow เดิมของ frontend
 - ในโหมด `seamless` ช่วงสร้าง `games_user` จาก flow register:
   - ต้องรองรับ source payload จาก frontend ที่เป็น `array`
   - ห้ามล้มเพียงเพราะ side effect หลังสร้าง `games_user` ที่พยายามเขียนกลับไปยัง source object
@@ -862,7 +879,24 @@
     - `APP_API_URL + APP_API_DOMAIN_URL` (ถ้าตั้ง `APP_API_DOMAIN_URL`)
     - fallback เป็น `APP_API_URL + APP_ADMIN_DOMAIN_URL` (กรณีไม่ได้ตั้ง `APP_API_DOMAIN_URL`)
   - canonical URL สำหรับ internal result endpoints ต้องเรียกผ่าน `api.*` เท่านั้น (ไม่เปิดผ่าน `admin.*`)
+  - มี public central result API เพิ่มที่ `GET /api/v1/get_lottery?type={type}&date={Y-m-d}`
+    - route ชุดนี้ bind ผ่าน API host เดียวกับ internal result endpoints
+    - ใช้ `business date` เป็น contract หลักเสมอ
+    - รองรับ canonical type ฝั่ง relay เช่น `laosvip`, `egx30`, `dowjones-midnight`, `dowjones-extra`
+    - response กลางคืนค่า `type`, `nameTH`, `date`, `page`, `count`, `results[]`
+    - `results[]` ใช้ key กลาง `id`, `lottosName`, `lottosTH`, `lottosDate`, `lottosTime`, `lottosNumber`, `lottosUnder`
+    - ถ้า type ไม่รองรับให้คืน `422` + `errors[0].code=UNSUPPORTED_TYPE`
+    - ถ้า request format ไม่ถูกต้องให้คืน validation `422`
+    - ถ้า business date ที่ขอไม่พบข้อมูลให้คืน `404` + `errors[0].code=DRAW_DATE_NOT_FOUND`
   - route ชุดนี้ใช้ middleware `lotto.internal_results`
+  - relay runtime/ops policy:
+    - `primary` ใช้ publish `lottery.ready` ผ่าน Redis Streams เมื่อ `result_fetch_status=APPLIED` และมี `result_hash`
+    - publish ใช้ dedupe marker ต่อ `canonical type + business date + checksum`
+    - latest marker ล่าสุดของแต่ละ type ถูกเก็บไว้ใต้ prefix `lotto:relay:latest:*`
+    - `clone` จะไม่รัน periodic `lotto:fetch-auto-results` แบบ sweep ปกติ
+    - `clone` ใช้ `lotto:relay:consume-stream` รับ event แล้ว dispatch `FetchRelayLotteryResultJob` เข้า queue `lotto`
+    - job จะ resolve draw จาก `canonical type + business date` แล้ว reuse `AutoResultPipelineService` เดิม
+    - `disabled` ปิด relay flow ใหม่ แต่ยังคง legacy sweep เดิมได้
 - นโยบาย generated config จากคำสั่ง `lotto:insert-internal-result-source-mappings`:
   - JSON หลักที่สร้างใหม่ใช้ baseline แบบ internal endpoint:
     - `request_headers_json = []`
@@ -897,7 +931,7 @@
   - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
   - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
   - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover
-- migration/backfill policy:
+  - migration/backfill policy:
   - ใช้ command `lotto:migrate-internal-result-endpoints` เพื่อ map endpoint เดิม -> internal endpoints
   - ใช้ command `lotto:migrate-exphuay-sources-to-get-lottery` เพื่อ migrate แถว exphuay ที่มีอยู่แล้วให้ชี้ `http://203.146.127.170/~anan/get_lottery.php`
     - resolve `type` จาก endpoint เดิม (`/internal/lottery/results/exphuay/{type}` หรือ `exphuay.com/backward/{type}/__data.json`) หรือจาก query template/config
@@ -910,8 +944,17 @@
   - มี command insert-only สำหรับ canonical mapping โดยไม่ทับแถวเดิม:
     - `lotto:insert-internal-result-source-mappings`
     - policy: insert เฉพาะ endpoint canonical ที่ยังไม่มีใน market นั้น (skip ถ้ามี endpoint เดิมอยู่แล้ว)
+  - มี command สำหรับ switch source rows ไป public relay contract:
+    - `lotto:migrate-relay-result-sources`
+    - ชี้ `endpoint_url` ไป `LOTTERY_RESULT_RELAY_API_BASE_URL/api/v1/get_lottery`
+    - rewrite query template เป็น `type + date`
+    - rewrite parser ไปอ่าน `$.date`, `$.results[0].lottosNumber`, `$.results[0].lottosUnder`
+    - ใช้สำหรับ rollout clone site ที่จะ fetch ผ่าน `api.1168lot`
   - V2 fetch runtime ต้อง render placeholders ใน `endpoint_url`, `query`, `headers`, `body` ก่อนยิง request
     - ถ้าไม่มี `lookup_date` ใน runtime context ให้ fallback ใช้ `expected_draw_date`
+  - relay ops commands ขั้นต่ำ:
+    - `lotto:relay:health` สำหรับ inspect runtime mode / stream / queue / latest marker
+    - `lotto:relay:consume-stream` สำหรับ consume `lottery.ready`
 
 ## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
 

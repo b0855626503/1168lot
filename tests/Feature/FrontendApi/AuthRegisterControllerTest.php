@@ -5,6 +5,7 @@ namespace Tests\Feature\FrontendApi;
 use Gametech\Core\Core;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\AuthController;
 use Gametech\FrontendApi\Services\FrontendTokenService;
+use Gametech\FrontendApi\Services\RegisterBankAccountNameService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -116,14 +117,17 @@ class AuthRegisterControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     private function register(array $payload): TestResponse
     {
         $request = Request::create('/api/v1/auth/register', 'POST', $payload);
 
         return TestResponse::fromBaseResponse(
-            (new AuthController(Mockery::mock(FrontendTokenService::class)))->register($request)
+            (new AuthController(
+                Mockery::mock(FrontendTokenService::class),
+                Mockery::mock(RegisterBankAccountNameService::class)
+            ))->register($request)
         );
     }
 

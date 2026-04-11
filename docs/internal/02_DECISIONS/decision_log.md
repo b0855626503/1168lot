@@ -3,6 +3,67 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-11 — Lottery Relay Runtime Uses `primary|clone|disabled` Mode, Redis Streams Ready Signal, and Explicit Clone Fetch Jobs (APPROVED)
+
+- เพิ่ม relay runtime config กลาง `config/lottery_result_relay.php`
+- behavior ใหม่:
+  - role ของระบบถูกล็อกด้วย config เดียว:
+    - `primary`
+    - `clone`
+    - `disabled`
+  - เพิ่ม Redis connection `lotto` (db 4) สำหรับ relay stream และ marker
+  - `primary`:
+    - ยังรัน legacy auto-result sweep ได้
+    - เมื่อ draw ถูก apply สำเร็จและมี `result_hash` แล้ว ระบบจะ publish `lottery.ready` เข้า Redis Streams
+    - publish ใช้ dedupe marker ต่อ `type + business_date + checksum`
+  - `clone`:
+    - หยุด periodic auto-result sweep ปกติ
+    - ใช้ command `lotto:relay:consume-stream` consume ready signal
+    - เมื่อรับ signal จะ dispatch explicit queue job `FetchRelayLotteryResultJob` เข้า queue `lotto`
+    - job จะ resolve local draw จาก `canonical type + business date` แล้ว reuse `AutoResultPipelineService` เดิมต่อ
+  - `disabled`:
+    - relay publisher/consumer ไม่ทำงาน
+    - legacy sweep เดิมยังทำงานต่อได้
+  - scheduler policy:
+    - `lotto:fetch-auto-results --limit=100` รันเฉพาะ mode ที่ไม่ใช่ `clone`
+    - `lotto:relay:consume-stream --once` รันเฉพาะ `clone`
+  - infra policy:
+    - แยก Horizon supervisor `lotto`
+    - เพิ่ม wait threshold `redis:lotto`
+  - ops/migration ขั้นต่ำ:
+    - เพิ่ม `lotto:relay:health`
+    - เพิ่ม `lotto:migrate-relay-result-sources`
+- เหตุผล:
+  - ล็อก role separation ของเว็บหลักกับเว็บ clone ภายใต้ codebase เดียว
+  - ทำให้ clone รับงานผ่าน backend trigger จริง ไม่ต้องพึ่ง periodic discovery เดิม
+  - reuse pipeline/apply path เดิมให้มากที่สุดเพื่อลด scope ของ clone rollout
+
+## 2026-04-11 — Public Lotto Relay Result API Uses Canonical `type + business date` Contract (APPROVED)
+
+- เพิ่ม public API `GET /api/v1/get_lottery`
+- behavior ใหม่:
+  - request บังคับ query `type` และ `date` (`Y-m-d`)
+  - `date` ใน contract นี้หมายถึง business date เสมอ
+  - response คืน envelope กลาง:
+    - `type`, `nameTH`, `date`, `page`, `count`, `results[]`
+  - `results[]` ล็อก key หลักเป็น:
+    - `id`, `lottosName`, `lottosTH`, `lottosDate`, `lottosTime`, `lottosNumber`, `lottosUnder`
+  - canonical type ที่ endpoint นี้รองรับในรอบแรกคือ:
+    - exphuay family แบบ canonical key เช่น `laosvip`, `egx30`, `dji`
+    - internal types `dowjones-midnight`, `dowjones-extra`
+  - internal source complexity ยังคงถูก absorb ภายใน 1168lot:
+    - clone/caller ไม่ต้องรู้เรื่อง source-specific date logic
+    - controller map upstream/internal result ให้กลับมาเป็น public contract กลางจุดเดียว
+  - error policy:
+    - invalid request -> `422`
+    - unsupported type -> `422` + `UNSUPPORTED_TYPE`
+    - requested business date not found -> `404` + `DRAW_DATE_NOT_FOUND`
+    - upstream/internal fetch failure -> `502`
+- เหตุผล:
+  - ล็อก external contract ของ `api.1168lot` ให้พร้อมสำหรับ relay flow รอบ BOA-132
+  - ลดการผูก clone sites กับ schema เฉพาะของ internal endpoints เดิม
+  - ทำให้ mapper ฝั่ง clone มี input shape เดียวก่อนต่อเข้า auto source flow เดิม
+
 ## 2026-04-10 — Runtime Request Paths Must Not Query `information_schema` or Use Request-Time Schema Guards (APPROVED)
 
 - ปรับ policy runtime ของ web/api/admin hot paths
@@ -51,6 +112,18 @@
   - ลดความซับซ้อนฝั่ง Next.js ให้ listen หลักเพียง `.member.activity.updated`
   - ลด noise ใน shared feed ของสมาชิก เพราะรายการสร้างโพย/ยกเลิกโพยไม่ใช่ public audience
   - ทำให้ wallet/lotto credit updates แนบ copy ที่ backend ควบคุมเองได้สม่ำเสมอ
+
+## 2026-04-11 — FrontendApi Adds Public Register Bank Account Name Lookup Endpoint (APPROVED)
+
+- เพิ่ม endpoint `POST /api/v1/auth/register/bank-account-name` ใน `FrontendApi`
+- behavior ใหม่:
+  - รับ `bank` และ `acc_no` จาก frontend โดยไม่ต้องใช้ token
+  - validate รูปแบบเลขบัญชีและกันเลขซ้ำใน `members(bank_code+acc_no)` และ `banks_account(banks+acc_no)` ก่อนยิง upstream
+  - `FrontendApi` เป็นคนยิง API ภายนอกเองผ่าน service ภายใน (`RegisterBankAccountNameService`) เพื่อ resolve ชื่อบัญชี
+  - response ส่ง `account_name`, `firstname`, `lastname`, `bank_shortcode` กลับให้ frontend พร้อม field compatibility `valid`
+- เหตุผล:
+  - ให้ flow สมัครสมาชิกใช้ customer-facing contract ของ `FrontendApi` โดยตรงตาม ADR-001 / ADR-012
+  - ลดการผูก route ฝั่งลูกค้ากับ controller เดิมใน package อื่น แม้ logic จะอิง behavior เดิมของ `MarketingController::checkBank`
 
 ## 2026-04-08 — เพิ่ม `wallet_address` Field และ FrontendApi Endpoint สำหรับสมาชิก (APPROVED)
 

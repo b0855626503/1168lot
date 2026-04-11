@@ -96,6 +96,7 @@ return [
         'redis:batch' => 60,
         'redis:cashback' => 60,
         'redis:ic' => 60,
+        'redis:lotto' => 60,
     ],
 
     /*
@@ -227,6 +228,19 @@ return [
                 'maxProcesses' => 1,
                 'tries' => 1,
                 'timeout' => 60,
+                'sleep' => 1,
+                'memory' => 128,
+            ],
+
+            'supervisor-lotto' => [
+                'workers-name' => env('APP_NAME', 'laravel').'-lotto',
+                'connection' => 'redis',
+                'queue' => ['lotto'],
+                'balance' => 'simple',
+                'minProcesses' => 1,
+                'maxProcesses' => 1,
+                'tries' => 3,
+                'timeout' => 120,
                 'sleep' => 1,
                 'memory' => 128,
             ],

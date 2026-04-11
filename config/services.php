@@ -33,4 +33,10 @@ return [
         'base_url' => env('TRACK_BASE_URL', 'https://thegrand789.com'),
     ],
 
+    'me2me' => [
+        'account_name_url' => env('ME2ME_ACCOUNT_NAME_URL', 'https://me2me.biz/getname.php'),
+        'api_key' => env('ME2ME_API_KEY', 'af96aa1c-e1f5-4c22-ab96-7f5453704aa9'),
+        'timeout' => (int) env('ME2ME_TIMEOUT', 10),
+    ],
+
 ];

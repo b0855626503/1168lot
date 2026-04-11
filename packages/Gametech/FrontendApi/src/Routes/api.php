@@ -7,14 +7,14 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
-use Gametech\FrontendApi\Http\Controllers\Api\V1\SiteMetaController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\RealtimeController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\SiteMetaController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\SlideController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WalletController;
-use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
 use Illuminate\Support\Facades\Route;
@@ -24,12 +24,14 @@ $apiDomain = is_null(config('app.admin_domain_url'))
     ? config('app.domain_url')
     : config('app.admin_domain_url');
 
-Route::domain($apiSubdomain . '.' . $apiDomain)
+Route::domain($apiSubdomain.'.'.$apiDomain)
     ->prefix('api/v1')
     ->group(function () {
         Route::middleware(['api', ResolveFrontendLanguage::class])->group(function () {
             Route::get('auth/register/banks', [AuthController::class, 'registerBanks'])
                 ->name('frontend.api.v1.auth.register.banks');
+            Route::post('auth/register/bank-account-name', [AuthController::class, 'resolveRegisterBankAccount'])
+                ->name('frontend.api.v1.auth.register.bank_account_name');
             Route::post('auth/register', [AuthController::class, 'register'])
                 ->name('frontend.api.v1.auth.register');
             Route::post('auth/login', [AuthController::class, 'login'])

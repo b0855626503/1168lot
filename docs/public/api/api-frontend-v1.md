@@ -202,6 +202,61 @@ Response ตัวอย่าง
 }
 ```
 
+#### 1.1.2 ตรวจสอบชื่อบัญชีสำหรับสมัครสมาชิก
+- `POST /auth/register/bank-account-name`
+- Auth: ไม่ต้องใช้ token
+
+Request body
+```json
+{
+  "bank": 2,
+  "acc_no": "1234567890"
+}
+```
+
+เงื่อนไขสำคัญ
+- `bank`
+  - ต้องเป็นจำนวนเต็ม
+  - backend จะ map เป็น bank shortcode เพื่อส่งต่อไปยัง API ภายนอก
+- `acc_no`
+  - ต้องเป็นตัวเลข 1-14 หลัก
+  - ถ้าเลขบัญชีนี้ถูกใช้แล้วใน `members` ภายใต้ `bank` เดียวกัน หรือถูกใช้ใน `banks_account` ภายใต้ธนาคารเดียวกัน ระบบจะ reject ทันที
+
+Response ตัวอย่าง (success)
+```json
+{
+  "success": true,
+  "message": "ตรวจสอบชื่อบัญชีสำเร็จ",
+  "data": {
+    "valid": false,
+    "bank": 2,
+    "acc_no": "1234567890",
+    "bank_shortcode": "KBANK",
+    "account_name": "สมชาย ใจดี",
+    "firstname": "สมชาย",
+    "lastname": "ใจดี"
+  }
+}
+```
+
+Response ตัวอย่าง (unsupported bank)
+```json
+{
+  "success": false,
+  "message": "ยังไม่รองรับรหัสธนาคารนี้",
+  "valid": true
+}
+```
+
+Response ตัวอย่าง (upstream fail)
+```json
+{
+  "success": false,
+  "message": "ไม่สามารถตรวจสอบชื่อบัญชีได้ในขณะนี้",
+  "valid": true
+}
+```
+
 #### 1.2 ล็อกอิน
 - `POST /auth/login`
 - Auth: ไม่ต้องใช้ token
