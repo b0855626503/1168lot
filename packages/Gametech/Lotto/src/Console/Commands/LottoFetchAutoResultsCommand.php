@@ -14,6 +14,7 @@ class LottoFetchAutoResultsCommand extends Command
 {
     protected $signature = 'lotto:fetch-auto-results
         {--draw-id= : Process only one draw id}
+        {--draw-date= : Process all draws for one draw date (Y-m-d)}
         {--market-id= : Process only one market id}
         {--run-id= : Override execution run id}
         {--expected-draw-date= : Expected draw date for strict context validation (Y-m-d)}
@@ -32,18 +33,35 @@ class LottoFetchAutoResultsCommand extends Command
         $manualRetry = (bool) $this->option('manual-retry');
         $limit = max(1, (int) $this->option('limit'));
         $drawId = $this->option('draw-id');
+        $drawDate = is_string($this->option('draw-date')) ? trim((string) $this->option('draw-date')) : '';
         $marketId = $this->option('market-id');
         $expectedDrawDate = $this->option('expected-draw-date');
-        $forceSingleDrawRetry = $manualRetry && $drawId !== null && $drawId !== '';
-        $singleDrawStatuses = ($forceSingleDrawRetry && $dryRun)
-            ? ['closed', 'resulted']
-            : ['closed'];
+        $hasExplicitDrawId = $drawId !== null && $drawId !== '';
+        $hasExplicitDrawDate = $drawDate !== '';
+        $hasExplicitBackfillSelection = $hasExplicitDrawId || $hasExplicitDrawDate;
+        $forceSingleDrawRetry = $manualRetry && $hasExplicitDrawId;
 
-        if ($forceSingleDrawRetry) {
+        if ($hasExplicitDrawId) {
             $query = LottoDraw::query()
                 ->where('id', (int) $drawId)
-                ->whereIn('status', $singleDrawStatuses)
+                ->whereIn('status', ['closed', 'resulted'])
                 ->limit(1);
+        } elseif ($hasExplicitDrawDate) {
+            try {
+                $normalizedDrawDate = Carbon::createFromFormat('Y-m-d', $drawDate)->format('Y-m-d');
+            } catch (\Throwable $exception) {
+                $this->error('Invalid --draw-date. Expected format: Y-m-d');
+
+                return self::FAILURE;
+            }
+
+            $query = LottoDraw::query()
+                ->whereDate('draw_date', $normalizedDrawDate)
+                ->whereIn('status', ['closed', 'resulted'])
+                ->orderBy('market_id')
+                ->orderBy('result_at')
+                ->orderBy('id')
+                ->limit($limit);
         } else {
             $query = LottoDraw::query()
                 ->where('status', 'closed')
@@ -56,10 +74,6 @@ class LottoFetchAutoResultsCommand extends Command
                 ->orderBy('result_at')
                 ->orderBy('id')
                 ->limit($limit);
-
-            if ($drawId !== null && $drawId !== '') {
-                $query->where('id', (int) $drawId);
-            }
         }
 
         if ($marketId !== null && $marketId !== '') {
@@ -82,21 +96,24 @@ class LottoFetchAutoResultsCommand extends Command
         ];
 
         foreach ($draws as $draw) {
-            if (! $forceSingleDrawRetry) {
+            if (! $hasExplicitBackfillSelection) {
                 if (! $this->hasConfiguredSourceForMarket((int) $draw->market_id)) {
                     $summary['skipped_no_source_config']++;
+
                     continue;
                 }
 
                 $resultAt = $draw->result_at ? Carbon::parse((string) $draw->result_at) : null;
                 if ($resultAt && $now->lt($resultAt)) {
                     $summary['skipped_not_due']++;
+
                     continue;
                 }
 
                 if ($this->isWindowExpired($draw, $now)) {
                     $pipeline->markExhausted($draw);
                     $summary['marked_exhausted']++;
+
                     continue;
                 }
             }
@@ -188,6 +205,7 @@ class LottoFetchAutoResultsCommand extends Command
 
         return $now->gt($deadline);
     }
+
     private function hasConfiguredSourceForMarket(int $marketId): bool
     {
         if ($marketId <= 0) {

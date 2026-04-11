@@ -30,6 +30,7 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         Schema::create('lotto_draws', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('market_id');
+            $table->date('draw_date')->nullable();
             $table->dateTime('result_at')->nullable();
             $table->string('status', 32);
             $table->string('result_fetch_status', 32)->nullable();
@@ -106,10 +107,10 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         ]);
 
         DB::table('lotto_draws')->insert([
-            ['id' => 1, 'market_id' => 1, 'result_at' => now()->subMinutes(4), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'market_id' => 2, 'result_at' => now()->subMinutes(3), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'market_id' => 3, 'result_at' => now()->subMinutes(2), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'market_id' => 4, 'result_at' => now()->subMinute(), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'market_id' => 1, 'draw_date' => '2026-04-10', 'result_at' => now()->subMinutes(4), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'market_id' => 2, 'draw_date' => '2026-04-10', 'result_at' => now()->subMinutes(3), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'market_id' => 3, 'draw_date' => '2026-04-10', 'result_at' => now()->subMinutes(2), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'market_id' => 4, 'draw_date' => '2026-04-10', 'result_at' => now()->subMinute(), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $pipeline = Mockery::mock(AutoResultPipelineService::class);
@@ -159,6 +160,7 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         DB::table('lotto_draws')->insert([
             'id' => 617,
             'market_id' => 1,
+            'draw_date' => '2026-04-10',
             'result_at' => now()->subMinutes(5),
             'status' => 'closed',
             'result_fetch_status' => 'EXHAUSTED',
@@ -194,5 +196,93 @@ class LottoFetchAutoResultsCommandTest extends TestCase
         $this->assertStringContainsString('selected=1', $output);
         $this->assertStringContainsString('processed=1', $output);
         $this->assertStringContainsString('- APPLIED: 1', $output);
+    }
+
+    public function test_draw_id_can_reprocess_single_resulted_draw_for_backfill(): void
+    {
+        DB::table('lotto_result_sources')->insert([
+            'id' => 1,
+            'market_id' => 1,
+            'is_active' => 1,
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 701,
+            'market_id' => 1,
+            'draw_date' => '2026-04-08',
+            'result_at' => now()->subDays(2),
+            'status' => 'resulted',
+            'result_fetch_status' => 'APPLIED',
+            'result_fetch_attempts' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('markExhausted')->never();
+        $pipeline->shouldReceive('processDraw')
+            ->once()
+            ->withArgs(function ($draw, $dryRun, $manualRetry, $runId, $expectedDrawDate): bool {
+                return (int) $draw->id === 701
+                    && $dryRun === false
+                    && $manualRetry === false
+                    && is_string($runId) && str_starts_with($runId, 'cmd_')
+                    && $expectedDrawDate === null;
+            })
+            ->andReturn(['status' => 'APPLIED']);
+
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', [
+            '--draw-id' => 701,
+            '--limit' => 1,
+        ]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('selected=1', $output);
+        $this->assertStringContainsString('processed=1', $output);
+        $this->assertStringContainsString('- APPLIED: 1', $output);
+    }
+
+    public function test_draw_date_can_backfill_all_markets_for_one_day(): void
+    {
+        DB::table('lotto_result_sources')->insert([
+            ['id' => 1, 'market_id' => 1, 'is_active' => 1],
+            ['id' => 2, 'market_id' => 2, 'is_active' => 1],
+            ['id' => 3, 'market_id' => 3, 'is_active' => 1],
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            ['id' => 801, 'market_id' => 1, 'draw_date' => '2026-04-05', 'result_at' => now()->subDays(5), 'status' => 'resulted', 'result_fetch_status' => 'APPLIED', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 802, 'market_id' => 2, 'draw_date' => '2026-04-05', 'result_at' => now()->subDays(5), 'status' => 'closed', 'result_fetch_status' => 'EXHAUSTED', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 803, 'market_id' => 3, 'draw_date' => '2026-04-06', 'result_at' => now()->subDays(4), 'status' => 'closed', 'result_fetch_status' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('markExhausted')->never();
+        $pipeline->shouldReceive('processDraw')
+            ->twice()
+            ->withArgs(function ($draw, $dryRun, $manualRetry, $runId, $expectedDrawDate): bool {
+                return in_array((int) $draw->id, [801, 802], true)
+                    && $dryRun === false
+                    && $manualRetry === false
+                    && is_string($runId) && str_starts_with($runId, 'cmd_')
+                    && $expectedDrawDate === null;
+            })
+            ->andReturn(['status' => 'APPLIED']);
+
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        $exitCode = Artisan::call('lotto:fetch-auto-results', [
+            '--draw-date' => '2026-04-05',
+            '--limit' => 10,
+        ]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('selected=2', $output);
+        $this->assertStringContainsString('processed=2', $output);
+        $this->assertStringContainsString('- APPLIED: 2', $output);
     }
 }
