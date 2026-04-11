@@ -154,6 +154,11 @@ class CentralLotteryResultService
             ]]);
         }
 
+        // Override date with the business date the caller requested.
+        // Upstream may return an offset date (e.g. actual market date),
+        // but clone selection always compares against the draw's business date.
+        $decoded['date'] = $date;
+
         return $decoded;
     }
 
