@@ -15,6 +15,7 @@ class LottoRelayPublishReadyCommand extends Command
         {--date= : Publish all eligible draws for one business date (Y-m-d)}
         {--market-id= : Limit by market id}
         {--type= : Limit by canonical relay type}
+        {--force : Republish even when published checksum marker already matches}
         {--limit=100 : Maximum eligible draws to scan}';
 
     protected $description = 'Backfill or republish lottery.ready events from existing APPLIED lotto draws';
@@ -34,6 +35,7 @@ class LottoRelayPublishReadyCommand extends Command
         $date = trim((string) $this->option('date'));
         $marketId = (int) $this->option('market-id');
         $type = strtolower(trim((string) $this->option('type')));
+        $force = (bool) $this->option('force');
         $limit = max(1, (int) $this->option('limit'));
 
         $query = LottoDraw::query()
@@ -76,7 +78,7 @@ class LottoRelayPublishReadyCommand extends Command
         $rows = [];
 
         foreach ($draws as $draw) {
-            $streamId = $publisher->publishIfReady($draw);
+            $streamId = $publisher->publishIfReady($draw, $force);
             $status = $streamId !== null ? 'published' : 'skipped';
 
             if ($streamId !== null) {

@@ -13,7 +13,7 @@ class LotteryRelayPublisher
         private LotteryRelayStream $stream
     ) {}
 
-    public function publishIfReady(LottoDraw $draw): ?string
+    public function publishIfReady(LottoDraw $draw, bool $force = false): ?string
     {
         if (! $this->runtime->shouldPublishReadySignals()) {
             return null;
@@ -34,7 +34,7 @@ class LotteryRelayPublisher
 
         $markerKey = sprintf('%s:%s:%s', $this->runtime->publishedMarkerPrefix(), $canonicalType, $drawDate);
         $currentMarker = $this->stream->get($this->runtime->streamConnection(), $markerKey);
-        if ($currentMarker === $checksum) {
+        if (! $force && $currentMarker === $checksum) {
             return null;
         }
 

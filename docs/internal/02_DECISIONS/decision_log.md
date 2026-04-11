@@ -33,7 +33,7 @@
   - ops/migration ขั้นต่ำ:
     - เพิ่ม `lotto:relay:health`
     - เพิ่ม `lotto:migrate-relay-result-sources`
-    - เพิ่ม `lotto:relay:publish-ready` สำหรับ backfill publish ของ draw ที่ `APPLIED` ไปก่อน observer rollout
+    - เพิ่ม `lotto:relay:publish-ready` สำหรับ backfill publish ของ draw ที่ `APPLIED` ไปก่อน observer rollout และรองรับ `--force` เพื่อ republish เมื่อ clone consumer group ถูกสร้างหลัง event เดิม
 - เหตุผล:
   - ล็อก role separation ของเว็บหลักกับเว็บ clone ภายใต้ codebase เดียว
   - ทำให้ clone รับงานผ่าน backend trigger จริง ไม่ต้องพึ่ง periodic discovery เดิม

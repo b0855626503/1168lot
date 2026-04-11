@@ -105,4 +105,42 @@ class LotteryRelayPublisherTest extends TestCase
 
         $this->assertNull($publisher->publishIfReady($draw));
     }
+
+    public function test_force_publish_ignores_matching_checksum_marker(): void
+    {
+        config()->set('lottery_result_relay.enabled', true);
+        config()->set('lottery_result_relay.mode', 'primary');
+        config()->set('lottery_result_relay.stream_connection', 'lotto');
+        config()->set('lottery_result_relay.stream_key', 'lotto:stream:results');
+        config()->set('lottery_result_relay.published_marker_prefix', 'lotto:relay:published');
+        config()->set('lottery_result_relay.latest_marker_prefix', 'lotto:relay:latest');
+
+        $stream = Mockery::mock(LotteryRelayStream::class);
+        $stream->shouldReceive('get')
+            ->once()
+            ->with('lotto', 'lotto:relay:published:dji:2026-04-11')
+            ->andReturn('abc123');
+        $stream->shouldReceive('publish')
+            ->once()
+            ->andReturn('1712800000002-0');
+        $stream->shouldReceive('set')
+            ->twice();
+
+        $publisher = new LotteryRelayPublisher(
+            new LotteryRelayRuntime,
+            new LotteryRelayTypeRegistry,
+            $stream
+        );
+
+        $draw = new LottoDraw([
+            'id' => 77,
+            'market_id' => 9,
+            'result_fetch_status' => 'APPLIED',
+            'result_hash' => 'abc123',
+        ]);
+        $draw->draw_date = now()->setDate(2026, 4, 11);
+        $draw->setRelation('market', new LotteryMarket(['code' => 'downjone-stock']));
+
+        $this->assertSame('1712800000002-0', $publisher->publishIfReady($draw, true));
+    }
 }

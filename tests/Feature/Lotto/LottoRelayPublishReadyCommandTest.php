@@ -71,8 +71,8 @@ class LottoRelayPublishReadyCommandTest extends TestCase
         $publisher = Mockery::mock(LotteryRelayPublisher::class);
         $publisher->shouldReceive('publishIfReady')
             ->once()
-            ->withArgs(function ($draw): bool {
-                return (int) $draw->id === 950;
+            ->withArgs(function ($draw, $force): bool {
+                return (int) $draw->id === 950 && $force === false;
             })
             ->andReturn('1712800000000-0');
 
@@ -121,8 +121,8 @@ class LottoRelayPublishReadyCommandTest extends TestCase
         $publisher = Mockery::mock(LotteryRelayPublisher::class);
         $publisher->shouldReceive('publishIfReady')
             ->once()
-            ->withArgs(function ($draw): bool {
-                return (int) $draw->id === 950;
+            ->withArgs(function ($draw, $force): bool {
+                return (int) $draw->id === 950 && $force === false;
             })
             ->andReturn('1712800000001-0');
 
@@ -130,6 +130,45 @@ class LottoRelayPublishReadyCommandTest extends TestCase
 
         $exitCode = Artisan::call('lotto:relay:publish-ready', [
             '--type' => 'dji',
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('Published=1', Artisan::output());
+    }
+
+    public function test_command_can_force_republish_even_when_checksum_marker_already_exists(): void
+    {
+        DB::table('lotto_markets')->insert([
+            'id' => 1,
+            'code' => 'downjone-stock',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 952,
+            'market_id' => 1,
+            'draw_date' => '2026-04-11',
+            'status' => 'resulted',
+            'result_fetch_status' => 'APPLIED',
+            'result_hash' => 'checksum-952',
+            'result_applied_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $publisher = Mockery::mock(LotteryRelayPublisher::class);
+        $publisher->shouldReceive('publishIfReady')
+            ->once()
+            ->withArgs(function ($draw, $force): bool {
+                return (int) $draw->id === 952 && $force === true;
+            })
+            ->andReturn('1712800000002-0');
+
+        $this->app->instance(LotteryRelayPublisher::class, $publisher);
+
+        $exitCode = Artisan::call('lotto:relay:publish-ready', [
+            '--draw-id' => 952,
+            '--force' => true,
         ]);
 
         $this->assertSame(0, $exitCode);
