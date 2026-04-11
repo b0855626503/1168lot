@@ -126,6 +126,35 @@
             height: 64px !important;
         }
 
+        @media (max-width: 767.98px) {
+            .toastify.gt-toast {
+                width: min(calc(100vw - 24px), 320px);
+                max-width: calc(100vw - 24px);
+                border-radius: 18px;
+                padding: 10px 12px;
+                font-size: 13px;
+                line-height: 1.35;
+                white-space: normal;
+                align-items: center;
+            }
+
+            .toastify.gt-toast .toastify-avatar,
+            .gt-toast .toastify-avatar,
+            .toastify .toastify-avatar {
+                width: 36px !important;
+                height: 36px !important;
+                min-width: 36px;
+                margin-right: 8px;
+                padding: 2px;
+            }
+
+            .toastify.gt-toast .toast-close {
+                align-self: flex-start;
+                margin-left: 6px;
+                font-size: 18px;
+            }
+        }
+
         .app-preloader {
             position: fixed;
             inset: 0; /* top:0; right:0; bottom:0; left:0 */

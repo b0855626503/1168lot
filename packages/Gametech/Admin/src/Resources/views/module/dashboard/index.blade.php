@@ -572,9 +572,44 @@
             .lotto-section-grid {
                 grid-template-columns: 1fr;
             }
+            .dashboard-equal-row {
+                margin-left: -4px;
+                margin-right: -4px;
+            }
             .dashboard-equal-row > [class*="col-"] {
-                flex: 0 0 100%;
-                max-width: 100%;
+                flex: 0 0 50%;
+                max-width: 50%;
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+            .dashboard-equal-row .kpi-card {
+                margin-bottom: 10px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas:
+                    "title value"
+                    "meta meta";
+                column-gap: 10px;
+                row-gap: 4px;
+                align-items: start;
+                min-height: 100%;
+            }
+            .dashboard-equal-row .kpi-title {
+                grid-area: title;
+                margin-bottom: 0;
+                padding-top: 2px;
+            }
+            .dashboard-equal-row .kpi-value {
+                grid-area: value;
+                margin-top: 0;
+                text-align: right;
+                justify-self: end;
+                align-self: center;
+                min-width: 92px;
+            }
+            .dashboard-equal-row .kpi-sub {
+                grid-column: 1 / -1;
+                line-height: 1.45;
             }
             .modal-member-list .modal-content {
                 height: 86vh;
@@ -811,7 +846,7 @@
                                                             href="#"
                                                             class="nav-link"
                                                             :class="{ active: lottoRiskTab === 'today' }"
-                                                            @click.prevent="lottoRiskTab = 'today'"
+                                                            @click.prevent="switchLottoRiskTab('today')"
                                                         >
                                                             วันนี้
                                                         </a>
@@ -821,7 +856,7 @@
                                                             href="#"
                                                             class="nav-link"
                                                             :class="{ active: lottoRiskTab === 'highest' }"
-                                                            @click.prevent="lottoRiskTab = 'highest'"
+                                                            @click.prevent="switchLottoRiskTab('highest')"
                                                         >
                                                             เสี่ยงสูงสุด
                                                         </a>
@@ -2844,8 +2879,42 @@
                         date_start: this.filters.start,
                         date_end: this.filters.end,
                         trend_mode: this.trendMode,
+                        lotto_risk_mode: this.lottoRiskTab === 'highest' ? 'peak' : 'today',
                         ...extra
                     };
+                },
+                switchLottoRiskTab(nextTab) {
+                    const normalizedTab = nextTab === 'highest' ? 'highest' : 'today';
+                    if (this.lottoRiskTab === normalizedTab) {
+                        return;
+                    }
+
+                    this.lottoRiskTab = normalizedTab;
+                    this.refreshLottoRiskSummary(normalizedTab);
+                },
+                refreshLottoRiskSummary(tab) {
+                    if (!axios || typeof axios.post !== 'function') return;
+
+                    const normalizedTab = tab === 'highest' ? 'highest' : 'today';
+                    const previousTab = this.lottoRiskTab;
+                    this.lottoRiskTab = normalizedTab;
+                    const payload = this.buildPayload();
+                    const loadingToken = this.startLoading('lotto-risk-tab', { skeleton: false });
+
+                    axios.post("{{ route('admin.dashboard.summary') }}", payload)
+                        .then((res) => {
+                            const data = this.normalizeResponse(res);
+                            if (data && data.deposit) {
+                                this.summary = Object.assign({}, this.summary, data);
+                                this.animateKpiValues(this.summaryAnimationSnapshot(this.summary), 500);
+                            }
+                        })
+                        .catch(() => {
+                            this.lottoRiskTab = previousTab;
+                        })
+                        .then(() => {
+                            this.stopLoading(loadingToken);
+                        });
                 },
                 refreshAll(options = {}) {
                     if (!axios || typeof axios.post !== 'function') return;

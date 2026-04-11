@@ -294,6 +294,10 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString('ยอดเสี่ยงสูงสุดแบบเดิม', $contents);
         $this->assertStringContainsString("lottoRiskTab === 'today'", $contents);
         $this->assertStringContainsString("lottoRiskTab === 'highest'", $contents);
+        $this->assertStringContainsString("switchLottoRiskTab('today')", $contents);
+        $this->assertStringContainsString("switchLottoRiskTab('highest')", $contents);
+        $this->assertStringContainsString('refreshLottoRiskSummary(normalizedTab);', $contents);
+        $this->assertStringContainsString("lotto_risk_mode: this.lottoRiskTab === 'highest' ? 'peak' : 'today'", $contents);
         $this->assertStringContainsString('วันนี้', $contents);
         $this->assertStringContainsString('เสี่ยงสูงสุด', $contents);
         $this->assertStringContainsString('activeLottoRiskRows()', $contents);
@@ -301,6 +305,14 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString('formatLottoRiskBetType(row.bet_type)', $contents);
         $this->assertStringContainsString("top_3: '3 ตัวบน'", $contents);
         $this->assertStringContainsString('จำนวนงวด (เสี่ยง)', $contents);
+        $this->assertStringContainsString('.dashboard-equal-row {', $contents);
+        $this->assertStringContainsString('flex: 0 0 50%;', $contents);
+        $this->assertStringContainsString('max-width: 50%;', $contents);
+        $this->assertStringContainsString('padding-left: 4px;', $contents);
+        $this->assertStringContainsString('padding-right: 4px;', $contents);
+        $this->assertStringContainsString('grid-template-areas:', $contents);
+        $this->assertStringContainsString('"title value"', $contents);
+        $this->assertStringContainsString('justify-self: end;', $contents);
         $this->assertStringContainsString("openTopRiskyDetail('markets', row)", $contents);
         $this->assertStringContainsString("openTopRiskyDetail('rounds', row)", $contents);
         $this->assertStringContainsString('id="top-risky-detail-modal"', $contents);
@@ -318,6 +330,13 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString("sales_delta: '0.00', sales_delta_raw: 0", $contents);
         $this->assertStringContainsString('ยอดเสี่ยงสูงสุดต่อเลข', $contents);
         $this->assertStringContainsString('member_username', $contents);
+
+        $masterLayout = file_get_contents(base_path('packages/Gametech/Admin/src/Resources/views/layouts/master.blade.php'));
+        $this->assertNotFalse($masterLayout);
+        $this->assertStringContainsString('.toastify.gt-toast {', $masterLayout);
+        $this->assertStringContainsString('width: min(calc(100vw - 24px), 320px);', $masterLayout);
+        $this->assertStringContainsString('border-radius: 18px;', $masterLayout);
+        $this->assertStringContainsString('width: 36px !important;', $masterLayout);
 
         $projector = file_get_contents(base_path('app/Services/Dashboard/DashboardSummaryProjector.php'));
         $this->assertNotFalse($projector);
@@ -598,6 +617,10 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertCount(2, $rows);
         $this->assertSame('587', $rows[0]['number']);
         $this->assertSame('top_3', $rows[0]['bet_type']);
+        $this->assertSame('range', $rows[0]['summary_mode']);
+        $this->assertSame('2026-04-10', $rows[0]['source_date_start']);
+        $this->assertSame('2026-04-10', $rows[0]['source_date_end']);
+        $this->assertSame('', $rows[0]['source_summary_date']);
         $this->assertSame(1040000.0, (float) $rows[0]['exposure_total_raw']);
         $this->assertCount(4, $rows[0]['markets']);
         $this->assertCount(4, $rows[0]['rounds']);
@@ -711,7 +734,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(300000.0, (float) $rows[0]['rounds'][0]['potential_payout_raw']);
     }
 
-    public function test_highest_risky_numbers_summary_uses_latest_snapshot_day_independent_of_selected_range(): void
+    public function test_highest_risky_numbers_summary_uses_peak_rows_independent_of_selected_range(): void
     {
         Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
             $table->id();
@@ -733,6 +756,22 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $webCode = app(DashboardWebCodeResolver::class)->resolve();
 
         DB::table('lotto_dashboard_risk_aggregates')->insert([
+            [
+                'web_code' => $webCode,
+                'summary_date' => '2026-04-09',
+                'bet_type' => 'top_3',
+                'number' => '123',
+                'stake_total' => 300,
+                'exposure_total' => 300000,
+                'liability_total' => 300000,
+                'market_count' => 1,
+                'round_count' => 1,
+                'market_ids_json' => '[9]',
+                'round_ids_json' => '[99]',
+                'snapshot_at' => '2026-04-09 09:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             [
                 'web_code' => $webCode,
                 'summary_date' => '2026-04-10',
@@ -797,7 +836,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(250000.0, (float) $rangeRows[0]['exposure_total_raw']);
         $this->assertSame(2, (int) $rangeRows[0]['round_count']);
         $this->assertSame('123', $highestRows[0]['number']);
-        $this->assertSame(150000.0, (float) $highestRows[0]['exposure_total_raw']);
+        $this->assertSame('peak', $highestRows[0]['summary_mode']);
+        $this->assertSame('2026-04-09', $highestRows[0]['source_summary_date']);
+        $this->assertSame('2026-04-10', $highestRows[0]['source_date_start']);
+        $this->assertSame('2026-04-11', $highestRows[0]['source_date_end']);
+        $this->assertSame(300000.0, (float) $highestRows[0]['exposure_total_raw']);
         $this->assertSame(1, (int) $highestRows[0]['round_count']);
     }
 

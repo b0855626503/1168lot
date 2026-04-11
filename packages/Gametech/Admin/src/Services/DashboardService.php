@@ -3072,6 +3072,10 @@ class DashboardService
                 $grouped[$key] = [
                     'number' => $number,
                     'bet_type' => $betType,
+                    'summary_mode' => 'range',
+                    'source_summary_date' => '',
+                    'source_date_start' => $startDate,
+                    'source_date_end' => $endDate,
                     'stake_total_raw' => 0.0,
                     'exposure_total_raw' => 0.0,
                     'liability_total_raw' => 0.0,
@@ -3122,7 +3126,7 @@ class DashboardService
             return [];
         }
 
-        return $this->hydrateLottoTopRiskyRows($topRows, $startDate, $endDate);
+        return $this->hydrateLottoTopRiskyRows($topRows, 'range');
     }
 
     /**
@@ -3136,17 +3140,8 @@ class DashboardService
 
         $limit = max(1, min(100, $limit));
 
-        $latestSummaryDate = DB::table('lotto_dashboard_risk_aggregates')
-            ->where('web_code', $this->dashboardWebCode())
-            ->max('summary_date');
-
-        if (empty($latestSummaryDate)) {
-            return [];
-        }
-
         $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
-            ->where('summary_date', $latestSummaryDate)
             ->get([
                 'summary_date',
                 'snapshot_at',
@@ -3175,7 +3170,10 @@ class DashboardService
             $candidate = [
                 'number' => $number,
                 'bet_type' => $betType,
-                'summary_date' => (string) ($row->summary_date ?? ''),
+                'summary_mode' => 'peak',
+                'source_summary_date' => (string) ($row->summary_date ?? ''),
+                'source_date_start' => $startDate,
+                'source_date_end' => $endDate,
                 'snapshot_at' => (string) ($row->snapshot_at ?? ''),
                 'stake_total_raw' => round((float) ($row->stake_total ?? 0), 2),
                 'exposure_total_raw' => round((float) ($row->exposure_total ?? 0), 2),
@@ -3213,6 +3211,12 @@ class DashboardService
                 || (
                     abs($candidate['exposure_total_raw'] - $current['exposure_total_raw']) < 0.00001
                     && abs($candidate['stake_total_raw'] - $current['stake_total_raw']) < 0.00001
+                    && strcmp((string) $candidate['source_summary_date'], (string) ($current['source_summary_date'] ?? '')) > 0
+                )
+                || (
+                    abs($candidate['exposure_total_raw'] - $current['exposure_total_raw']) < 0.00001
+                    && abs($candidate['stake_total_raw'] - $current['stake_total_raw']) < 0.00001
+                    && strcmp((string) $candidate['source_summary_date'], (string) ($current['source_summary_date'] ?? '')) === 0
                     && strcmp($candidate['snapshot_at'], $current['snapshot_at']) > 0
                 );
 
@@ -3235,14 +3239,14 @@ class DashboardService
             return [];
         }
 
-        return $this->hydrateLottoTopRiskyRows($topRows, (string) $latestSummaryDate, (string) $latestSummaryDate);
+        return $this->hydrateLottoTopRiskyRows($topRows, 'peak');
     }
 
     /**
      * @param  Collection<int, array<string, mixed>>  $topRows
      * @return array<int, array<string, mixed>>
      */
-    private function hydrateLottoTopRiskyRows(Collection $topRows, string $startDate, string $endDate): array
+    private function hydrateLottoTopRiskyRows(Collection $topRows, string $mode): array
     {
         $topKeys = $topRows
             ->map(static fn (array $row): string => (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? ''))
@@ -3328,46 +3332,28 @@ class DashboardService
         $roundRiskByKey = [];
         if (
             $topKeys->isNotEmpty()
+            && $roundIds->isNotEmpty()
             && $this->hasTable('lotto_dashboard_risk_snapshot')
+            && $this->hasColumn('lotto_dashboard_risk_snapshot', 'round_id')
+            && $this->hasColumn('lotto_dashboard_risk_snapshot', 'market_id')
+            && $this->hasColumn('lotto_dashboard_risk_snapshot', 'bet_type')
+            && $this->hasColumn('lotto_dashboard_risk_snapshot', 'number')
         ) {
-            $snapshotStartAt = Carbon::parse($startDate)->startOfDay()->format('Y-m-d H:i:s');
-            $snapshotEndAt = Carbon::parse($endDate)->endOfDay()->format('Y-m-d H:i:s');
-            $snapshotBase = DB::table('lotto_dashboard_risk_snapshot')
+            $snapshotRows = DB::table('lotto_dashboard_risk_snapshot')
                 ->where('web_code', $this->dashboardWebCode())
+                ->whereIn('round_id', $roundIds->all())
                 ->whereIn('bet_type', $topRows->pluck('bet_type')->unique()->values()->all())
-                ->whereIn('number', $topRows->pluck('number')->unique()->values()->all());
-
-            $snapshotColumns = [
-                'market_id',
-                'round_id',
-                'bet_type',
-                'number',
-                'stake_total',
-                'payout_if_hit',
-                'liability',
-            ];
-
-            $snapshotRows = (clone $snapshotBase)
-                ->whereBetween('snapshot_at', [$snapshotStartAt, $snapshotEndAt])
-                ->get($snapshotColumns);
-
-            if ($snapshotRows->isEmpty()) {
-                $fallbackSnapshotAt = (clone $snapshotBase)
-                    ->where('snapshot_at', '<=', $snapshotEndAt)
-                    ->max('snapshot_at');
-
-                if (empty($fallbackSnapshotAt)) {
-                    $fallbackSnapshotAt = (clone $snapshotBase)
-                        ->where('snapshot_at', '>=', $snapshotStartAt)
-                        ->min('snapshot_at');
-                }
-
-                if (! empty($fallbackSnapshotAt)) {
-                    $snapshotRows = (clone $snapshotBase)
-                        ->where('snapshot_at', $fallbackSnapshotAt)
-                        ->get($snapshotColumns);
-                }
-            }
+                ->whereIn('number', $topRows->pluck('number')->unique()->values()->all())
+                ->get([
+                    'snapshot_at',
+                    'market_id',
+                    'round_id',
+                    'bet_type',
+                    'number',
+                    'stake_total',
+                    'payout_if_hit',
+                    'liability',
+                ]);
 
             foreach ($snapshotRows as $snapshotRow) {
                 $key = trim((string) ($snapshotRow->bet_type ?? '')).'|'.trim((string) ($snapshotRow->number ?? ''));
@@ -3380,59 +3366,35 @@ class DashboardService
                 $stakeTotal = (float) ($snapshotRow->stake_total ?? 0);
                 $totalRisk = (float) ($snapshotRow->liability ?? $snapshotRow->payout_if_hit ?? 0);
                 $potentialPayout = (float) ($snapshotRow->payout_if_hit ?? 0);
+                $snapshotAt = (string) ($snapshotRow->snapshot_at ?? '');
 
                 if ($marketId > 0) {
                     $marketKey = (string) $marketId;
-                    if (! isset($marketRiskByKey[$key][$marketKey])) {
+                    $currentSnapshotAt = (string) ($marketRiskByKey[$key][$marketKey]['snapshot_at'] ?? '');
+                    if (! isset($marketRiskByKey[$key][$marketKey]) || $snapshotAt > $currentSnapshotAt) {
                         $marketRiskByKey[$key][$marketKey] = [
                             'market_id' => $marketId,
-                            'total_stake_raw' => 0.0,
-                            'total_risk_raw' => 0.0,
-                            'potential_payout_raw' => 0.0,
-                            'round_ids' => [],
+                            'total_stake_raw' => round($stakeTotal, 2),
+                            'total_risk_raw' => round($totalRisk, 2),
+                            'potential_payout_raw' => round($potentialPayout, 2),
+                            'round_ids' => $roundId > 0 ? [(string) $roundId => true] : [],
+                            'snapshot_at' => $snapshotAt,
                         ];
-                    }
-
-                    $marketRiskByKey[$key][$marketKey]['total_stake_raw'] = round(
-                        (float) $marketRiskByKey[$key][$marketKey]['total_stake_raw'] + $stakeTotal,
-                        2
-                    );
-                    $marketRiskByKey[$key][$marketKey]['total_risk_raw'] = round(
-                        (float) $marketRiskByKey[$key][$marketKey]['total_risk_raw'] + $totalRisk,
-                        2
-                    );
-                    $marketRiskByKey[$key][$marketKey]['potential_payout_raw'] = round(
-                        (float) $marketRiskByKey[$key][$marketKey]['potential_payout_raw'] + $potentialPayout,
-                        2
-                    );
-                    if ($roundId > 0) {
-                        $marketRiskByKey[$key][$marketKey]['round_ids'][(string) $roundId] = true;
                     }
                 }
 
                 if ($roundId > 0) {
                     $roundKey = (string) $roundId;
-                    if (! isset($roundRiskByKey[$key][$roundKey])) {
+                    $currentSnapshotAt = (string) ($roundRiskByKey[$key][$roundKey]['snapshot_at'] ?? '');
+                    if (! isset($roundRiskByKey[$key][$roundKey]) || $snapshotAt > $currentSnapshotAt) {
                         $roundRiskByKey[$key][$roundKey] = [
                             'round_id' => $roundId,
-                            'total_stake_raw' => 0.0,
-                            'total_risk_raw' => 0.0,
-                            'potential_payout_raw' => 0.0,
+                            'total_stake_raw' => round($stakeTotal, 2),
+                            'total_risk_raw' => round($totalRisk, 2),
+                            'potential_payout_raw' => round($potentialPayout, 2),
+                            'snapshot_at' => $snapshotAt,
                         ];
                     }
-
-                    $roundRiskByKey[$key][$roundKey]['total_stake_raw'] = round(
-                        (float) $roundRiskByKey[$key][$roundKey]['total_stake_raw'] + $stakeTotal,
-                        2
-                    );
-                    $roundRiskByKey[$key][$roundKey]['total_risk_raw'] = round(
-                        (float) $roundRiskByKey[$key][$roundKey]['total_risk_raw'] + $totalRisk,
-                        2
-                    );
-                    $roundRiskByKey[$key][$roundKey]['potential_payout_raw'] = round(
-                        (float) $roundRiskByKey[$key][$roundKey]['potential_payout_raw'] + $potentialPayout,
-                        2
-                    );
                 }
             }
         }
@@ -3645,7 +3607,7 @@ class DashboardService
         }
 
         return $topRows
-            ->map(function (array $row) use ($marketMeta, $roundMeta, $marketRiskByKey, $roundRiskByKey, $ticketImpactByKeyRound): array {
+            ->map(function (array $row) use ($marketMeta, $roundMeta, $marketRiskByKey, $roundRiskByKey, $ticketImpactByKeyRound, $mode): array {
                 $key = (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? '');
                 $marketIds = collect(array_keys((array) ($row['market_ids'] ?? [])))
                     ->map(static fn ($id): int => (int) $id)
@@ -3827,6 +3789,10 @@ class DashboardService
                 return [
                     'number' => (string) $row['number'],
                     'bet_type' => (string) $row['bet_type'],
+                    'summary_mode' => (string) ($row['summary_mode'] ?? $mode),
+                    'source_summary_date' => (string) ($row['source_summary_date'] ?? ''),
+                    'source_date_start' => (string) ($row['source_date_start'] ?? ''),
+                    'source_date_end' => (string) ($row['source_date_end'] ?? ''),
                     'stake_total' => core()->currency((float) $row['stake_total_raw']),
                     'stake_total_raw' => (float) $row['stake_total_raw'],
                     'exposure_total' => core()->currency((float) $row['exposure_total_raw']),
