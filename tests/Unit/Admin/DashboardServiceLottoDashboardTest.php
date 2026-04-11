@@ -288,7 +288,16 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString('ฝากสำเร็จ - ถอนสำเร็จ', $contents);
         $this->assertStringNotContainsString('ฝากสำเร็จ - ถอนสำเร็จ + Lotto Net', $contents);
         $this->assertStringContainsString('Lotto Risk (ความเสี่ยงหวย)', $contents);
-        $this->assertStringContainsString('เลขเสี่ยงสูงสุด (Top 10 Risky Numbers)', $contents);
+        $this->assertStringContainsString('เลขเสี่ยง (Top 10 Risky Numbers)', $contents);
+        $this->assertStringContainsString("lottoRiskTab: 'today'", $contents);
+        $this->assertStringContainsString('ยอดเสี่ยงวันนี้ หรือช่วงวันที่ที่เลือก', $contents);
+        $this->assertStringContainsString('ยอดเสี่ยงสูงสุดแบบเดิม', $contents);
+        $this->assertStringContainsString("lottoRiskTab === 'today'", $contents);
+        $this->assertStringContainsString("lottoRiskTab === 'highest'", $contents);
+        $this->assertStringContainsString('วันนี้', $contents);
+        $this->assertStringContainsString('เสี่ยงสูงสุด', $contents);
+        $this->assertStringContainsString('activeLottoRiskRows()', $contents);
+        $this->assertStringContainsString('summary.lotto_top_risky_numbers', $contents);
         $this->assertStringContainsString('formatLottoRiskBetType(row.bet_type)', $contents);
         $this->assertStringContainsString("top_3: '3 ตัวบน'", $contents);
         $this->assertStringContainsString('จำนวนงวด (เสี่ยง)', $contents);

@@ -804,7 +804,32 @@
                                         </div>
                                         <div class="lotto-recent-wrap mt-2">
                                             <div class="lotto-recent-head">
-                                                <div class="lotto-recent-title">เลขเสี่ยงสูงสุด (Top 10 Risky Numbers)</div>
+                                                <div class="lotto-recent-title">เลขเสี่ยง (Top 10 Risky Numbers)</div>
+                                                <ul class="nav nav-pills nav-sm">
+                                                    <li class="nav-item">
+                                                        <a
+                                                            href="#"
+                                                            class="nav-link"
+                                                            :class="{ active: lottoRiskTab === 'today' }"
+                                                            @click.prevent="lottoRiskTab = 'today'"
+                                                        >
+                                                            วันนี้
+                                                        </a>
+                                                    </li>
+                                                    <li class="nav-item">
+                                                        <a
+                                                            href="#"
+                                                            class="nav-link"
+                                                            :class="{ active: lottoRiskTab === 'highest' }"
+                                                            @click.prevent="lottoRiskTab = 'highest'"
+                                                        >
+                                                            เสี่ยงสูงสุด
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="text-muted small mb-2">
+                                                @{{ lottoRiskTab === 'today' ? 'ยอดเสี่ยงวันนี้ หรือช่วงวันที่ที่เลือก' : 'ยอดเสี่ยงสูงสุดแบบเดิม' }}
                                             </div>
                                             <div class="table-responsive">
                                                 <table class="table table-sm table-hover lotto-recent-table">
@@ -819,7 +844,7 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        <tr v-for="(row, idx) in summary.top_risky_numbers" :key="'top-risky-' + idx + '-' + row.number + '-' + row.bet_type">
+                                                        <tr v-for="(row, idx) in activeLottoRiskRows()" :key="'top-risky-' + lottoRiskTab + '-' + idx + '-' + row.number + '-' + row.bet_type">
                                                             <td>@{{ uiValue(row.number, '-') }}</td>
                                                             <td>@{{ formatLottoRiskBetType(row.bet_type) }}</td>
                                                             <td class="text-right">@{{ uiValue(row.stake_total, '0.00') }}</td>
@@ -831,8 +856,8 @@
                                                                 <a href="#" class="dashboard-clickable" @click.prevent="openTopRiskyDetail('rounds', row)">@{{ uiCount(row.round_count) }}</a>
                                                             </td>
                                                         </tr>
-                                                        <tr v-if="summary.top_risky_numbers.length === 0">
-                                                            <td colspan="6" class="text-center text-muted">ไม่มีข้อมูล top risky numbers</td>
+                                                        <tr v-if="activeLottoRiskRows().length === 0">
+                                                            <td colspan="6" class="text-center text-muted">@{{ lottoRiskTab === 'today' ? 'ไม่มีข้อมูลความเสี่ยงในช่วงวันที่ที่เลือก' : 'ไม่มีข้อมูลเลขเสี่ยงสูงสุด' }}</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1975,6 +2000,7 @@
                     lottoRecentMarketId: '',
                     lottoRecentMarketOptions: lottoRecentMarketOptions,
                     depositTab: 'all',
+                    lottoRiskTab: 'today',
                     bank: { in: [], out: [] },
                     adminLogs: { login: [], logout: [] },
                     canAlertToast: @json($permAlerts),
@@ -3239,6 +3265,17 @@
                         return 'รายชื่อสมาชิกที่ฝากซ้ำ (ครั้งที่ 2 ขึ้นไป)';
                     }
                     return 'รายชื่อสมาชิกที่ฝากแล้ว';
+                },
+                activeLottoRiskRows() {
+                    if (this.lottoRiskTab === 'highest') {
+                        return Array.isArray(this.summary.lotto_top_risky_numbers)
+                            ? this.summary.lotto_top_risky_numbers
+                            : [];
+                    }
+
+                    return Array.isArray(this.summary.top_risky_numbers)
+                        ? this.summary.top_risky_numbers
+                        : [];
                 },
                 openMemberList(type) {
                     if (!axios || typeof axios.post !== 'function') return;
