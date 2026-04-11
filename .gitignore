@@ -74,3 +74,4 @@ __pycache__/
 /output/playwright/results_by_date_probe.js
 /.playwright-cli/results_by_date_runtime_probe.js
 /.playwright-cli/results_by_date_smoke.js
+/.phpunit.cache/test-results

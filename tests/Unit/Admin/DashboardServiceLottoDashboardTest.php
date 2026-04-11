@@ -711,6 +711,96 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(300000.0, (float) $rows[0]['rounds'][0]['potential_payout_raw']);
     }
 
+    public function test_highest_risky_numbers_summary_uses_peak_snapshot_per_number(): void
+    {
+        Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->date('summary_date');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('exposure_total', 18, 2)->default(0);
+            $table->decimal('liability_total', 18, 2)->default(0);
+            $table->unsignedInteger('market_count')->default(0);
+            $table->unsignedInteger('round_count')->default(0);
+            $table->longText('market_ids_json')->nullable();
+            $table->longText('round_ids_json')->nullable();
+            $table->timestamp('snapshot_at');
+            $table->timestamps();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+
+        DB::table('lotto_dashboard_risk_aggregates')->insert([
+            [
+                'web_code' => $webCode,
+                'summary_date' => '2026-04-10',
+                'bet_type' => 'top_3',
+                'number' => '123',
+                'stake_total' => 100,
+                'exposure_total' => 100000,
+                'liability_total' => 100000,
+                'market_count' => 1,
+                'round_count' => 1,
+                'market_ids_json' => '[1]',
+                'round_ids_json' => '[11]',
+                'snapshot_at' => '2026-04-10 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'summary_date' => '2026-04-11',
+                'bet_type' => 'top_3',
+                'number' => '123',
+                'stake_total' => 150,
+                'exposure_total' => 150000,
+                'liability_total' => 150000,
+                'market_count' => 1,
+                'round_count' => 1,
+                'market_ids_json' => '[2]',
+                'round_ids_json' => '[22]',
+                'snapshot_at' => '2026-04-11 11:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'summary_date' => '2026-04-11',
+                'bet_type' => 'top_3',
+                'number' => '456',
+                'stake_total' => 120,
+                'exposure_total' => 120000,
+                'liability_total' => 120000,
+                'market_count' => 1,
+                'round_count' => 1,
+                'market_ids_json' => '[3]',
+                'round_ids_json' => '[33]',
+                'snapshot_at' => '2026-04-11 11:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $rangeMethod = new ReflectionMethod(DashboardService::class, 'lottoTopRiskyNumbersSummary');
+        $rangeMethod->setAccessible(true);
+        $rangeRows = $rangeMethod->invoke($this->service, '2026-04-10', '2026-04-11', 10);
+
+        $highestMethod = new ReflectionMethod(DashboardService::class, 'lottoHighestRiskNumbersSummary');
+        $highestMethod->setAccessible(true);
+        $highestRows = $highestMethod->invoke($this->service, '2026-04-10', '2026-04-11', 10);
+
+        $this->assertCount(2, $rangeRows);
+        $this->assertCount(2, $highestRows);
+        $this->assertSame('123', $rangeRows[0]['number']);
+        $this->assertSame(250000.0, (float) $rangeRows[0]['exposure_total_raw']);
+        $this->assertSame(2, (int) $rangeRows[0]['round_count']);
+        $this->assertSame('123', $highestRows[0]['number']);
+        $this->assertSame(150000.0, (float) $highestRows[0]['exposure_total_raw']);
+        $this->assertSame(1, (int) $highestRows[0]['round_count']);
+    }
+
     public function test_top_risky_numbers_summary_formats_no_result_payload_as_label(): void
     {
         Schema::create('lotto_markets', function (Blueprint $table): void {

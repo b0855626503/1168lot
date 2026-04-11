@@ -9,6 +9,7 @@ use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Carbon\Carbon;
 use Gametech\Lotto\Enums\BetType;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -229,6 +230,7 @@ class DashboardService
             $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
             $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
             $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
+            $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate);
             $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
             $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
             $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
@@ -388,7 +390,7 @@ class DashboardService
                     'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
                 ],
                 'top_risky_numbers' => $topRiskyNumbers,
-                'lotto_top_risky_numbers' => $topRiskyNumbers,
+                'lotto_top_risky_numbers' => $highestRiskyNumbers,
                 'lotto_risk_trend' => $lottoRiskTrend,
                 'lotto_risk_alerts' => $lottoRiskAlerts,
                 'lotto_bet_type_insights' => $lottoBetTypeInsights,
@@ -1665,6 +1667,7 @@ class DashboardService
         $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
         $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
         $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
+        $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate);
         $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
         $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
         $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
@@ -1825,7 +1828,7 @@ class DashboardService
                 'last_snapshot_at' => (string) ($lottoRisk['last_snapshot_at'] ?? ''),
             ],
             'top_risky_numbers' => $topRiskyNumbers,
-            'lotto_top_risky_numbers' => $topRiskyNumbers,
+            'lotto_top_risky_numbers' => $highestRiskyNumbers,
             'lotto_risk_trend' => $lottoRiskTrend,
             'lotto_risk_alerts' => $lottoRiskAlerts,
             'lotto_bet_type_insights' => $lottoBetTypeInsights,
@@ -3119,6 +3122,120 @@ class DashboardService
             return [];
         }
 
+        return $this->hydrateLottoTopRiskyRows($topRows, $startDate, $endDate);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoHighestRiskNumbersSummary(string $startDate, string $endDate, int $limit = 10): array
+    {
+        if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
+            return [];
+        }
+
+        $limit = max(1, min(100, $limit));
+
+        $rows = DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->get([
+                'summary_date',
+                'snapshot_at',
+                'number',
+                'bet_type',
+                'stake_total',
+                'exposure_total',
+                'liability_total',
+                'market_ids_json',
+                'round_ids_json',
+            ]);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $number = trim((string) ($row->number ?? ''));
+            $betType = trim((string) ($row->bet_type ?? ''));
+            if ($number === '' || $betType === '') {
+                continue;
+            }
+
+            $key = $betType.'|'.$number;
+            $candidate = [
+                'number' => $number,
+                'bet_type' => $betType,
+                'summary_date' => (string) ($row->summary_date ?? ''),
+                'snapshot_at' => (string) ($row->snapshot_at ?? ''),
+                'stake_total_raw' => round((float) ($row->stake_total ?? 0), 2),
+                'exposure_total_raw' => round((float) ($row->exposure_total ?? 0), 2),
+                'liability_total_raw' => round((float) ($row->liability_total ?? 0), 2),
+                'market_ids' => [],
+                'round_ids' => [],
+            ];
+
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $candidate['market_ids'][(string) ((int) $marketId)] = true;
+                }
+            }
+
+            $roundJson = json_decode((string) ($row->round_ids_json ?? '[]'), true);
+            if (is_array($roundJson)) {
+                foreach ($roundJson as $roundId) {
+                    $candidate['round_ids'][(string) ((int) $roundId)] = true;
+                }
+            }
+
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = $candidate;
+
+                continue;
+            }
+
+            $current = $grouped[$key];
+            $shouldReplace = $candidate['exposure_total_raw'] > $current['exposure_total_raw']
+                || (
+                    abs($candidate['exposure_total_raw'] - $current['exposure_total_raw']) < 0.00001
+                    && $candidate['stake_total_raw'] > $current['stake_total_raw']
+                )
+                || (
+                    abs($candidate['exposure_total_raw'] - $current['exposure_total_raw']) < 0.00001
+                    && abs($candidate['stake_total_raw'] - $current['stake_total_raw']) < 0.00001
+                    && strcmp($candidate['snapshot_at'], $current['snapshot_at']) > 0
+                );
+
+            if ($shouldReplace) {
+                $grouped[$key] = $candidate;
+            }
+        }
+
+        $topRows = collect(array_values($grouped))
+            ->sortBy([
+                ['exposure_total_raw', 'desc'],
+                ['stake_total_raw', 'desc'],
+                ['number', 'asc'],
+                ['bet_type', 'asc'],
+            ])
+            ->take($limit)
+            ->values();
+
+        if ($topRows->isEmpty()) {
+            return [];
+        }
+
+        return $this->hydrateLottoTopRiskyRows($topRows, $startDate, $endDate);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $topRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function hydrateLottoTopRiskyRows(Collection $topRows, string $startDate, string $endDate): array
+    {
         $topKeys = $topRows
             ->map(static fn (array $row): string => (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? ''))
             ->filter(static fn (string $key): bool => $key !== '|')
