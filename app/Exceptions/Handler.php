@@ -6,6 +6,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -17,7 +18,7 @@ class Handler extends ExceptionHandler
      * @var array
      */
     protected $dontReport = [
-        ConnectionException::class
+        ConnectionException::class,
     ];
 
     /**
@@ -33,7 +34,6 @@ class Handler extends ExceptionHandler
     /**
      * Report or log an exception.
      *
-     * @param Throwable $e
      * @return void
      *
      * @throws Throwable
@@ -48,7 +48,6 @@ class Handler extends ExceptionHandler
      * Render an exception into an HTTP response.
      *
      * @param  Request  $request
-     * @param Throwable $e
      * @return Response
      *
      * @throws Throwable
@@ -56,10 +55,28 @@ class Handler extends ExceptionHandler
     public function render($request, Throwable $e)
     {
         if ($e instanceof TokenMismatchException) {
-            return redirect()->route('customer.session.index')
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => 'Session expired. Please try again.',
+                ], 419);
+            }
+
+            return redirect()->route($this->resolveSessionExpiredRoute($request))
                 ->with('error', 'Session expired. Please try again.');
         }
+
         return parent::render($request, $e);
+    }
+
+    private function resolveSessionExpiredRoute(Request $request): string
+    {
+        if ($request->routeIs('admin.*') || $request->is('admin/*')) {
+            return 'admin.session.index';
+        }
+
+        return Route::has('customer.session.index')
+            ? 'customer.session.index'
+            : 'admin.session.index';
     }
 
     public function register()
