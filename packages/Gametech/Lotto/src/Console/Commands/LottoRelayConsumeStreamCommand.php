@@ -35,7 +35,26 @@ class LottoRelayConsumeStreamCommand extends Command
         $streamKey = $runtime->streamKey();
 
         $stream->ensureConsumerGroup($connection, $streamKey, $group);
+
+        Log::channel($runtime->logChannel())->info('LOTTERY_RELAY_CONSUME_POLLING', [
+            'stream_connection' => $connection,
+            'stream_key' => $streamKey,
+            'consumer_group' => $group,
+            'consumer' => $consumer,
+            'count' => $count,
+            'block_ms' => $blockMs,
+        ]);
+
         $messages = $stream->readGroup($connection, $streamKey, $group, $consumer, $count, $blockMs);
+
+        if ($messages === []) {
+            Log::channel($runtime->logChannel())->info('LOTTERY_RELAY_CONSUME_EMPTY', [
+                'stream_connection' => $connection,
+                'stream_key' => $streamKey,
+                'consumer_group' => $group,
+                'consumer' => $consumer,
+            ]);
+        }
 
         foreach ($messages as $message) {
             $fields = $message['fields'];
@@ -62,8 +81,11 @@ class LottoRelayConsumeStreamCommand extends Command
                 'event_id' => $eventId,
                 'type' => $type,
                 'date' => $date,
+                'checksum' => $checksum,
                 'consumer_group' => $group,
                 'consumer' => $consumer,
+                'stream_connection' => $connection,
+                'stream_key' => $streamKey,
             ]);
         }
 

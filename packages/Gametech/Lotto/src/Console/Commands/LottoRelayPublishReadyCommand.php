@@ -7,6 +7,7 @@ use Gametech\Lotto\Services\Relay\LotteryRelayPublisher;
 use Gametech\Lotto\Services\Relay\LotteryRelayRuntime;
 use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class LottoRelayPublishReadyCommand extends Command
 {
@@ -37,6 +38,15 @@ class LottoRelayPublishReadyCommand extends Command
         $type = strtolower(trim((string) $this->option('type')));
         $force = (bool) $this->option('force');
         $limit = max(1, (int) $this->option('limit'));
+
+        Log::channel($runtime->logChannel())->info('LOTTERY_RELAY_PUBLISH_READY_STARTED', [
+            'draw_id' => $drawId > 0 ? $drawId : null,
+            'date' => $date !== '' ? $date : null,
+            'market_id' => $marketId > 0 ? $marketId : null,
+            'type' => $type !== '' ? $type : null,
+            'force' => $force,
+            'limit' => $limit,
+        ]);
 
         $query = LottoDraw::query()
             ->with('market:id,code')
@@ -87,6 +97,16 @@ class LottoRelayPublishReadyCommand extends Command
                 $skipped++;
             }
 
+            Log::channel($runtime->logChannel())->info('LOTTERY_RELAY_PUBLISH_READY_RESULT', [
+                'draw_id' => (int) $draw->id,
+                'market_id' => (int) $draw->market_id,
+                'market_code' => (string) data_get($draw, 'market.code', '-'),
+                'draw_date' => $draw->draw_date ? $draw->draw_date->format('Y-m-d') : null,
+                'status' => $status,
+                'stream_id' => $streamId,
+                'force' => $force,
+            ]);
+
             $rows[] = [
                 'draw_id' => (int) $draw->id,
                 'market_code' => (string) data_get($draw, 'market.code', '-'),
@@ -102,6 +122,13 @@ class LottoRelayPublishReadyCommand extends Command
             $published,
             $skipped
         ));
+
+        Log::channel($runtime->logChannel())->info('LOTTERY_RELAY_PUBLISH_READY_FINISHED', [
+            'scanned' => $draws->count(),
+            'published' => $published,
+            'skipped' => $skipped,
+            'force' => $force,
+        ]);
 
         if ($rows !== []) {
             $this->table(['draw_id', 'market_code', 'draw_date', 'status', 'stream_id'], $rows);
