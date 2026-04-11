@@ -36,9 +36,6 @@ class LottoDrawDataTable extends DataTable
                     $query->where('status', 'active');
                 },
             ])
-            ->orderBy('close_at')
-            ->orderBy('id');
-
         if ($groupId = (int) request('group_id')) {
             $query->whereHas('market', function ($builder) use ($groupId): void {
                 $builder->where('group_id', $groupId);
@@ -60,6 +57,8 @@ class LottoDrawDataTable extends DataTable
         } else {
             $query->orderByRaw("CASE status WHEN 'closed' THEN 0 WHEN 'open' THEN 1 ELSE 2 END");
         }
+
+        $query->orderBy('close_at')->orderBy('id');
 
         return $query;
     }
