@@ -35,7 +35,8 @@ class LottoDrawDataTable extends DataTable
                 'tickets as active_tickets_count' => function ($query): void {
                     $query->where('status', 'active');
                 },
-            ])
+            ]);
+
         if ($groupId = (int) request('group_id')) {
             $query->whereHas('market', function ($builder) use ($groupId): void {
                 $builder->where('group_id', $groupId);
