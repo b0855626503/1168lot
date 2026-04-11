@@ -955,6 +955,9 @@
   - relay ops commands ขั้นต่ำ:
     - `lotto:relay:health` สำหรับ inspect runtime mode / stream / queue / latest marker
     - `lotto:relay:consume-stream` สำหรับ consume `lottery.ready`
+    - `lotto:relay:publish-ready` สำหรับ backfill publish จาก draw ที่ `result_fetch_status=APPLIED` และมี `result_hash` อยู่แล้ว
+      - filter ได้ด้วย `--draw-id`, `--date`, `--market-id`, `--type`
+      - command นี้รันได้เฉพาะ `primary`
 
 ## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
 

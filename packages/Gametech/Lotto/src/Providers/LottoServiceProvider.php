@@ -12,6 +12,7 @@ use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayConsumeStreamCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayHealthCommand;
+use Gametech\Lotto\Console\Commands\LottoRelayPublishReadyCommand;
 use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointCommand;
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
@@ -19,6 +20,7 @@ use Gametech\Lotto\Console\Commands\MigrateRelayResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
 use Gametech\Lotto\Models\LotteryMarketProxy;
+use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSettingProxy;
 use Gametech\Lotto\Models\LottoDrawProxy;
 use Gametech\Lotto\Models\LottoMarketBetSettingProxy;
@@ -131,6 +133,7 @@ class LottoServiceProvider extends ServiceProvider
             LottoAutoResultMetricsCommand::class,
             LottoRelayConsumeStreamCommand::class,
             LottoRelayHealthCommand::class,
+            LottoRelayPublishReadyCommand::class,
             MigrateExphuaySourcesToExternalEndpointCommand::class,
             MigrateInternalResultEndpointsCommand::class,
             MigrateLegacyLottoPermissionsCommand::class,
@@ -177,6 +180,9 @@ class LottoServiceProvider extends ServiceProvider
         LotteryGroupProxy::observe(LottoAuditObserver::class);
         LotteryMarketProxy::observe(LottoAuditObserver::class);
         LottoMarketBetSettingProxy::observe(LottoAuditObserver::class);
+        LottoDraw::observe(LottoDrawRealtimeObserver::class);
+        LottoDraw::observe(LottoDashboardSummaryObserver::class);
+        LottoDraw::observe(LottoDrawAutoResultObserver::class);
         LottoDrawProxy::observe(LottoAuditObserver::class);
         LottoDrawProxy::observe(LottoDrawRealtimeObserver::class);
         LottoDrawProxy::observe(LottoDashboardSummaryObserver::class);

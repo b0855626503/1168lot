@@ -33,10 +33,12 @@
   - ops/migration ขั้นต่ำ:
     - เพิ่ม `lotto:relay:health`
     - เพิ่ม `lotto:migrate-relay-result-sources`
+    - เพิ่ม `lotto:relay:publish-ready` สำหรับ backfill publish ของ draw ที่ `APPLIED` ไปก่อน observer rollout
 - เหตุผล:
   - ล็อก role separation ของเว็บหลักกับเว็บ clone ภายใต้ codebase เดียว
   - ทำให้ clone รับงานผ่าน backend trigger จริง ไม่ต้องพึ่ง periodic discovery เดิม
   - reuse pipeline/apply path เดิมให้มากที่สุดเพื่อลด scope ของ clone rollout
+  - รองรับเคส deploy relay publisher หลังมีข้อมูลผลหวยใน `lotto_draws` อยู่แล้ว โดยไม่ต้องแก้ DB เพื่อ trigger event เทียม
 
 ## 2026-04-11 — Public Lotto Relay Result API Uses Canonical `type + business date` Contract (APPROVED)
 
