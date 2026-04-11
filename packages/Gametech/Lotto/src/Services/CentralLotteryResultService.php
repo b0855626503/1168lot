@@ -3,11 +3,17 @@
 namespace Gametech\Lotto\Services;
 
 use Carbon\CarbonImmutable;
+use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 use Gametech\Lotto\Services\InternalResultSources\InternalResultService;
+use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 
 class CentralLotteryResultService
 {
-    public function __construct(private InternalResultService $internalResultService) {}
+    public function __construct(
+        private InternalResultService $internalResultService,
+        private LotteryRelayTypeRegistry $typeRegistry,
+        private HttpResultFetcher $httpFetcher,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -25,12 +31,11 @@ class CentralLotteryResultService
             ]]);
         }
 
-        $params = ['date' => $businessDate];
-        if ($source === 'exphuay') {
-            $params['type'] = $canonicalType;
+        if ($source === 'external') {
+            return $this->fetchFromUpstream($canonicalType, $businessDate);
         }
 
-        $result = $this->internalResultService->fetch($source, $params);
+        $result = $this->internalResultService->fetch($source, ['date' => $businessDate]);
         if (($result['success'] ?? false) !== true) {
             return $this->buildFailurePayload(
                 $canonicalType,
@@ -73,77 +78,46 @@ class CentralLotteryResultService
             return $canonicalType;
         }
 
-        if (in_array($canonicalType, $this->supportedExphuayTypes(), true)) {
-            return 'exphuay';
+        if ($this->typeRegistry->marketCodesForCanonicalType($canonicalType) !== []) {
+            return 'external';
         }
 
         return null;
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, mixed>
      */
-    private function supportedExphuayTypes(): array
+    private function fetchFromUpstream(string $canonicalType, string $date): array
     {
-        return [
-            'gsb',
-            'baac',
-            'goverment',
-            'xsthm',
-            'minhngoc',
-            'mlnhngo',
-            'magnum4d',
-            'laosvip',
-            'nikkei-vip-morning',
-            'hanoiasean',
-            'szse-vip-morning',
-            'laotv',
-            'hsi-vip-morning',
-            'xosohd',
-            'twse-vip',
-            'minhngocstar',
-            'ktop30-vip',
-            'nikkei-vip-afternoon',
-            'laoshd',
-            'minhngoctv',
-            'szse-vip-afternoon',
-            'hsi-vip-afternoon',
-            'laostars',
-            'xosoredcross',
-            'sgx-vip',
-            'xosounion',
-            'xosodevelop',
-            'laounion',
-            'laosasean',
-            'laounionvip',
-            'laostarsvip',
-            'england-vip',
-            'xosoextra',
-            'germany-vip',
-            'laoredcross',
-            'russia-vip',
-            'dowjonestar',
-            'laosantipap',
-            'laopatuxay',
-            'laocitizen',
-            'nikkei-morning',
-            'nikkei-afternoon',
-            'egx30',
-            'szse-morning',
-            'hsi-morning',
-            'twse',
-            'ktop30',
-            'szse-afternoon',
-            'hsi-afternoon',
-            'sgx',
-            'set',
-            'bsesn',
-            'ftse100',
-            'gdaxi',
-            'moexbc',
-            'dji',
-            'laosdevelops',
-        ];
+        $upstreamUrl = (string) config('lottery_result_relay.upstream_get_lottery_url', '');
+
+        if ($upstreamUrl === '') {
+            return $this->buildFailurePayload($canonicalType, $date, [[
+                'code' => 'UPSTREAM_NOT_CONFIGURED',
+                'message' => 'Upstream get_lottery URL is not configured.',
+            ]]);
+        }
+
+        $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $canonicalType, 'date' => $date], 15);
+
+        if (! ($fetch['ok'] ?? false)) {
+            return $this->buildFailurePayload($canonicalType, $date, [[
+                'code' => (string) ($fetch['error_code'] ?? 'FETCH_FAILED'),
+                'message' => (string) ($fetch['error_message'] ?? 'Failed to fetch from upstream.'),
+            ]]);
+        }
+
+        $decoded = json_decode((string) ($fetch['response_body'] ?? ''), true);
+
+        if (! is_array($decoded)) {
+            return $this->buildFailurePayload($canonicalType, $date, [[
+                'code' => 'INVALID_RESPONSE',
+                'message' => 'Upstream returned invalid JSON.',
+            ]]);
+        }
+
+        return $decoded;
     }
 
     /**

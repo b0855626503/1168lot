@@ -352,7 +352,12 @@ class RenderedBrowserFetchDriver
     {
         $nodeBinary = (string) config('lotto_auto_result.browser_runtime.node_binary', 'node');
         $workerScript = (string) config('lotto_auto_result.browser_runtime.worker_script', base_path('scripts/lotto/browser_runtime_worker.js'));
-        if (! is_file($workerScript)) {
+        try {
+            $scriptExists = is_file($workerScript);
+        } catch (\ErrorException) {
+            $scriptExists = false;
+        }
+        if (! $scriptExists) {
             return [
                 'ok' => false,
                 'error_code' => 'BROWSER_RUNTIME_UNAVAILABLE',

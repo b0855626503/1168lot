@@ -44,10 +44,26 @@ class CentralLotteryResultEndpointTest extends TestCase
         ])->getJson('http://api.localhost'.$uri);
     }
 
-    public function test_get_lottery_returns_central_contract_for_exphuay_type(): void
+    public function test_get_lottery_returns_central_contract_for_upstream_type(): void
     {
+        config()->set('lottery_result_relay.upstream_get_lottery_url', 'http://203.146.127.170/~anan/get_lottery.php');
+
         Http::fake([
-            'https://exphuay.com/backward/*' => Http::response($this->fakeExphuayPayload(), 200),
+            'http://203.146.127.170/~anan/get_lottery.php*' => Http::response([
+                'type' => 'laosvip',
+                'nameTH' => 'ลาว VIP',
+                'date' => '2026-03-28',
+                'page' => 1,
+                'count' => 1,
+                'results' => [[
+                    'lottosName' => 'laosvip',
+                    'lottosTH' => 'ลาว VIP',
+                    'lottosDate' => '2026-03-27T17:00:00.000Z',
+                    'lottosTime' => '21:30',
+                    'lottosNumber' => '18413',
+                    'lottosUnder' => '84',
+                ]],
+            ], 200),
         ]);
 
         $response = $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-03-28');
@@ -124,47 +140,4 @@ class CentralLotteryResultEndpointTest extends TestCase
         $response->assertJsonValidationErrors(['date']);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function fakeExphuayPayload(): array
-    {
-        return [
-            'type' => 'data',
-            'nodes' => [
-                ['type' => 'skip'],
-                [
-                    'type' => 'data',
-                    'data' => [
-                        ['result' => 1],
-                        [2],
-                        [
-                            'id' => 3,
-                            'lottosType' => 4,
-                            'lottosFlag' => 4,
-                            'lottosName' => 5,
-                            'lottosTH' => 6,
-                            'lottosDate' => 7,
-                            'lottosTime' => 8,
-                            'lottosNumber' => 9,
-                            'lottosUnder' => 10,
-                            'logTime' => 11,
-                            'createdAt' => 12,
-                            'updatedAt' => 12,
-                        ],
-                        113613,
-                        'laos',
-                        'laosvip',
-                        'ลาว VIP',
-                        '2026-03-27T17:00:00.000Z',
-                        '21:30',
-                        '18413',
-                        '84',
-                        '2026-03-28T14:30:17.111Z',
-                        '2026-03-28T14:30:17.113Z',
-                    ],
-                ],
-            ],
-        ];
-    }
 }

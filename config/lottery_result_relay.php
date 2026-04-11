@@ -17,4 +17,5 @@ return [
     'published_marker_prefix' => (string) env('LOTTERY_RESULT_RELAY_PUBLISHED_MARKER_PREFIX', 'lotto:relay:published'),
     'latest_marker_prefix' => (string) env('LOTTERY_RESULT_RELAY_LATEST_MARKER_PREFIX', 'lotto:relay:latest'),
     'log_channel' => (string) env('LOTTERY_RESULT_RELAY_LOG_CHANNEL', 'daily'),
+    'upstream_get_lottery_url' => (string) env('LOTTERY_RESULT_RELAY_UPSTREAM_GET_LOTTERY_URL', ''),
 ];
