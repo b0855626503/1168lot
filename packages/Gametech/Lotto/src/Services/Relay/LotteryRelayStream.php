@@ -37,7 +37,7 @@ class LotteryRelayStream
             $this->flattenFields($payload)
         );
 
-        $response = $redis->command('XADD', $arguments);
+        $response = $this->executeRaw($redis, array_merge(['XADD'], $arguments));
 
         if ($response === false || $response === null || $response === '') {
             throw new RuntimeException(sprintf('Unable to publish relay stream entry to [%s].', $stream));
@@ -58,7 +58,7 @@ class LotteryRelayStream
             }
         } catch (\Throwable $exception) {
             if ($this->shouldFallbackToRawCommand($exception)) {
-                $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
+                $this->executeRaw($redis, ['XGROUP', 'CREATE', $stream, $group, '$', 'MKSTREAM']);
 
                 return;
             }
@@ -70,7 +70,7 @@ class LotteryRelayStream
             return;
         }
 
-        $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
+        $this->executeRaw($redis, ['XGROUP', 'CREATE', $stream, $group, '$', 'MKSTREAM']);
     }
 
     /**
@@ -104,7 +104,8 @@ class LotteryRelayStream
             }
         }
 
-        $response = $redis->command('XREADGROUP', [
+        $response = $this->executeRaw($redis, [
+            'XREADGROUP',
             'GROUP', $group, $consumer,
             'COUNT', (string) max(1, $count),
             'BLOCK', (string) max(0, $blockMs),
@@ -130,7 +131,7 @@ class LotteryRelayStream
             }
         }
 
-        $redis->command('XACK', [$stream, $group, $id]);
+        $this->executeRaw($redis, ['XACK', $stream, $group, $id]);
     }
 
     public function get(string $connection, string $key): ?string
@@ -170,6 +171,18 @@ class LotteryRelayStream
             || str_contains($message, 'ARGUMENT')
             || str_contains($message, 'EXPECTS AT MOST')
             || str_contains($message, 'WRONG NUMBER OF ARGUMENTS');
+    }
+
+    /**
+     * @param  array<int,string>  $arguments
+     */
+    private function executeRaw(object $redis, array $arguments): mixed
+    {
+        if (is_callable([$redis, 'executeRaw'])) {
+            return $redis->executeRaw($arguments);
+        }
+
+        return $redis->command((string) array_shift($arguments), $arguments);
     }
 
     /**

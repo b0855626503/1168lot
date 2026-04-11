@@ -22,6 +22,7 @@ class LotteryRelayStreamTest extends TestCase
             ->once()
             ->with('lotto:stream:results', '*', ['event' => 'lottery.ready'], 1000, true)
             ->andReturn('1712800000000-0');
+        $redis->shouldReceive('executeRaw')->never();
         $redis->shouldReceive('command')->never();
 
         Redis::shouldReceive('connection')
@@ -43,9 +44,10 @@ class LotteryRelayStreamTest extends TestCase
         $redis->shouldReceive('xadd')
             ->once()
             ->andThrow(new \ArgumentCountError('Redis::xadd() expects at most 6 arguments, 17 given'));
-        $redis->shouldReceive('command')
+        $redis->shouldReceive('executeRaw')
             ->once()
-            ->with('XADD', [
+            ->with([
+                'XADD',
                 'lotto:stream:results',
                 'MAXLEN',
                 '~',
@@ -57,6 +59,7 @@ class LotteryRelayStreamTest extends TestCase
                 'dji',
             ])
             ->andReturn('1712800000001-0');
+        $redis->shouldReceive('command')->never();
 
         Redis::shouldReceive('connection')
             ->once()
@@ -83,9 +86,10 @@ class LotteryRelayStreamTest extends TestCase
             ->once()
             ->with('lotto:stream:results', '*', ['event' => 'lottery.ready'], 1000, true)
             ->andReturn(false);
-        $redis->shouldReceive('command')
+        $redis->shouldReceive('executeRaw')
             ->once()
-            ->with('XADD', [
+            ->with([
+                'XADD',
                 'lotto:stream:results',
                 'MAXLEN',
                 '~',
@@ -95,6 +99,7 @@ class LotteryRelayStreamTest extends TestCase
                 'lottery.ready',
             ])
             ->andReturn('1712800000002-0');
+        $redis->shouldReceive('command')->never();
 
         Redis::shouldReceive('connection')
             ->once()
@@ -116,9 +121,10 @@ class LotteryRelayStreamTest extends TestCase
             ->once()
             ->with('relay-a', 'consumer-a', ['lotto:stream:results' => '>'], 10, 5000)
             ->andReturn(false);
-        $redis->shouldReceive('command')
+        $redis->shouldReceive('executeRaw')
             ->once()
-            ->with('XREADGROUP', [
+            ->with([
+                'XREADGROUP',
                 'GROUP',
                 'relay-a',
                 'consumer-a',
@@ -164,10 +170,11 @@ class LotteryRelayStreamTest extends TestCase
             ->once()
             ->with('lotto:stream:results', 'relay-a', ['1712800000003-0'])
             ->andReturn(false);
-        $redis->shouldReceive('command')
+        $redis->shouldReceive('executeRaw')
             ->once()
-            ->with('XACK', ['lotto:stream:results', 'relay-a', '1712800000003-0'])
+            ->with(['XACK', 'lotto:stream:results', 'relay-a', '1712800000003-0'])
             ->andReturn(1);
+        $redis->shouldReceive('command')->never();
 
         Redis::shouldReceive('connection')
             ->once()
