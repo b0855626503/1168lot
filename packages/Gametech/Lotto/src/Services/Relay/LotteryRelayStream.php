@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Services\Relay;
 
 use Illuminate\Support\Facades\Redis;
+use RuntimeException;
 
 class LotteryRelayStream
 {
@@ -14,13 +15,17 @@ class LotteryRelayStream
         $redis = Redis::connection($connection);
 
         try {
-            return (string) $redis->xadd(
+            $response = $redis->xadd(
                 $stream,
                 '*',
                 $payload,
                 max(1, $maxLen),
                 true
             );
+
+            if ($response !== false && $response !== null && $response !== '') {
+                return (string) $response;
+            }
         } catch (\Throwable $exception) {
             if (! $this->shouldFallbackToRawCommand($exception)) {
                 throw $exception;
@@ -32,7 +37,13 @@ class LotteryRelayStream
             $this->flattenFields($payload)
         );
 
-        return (string) $redis->command('XADD', $arguments);
+        $response = $redis->command('XADD', $arguments);
+
+        if ($response === false || $response === null || $response === '') {
+            throw new RuntimeException(sprintf('Unable to publish relay stream entry to [%s].', $stream));
+        }
+
+        return (string) $response;
     }
 
     public function ensureConsumerGroup(string $connection, string $stream, string $group): void
@@ -40,7 +51,11 @@ class LotteryRelayStream
         $redis = Redis::connection($connection);
 
         try {
-            $redis->xgroup('CREATE', $stream, $group, '$', true);
+            $response = $redis->xgroup('CREATE', $stream, $group, '$', true);
+
+            if ($response !== false) {
+                return;
+            }
         } catch (\Throwable $exception) {
             if ($this->shouldFallbackToRawCommand($exception)) {
                 $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
@@ -51,7 +66,11 @@ class LotteryRelayStream
             if (! str_contains(strtoupper($exception->getMessage()), 'BUSYGROUP')) {
                 throw $exception;
             }
+
+            return;
         }
+
+        $redis->command('XGROUP', ['CREATE', $stream, $group, '$', 'MKSTREAM']);
     }
 
     /**
@@ -76,7 +95,9 @@ class LotteryRelayStream
                 max(0, $blockMs)
             );
 
-            return $this->normalizeReadGroupResponse($response);
+            if ($response !== false) {
+                return $this->normalizeReadGroupResponse($response);
+            }
         } catch (\Throwable $exception) {
             if (! $this->shouldFallbackToRawCommand($exception)) {
                 throw $exception;
@@ -98,9 +119,11 @@ class LotteryRelayStream
         $redis = Redis::connection($connection);
 
         try {
-            $redis->xack($stream, $group, [$id]);
+            $response = $redis->xack($stream, $group, [$id]);
 
-            return;
+            if ($response !== false) {
+                return;
+            }
         } catch (\Throwable $exception) {
             if (! $this->shouldFallbackToRawCommand($exception)) {
                 throw $exception;
