@@ -3136,9 +3136,17 @@ class DashboardService
 
         $limit = max(1, min(100, $limit));
 
+        $latestSummaryDate = DB::table('lotto_dashboard_risk_aggregates')
+            ->where('web_code', $this->dashboardWebCode())
+            ->max('summary_date');
+
+        if (empty($latestSummaryDate)) {
+            return [];
+        }
+
         $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
-            ->whereBetween('summary_date', [$startDate, $endDate])
+            ->where('summary_date', $latestSummaryDate)
             ->get([
                 'summary_date',
                 'snapshot_at',
@@ -3227,7 +3235,7 @@ class DashboardService
             return [];
         }
 
-        return $this->hydrateLottoTopRiskyRows($topRows, $startDate, $endDate);
+        return $this->hydrateLottoTopRiskyRows($topRows, (string) $latestSummaryDate, (string) $latestSummaryDate);
     }
 
     /**

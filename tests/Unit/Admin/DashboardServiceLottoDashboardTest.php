@@ -711,7 +711,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(300000.0, (float) $rows[0]['rounds'][0]['potential_payout_raw']);
     }
 
-    public function test_highest_risky_numbers_summary_uses_peak_snapshot_per_number(): void
+    public function test_highest_risky_numbers_summary_uses_latest_snapshot_day_independent_of_selected_range(): void
     {
         Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
             $table->id();
