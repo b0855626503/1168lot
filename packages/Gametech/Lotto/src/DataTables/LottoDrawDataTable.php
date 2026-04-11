@@ -36,8 +36,8 @@ class LottoDrawDataTable extends DataTable
                     $query->where('status', 'active');
                 },
             ])
-            ->orderByDesc('draw_date')
-            ->orderByDesc('id');
+            ->orderBy('close_at')
+            ->orderBy('id');
 
         if ($groupId = (int) request('group_id')) {
             $query->whereHas('market', function ($builder) use ($groupId): void {
@@ -82,7 +82,7 @@ class LottoDrawDataTable extends DataTable
                 'deferRender' => true,
                 'retrieve'    => true,
                 'ordering'    => true,
-                'order'       => [[2, 'desc']],
+                'order'       => [[4, 'asc']],
                 'buttons'     => ['pageLength'],
                 'columnDefs'  => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
