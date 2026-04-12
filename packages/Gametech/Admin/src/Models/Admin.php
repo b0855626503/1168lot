@@ -70,7 +70,6 @@ class Admin extends Authenticatable implements AdminContract
         'credit_balance',
         'percent',
         'fight',
-        'superadmin',
         'enable',
         'user_create',
         'user_update',
