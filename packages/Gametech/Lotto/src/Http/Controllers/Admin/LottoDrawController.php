@@ -454,6 +454,10 @@ class LottoDrawController extends AppBaseController
 
     public function cancelAllRefund(Request $request, DrawCancelAllRefundService $drawCancelAllRefundService): JsonResponse
     {
+        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_settings.draws.settle')) {
+            return $this->sendError('ไม่มีสิทธิ์ยกเลิกโพยทั้งงวดและคืนเงิน', 403);
+        }
+
         $drawId = (int) $request->input('id');
         $draw = LottoDraw::query()->find($drawId);
         if (! $draw instanceof LottoDraw) {

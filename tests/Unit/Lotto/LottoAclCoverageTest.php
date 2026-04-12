@@ -27,6 +27,7 @@ class LottoAclCoverageTest extends TestCase
         $this->assertStringContainsString("admin.lotto.groups.update", $content);
         $this->assertStringContainsString("admin.lotto.markets.create", $content);
         $this->assertStringContainsString("admin.lotto.markets.update", $content);
+        $this->assertStringContainsString("'route' => 'admin.lotto.draws.cancel_all_refund'", $content);
         $this->assertStringNotContainsString("admin.lotto.rate_plans.index", $content);
         $this->assertStringNotContainsString("admin.lotto.settings.bet_types", $content);
     }
