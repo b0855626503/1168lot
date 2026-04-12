@@ -1,0 +1,16 @@
+*
+!.gitignore
+!bank_img/
+!bank_img/**
+!game_img/
+!game_img/**
+!gametype_img/
+!gametype_img/**
+!icon_cat/
+!icon_cat/**
+!sound/
+!sound/**
+!spin_img/
+!spin_img/**
+!lotto/
+!lotto/**

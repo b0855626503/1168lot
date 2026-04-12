@@ -1,28 +1,74 @@
+# =========================================================
 # Dependencies
+# =========================================================
 /vendor/
 /public/vendor/
 /node_modules/
 
-# Runtime / cache
+# =========================================================
+# Laravel runtime / cache / storage
+# =========================================================
 /storage/
 /bootstrap/cache/
+/public/storage/
 
-# Frontend build outputs
+# =========================================================
+# Frontend generated outputs
+# =========================================================
+/public/build/
+/public/hot/
 /public/js/
 /public/css/
 /public/mix-manifest.json
+/.vite/
+/dist/
+/build/
 
-# Logs / dump
+# =========================================================
+# Logs / dumps / local databases / archives
+# =========================================================
 *.log
 *.sql
+*.sqlite
+*.sqlite3
+*.bak
+*.tmp
+*.temp
 *.zip
 *.tar
 *.gz
+*.rar
+*.7z
+*.dump
 
-# VCS / IDE
+# =========================================================
+# Coverage / reports / test artifacts
+# =========================================================
+coverage/
+report/
+reports/
+/playwright-report/
+/test-results/
+/.playwright-cli/
+
+# =========================================================
+# IDE / VCS / editor
+# =========================================================
 /.git/
 /.idea/
 /.vscode/
 
-# Misc
-/public/storage/
+# =========================================================
+# Python local runtime
+# =========================================================
+/.venv/
+/venv/
+__pycache__/
+*.pyc
+
+# =========================================================
+# Optional local-only directories
+# Keep only if these are not real source code
+# =========================================================
+/bank/
+/game/

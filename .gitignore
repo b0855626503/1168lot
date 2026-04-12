@@ -1,77 +1,186 @@
-### Laravel template
+# =========================================================
+# OS / Filesystem noise
+# =========================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-/node_modules/
-npm-debug.log
-yarn-error.log
+# =========================================================
+# IDE / Editor
+# =========================================================
+.idea/
+.vscode/
+*.iml
 
-# Laravel 4 specific
-/bootstrap/compiled.php
-/app/storage/
+# Local AI / tooling workdirs
+.ai/
+.codebase-memory/
+.codex/
+.claude/
+.junie/
+memory.openclaw/
+workspace/
 
-# Laravel 5 & Lumen specific
-/public/storage
-/public/hot
-
-# Laravel 5 & Lumen specific with changed public path
-/public_html/storage
-/public_html/hot
-/storage/
-/storage/*.key
+# =========================================================
+# Environment / secrets
+# =========================================================
 .env
-.env.prod
-Homestead.yaml
-Homestead.json
-/.vagrant
-.phpunit.result.cache
-/.idea/
-/wallet_demo.zip
-/bank/
-/vendor/
-/game/
-/.ai/
-/.codebase-memory/
-/.codex/
-/.github/
-!/.github/
-!/.github/workflows/
-!/.github/workflows/*.yml
+.env.*
+!.env.example
 
-# Python local runtime
+# Optional machine-specific env naming
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =========================================================
+# PHP / Composer
+# =========================================================
+vendor/
+composer.phar
+
+# PHPUnit / Pest / coverage / cache
+.phpunit.result.cache
+.phpunit.cache/
+coverage/
+report/
+reports/
+
+# PHPStan / Psalm / Rector caches
+phpstan.neon.cache
+.phpstan.cache/
+psalm-report.json
+.psalm/
+rector.cache
+
+# =========================================================
+# Laravel runtime / cache / generated
+# =========================================================
+public/storage
+public/hot
+public/build
+public/mix-manifest.json
+public/js
+public/css
+
+storage/*
+!storage/.gitignore
+!storage/app/
+!storage/app/.gitignore
+!storage/app/public/
+!storage/app/public/.gitignore
+!storage/app/public/bank_img/
+!storage/app/public/bank_img/**
+!storage/app/public/game_img/
+!storage/app/public/game_img/**
+!storage/app/public/gametype_img/
+!storage/app/public/gametype_img/**
+!storage/app/public/icon_cat/
+!storage/app/public/icon_cat/**
+!storage/app/public/sound/
+!storage/app/public/sound/**
+!storage/app/public/spin_img/
+!storage/app/public/spin_img/**
+!storage/app/public/lotto/
+!storage/app/public/lotto/**
+!storage/framework/
+!storage/framework/.gitignore
+!storage/framework/cache/
+!storage/framework/cache/.gitignore
+!storage/framework/cache/data/
+!storage/framework/cache/data/.gitignore
+!storage/framework/sessions/
+!storage/framework/sessions/.gitignore
+!storage/framework/testing/
+!storage/framework/testing/.gitignore
+!storage/framework/views/
+!storage/framework/views/.gitignore
+!storage/logs/
+!storage/logs/.gitignore
+
+bootstrap/cache/*
+!bootstrap/cache/.gitignore
+
+storage/*.key
+
+# Legacy / alternate public path
+public_html/storage
+public_html/hot
+
+# =========================================================
+# Node / Frontend
+# =========================================================
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.yarnrc.yml
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / bundlers
+.vite/
+vite.svg
+dist/
+build/
+
+# =========================================================
+# Python local runtime / utility scripts
+# =========================================================
 .venv/
 venv/
 __pycache__/
 *.pyc
-/.playwright-cli/console-2026-04-03T15-45-46-631Z.log
-/.playwright-cli/console-2026-04-03T15-46-25-418Z.log
-/.playwright-cli/console-2026-04-03T15-47-20-667Z.log
-/.playwright-cli/console-2026-04-03T16-00-08-966Z.log
-/.playwright-cli/console-2026-04-03T16-00-19-487Z.log
-/.playwright-cli/console-2026-04-03T16-07-06-645Z.log
-/.playwright-cli/console-2026-04-03T16-08-16-697Z.log
-/.playwright-cli/console-2026-04-03T16-09-19-726Z.log
-/.playwright-cli/console-2026-04-03T16-09-45-623Z.log
-/.playwright-cli/console-2026-04-03T16-13-38-309Z.log
-/.playwright-cli/page-2026-04-03T15-45-48-736Z.yml
-/.playwright-cli/page-2026-04-03T15-46-26-266Z.yml
-/.playwright-cli/page-2026-04-03T15-47-08-918Z.yml
-/.playwright-cli/page-2026-04-03T15-47-22-484Z.yml
-/.playwright-cli/page-2026-04-03T15-49-19-217Z.yml
-/.playwright-cli/page-2026-04-03T15-51-34-118Z.png
-/.playwright-cli/page-2026-04-03T15-56-13-783Z.yml
-/.playwright-cli/page-2026-04-03T15-57-53-628Z.yml
-/.playwright-cli/page-2026-04-03T15-59-01-237Z.yml
-/.playwright-cli/page-2026-04-03T16-00-09-496Z.yml
-/.playwright-cli/page-2026-04-03T16-00-21-995Z.yml
-/.playwright-cli/page-2026-04-03T16-06-52-518Z.yml
-/.playwright-cli/page-2026-04-03T16-07-09-139Z.yml
-/.playwright-cli/page-2026-04-03T16-08-04-509Z.yml
-/.playwright-cli/page-2026-04-03T16-08-19-951Z.yml
-/.playwright-cli/page-2026-04-03T16-09-03-447Z.yml
-/.playwright-cli/page-2026-04-03T16-09-27-008Z.yml
-/.playwright-cli/page-2026-04-03T16-09-46-670Z.yml
-/.playwright-cli/page-2026-04-03T16-13-38-524Z.yml
-/.playwright-cli/results_by_date_fill_actual.js
-/output/playwright/results_by_date_probe.js
-/.playwright-cli/results_by_date_runtime_probe.js
-/.playwright-cli/results_by_date_smoke.js
-/.phpunit.cache/test-results
+.python-version
+
+# =========================================================
+# Playwright / Browser automation
+# =========================================================
+.playwright-cli/
+playwright-report/
+test-results/
+
+# Project output (local/generated)
+output/
+
+# =========================================================
+# Databases / dumps / archives / temp
+# =========================================================
+*.sql
+*.sqlite
+*.sqlite3
+*.bak
+*.tmp
+*.temp
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+*.dump
+
+# =========================================================
+# VM / local infra
+# =========================================================
+.vagrant/
+Homestead.yaml
+Homestead.json
+
+# =========================================================
+# Optional project-specific local folders
+# Keep only if these are local/generated and should never be versioned
+# If they are real source folders, remove them from here.
+# =========================================================
+bank/
+game/
+wallet_demo.zip
+
+# =========================================================
+# Misc logs
+# =========================================================
+*.log

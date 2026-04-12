@@ -1,0 +1,8 @@
+cache
+sessions
+views
+testing
+!cache/.gitignore
+!sessions/.gitignore
+!views/.gitignore
+!testing/.gitignore

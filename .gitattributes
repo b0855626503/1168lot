@@ -1,8 +1,94 @@
-* text=auto
+# =========================================================
+# Default text normalization
+# =========================================================
+* text=auto eol=lf
+
+# =========================================================
+# Windows-specific scripts
+# =========================================================
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# =========================================================
+# Shell / source files force LF
+# =========================================================
+*.sh text eol=lf
 *.php text eol=lf
+*.phtml text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.vue text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+*.less text eol=lf
+*.html text eol=lf
+*.blade.php text eol=lf
 *.json text eol=lf
 *.md text eol=lf
-*.css linguist-vendored
-*.scss linguist-vendored
-*.js linguist-vendored
+*.txt text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.env.example text eol=lf
+
+# =========================================================
+# Binary assets
+# =========================================================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.rar binary
+*.7z binary
+*.phar binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp3 binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+
+# =========================================================
+# Generated / minified assets: reduce noisy diffs
+# =========================================================
+*.min.js -diff
+*.min.css -diff
+/public/build/** -diff
+/public/js/** -diff
+/public/css/** -diff
+
+# =========================================================
+# GitHub Linguist tuning
+# Mark only generated outputs / lockfiles, not all source JS/CSS/SCSS
+# =========================================================
+/public/build/** linguist-generated=true
+/public/js/** linguist-generated=true
+/public/css/** linguist-generated=true
+
+package-lock.json linguist-generated=true
+yarn.lock linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+composer.lock linguist-generated=true
+
+# Vendor code can be marked as vendored if it ever exists in repo
+vendor/** linguist-vendored=true
+node_modules/** linguist-vendored=true
+
+# =========================================================
+# Export rules
+# =========================================================
 CHANGELOG.md export-ignore
+.github/ export-ignore
+.playwright-cli/ export-ignore
+tests/ export-ignore
