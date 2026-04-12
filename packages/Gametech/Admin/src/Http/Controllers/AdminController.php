@@ -82,6 +82,7 @@ class AdminController extends AppBaseController
     {
         $user = $this->user()->name.' '.$this->user()->surname;
         $data = $request->input('data');
+        unset($data['superadmin']);
 
 
         $validator = Validator::make($data, [
@@ -112,6 +113,7 @@ class AdminController extends AppBaseController
         $user = $this->user()->name.' '.$this->user()->surname;
         $id = $request->input('id');
         $data = $request->input('data');
+        unset($data['superadmin']);
 
         $validator = Validator::make($data, [
             'user_name' => 'required|string|unique:employees,user_name,'.$id.',code',
