@@ -3,6 +3,18 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-12 — Remove Legacy Admin Seamless Withdraw Routes from Runtime (APPROVED)
+
+- ปรับ `packages/Gametech/Admin/src/Http/routes.php` โดยลบ route กลุ่ม:
+  - `admin.withdraw_seamless.*`
+  - `admin.withdraw_seamless_free.*`
+- behavior ใหม่:
+  - endpoint legacy สำหรับ approve/clear/delete/update ผ่านเส้น `withdraw_seamless` จะไม่สามารถเรียกได้อีกใน admin runtime
+  - การทำงานถอนเงินฝั่ง admin ต้องใช้ route ชุด active เท่านั้น (`admin.withdraw.*`, `admin.withdraw_free.*`)
+- เหตุผล:
+  - ลด attack surface ของ route legacy ที่ไม่อยู่ใน ACL map ของ seamless config
+  - ป้องกัน authorization bypass จากการเรียก endpoint ตรงข้าม menu/ACL flow ปัจจุบัน
+
 ## 2026-04-11 — Lottery Relay Runtime Uses `primary|clone|disabled` Mode, Redis Streams Ready Signal, and Explicit Clone Fetch Jobs (APPROVED)
 
 - เพิ่ม relay runtime config กลาง `config/lottery_result_relay.php`
