@@ -1,6 +1,6 @@
 # System Current State
 
-อัปเดตล่าสุด: 2026-04-11
+อัปเดตล่าสุด: 2026-04-12
 
 ## ภาพรวมระบบ
 
@@ -155,6 +155,16 @@
   - `lotto_settings.group_packages.*` (`index/create/update/delete`)
   - `lotto_settings.payout_settings.*` (`index/update`)
   - `lotto_settings.bet_limit_settings.*` (`index/update`)
+
+## นโยบายเส้นทางถอนเงิน Seamless (Admin)
+
+- route กลุ่ม legacy ต่อไปนี้ถูกถอดออกจาก admin runtime แล้ว:
+  - `admin.withdraw_seamless.*`
+  - `admin.withdraw_seamless_free.*`
+- เหลือเฉพาะเส้นทางถอนที่ active ภายใต้ ACL ชุดปัจจุบัน:
+  - `admin.withdraw.*`
+  - `admin.withdraw_free.*`
+- เหตุผล: ลด legacy attack surface และปิดช่องโหว่จาก route ที่ไม่ได้ถูก map ใน `acl-seamless.php`
 
 ## นโยบายการเรียงข้อมูลแหล่งผลอัตโนมัติ (Admin UI)
 
