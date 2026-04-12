@@ -62,6 +62,12 @@ return [
         'sort' => 7,
     ],
     [
+        'key' => 'lotto_settings.draws.settle',
+        'name' => 'สิทธิ์ ยกเลิกโพยทั้งงวดและคืนเงิน',
+        'route' => 'admin.lotto.draws.cancel_all_refund',
+        'sort' => 8,
+    ],
+    [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
