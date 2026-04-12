@@ -1,19 +1,28 @@
 # Dependencies
-vendor/
-public/vendor/
+/vendor/
+/public/vendor/
+/node_modules/
 
 # Runtime / cache
-storage/
-bootstrap/cache/
+/storage/
+/bootstrap/cache/
 
 # Frontend build outputs
-public/js/
-public/css/
-public/mix-manifest.json
+/public/js/
+/public/css/
+/public/mix-manifest.json
 
-# VCS / IDE noise
-.git/
-.idea/
+# Logs / dump
+*.log
+*.sql
+*.zip
+*.tar
+*.gz
 
-# Node modules (if present)
-node_modules/
+# VCS / IDE
+/.git/
+/.idea/
+/.vscode/
+
+# Misc
+/public/storage/
