@@ -177,7 +177,6 @@ Homestead.json
 # If they are real source folders, remove them from here.
 # =========================================================
 bank/
-game/
 wallet_demo.zip
 
 # =========================================================
