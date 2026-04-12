@@ -28,6 +28,8 @@ class NewCommonFlowController extends AppBaseController
 
     protected $member;
 
+    protected $memberLookupStatus = 10001;
+
     protected $balances = 'balance';
 
     protected $game = 'ACE333';
@@ -67,13 +69,33 @@ class NewCommonFlowController extends AppBaseController
 
         $username = $request->input('username');
         $token = $request->input('token', $request->input('sessionToken'));
+        $token = is_scalar($token) ? trim((string) $token) : '';
+        $hasToken = $token !== '';
 
-        $query = MemberProxy::without('bank')->where('user_name', $username)->where('enable', 'Y');
-        if ($token) {
-            $query->where('session_id', $token);
+        $member = MemberProxy::without('bank')
+            ->where('user_name', $username)
+            ->where('enable', 'Y')
+            ->first();
+
+        if (! $member) {
+            $this->memberLookupStatus = 10001;
+            $this->member = null;
+
+            return;
         }
 
-        $this->member = $query->first();
+        if ($hasToken) {
+            $sessionId = is_scalar($member->session_id) ? trim((string) $member->session_id) : '';
+            if ($sessionId !== $token) {
+                $this->memberLookupStatus = 30001;
+                $this->member = null;
+
+                return;
+            }
+        }
+
+        $this->memberLookupStatus = 10001;
+        $this->member = $member;
     }
 
     public function getBalance(Request $request)
@@ -81,7 +103,7 @@ class NewCommonFlowController extends AppBaseController
         $session = $request->all();
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 30001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $param = $this->responseData(
@@ -124,6 +146,11 @@ class NewCommonFlowController extends AppBaseController
             'username' => $username,
             'timestampMillis' => $this->now->getTimestampMs(),
         ];
+    }
+
+    protected function memberLookupStatusCode(): int
+    {
+        return (int) $this->memberLookupStatus;
     }
 
     protected function createGameLog(array $data)
@@ -305,7 +332,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -445,7 +472,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -671,7 +698,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -823,7 +850,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -961,7 +988,7 @@ class NewCommonFlowController extends AppBaseController
         $isArray = false;
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1116,7 +1143,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1142,14 +1169,16 @@ class NewCommonFlowController extends AppBaseController
         $mainLog = $this->createGameLog($log);
 
         foreach ($session['txns'] as $txn) {
+            $status = strtoupper((string) ($txn['status'] ?? 'ROLLBACK'));
+
             if ($txn['transactionType'] === 'BY_ROUND') {
                 $isDup = GameLogProxy::where('company', $session['productId'])
                     ->where('response', 'in')
                     ->where('game_user', $this->member->user_name)
-                    ->where('method', $txn['status'])
+                    ->where('method', $status)
                     ->where('con_1', $txn['id'])
                     ->where('con_2', $txn['roundId'])
-                    ->where('con_3', $txn['status'])
+                    ->where('con_3', $status)
                     ->whereNull('con_4')
                     ->exists();
 
@@ -1197,7 +1226,7 @@ class NewCommonFlowController extends AppBaseController
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
                     'round_id' => $txn['roundId'] ?? null,
-                    'status' => $txn['status'] ?? null,
+                    'status' => $status,
                 ],
             ]);
 
@@ -1211,12 +1240,12 @@ class NewCommonFlowController extends AppBaseController
                 'output' => $param,
                 'company' => $session['productId'],
                 'game_user' => $this->member->user_name,
-                'method' => $txn['status'],
+                'method' => $status,
                 'response' => 'in',
                 'amount' => $rollbackAmount,
                 'con_1' => $txn['id'],
                 'con_2' => $txn['roundId'],
-                'con_3' => $txn['status'],
+                'con_3' => $status,
                 'con_4' => null,
                 'before_balance' => $oldBalance,
                 'after_balance' => $this->member->balance,
@@ -1224,7 +1253,7 @@ class NewCommonFlowController extends AppBaseController
                 'expireAt' => $this->expireAt,
             ])->id;
 
-            $log->con_4 = $txn['status'].'_'.$logId;
+            $log->con_4 = $status.'_'.$logId;
             $log->save();
 
             GameLogProxy::where('con_4', $log->method.'_'.$log->id)
@@ -1254,7 +1283,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1280,13 +1309,15 @@ class NewCommonFlowController extends AppBaseController
         $mainLog = $this->createGameLog($log);
 
         foreach ($session['txns'] as $txn) {
+            $status = strtoupper((string) ($txn['status'] ?? 'SETTLED'));
+
             $logDup = GameLogProxy::where('company', $session['productId'])
                 ->where('response', 'in')
                 ->where('game_user', $this->member->user_name)
-                ->where('method', $txn['status'])
+                ->where('method', $status)
                 ->where('con_1', $txn['id'])
                 ->where('con_2', $txn['roundId'])
-                ->where('con_3', $txn['status'])
+                ->where('con_3', $status)
                 ->whereNull('con_4')
                 ->exists();
 
@@ -1305,7 +1336,7 @@ class NewCommonFlowController extends AppBaseController
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
                     'round_id' => $txn['roundId'] ?? null,
-                    'status' => $txn['status'] ?? null,
+                    'status' => $status,
                 ],
             ]);
 
@@ -1319,12 +1350,12 @@ class NewCommonFlowController extends AppBaseController
                 'output' => $param,
                 'company' => $session['productId'],
                 'game_user' => $this->member->user_name,
-                'method' => $txn['status'],
+                'method' => $status,
                 'response' => 'in',
                 'amount' => $payout,
                 'con_1' => $txn['id'],
                 'con_2' => $txn['roundId'],
-                'con_3' => $txn['status'],
+                'con_3' => $status,
                 'con_4' => null,
                 'before_balance' => $oldBalance,
                 'after_balance' => $this->member->balance,
@@ -1353,7 +1384,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1518,7 +1549,7 @@ class NewCommonFlowController extends AppBaseController
         $param = [];
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1623,7 +1654,7 @@ class NewCommonFlowController extends AppBaseController
         $isArray = false;
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
@@ -1649,13 +1680,15 @@ class NewCommonFlowController extends AppBaseController
         $mainLog = $this->createGameLog($log);
 
         foreach ($session['txns'] as $txn) {
+            $status = strtoupper((string) ($txn['status'] ?? 'REFUND'));
+
             $exists = GameLogProxy::where('company', $session['productId'])
                 ->where('response', 'in')
                 ->where('game_user', $this->member->user_name)
-                ->where('method', $txn['status'])
+                ->where('method', $status)
                 ->where('con_1', $txn['id'])
                 ->where('con_2', $txn['roundId'])
-                ->where('con_3', $txn['status'])
+                ->where('con_3', $status)
                 ->whereNull('con_4')
                 ->exists();
 
@@ -1693,7 +1726,7 @@ class NewCommonFlowController extends AppBaseController
                 'meta' => [
                     'product_id' => $session['productId'] ?? null,
                     'round_id' => $txn['roundId'] ?? null,
-                    'status' => $txn['status'] ?? null,
+                    'status' => $status,
                 ],
             ]);
 
@@ -1707,12 +1740,12 @@ class NewCommonFlowController extends AppBaseController
                 'output' => $param,
                 'company' => $session['productId'],
                 'game_user' => $this->member->user_name,
-                'method' => $txn['status'],
+                'method' => $status,
                 'response' => 'in',
                 'amount' => $txn['betAmount'],
                 'con_1' => $txn['id'],
                 'con_2' => $txn['roundId'],
-                'con_3' => $txn['status'],
+                'con_3' => $status,
                 'con_4' => null,
                 'before_balance' => $oldBalance,
                 'after_balance' => $this->member->balance,
@@ -1743,7 +1776,7 @@ class NewCommonFlowController extends AppBaseController
         $session = $request->all();
 
         if (! $this->member) {
-            return $this->responseData($session['id'], $session['username'], $session['productId'], 10001);
+            return $this->responseData($session['id'], $session['username'], $session['productId'], $this->memberLookupStatusCode());
         }
 
         $oldBalance = $this->member->balance;
