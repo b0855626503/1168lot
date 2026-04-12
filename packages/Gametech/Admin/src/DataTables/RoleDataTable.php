@@ -14,9 +14,6 @@ use Yajra\DataTables\Services\DataTable;
 class RoleDataTable extends DataTable
 {
 
-    protected $fastExcel = true;
-    protected $fastExcelCallback = false;
-
     /**
      * Build DataTable class.
      *
