@@ -1000,6 +1000,7 @@
   - ต้องซ่อนปุ่ม `ยกเลิกโพย+คืนเงิน`
 - backend guard ของ endpoint `POST /lotto/draws/cancel-all-refund`:
   - อนุญาตเฉพาะ `resulted` ที่ `result_number.no_result=true` หรือ `result_number.status=no_result`
+  - ต้องมี permission `lotto_settings.draws.settle` เพื่อเรียก action ได้ (ป้องกัน low-privileged admin เรียก route ตรง)
 - เหตุผล:
   - ตรงตาม requirement ทีมงานว่า action นี้ต้องใช้เฉพาะเคสงวดงดออกผลเท่านั้น
   - ป้องกันการกดซ้ำจาก UI หลังคืนเงินครบทั้งงวดแล้ว

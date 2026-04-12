@@ -5,7 +5,9 @@ namespace Tests\Feature\Lotto;
 use Gametech\Lotto\Http\Controllers\Admin\LottoDrawController;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Transformers\LottoDrawTransformer;
+use Illuminate\Http\Request;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -65,5 +67,28 @@ class LottoDrawTransformerCancelAllRefundTest extends TestCase
         $method->setAccessible(true);
 
         $this->assertFalse($method->invoke($controller, $draw));
+    }
+
+    public function test_admin_cancel_all_refund_requires_settle_permission(): void
+    {
+        app()->instance('bouncer', new class
+        {
+            public function hasPermission(string $permission): bool
+            {
+                return false;
+            }
+        });
+
+        $controller = app(LottoDrawController::class);
+        $response = $controller->cancelAllRefund(
+            Request::create('/lotto/draws/cancel-all-refund', 'POST', ['id' => 1]),
+            $this->createMock(DrawCancelAllRefundService::class)
+        );
+
+        $payload = $response->getData(true);
+
+        $this->assertSame(403, $response->getStatusCode());
+        $this->assertFalse($payload['success']);
+        $this->assertSame('ไม่มีสิทธิ์ยกเลิกโพยทั้งงวดและคืนเงิน', $payload['message']);
     }
 }

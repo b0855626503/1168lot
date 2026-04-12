@@ -819,6 +819,7 @@
   - `POST /lotto/draws/cancel-all-refund`
 - เงื่อนไข:
   - ใช้ได้เฉพาะ draw สถานะ `resulted` ที่เป็น `งดออกผล` (`result_number.no_result=true` หรือ `result_number.status=no_result`)
+  - ผู้เรียกต้องมี permission `lotto_settings.draws.settle` (backend ตรวจซ้ำด้วย `bouncer()->hasPermission(...)` ก่อนทำรายการ)
 - behavior:
   - ยกเลิก ticket สถานะ `active` ทั้งหมดของงวด
   - คืนเงินตาม `total_net_amount` (fallback `total_amount`) ให้สมาชิกแต่ละโพย
