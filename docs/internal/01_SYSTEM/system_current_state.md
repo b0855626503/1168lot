@@ -147,7 +147,7 @@
 - ACL ของเมนูตั้งค่า Lotto รองรับ key แยก action ระดับ `index/create/update/delete` ตาม route ที่มีจริง (pattern เดียวกับโมดูลที่แยกสิทธิ์แบบ CRUD)
 - key เดิมระดับเมนู (เช่น `lotto_settings.markets`, `lotto_settings.number_blocks`) ยังคงอยู่เพื่อรักษา backward compatibility
 - กลุ่มที่มีการแยก action เพิ่มแล้ว:
-  - `lotto_settings.draws.*` (`index/create/update`)
+  - `lotto_settings.draws.*` (`index/create/update/open/force_open/close/settle/cancel_all_refund/mark_no_result/auto_result_test_fetch/auto_result_manual_retry/auto_result_metrics/auto_result_logs`)
   - `lotto_settings.auto_result_sources.*` (`index/create/update/delete`)
   - `lotto_settings.number_blocks.*` (`index/create/update/delete`)
   - `lotto_settings.groups.*` (`index/create/update`)
@@ -903,6 +903,7 @@
   - route ชุดนี้ใช้ middleware `lotto.internal_results`
   - relay runtime/ops policy:
     - `primary` ใช้ publish `lottery.ready` ผ่าน Redis Streams เมื่อ `result_fetch_status=APPLIED` และมี `result_hash`
+      - manual settle (`SettlementService::settleDraw`) และ manual no-result (`markNoResult` / `cancelAllRefund`) ถูก normalize ให้เขียน `APPLIED + result_hash` เช่นเดียวกับ auto path
     - publish ใช้ dedupe marker ต่อ `canonical type + business date + checksum`
     - latest marker ล่าสุดของแต่ละ type ถูกเก็บไว้ใต้ prefix `lotto:relay:latest:*`
     - Redis connection `lotto` ต้อง override prefix เฉพาะ connection เพื่อไม่ให้ `APP_NAME` ของแต่ละเว็บแยก stream/marker key ออกจากกัน

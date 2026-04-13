@@ -720,9 +720,9 @@
                         status_label: '',
                     },
                     settleModeDrawId: null,
-                    canUseManualSettle: @json((bool) bouncer()->hasPermission('lotto_draws.settle')),
-                    canUseAutoSettle: @json((bool) bouncer()->hasPermission('lotto_draws.auto_result_manual_retry')),
-                    canUseNoResultSettle: @json((bool) bouncer()->hasPermission('lotto_draws.settle')),
+                    canUseManualSettle: @json((bool) (bouncer()->hasPermission('lotto_settings.draws.settle') || bouncer()->hasPermission('lotto_draws.settle'))),
+                    canUseAutoSettle: @json((bool) (bouncer()->hasPermission('lotto_settings.draws.auto_result_manual_retry') || bouncer()->hasPermission('lotto_draws.auto_result_manual_retry'))),
+                    canUseNoResultSettle: @json((bool) ((bouncer()->hasPermission('lotto_settings.draws.mark_no_result') || bouncer()->hasPermission('lotto_settings.draws.settle')) || bouncer()->hasPermission('lotto_draws.settle'))),
                     blockedNumbersData: {
                         draw: {},
                         count: 0,

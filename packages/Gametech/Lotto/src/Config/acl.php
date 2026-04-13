@@ -40,25 +40,25 @@ return [
     [
         'key' => 'lotto_settings.draws.open',
         'name' => 'สิทธิ์ เปิดรับงวดหวย',
-        'route' => 'admin.lotto.draws.index',
+        'route' => 'admin.lotto.draws.open',
         'sort' => 4,
     ],
     [
         'key' => 'lotto_settings.draws.force_open',
         'name' => 'สิทธิ์ เปิดรับก่อนเวลา',
-        'route' => 'admin.lotto.draws.index',
+        'route' => 'admin.lotto.draws.open',
         'sort' => 5,
     ],
     [
         'key' => 'lotto_settings.draws.close',
         'name' => 'สิทธิ์ ปิดรับงวดหวย',
-        'route' => 'admin.lotto.draws.index',
+        'route' => 'admin.lotto.draws.close',
         'sort' => 6,
     ],
     [
         'key' => 'lotto_settings.draws.settle',
         'name' => 'สิทธิ์ ประกาศผลงวดหวย',
-        'route' => 'admin.lotto.draws.index',
+        'route' => 'admin.lotto.draws.settle',
         'sort' => 7,
     ],
     [
@@ -66,6 +66,36 @@ return [
         'name' => 'สิทธิ์ ยกเลิกโพยทั้งงวดและคืนเงิน',
         'route' => 'admin.lotto.draws.cancel_all_refund',
         'sort' => 8,
+    ],
+    [
+        'key' => 'lotto_settings.draws.mark_no_result',
+        'name' => 'สิทธิ์ ระบุงดออกผลงวดหวย',
+        'route' => 'admin.lotto.draws.mark_no_result',
+        'sort' => 9,
+    ],
+    [
+        'key' => 'lotto_settings.draws.auto_result_test_fetch',
+        'name' => 'สิทธิ์ ทดสอบดึงผลอัตโนมัติ',
+        'route' => 'admin.lotto.draws.auto_result_test_fetch',
+        'sort' => 10,
+    ],
+    [
+        'key' => 'lotto_settings.draws.auto_result_manual_retry',
+        'name' => 'สิทธิ์ ลองดึงผลอัตโนมัติใหม่',
+        'route' => 'admin.lotto.draws.auto_result_manual_retry',
+        'sort' => 11,
+    ],
+    [
+        'key' => 'lotto_settings.draws.auto_result_metrics',
+        'name' => 'สิทธิ์ ดูสถิติผลอัตโนมัติ',
+        'route' => 'admin.lotto.draws.auto_result_metrics',
+        'sort' => 12,
+    ],
+    [
+        'key' => 'lotto_settings.draws.auto_result_logs',
+        'name' => 'สิทธิ์ ดูบันทึกผลอัตโนมัติ',
+        'route' => 'admin.lotto.draws.auto_result_logs',
+        'sort' => 13,
     ],
     [
         'key' => 'lotto_settings.switches',

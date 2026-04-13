@@ -1,8 +1,10 @@
 @php
-    $canEdit = bouncer()->hasPermission('lotto_draws.edit');
-    $canSettle = bouncer()->hasPermission('lotto_draws.settle');
-    $canRetry = bouncer()->hasPermission('lotto_draws.auto_result_manual_retry');
-    $canCancelAllRefund = bouncer()->hasPermission('lotto_draws.settle') || bouncer()->hasPermission('lotto_settings.draws.settle');
+    $canEdit = bouncer()->hasPermission('lotto_settings.draws.update') || bouncer()->hasPermission('lotto_draws.edit');
+    $canSettle = bouncer()->hasPermission('lotto_settings.draws.settle') || bouncer()->hasPermission('lotto_draws.settle');
+    $canRetry = bouncer()->hasPermission('lotto_settings.draws.auto_result_manual_retry') || bouncer()->hasPermission('lotto_draws.auto_result_manual_retry');
+    $canCancelAllRefund = bouncer()->hasPermission('lotto_settings.draws.cancel_all_refund')
+        || bouncer()->hasPermission('lotto_settings.draws.settle')
+        || bouncer()->hasPermission('lotto_draws.settle');
 @endphp
 
 <div class="d-flex flex-wrap justify-content-center">

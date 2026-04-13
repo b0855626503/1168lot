@@ -2,21 +2,22 @@
 
 namespace Gametech\Lotto\Http\Controllers\Admin;
 
+use Carbon\CarbonInterface;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoDrawDataTable;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LotteryGroup;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoTicket;
-use Gametech\Lotto\Models\LotteryGroup;
-use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
-use Carbon\CarbonInterface;
+use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -89,7 +90,7 @@ class LottoDrawController extends AppBaseController
     {
         $drawService->syncScheduledStatuses();
 
-        $id   = $request->input('id');
+        $id = $request->input('id');
         $data = LottoDraw::query()->with('market')->find((int) $id);
 
         if (! $data) {
@@ -195,7 +196,7 @@ class LottoDrawController extends AppBaseController
                     'member_id' => (int) $row->member_id,
                     'member_username' => (string) ($row->member->user_name ?? ''),
                     'member_name' => (string) ($row->member->name ?? ''),
-                    'member_display' => (string) ($row->member->user_name ?? $row->member->name ?? ('MEM-' . $row->member_id)),
+                    'member_display' => (string) ($row->member->user_name ?? $row->member->name ?? ('MEM-'.$row->member_id)),
                     'bet_types' => (string) ($betTypes !== '' ? $betTypes : '-'),
                     'bet_numbers' => (string) ($betNumbers !== '' ? $betNumbers : '-'),
                     'total_amount' => (float) ($row->total_bet_amount ?? $row->total_amount ?? 0),
@@ -211,12 +212,12 @@ class LottoDrawController extends AppBaseController
         $data = (array) $request->input('data', []);
 
         $validated = validator($data, [
-            'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
-            'draw_date'   => ['required', 'date_format:Y-m-d'],
-            'open_at'     => ['required', 'date_format:Y-m-d H:i'],
-            'close_at'    => ['required', 'date_format:Y-m-d H:i'],
-            'status'      => ['nullable', Rule::in(DrawStatusFlow::allowedStatuses())],
-            'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
+            'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+            'draw_date' => ['required', 'date_format:Y-m-d'],
+            'open_at' => ['required', 'date_format:Y-m-d H:i'],
+            'close_at' => ['required', 'date_format:Y-m-d H:i'],
+            'status' => ['nullable', Rule::in(DrawStatusFlow::allowedStatuses())],
+            'result_at' => ['nullable', 'date_format:Y-m-d H:i'],
         ])->validate();
 
         try {
@@ -231,12 +232,12 @@ class LottoDrawController extends AppBaseController
             );
 
             $draw = $drawService->createDraft([
-                'market_id'   => $validated['market_id'],
-                'draw_date'   => $validated['draw_date'],
-                'open_at'     => $normalizedOpenAt,
-                'close_at'    => $normalizedCloseAt,
-                'result_at'   => $normalizedResultAt,
-                'created_by'  => auth()->id(),
+                'market_id' => $validated['market_id'],
+                'draw_date' => $validated['draw_date'],
+                'open_at' => $normalizedOpenAt,
+                'close_at' => $normalizedCloseAt,
+                'result_at' => $normalizedResultAt,
+                'created_by' => auth()->id(),
             ]);
 
             $this->applyStatusTransition($drawService, $draw, 'draft', $targetStatus);
@@ -245,13 +246,13 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Exception $e) {
-            return $this->sendError('เพิ่มงวดหวยไม่สำเร็จ: ' . $e->getMessage());
+            return $this->sendError('เพิ่มงวดหวยไม่สำเร็จ: '.$e->getMessage());
         }
     }
 
     public function edit(Request $request): JsonResponse
     {
-        $id   = $request->input('id');
+        $id = $request->input('id');
         $data = LottoDraw::query()->find((int) $id);
 
         if (! $data) {
@@ -263,7 +264,7 @@ class LottoDrawController extends AppBaseController
 
     public function update(Request $request): JsonResponse
     {
-        $id   = $request->input('id');
+        $id = $request->input('id');
         $data = (array) $request->input('data', []);
 
         $draw = LottoDraw::query()->find((int) $id);
@@ -291,7 +292,7 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Exception $e) {
-            return $this->sendError('อัปเดตงวดหวยไม่สำเร็จ: ' . $e->getMessage());
+            return $this->sendError('อัปเดตงวดหวยไม่สำเร็จ: '.$e->getMessage());
         }
     }
 
@@ -311,7 +312,7 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('เปิดรับงวดไม่สำเร็จ: ' . $e->getMessage());
+            return $this->sendError('เปิดรับงวดไม่สำเร็จ: '.$e->getMessage());
         }
     }
 
@@ -331,7 +332,7 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('ปิดรับงวดไม่สำเร็จ: ' . $e->getMessage());
+            return $this->sendError('ปิดรับงวดไม่สำเร็จ: '.$e->getMessage());
         }
     }
 
@@ -368,7 +369,7 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('ประกาศผลไม่สำเร็จ: ' . $e->getMessage());
+            return $this->sendError('ประกาศผลไม่สำเร็จ: '.$e->getMessage());
         }
     }
 
@@ -421,7 +422,7 @@ class LottoDrawController extends AppBaseController
                         reason: $reason,
                         createdByType: 'system',
                         createdById: null,
-                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_' . (int) $lockedDraw->id . '_' . now()->format('YmdHis')
+                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_'.(int) $lockedDraw->id.'_'.now()->format('YmdHis')
                     );
                     $resultNumber['manual_cancelled_all_tickets'] = true;
                 }
@@ -432,6 +433,7 @@ class LottoDrawController extends AppBaseController
                     'result_number' => $resultNumber,
                     'result_fetch_status' => 'APPLIED',
                     'result_fetch_error' => null,
+                    'result_hash' => ResultHash::fromPayload($resultNumber),
                     'result_applied_at' => now(),
                     'result_fetched_at' => now(),
                 ])->save();
@@ -448,13 +450,18 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('ระบุงดออกผลไม่สำเร็จ: ' . $e->getMessage(), 500);
+            return $this->sendError('ระบุงดออกผลไม่สำเร็จ: '.$e->getMessage(), 500);
         }
     }
 
     public function cancelAllRefund(Request $request, DrawCancelAllRefundService $drawCancelAllRefundService): JsonResponse
     {
-        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_settings.draws.settle')) {
+        $canCancelAllRefund = ! function_exists('bouncer')
+            || bouncer()->hasPermission('lotto_settings.draws.cancel_all_refund')
+            || bouncer()->hasPermission('lotto_settings.draws.settle')
+            || bouncer()->hasPermission('lotto_draws.settle');
+
+        if (! $canCancelAllRefund) {
             return $this->sendError('ไม่มีสิทธิ์ยกเลิกโพยทั้งงวดและคืนเงิน', 403);
         }
 
@@ -469,7 +476,7 @@ class LottoDrawController extends AppBaseController
         }
 
         $adminId = auth('admin')->id();
-        $groupCode = 'LOTTO_DRAW_CANCEL_' . $drawId . '_' . now()->format('YmdHis');
+        $groupCode = 'LOTTO_DRAW_CANCEL_'.$drawId.'_'.now()->format('YmdHis');
 
         try {
             $summary = DB::transaction(function () use ($drawId, $drawCancelAllRefundService, $groupCode, $adminId): array {
@@ -489,18 +496,21 @@ class LottoDrawController extends AppBaseController
                     groupCode: $groupCode
                 );
 
+                $resultNumber = [
+                    'no_result' => true,
+                    'status' => 'no_result',
+                    'label' => $reason,
+                    'no_result_reason' => $reason,
+                    'manual_cancelled_all_tickets' => true,
+                ];
+
                 $lockedDraw->forceFill([
                     'status' => 'resulted',
                     'result_at' => now(),
-                    'result_number' => [
-                        'no_result' => true,
-                        'status' => 'no_result',
-                        'label' => $reason,
-                        'no_result_reason' => $reason,
-                        'manual_cancelled_all_tickets' => true,
-                    ],
+                    'result_number' => $resultNumber,
                     'result_fetch_status' => 'APPLIED',
                     'result_fetch_error' => null,
+                    'result_hash' => ResultHash::fromPayload($resultNumber),
                     'result_applied_at' => now(),
                     'result_fetched_at' => now(),
                 ])->save();
@@ -516,7 +526,7 @@ class LottoDrawController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('ยกเลิกโพยทั้งงวดไม่สำเร็จ: ' . $e->getMessage(), 500);
+            return $this->sendError('ยกเลิกโพยทั้งงวดไม่สำเร็จ: '.$e->getMessage(), 500);
         }
     }
 
@@ -598,7 +608,7 @@ class LottoDrawController extends AppBaseController
         $output = trim((string) Artisan::output());
 
         if ($exitCode !== 0) {
-            return $this->sendError('Dry-run Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+            return $this->sendError('Dry-run Auto Result ไม่สำเร็จ: '.($output !== '' ? $output : 'command failed'), 500);
         }
 
         return $this->sendResponse([
@@ -634,7 +644,7 @@ class LottoDrawController extends AppBaseController
         $output = trim((string) Artisan::output());
 
         if ($exitCode !== 0) {
-            return $this->sendError('Retry Auto Result ไม่สำเร็จ: ' . ($output !== '' ? $output : 'command failed'), 500);
+            return $this->sendError('Retry Auto Result ไม่สำเร็จ: '.($output !== '' ? $output : 'command failed'), 500);
         }
 
         return $this->sendResponse([
@@ -742,11 +752,11 @@ class LottoDrawController extends AppBaseController
 
         if ($status === 'draft') {
             return [
-                'market_id'   => ['required', 'integer', 'exists:lotto_markets,id'],
-                'draw_date'   => ['required', 'date_format:Y-m-d'],
-                'open_at'     => ['required', 'date_format:Y-m-d H:i'],
-                'close_at'    => ['required', 'date_format:Y-m-d H:i'],
-                'result_at'   => ['nullable', 'date_format:Y-m-d H:i'],
+                'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
+                'draw_date' => ['required', 'date_format:Y-m-d'],
+                'open_at' => ['required', 'date_format:Y-m-d H:i'],
+                'close_at' => ['required', 'date_format:Y-m-d H:i'],
+                'result_at' => ['nullable', 'date_format:Y-m-d H:i'],
             ];
         }
 
@@ -854,15 +864,15 @@ class LottoDrawController extends AppBaseController
     }
 
     /**
-     * @param array<string, mixed> $payload
-     * @param array<int, string> $allowedKeys
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $allowedKeys
      */
     private function assertNoUnexpectedFields(array $payload, array $allowedKeys): void
     {
         $unexpected = array_diff(array_keys($payload), $allowedKeys);
         if ($unexpected !== []) {
             throw new InvalidArgumentException(
-                'พบฟิลด์ที่ไม่อนุญาตให้แก้ไข: ' . implode(', ', $unexpected)
+                'พบฟิลด์ที่ไม่อนุญาตให้แก้ไข: '.implode(', ', $unexpected)
             );
         }
     }
@@ -921,7 +931,7 @@ class LottoDrawController extends AppBaseController
     }
 
     /**
-     * @param CarbonInterface|string|null $openAt
+     * @param  CarbonInterface|string|null  $openAt
      */
     private function normalizeCloseAtWithExistingOpenAt(string $closeAtInput, $openAt): string
     {
@@ -996,5 +1006,4 @@ class LottoDrawController extends AppBaseController
 
         return (bool) ($market->auto_refund_on_no_result ?? false);
     }
-
 }

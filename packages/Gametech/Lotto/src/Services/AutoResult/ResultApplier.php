@@ -2,10 +2,11 @@
 
 namespace Gametech\Lotto\Services\AutoResult;
 
-use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\SettlementService;
+use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -14,17 +15,16 @@ class ResultApplier
     public function __construct(
         private SettlementService $settlementService,
         private DrawCancelAllRefundService $drawCancelAllRefundService
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string,mixed> $validated
-     * @param array<string,mixed> $rawPayload
+     * @param  array<string,mixed>  $validated
+     * @param  array<string,mixed>  $rawPayload
      * @return array<string,mixed>
      */
     public function apply(LottoDraw $draw, array $validated, array $rawPayload, bool $dryRun = false): array
     {
-        $resultHash = $this->computeHash($validated);
+        $resultHash = ResultHash::fromPayload($validated);
 
         if ($dryRun) {
             return [
@@ -80,7 +80,7 @@ class ResultApplier
                         reason: $reason,
                         createdByType: 'system',
                         createdById: null,
-                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_' . (int) $locked->id . '_' . now()->format('YmdHis')
+                        groupCode: 'LOTTO_DRAW_CANCEL_AUTO_'.(int) $locked->id.'_'.now()->format('YmdHis')
                     );
                     $resultNumber['manual_cancelled_all_tickets'] = true;
                 }
@@ -148,16 +148,6 @@ class ResultApplier
         });
     }
 
-    /**
-     * @param array<string,mixed> $payload
-     */
-    private function computeHash(array $payload): string
-    {
-        ksort($payload);
-
-        return hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-    }
-
     private function shouldAutoSettleOnResult(LottoDraw $draw): bool
     {
         $market = LotteryMarket::query()
@@ -185,7 +175,7 @@ class ResultApplier
     }
 
     /**
-     * @param array<string,mixed> $validated
+     * @param  array<string,mixed>  $validated
      */
     private function isNoResultPayload(array $validated): bool
     {

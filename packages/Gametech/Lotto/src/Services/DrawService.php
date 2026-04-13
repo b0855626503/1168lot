@@ -81,7 +81,7 @@ class DrawService
     }
 
     /**
-     * @param array{source:string,actor_id?:int,actor_type?:string,reason?:string} $context
+     * @param  array{source:string,actor_id?:int,actor_type?:string,reason?:string}  $context
      */
     public function openDraw(LottoDraw $draw, array $context): LottoDraw
     {
@@ -118,7 +118,7 @@ class DrawService
     }
 
     /**
-     * @param array{source:string,actor_id?:int,actor_type?:string,reason?:string} $context
+     * @param  array{source:string,actor_id?:int,actor_type?:string,reason?:string}  $context
      */
     public function closeDraw(LottoDraw $draw, array $context): LottoDraw
     {
@@ -188,7 +188,7 @@ class DrawService
     }
 
     /**
-     * @param array{source?:string} $context
+     * @param  array{source?:string}  $context
      */
     private function resolveSource(array $context): string
     {
@@ -206,7 +206,10 @@ class DrawService
             throw new InvalidArgumentException('ไม่สามารถตรวจสอบสิทธิ์ force open ได้');
         }
 
-        if (! bouncer()->hasPermission('lotto_draws.force_open')) {
+        $hasPermission = bouncer()->hasPermission('lotto_settings.draws.force_open')
+            || bouncer()->hasPermission('lotto_draws.force_open');
+
+        if (! $hasPermission) {
             throw new InvalidArgumentException('ไม่มีสิทธิ์เปิดรับก่อนเวลาที่กำหนด');
         }
     }

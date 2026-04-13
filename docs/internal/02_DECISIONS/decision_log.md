@@ -3,6 +3,37 @@
 อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
 อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 
+## 2026-04-13 — Lotto Draw ACL Must Map Action Permissions to Action Routes and Keep Legacy Key Fallback in UI/Service Guards (APPROVED)
+
+- ปรับ `packages/Gametech/Lotto/src/Config/acl.php` ให้ key action ของ draw ชี้ route action ตรงตัว:
+  - `lotto_settings.draws.open` -> `admin.lotto.draws.open`
+  - `lotto_settings.draws.close` -> `admin.lotto.draws.close`
+  - `lotto_settings.draws.settle` -> `admin.lotto.draws.settle`
+- เพิ่ม ACL key สำหรับ draw routes ที่มีอยู่จริงแต่ยังไม่ถูกประกาศใน ACL:
+  - `lotto_settings.draws.mark_no_result`
+  - `lotto_settings.draws.auto_result_test_fetch`
+  - `lotto_settings.draws.auto_result_manual_retry`
+  - `lotto_settings.draws.auto_result_metrics`
+  - `lotto_settings.draws.auto_result_logs`
+- ปรับจุดเช็กสิทธิ์ฝั่ง UI/service/controller ให้รองรับ key ใหม่ พร้อม fallback key legacy (`lotto_draws.*`) เพื่อไม่ทำให้ role เดิมพังทันทีระหว่าง rollout
+- เหตุผล:
+  - ลด ACL-route mismatch ที่ทำให้สิทธิ์ action บางตัวผูกกับ `draws.index` แทน endpoint จริง
+  - ทำให้ route protection และ permission intent ตรงกันตาม action
+
+## 2026-04-13 — Manual Lotto Result / No-Result Must Produce Relay-Ready Fields (`APPLIED + result_hash`) (APPROVED)
+
+- ปรับ flow manual ฝั่ง admin ให้สอดคล้องกับ relay publisher contract
+- behavior ใหม่:
+  - manual ประกาศผล (`SettlementService::settleDraw`) จะเขียน:
+    - `result_fetch_status=APPLIED`
+    - `result_hash` จาก normalized result payload
+    - `result_applied_at`, `result_fetched_at`
+  - manual `mark no-result` และ `cancel all refund` จะเขียน `result_hash` ด้วย (นอกเหนือจาก `result_fetch_status=APPLIED` ที่มีอยู่เดิม)
+  - observer เดิม (`LottoDrawAutoResultObserver`) จะ trigger relay publish ได้เหมือน auto path เมื่อ runtime เป็น `primary`
+- เหตุผล:
+  - เดิม manual settle/no-result บาง path ไม่ครบเงื่อนไข relay publisher (`APPLIED + result_hash`) ทำให้ไม่ปล่อย `lottery.ready`
+  - ทำให้ clone/site downstream พึ่งพา event จาก primary ได้ครบทุกโหมดการออกผล
+
 ## 2026-04-12 — Remove Legacy Admin Seamless Withdraw Routes from Runtime (APPROVED)
 
 - ปรับ `packages/Gametech/Admin/src/Http/routes.php` โดยลบ route กลุ่ม:

@@ -1,6 +1,10 @@
 @php
-    $canAutoResultTestFetch = function_exists('bouncer') ? bouncer()->hasPermission('lotto_draws.auto_result_test_fetch') : false;
-    $canAutoResultLogs = function_exists('bouncer') ? bouncer()->hasPermission('lotto_draws.auto_result_metrics') : false;
+    $canAutoResultTestFetch = function_exists('bouncer')
+        ? (bouncer()->hasPermission('lotto_settings.draws.auto_result_test_fetch') || bouncer()->hasPermission('lotto_draws.auto_result_test_fetch'))
+        : false;
+    $canAutoResultLogs = function_exists('bouncer')
+        ? (bouncer()->hasPermission('lotto_settings.draws.auto_result_metrics') || bouncer()->hasPermission('lotto_draws.auto_result_metrics'))
+        : false;
 @endphp
 
 <b-modal ref="addeditSource" id="addeditSource" centered size="lg" title="ตั้งค่า Auto Result Source" :hide-footer="true" @shown="onModalShown" @hidden="onModalHidden">

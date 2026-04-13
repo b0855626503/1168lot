@@ -10,12 +10,12 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Models\LottoResultSourceRevision;
+use Gametech\Lotto\Services\AutoResultHardeningService;
+use Gametech\Lotto\Services\AutoResultV2\Browser\BrowserFetchDispatchService;
 use Gametech\Lotto\Services\AutoResultV2\Config\SourcePipelineConfigCompiler;
 use Gametech\Lotto\Services\AutoResultV2\ConfigData\CompiledSourcePipelineData;
-use Gametech\Lotto\Services\AutoResultV2\Browser\BrowserFetchDispatchService;
 use Gametech\Lotto\Services\AutoResultV2\Executors\FetchExecutor;
 use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
-use Gametech\Lotto\Services\AutoResultHardeningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -269,7 +269,7 @@ class LottoResultSourceController extends AppBaseController
 
             $source = ! empty($validated['id'])
                 ? LottoResultSource::query()->findOrFail((int) $validated['id'])
-                : new LottoResultSource();
+                : new LottoResultSource;
 
             if (! empty($validated['id']) && (int) $source->market_id !== (int) $validated['market_id']) {
                 throw new InvalidArgumentException('โหมดแก้ไขไม่อนุญาตให้เปลี่ยนตลาดของ source');
@@ -309,7 +309,7 @@ class LottoResultSourceController extends AppBaseController
                 'cutover_enabled' => true,
             ]);
 
-            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPipelinePayload($source));
+            $compiled = (new SourcePipelineConfigCompiler)->compile($this->buildPipelinePayload($source));
 
             if ($source->cutover_enabled && $this->shouldEnforceFixtureGate() && ! $this->shouldBypassFixtureGate($source) && ! $this->hasFixtureSet($source)) {
                 throw new InvalidArgumentException('เปิด cutover ไม่ได้: ยังไม่พบ fixture test สำหรับ source นี้ (required only in local/testing)');
@@ -322,7 +322,7 @@ class LottoResultSourceController extends AppBaseController
         } catch (InvalidArgumentException $e) {
             return $this->sendError($e->getMessage(), 422);
         } catch (\Throwable $e) {
-            return $this->sendError('บันทึก source ไม่สำเร็จ: ' . $e->getMessage(), 422);
+            return $this->sendError('บันทึก source ไม่สำเร็จ: '.$e->getMessage(), 422);
         }
     }
 
@@ -340,13 +340,13 @@ class LottoResultSourceController extends AppBaseController
     {
         try {
             $payload = (array) $request->input('data', []);
-            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
+            $compiled = (new SourcePipelineConfigCompiler)->compile($this->buildPreviewPayload($payload));
 
             return $this->sendResponse([
                 'compiled' => $compiled->toArray(),
             ], 'Preview config สำเร็จ');
         } catch (\Throwable $e) {
-            return $this->sendError('Preview config ไม่สำเร็จ: ' . $e->getMessage(), 422);
+            return $this->sendError('Preview config ไม่สำเร็จ: '.$e->getMessage(), 422);
         }
     }
 
@@ -354,11 +354,11 @@ class LottoResultSourceController extends AppBaseController
     {
         try {
             $payload = (array) $request->input('data', []);
-            (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
+            (new SourcePipelineConfigCompiler)->compile($this->buildPreviewPayload($payload));
 
             return $this->sendSuccess('Validate config สำเร็จ');
         } catch (\Throwable $e) {
-            return $this->sendError('Validate config ไม่สำเร็จ: ' . $e->getMessage(), 422);
+            return $this->sendError('Validate config ไม่สำเร็จ: '.$e->getMessage(), 422);
         }
     }
 
@@ -366,7 +366,7 @@ class LottoResultSourceController extends AppBaseController
     {
         try {
             $payload = (array) $request->input('data', []);
-            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
+            $compiled = (new SourcePipelineConfigCompiler)->compile($this->buildPreviewPayload($payload));
             $sourceId = (int) ($request->input('id') ?: 0);
 
             if ($sourceId > 0) {
@@ -385,8 +385,8 @@ class LottoResultSourceController extends AppBaseController
                 $expectedDrawDate = trim((string) ($payload['expected_draw_date'] ?? optional($draw->draw_date)->format('Y-m-d')));
                 $lookupDate = $this->resolveLookupDateForSource($draw, $source);
 
-                $runResult = (new LottoResultPipelineRunner())->run($draw, $source, [
-                    'run_id' => 'cutover_validate_' . now()->format('YmdHisv'),
+                $runResult = (new LottoResultPipelineRunner)->run($draw, $source, [
+                    'run_id' => 'cutover_validate_'.now()->format('YmdHisv'),
                     'expected_draw_date' => $expectedDrawDate !== '' ? $expectedDrawDate : null,
                     'lookup_date' => $lookupDate,
                 ]);
@@ -394,13 +394,13 @@ class LottoResultSourceController extends AppBaseController
                 if ($this->stringValue($runResult['status'] ?? '') !== 'VALID') {
                     $errorCode = $this->stringValue($runResult['error_code'] ?? 'VALIDATION_ERROR');
                     $errorStage = $this->stringValue($runResult['error_stage'] ?? 'READINESS');
-                    throw new InvalidArgumentException('live validate ไม่ผ่าน: ' . $errorCode . ' @ ' . $errorStage);
+                    throw new InvalidArgumentException('live validate ไม่ผ่าน: '.$errorCode.' @ '.$errorStage);
                 }
             }
 
             return $this->sendSuccess('Validate cutover สำเร็จ');
         } catch (\Throwable $e) {
-            return $this->sendError('Validate cutover ไม่สำเร็จ: ' . $e->getMessage(), 422);
+            return $this->sendError('Validate cutover ไม่สำเร็จ: '.$e->getMessage(), 422);
         }
     }
 
@@ -459,7 +459,11 @@ class LottoResultSourceController extends AppBaseController
 
     public function testFetchByDate(Request $request): JsonResponse
     {
-        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_draws.auto_result_test_fetch')) {
+        $canTestFetch = ! function_exists('bouncer')
+            || bouncer()->hasPermission('lotto_settings.draws.auto_result_test_fetch')
+            || bouncer()->hasPermission('lotto_draws.auto_result_test_fetch');
+
+        if (! $canTestFetch) {
             return $this->sendError('ไม่มีสิทธิ์ทดสอบ Dry-run Auto Result', 403);
         }
 
@@ -486,7 +490,7 @@ class LottoResultSourceController extends AppBaseController
 
         $runId = sprintf('source_test_%s_%d', now()->format('YmdHisv'), (int) ($source->id ?: 0));
         $lookupDate = $this->resolveLookupDateForSource($draw, $source);
-        $result = (new LottoResultPipelineRunner())->run($draw, $source, [
+        $result = (new LottoResultPipelineRunner)->run($draw, $source, [
             'run_id' => $runId,
             'expected_draw_date' => (string) $validated['draw_date'],
             'lookup_date' => $lookupDate,
@@ -550,26 +554,26 @@ class LottoResultSourceController extends AppBaseController
 
         $lines = [
             'mode: dry-run (pipeline v2)',
-            'source_id: ' . (int) ($source->id ?? 0),
-            'draw_context: ' . ($usingVirtualDraw ? 'virtual (ไม่ผูกงวดจริง)' : ('draw_id=' . (int) ($draw->id ?? 0))),
-            'expected_draw_date: ' . (string) $validated['draw_date'],
-            'lookup_date: ' . $lookupDate,
-            'status: ' . $status,
+            'source_id: '.(int) ($source->id ?? 0),
+            'draw_context: '.($usingVirtualDraw ? 'virtual (ไม่ผูกงวดจริง)' : ('draw_id='.(int) ($draw->id ?? 0))),
+            'expected_draw_date: '.(string) $validated['draw_date'],
+            'lookup_date: '.$lookupDate,
+            'status: '.$status,
         ];
         if ($errorCode !== '') {
-            $lines[] = 'error_code: ' . $errorCode;
+            $lines[] = 'error_code: '.$errorCode;
         }
         if ($errorMessage !== '') {
-            $lines[] = 'error_message: ' . $errorMessage;
+            $lines[] = 'error_message: '.$errorMessage;
         }
         if ($receiptKey !== '') {
-            $lines[] = 'receipt_key: ' . $receiptKey;
+            $lines[] = 'receipt_key: '.$receiptKey;
         }
         if ($selectedDriver !== '') {
-            $lines[] = 'selected_driver: ' . $selectedDriver;
+            $lines[] = 'selected_driver: '.$selectedDriver;
         }
         if (is_array($normalized) && $normalized !== []) {
-            $lines[] = 'normalized: ' . json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $lines[] = 'normalized: '.json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
         return $this->sendResponse([
@@ -593,7 +597,11 @@ class LottoResultSourceController extends AppBaseController
 
     public function testFetchLogsByDate(Request $request): JsonResponse
     {
-        if (function_exists('bouncer') && ! bouncer()->hasPermission('lotto_draws.auto_result_metrics')) {
+        $canViewMetrics = ! function_exists('bouncer')
+            || bouncer()->hasPermission('lotto_settings.draws.auto_result_metrics')
+            || bouncer()->hasPermission('lotto_draws.auto_result_metrics');
+
+        if (! $canViewMetrics) {
             return $this->sendError('ไม่มีสิทธิ์ดู Logs Auto Result', 403);
         }
 
@@ -679,7 +687,7 @@ class LottoResultSourceController extends AppBaseController
 
         try {
             $payload = (array) $validated['data'];
-            $compiled = (new SourcePipelineConfigCompiler())->compile($this->buildPreviewPayload($payload));
+            $compiled = (new SourcePipelineConfigCompiler)->compile($this->buildPreviewPayload($payload));
             $source = $this->buildSourceForLiveValidation($payload, (int) ($payload['id'] ?? 0));
             $draw = LottoDraw::query()
                 ->where('market_id', (int) $validated['market_id'])
@@ -690,8 +698,8 @@ class LottoResultSourceController extends AppBaseController
             if (! $draw instanceof LottoDraw) {
                 $draw = $this->buildVirtualDrawForDate((int) $validated['market_id'], (string) $validated['draw_date']);
             }
-            $fetch = (new FetchExecutor())->execute($compiled->fetch(), [
-                'run_id' => 'browser_test_' . now()->format('YmdHisv'),
+            $fetch = (new FetchExecutor)->execute($compiled->fetch(), [
+                'run_id' => 'browser_test_'.now()->format('YmdHisv'),
                 'draw_id' => (int) $draw->id,
                 'source_id' => (int) ($source->id ?? 0),
                 'strategy' => $compiled->fetch()->strategy(),
@@ -717,7 +725,7 @@ class LottoResultSourceController extends AppBaseController
                 'artifact_refs' => $fetch['meta']['artifact_refs'] ?? null,
             ], 'ส่ง Browser test ไปที่ worker แล้ว');
         } catch (\Throwable $e) {
-            return $this->sendError('Browser test dispatch ไม่สำเร็จ: ' . $e->getMessage(), 422);
+            return $this->sendError('Browser test dispatch ไม่สำเร็จ: '.$e->getMessage(), 422);
         }
     }
 
@@ -728,7 +736,7 @@ class LottoResultSourceController extends AppBaseController
         ])->validate();
 
         $receipt = trim((string) $validated['receipt_key']);
-        $cached = (new BrowserFetchDispatchService())->getCachedPayload($receipt);
+        $cached = (new BrowserFetchDispatchService)->getCachedPayload($receipt);
 
         if (! is_array($cached)) {
             return $this->sendResponse([
@@ -765,7 +773,7 @@ class LottoResultSourceController extends AppBaseController
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      * @return array<string,mixed>|array<int,mixed>|null
      */
     private function parseJsonInput($value, string $field)
@@ -779,23 +787,23 @@ class LottoResultSourceController extends AppBaseController
         }
 
         if (! is_string($value)) {
-            throw new InvalidArgumentException($field . ' ต้องเป็น JSON object/array หรือค่าว่าง');
+            throw new InvalidArgumentException($field.' ต้องเป็น JSON object/array หรือค่าว่าง');
         }
 
         $decoded = json_decode($value, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException($field . ' JSON ไม่ถูกต้อง: ' . json_last_error_msg());
+            throw new InvalidArgumentException($field.' JSON ไม่ถูกต้อง: '.json_last_error_msg());
         }
 
         if (! is_array($decoded)) {
-            throw new InvalidArgumentException($field . ' ต้องเป็น JSON object/array');
+            throw new InvalidArgumentException($field.' ต้องเป็น JSON object/array');
         }
 
         return $decoded;
     }
 
     /**
-     * @param array<string,mixed> $payload
+     * @param  array<string,mixed>  $payload
      * @return array<string,mixed>
      */
     private function buildPreviewPayload(array $payload): array
@@ -853,10 +861,10 @@ class LottoResultSourceController extends AppBaseController
 
     private function hasFixtureSet(LottoResultSource $source): bool
     {
-        $fixtureKey = 'source_' . (int) $source->id;
-        $fixturePath = base_path('tests/Fixtures/Lotto/V2/' . $fixtureKey);
+        $fixtureKey = 'source_'.(int) $source->id;
+        $fixturePath = base_path('tests/Fixtures/Lotto/V2/'.$fixtureKey);
 
-        return is_dir($fixturePath) && count((array) glob($fixturePath . '/*')) > 0;
+        return is_dir($fixturePath) && count((array) glob($fixturePath.'/*')) > 0;
     }
 
     private function shouldEnforceFixtureGate(): bool
@@ -890,7 +898,7 @@ class LottoResultSourceController extends AppBaseController
     }
 
     /**
-     * @param array<string,mixed> $payload
+     * @param  array<string,mixed>  $payload
      */
     private function buildSourceForLiveValidation(array $payload, int $sourceId): LottoResultSource
     {
@@ -899,7 +907,7 @@ class LottoResultSourceController extends AppBaseController
             : null;
 
         if (! $source instanceof LottoResultSource) {
-            $source = new LottoResultSource();
+            $source = new LottoResultSource;
         }
 
         $source->forceFill([
@@ -996,7 +1004,7 @@ class LottoResultSourceController extends AppBaseController
     private function buildVirtualDrawForDate(int $marketId, string $drawDate): LottoDraw
     {
         $date = Carbon::parse($drawDate)->startOfDay();
-        $draw = new LottoDraw();
+        $draw = new LottoDraw;
         $draw->forceFill([
             'market_id' => $marketId,
             'draw_date' => $date->copy(),
@@ -1047,7 +1055,7 @@ class LottoResultSourceController extends AppBaseController
     }
 
     /**
-     * @param array<string,mixed> $validated
+     * @param  array<string,mixed>  $validated
      */
     private function assertNoActivePriorityWindowConflict(array $validated): void
     {

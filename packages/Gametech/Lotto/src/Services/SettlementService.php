@@ -7,6 +7,7 @@ use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
@@ -20,8 +21,9 @@ class SettlementService
     ) {}
 
     /**
-     * @param array<string, mixed> $resultNumber
+     * @param  array<string, mixed>  $resultNumber
      * @return array<string, int|float|array<string, string>>
+     *
      * @throws Exception
      */
     public function settleDraw(LottoDraw $draw, array $resultNumber): array
@@ -39,6 +41,11 @@ class SettlementService
                 'result_number' => $normalizedResult,
                 'result_at' => now(),
                 'status' => 'resulted',
+                'result_fetch_status' => 'APPLIED',
+                'result_fetch_error' => null,
+                'result_hash' => ResultHash::fromPayload($normalizedResult),
+                'result_applied_at' => now(),
+                'result_fetched_at' => now(),
             ]);
 
             $tickets = LottoTicket::query()
@@ -94,7 +101,7 @@ class SettlementService
     }
 
     /**
-     * @param array<string, mixed> $resultNumber
+     * @param  array<string, mixed>  $resultNumber
      * @return array<string, string>
      */
     public function normalizeResultNumber(array $resultNumber): array
@@ -154,7 +161,7 @@ class SettlementService
     }
 
     /**
-     * @param array<string, string> $resultNumber
+     * @param  array<string, string>  $resultNumber
      */
     public function isWinningBet(string $betType, string $number, array $resultNumber): bool
     {
@@ -175,26 +182,26 @@ class SettlementService
     }
 
     /**
-     * @param array<string, string> $resultNumber
+     * @param  array<string, string>  $resultNumber
      */
     public function describeResultNumber(array $resultNumber): string
     {
         $normalized = $this->normalizeResultNumber($resultNumber);
 
         if (! empty($normalized['first_prize']) && ! empty($normalized['last_2_digits'])) {
-            return 'รางวัลที่ 1 ' . $normalized['first_prize']
-                . ' / เลขท้าย 2 ตัว ' . $normalized['last_2_digits']
-                . ' / 3 ตัวบน ' . $normalized['top_3']
-                . ' / 2 ตัวบน ' . $normalized['top_2'];
+            return 'รางวัลที่ 1 '.$normalized['first_prize']
+                .' / เลขท้าย 2 ตัว '.$normalized['last_2_digits']
+                .' / 3 ตัวบน '.$normalized['top_3']
+                .' / 2 ตัวบน '.$normalized['top_2'];
         }
 
-        return '3 ตัวบน ' . $normalized['top_3']
-            . ' / 2 ตัวบน ' . $normalized['top_2']
-            . ' / 2 ตัวล่าง ' . $normalized['bottom_2'];
+        return '3 ตัวบน '.$normalized['top_3']
+            .' / 2 ตัวบน '.$normalized['top_2']
+            .' / 2 ตัวล่าง '.$normalized['bottom_2'];
     }
 
     /**
-     * @param array<string, string> $resultNumber
+     * @param  array<string, string>  $resultNumber
      */
     private function isWinningItem(LottoTicketItem $item, array $resultNumber): bool
     {
@@ -238,8 +245,7 @@ class SettlementService
         LottoTicket $ticket,
         float $ticketWinAmount,
         bool $canWriteWalletTransactions
-    ): void
-    {
+    ): void {
         if ($ticketWinAmount <= 0) {
             return;
         }
@@ -265,7 +271,7 @@ class SettlementService
             refType: self::SETTLE_WIN_REF_TYPE,
             refId: (int) $ticket->id,
             refCode: (string) $draw->id,
-            groupCode: 'LOTTO_SETTLE_DRAW_' . (int) $draw->id,
+            groupCode: 'LOTTO_SETTLE_DRAW_'.(int) $draw->id,
             meta: [
                 'draw_id' => (int) $draw->id,
                 'ticket_id' => (int) $ticket->id,
