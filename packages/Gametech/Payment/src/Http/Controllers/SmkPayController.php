@@ -79,7 +79,9 @@ class SmkPayController extends AppBaseController
                 'payamount' => (float) ($data->payamount ?? 0),
                 'qrcode' => $data->qrcode ?? null,
                 'qr_string' => $data->url ?? null,
-                'expired_date' => optional($data->expired_date)->toDateTimeString(),
+                'expired_date' => !empty($data->expired_date)
+                    ? Carbon::parse($data->expired_date)->toDateTimeString()
+                    : null,
                 'member' => [
                     'user_name' => (string) ($member->user_name ?? $data->username ?? ''),
                     'name' => (string) ($member->name ?? ''),
