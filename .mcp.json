@@ -7,18 +7,6 @@
                 "/home/boat/Projects/1168lot/artisan",
                 "boost:mcp"
             ]
-        },
-        "jetbrains": {
-            "command": "wsl.exe",
-            "args": [
-                "node",
-                "-e",
-                "require('@jetbrains/mcp-proxy')"
-            ],
-            "env": {
-                "IDE_PORT": "64344",
-                "IDE_HOST": "127.0.0.1"
-            }
         }
     }
 }

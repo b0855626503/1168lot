@@ -1,6 +1,6 @@
 # Startup Digest
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-13
 
 ไฟล์นี้เป็น startup core สำหรับ agent
 เป้าหมายคือให้เริ่มงานด้วย token ต่ำที่สุด โดยยังไม่เสีย source-of-truth และ boundary สำคัญ
@@ -14,6 +14,7 @@
 3. `docs/internal/02_DECISIONS/adr_baseline.md`
 4. `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 5. `docs/04_PLANS/README.md`
+6. `docs/internal/01_SYSTEM/mcp_operating_guide.md` (เปิดเมื่อมีงาน MCP, knowledge graph, ADR memory)
 
 ## สิ่งที่ startup core ต้องจำ
 
@@ -34,6 +35,7 @@
 - งาน `Lotto` policy / draw / cancel / result -> `docs/internal/03_DOMAINS/lotto.md`
 - งาน `Admin Lotto` / report / badge / loadCnt -> `docs/internal/03_DOMAINS/admin_lotto.md`
 - งาน `Realtime` -> `docs/internal/03_DOMAINS/realtime.md`
+- งาน MCP / architecture memory / cross-session trace -> `docs/internal/01_SYSTEM/mcp_operating_guide.md`
 
 ## เมื่อไรต้องเปิดไฟล์ใหญ่
 

@@ -9,6 +9,7 @@
 3. `docs/internal/02_DECISIONS/adr_baseline.md`
 4. `docs/internal/02_DECISIONS/adr_index_by_domain.md`
 5. `docs/04_PLANS/README.md`
+6. `docs/internal/01_SYSTEM/mcp_operating_guide.md` (เมื่อมีงาน MCP / architecture memory / cross-session context)
 
 ---
 
