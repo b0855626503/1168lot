@@ -183,3 +183,7 @@ wallet_demo.zip
 # Misc logs
 # =========================================================
 *.log
+
+# Local game entry files (do not track)
+game/game.php
+game/gamefree.php
