@@ -1516,6 +1516,42 @@ Response ตัวอย่าง
 }
 ```
 
+#### 6.3 SMKPAY (เมื่อ `method=payment`)
+- กลุ่ม endpoint นี้เป็น API ฝั่ง frontend (`/api/v1/*`)
+- Auth: ต้องใช้ token (Bearer) ทุกเส้น
+
+เส้นทางที่ใช้งาน:
+- `GET /smkpay/deposit/status/{txid}`
+- `POST /smkpay/deposit/expire/{txid}`
+- `POST /smkpay/deposit/create`
+- `GET /smkpay/qrcode/{id}`
+
+Request ตัวอย่าง (สร้างรายการฝาก)
+```json
+{
+  "amount": 100
+}
+```
+
+Response ตัวอย่าง (สำเร็จ)
+```json
+{
+  "success": true,
+  "msg": "ทำรายการสำเร็จ",
+  "url": "https://api.example.com/api/v1/smkpay/qrcode/REQ-202604130001",
+  "txid": "SDEP-000001-20260413010101",
+  "request_id": "REQ-202604130001"
+}
+```
+
+Response ตัวอย่าง (ยังไม่ได้ส่ง token)
+```json
+{
+  "success": false,
+  "message": "ไม่พบ Bearer token"
+}
+```
+
 ---
 
 ### 7) Wheel
@@ -1984,7 +2020,7 @@ Response หลัก:
 
 ---
 
-## สรุป endpoint ที่พร้อมใช้งาน (อัปเดต 2026-03-24)
+## สรุป endpoint ที่พร้อมใช้งาน (อัปเดต 2026-04-13)
 
 ผ่านและตอบ JSON ถูกต้อง:
 - `POST /auth/login`
@@ -2007,6 +2043,10 @@ Response หลัก:
 - `GET /lotto/groups/{groupId}/selected-package`
 - `GET /deposit/channels`
 - `POST /deposit/loadbank`
+- `GET /smkpay/deposit/status/{txid}`
+- `POST /smkpay/deposit/expire/{txid}`
+- `POST /smkpay/deposit/create`
+- `GET /smkpay/qrcode/{id}`
 - `GET /wheel/list`
 - `POST /wheel/spin`
 - `GET /wheel/history`
