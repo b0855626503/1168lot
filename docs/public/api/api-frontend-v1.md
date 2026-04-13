@@ -1524,7 +1524,7 @@ Response ตัวอย่าง
 - `GET /smkpay/deposit/status/{txid}`
 - `POST /smkpay/deposit/expire/{txid}`
 - `POST /smkpay/deposit/create`
-- `GET /smkpay/qrcode/{id}`
+- `GET /smkpay/qrcode/{id}` (คืน JSON, ไม่คืน HTML)
 
 Request ตัวอย่าง (สร้างรายการฝาก)
 ```json
@@ -1549,6 +1549,27 @@ Response ตัวอย่าง (ยังไม่ได้ส่ง token)
 {
   "success": false,
   "message": "ไม่พบ Bearer token"
+}
+```
+
+Response ตัวอย่าง `GET /smkpay/qrcode/{id}` (สำเร็จ)
+```json
+{
+  "success": true,
+  "data": {
+    "request_id": "REQ-202604130001",
+    "txid": "SDEP-000001-20260413010101",
+    "status": "pending",
+    "amount": 100,
+    "payamount": 100,
+    "qrcode": "data:image/png;base64,...",
+    "qr_string": "000201010212...",
+    "expired_date": "2026-04-13 19:01:01",
+    "member": {
+      "user_name": "0855626503",
+      "name": "วรเดช ยางนึก"
+    }
+  }
 }
 ```
 

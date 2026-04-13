@@ -43,29 +43,49 @@ class SmkPayController extends AppBaseController
     }
 
     /**
-     * หน้าแสดง QR/สถานะ (เหมือน OnPay)
+     * คืนข้อมูล QR/สถานะในรูปแบบ JSON (Frontend API v1)
      */
     public function index($id)
     {
         $data = $this->repository->findOneWhere(['detail' => $id]);
 
-        $banks = [];
-        try {
-            $banks = $this->bankRepository->all();
-        } catch (\Throwable $e) {
-            // ignore
+        if (!$data) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบรายการฝากเงิน',
+            ], 404);
+        }
+
+        $authMember = auth()->guard('customer')->user();
+        if ($authMember && (string) $data->username !== (string) $authMember->user_name) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์เข้าถึงรายการนี้',
+            ], 403);
         }
 
         $member = null;
-        if ($data && !empty($data->username)) {
-            $member = $this->memberRepository->findOneWhere([
-                'user_name' => $data->username,
-            ]);
+        if (!empty($data->username)) {
+            $member = $this->memberRepository->findOneWhere(['user_name' => $data->username]);
         }
 
-        $view = (string) config('smkpay.deposit_view', 'topup.box.onpay_new');
-
-        return view($view, compact('data', 'member', 'banks'));
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'request_id' => $id,
+                'txid' => (string) ($data->txid ?? ''),
+                'status' => (string) ($data->status ?? ''),
+                'amount' => (float) ($data->amount ?? 0),
+                'payamount' => (float) ($data->payamount ?? 0),
+                'qrcode' => $data->qrcode ?? null,
+                'qr_string' => $data->url ?? null,
+                'expired_date' => optional($data->expired_date)->toDateTimeString(),
+                'member' => [
+                    'user_name' => (string) ($member->user_name ?? $data->username ?? ''),
+                    'name' => (string) ($member->name ?? ''),
+                ],
+            ],
+        ]);
     }
 
     /**
