@@ -8,12 +8,12 @@ use Gametech\Core\Tree;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Route;
 use Yajra\DataTables\DataTableAbstract;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,8 +26,54 @@ class AppServiceProvider extends ServiceProvider
 
     protected function registerConfig(): void
     {
-        $this->mergeConfigFrom(dirname(__DIR__) . '/../game/game.php',     'game');
-//        $this->mergeConfigFrom(dirname(__DIR__) . '/../game/gamefree.php', 'gamefree');
+        $gameConfigPath = dirname(__DIR__).'/../game/game.php';
+        if (is_file($gameConfigPath)) {
+            $this->mergeConfigFrom($gameConfigPath, 'game');
+        } else {
+            config()->set('game', array_replace_recursive(
+                $this->defaultGameConfig(),
+                (array) config('game', [])
+            ));
+        }
+
+        $gameFreeConfigPath = dirname(__DIR__).'/../game/gamefree.php';
+        if (is_file($gameFreeConfigPath)) {
+            $this->mergeConfigFrom($gameFreeConfigPath, 'gamefree');
+        } else {
+            config()->set('gamefree', array_replace_recursive(
+                $this->defaultGameFreeConfig(),
+                (array) config('gamefree', [])
+            ));
+        }
+    }
+
+    /**
+     * @return array{seamless: array{apiurl:string,agent:string,secretkey:string,s:string}}
+     */
+    private function defaultGameConfig(): array
+    {
+        return [
+            'seamless' => [
+                'apiurl' => '',
+                'agent' => '',
+                'secretkey' => '',
+                's' => '',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{seamless: array{apiurl:string,agent:string,secretkey:string}}
+     */
+    private function defaultGameFreeConfig(): array
+    {
+        return [
+            'seamless' => [
+                'apiurl' => '',
+                'agent' => '',
+                'secretkey' => '',
+            ],
+        ];
     }
 
     protected function registerDataTableTransformerCompat(): void
@@ -63,7 +109,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Schema::defaultStringLength(191);
         JsonResource::withoutWrapping();
-
 
         if (app()->environment('local')) {
             DB::listen(function ($query) {
@@ -132,7 +177,7 @@ class AppServiceProvider extends ServiceProvider
         $req = $this->app['request'];
 
         // 1) subdomain api.*
-//        $isApiSubdomain = Str::startsWith($req->getHost() ?? '', 'api.');
+        //        $isApiSubdomain = Str::startsWith($req->getHost() ?? '', 'api.');
 
         // 2) path /api/*
         $isApiPath = $req->is('api/*');
@@ -161,6 +206,7 @@ class AppServiceProvider extends ServiceProvider
         try {
             /** @var CoreService $core */
             $core = $this->app->make('core');
+
             return $core;
         } catch (\Throwable $e) {
             return null;
@@ -182,32 +228,33 @@ class AppServiceProvider extends ServiceProvider
 
                 if (! $core) {
                     $view->with([
-                        'webconfig'  => null,
-                        'menu'       => $tree,
-                        'notice'     => [],
+                        'webconfig' => null,
+                        'menu' => $tree,
+                        'notice' => [],
                         'notice_new' => [],
-                        'lang'       => Session::get('lang'),
-                        'userdata'   => null,
+                        'lang' => Session::get('lang'),
+                        'userdata' => null,
                         'topupbanks' => 0,
-                        'topuptws'   => 0,
-                        'topuppayment'   => 0,
-                        'topupslip'   => 0,
-                        'contacts'   => [],
-                        'menus'   => [],
-                        'refill'     => '',
-                        'single'     => null,
+                        'topuptws' => 0,
+                        'topuppayment' => 0,
+                        'topupslip' => 0,
+                        'contacts' => [],
+                        'menus' => [],
+                        'refill' => '',
+                        'single' => null,
                     ]);
+
                     return;
                 }
 
                 $bag = $this->rememberRequestValue('front_view_bag', function () use ($core) {
                     try {
                         $webconfig = $core->getConfigData();
-                        $contacts  = $core->getContact();
-                        $notice    = $core->getNoticeData();
+                        $contacts = $core->getContact();
+                        $notice = $core->getNoticeData();
                         $noticeNew = $core->getNoticeNewData();
-                        $userdata  = $core->getProfile();
-                        $menus     = $core->getGameType();
+                        $userdata = $core->getProfile();
+                        $menus = $core->getGameType();
                         $refill = '';
                         $single = null;
 
@@ -221,32 +268,32 @@ class AppServiceProvider extends ServiceProvider
                     } catch (\Throwable $e) {
                         return [
                             'webconfig' => null,
-                            'contacts'  => [],
-                            'notice'    => [],
+                            'contacts' => [],
+                            'notice' => [],
                             'noticeNew' => [],
-                            'userdata'  => null,
-                            'menus'     => [],
-                            'refill'    => '',
-                            'single'    => null,
+                            'userdata' => null,
+                            'menus' => [],
+                            'refill' => '',
+                            'single' => null,
                         ];
                     }
                 });
-//                dd($bag['userdata']);
+                //                dd($bag['userdata']);
 
-                $view->with('webconfig',  $bag['webconfig']);
-                $view->with('menu',       $tree);
-                $view->with('notice',     $bag['notice']);
+                $view->with('webconfig', $bag['webconfig']);
+                $view->with('menu', $tree);
+                $view->with('notice', $bag['notice']);
                 $view->with('notice_new', $bag['noticeNew']);
-                $view->with('lang',       Session::get('lang'));
-                $view->with('userdata',   $bag['userdata']);
-//                $view->with('topupbanks', $bag['bank']);
-//                $view->with('topuptws',   $bag['tw']);
-//                $view->with('topuppayment',   $bag['payment']);
-//                $view->with('topupslip',   $bag['slip']);
-                $view->with('contacts',   $bag['contacts']);
-                $view->with('refill',     $bag['refill']);
-                $view->with('single',     $bag['single']);
-                $view->with('menus',     $bag['menus']);
+                $view->with('lang', Session::get('lang'));
+                $view->with('userdata', $bag['userdata']);
+                //                $view->with('topupbanks', $bag['bank']);
+                //                $view->with('topuptws',   $bag['tw']);
+                //                $view->with('topuppayment',   $bag['payment']);
+                //                $view->with('topupslip',   $bag['slip']);
+                $view->with('contacts', $bag['contacts']);
+                $view->with('refill', $bag['refill']);
+                $view->with('single', $bag['single']);
+                $view->with('menus', $bag['menus']);
             }
         );
     }
@@ -283,7 +330,7 @@ class AppServiceProvider extends ServiceProvider
     {
         if ($this->app->bound('request')) {
             $request = $this->app['request'];
-            $cacheKey = '_app_provider_cache.' . $key;
+            $cacheKey = '_app_provider_cache.'.$key;
 
             if ($request->attributes->has($cacheKey)) {
                 return $request->attributes->get($cacheKey);

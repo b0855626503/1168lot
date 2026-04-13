@@ -187,3 +187,4 @@ wallet_demo.zip
 # Local game entry files (do not track)
 game/game.php
 game/gamefree.php
+/game/
