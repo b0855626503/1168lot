@@ -17,6 +17,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
+use Gametech\Payment\Http\Controllers\SmkPayController;
 use Illuminate\Support\Facades\Route;
 
 $apiSubdomain = config('gametech.api_url') ?? config('app.admin_url');
@@ -114,6 +115,14 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.deposit.channels');
             Route::post('deposit/loadbank', [DepositController::class, 'loadBank'])
                 ->name('frontend.api.v1.deposit.loadbank');
+            Route::get('smkpay/deposit/status/{txid}', [SmkPayController::class, 'checkStatus'])
+                ->name('api.smkpay.deposit.status');
+            Route::post('smkpay/deposit/expire/{txid}', [SmkPayController::class, 'expire'])
+                ->name('api.smkpay.deposit.expire');
+            Route::post('smkpay/deposit/create', [SmkPayController::class, 'deposit'])
+                ->name('api.smkpay.deposit');
+            Route::get('smkpay/qrcode/{id}', [SmkPayController::class, 'index'])
+                ->name('api.smkpay.index');
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');

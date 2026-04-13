@@ -118,13 +118,6 @@ Route::domain($domain)->group(function () {
                 Route::get('maxpay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\MaxPayController@index')->name('api.maxpay.index');
 
 
-                // ===== SMKPAY =====
-                Route::get('smkpay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\SmkPayController@checkStatus')->name('api.smkpay.deposit.status');
-                Route::post('smkpay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\SmkPayController@expire')->name('api.smkpay.deposit.expire');
-                Route::post('smkpay/deposit/create', 'Gametech\Payment\Http\Controllers\SmkPayController@deposit')->name('api.smkpay.deposit');
-                Route::get('smkpay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\SmkPayController@index')->name('api.smkpay.index');
-
-
                 Route::get('payonex/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\PayoneXController@checkStatus')->name('api.payonex.deposit.status');
                 Route::post('payonex/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\PayoneXController@expire')->name('api.payonex.deposit.expire');
                 Route::post('payonex/deposit/create', 'Gametech\Payment\Http\Controllers\PayoneXController@deposit')->name('api.payonex.deposit');
