@@ -6,10 +6,11 @@
 @foreach ($menuItems as $menuItem)
 
 @if($isRootLevel && $webconfig->freecredit_open == 'N')
-    @continue($menuItem['key'] == 'credit')
-    @continue($menuItem['key'] == 'withdraw_free')
-    @continue($menuItem['key'] == 'mop.rp_cashback')
-    @continue($menuItem['key'] == 'mop.rp_member_ic')
+    @php($menuKey = (string) ($menuItem['key'] ?? ''))
+    @continue($menuKey == 'credit')
+    @continue($menuKey == 'withdraw_free')
+    @continue($menuKey == 'mop.rp_cashback')
+    @continue($menuKey == 'mop.rp_member_ic')
 @endif
 
     @php
