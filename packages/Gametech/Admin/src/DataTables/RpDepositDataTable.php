@@ -15,12 +15,12 @@ use Yajra\DataTables\Services\DataTable;
 
 class RpDepositDataTable extends DataTable
 {
-    protected $exportClass = PaymentExport::class;
+    protected string $exportClass = PaymentExport::class;
 
     /**
      * Build DataTable class.
      *
-     * @param mixed $query Results from query() method.
+     * @param  mixed  $query  Results from query() method.
      * @return DataTableAbstract
      */
     public function dataTable($query)
@@ -63,38 +63,38 @@ class RpDepositDataTable extends DataTable
         $startdate = request()->input('startDate');
         $enddate = request()->input('endDate');
         if (empty($startdate)) {
-            $startdate = now()->toDateString() . ' 00:00:00';
+            $startdate = now()->toDateString().' 00:00:00';
         }
         if (empty($enddate)) {
-            $enddate = now()->toDateString() . ' 23:59:59';
+            $enddate = now()->toDateString().' 23:59:59';
         }
 
         return $model->newQuery()
-            ->with(['member', 'admin','promotion'])->with(['bank_account' => function ($query) {
+            ->with(['member', 'admin', 'promotion'])->with(['bank_account' => function ($query) {
                 $query->with('bank');
             }])->withCasts([
                 'bank_time' => 'datetime:Y-m-d H:i:s',
-                'date_approve' => 'datetime:Y-m-d H:i:s'
+                'date_approve' => 'datetime:Y-m-d H:i:s',
             ])
             ->income()
             ->select('bank_payment.*')
             ->when($startdate, function ($query, $startdate) use ($enddate) {
-                $query->whereBetween('date_create', array($startdate, $enddate));
+                $query->whereBetween('date_create', [$startdate, $enddate]);
             })
             ->when($ip, function ($query, $ip) {
-                $query->where('ip_admin', 'like', "%" . $ip . "%");
+                $query->where('ip_admin', 'like', '%'.$ip.'%');
             })
             ->when($status, function ($query, $status) {
-                $query->where('status',$status);
+                $query->where('status', $status);
             })
             ->when($enable, function ($query, $enable) {
-                $query->where('enable',$enable);
+                $query->where('enable', $enable);
             })
             ->when($channel, function ($query, $channel) {
-                $query->where('channel',$channel);
+                $query->where('channel', $channel);
             })
             ->when($bankname, function ($query, $bankname) {
-                $query->where('account_code',$bankname);
+                $query->where('account_code', $bankname);
             })
             ->when($user, function ($query, $user) {
                 $query->whereIn('bank_payment.member_topup', function ($q) use ($user) {
@@ -111,47 +111,54 @@ class RpDepositDataTable extends DataTable
         $req = request();
         $today = now('Asia/Bangkok')->toDateString();
 
-        $ip        = trim((string) $req->input('ip', ''));
-        $user      = trim((string) $req->input('user_name', ''));
-        $channel   = $req->input('channel');
-        $status    = $req->input('status');
-        $enable    = $req->input('enable');
-        $bankname  = $req->input('bankname');
+        $ip = trim((string) $req->input('ip', ''));
+        $user = trim((string) $req->input('user_name', ''));
+        $channel = $req->input('channel');
+        $status = $req->input('status');
+        $enable = $req->input('enable');
+        $bankname = $req->input('bankname');
         $startdate = $req->input('startDate');
-        $enddate   = $req->input('endDate');
-        $pro       = $req->input('pro_id');
+        $enddate = $req->input('endDate');
+        $pro = $req->input('pro_id');
         $member_status = $req->input('member_status');
 
         // --- Normalize dates (Asia/Bangkok) ---
         $tz = 'Asia/Bangkok';
         $start = $startdate
-            ? rescue(fn() => Carbon::parse($startdate, $tz), fn() => null, true)
+            ? rescue(fn () => Carbon::parse($startdate, $tz), fn () => null, true)
             : now($tz)->startOfDay();
-        $end   = $enddate
-            ? rescue(fn() => Carbon::parse($enddate, $tz), fn() => null, true)
+        $end = $enddate
+            ? rescue(fn () => Carbon::parse($enddate, $tz), fn () => null, true)
             : now($tz)->endOfDay();
 
-        if (! $start) $start = now($tz)->startOfDay();
-        if (! $end)   $end   = now($tz)->endOfDay();
+        if (! $start) {
+            $start = now($tz)->startOfDay();
+        }
+        if (! $end) {
+            $end = now($tz)->endOfDay();
+        }
         if ($start->gt($end)) {
             [$start, $end] = [$end, $start];
         }
 
         // จำกัด scope ของ subquery ให้ครอบทั้งเดือน (RN แยกเดือนอยู่แล้ว)
         $monthStart = $start->copy()->startOfMonth();
-        $monthEnd   = $end->copy()->endOfMonth();
+        $monthEnd = $end->copy()->endOfMonth();
 
         // --- channel/bankname รองรับ CSV เป็นหลายค่า ---
         $toArray = function ($val) {
-            if (is_array($val)) return array_values(array_filter(array_map('trim', $val), fn($v) => $v !== ''));
-            if (is_string($val) && str_contains($val, ',')) {
-                return array_values(array_filter(array_map('trim', explode(',', $val)), fn($v) => $v !== ''));
+            if (is_array($val)) {
+                return array_values(array_filter(array_map('trim', $val), fn ($v) => $v !== ''));
             }
+            if (is_string($val) && str_contains($val, ',')) {
+                return array_values(array_filter(array_map('trim', explode(',', $val)), fn ($v) => $v !== ''));
+            }
+
             return $val !== null && $val !== '' ? [$val] : [];
         };
 
-        $channels  = $toArray($channel);
-        $banks     = $toArray($bankname);
+        $channels = $toArray($channel);
+        $banks = $toArray($bankname);
 
         /**
          * feerank: นับลำดับรายการที่เข้าเกณฑ์นับ ต่อเดือน/ต่อบัญชี
@@ -204,8 +211,8 @@ class RpDepositDataTable extends DataTable
                 'bank_account.bank:code,shortcode,filepic,name_th',
             ])
             ->withCasts([
-                'bank_time'    => 'datetime:Y-m-d H:i:s',
-                'date_create'  => 'datetime:Y-m-d H:i:s',
+                'bank_time' => 'datetime:Y-m-d H:i:s',
+                'date_create' => 'datetime:Y-m-d H:i:s',
                 'date_approve' => 'datetime:Y-m-d H:i:s',
             ])
             ->income()
@@ -222,7 +229,7 @@ class RpDepositDataTable extends DataTable
             ->addSelect([
                 DB::raw('feerank.rn as rn'),
                 DB::raw('matchrank.accmatch_rn as accmatch_rn'),
-                DB::raw("
+                DB::raw('
                     CASE
                       WHEN feerank.rn IS NULL THEN 0
                       WHEN feerank.rn <= 100 THEN 0
@@ -231,7 +238,7 @@ class RpDepositDataTable extends DataTable
                       WHEN bank_payment.value <= 1 THEN 0
                       ELSE LEAST(ROUND(bank_payment.value * 0.029, 2), 20.00)
                     END AS fees
-                "),
+                '),
             ])
 
             ->whereBetween('date_create', [$start->toDateTimeString(), $end->toDateTimeString()])
@@ -249,17 +256,16 @@ class RpDepositDataTable extends DataTable
             })
 
             ->when($member_status === 'today', function ($q) use ($today) {
-                $q->whereHas('member', fn($m) => $m->whereDate('date_regis', $today));
+                $q->whereHas('member', fn ($m) => $m->whereDate('date_regis', $today));
             })
             ->when($member_status === 'old', function ($q) use ($today) {
-                $q->whereHas('member', fn($m) =>
-                $m->whereNull('date_regis')
+                $q->whereHas('member', fn ($m) => $m->whereNull('date_regis')
                     ->orWhereDate('date_regis', '<', $today)
                 );
             })
 
-            ->when($enable !== null && $enable !== '', fn($q) => $q->where('enable', (string) $enable))
-            ->when($status !== null && $status !== '', fn($q) => $q->where('status', (int) $status))
+            ->when($enable !== null && $enable !== '', fn ($q) => $q->where('enable', (string) $enable))
+            ->when($status !== null && $status !== '', fn ($q) => $q->where('status', (int) $status))
 
             ->when(! empty($channels), function ($q) use ($channels) {
                 $q->whereIn('channel', $channels);
@@ -312,7 +318,7 @@ class RpDepositDataTable extends DataTable
                 'order' => [[0, 'desc']],
                 'lengthMenu' => [
                     [50, 100, 200, 500, 1000],
-                    ['50 rows', '100 rows', '200 rows', '500 rows', '1000 rows']
+                    ['50 rows', '100 rows', '200 rows', '500 rows', '1000 rows'],
                 ],
                 'buttons' => [
                     'pageLength',
@@ -321,49 +327,53 @@ class RpDepositDataTable extends DataTable
                         'text' => '<i class="bi bi-download"></i> Export (Server)',
                         'action' => 'function ( e, dt, node, config ) {
             let params = $("#frmsearch").serialize();
-            let url = "' . route('admin.rp_deposit.export') . '?" + params;
+            let url = "'.route('admin.rp_deposit.export').'?" + params;
             window.open(url, "_blank");
         }',
                         'className' => 'btn btn-success',
-                    ]
+                    ],
                 ],
                 'columnDefs' => [
-                    ['targets' => '_all', 'className' => 'text-center text-nowrap']
-                ]
+                    ['targets' => '_all', 'className' => 'text-center text-nowrap'],
+                ],
             ]);
     }
 
     public function myexport(): StreamedResponse
     {
         /** @var \Illuminate\Database\Eloquent\Builder $builder */
-        $builder = $this->query(app(\Gametech\Payment\Contracts\BankPayment::class));
+        $builder = $this->query(app(BankPayment::class));
 
         $builder->orderBy('bank_payment.code', 'asc')
             ->with(['member', 'admin', 'bank_account.bank', 'promotion']);
 
-        $filename = $this->filename() . '.csv';
+        $filename = $this->filename().'.csv';
 
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-            'X-Accel-Buffering'   => 'no',
-            'Cache-Control'       => 'no-transform, no-store, no-cache, must-revalidate',
-            'Pragma'              => 'no-cache',
-            'Expires'             => '0',
-            'Content-Encoding'    => 'identity',
+            'X-Accel-Buffering' => 'no',
+            'Cache-Control' => 'no-transform, no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'Content-Encoding' => 'identity',
         ];
 
         return new StreamedResponse(function () use ($builder) {
-            while (ob_get_level() > 0) { @ob_end_clean(); }
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
 
             $out = fopen('php://output', 'w');
-            if ($out === false) { return; }
+            if ($out === false) {
+                return;
+            }
 
             fwrite($out, chr(0xEF).chr(0xBB).chr(0xBF));
 
             fputcsv($out, [
-                'Bank','Account No','Bank Time','Channel','Detail',
-                'User ID','Member Name','Amount','Fees','Code','Created At','Approved At','IP',
+                'Bank', 'Account No', 'Bank Time', 'Channel', 'Detail',
+                'User ID', 'Member Name', 'Amount', 'Fees', 'Code', 'Created At', 'Approved At', 'IP',
             ]);
 
             foreach ($builder->cursor() as $row) {
@@ -377,18 +387,18 @@ class RpDepositDataTable extends DataTable
 
                 $userName = (string) ($row->member->user_name ?? '');
 
-                $accNo    = (string) ($row->bank_account->acc_no ?? '');
+                $accNo = (string) ($row->bank_account->acc_no ?? '');
                 $bankTime = optional($row->bank_time)->format('Y-m-d H:i:s') ?? '';
-                $channel  = (string) ($row->channel ?? '');
-                $detail   = (string) ($row->detail ?? ($row->remark ?? ''));
-                $amount   = is_numeric($row->value ?? null) ? (float) $row->value : null;
+                $channel = (string) ($row->channel ?? '');
+                $detail = (string) ($row->detail ?? ($row->remark ?? ''));
+                $amount = is_numeric($row->value ?? null) ? (float) $row->value : null;
 
-                $fees     = is_numeric($row->fees ?? null) ? (float) $row->fees : 0.0;
+                $fees = is_numeric($row->fees ?? null) ? (float) $row->fees : 0.0;
 
-                $code     = (string) ($row->code ?? '');
-                $created  = optional($row->date_create)->format('Y-m-d H:i:s') ?? '';
+                $code = (string) ($row->code ?? '');
+                $created = optional($row->date_create)->format('Y-m-d H:i:s') ?? '';
                 $approved = optional($row->date_approve)->format('Y-m-d H:i:s') ?? '';
-                $ip       = (string) ($row->ip ?? $row->ip_admin ?? '');
+                $ip = (string) ($row->ip ?? $row->ip_admin ?? '');
 
                 fputcsv($out, [
                     $bankName, $accNo, $bankTime, $channel, $detail,
@@ -413,7 +423,7 @@ class RpDepositDataTable extends DataTable
         return [
             ['data' => 'code',          'name' => 'bank_payment.code',        'title' => '#',                'orderable' => true,  'searchable' => false, 'className' => 'text-center text-nowrap'],
             ['data' => 'bank',          'name' => 'withdraws.member_name',    'title' => 'ธนาคาร',           'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
-            ['data' => 'acc_no',        'name' => 'bank_payment.account_code','title' => 'เลขบัญชี',        'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
+            ['data' => 'acc_no',        'name' => 'bank_payment.account_code', 'title' => 'เลขบัญชี',        'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
             ['data' => 'date',          'name' => 'withdraws.member_name',    'title' => 'เวลาธนาคาร',       'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
             ['data' => 'channel',       'name' => 'withdraws.member_name',    'title' => 'ช่องทาง',           'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
             ['data' => 'detail',        'name' => 'withdraws.member_name',    'title' => 'รายละเอียด',        'orderable' => false, 'searchable' => false, 'className' => 'text-left text-nowrap'],
@@ -429,30 +439,28 @@ class RpDepositDataTable extends DataTable
             ['data' => 'date_approve',  'name' => 'withdraws.emp_name',       'title' => 'วัน/เวลา (เติม)',    'orderable' => false, 'searchable' => false, 'className' => 'text-center text-nowrap'],
             ['data' => 'remark',        'name' => 'withdraws.emp_name',       'title' => 'หมายเหตุ',           'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
             ['data' => 'ip',            'name' => 'bank_payment.ip',          'title' => 'ip',                 'orderable' => false, 'searchable' => false, 'className' => 'text-center text-nowrap'],
-//            ['data' => 'action',            'name' => 'action',          'title' => 'action',                  'orderable' => false, 'searchable' => false, 'className' => 'text-center text-nowrap'],
+            //            ['data' => 'action',            'name' => 'action',          'title' => 'action',                  'orderable' => false, 'searchable' => false, 'className' => 'text-center text-nowrap'],
         ];
     }
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return config('app.name').'_payment_datatable_' . date('YmdHis');
+        return config('app.name').'_payment_datatable_'.date('YmdHis');
     }
 
     public function fastExcelCallback()
     {
         return function ($row) {
             return [
-                'bank'        => $row['bank'],
-                'acc_no'      => $row['acc_no'],
-                'date'        => $row['date'],
-                'amount'      => $row['amount'],
-                'fee'         => $row['fee'],
-                'user_name'   => $row['user_name'],
+                'bank' => $row['bank'],
+                'acc_no' => $row['acc_no'],
+                'date' => $row['date'],
+                'amount' => $row['amount'],
+                'fee' => $row['fee'],
+                'user_name' => $row['user_name'],
                 'member_name' => $row['member_name'],
             ];
         };
