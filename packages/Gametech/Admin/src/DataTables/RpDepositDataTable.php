@@ -4,6 +4,7 @@ namespace Gametech\Admin\DataTables;
 
 use App\Exports\PaymentExport;
 use Carbon\Carbon;
+use Closure;
 use Gametech\Admin\Transformers\RpDepositTransformer;
 use Gametech\Payment\Contracts\BankPayment;
 use Illuminate\Support\Facades\DB;
@@ -451,7 +452,7 @@ class RpDepositDataTable extends DataTable
         return config('app.name').'_payment_datatable_'.date('YmdHis');
     }
 
-    public function fastExcelCallback()
+    public function fastExcelCallback(): Closure
     {
         return function ($row) {
             return [
