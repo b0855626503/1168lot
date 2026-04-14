@@ -317,6 +317,33 @@ Response ตัวอย่าง
 }
 ```
 
+#### 1.5 รายการสไลด์หน้าเว็บไซต์
+- `GET /slides`
+- Auth: ไม่ต้องใช้ token
+- คืนรายการสไลด์ที่เปิดใช้งาน (`enable = Y`) เรียงตาม `sort` จากน้อยไปมาก
+- ฟิลด์ `filepic` และ `image` จะถูก normalize เป็น Full URL (absolute URL)
+
+Response ตัวอย่าง
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "code": 2,
+      "filepic": "https://api.example.com/storage/slide_img/J5xyXcM241.jpg?v=1776144394000",
+      "sort": 1,
+      "enable": "Y",
+      "user_create": "pop za",
+      "user_update": "Master Web",
+      "date_create": "2026-04-14 12:16:26",
+      "date_update": "2026-04-14 12:26:34",
+      "image": "https://api.example.com/storage/slide_img/J5xyXcM241.jpg?v=1776144394000"
+    }
+  ],
+  "message": "ดึงรายการสไลด์สำเร็จ"
+}
+```
+
 ---
 
 ### 2) Member
