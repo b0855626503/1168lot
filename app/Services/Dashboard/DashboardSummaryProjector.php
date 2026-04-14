@@ -1064,13 +1064,9 @@ class DashboardSummaryProjector
 
     private function withdrawMainTables(): array
     {
-        $config = core()->getConfigData();
-        $isSeamless = (($config->seamless ?? 'N') === 'Y');
-
         $tables = [];
-        $primaryTable = $isSeamless ? 'withdraws_seamless' : 'withdraws';
-        if ($this->hasTable($primaryTable)) {
-            $tables[] = $primaryTable;
+        if ($this->hasTable('withdraws')) {
+            $tables[] = 'withdraws';
         }
 
         return $tables;
@@ -1083,11 +1079,8 @@ class DashboardSummaryProjector
             return [];
         }
 
-        $isSeamless = (($config->seamless ?? 'N') === 'Y');
-        $freeTable = $isSeamless ? 'withdraws_seamless_free' : 'withdraws_free';
-
-        if ($this->hasTable($freeTable)) {
-            return [$freeTable];
+        if ($this->hasTable('withdraws_free')) {
+            return ['withdraws_free'];
         }
 
         return [];
