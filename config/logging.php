@@ -4,6 +4,20 @@ use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 
+if (! function_exists('log_path')) {
+    function log_path(string $file): string
+    {
+        $path = storage_path('logs/'.$file);
+        $directory = dirname($path);
+
+        if (! is_dir($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
+            return $path;
+        }
+
+        return $path;
+    }
+}
+
 return [
 
     /*
@@ -43,13 +57,13 @@ return [
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => log_path('laravel.log'),
             'level' => 'debug',
         ],
 
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/daily.log'),
+            'path' => log_path('daily.log'),
             'level' => 'warning',
             'days' => 3,
         ],
@@ -97,554 +111,576 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/emergency.log'),
+            'path' => log_path('emergency.log'),
         ],
 
         'cashback' => [
             'driver' => 'single',
-            'path' => storage_path('logs/cashback_create.log'),
+            'path' => log_path('cashback_create.log'),
             'level' => 'info',
         ],
 
         'slowlog' => [
             'driver' => 'single',
-            'path' => storage_path('logs/slow-requests.log'),
+            'path' => log_path('slow-requests.log'),
             'level' => 'info',
         ],
 
         'slow' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/slow/daily.log'),
-            'level' => 'info',
-            'days' => 14,
-        ],
-        'check' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/check/daily.log'),
+            'path' => log_path('slow/daily.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
+        'check' => [
+            'driver' => 'daily',
+            'path' => log_path('check/daily.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'center_oa' => [
+            'driver' => 'daily',
+            'path' => log_path('center_oa/daily.log'),
+            'level' => 'debug',
+            'days' => 7,
+        ],
+
+        'line_oa' => [
+            'driver' => 'daily',
+            'path' => log_path('line_oa/daily.log'),
+            'level' => 'debug',
+            'days' => 7,
+        ],
+
+        'facebook_oa' => [
+            'driver' => 'daily',
+            'path' => log_path('facebook_oa/daily.log'),
+            'level' => 'debug',
+            'days' => 7,
+        ],
+
         'wildpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/deposit_create.log'),
+            'path' => log_path('wildpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wildpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/deposit_callback.log'),
+            'path' => log_path('wildpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wildpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/withdraw_create.log'),
+            'path' => log_path('wildpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wildpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/withdraw_callback.log'),
+            'path' => log_path('wildpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'wildpay_cancel_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/cancel_create.log'),
+            'path' => log_path('wildpay/cancel_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wildpay_cancel_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wildpay/cancel_callback.log'),
+            'path' => log_path('wildpay/cancel_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifu_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifu/deposit_create.log'),
+            'path' => log_path('sulifu/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifu_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifu/deposit_callback.log'),
+            'path' => log_path('sulifu/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifu_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifu/withdraw_create.log'),
+            'path' => log_path('sulifu/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifu_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifu/withdraw_callback.log'),
+            'path' => log_path('sulifu/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'xpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xpay/deposit_create.log'),
+            'path' => log_path('xpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xpay/deposit_callback.log'),
+            'path' => log_path('xpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xpay/withdraw_create.log'),
+            'path' => log_path('xpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xpay/withdraw_callback.log'),
+            'path' => log_path('xpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'matepay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/matepay/deposit_create.log'),
+            'path' => log_path('matepay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'matepay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/matepay/deposit_callback.log'),
+            'path' => log_path('matepay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'gamelog' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/gamelog/redis.log'),
+            'path' => log_path('gamelog/redis.log'),
             'level' => 'debug',
             'days' => 2,
         ],
         'wellpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wellpay/deposit_create.log'),
+            'path' => log_path('wellpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wellpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wellpay/deposit_callback.log'),
+            'path' => log_path('wellpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wellpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wellpay/withdraw_create.log'),
+            'path' => log_path('wellpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'wellpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/wellpay/withdraw_callback.log'),
+            'path' => log_path('wellpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'kingpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/kingpay/deposit_create.log'),
+            'path' => log_path('kingpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'kingpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/kingpay/deposit_callback.log'),
+            'path' => log_path('kingpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'kingpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/kingpay/withdraw_create.log'),
+            'path' => log_path('kingpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'kingpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/kingpay/withdraw_callback.log'),
+            'path' => log_path('kingpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'cloudpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/cloudpay/deposit_create.log'),
+            'path' => log_path('cloudpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'cloudpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/cloudpay/deposit_callback.log'),
+            'path' => log_path('cloudpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'cloudpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/cloudpay/withdraw_create.log'),
+            'path' => log_path('cloudpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'cloudpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/cloudpay/withdraw_callback.log'),
+            'path' => log_path('cloudpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'omnipay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/omnipay/deposit_create.log'),
+            'path' => log_path('omnipay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'omnipay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/omnipay/deposit_callback.log'),
+            'path' => log_path('omnipay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'omnipay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/omnipay/withdraw_create.log'),
+            'path' => log_path('omnipay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'omnipay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/omnipay/withdraw_callback.log'),
+            'path' => log_path('omnipay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'payonex_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/payonex/deposit_create.log'),
+            'path' => log_path('payonex/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'payonex_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/payonex/deposit_callback.log'),
+            'path' => log_path('payonex/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'payonex_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/payonex/withdraw_create.log'),
+            'path' => log_path('payonex/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'payonex_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/payonex/withdraw_callback.log'),
+            'path' => log_path('payonex/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'apay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/apay/deposit_create.log'),
+            'path' => log_path('apay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'apay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/apay/deposit_callback.log'),
+            'path' => log_path('apay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'apay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/apay/withdraw_create.log'),
+            'path' => log_path('apay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'apay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/apay/withdraw_callback.log'),
+            'path' => log_path('apay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'sulifupay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifupay/deposit_create.log'),
+            'path' => log_path('sulifupay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifupay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifupay/deposit_callback.log'),
+            'path' => log_path('sulifupay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifupay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifupay/withdraw_create.log'),
+            'path' => log_path('sulifupay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'sulifupay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/sulifupay/withdraw_callback.log'),
+            'path' => log_path('sulifupay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'tlconnectpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/tlconnectpay/deposit_create.log'),
+            'path' => log_path('tlconnectpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'tlconnectpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/tlconnectpay/deposit_callback.log'),
+            'path' => log_path('tlconnectpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'tlconnectpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/tlconnectpay/withdraw_create.log'),
+            'path' => log_path('tlconnectpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'tlconnectpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/tlconnectpay/withdraw_callback.log'),
+            'path' => log_path('tlconnectpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'onpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/onpay/deposit_create.log'),
+            'path' => log_path('onpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'onpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/onpay/deposit_callback.log'),
+            'path' => log_path('onpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'onpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/onpay/withdraw_create.log'),
+            'path' => log_path('onpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'onpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/onpay/withdraw_callback.log'),
+            'path' => log_path('onpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'maxpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/maxpay/deposit_create.log'),
+            'path' => log_path('maxpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'maxpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/maxpay/deposit_callback.log'),
+            'path' => log_path('maxpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'maxpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/maxpay/withdraw_create.log'),
+            'path' => log_path('maxpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'maxpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/maxpay/withdraw_callback.log'),
+            'path' => log_path('maxpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'worldpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/worldpay/deposit_create.log'),
+            'path' => log_path('worldpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'worldpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/worldpay/deposit_callback.log'),
+            'path' => log_path('worldpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'worldpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/worldpay/withdraw_create.log'),
+            'path' => log_path('worldpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'worldpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/worldpay/withdraw_callback.log'),
+            'path' => log_path('worldpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'autotransfer_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/autotransfer/deposit_callback.log'),
+            'path' => log_path('autotransfer/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'autotransfer_check_ma' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/autotransfer/check_ma.log'),
+            'path' => log_path('autotransfer/check_ma.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'autotransfer_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/autotransfer/withdraw_callback.log'),
+            'path' => log_path('autotransfer/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'autotransfer_api' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/autotransfer/autotransfer_api.log'),
+            'path' => log_path('autotransfer/autotransfer_api.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'smkpay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/smkpay/deposit_create.log'),
+            'path' => log_path('smkpay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'smkpay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/smkpay/deposit_callback.log'),
+            'path' => log_path('smkpay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'smkpay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/smkpay/withdraw_create.log'),
+            'path' => log_path('smkpay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'smkpay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/smkpay/withdraw_callback.log'),
+            'path' => log_path('smkpay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'smkpay_api' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/smkpay/api.log'),
+            'path' => log_path('smkpay/api.log'),
             'level' => 'info',
             'days' => 14,
         ],
         'api' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/api.log'),
+            'path' => log_path('api.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_deposit_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/deposit_create.log'),
+            'path' => log_path('xepay/deposit_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_deposit_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/deposit_callback.log'),
+            'path' => log_path('xepay/deposit_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_withdraw_create' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/withdraw_create.log'),
+            'path' => log_path('xepay/withdraw_create.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_withdraw_callback' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/withdraw_callback.log'),
+            'path' => log_path('xepay/withdraw_callback.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_balance' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/balance.log'),
+            'path' => log_path('xepay/balance.log'),
             'level' => 'info',
             'days' => 14,
         ],
 
         'xepay_api' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/xepay/api.log'),
+            'path' => log_path('xepay/api.log'),
             'level' => 'info',
             'days' => 14,
         ],
