@@ -2,7 +2,6 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -40,7 +39,7 @@ class DepositController extends BaseController
                 'method' => ['required', 'in:bank,payment,tw,slip'],
             ])->validate();
 
-            return response()->json($this->loadBankPayload($request, (string) $validated['method']));
+            return $this->normalizedJsonResponse($this->loadBankPayload($request, (string) $validated['method']));
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงข้อมูลบัญชีเติมเงินได้ในขณะนี้', 422);
         }
@@ -84,8 +83,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/' . (string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/' . $data->filepic),
+                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
+                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'code' => $data->code,
                         'deposit_min' => $data->deposit_min,
@@ -111,8 +110,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/' . (string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/' . $data->filepic),
+                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
+                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'deposit_min' => $data->deposit_min,
                         'remark' => $data->remark,
@@ -136,8 +135,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/' . (string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/' . $data->filepic),
+                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
+                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'slip_bank' => $this->getBankCode((string) optional($data->bank)->shortcode),
                         'code' => $data->code,

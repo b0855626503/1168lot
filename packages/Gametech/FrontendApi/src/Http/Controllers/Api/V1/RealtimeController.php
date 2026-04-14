@@ -24,8 +24,8 @@ class RealtimeController extends BaseController
                 'ws_path' => '',
                 'ws_scheme' => (string) ($options['scheme'] ?? 'http'),
                 'force_tls' => (bool) ($options['useTLS'] ?? false),
-                'shared_member_channel' => (string) config('app.name') . '_members',
-                'private_channel_member_template' => (string) config('app.name') . '_members.{member_code}',
+                'shared_member_channel' => (string) config('app.name').'_members',
+                'private_channel_member_template' => (string) config('app.name').'_members.{member_code}',
                 'events' => [
                     'public.activity.updated',
                     'member.activity.updated',
@@ -44,7 +44,7 @@ class RealtimeController extends BaseController
 
         return $this->sendResponseNew([
             'member_code' => (int) $member->code,
-            'private_channel' => (string) config('app.name') . '_members.' . (int) $member->code,
+            'private_channel' => (string) config('app.name').'_members.'.(int) $member->code,
         ], 'ดึง realtime member context สำเร็จ');
     }
 
@@ -65,7 +65,7 @@ class RealtimeController extends BaseController
         }
 
         $channelName = (string) $request->input('channel_name');
-        $expectedPrefix = (string) config('app.name') . '_members.';
+        $expectedPrefix = (string) config('app.name').'_members.';
         if (str_starts_with($channelName, 'private-')) {
             $channelName = substr($channelName, 8);
         }
@@ -80,13 +80,13 @@ class RealtimeController extends BaseController
         $response = Broadcast::auth($request);
 
         if (is_array($response)) {
-            return response()->json($response);
+            return $this->normalizedJsonResponse($response);
         }
 
         if (is_string($response)) {
             $payload = json_decode($response, true);
 
-            return response()->json(is_array($payload) ? $payload : ['auth' => $response]);
+            return $this->normalizedJsonResponse(is_array($payload) ? $payload : ['auth' => $response]);
         }
 
         if ($response instanceof Response) {
@@ -95,9 +95,9 @@ class RealtimeController extends BaseController
                 $payload = [];
             }
 
-            return response()->json($payload, $response->getStatusCode());
+            return $this->normalizedJsonResponse($payload, $response->getStatusCode());
         }
 
-        return response()->json([]);
+        return $this->normalizedJsonResponse([]);
     }
 }

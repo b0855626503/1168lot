@@ -722,7 +722,7 @@ class AuthController extends BaseController
             $payload['details'] = $details;
         }
 
-        return response()->json($payload, $status);
+        return $this->normalizedJsonResponse($payload, $status);
     }
 
     private function validationErrorResponse(ValidatorContract $validator): JsonResponse
@@ -757,7 +757,7 @@ class AuthController extends BaseController
             ];
         }
 
-        return response()->json([
+        return $this->normalizedJsonResponse([
             'success' => false,
             'message' => 'ข้อมูลสมัครสมาชิกไม่ถูกต้อง',
             'errors' => $errors,

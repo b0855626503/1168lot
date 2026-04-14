@@ -44,6 +44,14 @@ class BaseController extends AppBaseController
         return $this->normalizeJsonResponseImages(response()->json($payload, $code));
     }
 
+    /**
+     * @param  mixed  $payload
+     */
+    protected function normalizedJsonResponse($payload, int $status = 200): JsonResponse
+    {
+        return $this->normalizeJsonResponseImages(response()->json($payload, $status));
+    }
+
     protected function tokenPayload(Request $request): array
     {
         return (array) $request->attributes->get('frontend_api_token_payload', []);
@@ -75,7 +83,7 @@ class BaseController extends AppBaseController
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      * @return mixed
      */
     protected function normalizeImageFieldsRecursive($value, ?string $key = null, ?string $parentKey = null)
@@ -149,7 +157,7 @@ class BaseController extends AppBaseController
         }
 
         if (str_starts_with($path, '//')) {
-            return $this->appendMediaCacheBust(request()->getScheme() . ':' . $path);
+            return $this->appendMediaCacheBust(request()->getScheme().':'.$path);
         }
 
         if (str_starts_with($path, '/')) {
@@ -157,7 +165,7 @@ class BaseController extends AppBaseController
         }
 
         if (str_starts_with($path, 'storage/')) {
-            return $this->appendMediaCacheBust(url('/' . $path));
+            return $this->appendMediaCacheBust(url('/'.$path));
         }
 
         foreach ($this->mediaStorageFolders as $prefix) {
@@ -198,7 +206,7 @@ class BaseController extends AppBaseController
             return $url;
         }
 
-        return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
+        return $url.(str_contains($url, '?') ? '&' : '?').'v='.$version;
     }
 
     private function mediaVersionForStoragePath(string $path): int
