@@ -114,36 +114,6 @@ class RpSmWithdrawDataTable extends DataTable
                 'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap']
                 ],
-                'footerCallback' => "function (row, data, start, end, display) {
-                           var api = this.api();
-
-                           var intVal = function ( i ) {
-                                return typeof i === 'string' ?
-                                    i.replace(/[\$,]/g, '')*1 :
-                                    typeof i === 'number' ?
-                                        i : 0;
-                            };
-
-                           api.columns().every(function (i) {
-                            if(i == 3){
-                           var sum = this.data()
-                                      .reduce(function(a, b) {
-                                        var x = intVal(a) || 0;
-                                        var y = intVal(b) || 0;
-                                        return x + y;
-                                      }, 0);
-
-                                    var n = new Number(sum);
-                                    var myObj = {
-                                        style: 'decimal'
-                                    };
-                                    if(sum < 0){
-                                        $(this.column()).css('background-color','red');
-                                    }
-                                $(this.footer()).html(n.toLocaleString(myObj));
-                                }
-                            });
-                        }",
             ]);
     }
 

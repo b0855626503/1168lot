@@ -26,7 +26,7 @@ class RpSmPaymentTransformer extends TransformerAbstract
             'date_approve' => (is_null($model->date_approve) ? '' : $model->date_approve->format('d/m/y H:i:s')),
             'amount' => core()->textcolor(core()->currency($model->value), 'text-success'),
             'username' => (is_null($model->member) ? '' : $model->member->user_name),
-            'msg' => $model->msg,
+            'msg' => $model->promotion ? $model->promotion->name_th : '',
             'pro_amount' => $model->pro_amount,
         ];
     }

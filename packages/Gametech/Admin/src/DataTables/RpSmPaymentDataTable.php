@@ -59,7 +59,7 @@ class RpSmPaymentDataTable extends DataTable
         $onlyenddate = Carbon::parse($enddate)->toDateString();
 
         return $model->newQuery()->orderByDesc('code')
-            ->with('member')
+            ->with(['member','promotion'])
             ->active()->income()->complete()
             ->select('bank_payment.*')
             ->when($startdate, function ($query, $startdate) use ($enddate) {
