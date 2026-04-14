@@ -4,14 +4,14 @@
 @endphp
 
 @foreach ($menuItems as $menuItem)
+    @php
+        $menuKey = (string) ($menuItem['key'] ?? '');
+        $isFreeCreditDisabledMenu = $isRootLevel
+            && ($webconfig->freecredit_open ?? 'N') === 'N'
+            && in_array($menuKey, ['credit', 'withdraw_free', 'mop.rp_cashback', 'mop.rp_member_ic'], true);
+    @endphp
 
-@if($isRootLevel && $webconfig->freecredit_open == 'N')
-    @php($menuKey = (string) ($menuItem['key'] ?? ''))
-    @continue($menuKey == 'credit')
-    @continue($menuKey == 'withdraw_free')
-    @continue($menuKey == 'mop.rp_cashback')
-    @continue($menuKey == 'mop.rp_member_ic')
-@endif
+    @continue($isFreeCreditDisabledMenu)
 
     @php
         $visibleChildren = collect((array) ($menuItem['children'] ?? []))
