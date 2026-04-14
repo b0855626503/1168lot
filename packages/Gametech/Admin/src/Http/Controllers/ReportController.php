@@ -192,11 +192,7 @@ class ReportController extends AppBaseController
     {
         $config = $this->getCoreConfig();
 
-        if($config->seamless == 'Y'){
-            $wdDataTable = $rpSmWithdrawSeamlessDataTable->html();
-        }else{
-            $wdDataTable = $rpSmWithdrawDataTable->html();
-        }
+        $wdDataTable = $rpSmWithdrawDataTable->html();
         $stDataTable = $rpSmSetWalletDataTable->html();
         $lgDataTable = $rpSmLogDataTable->html();
 
