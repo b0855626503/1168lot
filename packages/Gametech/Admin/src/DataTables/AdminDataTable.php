@@ -2,7 +2,6 @@
 
 namespace Gametech\Admin\DataTables;
 
-
 use Gametech\Admin\Contracts\Admin;
 use Gametech\Admin\Transformers\AdminTransformer;
 use Yajra\DataTables\DataTableAbstract;
@@ -10,13 +9,12 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
 use Yajra\DataTables\Services\DataTable;
 
-
 class AdminDataTable extends DataTable
 {
     /**
      * Build DataTable class.
      *
-     * @param mixed $query Results from query() method.
+     * @param  mixed  $query  Results from query() method.
      * @return DataTableAbstract
      */
     public function dataTable($query)
@@ -28,22 +26,23 @@ class AdminDataTable extends DataTable
 
     }
 
-
     /**
-     * @param Admin $model
      * @return mixed
      */
     public function query(Admin $model)
     {
         $status = request()->input('enable');
+        $admin = auth()->guard('admin')->user()->superadmin === 'N';
 
-        return $model->newQuery()->where('superadmin', 'N')
+        return $model->newQuery()
+            ->when($admin, function ($query) {
+                $query->where('superadmin', 'N');
+            })
             ->when($status, function ($query, $status) {
 
                 $query->where('enable', $status);
             })
             ->select('employees.*')->with('role');
-
 
     }
 
@@ -73,11 +72,11 @@ class AdminDataTable extends DataTable
 
                 'order' => [[0, 'desc']],
                 'buttons' => [
-                    'pageLength'
+                    'pageLength',
                 ],
                 'columnDefs' => [
-                    ['targets' => '_all', 'className' => 'text-nowrap']
-                ]
+                    ['targets' => '_all', 'className' => 'text-nowrap'],
+                ],
             ]);
     }
 
@@ -104,11 +103,9 @@ class AdminDataTable extends DataTable
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return 'bankin_datatable_' . time();
+        return 'bankin_datatable_'.time();
     }
 }

@@ -18,7 +18,22 @@ class LottoDrawDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoDrawTransformer);
+        return $dataTable
+            ->setTransformer(new LottoDrawTransformer)
+            ->order(function ($query): void {
+                $status = (string) request('status', '');
+
+                if (in_array($status, ['draft', 'open', 'closed', 'resulted'], true)) {
+                    $query->orderBy('close_at', 'asc')
+                        ->orderBy('id', 'asc');
+
+                    return;
+                }
+
+                $query->orderByRaw("CASE status WHEN 'closed' THEN 0 WHEN 'open' THEN 1 ELSE 2 END")
+                    ->orderBy('close_at', 'asc')
+                    ->orderBy('id', 'asc');
+            });
     }
 
     /**
@@ -55,11 +70,7 @@ class LottoDrawDataTable extends DataTable
         $status = (string) request('status', '');
         if (in_array($status, ['draft', 'open', 'closed', 'resulted'], true)) {
             $query->where('status', $status);
-        } else {
-            $query->orderByRaw("CASE status WHEN 'closed' THEN 0 WHEN 'open' THEN 1 ELSE 2 END");
         }
-
-        $query->orderBy('close_at')->orderBy('id');
 
         return $query;
     }
@@ -73,20 +84,20 @@ class LottoDrawDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'dom'         => 'Bfrtip',
-                'processing'  => true,
-                'serverSide'  => true,
-                'responsive'  => false,
-                'stateSave'   => true,
-                'scrollX'     => true,
-                'paging'      => true,
-                'searching'   => true,
+                'dom' => 'Bfrtip',
+                'processing' => true,
+                'serverSide' => true,
+                'responsive' => false,
+                'stateSave' => true,
+                'scrollX' => true,
+                'paging' => true,
+                'searching' => true,
                 'deferRender' => true,
-                'retrieve'    => true,
-                'ordering'    => true,
-                'order'       => [[4, 'asc']],
-                'buttons'     => ['pageLength'],
-                'columnDefs'  => [
+                'retrieve' => true,
+                'ordering' => true,
+                'order' => [[4, 'asc']],
+                'buttons' => ['pageLength'],
+                'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
                 ],
             ]);
@@ -118,6 +129,6 @@ class LottoDrawDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'LottoDraw_' . date('YmdHis');
+        return 'LottoDraw_'.date('YmdHis');
     }
 }
