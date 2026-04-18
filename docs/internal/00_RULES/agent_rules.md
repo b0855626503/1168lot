@@ -63,6 +63,7 @@
   - `.codebase-memory/SUMMARY.md`
   - `memory/<domain>.md`
 - ค่อยเปิด docs เฉพาะ section ที่จำเป็นเมื่อ memory ยังไม่พอ
+- ถ้าต้องตรวจหลักฐาน retrieval consistency ให้เปิด `docs/internal/01_SYSTEM/retrieval_system_status.md`
 
 ### ลำดับการค้นหาโค้ด (ต้องทำตามลำดับนี้)
 

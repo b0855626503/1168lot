@@ -33,6 +33,9 @@
 - `.codebase-memory/SUMMARY.md`
 - `memory/auth.md`, `memory/payment.md`, `memory/wallet.md`, `memory/game.md` (เลือกเฉพาะ domain ที่เกี่ยวข้อง)
 
+ถ้าต้องตรวจสถานะ retrieval/memory/index ให้เปิด:
+- `docs/internal/01_SYSTEM/retrieval_system_status.md`
+
 ถ้า memory ไม่พอค่อยเปิด docs ตามลำดับด้านล่าง
 
 หลังอ่าน core startup แล้ว ให้เลือกอ่านเฉพาะ domain ที่เกี่ยวข้อง:

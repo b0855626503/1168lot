@@ -16,6 +16,9 @@
 - `.codebase-memory/SUMMARY.md`
 - `memory/auth.md` / `memory/payment.md` / `memory/wallet.md` / `memory/game.md`
 
+ถ้าต้องตรวจสถานะ retrieval/memory/index ให้เปิด:
+- `docs/internal/01_SYSTEM/retrieval_system_status.md`
+
 ---
 
 ## 🧠 อ่านต่อแบบ on-demand
