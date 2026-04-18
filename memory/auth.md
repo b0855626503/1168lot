@@ -4,22 +4,41 @@
 
 ## Responsibility
 
-ดูแล flow ยืนยันตัวตนของลูกค้าผ่าน FrontendApi (register/login/logout + token guard)
+ดูแล customer auth contract ของ FrontendApi: register/login/logout + token guard
 
-## Key Flows (สั้น)
+## Key Endpoints
 
-- register -> validate payload -> create member -> respond contract
-- login -> issue access token -> return profile baseline
-- logout -> invalidate token/session context
+- `POST /api/v1/auth/register`
+- `GET /api/v1/auth/register/banks`
+- `POST /api/v1/auth/register/bank-account-name`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
 
-## Important Modules
+## Module Map
 
+- `packages/Gametech/FrontendApi/src/Routes/api.php`
 - `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/AuthController.php`
 - `packages/Gametech/FrontendApi/src/Http/Middleware/AuthenticateFrontendToken.php`
-- `packages/Gametech/FrontendApi/src/Routes/api.php`
 - `config/auth.php`
 
-## Dependencies
+## Main Services / Actions
 
-- member data (`packages/Gametech/Wallet/src/`)
-- language middleware และ response contract ฝั่ง FrontendApi
+- register validation + member creation
+- token issue/revoke lifecycle
+- auth guard enforcement for protected endpoints
+
+## Important Dependencies
+
+- member domain (`packages/Gametech/Wallet/src/`)
+- language middleware / response contract ของ FrontendApi
+
+## Short Execution Flow
+
+- register/login request -> AuthController -> domain/repository flow -> token/response
+- protected request -> AuthenticateFrontendToken -> controller action
+
+## Source-of-Truth References
+
+- `docs/internal/03_DOMAINS/auth.md`
+- `docs/public/api/frontend-v1/03-endpoints.md`
+- `docs/internal/01_SYSTEM/system-current-state/03-endpoints.md`

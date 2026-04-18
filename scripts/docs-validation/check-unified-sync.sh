@@ -110,6 +110,8 @@ done
 
 issues=0
 semantic_mismatch_count=0
+semantic_critical_mismatch_count=0
+semantic_non_critical_mismatch_count=0
 
 if (( has_code_trigger == 1 )); then
   if (( has_docs_sync == 0 )); then
@@ -138,6 +140,8 @@ fi
 
 if [[ -f "${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json}" ]]; then
   semantic_mismatch_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)($j["summary"]["total_mismatches"] ?? 0);' "${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json}")"
+  semantic_critical_mismatch_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)($j["summary"]["critical_mismatches"] ?? 0);' "${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json}")"
+  semantic_non_critical_mismatch_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)($j["summary"]["non_critical_mismatches"] ?? 0);' "${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json}")"
 fi
 
 if ! bash "$SCRIPT_DIR/check-octocode-index-sync.sh"; then
@@ -154,7 +158,7 @@ if (( issues > 0 )); then
 fi
 
 if (( semantic_mismatch_count > 0 )); then
-  log_warn "unified-sync" "semantic drift remains: $semantic_mismatch_count (see ${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json})"
+  log_warn "unified-sync" "semantic drift remains: total=$semantic_mismatch_count critical=$semantic_critical_mismatch_count non-critical=$semantic_non_critical_mismatch_count (see ${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json})"
 else
   log_info "unified-sync" "semantic-consistent + coverage-complete + index-synced"
 fi
