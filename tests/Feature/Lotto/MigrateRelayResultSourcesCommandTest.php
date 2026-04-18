@@ -84,4 +84,33 @@ class MigrateRelayResultSourcesCommandTest extends TestCase
         $this->assertStringContainsString('"type":"dji"', (string) $source->request_query_template_json);
         $this->assertStringContainsString('$.results[0].lottosNumber', (string) $source->parser_config_json);
     }
+
+    public function test_command_maps_downjone_vip_to_dowjones_vip_type(): void
+    {
+        DB::table('lotto_markets')->insert([
+            'id' => 2,
+            'code' => 'downjone-vip',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('lotto_result_sources')->insert([
+            'id' => 56,
+            'market_id' => 2,
+            'is_active' => 0,
+            'endpoint_url' => 'https://old.example.com/result',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $exitCode = Artisan::call('lotto:migrate-relay-result-sources', [
+            '--apply' => true,
+        ]);
+
+        $this->assertSame(0, $exitCode);
+
+        $source = DB::table('lotto_result_sources')->where('id', 56)->first();
+
+        $this->assertStringContainsString('"type":"dowjones-vip"', (string) $source->request_query_template_json);
+        $this->assertStringContainsString('"type":"dowjones-vip"', (string) $source->fetch_config_json);
+    }
 }

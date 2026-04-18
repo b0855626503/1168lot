@@ -46,7 +46,7 @@ class LotteryRelayTypeRegistry
             'germany-vip' => 'germany-vip',
             'laos-redcross' => 'laoredcross',
             'russia-vip' => 'russia-vip',
-            'downjone-vip' => 'mlnhngo',
+            'downjone-vip' => 'dowjones-vip',
             'downjone-star' => 'dowjonestar',
             'downjone-midnight' => 'dowjones-midnight',
             'downjone-extra' => 'dowjones-extra',

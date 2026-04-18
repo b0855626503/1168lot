@@ -13,6 +13,7 @@ class LotteryRelayTypeRegistryTest extends TestCase
 
         $this->assertSame('dji', $registry->canonicalTypeForMarketCode('downjone-stock'));
         $this->assertSame('dowjones-midnight', $registry->canonicalTypeForMarketCode('downjone-midnight'));
+        $this->assertSame('dowjones-vip', $registry->canonicalTypeForMarketCode('downjone-vip'));
         $this->assertNull($registry->canonicalTypeForMarketCode('unknown-market'));
     }
 
@@ -21,6 +22,7 @@ class LotteryRelayTypeRegistryTest extends TestCase
         $registry = new LotteryRelayTypeRegistry;
 
         $this->assertSame(['downjone-stock'], $registry->marketCodesForCanonicalType('dji'));
-        $this->assertContains('downjone-vip', $registry->marketCodesForCanonicalType('mlnhngo'));
+        $this->assertContains('downjone-vip', $registry->marketCodesForCanonicalType('dowjones-vip'));
+        $this->assertNotContains('downjone-vip', $registry->marketCodesForCanonicalType('mlnhngo'));
     }
 }

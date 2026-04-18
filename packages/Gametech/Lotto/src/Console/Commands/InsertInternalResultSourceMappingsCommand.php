@@ -62,6 +62,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
                     'action' => 'skip(unmapped)',
                     'endpoint_url' => '-',
                 ];
+
                 continue;
             }
 
@@ -81,6 +82,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
                     'action' => 'skip(exists)',
                     'endpoint_url' => (string) $draft['endpoint_url'],
                 ];
+
                 continue;
             }
 
@@ -162,7 +164,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
             'germany-vip' => 'exphuay:germany-vip',
             'laos-redcross' => 'exphuay:laoredcross',
             'russia-vip' => 'exphuay:russia-vip',
-            'downjone-vip' => 'exphuay:mlnhngo',
+            'downjone-vip' => 'exphuay:dowjones-vip',
             'downjone-star' => 'exphuay:dowjonestar',
             'downjone-midnight' => 'dowjones-midnight',
             'downjone-extra' => 'dowjones-extra',
@@ -219,14 +221,15 @@ class InsertInternalResultSourceMappingsCommand extends Command
                 'last_2_raw_1' => ['type' => 'JSON_PATH', 'path' => '$.results[0].lottosUnder'],
             ];
         } elseif ($target === 'dowjones-midnight') {
-            $endpointUrl = $baseUrl . '/internal/lottery/results/dowjones-midnight';
+            $endpointUrl = $baseUrl.'/internal/lottery/results/dowjones-midnight';
         } elseif ($target === 'dowjones-extra') {
-            $endpointUrl = $baseUrl . '/internal/lottery/results/dowjones-extra';
+            $endpointUrl = $baseUrl.'/internal/lottery/results/dowjones-extra';
         } else {
             $type = substr($target, strlen('exphuay:'));
-            $endpointUrl = $baseUrl . '/internal/lottery/results/exphuay/' . $type;
+            $endpointUrl = $baseUrl.'/internal/lottery/results/exphuay/'.$type;
             $queryTemplate['page'] = 1;
         }
+
         return [
             'market_id' => (int) $market->id,
             'is_active' => $resolvedActive,
@@ -316,7 +319,7 @@ class InsertInternalResultSourceMappingsCommand extends Command
         $apiSubdomain = trim((string) config('gametech.api_url', 'api'), '.');
 
         if ($domain !== '') {
-            $host = $apiSubdomain !== '' ? ($apiSubdomain . '.' . ltrim($domain, '.')) : ltrim($domain, '.');
+            $host = $apiSubdomain !== '' ? ($apiSubdomain.'.'.ltrim($domain, '.')) : ltrim($domain, '.');
 
             return sprintf('%s://%s', $scheme, $host);
         }
