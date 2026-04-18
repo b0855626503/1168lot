@@ -225,6 +225,64 @@ foreach ($bucket as $bucketName => $bucketParts) {
     }
 }
 
+$gitCommitHits = static function (string $needle, ?string $since = null): int {
+    $quotedNeedle = escapeshellarg($needle);
+    $sinceArg = '';
+    if ($since !== null && $since !== '') {
+        $sinceArg = '--since=' . escapeshellarg($since);
+    }
+
+    $command = sprintf(
+        'git log --oneline --no-merges %s -G%s -- docs/ memory/ app/ routes/ packages/ 2>/dev/null | wc -l',
+        $sinceArg,
+        $quotedNeedle
+    );
+
+    $output = shell_exec($command);
+    if (!is_string($output)) {
+        return 0;
+    }
+
+    return (int) trim($output);
+};
+
+$usefulSoonTracking = [
+    'promotion_rule' => 'promote_if_total_hits>=3_and_recent_hits>=2',
+    'recent_window' => '120 days',
+    'items' => [],
+];
+
+foreach (($bucket['useful_soon']['endpoints'] ?? []) as $endpoint) {
+    $totalHits = $gitCommitHits($endpoint, null);
+    $recentHits = $gitCommitHits($endpoint, '120 days ago');
+
+    $usefulSoonTracking['items'][] = [
+        'entity_type' => 'endpoint',
+        'entity' => $endpoint,
+        'total_commit_hits' => $totalHits,
+        'recent_commit_hits' => $recentHits,
+        'promote_candidate' => ($totalHits >= 3 && $recentHits >= 2),
+    ];
+}
+
+foreach (($bucket['useful_soon']['modules'] ?? []) as $module) {
+    $totalHits = $gitCommitHits($module, null);
+    $recentHits = $gitCommitHits($module, '120 days ago');
+
+    $usefulSoonTracking['items'][] = [
+        'entity_type' => 'module',
+        'entity' => $module,
+        'total_commit_hits' => $totalHits,
+        'recent_commit_hits' => $recentHits,
+        'promote_candidate' => ($totalHits >= 3 && $recentHits >= 2),
+    ];
+}
+
+$usefulSoonTracking['promote_candidates'] = array_values(array_filter(
+    $usefulSoonTracking['items'],
+    static fn (array $item): bool => (bool) ($item['promote_candidate'] ?? false)
+));
+
 $criticalCount = count($critical['doc_only_endpoints']) + count($critical['doc_only_modules']);
 foreach ($critical['missing_flow_keywords_by_domain'] as $items) {
     $criticalCount += count($items);
@@ -250,6 +308,7 @@ $report = [
     'critical' => $critical,
     'non_critical' => $nonCritical,
     'non_critical_buckets' => $bucket,
+    'useful_soon_tracking' => $usefulSoonTracking,
 ];
 
 file_put_contents($reportPath, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));

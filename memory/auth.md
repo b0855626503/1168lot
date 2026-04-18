@@ -13,6 +13,7 @@
 - `POST /api/v1/auth/register/bank-account-name`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/realtime/auth` (repeated active usage: channel auth handshake)
 
 ## Module Map
 
@@ -36,6 +37,7 @@
 
 - register/login request -> AuthController -> domain/repository flow -> token/response
 - protected request -> AuthenticateFrontendToken -> controller action
+- realtime private/presence subscription -> `/api/v1/realtime/auth` -> auth middleware -> channel authorization
 
 ## Source-of-Truth References
 
