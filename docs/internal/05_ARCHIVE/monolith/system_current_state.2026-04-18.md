@@ -1,0 +1,1199 @@
+# System Current State
+
+อัปเดตล่าสุด: 2026-04-12
+
+## ภาพรวมระบบ
+
+- Framework: Laravel 10.50.2
+- Architecture: Modular (Konekt Concord)
+- หลัก domain สำคัญ: Admin, Wallet, Payment, API, Lotto
+- Lotto ใช้สถานะงวดหลัก: `draft -> open -> closed -> resulted`
+- package baseline หลังอัปเกรดรอบนี้:
+  - MongoDB driver ใช้ `mongodb/laravel-mongodb`
+  - DataTables ใช้ชุด `yajra/laravel-datatables-{oracle,html,buttons}` เวอร์ชัน Laravel 10 path
+  - legacy middleware packages `fideloper/proxy` และ `fruitcake/laravel-cors` ถูกถอดออกจาก runtime path แล้ว
+  - package ที่ไม่ได้ใช้งานจริงและถูกถอดออกแล้ว: `google/apiclient`, `irazasyed/telegram-bot-sdk`, `laravel/scout`, `barryvdh/laravel-debugbar`
+- validation baseline หลังอัปเกรด:
+  - `php artisan --version` และ `php artisan about --only=environment` boot ผ่านบน Laravel 10
+  - `php artisan route:list` ไม่ถูก block จาก controller constructor ที่ยิง DB ระหว่าง console bootstrap แล้ว
+- lottery relay baseline:
+  - มี config กลาง `config/lottery_result_relay.php`
+  - runtime mode รองรับ `primary`, `clone`, `disabled`
+  - มี Redis connection `lotto` (db 4) สำหรับ relay stream + markers
+  - Redis connection `lotto` ต้องใช้ prefix กลางร่วมกันทุกเว็บผ่าน `REDIS_LOTTO_PREFIX` (default `lotto_relay:`) ไม่ใช้ app prefix ปกติ
+  - มี queue/horizon แยก `lotto`
+  - draw observer ชุด realtime/dashboard/auto-result register เฉพาะบน `LottoDraw` model ตัวจริง ไม่ register ซ้ำบน `LottoDrawProxy` เพื่อกัน event/ประกาศผลซ้ำ
+
+## นโยบาย Runtime Schema
+
+- environment ปกติของระบบต้องถือว่า migrate schema เป็นล่าสุดแล้ว
+- web/api/admin request path ห้าม query `information_schema` เด็ดขาด
+- web/api/admin request path ห้ามใช้ request-time schema guards เช่น:
+  - `Schema::hasTable(...)`
+  - `Schema::hasColumn(...)`
+  - `Schema::getColumnListing(...)`
+- ถ้าต้องมี compatibility ระหว่างข้อมูลเก่า/ใหม่ ให้ fallback ที่ระดับข้อมูลแทน
+  - ตัวอย่าง: อ่าน `wallet_transactions.meta.reason` เมื่อ `lotto_tickets.reason` ยังว่าง
+- schema inspection อนุญาตเฉพาะใน:
+  - migration
+  - one-off maintenance/diagnostic command
+  - test/setup path ที่ไม่ใช่ runtime ปกติ
+
+## Admin Maintenance / Version Display
+
+- admin login และ admin header ยังแสดง installed version ได้จาก config `self-update.version_installed`
+- package `codedge/laravel-selfupdater` ถูกถอดออกจากระบบแล้วในเส้นทาง Laravel 10 upgrade
+- route เดิมของ admin ยังอยู่:
+  - `admin.update.index`
+  - `admin.checkupdate.index`
+- แต่ route ชุดนี้ไม่ทำ in-app auto-update อีกต่อไป:
+  - `update` จะ redirect กลับพร้อมข้อความแจ้งว่า self-update ถูกถอดออกแล้ว
+  - `checkupdate` แสดง current version และแจ้งว่าไม่มี available version ผ่าน in-app updater
+- deployment/update policy ปัจจุบันต้องใช้ external deployment flow แทน self-update ในแอป
+
+## นโยบายแก้ไขงวดหวย (Admin)
+
+- สถานะ `draft`: แก้ไขฟิลด์หลักของงวดได้
+- สถานะ `open`: อนุญาตแก้ `draw_date` และ `close_at` (รวม metadata ที่ระบบ allowlist ไว้)
+- สถานะ `resulted`: ไม่อนุญาตให้แก้ไข
+- ฟิลด์เวลาในฟอร์ม admin รองรับเคสข้ามวัน:
+  - ถ้า `close_at` < `open_at` จะตีความ `close_at` เป็นวันถัดไป
+  - ถ้า `result_at` < `close_at` จะตีความ `result_at` เป็นวันถัดไป
+  - ถ้าเวลาที่กรอกน้อยกว่าค่าอ้างอิง ระบบจะ normalize ไปวันถัดไปจนได้ลำดับเวลาที่ถูกต้อง
+- เมนู `รายการหวย` รองรับเวลาอัตโนมัติแบบข้ามวันเช่นกัน (`auto_open_time > auto_close_time`)
+- โหมดงวด (`draw_mode`) ของตลาดรองรับ:
+  - `manual` (ทีมงานสร้างงวดเอง)
+  - `daily` (ทุกวัน)
+  - `weekdays` (จันทร์-ศุกร์)
+  - `wed_sat_sun` (พุธ/เสาร์/อาทิตย์)
+
+## นโยบายสิทธิ์ปุ่มงวดหวย (Admin UI)
+
+- ปุ่มในตาราง `draws` ถูกเช็กสิทธิ์รายปุ่มด้วย `bouncer()->hasPermission(...)`
+- ผู้ใช้ `superadmin` ผ่านการตรวจสิทธิ์ทั้งหมดตามกลไก bouncer เดิม
+- ปัจจุบันหน้าเมนู `lotto/draws` ซ่อนปุ่ม `Dry-run` และ `Logs` ออกจาก action column
+- ปุ่ม `เปิดรับ/ปิดรับ` ถูกถอดออกจากคอลัมน์ `ดำเนินการ` และย้ายพฤติกรรมสลับสถานะไปที่ช่อง `สถานะ` แทน
+- ปุ่ม `ออกผล` (สถานะ `closed`) เปิด modal ขนาดเล็กให้เลือกโหมด `Manual` หรือ `Auto`
+  - `Manual` = เปิดฟอร์มกรอกผลและคำนวณรางวัลด้วยมือ
+  - `Auto` = เรียก flow เดียวกับ `Retry` (`lotto_draws.auto_result_manual_retry`)
+  - `Auto` / `Retry` ของทีมงานต้อง bypass retry gating ของ auto scheduler
+    - bypass source backoff
+    - bypass source exhausted / `max_attempts`
+    - bypass draw fetch status เดิมที่เป็น `EXHAUSTED`
+  - แต่ยังใช้ source resolution / fetch / parse / validate / apply ชุดเดิมเหมือนเดิม
+- modal `ออกผล` รองรับปุ่ม `งดออกผล` เพิ่มเติม
+  - เรียก `POST /lotto/draws/mark-no-result`
+  - ใช้ได้เฉพาะงวดสถานะ `closed`
+  - เมื่อสำเร็จ ระบบ set งวดเป็น `resulted` พร้อม `result_number.no_result=true`
+- ปุ่ม `Retry` แยกใน action column ถูกยุบเข้าในโหมด `Auto` ของ modal `ออกผล`
+- ช่อง `สถานะ` ของงวด `open/closed` แสดงเป็นปุ่ม (button) เพื่อสลับ `เปิดรับ <-> ปิดรับ` ได้เมื่อผู้ใช้มีสิทธิ์ที่เกี่ยวข้อง (`lotto_draws.open`/`lotto_draws.close`) และต้องยืนยันผ่าน popup ก่อนทุกครั้ง
+- สถานะที่กดไม่ได้ (`draft`/`resulted` หรือรายการที่ไม่มีสิทธิ์) แสดงเป็นข้อความตกแต่งสีพร้อมไอคอน (ไม่ใช้ badge เดิม)
+- ตาราง `lotto/draws` แสดงสีพื้นหลังแยกตามสถานะงวดด้วยโทนที่เห็นชัดขึ้น:
+  - `draft` = เทาอ่อน
+  - `open` = เขียวอ่อน
+  - `closed` = เหลืองอ่อน
+  - `resulted` = ฟ้าอ่อน
+- ตาราง `lotto/draws` จัดข้อมูลใน cell เป็นแนวตั้งกึ่งกลาง (`vertical-align: middle`) และจัดข้อความกึ่งกลางในส่วนข้อมูลแถว
+- หน้า `lotto/draws` รองรับ filter เพิ่มเติมด้วย `สถานะ` (`draft/open/closed/resulted`) ร่วมกับ group/market/draw_date
+- realtime toast ของรายการ `โพยหวย` (`lotto.ticket.list.changed`) ต้องส่งข้อความที่อ่านรู้เรื่องใน event เดียว
+  - ถ้ามี context ของ draw ให้แนบ `market_name` และ `draw_date`
+  - ถ้าเป็น action `created` ต้องแนบผู้ทำรายการ (`actor_id`) และยอดเงิน (`amount`) ด้วย
+  - ถ้าเป็น action `cancelled` ต้องแนบทั้งเจ้าของโพย (`owner_id`) และผู้ทำรายการ (`actor_id`) เมื่อ resolve ได้
+  - field `total` ของ event นี้ต้องมีความหมายเท่ากับ badge เมนู `รายการโพย`
+    - นับเฉพาะ `lotto_tickets.status=active`
+    - ห้ามนับ `cancelled` และ `resulted` ปนใน total
+  - ตัวอย่างข้อความ:
+    - `มีโพยหวยถูกตัดสินผลแล้ว: หวยออมสิน งวดวันที่ 2026-04-04`
+    - `มีการคืนโพยหวย: หวย ธกส. งวดวันที่ 2026-04-16 ของ xxx โดย xxxx`
+    - `มีรายการโพยหวยใหม่: หวยมาเลเซีย งวดวันที่ 2026-04-05 โดย 0855626503 จำนวน 200`
+  - trigger policy:
+    - `created` = ยิงตอนสร้าง ticket ใหม่
+    - `cancelled` = ยิงตอน ticket เปลี่ยนสถานะเป็น `cancelled`
+    - `resulted` = ยิงครั้งเดียวต่อ `draw` ตอน `draw.status` เปลี่ยนเป็น `resulted`
+  - ห้ามยิง `resulted` ทีละ ticket ระหว่าง settlement ของงวดเดียวกัน
+- toast ของ Lotto ที่ขึ้นหน้าแอดมินทีมงานตอนนี้มี 2 ตัวหลัก:
+  - `lotto.ticket.list.changed`
+  - `lotto.draw.status.changed`
+- ทั้งสองตัวต้องใช้ toast style:
+  - `className = rt-toast rt-info gt-toast gt-toast-info`
+  - `avatar = /assets/admin/icons/alert.webp?v=1`
+- realtime channel ฝั่งลูกค้าต้องแยกจากทีมงาน
+  - ทีมงานใช้ `{APP_NAME}_events`
+  - ฝั่งสมาชิกใช้ shared private channel `{APP_NAME}_members` สำหรับ `public.activity.updated`
+  - ฝั่งสมาชิกแต่ละคนยังใช้ private channel `{APP_NAME}_members.{member_code}` สำหรับ `member.activity.updated` และ `member.balance.updated`
+  - `member.activity.updated` เป็นเส้นหลักของ wallet/customer realtime
+    - deposit approval
+    - withdraw approval / reject
+    - rollback
+    - admin adjust
+    - lotto ticket win
+    - lotto ticket refund/cancel credit
+  - ทุก wallet flow ที่ยิง `member.activity.updated` ต้องแนบ `message` ที่พร้อมแสดงบน frontend ทันที
+  - `member.balance.updated` ถือเป็น legacy compatibility เท่านั้น
+  - กรณีทีมงานเพิ่ม/ลดเครดิตผ่าน admin `setWallet`
+    - ต้องยิง `member.activity.updated` เพิ่มด้วย payload `method=adjust`, `event=wallet.admin_adjusted`
+    - payload ต้องแนบ `message` สำหรับแสดงผลตรงบน frontend และแนบ `direction`, `remark`, `adjusted_by` ใน `data`
+    - ต้องยิง `member.balance.updated` คู่กันด้วยข้อความเดียวกันเพื่อรักษา legacy compatibility
+  - shared member channel ห้าม broadcast `lotto.ticket.list.changed` ที่มาจาก `created/cancelled`
+  - ตอนสมาชิกถูกรางวัล ต้องยิง targeted private event ผ่าน `member.activity.updated`
+    - `method=lotto`
+    - `event=lotto.ticket_won`
+    - payload ต้องแนบ `market_name`, `draw_date`, `ticket_id`, `draw_id`, `amount`, `balance`, `message`
+  - `/api/v1/realtime/config` ต้องคืน `shared_member_channel` แทน `public_channel`
+  - frontend ฝั่งลูกค้าห้าม subscribe `{APP_NAME}_events` หรือ listen direct event ของทีมงาน เช่น `lotto.ticket.list.changed` / `lotto.draw.status.changed`
+
+## นโยบาย ACL แยกสิทธิ์ CRUD (Admin Lotto)
+
+- ACL ของเมนูตั้งค่า Lotto รองรับ key แยก action ระดับ `index/create/update/delete` ตาม route ที่มีจริง (pattern เดียวกับโมดูลที่แยกสิทธิ์แบบ CRUD)
+- key เดิมระดับเมนู (เช่น `lotto_settings.markets`, `lotto_settings.number_blocks`) ยังคงอยู่เพื่อรักษา backward compatibility
+- กลุ่มที่มีการแยก action เพิ่มแล้ว:
+  - `lotto_settings.draws.*` (`index/create/update/open/force_open/close/settle/cancel_all_refund/mark_no_result/auto_result_test_fetch/auto_result_manual_retry/auto_result_metrics/auto_result_logs`)
+  - `lotto_settings.auto_result_sources.*` (`index/create/update/delete`)
+  - `lotto_settings.number_blocks.*` (`index/create/update/delete`)
+  - `lotto_settings.groups.*` (`index/create/update`)
+  - `lotto_settings.markets.*` (`index/create/update`)
+  - `lotto_settings.group_packages.*` (`index/create/update/delete`)
+  - `lotto_settings.payout_settings.*` (`index/update`)
+  - `lotto_settings.bet_limit_settings.*` (`index/update`)
+
+## นโยบายเส้นทางถอนเงิน Seamless (Admin)
+
+- route กลุ่ม legacy ต่อไปนี้ถูกถอดออกจาก admin runtime แล้ว:
+  - `admin.withdraw_seamless.*`
+  - `admin.withdraw_seamless_free.*`
+- เหลือเฉพาะเส้นทางถอนที่ active ภายใต้ ACL ชุดปัจจุบัน:
+  - `admin.withdraw.*`
+  - `admin.withdraw_free.*`
+- เหตุผล: ลด legacy attack surface และปิดช่องโหว่จาก route ที่ไม่ได้ถูก map ใน `acl-seamless.php`
+
+## นโยบายการเรียงข้อมูลแหล่งผลอัตโนมัติ (Admin UI)
+
+- ตาราง `/lotto/auto-result-sources` รองรับ interactive sorting จากการกดหัวคอลัมน์
+- ระบบใช้ default initial sort เป็น `priority ASC` แล้วตามด้วย `id DESC`
+- ห้าม lock ลำดับด้วย `orderBy(...)` ตายตัวใน query หลัก เพราะจะทำให้ผู้ใช้ sort คอลัมน์อื่นไม่ได้จริง
+
+## นโยบายหน้าเลขอั้น (Admin `/lotto/number-blocks`)
+
+- ตารางมีคอลัมน์ checkbox เป็นคอลัมน์แรกสุดสำหรับเลือกหลายรายการ
+- modal `เพิ่มเลขอั้น` แสดงตัวเลือก `งวดหวย` เป็นงวดล่าสุดของแต่ละรายการหวยที่สถานะยังไม่ปิด (`draft/open`) เท่านั้น
+- หน้า index รองรับ filter ด้วย:
+  - `วันที่งวด` (`draw_date`)
+  - `รายการหวย` (`market_id`) แบบจัดกลุ่มตามกลุ่มหวย และเลือก filter ทั้งกลุ่มได้ (`group_id`)
+  - `ประเภทเดิมพัน` (`bet_type`)
+  - `ค้นหาเลข` (`number_search`)
+- คอลัมน์ตารางแยก `งวด` และ `รายการหวย` ออกจากกัน และคอลัมน์ `รายการหวย` แสดงโลโก้หน้าชื่อรายการเมื่อมีข้อมูลโลโก้
+- เปิด DataTables global searching (`searching=true`) และยังรองรับ filter ด้านบนผ่าน preXhr
+- รองรับลบหลายรายการจาก checkbox ที่เลือกผ่านปุ่ม `ลบที่เลือก`
+- คอลัมน์ `จัดการ` มีปุ่ม `แก้ไข` และ `ลบ` รายรายการ
+
+## นโยบายหน้าโพยหวย (Admin `/lotto/tickets`)
+
+- เมนู `รายการโพย/ยกเลิกโพย` แสดงเฉพาะ ticket ที่ `status=active`
+- เมนู Lotto ฝั่งทีมงานต้องเรียก `DashboardController@loadCnt` ตอนเข้าเมนูให้สม่ำเสมอ
+  - ครอบคลุมหน้า `รายการโพย`, เมนูใน `ตั้งค่าหวย`, และเมนูใน `รายงาน Lotto`
+  - หน้า DataTable ของ Lotto ใช้ shared `datatables_js` เป็นตัวเรียก
+  - หน้า custom dashboard / Vue page ของ Lotto ที่ไม่ได้ใช้ DataTables โดยตรง
+    - ใช้ shared partial `admin::layouts.loadcnt_js` เพื่อเรียก `loadCnt` ตอนเปิดหน้า
+  - หน้า Lotto index ทั้งหมดต้อง include `admin::layouts.loadcnt_js` เป็น fallback/guarantee แม้บางหน้าจะยังมี `autoCnt()` จากโค้ดเดิม
+  - ใช้ global dedupe (`window.__adminLoadCntTriggered`) กัน request `loadCnt` ซ้ำในหน้าเดียวกัน
+  - หน้า Vue reports `results-by-date` และ `profit-loss-forecast` ต้องมีการเรียก `loadCnt` ตอนเข้าเมนูเช่นกัน
+- badge เมนู `รายการโพย` (`lotto_tickets`) ใช้ค่า count จาก `Admin DashboardController@loadCnt`
+  - นับเฉพาะ `lotto_tickets.status=active`
+  - หน้า `/lotto/tickets` ห้ามดึงค่า badge จาก `DataTable xhr` ของหน้าเอง
+- รายการ `cancelled` และ `resulted` ต้องไม่แสดงใน DataTable หลักของหน้า
+- filter `draw_id/market_id/search` ยังคงทำงานภายใต้ชุดข้อมูล active-only
+- ลำดับคอลัมน์หลักของ DataTable:
+  - `สมาชิก`
+  - `งวดหวย` = แสดงเฉพาะวันที่งวด
+  - `รายการหวย` = แยกออกจากงวดหวย และต้องแสดง icon/logo หน้าชื่อหวยเมื่อมีข้อมูล
+  - `แพกเกจ` = ใช้ชื่อ package snapshot จาก `lotto_ticket_items.package_name_at_time`
+  - `ยอดแทง`, `ส่วนลด`, `สุทธิ`, `สถานะ`
+- คอลัมน์ `ยอดถูก` ไม่แสดงในหน้า `รายการโพย/ยกเลิกโพย`
+- คอลัมน์ `จัดการ` มีปุ่ม `ดูรายละเอียด` และ `ยกเลิกโพย`
+  - ปุ่ม `ยกเลิกโพย` เปิด modal ให้กรอก `สาเหตุการยกเลิก` แบบบังคับกรอก
+  - backend route `POST /lotto/tickets/{id}/cancel`
+  - ใช้ได้เฉพาะ ticket ที่ `status=active` และ draw ยัง `status=open`
+  - เมื่อยกเลิกสำเร็จ:
+    - rollback exposure ของเลขใน ticket
+    - คืนเงินสมาชิกด้วย `wallet_transactions(ref_type=LOTTO_CANCEL, created_by_type=admin)`
+    - update ticket เป็น `cancelled`
+    - เก็บ `reason`, `cancelled_at`, `cancelled_by`, `refund_amount`
+  - runtime policy:
+    - request path นี้ต้องถือว่า DB มีคอลัมน์ `lotto_tickets.reason` แล้ว
+    - ห้ามเช็ก schema ระหว่าง request เพื่อ branching flow
+    - ถ้าต้องอ่านข้อมูลเก่า ให้ fallback จาก `wallet_transactions.meta.reason` เมื่อ field บน ticket ว่างเท่านั้น
+- modal รายละเอียดโพย (`tickets/loaddata`) ส่งข้อมูล cancel context เพิ่มเมื่อมี:
+  - `reason`
+  - `cancelled_at`
+  - `cancelled_by_name`
+  - `refund_amount`
+
+## นโยบาย Frontend API รายการโพยหวย (`/api/v1/lotto/tickets*`)
+
+- `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+  - คง field summary เดิมไว้ เช่น `draw_status`, `result_outcome`, `refund_amount`
+  - field `status` ฝั่ง customer API ใช้ display status ที่พร้อมใช้บน UI:
+    - `won` เมื่อ `result_outcome=won` และ `is_winner=true`
+    - `lost` เมื่อ `result_outcome=lose` และ `is_winner=false`
+    - กรณีอื่นคงค่า lifecycle เดิม เช่น `active`, `cancelled`
+  - ส่ง cancel context ระดับโพยเพิ่มทุกครั้งเพื่อให้ frontend แสดงประวัติโพยได้ครบ:
+    - `cancelled_at`
+    - `cancelled_by_name`
+    - `cancelled_by_type`
+    - `cancel_reason`
+  - การ resolve ผู้ยกเลิก:
+    - อ่านจาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
+    - ถ้าไม่พบ ค่อย fallback จาก `lotto_tickets.cancelled_by`
+  - การ resolve สาเหตุ:
+    - อ่าน `lotto_tickets.reason` เป็นหลัก
+    - ถ้า field ว่าง ให้ fallback จาก `wallet_transactions.meta.reason`
+    - ห้ามเช็ก schema ระหว่าง request เพื่อเลือก path
+
+## นโยบาย Frontend API ประวัติการเงิน (`/api/v1/wallet/transactions`)
+
+- มี route ใหม่ `GET /api/v1/wallet/transactions`
+- ใช้ `wallet_transactions` เป็น source หลักสำหรับประวัติการเงินรวมของสมาชิก
+- scope ของข้อมูล:
+  - ใช้เฉพาะ `wallet_transactions.scope=MEMBER`
+  - รวมทั้งฝาก ถอน แทงหวย คืนเงินหวย ค่าแนะนำ Cashback ยอดเสียเพื่อน และรายการ wallet อื่นที่เข้ากระเป๋าหลัก
+- รองรับ filter:
+  - `type`
+  - `date_start`
+  - `date_stop`
+  - `page`
+  - `limit`
+- `type` ที่ frontend ใช้ได้:
+  - `all`
+  - `deposit`
+  - `withdraw`
+  - `lotto_bet`
+  - `lotto_refund`
+  - `referral`
+  - `cashback`
+  - `ic`
+  - `bonus`
+  - `game`
+  - `admin_adjust`
+  - `rollback`
+  - `other`
+- response ต้องมี:
+  - `filters`
+  - `summary` (`count`, `total_credit_amount`, `total_debit_amount`, `net_amount`)
+  - `items`
+  - `pagination`
+- รายการระดับ item ต้องส่งทั้ง:
+  - `type/type_label`
+  - `ref_type`
+  - `direction/direction_label`
+  - `amount/signed_amount`
+  - `balance_before/balance_after`
+  - `title/detail`
+  - `ref_id/ref_code/group_code`
+
+## นโยบาย Frontend API รับยอดโบนัส/ค่าแนะนำเข้ากระเป๋า (`/api/v1/wallet/claim`)
+
+- มี route ใหม่ `POST /api/v1/wallet/claim`
+- ใช้สำหรับรับยอดสะสมประเภท:
+  - `bonus`
+  - `faststart`
+  - `cashback`
+  - `ic`
+- request body:
+  - `type`
+- ต้อง map `type` ไป legacy id เดิมของระบบ:
+  - `bonus` -> `BONUS`
+  - `faststart` -> `FASTSTART`
+  - `cashback` -> `CASHBACK`
+  - `ic` -> `IC`
+- ห้ามเรียก controller เดิมของ package `Wallet` จาก `FrontendApi`
+  - ให้เรียก repository domain โดยตรงแทน
+- behavior ต้องคงตามระบบเดิม:
+  - ถ้า `freecredit_open=Y` ให้ใช้ `MemberCreditFreeLogRepository::tranBonus()`
+  - ถ้า `freecredit_open!=Y` ให้ใช้ `MemberCreditLogRepository::tranBonus()`
+  - ถ้ายอดกระเป๋าเป้าหมายมากกว่า `pro_reset` ต้องปฏิเสธการรับยอด
+- response สำเร็จต้องคืน:
+  - `type`
+  - `legacy_type`
+  - `claimed_amount`
+  - `target_wallet`
+  - `profile.balance`
+  - `profile.balance_free`
+  - `profile.bonus`
+  - `profile.cashback`
+  - `profile.ic`
+  - `profile.faststart`
+
+## นโยบายเริ่มงานของ Agent (Lean Startup Docs)
+
+- startup default ของ agent ต้องใช้ชุดเอกสารสั้นก่อน:
+  - `docs/START_HERE.md`
+  - `docs/internal/00_RULES/agent_rules.md`
+  - `docs/internal/01_SYSTEM/startup_digest.md`
+  - `docs/internal/02_DECISIONS/adr_baseline.md`
+  - `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+  - `docs/04_PLANS/README.md`
+- หลังจากนั้นให้อ่านเฉพาะ domain note ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/`
+- `system_current_state.md` และ `decision_log.md` ใช้เป็น escalation docs:
+  - เปิดเมื่อ task จะเปลี่ยน behavior
+  - เปิดเมื่อ task high-risk
+  - เปิดเมื่อ task แตะ state machine / retry / queue / cron / pipeline
+  - เปิดเมื่อพบ doc/code mismatch
+- เป้าหมายคือคง source-of-truth เดิม แต่ลด startup token ของงานเล็กและงานกลาง
+- ถ้าเป็น `LOTTO_BET` หรือ `LOTTO_CANCEL`
+  - ให้ enrich `lotto.ticket_id`, `lotto.market_name`, `lotto.draw_date` จากตาราง Lotto เพื่อให้ frontend แสดงบริบทโพยได้ทันที
+
+## นโยบายรายงานรอผลเดิมพัน (Admin `/lotto/reports/pending-bets`)
+
+- เมนู `รอผลเดิมพัน` ใช้หน้า/ชุดข้อมูลเดียวกับ `รายการโพย` ไม่ใช่ mockup แล้ว
+- DataTable หลักดึงเฉพาะ ticket ที่ `status=active`
+- การดูรายละเอียดโพยใน modal ใช้ route รายงานของตัวเอง แต่แสดง payload รายละเอียดโพยรูปแบบเดียวกับหน้า `รายการโพย`
+
+## นโยบาย Dashboard Lotto/Finance (Admin `/dashboard`)
+
+- block `รายการโพยล่าสุด (Recent Lotto Bets)`
+  - คอลัมน์ `สมาชิก` ต้องแสดง `members.user_name` เมื่อ resolve ได้
+  - ถ้าไม่พบสมาชิก ให้ fallback เป็น `member_id`
+- block `คงเหลือสุทธิ`
+  - ใช้ความหมายเป็น cash movement หลักของระบบเท่านั้น
+  - คำนวณจาก `ฝากสำเร็จ - ถอนสำเร็จ`
+  - ห้ามเอา `lotto net cash` มารวมใน block นี้
+  - Lotto cash ต้องอยู่ใน block `Lotto Cash` แยกต่างหาก
+- block `Lotto Risk`
+  - ต้องใช้คำอธิบายภาษาไทยที่อ่านเข้าใจง่ายในหน้า dashboard
+  - ค่าหลักคือ `ยอดเสี่ยงสูงสุดต่อเลข`
+  - รายการรองควรอธิบายเป็น:
+    - `ยอดจ่ายถ้าถูกทั้งหมด`
+    - `ยอดความเสี่ยงรวมทุกเลข`
+    - `จำนวนตลาด/งวด/เลขที่ติดตาม`
+
+## นโยบายรายงาน Lotto (Admin `/lotto/reports/*`)
+
+- report Lotto ทุกหน้าที่มี filter `market_id`
+  - ใช้ `select2` แบบ grouped ตาม group ของรายการหวย
+  - แสดง `logo/icon` หน้าชื่อรายการเมื่อมีข้อมูล
+  - filter bar ใช้ immediate apply:
+    - หน้า DataTables: select/date เปลี่ยนค่าแล้ว redraw ทันที
+    - หน้า Vue single-page: เปลี่ยนค่าแล้ว fetch async ทันทีเมื่อ filter ครบ
+    - text search ใช้ debounce สั้นก่อน redraw/fetch
+    - ไม่ใช้ปุ่ม `ค้นหา`
+  - ตอน reset filter ต้อง sync ค่าใน UI ของ `select2` ให้กลับเป็นค่าว่างด้วย
+- เมนูรายงานที่เป็นของจริงแล้ว:
+  - `pending-bets`
+  - `profit-loss-forecast`
+  - `member-bet-types`
+  - `tickets-cancel`
+  - `blocked-numbers`
+  - `results-by-date`
+  - `exposure`
+  - `revenue`
+- `profit-loss-forecast`
+  - อ่านจาก `lotto_draw_bet_settings` + `lotto_number_exposures` + `lotto_ticket_items`
+  - ใช้ Vue (`x-template`) แบบ single-page async menu ตาม pattern เดียวกับ `results-by-date`
+  - แยก route เป็น:
+    - `GET /lotto/reports/profit-loss-forecast` = render หน้า
+    - `GET /lotto/reports/profit-loss-forecast/draw-options?market_id=` = คืนรายการงวดของตลาดที่เลือก
+    - `GET /lotto/reports/profit-loss-forecast/loaddata?market_id=&draw_id=` = คืน payload รายงานของงวดที่เลือก
+  - filter บังคับ:
+    - `market_id`
+    - `draw_id`
+  - ยังไม่แสดงผลรายงานจนกว่าจะเลือกทั้ง `ตลาด` และ `งวดหวย`
+  - ส่วนสรุปด้านบนเป็น matrix:
+    - แถวสรุป `ยอดแทง`, `ส่วนลด`, `รับสุทธิ`, `ยอดถูก`, `ยอดสูงสุดต่อเลข`
+    - คอลัมน์ = bet types ที่เปิดในงวดนั้น
+  - ส่วนล่างเป็นตารางรายหมายเลข:
+    - แสดงหมายเลขตามรูปแบบของแต่ละ bet type
+    - แสดงยอดแทงสะสมของหมายเลขนั้นจาก `lotto_number_exposures.sold_amount`
+- `member-bet-types`
+  - aggregate จาก `lotto_ticket_items` ที่ ticket ไม่ถูกยกเลิก
+  - filter: `member_keyword`, `date_start/date_stop` (อิง `draw_date`), `market_id`, `bet_type`
+  - แสดงสรุปตาม `member + market + bet_type`
+- `tickets-cancel`
+  - อ่าน ticket ทุกสถานะ ไม่ lock แค่ active
+  - filter: `date_start/date_stop` (อิง `COALESCE(cancelled_at, created_at)`), `market_id`, `status`
+  - แสดง `แพกเกจ`, `ส่วนลด`, `สุทธิ`, `ยอดถูก`, `สาเหตุ` ระดับ ticket
+  - คอลัมน์เวลา:
+    - คอลัมน์แรก `เวลาสร้างรายการ` ใช้ `created_at`
+    - คอลัมน์หลัง `ผู้ยกเลิก` ใช้ `เวลาอัปเดทล่าสุด`
+      - `cancelled_at` ถ้ามี
+      - fallback เป็น `updated_at`
+      - fallback สุดท้ายเป็น `created_at`
+  - แสดง `ผู้ยกเลิก` และ `เวลา` โดย resolve จาก `wallet_transactions(ref_type=LOTTO_CANCEL)` ก่อน
+    - ถ้าเป็นลูกค้ายกเลิกเอง ให้แสดงข้อมูล member จาก `created_by_type=member`
+    - ถ้าเป็นทีมงานยกเลิก/คืนโพยทั้งงวด ให้แสดงข้อมูล admin จาก `created_by_type=admin`
+    - fallback สุดท้ายค่อยอ่านจาก `lotto_tickets.cancelled_by`
+  - `สาเหตุ`
+    - อ่านจาก `lotto_tickets.reason` เป็นหลัก
+    - ถ้าระหว่าง rollout DB ยังไม่มีคอลัมน์นี้ ให้ fallback ไปอ่าน `wallet_transactions.meta.reason`
+  - กรณี draw ถูก `งดออกผล` แล้วกด `ยกเลิกโพย+คืนเงิน` ทั้งงวด:
+    - ticket ที่เกี่ยวข้องถูกเก็บ `reason = งดออกผล`
+    - report จึงแสดงได้ครบทั้งสาเหตุ ผู้ทำ และเวลา
+- `blocked-numbers`
+  - อ่านจาก `lotto_number_blocks`
+  - filter: `draw_date`, `market_id`, `bet_type`, `mode`
+  - แสดง `เวลาเริ่ม` และ `เวลาแก้ไขล่าสุด` จากข้อมูลจริง
+
+## นโยบาย Auto Result Manual Action (Admin UI)
+
+- ปุ่ม `Retry` และ `Dry-run` ในหน้า `draws` เรียก `lotto:fetch-auto-results` แบบ synchronous (`Artisan::call`)
+- เป้าหมายคือไม่ผูกกับ worker queue ใน production เพื่อให้คำสั่งถูกประมวลผลทันทีและเห็นผล/log ได้จริง
+- ฝั่ง UI ของปุ่มดังกล่าวต้องแสดงข้อความ error จาก backend เมื่อคำสั่งล้มเหลว (ห้าม silent failure)
+- รองรับส่ง `expected_draw_date` จาก admin action ไปยัง pipeline เพื่อใช้ strict context validation
+- pipeline v2 ส่ง `lookup_date` (และ `lookup_date_compact`) ต่อเข้า `FetchExecutor` โดยตรง
+  - ถ้าตั้ง source เป็น `ROUND_DATE_MINUS_DAYS` ระบบ dry-run/retry จะยิง upstream ด้วยวันที่ที่เลื่อนแล้วจริง (ไม่ fallback เป็น `expected_draw_date`)
+- ถ้า upstream ตอบ payload ของงวดตรงวันแล้ว แต่ฟิลด์ผลหลักยังว่าง/ไม่มีรายการ (เช่น `results: []`) และ readiness config ระบุว่าผลยังไม่ครบ:
+  - v2 pipeline ต้อง classify เป็น `NOT_READY`
+  - ห้ามตกเป็น `VALIDATION_ERROR` ทันที เพราะจะทำให้ scheduler retry ถี่เกินไปและไม่เข้า backoff policy
+- command `lotto:fetch-auto-results` ต้องจับ exception ราย draw แล้ววิ่งต่อ draw ถัดไป
+  - เมื่อเกิด unhandled exception ระหว่างรัน ต้อง log `LOTTO_AUTO_RESULT_DRAW_EXCEPTION`
+  - ห้ามปล่อยให้ draw เดียวทำให้รอบ cron ทั้งก้อนหยุดกลางทาง
+
+## นโยบาย Auto Result Apply/Settlement (Per Market)
+
+- ถ้า market ตั้ง `auto_settle_on_result=true`:
+  - เมื่อ source ดึงผลสำเร็จ ระบบจะ settle ทันทีและ draw เปลี่ยนเป็น `resulted`
+- ถ้า market ตั้ง `auto_settle_on_result=false`:
+  - ระบบจะบันทึกผลที่ดึงได้ไว้ใน draw แต่คงสถานะงวดเป็น `closed`
+  - ทีมงานต้องกดประกาศผลเองจากหน้า admin เพื่อคำนวณยอดได้เสีย
+- ถ้า market ตั้ง `auto_refund_on_no_result=true`:
+  - เมื่อผลถูก normalize เป็น `no_result` (ทั้ง auto-result และ manual mark no-result)
+  - ระบบจะยกเลิก ticket `active` ทั้งงวดและคืนเงินอัตโนมัติทันที
+  - draw จะถูกบันทึก marker `result_number.manual_cancelled_all_tickets=true`
+- เมื่อ draw เปลี่ยนเป็น `resulted`:
+  - ถ้า market เปิด `notify_result_telegram=true` ระบบ dispatch queue job แยกเพื่อสรุปผลและส่ง Telegram ผ่าน `notify/send`
+  - ข้อความแจ้งผลเป็นแบบสั้น (impact-first) และมีสรุป `บิลทั้งหมด/ชนะ/แพ้/กำไรสุทธิ` ในข้อความเดียว
+  - ส่วน header ของข้อความ Telegram แสดงทั้ง `งวดวันที่` และ `เวลาออกผล` โดยอ้างอิง `lotto_markets.auto_result_time` เป็นหลัก (fallback เป็น `draw.result_at`)
+  - เพิ่มบรรทัด `ออกผลโดย... เวลา ...` เพื่อระบุที่มาของการออกผล (`ระบบออโต้` หรือ `ทีมงาน`)
+  - บรรทัด `3 ตัวบน` ในข้อความ Telegram derive จาก `first_prize` แบบ `right(3)` เสมอ
+  - policy บังคับ `1 message ต่อ 1 draw` โดยใช้ `lotto_draws.telegram_sent_at` กันยิงซ้ำ
+  - trigger เฉพาะตอน status transition เป็น `resulted` เท่านั้น (ไม่ยิงตอนยัง `closed`)
+- `SettlementService::normalizeResultNumber` รองรับ `first_prize` แบบ `3|4|5|6` หลักร่วมกับ `last_2_digits` 2 หลัก
+  - ใช้ได้กับตลาดที่ผลประกาศเป็น 3 ตัวบน/2 ตัวล่าง และตลาด 4D (เช่น หุ้น/VIP/มาเลเซีย)
+  - ระบบยัง derive `top_3`, `top_2`, `bottom_2` เหมือนเดิมเพื่อให้ settlement bet types เดิมทำงานต่อเนื่อง
+- ถ้า source ส่งข้อความลักษณะ `งดออกผล` (หรือ marker เทียบเท่า) ในฟิลด์ผล:
+  - pipeline จะ normalize เป็นผลแบบ `no_result=true`
+  - apply จะไม่ยิง settlement และบันทึก draw เป็น `resulted` พร้อม `result_number.status=no_result`
+  - หน้า `งวดหวย` จะแสดงค่า `งดออกผล` ในคอลัมน์ผลรางวัลแทนตัวเลข
+
+## นโยบาย Telegram Alert ของ Auto Result
+
+- เส้นแจ้งเตือน `EXHAUSTED` ส่งผ่าน `TelegramBot` (job `SendTelegramBot`) ไม่ใช้ `TelegramFailedBot`
+- รูปแบบข้อความ exhausted:
+  - `หวย{ชื่อ} งวดวันที่ {date} เวลาออกผล {time} ไม่สามารถดึงผลรางวัลได้`
+- `TelegramFailedBot` สงวนไว้สำหรับเส้น dev/failed monitoring
+- exhausted alert ต้อง dispatch ได้แม้ environment ยังไม่มี hardening columns บน `lotto_draws` ครบ
+  - ถ้า draw ไม่มี `result_fetch_attempts/result_fetch_error`
+  - ให้ fallback อ่าน `attempt_no/error_message` ล่าสุดจาก `lotto_result_fetch_logs`
+
+## นโยบาย Retry/Fallback หลาย Source (Auto Result)
+
+- การเลือก source ยังคงเรียงตาม `priority ASC` (เลขน้อยสำคัญกว่า) แล้วตาม `id ASC`
+- ระบบนับ retry แบบราย `draw + source` จาก fetch logs สถานะ `NOT_READY` (ไม่ใช้ draw-level attempts เพียงอย่างเดียว)
+- เมื่อ source แรกครบ `max_attempts` แล้ว ระบบจะ mark ว่า source นั้น exhausted (เฉพาะ source) และ fallback ไป source ถัดไปอัตโนมัติ
+- กรณี source ยังไม่ครบ max แต่ยังติด backoff window ระบบจะคงรอ source เดิม (ยังไม่ข้ามไป source ถัดไป)
+  - ไม่บันทึก `lotto_result_fetch_logs` ถ้ายังไม่ยิง endpoint จริง (backoff pending)
+- ไม่บันทึก `lotto_result_fetch_logs` เมื่อไม่มีการยิง endpoint จริง (เช่น backoff pending, rate limit, no-source, template error, exhausted decision)
+- draw จะถูก mark `EXHAUSTED` เมื่อ source ที่ active ทั้งหมดในช่วงเวลานั้น exhausted ครบแล้วเท่านั้น
+- retry policy ค่ามาตรฐานทั้งระบบ: `max_attempts=5`, หน่วงครั้งละ 5 นาที (`base_backoff_seconds=300`, `max_backoff_seconds=300`)
+- สำหรับ V2 cutover:
+  - `NOT_READY_BUSINESS_RULE`
+  - `NOT_READY_PARTIAL_RESULT`
+  - หรือผลลัพธ์ที่ runner คืน `status=NOT_READY`
+  ต้องถูกบันทึกเป็น `NOT_READY`
+  - ห้าม downgrade เป็น `VALIDATION_ERROR`
+  - เพื่อให้เข้า retry/backoff/max_attempts policy ถูกต้อง
+- manual retry ของทีมงาน (`--manual-retry`) ใช้คนละ policy กับ scheduler:
+  - ยังใช้ pipeline เดิมและเขียน fetch logs ตามปกติ
+  - แต่ไม่ต้องติด gating ของ `sourceRetryState()` ที่คุม `backoff/exhausted/max_attempts`
+  - ถ้า draw เดิมค้าง `result_fetch_status=EXHAUSTED` แล้ว manual retry สำเร็จ ต้องอัปเดต fetch status ใหม่ได้
+- ถ้าเกิด unhandled exception หลัง `result_fetch_attempts` ถูก increment แล้ว:
+  - ต้องมีแถวใน `lotto_result_fetch_logs` เสมอ
+  - ใช้ `status=VALIDATION_ERROR`, `error_code=UNHANDLED_EXCEPTION`
+  - draw-level fields (`result_fetch_status`, `result_fetch_error`, `result_fetched_at`) ต้องถูกอัปเดตด้วย
+- runtime metadata ของ auto-result เช่น:
+  - `result_source_snapshot_json`
+  - `result_source_id`
+  - `result_fetch_attempts`
+  - `result_fetch_status/result_fetch_error/result_fetched_at`
+  - ห้ามเขียนซ้ำลงตาราง audit `logs`
+  - source of truth สำหรับ execution trace ให้ยึด `lotto_result_fetch_logs`
+- สำหรับ V2 cutover:
+  - ถ้า runner throw exception ก่อน `markAndLog()`
+  - pipeline ต้องจับและเขียน fetch log เอง ห้ามปล่อยให้เหลือแค่ app log
+- command `lotto:fetch-auto-results`:
+  - per-draw catch เป็น fallback ชั้นสุดท้าย
+  - เมื่อจับ exception ได้ ต้องบันทึก fetch log แบบ `UNHANDLED_EXCEPTION` เพิ่มเติมด้วย ไม่ใช่ log เฉพาะ `LOTTO_AUTO_RESULT_DRAW_EXCEPTION` ใน Laravel log อย่างเดียว
+
+## นโยบาย Frontend API v1 Game List
+
+- endpoint `GET /api/v1/games/{type}/{provider}` จะ trigger provider `gamelist` ก่อนทุกครั้ง
+- จากนั้นระบบจะอ่านและคืนข้อมูลจาก `GameListProxy` เป็นหลัก (คง response contract v1 เดิม)
+
+## นโยบาย Dashboard Summary Queue
+
+- queue job `SyncDashboardSummaryBucket` ใช้ bucket key ระดับ:
+  - `web_code + summary_date`
+- ตอน dispatch:
+  - ต้อง merge `updated_sections` ที่ค้างอยู่ใน cache ของ bucket เดียวกันก่อน
+  - แล้วค่อย dispatch job ของ bucket นั้น
+- job ใช้ `ShouldBeUniqueUntilProcessing`
+  - กันไม่ให้มีหลาย queued jobs ซ้ำกันของ bucket เดียวก่อนเริ่มรัน
+  - แต่ยังยอมให้มี follow-up job ได้ ถ้ามี event ใหม่เข้ามาระหว่าง job ปัจจุบันกำลังประมวลผล
+- job ยังใช้ `WithoutOverlapping`
+  - กันไม่ให้ bucket เดียวกันประมวลผลพร้อมกันจริงหลายตัว
+- ตอน `handle()`:
+  - job ต้อง consume pending payload ล่าสุดของ bucket จาก cache ก่อน sync
+  - เพื่อให้ recompute ครั้งเดียวครอบคลุม `updated_sections` ล่าสุด ไม่ต้องไล่ทำงานซ้ำด้วยข้อมูลเดิมหลายรอบ
+- policy:
+  - ถ้ามีหลาย model changes เข้ามาเวลาใกล้กันและลง bucket เดียวกัน ระบบควร collapse เป็นงาน sync ที่น้อยที่สุดเท่าที่ทำได้
+  - ห้ามปล่อยให้ duplicate queued jobs ของ bucket เดียวกันเรียงรันต่อกันโดยได้ผลสรุปเดิมซ้ำ ๆ
+
+## นโยบาย Frontend API v1 Register Referral Code
+
+- ตอนสมัครสมาชิกผ่าน `POST /api/v1/auth/register` ระบบจะสร้าง `members.referral_code` อัตโนมัติทุกบัญชี
+  - format: ยาว 8 ตัวอักษร
+  - charset: ตัวพิมพ์ใหญ่ + ตัวเลข (`A-Z`, `0-9`) โดยไม่ใช้ `O`
+  - ต้องไม่ซ้ำกันทั้งระบบ (unique)
+- ฝั่ง request รองรับรหัสแนะนำใน field `referral_code` (alias: `invite_code`, `recommend_code`)
+  - ระบบ normalize เป็นตัวพิมพ์ใหญ่ และแทน `O` เป็น `0` ก่อนเทียบ
+- ถ้าเทียบแล้วตรงกับ `members.referral_code` ของสมาชิกใด ให้ set `members.upline_code` ของผู้สมัครเป็น `members.code` ของสมาชิกนั้น
+- สำหรับสมาชิกเก่าที่ยังไม่มี `referral_code` ใช้คำสั่ง:
+  - `php artisan member:backfill-referral-codes` (dry-run)
+  - `php artisan member:backfill-referral-codes --apply` (เขียนจริง)
+
+## นโยบาย Frontend API v1 Register Bank Account Name Lookup
+
+- `POST /api/v1/auth/register/bank-account-name` เป็น public endpoint สำหรับหน้า register
+- `FrontendApi` รับ `bank` และ `acc_no`, ตรวจ duplicate ใน `members`/`banks_account`, แล้วค่อยยิง upstream เพื่อ resolve ชื่อบัญชี
+- upstream bank lookup ถูกห่อด้วย service ภายใน `packages/Gametech/FrontendApi/src/Services/RegisterBankAccountNameService.php`
+- response หลักคืน:
+  - `account_name`
+  - `firstname`
+  - `lastname`
+  - `bank_shortcode`
+  - และ `valid` สำหรับ compatibility กับ flow เดิมของ frontend
+- ในโหมด `seamless` ช่วงสร้าง `games_user` จาก flow register:
+  - ต้องรองรับ source payload จาก frontend ที่เป็น `array`
+  - ห้ามล้มเพียงเพราะ side effect หลังสร้าง `games_user` ที่พยายามเขียนกลับไปยัง source object
+  - ถ้าต้นทางเป็น object และมี `save()` ค่อย sync `game_user` กลับไปยัง source นั้น
+- ถ้า register fail หลังผ่าน validation แล้ว:
+  - response ต้องมี `error_code`
+  - response อาจมี `details.stage` และ `details.reason`
+  - ตัวอย่าง stage ที่ใช้ตอนนี้:
+    - `member_create`
+    - `game_account_create`
+    - `game_account_fallback`
+    - `unknown`
+
+## นโยบาย Frontend API v1 Member Contributor
+
+- เพิ่ม endpoint `GET /api/v1/member/contributor` (ต้องใช้ token)
+- response จะรวมข้อมูลสำคัญสำหรับหน้าแนะนำเพื่อน:
+  - จำนวนสมาชิกที่แนะนำ (`referred_members`)
+  - รหัสแนะนำของสมาชิก (`referral_code`)
+  - รายได้จากการแนะนำในกระเป๋าสมาชิก (`referral_income` จาก `members.faststart`)
+  - ยอดโบนัสแนะนำสะสมและจำนวนรายการจาก `payments_promotion` (`promotion_bonus_income`, `promotion_bonus_count`)
+- response มีข้อมูลกติกาโปรโมชั่นแนะนำจาก `promotions.id = pro_faststart`:
+  - `length_type`, `bonus_percent`, `bonus_price`, `display_value`
+  - `more_message` = ข้อความพร้อมแสดงจาก `app.con.more` โดยแทน `:field` ด้วย `display_value`
+- response มีรายการผู้ถูกแนะนำใน field `referrals`:
+  - `username`
+  - `name`
+  - `regis_date` (`Y-m-d`)
+  - `first_deposit_amount`
+  - `first_deposit_date` (`Y-m-d H:i:s`, nullable)
+
+## นโยบาย Frontend API v1 Coupon
+
+- เพิ่ม endpoint:
+  - `POST /api/v1/coupon/redeem`
+  - `GET /api/v1/coupon/my`
+  - `POST /api/v1/coupon/my/{code}/claim`
+- implementation policy:
+  - flow คูปองของ frontend ต้องอยู่ใน controller/service ของ `packages/Gametech/FrontendApi` เอง
+  - ห้าม route ฝั่ง `FrontendApi` เรียก controller ของ package อื่นโดยตรง
+  - route หลักที่เคย delegate controller ข้าม package ถูกย้ายมาเป็น native implementation แล้วใน `FrontendApi`
+    - `member/balance`
+    - `deposit/loadbank`
+    - `promotion/*`
+    - `wheel/*`
+    - `lotto/draws/{id}`
+    - `lotto/bet`
+    - `lotto/groups/{groupId}/packages*`
+    - `lotto/tickets*`
+  - มี regression test เชิงสถาปัตยกรรมคุมว่า controller ใน `FrontendApi/Api/V1` ห้าม import หรือ resolve controller จาก package อื่นผ่าน `app(...Controller::class)`
+- `POST /api/v1/coupon/redeem`
+  - request รับ `coupon`
+  - ตรวจรหัสคูปอง, สิทธิ์ใช้งาน, เงื่อนไขฝากเงิน, `newuser`, `norefill`, และการใช้ซ้ำ
+  - ถ้าผ่านเงื่อนไข จะสร้างรายการ `bonus` สถานะรอรับ และ mark `coupons_list.status=Y`
+  - response ส่ง `item.status = pending_claim`
+- `GET /api/v1/coupon/my`
+  - ใช้ `bonus.status = N` เป็น source หลัก
+  - ข้ามรายการที่หมดอายุแล้ว
+  - response ส่ง `items` และ `summary.count`
+- `POST /api/v1/coupon/my/{code}/claim`
+  - รับโบนัสจากรายการที่เลือก
+  - update สถานะ `bonus.status = Y`
+  - response ส่ง `item.status = claimed`
+
+## นโยบาย Frontend API v1 Member History
+
+- เพิ่ม endpoints สำหรับอ้างอิงหน้า wallet เดิม `/member/history`:
+  - `GET /api/v1/member/history`
+  - `GET /api/v1/member/history/{type}`
+- รองรับ query filter:
+  - `date_start`, `date_stop`
+- รองรับ `type` ดังนี้:
+  - `deposit`, `withdraw`, `transfer`, `spin`, `money`, `cashback`, `memberic`, `bonus`, `other`
+- response รูปแบบ:
+  - `type`, `date_start`, `date_stop`, `items`
+- policy:
+  - mapping ฟิลด์รายการต้องคง semantics เดียวกับ `Wallet HistoryController@store`
+
+## นโยบาย Frontend API v1 Member Change Password
+
+- เพิ่ม endpoint `POST /api/v1/member/change-password` (ต้องใช้ Bearer token)
+- request รับเฉพาะ:
+  - `password`
+  - `password_confirmation`
+- รองรับ alias `password_confirm` โดย normalize เป็น `password_confirmation` ก่อน validate
+- ไม่ต้องส่งรหัสผ่านเดิม เพราะถือว่า endpoint นี้เรียกหลังผ่าน token auth แล้ว
+- validation:
+  - `password` ต้องยาว `6-10` ตัวอักษร
+  - `password_confirmation` ต้องตรงกับ `password`
+- implementation ปัจจุบัน update ทั้ง:
+  - `members.password` (hash)
+  - `members.user_pass` (legacy plain text)
+- policy:
+  - การเก็บ `user_pass` ยังจำเป็นในช่วงนี้เพื่อรักษา compatibility กับ flow เดิมที่ยังพึ่ง password แบบ legacy
+
+## นโยบาย Frontend API v1 Member Wallet Address
+
+- เพิ่ม endpoint `POST /api/v1/member/wallet-address` (ต้องใช้ Bearer token)
+- request รับ:
+  - `wallet_address` (required, string, max 255)
+- implementation update `members.wallet_address` ผ่าน `MemberRepository`
+- field `wallet_address` เพิ่มใน migration `2026_04_08_000001_add_wallet_address_to_members_table.php`
+  - type: `varchar(255) nullable`
+  - วางหลัง column `wallet_id`
+
+## นโยบาย Frontend Lotto Critical Path API
+
+- `GET /api/v1/lotto/draws`
+  - คืน “งวดล่าสุดต่อรายการหวย” ที่ `status != draft`
+  - ถ้า market มีทั้ง `draft` และ `open/closed/resulted` พร้อมกัน ให้ข้าม `draft` และเลือก non-draft ล่าสุดแทน
+- `GET /api/v1/lotto/markets/latest`
+  - ฟิลด์ `latest_draw` ของแต่ละ market ต้องเลือกตามลำดับความสำคัญ:
+    - `open` ล่าสุด
+    - ถ้าไม่มี `open` ค่อยใช้ non-draft ล่าสุด
+  - ห้ามชี้ไปที่ `draft`
+  - ลำดับ `markets` ในแต่ละ `group` ต้องเรียงตาม `latest_draw.close_at` จากน้อยไปมาก
+    - ถ้า `close_at` ว่าง ให้ไปท้ายรายการ
+  - `latest_draw.status/status_label` สำหรับหน้าเลือกหวยใช้ mapping:
+    - `open` -> `แทงหวย`
+    - `closed` -> `รอผล`
+    - `resulted` -> `ออกผล`
+    - `no_result` -> `ยกเลิก`
+    - `refunded` -> `ยกเลิก`
+  - ถ้า draw มี `result_number.no_result=true` หรือ `result_number.status=no_result`
+    - ต้อง map เป็น `no_result`
+  - ถ้า draw มี `result_number.manual_cancelled_all_tickets=true`
+    - ต้อง map เป็น `refunded`
+- เพิ่ม public routes ชุด `/api/v1/lotto/markets/*` สำหรับหน้าแทงและผลย้อนหลังโดยตรง:
+  - `GET /api/v1/lotto/markets/latest`
+  - `GET /api/v1/lotto/markets/{marketId}/betting-context`
+  - `GET /api/v1/lotto/markets/{marketId}/results`
+  - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- endpoint `GET /api/v1/lotto/markets/latest` ส่งรูประดับกลุ่มหวยเพิ่ม:
+  - `group_logo`, `group_icon`, `group_image` (fallback logo -> icon)
+- เพิ่ม route รวมผลรางวัลตามวันที่:
+  - `GET /api/v1/lotto/results/by-date?draw_date=YYYY-MM-DD`
+  - แสดงผลแบบ grouped ตาม `lotto_groups`
+  - แสดงเฉพาะ market ที่มี draw ของวันที่เลือกและสถานะ `resulted`
+- `GET /api/v1/lotto/tickets` และ `GET /api/v1/lotto/tickets/{id}`
+  - คง field เดิม (`status`, `total_*`, `items[].result_status`, `items[].win_amount`) เพื่อ backward compatibility
+  - เพิ่ม field ชัดเจนสำหรับ frontend:
+    - ระดับโพย: `draw_status`, `draw_result_at`, `result_outcome`, `is_final`, `is_winner`
+    - ระดับโพยแบบอ่านได้: `status_label`, `draw_status_label`, `result_outcome_label`, `result_message`
+    - ระดับสรุปรายการ: `item_count`, `winning_item_count`, `losing_item_count`, `pending_item_count`
+  - endpoint รายละเอียดโพยเพิ่ม field ชัดเจนใน `items[]`:
+    - `raw_result_status`
+    - `is_winner`
+    - `result_status_label`
+    - `result_message`
+  - policy การ derive `result_outcome`:
+    - `cancelled` ถ้า `ticket.status=cancelled`
+    - `refunded` ถ้า draw ถูกคืนเงินทั้งงวด (`result_number.manual_cancelled_all_tickets=true`)
+    - `no_result` ถ้า draw เป็น `งดออกผล`
+    - `won` / `lose` เมื่อ ticket ถูก settle แล้ว
+    - `betting_open` ถ้างวดยัง `open`
+    - `pending_result` ในเคสรอผล/รอประกาศผลที่ยังไม่ settle
+- `POST /api/v1/lotto/tickets/{id}/cancel`
+  - ใช้ได้เฉพาะ ticket ของสมาชิกคนนั้นที่ `status=active`
+  - draw ต้องยัง `open`
+  - ต้องยกเลิกก่อน `draw.close_at` อย่างน้อย `10` นาที
+  - จำกัดสิทธิ์ยกเลิกของสมาชิกไม่เกิน `4` ครั้งต่อวัน
+    - นับเฉพาะ `wallet_transactions(ref_type=LOTTO_CANCEL)` ที่เกิดจาก self-cancel
+    - ต้องเป็น `created_by_type=member`
+    - ต้องเป็น `created_by_id=memberId`
+    - ใช้ `created_at` ของ transaction อยู่ในวันปัจจุบัน
+    - ไม่นับเคสทีมงานยกเลิกหรือระบบคืนโพย
+  - เมื่อยกเลิกสำเร็จ ระบบ:
+    - rollback `lotto_number_exposure.sold_amount`
+    - คืนเงินเข้ากระเป๋าสมาชิกผ่าน `wallet_transactions` (`ref_type=LOTTO_CANCEL`)
+    - update ticket เป็น `cancelled` พร้อม `cancelled_at/refund_amount`
+- `betting-context` คืนข้อมูลรวมสำหรับหน้าแทงในเส้นเดียว: market/draw/blocked numbers/limits/exposure/version/server_time
+- `results` รองรับ `limit` และ `page` เพื่อให้ frontend ทำ pagination ได้
+- `POST /api/v1/lotto/bet` ผ่าน `FrontendApi` ไปยัง `Gametech\Lotto\Services\BetService`
+  - container binding ของ `BetService` ต้อง inject 4 dependencies ตามลำดับ:
+    - `ExposureService`
+    - `LottoConfigResolver`
+    - `LottoPackageResolver`
+    - `WalletTransactionService`
+  - ถ้า bind ผิดลำดับ route จะตอบ generic error `ไม่สามารถส่งโพยได้ในขณะนี้` จาก `FrontendApi` แม้ข้อมูล bet ถูกต้อง
+
+## นโยบาย Lotto Group Package (Frontend + Betting)
+
+- เพิ่มตารางระดับกลุ่มสำหรับ package:
+  - `lotto_group_packages`
+  - `lotto_group_package_bet_settings`
+- เพิ่ม API สำหรับ package flow assist:
+  - `GET /api/v1/lotto/groups/{groupId}/packages` (frontend contract)
+  - `POST /api/v1/lotto/groups/{groupId}/select-package` (frontend contract)
+  - `GET /api/v1/lotto/groups/{groupId}/selected-package` (frontend contract)
+  - response ของ package endpoints มี field `image` สำหรับใช้งานหน้า frontend
+  - `selected-package` คืน `bet_settings[]` ของ package ที่ถูกเลือกด้วย
+    - แต่ละรายการมี `bet_type`, `payout`, `discount_percent`
+    - ใช้เพื่อให้หน้าแทงคำนวณ preview ยอดลด/ยอดจ่ายจริงได้ก่อน submit
+- policy ของ helper API:
+  - ใช้เพื่อ UI flow assist เท่านั้น (non-authoritative)
+  - ห้ามใช้แทน betting validation/auth gate
+  - ตอน submit bet ต้องยึด `package_id` ใน request เท่านั้น
+- `POST /api/v1/lotto/bet` บังคับรับ `package_id` ทุกครั้ง
+- เพิ่ม Admin endpoints สำหรับจัดการ package ระดับ group:
+  - `POST /lotto/group-packages/list|create|edit|update|delete`
+  - `POST /lotto/group-package-bet-settings/list|create|edit|update|delete`
+- หน้า Admin `/lotto/group-packages` ใช้ flow เดียวกับเมนู `rate-plans`:
+  - เลือก `group` ก่อน
+  - แสดงปุ่ม `เพิ่มแพกเกจ` เมื่ออยู่ใน group นั้น
+  - ถ้า group ไม่มี package จะไม่แสดง panel รายละเอียดเพิ่มเติม
+  - ถ้ามี package จะแสดง tab package และเมื่อเลือก tab จะแสดงตารางแบบ `rate-plans`:
+    - แถว = รายการหวยใน group
+    - คอลัมน์ = bet types
+    - โหมดแสดงผลเลือกได้ `อัตราจ่าย | ส่วนลด(%) | ทั้งคู่`
+    - ไม่มีคอลัมน์จัดการในตารางแสดงผล
+  - modal `เพิ่มแพกเกจ` ต้องกรอก `อัตราจ่าย/ส่วนลด` ราย `bet_type` และบันทึก package + bet settings ใน transaction เดียว
+  - มีปุ่ม `แก้ไขแพกเกจ` สำหรับแก้ชื่อ/คำอธิบาย/สถานะ พร้อม `อัตราจ่าย/ส่วนลด` ราย `bet_type` ใน modal เดียว
+  - modal `เพิ่ม/แก้ไขแพกเกจ` รองรับอัปโหลดรูปภาพแพกเกจ (`image_file`) และบันทึก path ลง `lotto_group_packages.image`
+  - modal `เพิ่ม/แก้ไขแพกเกจ` ไม่มีตัวเลือกเปิด-ปิดราย bet type และระบบตั้งค่า `is_enabled=true` ให้ทุกประเภทโดยอัตโนมัติ
+  - endpoint `group-packages/update` รองรับ sync `bet_settings` ใน transaction เดียวกับ package update
+- policy package deletion:
+  - package ที่เคยถูกใช้ใน `lotto_ticket_items.package_id_at_time` ห้าม hard delete
+  - ระบบจะ disable (`is_active=false`) แทน
+- error mapping สำหรับ package flow:
+  - `PACKAGE_REQUIRED` -> `400`
+  - `PACKAGE_NOT_IN_GROUP` -> `400`
+  - `PACKAGE_INACTIVE` -> `409`
+  - `BET_TYPE_NOT_CONFIGURED` -> `422`
+- snapshot package ที่ authoritative อยู่ที่ `lotto_ticket_items`:
+  - `package_id_at_time`
+  - `package_name_at_time`
+  - `calculated_values_at_bet_time` (อย่างน้อยมี `bet_amount`, `discount_amount`, `net_amount`, `payout_amount`)
+
+## นโยบายรายงานผลรางวัลทั้งหมด (Admin ทีมงาน)
+
+- เพิ่มเมนูรายงานในหน้า `รายงาน Lotto`:
+  - `ดูผลรางวัลทั้งหมด` (`admin.lotto.reports.results_by_date`)
+- หน้า report รองรับ filter `วันที่งวด` (`draw_date`) และแสดงผลแบบ grouped:
+  - ระดับกลุ่มหวย (`lotto_groups`)
+  - ภายในกลุ่มแสดงรายการหวย (`lotto_markets`) ที่มีงวดตรงวันที่เลือกและสถานะ `resulted`
+- ข้อมูลที่แสดงต่อรายการหวย:
+  - `draw_date`, `result_at`, `first_prize`, `top_3`, `top_2`, `bottom_2`
+- กรณีงวดมีผลแบบ `งดออกผล` (`result_number.no_result=true` หรือ `status=no_result`)
+  - ตารางรายงานจะแสดงคำว่า `งดออกผล` ในคอลัมน์ผลรางวัลแทน `-`
+- หน้า `/lotto/reports/results-by-date` ใช้ Vue (`x-template`) สำหรับค้นหาแบบ async
+  - route หน้าแสดงผล (`GET /lotto/reports/results-by-date`) แยกจาก route โหลดข้อมูล (`GET /lotto/reports/results-by-date/loaddata`)
+  - ตอนเปิดหน้า ถ้า URL ไม่มี `draw_date` ระบบจะตั้ง input เป็นวันที่ปัจจุบันของ browser และเรียก `loaddata` อัตโนมัติ
+  - ถ้า URL มี `?draw_date=...` ที่ valid ระบบจะคงวันที่นั้นไว้และเรียก `loaddata` ของวันนั้นตอนเปิดหน้า
+  - เมื่อเลือก `draw_date` ระบบจะเรียก `loaddata` และอัปเดตผลลัพธ์ในหน้าเดิมโดยไม่ reload ทั้งหน้า
+  - pattern implementation มาตรฐานนี้ใช้เฉพาะเมนู admin แบบหน้าเดียวที่ render component และ fetch ข้อมูลในหน้าเดียว:
+    - ใน Blade วาง custom tag ของหน้าไว้ตรง `@section('content')` โดยตรง เช่น `<result-app ref="resultApp"></result-app>`
+    - วาง layout ทั้งหน้าไว้ใน `script type="text/x-template"`
+    - register component ด้วย `Vue.component(...)` ภายใน `script type="module"` และให้ helper functions ที่ component ใช้ (`validate/filter/init`) อยู่ใน module scope เดียวกัน
+    - bootstrap `new Vue({ el: '#app' ... })` แยกอีก script ตาม pattern เดียวกับ dashboard เพื่อให้ root Vue compile custom component หลัง register เสร็จ
+    - event ที่ต้อง fetch ตามค่าจากฟอร์มทันที ให้ส่งค่าจริงจาก `$event.target.value` เข้า method โดยตรง แทนการพึ่ง state ที่อาจยัง sync ไม่ทัน
+    - ไม่ใช้กับเมนูที่ขับด้วย DataTables (`window.LaravelDataTables`, `preXhr`, server-side table actions`) เพราะเมนูกลุ่มนั้นต้องใช้ pattern ของ DataTables แยกต่างหาก
+
+## นโยบายยกเลิกโพยทั้งงวดและคืนเงิน (Admin Draws)
+
+- เพิ่ม action ในเมนู `งวดหวย`:
+  - `POST /lotto/draws/cancel-all-refund`
+- เงื่อนไข:
+  - ใช้ได้เฉพาะ draw สถานะ `resulted` ที่เป็น `งดออกผล` (`result_number.no_result=true` หรือ `result_number.status=no_result`)
+- behavior:
+  - ยกเลิก ticket สถานะ `active` ทั้งหมดของงวด
+  - คืนเงินตาม `total_net_amount` (fallback `total_amount`) ให้สมาชิกแต่ละโพย
+  - ปรับ exposure (`lotto_number_exposures.sold_amount`) ลงตามจำนวนที่ยกเลิก
+  - mark draw เป็น `resulted` พร้อมผล `งดออกผล` (`result_number.no_result=true`)
+  - หลังคืนเงินสำเร็จ ระบบบันทึก marker `result_number.manual_cancelled_all_tickets=true`
+- หมายเหตุ:
+  - ถ้า market เปิด `auto_refund_on_no_result=true` ระบบจะรัน behavior ชุดเดียวกันแบบอัตโนมัติทันทีตอนงวดถูก mark เป็น `no_result`
+  - ถ้า auto-refund ทำงานแล้ว ปุ่ม `ยกเลิกโพย+คืนเงิน` จะไม่แสดงซ้ำ
+- policy การแสดงปุ่มในหน้า `งวดหวย`:
+  - ปุ่ม `ยกเลิกโพย+คืนเงิน` แสดงเฉพาะสถานะ `resulted+งดออกผล`
+  - ถ้าเคยคืนเงินทั้งงวดแล้ว (`manual_cancelled_all_tickets=true`) ปุ่มต้องไม่แสดงซ้ำ
+
+## นโยบาย Deprecate Payout Override ระดับ Market
+
+- endpoint จัดการ `lotto_market_bet_settings` (`default-settings`) ไม่อนุญาตให้แก้ `payout/discount_percent` อีกต่อไป
+- ถ้าพบ field ดังกล่าวใน request จะ reject ด้วยข้อความ `DEPRECATED_PAYOUT_OVERRIDE`
+- คงไว้เฉพาะการตั้งค่า limits (`min_bet`, `max_bet`, `max_per_number`) และ toggle `is_enabled`
+
+## นโยบาย Internal Lotto Result Sources API
+
+- เพิ่ม internal endpoints สำหรับรวม source จาก mini projects เดิม:
+  - `GET /internal/lottery/results/exphuay/{type}?date=&page=`
+  - `GET /internal/lottery/results/dowjones-midnight?date=`
+  - `GET /internal/lottery/results/dowjones-extra?date=`
+- date input รองรับ 3 format:
+  - `Y-m-d`
+  - `d/m/Y`
+  - `d-m-Y`
+- เมื่อไม่ส่ง `date` ระบบจะไม่บังคับใส่ query `date` ไป upstream (คงโหมด latest)
+- output `draw_date` ถูก normalize เป็น `Y-m-d` เสมอ
+- สำหรับ exphuay:
+  - upstream อาจคืน payload หลายงวดแม้ส่ง `date`
+  - ระบบหลักต้อง select record จาก payload เองตาม local draw date (`Asia/Bangkok`) ที่ derive จาก `lottosDate`
+  - เมื่อ match record แล้วจะ derive:
+    - `first_prize` จาก `lottosNumber`
+    - `top_3` จาก 3 หลักท้ายของ `lottosNumber`
+    - `top_2` จาก 2 หลักท้ายของ `lottosNumber`
+    - `bottom_2` จาก `lottosUnder`
+- canonical response บังคับ key คงที่:
+  - `success`, `source`, `type`, `draw_date`, `raw_result`, `normalized_result`, `meta`, `errors`
+  - `normalized_result` คง key: `first_prize`, `top_3`, `top_2`, `bottom_2`, `digit_4`, `digit_5` (ไม่มีค่าใช้ `null`)
+  - `errors` เป็น array เสมอ
+- policy field เสริม Dowjones:
+  - `start_spin`, `show_result`, `now`, `update` ถูกเก็บใน `meta.dowjones_supplemental`
+  - ห้าม map field เสริมเหล่านี้เข้า `normalized_result`
+  - เมื่อ `dowjones-midnight` upstream ให้มาเพียง `digit5`:
+    - `top_3` = 3 หลักท้ายของ `digit5`
+    - `top_2` = 2 หลักท้ายของ `digit5`
+    - `bottom_2` = 2 หลักหน้าของ `digit5`
+  - `dowjones-extra`:
+    - ถ้าขอ “วันปัจจุบัน” ให้ใช้ `https://api.dowjonesextra.com/result` โดยไม่ส่ง `date`
+    - ถ้าขอย้อนหลัง ให้ใช้ `https://api.dowjonesextra.com/history` แล้ว select `lotto_date` ให้ตรงวันที่ขอ
+    - เมื่อได้ `digit5` แล้ว:
+      - `top_3` = 3 หลักท้ายของ `digit5`
+      - `top_2` = 2 หลักท้ายของ `digit5`
+      - `bottom_2` = 2 หลักหน้าของ `digit5`
+- security policy:
+  - route ชุดนี้ bind domain เฉพาะ API host เท่านั้น:
+    - `APP_API_URL + APP_API_DOMAIN_URL` (ถ้าตั้ง `APP_API_DOMAIN_URL`)
+    - fallback เป็น `APP_API_URL + APP_ADMIN_DOMAIN_URL` (กรณีไม่ได้ตั้ง `APP_API_DOMAIN_URL`)
+  - canonical URL สำหรับ internal result endpoints ต้องเรียกผ่าน `api.*` เท่านั้น (ไม่เปิดผ่าน `admin.*`)
+  - มี public central result API เพิ่มที่ `GET /api/v1/get_lottery?type={type}&date={Y-m-d}`
+    - route ชุดนี้ bind ผ่าน API host เดียวกับ internal result endpoints
+    - ใช้ `business date` เป็น contract หลักเสมอ
+    - รองรับ canonical type ฝั่ง relay เช่น `laosvip`, `egx30`, `dowjones-midnight`, `dowjones-extra`
+    - response กลางคืนค่า `type`, `nameTH`, `date`, `page`, `count`, `results[]`
+    - `results[]` ใช้ key กลาง `id`, `lottosName`, `lottosTH`, `lottosDate`, `lottosTime`, `lottosNumber`, `lottosUnder`
+    - ถ้า type ไม่รองรับให้คืน `422` + `errors[0].code=UNSUPPORTED_TYPE`
+    - ถ้า request format ไม่ถูกต้องให้คืน validation `422`
+    - ถ้า business date ที่ขอไม่พบข้อมูลให้คืน `404` + `errors[0].code=DRAW_DATE_NOT_FOUND`
+  - route ชุดนี้ใช้ middleware `lotto.internal_results`
+  - relay runtime/ops policy:
+    - `primary` ใช้ publish `lottery.ready` ผ่าน Redis Streams เมื่อ `result_fetch_status=APPLIED` และมี `result_hash`
+      - manual settle (`SettlementService::settleDraw`) และ manual no-result (`markNoResult` / `cancelAllRefund`) ถูก normalize ให้เขียน `APPLIED + result_hash` เช่นเดียวกับ auto path
+    - publish ใช้ dedupe marker ต่อ `canonical type + business date + checksum`
+    - latest marker ล่าสุดของแต่ละ type ถูกเก็บไว้ใต้ prefix `lotto:relay:latest:*`
+    - Redis connection `lotto` ต้อง override prefix เฉพาะ connection เพื่อไม่ให้ `APP_NAME` ของแต่ละเว็บแยก stream/marker key ออกจากกัน
+    - `clone` จะไม่รัน periodic `lotto:fetch-auto-results` แบบ sweep ปกติ
+    - `clone` ใช้ `lotto:relay:consume-stream` รับ event แล้ว dispatch `FetchRelayLotteryResultJob` เข้า queue `lotto`
+    - job จะ resolve draw จาก `canonical type + business date` แล้ว reuse `AutoResultPipelineService` เดิม
+    - `disabled` ปิด relay flow ใหม่ แต่ยังคง legacy sweep เดิมได้
+- นโยบาย generated config จากคำสั่ง `lotto:insert-internal-result-source-mappings`:
+  - JSON หลักที่สร้างใหม่ใช้ baseline แบบ internal endpoint:
+    - `request_headers_json = []`
+    - `fetch_config_json.headers = []`
+  - ห้ามฝัง cookie ของ upstream ไว้ใน JSON หลักที่บันทึกลงฐานข้อมูล
+  - สำหรับทุก market ที่ map เป็น `exphuay:{type}`:
+    - generator จะชี้ endpoint เป็น `http://203.146.127.170/~anan/get_lottery.php`
+    - query template เป็น `type={type}`, `date={{lookup_date}}`, `page=1`
+    - parser ใช้ JSON_PATH จาก `$.date`, `$.results[0].lottosNumber`, `$.results[0].lottosUnder`
+    - บังคับค่า row ที่สร้างใหม่เป็น `priority=1` และ `is_active=true`
+- นโยบาย exphuay upstream headers/cookie:
+  - ให้ส่งที่ `ExphuayResultDriver` ตอนเรียก upstream โดยตรง (ไม่ส่งผ่าน source JSON หลัก)
+  - header baseline: `Accept`, `Accept-Language`, `Referer`, `User-Agent`, `x-sveltekit-invalidated`
+  - cookie อ่านจาก env `LOTTO_EXPHUAY_COOKIE` (ถ้าไม่ตั้งจะไม่แนบ `Cookie`)
+  - user-agent override ได้ผ่าน `LOTTO_EXPHUAY_USER_AGENT`
+  - เมื่อ HTTP fetch เจอ Cloudflare challenge (`403` หรือ body แนว `Just a moment/cf-mitigated`) ให้ fallback แบบเป็นลำดับ:
+    - ลอง Python worker (`curl_cffi`) ก่อน
+    - ถ้าไม่สำเร็จค่อย fallback ไป browser runtime แบบ sync ใน driver
+  - env สำหรับ Python worker:
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_ENABLED` (default = false)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_BINARY` (default = `python3`)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_SCRIPT` (default = `scripts/lotto/exphuay_curl_cffi_worker.py`)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_TIMEOUT_SECONDS` (default = 20)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_IMPERSONATE` (default = `chrome124`)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP` (default = true)
+    - `LOTTO_EXPHUAY_PYTHON_WORKER_WARMUP_URL` (default = `https://exphuay.com/`)
+  - toggle ผ่าน `LOTTO_EXPHUAY_BROWSER_FALLBACK` (default = true)
+  - timeout ของ fallback ผ่าน `LOTTO_EXPHUAY_BROWSER_FALLBACK_TIMEOUT_SECONDS` (default = 60)
+  - browser goto/wait controls ผ่าน:
+    - `LOTTO_EXPHUAY_BROWSER_WAIT_UNTIL` (default = `domcontentloaded`)
+      - `LOTTO_EXPHUAY_BROWSER_TIMEOUT_MS` (default = `60000`)
+  - ถ้าตั้งค่า `LOTTO_INTERNAL_RESULT_SHARED_KEY` ระบบบังคับตรวจ header (`LOTTO_INTERNAL_RESULT_SHARED_HEADER`, default `X-Lotto-Internal-Key`)
+  - ถ้าไม่ตั้ง shared key จะ allow เพื่อรองรับช่วง transition ภายในระบบ
+  - source config ที่ชี้ internal endpoints (`/internal/lottery/results/*`) จะไม่ถูกบล็อกด้วย fixture gate ใน local/testing ตอน save/validate cutover
+  - migration/backfill policy:
+  - ใช้ command `lotto:migrate-internal-result-endpoints` เพื่อ map endpoint เดิม -> internal endpoints
+  - ใช้ command `lotto:migrate-exphuay-sources-to-get-lottery` เพื่อ migrate แถว exphuay ที่มีอยู่แล้วให้ชี้ `http://203.146.127.170/~anan/get_lottery.php`
+    - resolve `type` จาก endpoint เดิม (`/internal/lottery/results/exphuay/{type}` หรือ `exphuay.com/backward/{type}/__data.json`) หรือจาก query template/config
+    - rewrite parser/query ให้ตรง schema ของ `get_lottery.php`
+    - default จะตั้ง `priority=1` และ `is_active=1` (override ได้ผ่าน option)
+  - command จะ generate report ทุกครั้งที่รันสำหรับ traceability
+  - มี command bootstrap สำหรับ market ที่ยังไม่มี source row:
+    - `lotto:bootstrap-missing-result-sources`
+    - policy เริ่มต้นจะสร้างเป็น `is_active=false` (safe placeholder) เพื่อไม่กระทบ runtime ทันที
+  - มี command insert-only สำหรับ canonical mapping โดยไม่ทับแถวเดิม:
+    - `lotto:insert-internal-result-source-mappings`
+    - policy: insert เฉพาะ endpoint canonical ที่ยังไม่มีใน market นั้น (skip ถ้ามี endpoint เดิมอยู่แล้ว)
+  - มี command สำหรับ switch source rows ไป public relay contract:
+    - `lotto:migrate-relay-result-sources`
+    - ชี้ `endpoint_url` ไป `LOTTERY_RESULT_RELAY_API_BASE_URL/api/v1/get_lottery`
+    - rewrite query template เป็น `type + date`
+    - rewrite parser ไปอ่าน `$.date`, `$.results[0].lottosNumber`, `$.results[0].lottosUnder`
+    - ใช้สำหรับ rollout clone site ที่จะ fetch ผ่าน `api.1168lot`
+  - V2 fetch runtime ต้อง render placeholders ใน `endpoint_url`, `query`, `headers`, `body` ก่อนยิง request
+    - ถ้าไม่มี `lookup_date` ใน runtime context ให้ fallback ใช้ `expected_draw_date`
+  - relay ops commands ขั้นต่ำ:
+    - `lotto:relay:health` สำหรับ inspect runtime mode / stream / queue / latest marker
+    - `lotto:relay:consume-stream` สำหรับ consume `lottery.ready`
+    - `lotto:relay:publish-ready` สำหรับ backfill publish จาก draw ที่ `result_fetch_status=APPLIED` และมี `result_hash` อยู่แล้ว
+      - filter ได้ด้วย `--draw-id`, `--date`, `--market-id`, `--type`
+      - รองรับ `--force` สำหรับ republish event ซ้ำโดยไม่ต้องลบ published marker ใน Redis เอง
+      - command นี้รันได้เฉพาะ `primary`
+
+## นโยบาย UI รายการหวย (Admin `/lotto/markets`)
+
+- เพิ่มปุ่ม `Auto` ต่อแถว (หลังปุ่ม `แก้ไข`) เพื่อเปิด modal จัดการ `Auto Result Sources` ของตลาดนั้นแบบ inline
+- ปุ่ม `Auto` ถูกดักสิทธิ์ด้วย ACL `lotto_settings.auto_result_sources`
+- ฟอร์มตลาดรองรับตัวเลือกเพิ่ม:
+  - `ออกผลแล้วคำนวณยอดได้เสียอัตโนมัติทันที` (`auto_settle_on_result`)
+  - `งดออกผลแล้วคืนเงินโพยอัตโนมัติ` (`auto_refund_on_no_result`)
+  - `ส่งแจ้งเตือน Telegram เมื่อหวยนี้ออกผล` (`notify_result_telegram`)
+- ปุ่ม `Auto` ของหน้า `lotto/markets` เปิด modal ในหน้าเดิมแบบ native (ไม่ใช้ iframe) และดึงข้อมูลผ่าน API:
+  - `GET /lotto/auto-result-sources/list?market_id={id}`
+  - `POST /lotto/auto-result-sources/loaddata|create|update|edit`
+- ตาราง `รายการหวย` เพิ่มคอลัมน์สถานะผูก source (`ผูกแล้ว` / `ยังไม่ผูก`) ถัดจากคอลัมน์ `ลิงก์ออกผล`
+- เพิ่มคอลัมน์ `ออกผล` (หลัง `ลิงก์ออกผล`) เป็นปุ่มสลับ `Auto/Manual` สำหรับ `auto_settle_on_result`
+- เพิ่มคอลัมน์ `คืนเงิน` เป็นปุ่มสลับ `Auto/Manual` สำหรับ `auto_refund_on_no_result`
+- คอลัมน์สถานะผูก source ปรับ UI เป็นไอคอนไฟ:
+  - ผูกแล้ว = ไฟเขียวมี effect + แสดงจำนวน
+  - ยังไม่ผูก = ไฟสีเทา
+- ใน modal แก้ไข source มีโหมดทดสอบตามวันที่:
+  - เลือก `draw_date` แล้วกด dry-run ได้แม้ไม่มีงวดจริงของวันนั้น (ระบบสร้าง virtual draw context ให้ทดสอบ)
+  - Browser test dispatch รองรับโหมดเดียวกัน (ใช้ virtual draw context เมื่อไม่พบงวดจริง)
+  - ปุ่ม `Dry Run ตามวันที่` รองรับ async orchestration ใน popup:
+    - ผู้ใช้กด dry-run ครั้งเดียวได้
+    - ถ้ารอบแรกได้ `FETCH_DEFERRED` และมี `receipt_key` ระบบ frontend จะ polling `browser_test_status` อัตโนมัติใน popup เดิม
+    - เมื่อ worker จบแล้ว ระบบจะยิง dry-run ซ้ำอัตโนมัติเพื่อเดิน parse/select/map/validate ต่อให้ครบ
+  - ดู fetch logs ของวันทดสอบได้ใน modal เดียวกัน
+  - dry-run by date จะ persist log แบบเต็มคล้าย production run และใช้ `run_id` เป็นหลัก (`draw_id=null`)
+  - ปุ่ม `ดู` ในรายการ logs-by-date แสดงเฉพาะข้อมูล `trace_json` ใน modal รายละเอียด
+- คอลัมน์ `สถานะ` ในตาราง `lotto/markets` แสดงเป็นปุ่ม icon-only (`check/times`) และกดสลับ `is_enabled` ได้โดยตรง (มี confirm)
+- คอลัมน์ `จัดการ` ของตาราง `lotto/markets` คงปุ่ม `แก้ไข` และ `Auto`
+- ปุ่ม `ลบ` ของ `Auto Result Source` แสดงเฉพาะใน modal รายการ source ของ market นั้น และเรียก endpoint `POST /lotto/auto-result-sources/delete`
+- ตารางใน modal `Auto Result Sources`:
+  - คอลัมน์ `สถานะ` ถูกวางไว้ก่อน `จัดการ` และแสดงเป็นปุ่ม icon-only สำหรับกดสลับสถานะ
+  - คอลัมน์ `จัดการ` แสดงเฉพาะปุ่ม `แก้ไข/ลบ` แบบมาตรฐาน (`btn-info`/`btn-danger`) พร้อม icon+ข้อความ
+  - หัว modal แสดงชื่อรายการหวยร่วมกับ `market id`
+- ฟอร์มแก้ไข source ใน popup `/lotto/markets`:
+  - label `ตลาด` ถูกปรับเป็น `รายการหวย` เพื่อให้ตรงชื่อเมนูจริง
+  - แท็บ `ตั้งค่าด่วน` รองรับฟิลด์ที่มีผลจริงต่อ `Pipeline Config JSON` ได้แก่ `fetch_strategy`, `parser_type`, `selection_stage`, `lookup_date_mode/offset`, `runtime capability`
+  - ฟิลด์ `เก็บท้ายกี่หลัก (รางวัลที่ 1)` รองรับค่า `0` = ไม่ใส่ `right` transform (ไม่ตัดท้าย)
+  - ส่วน `Browser Worker Settings` ใน quick setup เป็น auto-generated (ไม่เปิดให้ปรับค่าละเอียดใน UI)
+  - เมื่อผู้ใช้แก้ `JSON หลัก` แล้วบันทึก ระบบยึด `JSON หลัก` เป็น source of truth โดยตรง และไม่ให้ quick setup ทับค่า JSON อัตโนมัติระหว่าง save/edit
+  - กรณีมี `selection_stage` อยู่ top-level ของ `JSON หลัก` แต่ยังไม่มีใน `selection_config_json` ระบบจะ normalize ใส่ใน `selection_config_json.selection_stage` อัตโนมัติ
+  - มี dependency-reset อัตโนมัติสำหรับค่าที่ไม่เกี่ยวข้อง เช่น:
+    - โหมดวันงวดที่ไม่ใช้ offset จะบังคับ `lookup_date_offset_days=0`
+    - `fetch_capability=http_only` จะปิด `allow_dom_fallback` และถ้าไม่ได้ใช้ browser strategy จะปิด `requires_browser`
+    - `fetch_strategy=RENDERED_BROWSER` จะบังคับเปิด browser capability ที่สัมพันธ์
+  - แท็บ `JSON หลัก` ระบุชุด key บังคับที่ต้องมีใน config ก้อนหลัก
+  - เอาปุ่ม preset `ตั้งค่าอัตโนมัติ` ออกจากแท็บ `ตั้งค่าด่วน`
+
+## นโยบาย Auto Result Parser/Selector v2
+
+- parser v2 เป็น `context-aware` และแยกบทบาทชัดเจน:
+  - `parser` = extract candidate + raw fields เท่านั้น
+  - `selector` = เลือกหรือ reject candidate
+  - `mapper` = normalize/transform chain
+  - `validator` = validate canonical output + expected context
+- strategy default สำหรับ source v2 คือ `strict_single_match` (โดยเฉพาะ HTML/text)
+- reject แบบ strict เมื่อ:
+  - ไม่มี candidate ตรง `expected_draw_date`
+  - มีหลาย candidate ตรง `expected_draw_date`
+  - candidate ที่ถูกเลือกไม่ผ่าน required fields
+  - candidate ที่ถูกเลือกไม่ตรง `expected_draw_date`
+  - tie score ในกรณี strategy ที่อิง score
+- transform chain อยู่ใน `mapping_config_json` เป็นหลัก (`trim`, `digits_only`, `left:n`, `right:n`, `{op:"date"...}`)
+- debug runtime เก็บใน `lotto_result_fetch_logs.selection_debug_json` เท่านั้น (ไม่เก็บใน master state)
+
+## นโยบาย Lotto Result Pipeline v2 (Config-Driven)
+
+- รองรับ pipeline เวอร์ชันต่อ source ผ่าน `pipeline_version`:
+  - `LEGACY`
+  - `V2_SHADOW`
+  - `V2_CUTOVER`
+- รองรับ `fetch_strategy` แบบ fixed set:
+  - `JSON_HTTP`, `HTML_HTTP`, `RENDERED_BROWSER`, `EMBEDDED_JSON`, `MANUAL_INPUT`
+- รองรับ placeholder ใน `fetch_config_json.endpoint_url` สำหรับ runtime context:
+  - `{{expected_draw_date}}` หรือ `{expected_draw_date}`
+  - ใช้ค่า `expected_draw_date` จาก runtime context ของรอบทดสอบ/รันจริงก่อนยิง fetch
+- รองรับ `selection_stage` แบบ fixed set:
+  - `PRE_MAPPING`, `POST_MAPPING`
+- มี shadow compare status แบบ fixed set:
+  - `MATCH`, `MISMATCH`, `ERROR`, `SKIPPED`
+- เพิ่ม config storage ฝั่ง source:
+  - `fetch_config_json`, `selection_config_json`, `readiness_config_json`
+  - flags: `supports_partial`, `requires_browser`, `shadow_enabled`, `cutover_enabled`
+- เพิ่ม structured trace/error ใน fetch logs:
+  - `trace_json`, `error_code`, `error_stage`
+  - `legacy_result_json`, `v2_result_json`, `shadow_diff_json`, `shadow_compare_status`
+- เพิ่ม revision history สำหรับ source config:
+  - ตาราง `lotto_result_source_revisions` เก็บ `changed_by`, `reason`, `config_hash` และ snapshot ต่อ revision
+- เพิ่ม admin actions ใหม่ในเมนู `/lotto/auto-result-sources`:
+  - preview config, validate config, validate cutover
+- ฟอร์ม admin ของ `auto-result-sources` ใช้โหมด V2-only:
+  - มีแท็บ `Quick Setup` สำหรับผู้ใช้ทั่วไป กรอก URL + path หลัก แล้วระบบ generate pipeline JSON อัตโนมัติ
+  - ฟิลด์ที่แก้ได้จริงถูกรวมไว้ที่แท็บ `Quick Setup` (เช่น market/priority/timeout/lookup/offset/effective)
+  - แท็บ `ทั่วไป` ถูกปรับเป็นมุมมองสรุปแบบ read-only
+  - มีช่องหลัก `Pipeline Config JSON (Single Source of Truth)` สำหรับตั้งค่ารวม
+  - ตัดแท็บ `Pipeline` ออกจากหน้าแก้ไข เพื่อไม่ให้สับสนกับแท็บตั้งค่าหลัก
+  - ปรับ label/tab/action ใน modal เป็นภาษาไทยและจัด layout 2 คอลัมน์ในโหมดตั้งค่าด่วนเพื่อให้อ่านง่ายขึ้น
+  - ระบบ sync/แตกค่าไป field ย่อยอัตโนมัติก่อน preview/validate/save
+  - ซ่อนช่อง JSON ย่อยจากหน้า form หลักเพื่อลดการกรอกซ้ำและลดความสับสนของผู้ใช้
+  - derive ค่า legacy-required fields (`endpoint_url`, `http_method`, `parser_type`, `fetch_strategy`, `selection_stage`) จาก JSON config อัตโนมัติก่อน preview/validate/save
+  - ลดความสับสนจากการกรอกค่า legacy และ v2 ซ้ำซ้อน
+- runtime `AutoResultPipelineService` ใช้ V2 cutover path เท่านั้น (latest-only) และไม่วิ่ง legacy/shadow path แล้ว
+- policy ของ `validate cutover`:
+  - `local/testing`: บังคับ fixture gate ต่อ source (สำหรับ regression test)
+  - `production`: ใช้ live validation จาก `endpoint_url` จริงผ่าน pipeline runner (ไม่บังคับให้ผู้ใช้ admin สร้างไฟล์ fixture)
+  - strict date-check ตาม `expected_draw_date` (ไม่ fallback แบบข้ามเงื่อนไขวันที่)
+- `RenderedBrowserFetchDriver` ถูกออกแบบเป็น async worker/runtime path เท่านั้น:
+  - main fetch path ห้าม block รอ browser execution แบบ synchronous
+
+## นโยบาย Browser Worker (Auto Result JS-delayed Sources)
+
+- ใช้ deterministic `receipt_key` จาก normalized config + stable context (`source_id`, `draw_id`, `endpoint_url`, `strategy`, `parser_type`, `expected_draw_date`)
+- ตัด volatile runtime fields ออกจาก receipt hashing เพื่อให้ input เดิมได้ key เดิมเสมอ
+- dispatch gate ใช้ atomic lock (`SETNX + TTL`) ต่อ `receipt_key` เพื่อกัน dispatch ซ้ำ
+- cache payload มาตรฐาน key `lotto:auto-result:browser-fetch:{receipt_key}`:
+  - `status`: `success|failed|app_shell_only`
+  - `response_body`
+  - `selected_endpoint`
+  - `error_code`
+  - `meta` (`duration_ms`, `content_type`, `captured_count`, etc.)
+- fetch selection priority แบบ strict:
+  1. captured endpoint JSON (valid)
+  2. rendered HTML
+  3. `APP_SHELL_ONLY`
+- retry policy:
+  - retry เฉพาะ deferred/network-class failures
+  - `APP_SHELL_ONLY` = terminal reject (no retry)
+- หน้า admin auto source มี Browser Worker config fields และ async test API:
+  - `wait_for_selector`, `wait_until`, `timeout_ms`, `capture_url_patterns`, `block_resource_types`
+  - serialize/deserialize ผ่าน `fetch_config_json.meta.browser_worker`
+
+## นโยบาย Browser Runtime Phase 2 (Locked)
+
+- Runtime baseline:
+  - ใช้ `Playwright Node Worker` เป็น browser executor หลัก
+  - transport เฟสแรก: PHP queue job เรียก local Node process (JSON in/out + exit/stderr summary)
+- Capability policy ต่อ source:
+  - `http_only`
+  - `prefer_browser_runtime`
+  - `require_browser_runtime`
+- Fallback policy (`prefer_browser_runtime`) แบบ allowlist เท่านั้น:
+  - `BROWSER_RUNTIME_UNAVAILABLE`
+  - `BROWSER_LAUNCH_FAILED`
+  - `BROWSER_EXECUTOR_TIMEOUT`
+  - `BROWSER_EXECUTOR_IO_ERROR`
+- Non-fallback policy:
+  - `NO_NETWORK_MATCH` (เมื่อ source declare network path เป็นหลัก)
+  - `DOM_SELECTOR_NOT_FOUND` (เมื่อ source declare browser path เป็นหลัก)
+  - invalid capture/wait/predicate config
+- Schema governance:
+  - PHP เป็น owner ของ runtime output schema
+  - Node worker ต้อง emit ตาม version ที่ PHP กำหนด (ห้าม ad hoc shape)
+- Selection determinism:
+  - `selection_mode=best` ใช้ deterministic tie-break
+  - tie ไม่แตกต้อง reject ด้วย `CAPTURE_AMBIGUOUS_MATCH`
+- DOM fallback:
+  - ใช้ได้เฉพาะ source ที่ `allow_dom_fallback=true`
+  - trace ต้องระบุ `payload_origin` ชัด
+- Admin/test fetch ของ browser runtime:
+  - async only (dispatch + polling status)
+  - ห้าม sync browser execution ใน request lifecycle
+- Artifact governance:
+  - deterministic storage path + filename convention
+  - redaction policy สำหรับ secret/cookie/auth/token
+  - truncation/retention/size cap ต่อ run
+  - มี command cleanup ตาม retention policy: `lotto:cleanup-browser-runtime-artifacts` (รองรับ `--days`, `--dry-run`)
+  - scheduler รัน cleanup รายวันเวลา `03:55` (non hot-path, `withoutOverlapping`)
+- Rollout:
+  - source เดิม default = `http_only`
+  - browser runtime เปิดใช้แบบ opt-in + whitelist
+  - มี global feature flag ปิดระบบ browser runtime ได้ทั้งระบบ
+- Resource budget:
+  - global/per-source/per-domain concurrency caps
+  - overall timeout cap
+  - artifact write cap ต่อ run
+- Source capability/rollout config (ใช้งานจริงผ่าน `fetch_config_json.meta.runtime`):
+  - `fetch_capability`: `http_only|prefer_browser_runtime|require_browser_runtime`
+  - `allow_dom_fallback`: เปิด/ปิด DOM fallback ราย source
+  - รองรับ `http_fallback_strategy` สำหรับ route แบบ `http_only`
+- Admin Auto Source form รองรับตั้งค่า:
+  - capability policy
+  - DOM fallback
+  - browser `selection_mode` (`first|best|all`)
+- Browser test status/dispatch payload แสดง debug เพิ่ม:
+  - `selected_driver`
+  - `phase_timing`
+  - `payload_origin`
+  - `selected_capture`
+  - `artifact_refs`
+- มี CI guardrail สำหรับ AutoResultV2:
+  - GitHub Actions workflow `lotto-autoresultv2-unit` รัน `tests/Unit/Lotto/AutoResultV2`
+  - อัปโหลด artifact (`autoresultv2-unit.log`, `junit-autoresultv2.xml`) ทุกครั้ง
+- มี incident runbook สำหรับ on-call:
+  - `docs/internal/03_DOMAINS/lotto-browser-runtime-incident-runbook.md`
+  - ครอบคลุม reason code triage + rollback decision tree + evidence checklist
+
+## นโยบาย Internal Result Sources Integration (Contract Freeze)
+
+- policy รายละเอียดของโดเมนนี้ถูกแยกเป็น source-of-truth ที่:
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-contract-freeze.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-compatibility-matrix.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-dowjones-extra-fields-policy.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-migration-backfill.md`
+  - `docs/internal/03_DOMAINS/lotto-internal-result-sources-rollout-deprecation.md`
+
+## โครงสร้างเอกสาร
+
+- Internal docs: `docs/internal/*`
+- Public docs: `docs/public/*`
+- Archive: `docs/internal/05_ARCHIVE/*`
+
+## เอกสารระบบหลักที่ใช้งานจริง
+
+- กฎ agent: `docs/internal/00_RULES/agent_rules.md`
+- บันทึกการตัดสินใจ: `docs/internal/02_DECISIONS/decision_log.md`
+- แผนงาน: `docs/04_PLANS/`
+- Domain docs: `docs/internal/03_DOMAINS/`
+
+## เอกสาร system เสริม
+
+- `docs/internal/01_SYSTEM/dev-workflow-phpstorm-wsl.md`
+- `docs/internal/01_SYSTEM/lotto-system-handover-th.md`
+- `docs/internal/01_SYSTEM/laravel-echo-nextjs-install.md`

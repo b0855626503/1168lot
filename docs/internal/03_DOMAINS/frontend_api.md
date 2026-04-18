@@ -25,6 +25,13 @@
 - `lotto/*`
 - `wheel/*`
 
+## Entry Points
+
+- Route: `packages/Gametech/FrontendApi/src/Routes/api.php`
+- Controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
+- Middleware: `packages/Gametech/FrontendApi/src/Http/Middleware/`
+- Public API docs: `docs/public/api/frontend-v1/index.md`
+
 ## ข้อควรจำ
 
 - ลูกค้าห้ามใช้ admin realtime channel
@@ -33,6 +40,6 @@
 
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 
-- route/payload ปัจจุบัน -> `docs/public/api/api-frontend-v1.md`
-- decision ลึก -> `docs/internal/02_DECISIONS/decision_log.md`
-- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system_current_state.md`
+- route/payload ปัจจุบัน -> `docs/public/api/frontend-v1/index.md`
+- decision ลึก -> `docs/internal/02_DECISIONS/decision-log/index.md`
+- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system-current-state/index.md`

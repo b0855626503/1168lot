@@ -35,6 +35,51 @@
 - ใช้ `system_current_state` และ `decision_log` เป็น escalation path ตาม risk
 - งานเล็กไม่ควรต้องแบก startup cost เท่างานใหญ่
 
+## Targeted Lookup Policy (บังคับใช้)
+
+- เป้าหมายหลัก: หา context แบบ "แคบและลึก" เฉพาะ task ปัจจุบัน
+- ห้าม scan โค้ดทั้งระบบแบบกว้าง ถ้ายังไม่ได้ทำ targeted search ก่อน
+- ต้องเริ่มจาก "จุดเข้าใช้งานจริง" (route/controller/service/repository) ก่อนขยาย scope
+- จำกัด context ที่อ่านให้พอ answer task เท่านั้น และหยุดเมื่อได้หลักฐานเพียงพอ
+- ทุกครั้งที่เปิดไฟล์เพิ่ม ต้องตอบได้ว่าไฟล์นั้นเกี่ยวกับ task อย่างไร
+
+## Unified Sync Policy (บังคับใช้)
+
+- เมื่อโค้ดเปลี่ยนที่กระทบ behavior/structure ต้องอัปเดตพร้อมกัน:
+  - docs (`/docs/*.md`)
+  - memory layer (`.codebase-memory/` หรือ `memory/`)
+  - octocode index layer (`.ai/mcp/index-build.json`)
+- อัปเดตไม่ครบถือว่า invalid state
+- ตรวจด้วย:
+  - `bash scripts/docs-validation/check-code-doc-drift.sh`
+  - `bash scripts/docs-validation/check-semantic-sync.sh`
+  - `bash scripts/docs-validation/check-octocode-index-sync.sh`
+  - `bash scripts/docs-validation/check-unified-sync.sh`
+
+## Retrieval Order Policy (Memory First)
+
+- ห้ามเปิด doc ใหญ่เป็น default entry point
+- ต้องอ่าน memory layer ก่อนเสมอ:
+  - `.codebase-memory/SUMMARY.md`
+  - `memory/<domain>.md`
+- ค่อยเปิด docs เฉพาะ section ที่จำเป็นเมื่อ memory ยังไม่พอ
+
+### ลำดับการค้นหาโค้ด (ต้องทำตามลำดับนี้)
+
+1. หา endpoint/command/class name จากโจทย์
+2. ใช้ targeted search หาไฟล์ที่ประกาศจริง
+3. อ่านเฉพาะ function/method ที่เกี่ยวข้อง
+4. ค่อยตาม call chain เฉพาะเส้นที่แตะ behavior นั้น
+5. ถ้าความเสี่ยงสูงค่อย escalate ไปไฟล์ state/decision ขนาดใหญ่
+
+### คำสั่งที่แนะนำสำหรับ targeted lookup
+
+- `rg -n "<keyword>" <path>`
+- `rg -n "function <name>|public function <name>" <path>`
+- `rg -n "Route::(get|post|put|delete)|->name\\(" packages/Gametech/FrontendApi/src/Routes`
+- `rg -n "<ClassName>" app packages`
+- `sed -n '<start>,<end>p' <file>`
+
 ## กฎการเขียนเอกสาร
 
 - ภาษาไทยเป็นหลัก

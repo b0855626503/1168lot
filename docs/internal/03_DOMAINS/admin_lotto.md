@@ -35,7 +35,13 @@
   - ยอดสุทธิ
 - semantic badge/toast ต้องตรงกับ dataset ของเมนูจริง
 
+## Entry Points
+
+- Admin package: `packages/Gametech/Admin/src/`
+- Lotto admin views/components: `packages/Gametech/Admin/src/Resources/`
+- Dashboard badge source: `DashboardController@loadCnt` (Admin package)
+
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 
-- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system_current_state.md`
-- decision ลึก -> `docs/internal/02_DECISIONS/decision_log.md`
+- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system-current-state/index.md`
+- decision ลึก -> `docs/internal/02_DECISIONS/decision-log/index.md`

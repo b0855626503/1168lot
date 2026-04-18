@@ -21,6 +21,13 @@
 - referral / cashback / ic / bonus
 - admin adjust / rollback
 
+## Entry Points
+
+- Wallet package: `packages/Gametech/Wallet/src/`
+- Frontend controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WalletController.php`
+- Withdraw controller: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WithdrawController.php`
+- Ledger tables/migrations: `database/migrations/`
+
 ## claim โบนัส/ค่าแนะนำ
 
 - `FrontendApi` ใช้ `POST /api/v1/wallet/claim`
@@ -29,6 +36,6 @@
 
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 
-- policy ปัจจุบัน -> `docs/internal/01_SYSTEM/system_current_state.md`
-- decisions -> `docs/internal/02_DECISIONS/decision_log.md`
+- policy ปัจจุบัน -> `docs/internal/01_SYSTEM/system-current-state/index.md`
+- decisions -> `docs/internal/02_DECISIONS/decision-log/index.md`
 - future ledger work -> `docs/04_PLANS/2026-03-21_wallet-ledger-implementation.md`

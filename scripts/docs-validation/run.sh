@@ -11,7 +11,11 @@ checks=(
   "check-naming.sh"
   "check-plans-readme.sh"
   "check-plan-metadata.sh"
+  "check-domain-entrypoints.sh"
   "check-doc-links.sh"
+  "check-monolith-size.sh"
+  "check-code-doc-drift.sh"
+  "check-unified-sync.sh"
 )
 
 for check in "${checks[@]}"; do

@@ -1,6 +1,6 @@
 # MCP Operating Guide
 
-อัปเดตล่าสุด: 2026-04-13
+อัปเดตล่าสุด: 2026-04-18
 
 เอกสารนี้สรุปวิธีใช้งาน `octocode_mcp` และ `codebase_memory_mcp` สำหรับ repo นี้
 รวมถึงขั้นตอน sync ข้อมูลให้เป็นล่าสุดหลังมีการเปลี่ยนแปลง
@@ -109,12 +109,37 @@
 5. อัปเดต ADR memory (`manage_adr(mode='update')`) ให้สะท้อนสถานะล่าสุด
 6. ตรวจซ้ำ sections (`manage_adr(mode='sections')`) ว่าครบ
 
+## 3.1) Unified Sync Policy (Doc + Memory + Index)
+
+เมื่อมีการเปลี่ยนโค้ดที่กระทบ behavior/structure ต้องอัปเดตพร้อมกัน 3 ชั้น:
+
+1. `.md` ใน `/docs` (source of truth)
+2. memory layer (`.codebase-memory/` หรือ `memory/`)
+3. octocode index/search layer (`.ai/mcp/index-build.json` แบบ machine-verifiable)
+
+ถ้า 3 ชั้นนี้ไม่สอดคล้องกัน ให้ถือเป็น invalid state
+
+- ตรวจด้วย `bash scripts/docs-validation/check-unified-sync.sh`
+- ปรับโหมดด้วย `UNIFIED_SYNC_MODE=warn|error`
+- สร้าง index artifact ด้วย `bash scripts/docs-validation/rebuild-octocode-index-artifact.sh --changed-only`
+
 ## 4) Definition of Done สำหรับงาน MCP/Memory
 
 - มี doc ใน `/docs` รองรับ decision ล่าสุด
 - graph/index พร้อมใช้งานกับโค้ดชุดล่าสุด
 - ADR memory อัปเดตแล้วและอ่านกลับได้
+- ผ่าน `check-unified-sync.sh` เมื่อมี code change
 - ทีมสามารถกลับมา query ต่อใน session ถัดไปได้ทันที
+
+## 4.1) Retrieval Rule (Memory First)
+
+ลำดับการอ่าน context ที่บังคับ:
+
+1. `.codebase-memory/SUMMARY.md`
+2. `memory/<domain>.md`
+3. docs เฉพาะ section ที่จำเป็นต่อ task
+
+ห้ามเปิด doc ใหญ่ก่อนโดยยังไม่อ่าน memory layer
 
 ## 5) Quick Checklist ก่อนเริ่มงานด้วย `octocode_mcp`
 

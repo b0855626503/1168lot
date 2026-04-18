@@ -28,8 +28,15 @@
 - การเขียนข้อมูลลง `lotto_tickets` และ `lotto_ticket_items` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `member_lotto_market_policies` จะไม่เขียน audit ลงตาราง `logs`
 
+## Entry Points
+
+- Lotto package: `packages/Gametech/Lotto/src/`
+- Frontend lotto controller: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/LottoController.php`
+- Admin routes/controllers: `packages/Gametech/Admin/src/`
+- Draw/result jobs/services: `app/Jobs/`, `app/Services/`
+
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 
-- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system_current_state.md`
-- decision ลึก -> `docs/internal/02_DECISIONS/decision_log.md`
+- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system-current-state/index.md`
+- decision ลึก -> `docs/internal/02_DECISIONS/decision-log/index.md`
 - active plans -> `docs/04_PLANS/README.md`

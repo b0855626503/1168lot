@@ -15,7 +15,13 @@
 - event ของทีมงานห้าม expose ให้ลูกค้า
 - realtime total/badge ของ lotto tickets ต้องตรงกับ active-only semantics
 
+## Entry Points
+
+- Realtime config/auth controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/RealtimeController.php`
+- Broadcast jobs/events: `app/Events/`, `app/Jobs/`, `app/Notifications/`
+- Channel policy/config: `config/broadcasting.php`, `routes/channels.php` (ถ้ามี)
+
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 
-- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system_current_state.md`
-- decision ลึก -> `docs/internal/02_DECISIONS/decision_log.md`
+- behavior ปัจจุบัน -> `docs/internal/01_SYSTEM/system-current-state/index.md`
+- decision ลึก -> `docs/internal/02_DECISIONS/decision-log/index.md`
