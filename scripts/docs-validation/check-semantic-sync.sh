@@ -8,6 +8,8 @@ source "$SCRIPT_DIR/config.sh"
 
 SEMANTIC_SYNC_MODE="${SEMANTIC_SYNC_MODE:-$UNIFIED_SYNC_MODE}"
 SEMANTIC_REPORT_PATH="${SEMANTIC_REPORT_PATH:-.ai/mcp/semantic-drift-report.json}"
+CRITICAL_DRIFT_MODE="${CRITICAL_DRIFT_MODE:-error}"
+DOMAIN_COVERAGE_MODE="${DOMAIN_COVERAGE_MODE:-warn}"
 
 mkdir -p "$(dirname "$SEMANTIC_REPORT_PATH")"
 
@@ -165,6 +167,64 @@ $nonCritical = [
     'memory_only_modules' => $diff($memModules, array_values(array_unique(array_merge($docCriticalModules, $docNonCriticalModules)))),
 ];
 
+$bucket = [
+    'useful_soon' => [
+        'endpoints' => [],
+        'modules' => [],
+    ],
+    'docs_only_acceptable' => [
+        'endpoints' => [],
+        'modules' => [],
+    ],
+    'ignore_noise' => [
+        'endpoints' => [],
+        'modules' => [],
+    ],
+];
+
+$endpointBucket = static function (string $endpoint): string {
+    if (preg_match('#^/api/v1/member/loadbalance$#', $endpoint) === 1) {
+        return 'useful_soon';
+    }
+    if (preg_match('#^/api/v1/(meta/|slides$|realtime/)#', $endpoint) === 1) {
+        return 'useful_soon';
+    }
+    if (preg_match('#^/api/v1/(coupon/|promotion/|lotto/|wheel/)#', $endpoint) === 1) {
+        return 'docs_only_acceptable';
+    }
+    return 'ignore_noise';
+};
+
+$moduleBucket = static function (string $module): string {
+    if (preg_match('#FrontendApi/src/Http/Controllers/Api/V1/(Member|Realtime|Online|Slide)#', $module) === 1) {
+        return 'useful_soon';
+    }
+    if (preg_match('#packages/Gametech/(Lotto|Promotion|Reward|Ui|API)/#', $module) === 1) {
+        return 'docs_only_acceptable';
+    }
+    return 'ignore_noise';
+};
+
+foreach ($nonCritical['doc_only_endpoints'] as $endpoint) {
+    $bucket[$endpointBucket($endpoint)]['endpoints'][] = $endpoint;
+}
+foreach ($nonCritical['memory_only_endpoints'] as $endpoint) {
+    $bucket['ignore_noise']['endpoints'][] = $endpoint;
+}
+foreach ($nonCritical['doc_only_modules'] as $module) {
+    $bucket[$moduleBucket($module)]['modules'][] = $module;
+}
+foreach ($nonCritical['memory_only_modules'] as $module) {
+    $bucket['ignore_noise']['modules'][] = $module;
+}
+
+foreach ($bucket as $bucketName => $bucketParts) {
+    foreach ($bucketParts as $part => $items) {
+        $bucket[$bucketName][$part] = array_values(array_unique($items));
+        sort($bucket[$bucketName][$part]);
+    }
+}
+
 $criticalCount = count($critical['doc_only_endpoints']) + count($critical['doc_only_modules']);
 foreach ($critical['missing_flow_keywords_by_domain'] as $items) {
     $criticalCount += count($items);
@@ -189,6 +249,7 @@ $report = [
     ],
     'critical' => $critical,
     'non_critical' => $nonCritical,
+    'non_critical_buckets' => $bucket,
 ];
 
 file_put_contents($reportPath, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -197,9 +258,19 @@ PHP
 critical_mismatch_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)($j["summary"]["critical_mismatches"] ?? 0);' "$SEMANTIC_REPORT_PATH")"
 non_critical_mismatch_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)($j["summary"]["non_critical_mismatches"] ?? 0);' "$SEMANTIC_REPORT_PATH")"
 total_mismatch_count=$((critical_mismatch_count + non_critical_mismatch_count))
+domain_low_coverage_count="$(php -r '$j=json_decode(file_get_contents($argv[1]), true); echo (int)count($j["summary"]["domains_low_coverage"] ?? []);' "$SEMANTIC_REPORT_PATH")"
+
+if (( domain_low_coverage_count > 0 )); then
+  if [[ "$DOMAIN_COVERAGE_MODE" == "error" ]]; then
+    log_error "semantic-sync" "domain coverage dropped: $domain_low_coverage_count domains (report: $SEMANTIC_REPORT_PATH)"
+    exit 1
+  fi
+
+  log_warn "semantic-sync" "domain coverage dropped: $domain_low_coverage_count domains (report: $SEMANTIC_REPORT_PATH)"
+fi
 
 if (( critical_mismatch_count > 0 )); then
-  if [[ "$SEMANTIC_SYNC_MODE" == "error" ]]; then
+  if [[ "$CRITICAL_DRIFT_MODE" == "error" ]]; then
     log_error "semantic-sync" "critical semantic mismatch: $critical_mismatch_count (report: $SEMANTIC_REPORT_PATH)"
     exit 1
   fi

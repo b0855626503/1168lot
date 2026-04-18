@@ -26,14 +26,17 @@
 - semantic consistency check: `scripts/docs-validation/check-semantic-sync.sh`
 - code-doc drift check: `scripts/docs-validation/check-code-doc-drift.sh`
 - octocode index verification: `scripts/docs-validation/check-octocode-index-sync.sh`
+- retrieval entrypoint regression check: `scripts/docs-validation/check-retrieval-entrypoints.sh`
 - full validation runner: `scripts/docs-validation/run.sh`
 - rebuild index artifact: `scripts/docs-validation/rebuild-octocode-index-artifact.sh --changed-only`
 - post-change helper: `scripts/docs-validation/post-change-sync.sh`
+- retrieval metrics report generator: `scripts/docs-validation/generate-retrieval-metrics-report.sh`
 
 ### Artifacts / Reports
 
 - semantic drift report: `.ai/mcp/semantic-drift-report.json`
 - octocode index artifact: `.ai/mcp/index-build.json`
+- retrieval metrics report: `.ai/mcp/retrieval-metrics-report.json` และ `.ai/mcp/retrieval-metrics-report.md`
 - memory summary: `.codebase-memory/SUMMARY.md`
 - required domain memory:
   - `memory/auth.md`
