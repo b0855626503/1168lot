@@ -35,6 +35,8 @@
 ## Public Routes
 
 ### `GET /api/v1/auth/register/banks`
+- คำอธิบาย: ดึงรายการธนาคารที่ระบบรองรับสำหรับใช้ในฟอร์มสมัครสมาชิก
+- ใช้เมื่อ: ต้องการแสดง dropdown ธนาคารก่อนกรอกเลขบัญชีตอนสมัคร
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -54,6 +56,8 @@ GET /api/v1/auth/register/banks
 ```
 
 ### `POST /api/v1/auth/register/bank-account-name`
+- คำอธิบาย: ตรวจสอบชื่อบัญชีจากธนาคารตามเลขบัญชีที่กรอก เพื่อช่วยยืนยันความถูกต้อง
+- ใช้เมื่อ: ผู้ใช้กรอกเลขบัญชีและต้องการพรีวิวชื่อเจ้าของบัญชีก่อนสมัคร
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```json
@@ -78,6 +82,8 @@ GET /api/v1/auth/register/banks
 ```
 
 ### `POST /api/v1/auth/register`
+- คำอธิบาย: สมัครสมาชิกใหม่และผูกข้อมูลบัญชีธนาคารสำหรับธุรกรรม
+- ใช้เมื่อ: สร้างบัญชีผู้ใช้ใหม่จากหน้าสมัครสมาชิก
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```json
@@ -100,6 +106,8 @@ GET /api/v1/auth/register/banks
 ```
 
 ### `POST /api/v1/auth/login`
+- คำอธิบาย: เข้าสู่ระบบและออก access token สำหรับเรียก API ที่ต้องยืนยันตัวตน
+- ใช้เมื่อ: ผู้ใช้ล็อกอินจากหน้าแรก/หน้าเข้าสู่ระบบ
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```json
@@ -122,6 +130,8 @@ GET /api/v1/auth/register/banks
 ```
 
 ### `GET /api/v1/games/types`
+- คำอธิบาย: ดึงประเภทเกมที่เปิดให้บริการ เช่น slot, casino, sport
+- ใช้เมื่อ: แสดงแท็บหรือหมวดหมู่เกมบนหน้าเกม
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -141,6 +151,8 @@ GET /api/v1/games/types
 ```
 
 ### `GET /api/v1/games/providers/{type}`
+- คำอธิบาย: ดึงรายชื่อค่ายเกมตามประเภทที่เลือก
+- ใช้เมื่อ: ผู้ใช้เลือกประเภทเกมและต้องการเห็นค่ายที่เกี่ยวข้อง
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `type` เช่น `slot`
@@ -163,6 +175,8 @@ GET /api/v1/games/providers/slot
 ```
 
 ### `GET /api/v1/games/{type}/{provider}`
+- คำอธิบาย: ดึงรายการเกมของค่ายที่เลือกในประเภทนั้น
+- ใช้เมื่อ: โหลดลิสต์เกมเพื่อแสดงการ์ดเกมในหน้า lobby
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `type` เช่น `slot`
@@ -185,6 +199,8 @@ GET /api/v1/games/slot/PGSOFT
 ```
 
 ### `GET /api/v1/slides`
+- คำอธิบาย: ดึงข้อมูลสไลด์/แบนเนอร์สำหรับหน้าแรก
+- ใช้เมื่อ: เรนเดอร์ banner carousel ในหน้า Home
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -204,6 +220,8 @@ GET /api/v1/slides
 ```
 
 ### `GET /api/v1/meta/online-members`
+- คำอธิบาย: ดึงจำนวนสมาชิกออนไลน์แบบสรุป
+- ใช้เมื่อ: แสดง social proof หรือสถิติผู้ใช้งานสดบนหน้าเว็บ
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -221,6 +239,8 @@ GET /api/v1/meta/online-members
 ```
 
 ### `GET /api/v1/meta/contact-channels`
+- คำอธิบาย: ดึงช่องทางติดต่อที่เปิดใช้งาน เช่น Line, Telegram
+- ใช้เมื่อ: เรนเดอร์ปุ่มติดต่อฝ่ายบริการลูกค้า
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -240,6 +260,8 @@ GET /api/v1/meta/contact-channels
 ```
 
 ### `GET /api/v1/meta/site`
+- คำอธิบาย: ดึงข้อมูลเมตาของเว็บ เช่น ชื่อเว็บ สถานะบำรุงรักษา
+- ใช้เมื่อ: โหลดค่าคอนฟิกพื้นฐานก่อน render แอป
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -258,6 +280,8 @@ GET /api/v1/meta/site
 ```
 
 ### `GET /api/v1/realtime/config`
+- คำอธิบาย: ดึงคอนฟิกระบบ realtime ที่ frontend ต้องใช้เชื่อมต่อ
+- ใช้เมื่อ: ตั้งค่า websocket/reverb client ตอนเริ่มแอป
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -277,6 +301,8 @@ GET /api/v1/realtime/config
 ```
 
 ### `GET /api/v1/lotto/draws`
+- คำอธิบาย: ดึงงวดหวยตาม market ที่ระบุ
+- ใช้เมื่อ: ผู้ใช้เลือกตลาดหวยและต้องการเลือกงวดที่จะเดิมพัน
 - Auth: ไม่ต้องใช้ token
 - Query example:
 ```http
@@ -296,6 +322,8 @@ GET /api/v1/lotto/draws?market_id=1
 ```
 
 ### `GET /api/v1/lotto/draws/{id}`
+- คำอธิบาย: ดึงรายละเอียดงวดหวยรายงวด
+- ใช้เมื่อ: ต้องการข้อมูลเชิงลึกของงวดก่อนวางบิล
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `id` เช่น `101`
@@ -317,6 +345,8 @@ GET /api/v1/lotto/draws/101
 ```
 
 ### `GET /api/v1/lotto/markets/latest`
+- คำอธิบาย: ดึงตลาดหวยล่าสุดที่กำลังเปิดให้เล่น
+- ใช้เมื่อ: โหลดหน้า lotto ให้เห็นตลาดที่ active ล่าสุดทันที
 - Auth: ไม่ต้องใช้ token
 - Query example:
 ```http
@@ -337,6 +367,8 @@ GET /api/v1/lotto/markets/latest?group=government
 ```
 
 ### `GET /api/v1/lotto/markets/{marketId}/betting-context`
+- คำอธิบาย: ดึงบริบทเดิมพันของตลาด เช่น draw ปัจจุบัน และเวลาปิดรับ
+- ใช้เมื่อ: ใช้คุม state ปุ่มเดิมพันและ countdown ในหน้าแทงหวย
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `marketId` เช่น `1`
@@ -359,6 +391,8 @@ GET /api/v1/lotto/markets/1/betting-context
 ```
 
 ### `GET /api/v1/lotto/markets/{marketId}/results`
+- คำอธิบาย: ดึงผลรางวัลย้อนหลังตามตลาด
+- ใช้เมื่อ: แสดงประวัติผลรางวัลของตลาดที่ผู้ใช้เลือก
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `marketId` เช่น `1`
@@ -381,6 +415,8 @@ GET /api/v1/lotto/markets/1/results
 ```
 
 ### `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- คำอธิบาย: ดึงผลรางวัลของงวดเฉพาะเจาะจง
+- ใช้เมื่อ: ผู้ใช้เปิดดูผลของงวดที่สนใจรายงวด
 - Auth: ไม่ต้องใช้ token
 - Path params:
   - `marketId` เช่น `1`
@@ -406,6 +442,8 @@ GET /api/v1/lotto/markets/1/draws/101/result
 ```
 
 ### `GET /api/v1/lotto/results/by-date`
+- คำอธิบาย: ดึงผลหวยรวมตามวันที่ระบุ
+- ใช้เมื่อ: ทำหน้าค้นหาผลหวยตามวันหรือหน้าสรุปประจำวัน
 - Auth: ไม่ต้องใช้ token
 - Query example:
 ```http
@@ -426,6 +464,8 @@ GET /api/v1/lotto/results/by-date?date=2026-04-19
 ```
 
 ### `GET /api/v1/lotto/navbar-config`
+- คำอธิบาย: ดึงคอนฟิกเมนูนำทางของโมดูลหวยตามโค้ดที่กำหนด
+- ใช้เมื่อ: ประกอบ navbar/dynamic menu ของหน้า lotto
 - Auth: ไม่ต้องใช้ token
 - Query example:
 ```http
@@ -450,6 +490,8 @@ GET /api/v1/lotto/navbar-config?code=mobile_bottom_nav&locale=th
 ## Authenticated Routes (`Authorization: Bearer <access_token>`)
 
 ### `POST /api/v1/auth/logout`
+- คำอธิบาย: ออกจากระบบและยกเลิก token ปัจจุบัน
+- ใช้เมื่อ: ผู้ใช้กดออกจากระบบจากโปรไฟล์/เมนู
 - Request example:
 ```json
 {}
@@ -463,6 +505,8 @@ GET /api/v1/lotto/navbar-config?code=mobile_bottom_nav&locale=th
 ```
 
 ### `GET /api/v1/member/profile`
+- คำอธิบาย: ดึงข้อมูลโปรไฟล์สมาชิกที่ล็อกอินอยู่
+- ใช้เมื่อ: แสดงข้อมูลบัญชีในหน้าโปรไฟล์
 - Request example:
 ```http
 GET /api/v1/member/profile
@@ -481,6 +525,8 @@ GET /api/v1/member/profile
 ```
 
 ### `GET /api/v1/member/balance`
+- คำอธิบาย: ดึงยอดเงินและยอดที่เกี่ยวข้องในกระเป๋าสมาชิก
+- ใช้เมื่อ: รีเฟรชยอดเงินก่อน/หลังทำรายการ
 - Request example:
 ```http
 GET /api/v1/member/balance
@@ -498,6 +544,8 @@ GET /api/v1/member/balance
 ```
 
 ### `GET /api/v1/member/loadbalance`
+- คำอธิบาย: ดึงยอดเงินแบบเบาเพื่อรีเฟรชเร็ว
+- ใช้เมื่อ: polling ยอดเงินบน header/wallet widget
 - Request example:
 ```http
 GET /api/v1/member/loadbalance
@@ -514,6 +562,8 @@ GET /api/v1/member/loadbalance
 ```
 
 ### `POST /api/v1/member/change-password`
+- คำอธิบาย: เปลี่ยนรหัสผ่านของสมาชิก
+- ใช้เมื่อ: ผู้ใช้ต้องการอัปเดตความปลอดภัยของบัญชี
 - Request example:
 ```json
 {
@@ -531,6 +581,8 @@ GET /api/v1/member/loadbalance
 ```
 
 ### `POST /api/v1/member/wallet-address`
+- คำอธิบาย: บันทึกหรืออัปเดตที่อยู่กระเป๋า crypto ของสมาชิก
+- ใช้เมื่อ: เตรียมข้อมูลปลายทางสำหรับการถอนแบบ crypto
 - Request example:
 ```json
 {
@@ -549,6 +601,8 @@ GET /api/v1/member/loadbalance
 ```
 
 ### `GET /api/v1/member/contributor`
+- คำอธิบาย: ดึงข้อมูลผู้แนะนำ/ผู้สนับสนุนที่ผูกกับสมาชิก
+- ใช้เมื่อ: แสดงข้อมูลสายแนะนำหรือหน้า referral
 - Request example:
 ```http
 GET /api/v1/member/contributor
@@ -566,6 +620,8 @@ GET /api/v1/member/contributor
 ```
 
 ### `GET /api/v1/member/history`
+- คำอธิบาย: ดึงประวัติธุรกรรมรวมของสมาชิก
+- ใช้เมื่อ: ทำหน้า history หลักที่รวมหลายประเภทรายการ
 - Query example:
 ```http
 GET /api/v1/member/history?date_start=2026-04-01&date_stop=2026-04-19
@@ -584,6 +640,8 @@ GET /api/v1/member/history?date_start=2026-04-01&date_stop=2026-04-19
 ```
 
 ### `GET /api/v1/member/history/{type}`
+- คำอธิบาย: ดึงประวัติธุรกรรมแยกตามประเภท
+- ใช้เมื่อ: ผู้ใช้เลือกแท็บประเภทประวัติ เช่น ฝาก ถอน เดิมพัน
 - Path params:
   - `type` เช่น `withdraw`, `deposit`, `setwallet`
 - Request example:
@@ -605,6 +663,8 @@ GET /api/v1/member/history/withdraw
 ```
 
 ### `GET /api/v1/member/realtime-context`
+- คำอธิบาย: ดึงข้อมูล context สำหรับ subscribe ช่อง realtime ของสมาชิก
+- ใช้เมื่อ: ตั้งค่า presence/channel หลังล็อกอิน
 - Request example:
 ```http
 GET /api/v1/member/realtime-context
@@ -622,6 +682,8 @@ GET /api/v1/member/realtime-context
 ```
 
 ### `POST /api/v1/member/heartbeat`
+- คำอธิบาย: ส่ง heartbeat เพื่ออัปเดตสถานะออนไลน์ของสมาชิก
+- ใช้เมื่อ: ยิงเป็นช่วงเวลาเพื่อคงสถานะ active session
 - Request example:
 ```json
 {
@@ -637,6 +699,8 @@ GET /api/v1/member/realtime-context
 ```
 
 ### `POST /api/v1/realtime/auth`
+- คำอธิบาย: authorize การเข้าช่อง realtime private/presence
+- ใช้เมื่อ: เรียกโดย client realtime ตอน subscribe private channel
 - Request example:
 ```json
 {
@@ -652,6 +716,8 @@ GET /api/v1/member/realtime-context
 ```
 
 ### `POST /api/v1/wallet/withdraw`
+- คำอธิบาย: สร้างคำขอถอนเงินจากกระเป๋าสมาชิก
+- ใช้เมื่อ: ผู้ใช้ส่งฟอร์มถอนเงิน
 - Request example:
 ```json
 {
@@ -669,6 +735,8 @@ GET /api/v1/member/realtime-context
 ```
 
 ### `POST /api/v1/wallet/claim`
+- คำอธิบาย: เคลมเครดิต/ยอดคงค้างเข้ากระเป๋าหลักตามเงื่อนไขระบบ
+- ใช้เมื่อ: กดปุ่มรับเครดิตหรือโอนยอดที่รอเคลม
 - Request example:
 ```json
 {
@@ -688,6 +756,8 @@ GET /api/v1/member/realtime-context
 ```
 
 ### `GET /api/v1/wallet/transactions`
+- คำอธิบาย: ดึงรายการเดินบัญชีกระเป๋า (wallet ledger)
+- ใช้เมื่อ: แสดงประวัติรับ-จ่ายในหน้ากระเป๋า
 - Query example:
 ```http
 GET /api/v1/wallet/transactions?type=all&date_start=2026-04-01&date_stop=2026-04-19&limit=20
@@ -715,6 +785,8 @@ GET /api/v1/wallet/transactions?type=all&date_start=2026-04-01&date_stop=2026-04
 ```
 
 ### `POST /api/v1/coupon/redeem`
+- คำอธิบาย: ตรวจสอบและแลกคูปองเข้าระบบของสมาชิก
+- ใช้เมื่อ: ผู้ใช้กรอกโค้ดคูปองจากแคมเปญ
 - Request example:
 ```json
 {
@@ -730,6 +802,8 @@ GET /api/v1/wallet/transactions?type=all&date_start=2026-04-01&date_stop=2026-04
 ```
 
 ### `GET /api/v1/coupon/my`
+- คำอธิบาย: ดึงคูปองที่สมาชิกมีอยู่
+- ใช้เมื่อ: แสดงรายการคูปองที่ใช้ได้/เคลมได้
 - Request example:
 ```http
 GET /api/v1/coupon/my
@@ -748,6 +822,8 @@ GET /api/v1/coupon/my
 ```
 
 ### `POST /api/v1/coupon/my/{code}/claim`
+- คำอธิบาย: เคลมคูปองที่สมาชิกถืออยู่ด้วย code ที่ระบุ
+- ใช้เมื่อ: ผู้ใช้กดรับสิทธิ์จากคูปองเฉพาะใบ
 - Path params:
   - `code` เช่น `WELCOME100`
 - Request example:
@@ -763,6 +839,8 @@ GET /api/v1/coupon/my
 ```
 
 ### `GET /api/v1/deposit/channels`
+- คำอธิบาย: ดึงช่องทางฝากเงินที่เปิดใช้งานสำหรับสมาชิก
+- ใช้เมื่อ: แสดงตัวเลือกช่องทางฝากในหน้าฝากเงิน
 - Request example:
 ```http
 GET /api/v1/deposit/channels
@@ -781,6 +859,8 @@ GET /api/v1/deposit/channels
 ```
 
 ### `POST /api/v1/deposit/loadbank`
+- คำอธิบาย: ดึงข้อมูลบัญชีธนาคารปลายทางของระบบสำหรับฝาก
+- ใช้เมื่อ: ผู้ใช้เลือกฝากผ่านธนาคารและต้องการข้อมูลบัญชีรับโอน
 - Request example:
 ```json
 {
@@ -801,6 +881,8 @@ GET /api/v1/deposit/channels
 ```
 
 ### `GET /api/v1/smkpay/deposit/status/{txid}`
+- คำอธิบาย: ตรวจสอบสถานะรายการฝากผ่าน SMKPay ตาม txid
+- ใช้เมื่อ: polling สถานะระหว่างรอฝากสำเร็จ
 - Path params:
   - `txid` เช่น `REQ-202604130001`
 - Request example:
@@ -820,6 +902,8 @@ GET /api/v1/smkpay/deposit/status/REQ-202604130001
 ```
 
 ### `POST /api/v1/smkpay/deposit/expire/{txid}`
+- คำอธิบาย: สั่งหมดอายุรายการฝาก SMKPay ที่ยังไม่ชำระ
+- ใช้เมื่อ: ผู้ใช้ยกเลิกหรือ timeout QR/payment intent
 - Path params:
   - `txid` เช่น `REQ-202604130001`
 - Request example:
@@ -835,6 +919,8 @@ GET /api/v1/smkpay/deposit/status/REQ-202604130001
 ```
 
 ### `POST /api/v1/smkpay/deposit/create`
+- คำอธิบาย: สร้างรายการฝากผ่าน SMKPay และคืนข้อมูลการชำระ
+- ใช้เมื่อ: เริ่ม flow ฝากเงินด้วย QR/SMKPay
 - Request example:
 ```json
 {
@@ -855,6 +941,8 @@ GET /api/v1/smkpay/deposit/status/REQ-202604130001
 ```
 
 ### `GET /api/v1/smkpay/qrcode/{id}`
+- คำอธิบาย: ดึงข้อมูล QR code ของรายการฝาก SMKPay
+- ใช้เมื่อ: แสดง QR ให้ผู้ใช้สแกนชำระ
 - Path params:
   - `id` เช่น `REQ-202604130001`
 - Request example:
@@ -874,6 +962,8 @@ GET /api/v1/smkpay/qrcode/REQ-202604130001
 ```
 
 ### `GET /api/v1/promotion/list`
+- คำอธิบาย: ดึงรายการโปรโมชั่นที่สมาชิกสามารถเลือกได้
+- ใช้เมื่อ: แสดงโปรที่สมัครได้ในหน้ากิจกรรม
 - Request example:
 ```http
 GET /api/v1/promotion/list
@@ -892,6 +982,8 @@ GET /api/v1/promotion/list
 ```
 
 ### `POST /api/v1/promotion/select`
+- คำอธิบาย: เลือกเข้าร่วมโปรโมชั่น
+- ใช้เมื่อ: ผู้ใช้กดยืนยันรับโปรที่ต้องการ
 - Request example:
 ```json
 {
@@ -907,6 +999,8 @@ GET /api/v1/promotion/list
 ```
 
 ### `POST /api/v1/promotion/deselect`
+- คำอธิบาย: ยกเลิกการเข้าร่วมโปรโมชั่นปัจจุบัน
+- ใช้เมื่อ: ผู้ใช้ต้องการออกจากโปรก่อนเปลี่ยนโปรใหม่
 - Request example:
 ```json
 {
@@ -922,6 +1016,8 @@ GET /api/v1/promotion/list
 ```
 
 ### `POST /api/v1/games/login`
+- คำอธิบาย: ขอ URL/Session สำหรับเข้าเล่นเกมแบบยิงจาก frontend
+- ใช้เมื่อ: ผู้ใช้กดเข้าเกมจากการ์ดเกม
 - Request example:
 ```json
 {
@@ -941,6 +1037,8 @@ GET /api/v1/promotion/list
 ```
 
 ### `GET /api/v1/games/login/{game}/{code}`
+- คำอธิบาย: เข้าเกมผ่าน path parameter สำหรับ deep link
+- ใช้เมื่อ: รองรับลิงก์ตรงเข้าเกมจากแคมเปญ/ภายนอก
 - Path params:
   - `game` เช่น `PGSOFT`
   - `code` เช่น `treasures-aztec`
@@ -960,6 +1058,8 @@ GET /api/v1/games/login/PGSOFT/treasures-aztec
 ```
 
 ### `POST /api/v1/lotto/bet`
+- คำอธิบาย: ส่งคำสั่งเดิมพันหวยและสร้างบิล
+- ใช้เมื่อ: ผู้ใช้ยืนยันแทงหวยจาก slip
 - Request example:
 ```json
 {
@@ -983,6 +1083,8 @@ GET /api/v1/games/login/PGSOFT/treasures-aztec
 ```
 
 ### `GET /api/v1/lotto/groups/{groupId}/packages`
+- คำอธิบาย: ดึงชุด package ที่มีให้เลือกในกลุ่มหวย
+- ใช้เมื่อ: แสดงแพ็กเกจสำเร็จรูปเพื่อแทงเร็ว
 - Path params:
   - `groupId` เช่น `1`
 - Request example:
@@ -1004,6 +1106,8 @@ GET /api/v1/lotto/groups/1/packages
 ```
 
 ### `POST /api/v1/lotto/groups/{groupId}/select-package`
+- คำอธิบาย: เลือก package สำหรับกลุ่มหวยที่ระบุ
+- ใช้เมื่อ: ผู้ใช้กดเลือกชุดเลขที่ต้องการใช้งาน
 - Path params:
   - `groupId` เช่น `1`
 - Request example:
@@ -1021,6 +1125,8 @@ GET /api/v1/lotto/groups/1/packages
 ```
 
 ### `GET /api/v1/lotto/groups/{groupId}/selected-package`
+- คำอธิบาย: ดึง package ที่สมาชิกเลือกไว้ล่าสุด
+- ใช้เมื่อ: restore state ตอนกลับเข้าหน้าซื้อเลข
 - Path params:
   - `groupId` เช่น `1`
 - Request example:
@@ -1040,6 +1146,8 @@ GET /api/v1/lotto/groups/1/selected-package
 ```
 
 ### `GET /api/v1/lotto/tickets`
+- คำอธิบาย: ดึงรายการบิลหวยของสมาชิก
+- ใช้เมื่อ: แสดงประวัติบิลหวยพร้อมสถานะ
 - Query example:
 ```http
 GET /api/v1/lotto/tickets?status=active&page=1
@@ -1058,6 +1166,8 @@ GET /api/v1/lotto/tickets?status=active&page=1
 ```
 
 ### `GET /api/v1/lotto/tickets/{id}`
+- คำอธิบาย: ดึงรายละเอียดบิลหวยรายใบ
+- ใช้เมื่อ: เปิดดูเลขที่แทงและยอดในบิลนั้น
 - Path params:
   - `id` เช่น `1001`
 - Request example:
@@ -1078,6 +1188,8 @@ GET /api/v1/lotto/tickets/1001
 ```
 
 ### `POST /api/v1/lotto/tickets/{id}/cancel`
+- คำอธิบาย: ยกเลิกบิลหวยตามเงื่อนไขเวลาที่อนุญาต
+- ใช้เมื่อ: ผู้ใช้ยกเลิกบิลก่อนปิดรับเดิมพัน
 - Path params:
   - `id` เช่น `1001`
 - Request example:
@@ -1099,6 +1211,8 @@ GET /api/v1/lotto/tickets/1001
 ```
 
 ### `GET /api/v1/wheel/list`
+- คำอธิบาย: ดึงรายการวงล้อ/สิทธิ์ที่สมาชิกเล่นได้
+- ใช้เมื่อ: แสดงรายการวงล้อและสถานะสิทธิ์
 - Request example:
 ```http
 GET /api/v1/wheel/list
@@ -1117,6 +1231,8 @@ GET /api/v1/wheel/list
 ```
 
 ### `POST /api/v1/wheel/spin`
+- คำอธิบาย: หมุนวงล้อและรับผลรางวัล
+- ใช้เมื่อ: ผู้ใช้กดปุ่มหมุนวงล้อ
 - Request example:
 ```json
 {
@@ -1137,6 +1253,8 @@ GET /api/v1/wheel/list
 ```
 
 ### `GET /api/v1/wheel/history`
+- คำอธิบาย: ดึงประวัติการหมุนวงล้อของสมาชิก
+- ใช้เมื่อ: แสดงผลการหมุนย้อนหลังในหน้า wheel
 - Request example:
 ```http
 GET /api/v1/wheel/history?page=1
