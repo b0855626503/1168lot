@@ -1,6 +1,6 @@
 # Lotto Domain Note
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-19
 
 ## ใช้อ่านเมื่อ
 
@@ -20,6 +20,10 @@
 ## ข้อควรจำ
 
 - เมนู `/lotto/tickets` ฝั่ง admin คือ active-only
+- Lotto Navbar Config v1:
+  - schema (`lotto_navbars`, `lotto_navbar_items`) อยู่ใน Lotto package เท่านั้น
+  - publish model ต่อ `code` ต้องมี active+published ได้สูงสุด 1 row
+  - `published_version` เป็น integer monotonic increment ต่อ `code`
 - สมาชิกกดยกเลิกเองนับ daily quota แยกจาก admin/system cancel
 - manual retry ของทีมงาน bypass auto scheduler retry gating ได้แล้ว
 - internal result source `exphuay` มี request budget cap (`LOTTO_EXPHUAY_REQUEST_BUDGET_SECONDS`) เพื่อกัน fallback latency ยาวผิดปกติ

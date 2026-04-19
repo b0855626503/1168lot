@@ -1,6 +1,6 @@
 # FrontendApi Domain Note
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-19
 
 ## ใช้อ่านเมื่อ
 
@@ -37,6 +37,10 @@
 - ลูกค้าห้ามใช้ admin realtime channel
 - ประวัติการเงินรวมยึด `wallet_transactions`
 - ถ้าเพิ่ม endpoint ใหม่ ต้องอัปเดต public API doc
+- Lotto navbar config read model อยู่ใน FrontendApi endpoint:
+  - `GET /api/v1/lotto/navbar-config`
+  - `code` เป็น optional query (default `mobile_bottom_nav`)
+  - public response อ่านเฉพาะ published row
 
 ## เปิดไฟล์เพิ่มเมื่อจำเป็น
 

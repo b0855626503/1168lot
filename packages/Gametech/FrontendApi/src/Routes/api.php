@@ -6,6 +6,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\CouponController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoNavbarConfigController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
@@ -69,6 +70,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.draw_result');
             Route::get('lotto/results/by-date', [LottoController::class, 'resultsByDate'])
                 ->name('frontend.api.v1.lotto.results_by_date');
+            Route::get('lotto/navbar-config', [LottoNavbarConfigController::class, 'show'])
+                ->name('frontend.api.v1.lotto.navbar_config');
         });
 
         Route::middleware(['api', ResolveFrontendLanguage::class, AuthenticateFrontendToken::class])->group(function () {

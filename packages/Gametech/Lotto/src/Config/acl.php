@@ -230,6 +230,48 @@ return [
         'sort' => 2,
     ],
     [
+        'key' => 'lotto_settings.navbar_configs',
+        'name' => 'Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.index',
+        'sort' => 8,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.index',
+        'name' => 'เห็นเมนู Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.index',
+        'sort' => 1,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.create',
+        'name' => 'สิทธิ์ เพิ่มข้อมูล Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.create',
+        'sort' => 2,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.update',
+        'name' => 'สิทธิ์ แก้ไขข้อมูล Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.update',
+        'sort' => 3,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.delete',
+        'name' => 'สิทธิ์ ลบข้อมูล Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.delete',
+        'sort' => 4,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.publish',
+        'name' => 'สิทธิ์ Publish Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.publish',
+        'sort' => 5,
+    ],
+    [
+        'key' => 'lotto_settings.navbar_configs.unpublish',
+        'name' => 'สิทธิ์ Unpublish Navbar Config',
+        'route' => 'admin.lotto.navbar_configs.unpublish',
+        'sort' => 6,
+    ],
+    [
         'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',

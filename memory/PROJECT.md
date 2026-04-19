@@ -6,6 +6,13 @@
    - แก้ไข: เปลี่ยนเป็น `setWalletSeamlessWithdraw()` สำหรับคืนยอด
    - Location: `packages/Gametech/Admin/src/Http/Controllers/WithdrawController.php`
 
+2. **Lotto Navbar Config v1** (2026-04-19)
+   - เพิ่ม domain schema ใน Lotto package: `lotto_navbars`, `lotto_navbar_items`
+   - เพิ่ม FrontendApi public endpoint: `GET /api/v1/lotto/navbar-config` (`code` optional, default `mobile_bottom_nav`)
+   - publish model: `published_version` monotonic per `code`, public อ่านเฉพาะ active+published
+   - locale fallback: requested -> `th` -> `en` -> `key`
+   - default code unpublish/ไม่พบ published row ต้องตอบ `404` แบบคงที่
+
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth
 - **ADR-005**: Ticket cancellation ต้องเก็บ audit context

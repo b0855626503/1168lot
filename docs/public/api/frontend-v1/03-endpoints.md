@@ -1,6 +1,6 @@
 # Frontend API V1 - Endpoints
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-19
 
 ## Public Endpoints
 
@@ -23,6 +23,7 @@
 - `GET /api/v1/lotto/markets/{marketId}/results`
 - `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
 - `GET /api/v1/lotto/results/by-date`
+- `GET /api/v1/lotto/navbar-config`
 
 ## Authenticated Endpoints
 

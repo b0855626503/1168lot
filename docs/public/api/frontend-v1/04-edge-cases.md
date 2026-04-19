@@ -1,12 +1,16 @@
 # Frontend API V1 - Edge Cases
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-19
 
 ## Compatibility Notes
 
 - realtime event migration: prefer `member.activity.updated`, keep legacy fallback ชั่วคราว
 - lotto latest draw selection ต้องข้าม `draft` ตาม policy
 - wallet transaction history ต้องแสดงข้อมูลรวมจาก source เดียวกันอย่างสม่ำเสมอ
+- lotto navbar config (`GET /api/v1/lotto/navbar-config`) ใช้ fallback locale แบบ deterministic:
+  - requested locale -> `th` -> `en` -> `key`
+- ถ้าไม่ส่ง `code` จะใช้ default `mobile_bottom_nav`
+- ถ้า default code ถูก unpublish หรือไม่มี published row จะตอบ `404` ทุกครั้ง (ไม่ fallback hardcoded payload)
 
 ## Contract Safety
 

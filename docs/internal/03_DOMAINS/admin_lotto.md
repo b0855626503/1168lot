@@ -1,6 +1,6 @@
 # Admin Lotto Domain Note
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-19
 
 ## ใช้อ่านเมื่อ
 
@@ -14,6 +14,10 @@
 - badge เมนู Lotto ต้องยึด `DashboardController@loadCnt`
 - หน้า Lotto ทุกหน้าต้อง trigger `loadCnt`
 - report ที่มี filter ตลาด ใช้ grouped select และ immediate apply
+- Lotto navbar admin ต้องตาม convention เดิม:
+  - `index + loaddata + create + edit + update + delete`
+  - ใช้ route/controller/view/datatable/transformer pattern เดิม
+  - ห้ามใช้ resource controller และห้ามทำ custom SPA admin page
 
 ## ข้อควรจำ
 

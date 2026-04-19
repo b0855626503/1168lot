@@ -24,6 +24,8 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSettingProxy;
 use Gametech\Lotto\Models\LottoDrawProxy;
 use Gametech\Lotto\Models\LottoMarketBetSettingProxy;
+use Gametech\Lotto\Models\LottoNavbarItemProxy;
+use Gametech\Lotto\Models\LottoNavbarProxy;
 use Gametech\Lotto\Models\LottoNumberBlockProxy;
 use Gametech\Lotto\Models\LottoNumberExposureProxy;
 use Gametech\Lotto\Models\LottoTicketItemProxy;
@@ -188,6 +190,8 @@ class LottoServiceProvider extends ServiceProvider
         LottoNumberExposureProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoDashboardSummaryObserver::class);
         LottoNumberBlockProxy::observe(LottoAuditObserver::class);
+        LottoNavbarProxy::observe(LottoAuditObserver::class);
+        LottoNavbarItemProxy::observe(LottoAuditObserver::class);
         LottoTicketProxy::observe(LottoAuditObserver::class);
         LottoTicketProxy::observe(LottoTicketRealtimeObserver::class);
         LottoTicketProxy::observe(LottoDashboardSummaryObserver::class);

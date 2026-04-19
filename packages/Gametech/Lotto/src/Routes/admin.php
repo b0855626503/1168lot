@@ -192,6 +192,34 @@ Route::domain(
             Route::get('auto-result-sources/browser-test-status', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultSourceController@browserTestStatus')
                 ->name('admin.lotto.result_sources.browser_test_status');
 
+            Route::get('navbar-configs', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.navbar_configs.index',
+            ])->name('admin.lotto.navbar_configs.index');
+
+            Route::get('navbar-configs/list', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@list')
+                ->name('admin.lotto.navbar_configs.list');
+
+            Route::post('navbar-configs/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@loadData')
+                ->name('admin.lotto.navbar_configs.loaddata');
+
+            Route::post('navbar-configs/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@create')
+                ->name('admin.lotto.navbar_configs.create');
+
+            Route::post('navbar-configs/edit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@edit')
+                ->name('admin.lotto.navbar_configs.edit');
+
+            Route::post('navbar-configs/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@update')
+                ->name('admin.lotto.navbar_configs.update');
+
+            Route::post('navbar-configs/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@delete')
+                ->name('admin.lotto.navbar_configs.delete');
+
+            Route::post('navbar-configs/publish', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@publish')
+                ->name('admin.lotto.navbar_configs.publish');
+
+            Route::post('navbar-configs/unpublish', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@unpublish')
+                ->name('admin.lotto.navbar_configs.unpublish');
+
             Route::post('draws/create', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@create')
                 ->name('admin.lotto.draws.create');
 

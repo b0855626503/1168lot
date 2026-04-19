@@ -1,6 +1,6 @@
 # System Current State - Endpoints
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-19
 
 ## Canonical Endpoint Source
 
@@ -11,6 +11,10 @@
 
 - Public: auth register/login, games, slides, meta, lotto read, realtime config
 - Authenticated: member, wallet, coupon, deposit, promotion, game login, lotto bet/ticket, wheel
+- Lotto navbar endpoint:
+  - `GET /api/v1/lotto/navbar-config`
+  - optional query `code` (default `mobile_bottom_nav`)
+  - default code ไม่มี published row => `404`
 
 ## Guardrails
 
