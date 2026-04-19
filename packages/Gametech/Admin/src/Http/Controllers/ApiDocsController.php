@@ -18,23 +18,17 @@ class ApiDocsController extends AppBaseController
 
     public function frontendApiV1(): View
     {
-        $path = base_path('docs/public/api/api-frontend-v1.md');
-
-        abort_unless(File::exists($path), 404, 'API docs file not found');
-
         return view($this->_config['view'], [
             'title' => 'Frontend API V1',
-            'markdown' => File::get($path),
+            'markdown' => $this->loadFrontendApiV1Markdown(),
+            'meta' => 'docs/public/api/frontend-v1/*.md',
+            'rawRoute' => 'admin.docs.api.frontend_v1.raw',
         ]);
     }
 
     public function frontendApiV1Raw(): Response
     {
-        $path = base_path('docs/public/api/api-frontend-v1.md');
-
-        abort_unless(File::exists($path), 404, 'API docs file not found');
-
-        return response(File::get($path), 200, [
+        return response($this->loadFrontendApiV1Markdown(), 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
         ]);
     }
@@ -48,6 +42,8 @@ class ApiDocsController extends AppBaseController
         return view($this->_config['view'], [
             'title' => 'Laravel Echo Nextjs Install',
             'markdown' => File::get($path),
+            'meta' => 'docs/public/api/laravel-echo-nextjs-install.md',
+            'rawRoute' => 'admin.docs.api.laravel_echo_nextjs_install.raw',
         ]);
     }
 
@@ -60,5 +56,32 @@ class ApiDocsController extends AppBaseController
         return response(File::get($path), 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
         ]);
+    }
+
+    private function loadFrontendApiV1Markdown(): string
+    {
+        $paths = [
+            base_path('docs/public/api/frontend-v1/index.md'),
+            base_path('docs/public/api/frontend-v1/01-overview.md'),
+            base_path('docs/public/api/frontend-v1/02-flows.md'),
+            base_path('docs/public/api/frontend-v1/03-endpoints.md'),
+            base_path('docs/public/api/frontend-v1/04-edge-cases.md'),
+        ];
+
+        $chunks = [];
+        foreach ($paths as $path) {
+            if (File::exists($path)) {
+                $chunks[] = trim(File::get($path));
+            }
+        }
+
+        if (! empty($chunks)) {
+            return implode("\n\n---\n\n", $chunks);
+        }
+
+        $legacyPath = base_path('docs/public/api/api-frontend-v1.md');
+        abort_unless(File::exists($legacyPath), 404, 'API docs file not found');
+
+        return File::get($legacyPath);
     }
 }

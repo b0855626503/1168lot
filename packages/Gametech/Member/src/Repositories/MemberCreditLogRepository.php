@@ -7,8 +7,10 @@ use Gametech\Core\Eloquent\Repository;
 use Gametech\Game\Repositories\GameUserEventRepository;
 use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\LogUser\Http\Traits\ActivityLoggerUser;
+use Gametech\Member\Models\MemberCreditLog;
 use Gametech\Promotion\Repositories\PromotionRepository;
 use Illuminate\Container\Container as App;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
@@ -46,7 +48,7 @@ class MemberCreditLogRepository extends Repository
      */
     public function model(): string
     {
-        return \Gametech\Member\Models\MemberCreditLog::class;
+        return MemberCreditLog::class;
 
     }
 
@@ -265,7 +267,7 @@ class MemberCreditLogRepository extends Repository
                     throw new \RuntimeException('Invalid method');
                 }
 
-                $this->create([
+                $creditLog = $this->create([
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
                     'credit_type' => $method,
@@ -300,8 +302,8 @@ class MemberCreditLogRepository extends Repository
                     $walletBefore,
                     (float) $credit_balance,
                     $this->resolveWalletRefTypeForAdjustKind($kind),
-                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
-                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    isset($creditLog->code) ? (int) $creditLog->code : null,
+                    (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(isset($creditLog->code) ? (string) $creditLog->code : '0'),
                     'Member wallet adjust via setWallet',
                     [
                         'source' => 'MemberCreditLogRepository::setWallet',
@@ -314,6 +316,7 @@ class MemberCreditLogRepository extends Repository
             });
         } catch (Throwable $e) {
             report($e);
+
             return false;
         }
 
@@ -455,7 +458,7 @@ class MemberCreditLogRepository extends Repository
 
         // ===== กันซ้ำแบบเร็ว (0.5 วิ) =====
         $idemKey = "mcl:singlewithdraw:{$refer_table}:{$refer_code}:{$kind}:{$method}";
-        $lock = \Illuminate\Support\Facades\Cache::lock($idemKey, 20);
+        $lock = Cache::lock($idemKey, 20);
 
         if (! $lock->get()) {
             // มีคนทำอยู่/เพิ่งทำไป
@@ -464,7 +467,7 @@ class MemberCreditLogRepository extends Repository
 
         try {
             // ===== Idempotency check: ถ้ามี log แล้ว ถือว่าเคยทำแล้ว =====
-            $logExists = \Illuminate\Support\Facades\DB::table('members_credit_log')
+            $logExists = DB::table('members_credit_log')
                 ->where('refer_table', $refer_table)
                 ->where('refer_code', $refer_code)
                 ->where('kind', $kind)
@@ -503,7 +506,7 @@ class MemberCreditLogRepository extends Repository
                 $response['after'] = $member->balance + $amount;
 
                 // ===== กันซ้ำรอบสอง (กรณีแปลก ๆ) ก่อน insert จริง =====
-                $logExists2 = \Illuminate\Support\Facades\DB::table('members_credit_log')
+                $logExists2 = DB::table('members_credit_log')
                     ->where('refer_table', $refer_table)
                     ->where('refer_code', $refer_code)
                     ->where('kind', $kind)
@@ -511,8 +514,9 @@ class MemberCreditLogRepository extends Repository
                     ->where('member_code', $member->code)
                     ->exists();
 
+                $creditLogCode = null;
                 if (! $logExists2) {
-                    $this->create([
+                    $creditLog = $this->create([
                         'refer_code' => $refer_code,
                         'refer_table' => $refer_table,
                         'credit_type' => $method,
@@ -541,10 +545,11 @@ class MemberCreditLogRepository extends Repository
                         'user_create' => $emp_name,
                         'user_update' => $emp_name,
                     ]);
+                    $creditLogCode = isset($creditLog->code) ? (int) $creditLog->code : null;
                 }
 
                 // ===== Bill: เช็คก่อนสร้าง (กันซ้ำ) =====
-                $billExists = \Illuminate\Support\Facades\DB::table('bills')
+                $billExists = DB::table('bills')
                     ->where('refer_table', $refer_table)
                     ->where('refer_code', $refer_code)
                     ->where('method', $kind)
@@ -603,24 +608,26 @@ class MemberCreditLogRepository extends Repository
                 $member->save();
                 $game_user->save();
 
-                $this->recordWalletTransaction(
-                    (int) $member->code,
-                    $method == 'D' ? 'CREDIT' : 'DEBIT',
-                    (float) $amount,
-                    $response['before'],
-                    (float) $response['after'],
-                    $this->resolveWalletRefTypeForAdjustKind($kind),
-                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
-                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
-                    'Member wallet adjust via setWalletSeamlessWithdraw',
-                    [
-                        'source' => 'MemberCreditLogRepository::setWalletSeamlessWithdraw',
-                        'kind' => $kind,
-                        'remark' => $remark,
-                    ],
-                    ((int) $emp_code > 0) ? 'admin' : 'system',
-                    ((int) $emp_code > 0) ? (int) $emp_code : null
-                );
+                if ($creditLogCode !== null) {
+                    $this->recordWalletTransaction(
+                        (int) $member->code,
+                        $method == 'D' ? 'CREDIT' : 'DEBIT',
+                        (float) $amount,
+                        $response['before'],
+                        (float) $response['after'],
+                        $this->resolveWalletRefTypeForAdjustKind($kind),
+                        $creditLogCode,
+                        (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(string) $creditLogCode,
+                        'Member wallet adjust via setWalletSeamlessWithdraw',
+                        [
+                            'source' => 'MemberCreditLogRepository::setWalletSeamlessWithdraw',
+                            'kind' => $kind,
+                            'remark' => $remark,
+                        ],
+                        ((int) $emp_code > 0) ? 'admin' : 'system',
+                        ((int) $emp_code > 0) ? (int) $emp_code : null
+                    );
+                }
 
             } catch (Throwable $e) {
                 report($e);
@@ -702,7 +709,7 @@ class MemberCreditLogRepository extends Repository
                     throw new \RuntimeException('Insufficient balance');
                 }
 
-                $this->create([
+                $creditLog = $this->create([
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
                     'credit_type' => $method,
@@ -779,8 +786,8 @@ class MemberCreditLogRepository extends Repository
                     $walletBefore,
                     (float) $credit_balance,
                     $this->resolveWalletRefTypeForAdjustKind($kind),
-                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
-                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    isset($creditLog->code) ? (int) $creditLog->code : null,
+                    (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(isset($creditLog->code) ? (string) $creditLog->code : '0'),
                     'Member wallet adjust via setWalletSeamlessWithdraw',
                     [
                         'source' => 'MemberCreditLogRepository::setWalletSeamlessWithdraw',
@@ -793,6 +800,7 @@ class MemberCreditLogRepository extends Repository
             });
         } catch (Throwable $e) {
             report($e);
+
             return false;
         }
 
@@ -989,7 +997,7 @@ class MemberCreditLogRepository extends Repository
 
         // ===== กันซ้ำแบบเร็ว (0.5 วิ) =====
         $idemKey = "mcl:singlewithdraw:{$refer_table}:{$refer_code}:{$kind}:{$method}";
-        $lock = \Illuminate\Support\Facades\Cache::lock($idemKey, 20);
+        $lock = Cache::lock($idemKey, 20);
 
         if (! $lock->get()) {
             // มีคนทำอยู่/เพิ่งทำไป
@@ -998,7 +1006,7 @@ class MemberCreditLogRepository extends Repository
 
         try {
             // ===== Idempotency check: ถ้ามี log แล้ว ถือว่าเคยทำแล้ว =====
-            $logExists = \Illuminate\Support\Facades\DB::table('members_credit_log')
+            $logExists = DB::table('members_credit_log')
                 ->where('refer_table', $refer_table)
                 ->where('refer_code', $refer_code)
                 ->where('kind', $kind)
@@ -1052,7 +1060,7 @@ class MemberCreditLogRepository extends Repository
                 }
 
                 // ===== กันซ้ำรอบสอง (กรณีแปลก ๆ) ก่อน insert จริง =====
-                $logExists2 = \Illuminate\Support\Facades\DB::table('members_credit_log')
+                $logExists2 = DB::table('members_credit_log')
                     ->where('refer_table', $refer_table)
                     ->where('refer_code', $refer_code)
                     ->where('kind', $kind)
@@ -1093,7 +1101,7 @@ class MemberCreditLogRepository extends Repository
                 }
 
                 // ===== Bill: เช็คก่อนสร้าง (กันซ้ำ) =====
-                $billExists = \Illuminate\Support\Facades\DB::table('bills')
+                $billExists = DB::table('bills')
                     ->where('refer_table', $refer_table)
                     ->where('refer_code', $refer_code)
                     ->where('method', $kind)
@@ -1218,7 +1226,7 @@ class MemberCreditLogRepository extends Repository
             //            DB::beginTransaction();
             try {
 
-                $this->create([
+                $creditLog = $this->create([
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
                     'credit_type' => $method,
@@ -1256,7 +1264,7 @@ class MemberCreditLogRepository extends Repository
                     'enable' => 'Y',
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
-                    'ref_id' => $response['ref_id'],
+                    'ref_id' => isset($creditLog->code) ? (string) $creditLog->code : $response['ref_id'],
                     'credit_before' => $response['before'],
                     'credit_after' => $response['after'],
                     'member_code' => $member_code,
@@ -1279,6 +1287,25 @@ class MemberCreditLogRepository extends Repository
                     'user_create' => $member['name'],
                     'user_update' => $member['name'],
                 ]);
+
+                $this->recordWalletTransaction(
+                    (int) $member_code,
+                    'CREDIT',
+                    (float) $amount,
+                    (float) $response['before'],
+                    (float) $response['after'],
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    null,
+                    (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(string) $response['ref_id'],
+                    'Member wallet adjust via setWalletSingle',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWalletSingle',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
 
                 //                DB::commit();
 
@@ -1311,7 +1338,7 @@ class MemberCreditLogRepository extends Repository
             //            DB::beginTransaction();
             try {
 
-                $this->create([
+                $creditLog = $this->create([
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
                     'credit_type' => $method,
@@ -1349,7 +1376,7 @@ class MemberCreditLogRepository extends Repository
                     'enable' => 'Y',
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
-                    'ref_id' => $response['ref_id'],
+                    'ref_id' => isset($creditLog->code) ? (string) $creditLog->code : $response['ref_id'],
                     'credit_before' => $response['before'],
                     'credit_after' => $response['after'],
                     'member_code' => $member_code,
@@ -1372,6 +1399,25 @@ class MemberCreditLogRepository extends Repository
                     'user_create' => $member['name'],
                     'user_update' => $member['name'],
                 ]);
+
+                $this->recordWalletTransaction(
+                    (int) $member_code,
+                    'DEBIT',
+                    (float) $amount,
+                    (float) $response['before'],
+                    (float) $response['after'],
+                    $this->resolveWalletRefTypeForAdjustKind($kind),
+                    null,
+                    (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(string) $response['ref_id'],
+                    'Member wallet adjust via setWalletSingle',
+                    [
+                        'source' => 'MemberCreditLogRepository::setWalletSingle',
+                        'kind' => $kind,
+                        'remark' => $remark,
+                    ],
+                    ((int) $emp_code > 0) ? 'admin' : 'system',
+                    ((int) $emp_code > 0) ? (int) $emp_code : null
+                );
 
                 //                DB::commit();
 
@@ -1463,7 +1509,7 @@ class MemberCreditLogRepository extends Repository
                 }
                 $response['ref_id'] = '';
 
-                $this->create([
+                $creditLog = $this->create([
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
                     'credit_type' => $method,
@@ -1501,7 +1547,7 @@ class MemberCreditLogRepository extends Repository
                     'enable' => 'Y',
                     'refer_code' => $refer_code,
                     'refer_table' => $refer_table,
-                    'ref_id' => $response['ref_id'],
+                    'ref_id' => isset($creditLog->code) ? (string) $creditLog->code : $response['ref_id'],
                     'credit_before' => $response['before'],
                     'credit_after' => $response['after'],
                     'member_code' => $member->code,
@@ -1532,8 +1578,8 @@ class MemberCreditLogRepository extends Repository
                     (float) $response['before'],
                     (float) $response['after'],
                     $this->resolveWalletRefTypeForAdjustKind($kind),
-                    is_numeric((string) $refer_code) ? (int) $refer_code : null,
-                    (string) $refer_table . ':' . (string) $refer_code . ':' . (string) $kind . ':' . (string) $method,
+                    isset($creditLog->code) ? (int) $creditLog->code : null,
+                    (string) $refer_table.':'.(string) $refer_code.':'.(string) $kind.':'.(string) $method.':'.(isset($creditLog->code) ? (string) $creditLog->code : '0'),
                     'Member wallet adjust via setWalletSeamless',
                     [
                         'source' => 'MemberCreditLogRepository::setWalletSeamless',
@@ -1546,6 +1592,7 @@ class MemberCreditLogRepository extends Repository
             });
         } catch (Throwable $e) {
             report($e);
+
             return false;
         }
 
@@ -2023,7 +2070,6 @@ class MemberCreditLogRepository extends Repository
         try {
             DB::transaction(function () use (
                 $member_code,
-                $game,
                 $id,
                 $amount,
                 &$response,
@@ -2092,61 +2138,61 @@ class MemberCreditLogRepository extends Repository
                     'refer_code' => 0,
                     'refer_table' => '',
                     'credit_type' => 'D',
-                'pro_code' => $game_event->pro_code,
-                'pro_name' => $pro_name,
-                'amount' => 0,
-                'bonus' => $amount,
-                'total' => $amount,
-                'balance_before' => $response['before'],
-                'balance_after' => $response['after'],
-                'credit' => 0,
-                'credit_bonus' => 0,
-                'credit_total' => 0,
-                'credit_before' => $response['before'],
-                'credit_after' => $response['after'],
-                'member_code' => $member_code,
-                'gameuser_code' => $game_user->code,
-                'game_code' => $game_code,
-                'user_name' => $member->user_name,
-                'kind' => $kind,
-                'auto' => 'N',
-                'remark' => 'RefID : '.$response['ref_id'].' '.$msg,
-                'emp_code' => 0,
-                'ip' => $ip,
-                'amount_balance' => $amount_total,
-                'withdraw_limit' => $game_event->withdraw_limit,
-                'withdraw_limit_amount' => $withdraw_limit_amount,
-                'user_create' => $member->name,
-                'user_update' => $member->name,
+                    'pro_code' => $game_event->pro_code,
+                    'pro_name' => $pro_name,
+                    'amount' => 0,
+                    'bonus' => $amount,
+                    'total' => $amount,
+                    'balance_before' => $response['before'],
+                    'balance_after' => $response['after'],
+                    'credit' => 0,
+                    'credit_bonus' => 0,
+                    'credit_total' => 0,
+                    'credit_before' => $response['before'],
+                    'credit_after' => $response['after'],
+                    'member_code' => $member_code,
+                    'gameuser_code' => $game_user->code,
+                    'game_code' => $game_code,
+                    'user_name' => $member->user_name,
+                    'kind' => $kind,
+                    'auto' => 'N',
+                    'remark' => 'RefID : '.$response['ref_id'].' '.$msg,
+                    'emp_code' => 0,
+                    'ip' => $ip,
+                    'amount_balance' => $amount_total,
+                    'withdraw_limit' => $game_event->withdraw_limit,
+                    'withdraw_limit_amount' => $withdraw_limit_amount,
+                    'user_create' => $member->name,
+                    'user_update' => $member->name,
                 ]);
 
                 app('Gametech\Payment\Repositories\BillRepository')->create([
-                'complete' => 'Y',
-                'enable' => 'Y',
-                'refer_code' => $bill->code,
-                'refer_table' => 'members_credit_log',
-                'ref_id' => $response['ref_id'],
-                'credit_before' => $response['before'],
-                'credit_after' => $response['after'],
-                'member_code' => $member_code,
-                'game_code' => $game_code,
-                'gameuser_code' => $game_user->code,
-                'pro_code' => $game_event->pro_code,
-                'pro_name' => $pro_name,
-                'remark' => $msg,
-                'method' => 'BONUS',
-                'transfer_type' => 1,
-                'amount' => $amount,
-                'balance_before' => $response['before'],
-                'balance_after' => $response['after'],
-                'credit' => 0,
-                'credit_bonus' => $amount,
-                'credit_balance' => $amount,
-                'amount_request' => $amount_total,
-                'amount_limit' => $withdraw_limit_amount,
-                'ip' => $ip,
-                'user_create' => $member['name'],
-                'user_update' => $member['name'],
+                    'complete' => 'Y',
+                    'enable' => 'Y',
+                    'refer_code' => $bill->code,
+                    'refer_table' => 'members_credit_log',
+                    'ref_id' => $response['ref_id'],
+                    'credit_before' => $response['before'],
+                    'credit_after' => $response['after'],
+                    'member_code' => $member_code,
+                    'game_code' => $game_code,
+                    'gameuser_code' => $game_user->code,
+                    'pro_code' => $game_event->pro_code,
+                    'pro_name' => $pro_name,
+                    'remark' => $msg,
+                    'method' => 'BONUS',
+                    'transfer_type' => 1,
+                    'amount' => $amount,
+                    'balance_before' => $response['before'],
+                    'balance_after' => $response['after'],
+                    'credit' => 0,
+                    'credit_bonus' => $amount,
+                    'credit_balance' => $amount,
+                    'amount_request' => $amount_total,
+                    'amount_limit' => $withdraw_limit_amount,
+                    'ip' => $ip,
+                    'user_create' => $member['name'],
+                    'user_update' => $member['name'],
                 ]);
 
                 $member->balance = $response['after'];
@@ -2173,22 +2219,22 @@ class MemberCreditLogRepository extends Repository
                 $game_event->save();
 
                 $this->recordWalletTransaction(
-                (int) $member_code,
-                'CREDIT',
-                (float) $amount,
-                (float) $response['before'],
-                (float) $response['after'],
-                $this->resolveWalletRefTypeForTranKind($kind),
-                isset($bill->code) ? (int) $bill->code : null,
-                'tranBonus:' . (string) $id . ':' . (isset($bill->code) ? (string) $bill->code : '0'),
-                'Transfer bonus to wallet/game via tranBonus',
-                [
-                    'source' => 'MemberCreditLogRepository::tranBonus',
-                    'event' => $id,
-                    'kind' => $kind,
-                ],
-                'system',
-                null
+                    (int) $member_code,
+                    'CREDIT',
+                    (float) $amount,
+                    (float) $response['before'],
+                    (float) $response['after'],
+                    $this->resolveWalletRefTypeForTranKind($kind),
+                    isset($bill->code) ? (int) $bill->code : null,
+                    'tranBonus:'.(string) $id.':'.(isset($bill->code) ? (string) $bill->code : '0'),
+                    'Transfer bonus to wallet/game via tranBonus',
+                    [
+                        'source' => 'MemberCreditLogRepository::tranBonus',
+                        'event' => $id,
+                        'kind' => $kind,
+                    ],
+                    'system',
+                    null
                 );
             });
         } catch (Throwable $e) {
@@ -2381,7 +2427,7 @@ class MemberCreditLogRepository extends Repository
             'ref_type' => $refType,
             'ref_id' => $refId,
             'ref_code' => $refCode,
-            'group_code' => $refType . '_' . ($refId !== null ? (string) $refId : $refCode),
+            'group_code' => $refType.'_'.($refId !== null ? (string) $refId : $refCode),
             'related_txn_id' => null,
             'status' => 'SUCCESS',
             'description' => $description,

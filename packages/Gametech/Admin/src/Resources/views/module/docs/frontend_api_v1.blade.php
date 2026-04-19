@@ -12,7 +12,7 @@
             color: #e2e8f0;
         }
         .container {
-            max-width: 1100px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 20px;
         }
@@ -41,6 +41,7 @@
             border-radius: 10px;
             background: #020617;
             overflow: auto;
+            max-height: calc(100vh - 100px);
         }
         pre {
             margin: 0;
@@ -57,9 +58,9 @@
     <div class="topbar">
         <div>
             <div class="title">{{ $title ?? 'API Docs' }}</div>
-            <div class="meta">docs/API_FRONTEND_V1.md</div>
+            <div class="meta">{{ $meta ?? 'docs/public/api/api-frontend-v1.md' }}</div>
         </div>
-        <a class="raw-link" href="{{ route('admin.docs.api.frontend_v1.raw') }}">Open Raw</a>
+        <a class="raw-link" href="{{ route($rawRoute ?? 'admin.docs.api.frontend_v1.raw') }}">Open Raw</a>
     </div>
 
     <div class="panel">
