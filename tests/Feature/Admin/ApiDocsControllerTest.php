@@ -20,8 +20,8 @@ class ApiDocsControllerTest extends TestCase
         $response = app(ApiDocsController::class)->frontendApiV1();
         $rendered = $response->render();
 
-        $this->assertStringContainsString('# Frontend API V1 (Index)', $rendered);
-        $this->assertStringContainsString('# Frontend API V1 - Endpoints', $rendered);
+        $this->assertStringContainsString('# คู่มือ Frontend API V1 (Gametech)', $rendered);
+        $this->assertStringContainsString('## 3) Route Catalog (ครบทุกเส้น)', $rendered);
         $this->assertStringContainsString('/api/v1/wallet/transactions', $rendered);
     }
 
@@ -37,8 +37,8 @@ class ApiDocsControllerTest extends TestCase
         $response = app(ApiDocsController::class)->frontendApiV1Raw();
         $content = $response->getContent();
 
-        $this->assertStringContainsString('# Frontend API V1 (Index)', $content);
-        $this->assertStringContainsString('# Frontend API V1 - Edge Cases', $content);
-        $this->assertStringContainsString('---', $content);
+        $this->assertStringContainsString('# คู่มือ Frontend API V1 (Gametech)', $content);
+        $this->assertStringContainsString('## 3) Route Catalog (ครบทุกเส้น)', $content);
+        $this->assertStringContainsString('/api/v1/wallet/transactions', $content);
     }
 }
