@@ -11,6 +11,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\RealtimeController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\RewardController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\SiteMetaController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\SlideController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WalletController;
@@ -160,5 +161,12 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.wheel.spin');
             Route::get('wheel/history', [WheelController::class, 'history'])
                 ->name('frontend.api.v1.wheel.history');
+
+            Route::get('reward/list', [RewardController::class, 'list'])
+                ->name('frontend.api.v1.reward.list');
+            Route::post('reward/redeem', [RewardController::class, 'redeem'])
+                ->name('frontend.api.v1.reward.redeem');
+            Route::get('reward/history', [RewardController::class, 'history'])
+                ->name('frontend.api.v1.reward.history');
         });
     });

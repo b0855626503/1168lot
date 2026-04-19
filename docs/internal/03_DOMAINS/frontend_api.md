@@ -20,6 +20,7 @@
 - `auth/*`
 - `member/profile|balance|contributor|history`
 - `wallet/transactions|withdraw|claim`
+- `reward/list|redeem|history`
 - `coupon/*`
 - `games/*`
 - `lotto/*`

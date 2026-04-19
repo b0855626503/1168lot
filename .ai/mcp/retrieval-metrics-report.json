@@ -1,0 +1,31 @@
+{
+    "generated_at": "2026-04-19T15:20:08+00:00",
+    "retrieval_metrics": {
+        "estimated_hops_before": 4,
+        "estimated_hops_after": 2,
+        "estimated_files_opened_before": 4,
+        "estimated_files_opened_after": 2,
+        "memory_first_pointer_count": 3,
+        "docs_first_pointer_count": 0
+    },
+    "token_estimate": {
+        "legacy_pack_words": 23192,
+        "current_pack_words": 885,
+        "legacy_token_estimate": 30149,
+        "current_token_estimate": 1150,
+        "estimated_token_reduction": 28999
+    },
+    "drift": {
+        "before_total": 97,
+        "after_total": 37,
+        "delta": 60,
+        "critical_after": 0,
+        "non_critical_after": 37,
+        "domains_low_coverage": []
+    },
+    "non_critical_buckets": {
+        "useful_soon": 6,
+        "docs_only_acceptable": 24,
+        "ignore_noise": 7
+    }
+}

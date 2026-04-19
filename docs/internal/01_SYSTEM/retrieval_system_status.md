@@ -1,6 +1,6 @@
 # Retrieval System Status
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-19
 
 ไฟล์นี้เป็นศูนย์กลางเดียวสำหรับตรวจสถานะ retrieval layer (docs + memory + octocode index)
 
@@ -60,6 +60,15 @@
    `bash scripts/docs-validation/check-unified-sync.sh`
 3. Validate full docs pipeline  
    `bash scripts/docs-validation/run.sh`
+
+## Local Run Note (2026-04-19)
+
+- รันแล้ว: `bash scripts/docs-validation/post-change-sync.sh`
+- สร้าง artifact ใหม่ใน local:
+  - `.ai/mcp/index-build.json`
+  - `.ai/mcp/retrieval-metrics-report.json`
+  - `.ai/mcp/retrieval-metrics-report.md`
+- หมายเหตุ: ไฟล์ใน `.ai/` และ `.codebase-memory/` ถูก ignore โดย `.gitignore` จึงไม่แสดงใน `git status` แม้จะอัปเดตแล้ว
 
 ## Pass / Warn / Fail Conditions
 

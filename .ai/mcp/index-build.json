@@ -1,0 +1,13 @@
+{
+    "built_at": "2026-04-19T15:19:34+00:00",
+    "commit_hash": "e4b33f8d000bf57a5a3af77d39715b371da22d07",
+    "mode": "changed-only",
+    "indexed_files": [
+        "docs/internal/03_DOMAINS/frontend_api.md",
+        "docs/public/api/frontend-v1/01-overview.md",
+        "docs/public/api/frontend-v1/03-endpoints.md",
+        "docs/public/api/frontend-v1/05-route-reference.md",
+        "memory/wallet.md",
+        "packages/Gametech/FrontendApi/src/Routes/api.php"
+    ]
+}

@@ -1,6 +1,6 @@
 # Wallet Memory
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-19
 
 ## Responsibility
 
@@ -17,11 +17,15 @@
 - `GET /api/v1/wallet/transactions`
 - `POST /api/v1/wallet/claim`
 - `POST /api/v1/wallet/withdraw`
+- `GET /api/v1/reward/list`
+- `POST /api/v1/reward/redeem`
+- `GET /api/v1/reward/history`
 
 ## Module Map
 
 - `packages/Gametech/FrontendApi/src/Routes/api.php`
 - `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WalletController.php`
+- `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/RewardController.php`
 - `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WithdrawController.php`
 - `packages/Gametech/Wallet/src/`
 - `database/migrations/`
@@ -31,6 +35,7 @@
 - unified transactions read
 - claim source validation + ledger append
 - withdraw policy check + state transition
+- reward catalog read + point redemption + redemption history timeline
 
 ## Important Dependencies
 

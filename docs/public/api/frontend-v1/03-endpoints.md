@@ -66,3 +66,6 @@
 - `GET /api/v1/wheel/list`
 - `POST /api/v1/wheel/spin`
 - `GET /api/v1/wheel/history`
+- `GET /api/v1/reward/list`
+- `POST /api/v1/reward/redeem`
+- `GET /api/v1/reward/history`
