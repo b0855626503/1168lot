@@ -27,10 +27,8 @@ workspace/
 .ai/mcp/*
 !.ai/mcp/index-build.json
 !.ai/mcp/retrieval-metrics-report.json
-!.ai/mcp/retrieval-metrics-report.md
 !.codebase-memory/
 .codebase-memory/*
-!.codebase-memory/SUMMARY.md
 
 # =========================================================
 # Environment / secrets
