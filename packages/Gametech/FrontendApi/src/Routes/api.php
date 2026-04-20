@@ -37,6 +37,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.auth.register.bank_account_name');
             Route::post('auth/register', [AuthController::class, 'register'])
                 ->name('frontend.api.v1.auth.register');
+            Route::post('auth/register-with-username', [AuthController::class, 'registerWithUsername'])
+                ->name('frontend.api.v1.auth.register_with_username');
             Route::post('auth/login', [AuthController::class, 'login'])
                 ->name('frontend.api.v1.auth.login');
 

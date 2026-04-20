@@ -33,7 +33,12 @@ class AuthController extends BaseController
 
     public function register(Request $request)
     {
-        return $this->registerFallback($request);
+        return $this->registerFallback($request, false);
+    }
+
+    public function registerWithUsername(Request $request): JsonResponse
+    {
+        return $this->registerFallback($request, true);
     }
 
     public function registerBanks(): JsonResponse
@@ -136,7 +141,8 @@ class AuthController extends BaseController
         }
 
         $username = Str::of((string) $request->input('user_name'))
-            ->replaceMatches('/[^0-9]++/', '')
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]++/', '')
             ->trim()
             ->__toString();
         $password = (string) $request->input('password');
@@ -193,7 +199,7 @@ class AuthController extends BaseController
         return $this->sendSuccess('ออกจากระบบสำเร็จ');
     }
 
-    private function registerFallback(Request $request): JsonResponse
+    private function registerFallback(Request $request, bool $useSeparatedUsernameFlow = false): JsonResponse
     {
         $config = core()->getConfigData();
         Log::error('frontend_api_register.entry', [
@@ -209,17 +215,26 @@ class AuthController extends BaseController
             'all' => $request->all(),
         ]);
 
-        $data = $this->normalizeRegisterPayload((array) $request->all());
+        $data = $this->normalizeRegisterPayload((array) $request->all(), $useSeparatedUsernameFlow);
 
-        $data['user_name'] = Str::of((string) ($data['user_name'] ?? ''))
+        if ($useSeparatedUsernameFlow) {
+            $data['user_name'] = Str::of((string) ($data['user_name'] ?? ''))
+                ->lower()
+                ->replaceMatches('/[^a-z0-9]++/', '')
+                ->trim()
+                ->__toString();
+        } else {
+            $data['user_name'] = Str::of((string) ($data['user_name'] ?? ''))
+                ->replaceMatches('/[^0-9]++/', '')
+                ->trim()
+                ->__toString();
+        }
+
+        $data['tel'] = Str::of((string) ($data['tel'] ?? ($useSeparatedUsernameFlow ? '' : $data['user_name'])))
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
-        $data['tel'] = Str::of((string) ($data['tel'] ?? $data['user_name']))
-            ->replaceMatches('/[^0-9]++/', '')
-            ->trim()
-            ->__toString();
-        $data['wallet_id'] = Str::of((string) ($data['wallet_id'] ?? $data['user_name']))
+        $data['wallet_id'] = Str::of((string) ($data['wallet_id'] ?? ($useSeparatedUsernameFlow ? $data['tel'] : $data['user_name'])))
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
@@ -253,17 +268,7 @@ class AuthController extends BaseController
             'lastname' => ['bail', 'required', 'regex:/^[\pL\pM\s\-]+$/u'],
             'password' => 'bail|required|string|min:6|max:10',
             'password_confirm' => 'nullable|string|same:password',
-            'user_name' => [
-                'bail',
-                'required',
-                'regex:/^\d+$/',
-                'unique:members,user_name',
-                function ($attribute, $value, $fail): void {
-                    if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
-                        $fail('หมายเลขนี้ถูกใช้เป็นเลขบัญชีธนาคารภายในแล้ว');
-                    }
-                },
-            ],
+            'user_name' => $this->registerUsernameValidationRules($useSeparatedUsernameFlow),
             'wallet_id' => 'bail|required|regex:/^\d+$/|unique:members,wallet_id',
             'tel' => [
                 'bail',
@@ -767,10 +772,15 @@ class AuthController extends BaseController
         ], 422);
     }
 
-    private function normalizeRegisterPayload(array $data): array
+    private function normalizeRegisterPayload(array $data, bool $useSeparatedUsernameFlow = false): array
     {
-        $username = (string) ($data['user_name'] ?? $data['phone'] ?? $data['tel'] ?? $data['username'] ?? '');
-        $phone = (string) ($data['phone'] ?? $data['tel'] ?? $username);
+        if ($useSeparatedUsernameFlow) {
+            $username = (string) ($data['user_name'] ?? $data['username'] ?? '');
+            $phone = (string) ($data['tel'] ?? $data['phone'] ?? '');
+        } else {
+            $username = (string) ($data['user_name'] ?? $data['phone'] ?? $data['tel'] ?? $data['username'] ?? '');
+            $phone = (string) ($data['phone'] ?? $data['tel'] ?? $username);
+        }
         $fullName = trim((string) ($data['name'] ?? ''));
 
         if (! isset($data['firstname']) && $fullName !== '') {
@@ -785,7 +795,7 @@ class AuthController extends BaseController
 
         $data['user_name'] = $username;
         $data['tel'] = $phone;
-        $data['wallet_id'] = (string) ($data['wallet_id'] ?? $username);
+        $data['wallet_id'] = (string) ($data['wallet_id'] ?? ($useSeparatedUsernameFlow ? $phone : $username));
         $data['password_confirm'] = (string) ($data['password_confirm'] ?? $data['password_confirmation'] ?? '');
         $data['bank'] = $data['bank'] ?? null;
         $data['acc_no'] = (string) ($data['acc_no'] ?? $data['account_no'] ?? '');
@@ -798,6 +808,46 @@ class AuthController extends BaseController
         );
 
         return $data;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function registerUsernameValidationRules(bool $useSeparatedUsernameFlow): array
+    {
+        if (! $useSeparatedUsernameFlow) {
+            return [
+                'bail',
+                'required',
+                'regex:/^\d+$/',
+                'unique:members,user_name',
+                function ($attribute, $value, $fail): void {
+                    if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
+                        $fail('หมายเลขนี้ถูกใช้เป็นเลขบัญชีธนาคารภายในแล้ว');
+                    }
+                },
+            ];
+        }
+
+        return [
+            'bail',
+            'required',
+            'string',
+            'between:5,10',
+            'regex:/^(?=.*[a-z])[a-z0-9]+$/',
+            'unique:members,user_name',
+            function ($attribute, $value, $fail): void {
+                if (preg_match('/^0\d{9}$/', (string) $value) === 1) {
+                    $fail('ชื่อผู้ใช้ต้องไม่เป็นหมายเลขโทรศัพท์');
+
+                    return;
+                }
+
+                if (DB::table('banks_account')->where('acc_no', (string) $value)->exists()) {
+                    $fail('หมายเลขนี้ถูกใช้เป็นเลขบัญชีธนาคารภายในแล้ว');
+                }
+            },
+        ];
     }
 
     private function normalizeReferralCodeInput(string $code): string

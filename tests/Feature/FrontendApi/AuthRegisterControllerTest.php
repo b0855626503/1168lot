@@ -105,7 +105,7 @@ class AuthRegisterControllerTest extends TestCase
             ]);
         $this->app->instance('Gametech\Game\Repositories\GameUserRepository', $gameUserRepo);
 
-        $response = $this->register($this->validPayload('0899999999'));
+        $response = $this->register($this->validPayload('0899999999', '0899999999'));
 
         $response->assertStatus(422);
         $response->assertJsonPath('success', false);
@@ -114,6 +114,18 @@ class AuthRegisterControllerTest extends TestCase
         $response->assertJsonPath('details.stage', 'game_account_create');
         $response->assertJsonPath('details.reason', 'connect_failed');
         $response->assertJsonPath('details.upstream_message', 'เชื่อมต่อไม่ได้');
+    }
+
+    public function test_register_requires_username_not_to_be_phone_number(): void
+    {
+        $this->mockCoreConfig('N');
+
+        $response = $this->registerWithUsername($this->validPayloadWithUsername('0899999999', '0899999999'));
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('success', false);
+        $response->assertJsonPath('message', 'ข้อมูลสมัครสมาชิกไม่ถูกต้อง');
+        $response->assertJsonPath('error_fields.0', 'user_name');
     }
 
     /**
@@ -128,6 +140,21 @@ class AuthRegisterControllerTest extends TestCase
                 Mockery::mock(FrontendTokenService::class),
                 Mockery::mock(RegisterBankAccountNameService::class)
             ))->register($request)
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function registerWithUsername(array $payload): TestResponse
+    {
+        $request = Request::create('/api/v1/auth/register-with-username', 'POST', $payload);
+
+        return TestResponse::fromBaseResponse(
+            (new AuthController(
+                Mockery::mock(FrontendTokenService::class),
+                Mockery::mock(RegisterBankAccountNameService::class)
+            ))->registerWithUsername($request)
         );
     }
 
@@ -147,10 +174,28 @@ class AuthRegisterControllerTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function validPayload(string $userName = '0888888888'): array
+    private function validPayload(string $userName = '0888888888', string $tel = '0888888888'): array
     {
         return [
             'user_name' => $userName,
+            'tel' => $tel,
+            'password' => 'test123',
+            'password_confirm' => 'test123',
+            'name' => 'Api Test',
+            'acc_no' => '123456789012',
+            'bank' => 1,
+            'refer' => 1,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validPayloadWithUsername(string $userName = 'member88', string $tel = '0888888888'): array
+    {
+        return [
+            'user_name' => $userName,
+            'tel' => $tel,
             'password' => 'test123',
             'password_confirm' => 'test123',
             'name' => 'Api Test',
