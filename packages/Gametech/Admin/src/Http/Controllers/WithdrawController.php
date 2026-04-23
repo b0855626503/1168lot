@@ -416,7 +416,7 @@ class WithdrawController extends AppBaseController
         ]);
 
         if ($bill) {
-            $bill->complete = 'R';
+            $bill->complete = 'N';
             $bill->save();
         }
 
