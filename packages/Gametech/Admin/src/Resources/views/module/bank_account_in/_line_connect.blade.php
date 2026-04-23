@@ -606,6 +606,8 @@
 
                     if (this.lineConnect.loadingAny) return;
 
+                    this.stopLineConnectPolling();
+                    this.lineConnect.noProgressCount = 0;
                     this.lineConnect.loadingAny = true;
                     this.lineConnect.message = '';
 
@@ -659,6 +661,8 @@
 
                     if (this.lineConnect.loadingAny) return;
 
+                    this.stopLineConnectPolling();
+                    this.lineConnect.noProgressCount = 0;
                     this.lineConnect.loadingAny = true;
                     this.lineConnect.message = '';
                     this.lineConnect.showLoginForm = false;
@@ -745,6 +749,8 @@
                         return;
                     }
 
+                    this.stopLineConnectPolling();
+                    this.lineConnect.noProgressCount = 0;
                     this.lineConnect.loadingAny = true;
                     this.lineConnect.message = '';
 
@@ -795,6 +801,7 @@
                     this.lineConnect.pollActive = true;
                     this.lineConnect.pollStartedAt = Date.now();
                     this.lineConnect.pollErrorDelayCurrentMs = 0;
+                    this.lineConnect.noProgressCount = 0;
 
                     const hardTimeoutMs = this.lineConnect.pollHardTimeoutMs;
 
