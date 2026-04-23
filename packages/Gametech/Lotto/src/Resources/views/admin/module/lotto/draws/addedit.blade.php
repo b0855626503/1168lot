@@ -44,17 +44,40 @@
             <b-row>
                 <b-col cols="12" md="6">
                     <b-form-group label="เปิดรับ:" label-for="open_at">
-                        <b-form-input id="open_at" v-model="formaddedit.open_at" type="datetime-local" size="sm" required :readonly="!canEditOpenAtField"></b-form-input>
+                        <b-form-input
+                            id="open_at"
+                            v-model="formaddedit.open_at"
+                            type="text"
+                            size="sm"
+                            required
+                            placeholder="YYYY-MM-DD HH:mm"
+                            autocomplete="off"
+                            :readonly="!canEditOpenAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
                 <b-col cols="12" md="6">
                     <b-form-group label="ปิดรับ:" label-for="close_at">
-                        <b-form-input id="close_at" v-model="formaddedit.close_at" type="datetime-local" size="sm" required :readonly="!canEditCloseAtField"></b-form-input>
+                        <b-form-input
+                            id="close_at"
+                            v-model="formaddedit.close_at"
+                            type="text"
+                            size="sm"
+                            required
+                            placeholder="YYYY-MM-DD HH:mm"
+                            autocomplete="off"
+                            :readonly="!canEditCloseAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
             </b-row>
             <b-form-group label="เวลาออกผล (คาดการณ์):" label-for="result_at">
-                <b-form-input id="result_at" v-model="formaddedit.result_at" type="datetime-local" size="sm" :readonly="!canEditResultAtField"></b-form-input>
+                <b-form-input
+                    id="result_at"
+                    v-model="formaddedit.result_at"
+                    type="text"
+                    size="sm"
+                    placeholder="YYYY-MM-DD HH:mm"
+                    autocomplete="off"
+                    :readonly="!canEditResultAtField"></b-form-input>
             </b-form-group>
 
             <div class="d-flex justify-content-end">
@@ -687,9 +710,24 @@
     <script src="{{ asset('vendor/select2/js/select2.full.min.js') }}"></script>
 
     <script type="module">
-        const toDateTimeLocal = (value) => {
+        const toDateTimeInput = (value) => {
             if (!value) return '';
-            return String(value).replace(' ', 'T').substring(0, 16);
+            return String(value).replace('T', ' ').substring(0, 16);
+        };
+
+        const toDateTimePayload = (value) => {
+            if (!value) return null;
+            const normalized = String(value).trim().replace('T', ' ').substring(0, 16);
+            return `${normalized}:00`;
+        };
+
+        const toDateTimeTimestamp = (value) => {
+            const payload = toDateTimePayload(value);
+            if (!payload) {
+                return Number.NaN;
+            }
+
+            return new Date(payload.replace(' ', 'T')).getTime();
         };
 
         const onlyDigits = (value) => String(value || '').replace(/\D+/g, '');
@@ -1047,10 +1085,15 @@
                 },
                 onModalShown() {
                     this.initMarketSelect2();
-                    this.$nextTick(() => this.applyMarketSelectDisabledState());
+                    this.initDateTimePickers();
+                    this.$nextTick(() => {
+                        this.applyMarketSelectDisabledState();
+                        this.applyDateTimePickersDisabledState();
+                    });
                 },
                 onModalHidden() {
                     this.destroyMarketSelect2();
+                    this.destroyDateTimePickers();
                 },
                 getMarketDropdownParent(selectEl) {
                     if (!window.jQuery || !selectEl) {
@@ -1230,6 +1273,102 @@
 
                     $select.prop('disabled', shouldDisable);
                 },
+                initDateTimePickers() {
+                    if (!window.jQuery) {
+                        return;
+                    }
+
+                    const bindings = [
+                        { id: '#open_at', field: 'open_at' },
+                        { id: '#close_at', field: 'close_at' },
+                        { id: '#result_at', field: 'result_at' },
+                    ];
+
+                    bindings.forEach(({ id, field }) => {
+                        const $input = window.jQuery(id);
+                        if (!$input.length) {
+                            return;
+                        }
+
+                        if (typeof $input.datetimepicker !== 'function') {
+                            return;
+                        }
+
+                        if ($input.data('datetimepicker')) {
+                            $input.datetimepicker('destroy');
+                        }
+
+                        $input.datetimepicker({
+                            format: 'YYYY-MM-DD HH:mm',
+                            stepping: 1,
+                            useCurrent: false,
+                            icons: {
+                                time: 'far fa-clock',
+                                date: 'far fa-calendar',
+                                up: 'fas fa-chevron-up',
+                                down: 'fas fa-chevron-down',
+                                previous: 'fas fa-chevron-left',
+                                next: 'fas fa-chevron-right',
+                                today: 'far fa-calendar-check',
+                                clear: 'far fa-trash-alt',
+                                close: 'far fa-times-circle',
+                            },
+                        });
+
+                        $input.off('change.datetimepicker');
+                        $input.on('change.datetimepicker', (event) => {
+                            this.formaddedit[field] = event.target.value || '';
+                        });
+
+                        const currentValue = this.formaddedit[field];
+                        $input.datetimepicker('date', currentValue ? window.moment(currentValue, 'YYYY-MM-DD HH:mm') : null);
+                    });
+                },
+                destroyDateTimePickers() {
+                    if (!window.jQuery) {
+                        return;
+                    }
+
+                    ['#open_at', '#close_at', '#result_at'].forEach((id) => {
+                        const $input = window.jQuery(id);
+                        if (!$input.length || typeof $input.datetimepicker !== 'function') {
+                            return;
+                        }
+
+                        if ($input.data('datetimepicker')) {
+                            $input.datetimepicker('destroy');
+                        }
+                    });
+                },
+                applyDateTimePickersDisabledState() {
+                    if (!window.jQuery) {
+                        return;
+                    }
+
+                    const states = [
+                        { id: '#open_at', disabled: !this.canEditOpenAtField },
+                        { id: '#close_at', disabled: !this.canEditCloseAtField },
+                        { id: '#result_at', disabled: !this.canEditResultAtField },
+                    ];
+
+                    states.forEach(({ id, disabled }) => {
+                        const $input = window.jQuery(id);
+                        if (!$input.length) {
+                            return;
+                        }
+
+                        $input.prop('readonly', disabled);
+                        $input.prop('disabled', disabled);
+
+                        if (typeof $input.datetimepicker === 'function' && $input.data('datetimepicker')) {
+                            if (disabled) {
+                                $input.datetimepicker('disable');
+                            } else {
+                                $input.datetimepicker('enable');
+                            }
+                        }
+                    });
+                },
                 statusLabel(status) {
                     const map = {
                         draft: 'ร่าง',
@@ -1254,18 +1393,20 @@
                     this.formaddedit = {
                         market_id: d.market_id ? parseInt(d.market_id, 10) : null,
                         draw_date: d.draw_date ? String(d.draw_date).substring(0, 10) : '',
-                        open_at: toDateTimeLocal(d.open_at),
-                        close_at: toDateTimeLocal(d.close_at),
+                        open_at: toDateTimeInput(d.open_at),
+                        close_at: toDateTimeInput(d.close_at),
                         result_number: {
                             first_prize: d.result_number?.first_prize || '',
                             last_2_digits: d.result_number?.last_2_digits || d.result_number?.bottom_2 || '',
                         },
-                        result_at: toDateTimeLocal(d.result_at),
+                        result_at: toDateTimeInput(d.result_at),
                     };
 
                     this.$nextTick(() => {
                         this.syncMarketSelectValue();
                         this.applyMarketSelectDisabledState();
+                        this.initDateTimePickers();
+                        this.applyDateTimePickersDisabledState();
                         setTimeout(() => this.syncMarketSelectValue(), 50);
                     });
                 },
@@ -1304,9 +1445,9 @@
                     return {
                         market_id: this.formaddedit.market_id,
                         draw_date: this.formaddedit.draw_date,
-                        open_at: this.formaddedit.open_at ? this.formaddedit.open_at.replace('T', ' ') : null,
-                        close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
-                        result_at: this.formaddedit.result_at ? this.formaddedit.result_at.replace('T', ' ') : null,
+                        open_at: toDateTimePayload(this.formaddedit.open_at),
+                        close_at: toDateTimePayload(this.formaddedit.close_at),
+                        result_at: toDateTimePayload(this.formaddedit.result_at),
                     };
                 },
                 buildUpdatePayload() {
@@ -1317,25 +1458,25 @@
                     if (this.currentDrawStatus === 'open') {
                         return {
                             draw_date: this.formaddedit.draw_date,
-                            close_at: this.formaddedit.close_at ? this.formaddedit.close_at.replace('T', ' ') : null,
+                            close_at: toDateTimePayload(this.formaddedit.close_at),
                         };
                     }
 
                     return {};
                 },
                 validateCloseAtAgainstOpenAt(openAtValue, closeAtValue) {
-                    const openAt = new Date(openAtValue);
-                    const closeAt = new Date(closeAtValue);
+                    const openAt = toDateTimeTimestamp(openAtValue);
+                    const closeAt = toDateTimeTimestamp(closeAtValue);
 
-                    if (Number.isNaN(openAt.getTime()) || Number.isNaN(closeAt.getTime())) {
+                    if (Number.isNaN(openAt) || Number.isNaN(closeAt)) {
                         return 'รูปแบบวันเวลาไม่ถูกต้อง';
                     }
 
-                    if (openAt.getTime() === closeAt.getTime()) {
+                    if (openAt === closeAt) {
                         return 'เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน';
                     }
 
-                    if (closeAt.getTime() > openAt.getTime()) {
+                    if (closeAt > openAt) {
                         return '';
                     }
                     return '';
@@ -1345,14 +1486,14 @@
                         return '';
                     }
 
-                    const closeAt = new Date(closeAtValue);
-                    const resultAt = new Date(resultAtValue);
+                    const closeAt = toDateTimeTimestamp(closeAtValue);
+                    const resultAt = toDateTimeTimestamp(resultAtValue);
 
-                    if (Number.isNaN(closeAt.getTime()) || Number.isNaN(resultAt.getTime())) {
+                    if (Number.isNaN(closeAt) || Number.isNaN(resultAt)) {
                         return 'รูปแบบวันเวลาไม่ถูกต้อง';
                     }
 
-                    if (resultAt.getTime() >= closeAt.getTime()) {
+                    if (resultAt >= closeAt) {
                         return '';
                     }
                     return '';
