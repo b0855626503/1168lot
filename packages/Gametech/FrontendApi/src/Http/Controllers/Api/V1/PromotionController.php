@@ -49,13 +49,13 @@ class PromotionController extends BaseController
             $proContents = $proContentRepository->orderBy('sort')->findWhere(['enable' => 'Y', ['code', '<>', 0]])->toArray();
 
             $proContents = collect($proContents)->map(function ($items) {
-                $items['filepic'] = Storage::url('procontent_img/' . $items['filepic']);
+                $items['filepic'] = Storage::url('procontent_img/'.$items['filepic']);
 
                 return $items;
             });
 
             $promotions = collect($promotions)->map(function ($items) {
-                $items['filepic'] = Storage::url('promotion_img/' . $items['filepic']);
+                $items['filepic'] = Storage::url('promotion_img/'.$items['filepic']);
 
                 return $items;
             });
@@ -83,7 +83,6 @@ class PromotionController extends BaseController
 
             $config = core()->getConfigData();
             $promotionRepository = app('Gametech\Promotion\Repositories\PromotionRepository');
-            $gameUserRepository = app('Gametech\Game\Repositories\GameUserRepository');
 
             $promotionId = $request->input('promotion');
             $promotion = $promotionRepository->findOneWhere(['code' => $promotionId]);
@@ -92,13 +91,8 @@ class PromotionController extends BaseController
                 return $this->sendError('ไม่พบโปรโมชันนี้', 404);
             }
 
-            $gameUser = $gameUserRepository->findOneWhere([
-                'member_code' => $member->code,
-                'enable' => 'Y',
-            ]);
-
-            if ($gameUser && (float) ($gameUser->balance ?? 0) >= (float) ($config->pro_reset ?? 0)) {
-                return $this->sendError(Lang::get('app.promotion.over_balance') . ($config->pro_reset ?? 0), 200);
+            if ((float) ($member->balance ?? 0) >= (float) ($config->pro_reset ?? 0)) {
+                return $this->sendError(Lang::get('app.promotion.over_balance').($config->pro_reset ?? 0), 200);
             }
 
             $pass = false;

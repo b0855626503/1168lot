@@ -473,6 +473,16 @@ class MemberController extends BaseController
             }
 
             $member = $memberRepository->findOrFail($member->code);
+            $isSeamless = ($config['seamless'] ?? 'N') === 'Y';
+            $hasActivePromotionFlow = ((float) data_get($gameUser, 'amount_balance', 0) > 0)
+                || ((int) data_get($gameUser, 'pro_code', 0) > 0);
+
+            if ($isSeamless && $gameUser && $hasActivePromotionFlow) {
+                $proReset = (float) ($config['pro_reset'] ?? 0);
+                if ((float) ($member->balance ?? 0) <= $proReset) {
+                    $this->resetPromotion($gameUser, $member, $proReset);
+                }
+            }
 
             $today = now()->toDateString();
             if (($config['seamless'] ?? 'N') === 'Y') {
@@ -618,5 +628,57 @@ class MemberController extends BaseController
         }
 
         return $this->storageMediaUrls('bank_img/'.ltrim($filepic, '/'));
+    }
+
+    /**
+     * @param  mixed  $gameUser
+     * @param  mixed  $member
+     */
+    private function resetPromotion($gameUser, $member, float $threshold): void
+    {
+        $gameUser->bill_code = 0;
+        $gameUser->pro_code = 0;
+        $gameUser->bonus = 0;
+        $gameUser->amount = 0;
+        $gameUser->turnpro = 0;
+        $gameUser->amount_balance = 0;
+        $gameUser->withdraw_limit = 0;
+        $gameUser->withdraw_limit_rate = 0;
+        $gameUser->withdraw_limit_amount = 0;
+        $gameUser->save();
+
+        app('Gametech\Member\Repositories\MemberPromotionLogRepository')
+            ->where('member_code', (int) data_get($member, 'code', 0))
+            ->where('complete', 'N')
+            ->update(['complete' => 'Y']);
+
+        app('Gametech\Member\Repositories\MemberCreditLogRepository')->create([
+            'ip' => request()->ip(),
+            'credit_type' => 'D',
+            'game_code' => data_get($gameUser, 'game_code'),
+            'gameuser_code' => data_get($gameUser, 'code'),
+            'amount' => 0,
+            'bonus' => 0,
+            'total' => 0,
+            'balance_before' => data_get($member, 'balance', 0),
+            'balance_after' => data_get($member, 'balance', 0),
+            'credit' => 0,
+            'credit_bonus' => 0,
+            'credit_total' => 0,
+            'credit_before' => data_get($member, 'balance', 0),
+            'credit_after' => data_get($member, 'balance', 0),
+            'member_code' => data_get($member, 'code'),
+            'pro_code' => 0,
+            'refer_code' => 0,
+            'refer_table' => 'blank',
+            'auto' => 'Y',
+            'remark' => 'ได้รับอิสระ เมื่อยอดเงินมีน้อยกว่า : '.$threshold,
+            'kind' => 'OTHER',
+            'amount_balance' => data_get($gameUser, 'amount_balance', 0),
+            'withdraw_limit' => data_get($gameUser, 'withdraw_limit', 0),
+            'withdraw_limit_amount' => data_get($gameUser, 'withdraw_limit_amount', 0),
+            'user_create' => 'System Auto',
+            'user_update' => 'System Auto',
+        ]);
     }
 }

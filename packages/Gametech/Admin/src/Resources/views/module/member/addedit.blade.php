@@ -393,7 +393,7 @@
 
 <b-modal ref="refill" id="refill" centered size="sm" title="ทำรายการฝากเงิน" :no-stacking="true"
          :no-close-on-backdrop="true" :hide-footer="true">
-    <b-form @submit.prevent.once="refillSubmit" v-if="show">
+    <b-form @submit.prevent="refillSubmit" v-if="show">
         <b-form-group
                 id="input-group-1"
                 label="จำนวนเงิน:"
@@ -420,6 +420,20 @@
                     size="sm"
                     required
             ></b-form-select>
+        </b-form-group>
+
+        <b-form-group
+                id="input-group-bank-time"
+                label="วันและเวลาโอน (bank_time):"
+                label-for="bank_time"
+                description="ระบุวันและเวลาที่ลูกค้าโอนเงินจริง">
+            <b-form-input
+                    id="bank_time"
+                    v-model="formrefill.bank_time"
+                    type="datetime-local"
+                    size="sm"
+                    required
+            ></b-form-input>
         </b-form-group>
 
         <b-form-group
@@ -799,6 +813,7 @@
                         id: null,
                         amount: 0,
                         account_code: '',
+                        bank_time: '',
                         remark_admin: '',
                         one_time_password: ''
                     },
@@ -1202,11 +1217,12 @@
 
                 },
                 refill(code) {
-                    this.code = null;
+                    this.code = code;
                     this.formrefill = {
                         id: null,
                         amount: 0,
                         account_code: '',
+                        bank_time: this.nowDatetimeLocal(),
                         remark_admin: '',
                         one_time_password: ''
                     }
@@ -1217,6 +1233,17 @@
                         this.$refs.refill.show();
 
                     })
+                },
+                nowDatetimeLocal() {
+                    const now = new Date();
+                    const pad = (value) => String(value).padStart(2, '0');
+                    const year = now.getFullYear();
+                    const month = pad(now.getMonth() + 1);
+                    const day = pad(now.getDate());
+                    const hour = pad(now.getHours());
+                    const minute = pad(now.getMinutes());
+
+                    return `${year}-${month}-${day}T${hour}:${minute}`;
                 },
                 money(code) {
                     this.formmoney.id = null;
@@ -1260,7 +1287,7 @@
                 },
                 refillSubmit(event) {
                     event.preventDefault();
-                    document.getElementById("btnsubmit").disabled = true;
+                    this.toggleButtonDisable(true);
                     this.$http.post("{{ url($menu->currentRoute.'/refill') }}", this.formrefill)
                         .then(response => {
                             this.$bvModal.msgBoxOk(response.data.message, {
@@ -1272,10 +1299,11 @@
                                 footerClass: 'p-2 border-top-0',
                                 centered: true
                             });
+                            window.LaravelDataTables["dataTableBuilder"].draw(false);
                         })
                         .catch(exception => {
                             console.log('error');
-                            document.getElementById("btnsubmit").disabled = false;
+                            this.toggleButtonDisable(false);
                         });
                 },
                 moneySubmit(event) {
