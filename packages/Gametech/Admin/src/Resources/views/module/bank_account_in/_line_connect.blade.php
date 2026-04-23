@@ -46,7 +46,7 @@
                     <b-button
                         type="button"
                         class="line-connect-modal-admin__btn -status mb-2"
-                        :disabled="lineConnectUiLocked"
+                        :disabled="lineConnectUiLocked || lineConnectActionLocked"
                         @click="lineConnectCheckStatus"
                     >
                         <i class="fas fa-search"></i>
@@ -57,7 +57,7 @@
                         v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
                         type="button"
                         class="line-connect-modal-admin__btn -connect-qr mb-2"
-                        :disabled="lineConnectUiLocked"
+                        :disabled="lineConnectUiLocked || lineConnectActionLocked"
                         @click="lineConnectConnectQr"
                     >
                         <i class="fas fa-qrcode"></i>
@@ -68,7 +68,7 @@
                         v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
                         type="button"
                         class="line-connect-modal-admin__btn -connect-email"
-                        :disabled="lineConnectUiLocked"
+                        :disabled="lineConnectUiLocked || lineConnectActionLocked"
                         @click="lineConnectOpenLoginForm"
                     >
                         <i class="fas fa-envelope"></i>
@@ -107,7 +107,7 @@
                         <b-button
                             type="button"
                             class="line-connect-modal-admin__btn -send"
-                            :disabled="lineConnectUiLocked"
+                            :disabled="lineConnectUiLocked || lineConnectActionLocked"
                             @click="lineConnectSubmitLogin"
                         >
                             <i class="fas fa-paper-plane"></i>
@@ -117,7 +117,7 @@
                         <b-button
                             type="button"
                             class="line-connect-modal-admin__btn -cancel"
-                            :disabled="lineConnectUiLocked"
+                            :disabled="lineConnectUiLocked || lineConnectActionLocked"
                             @click="lineConnectCancelLoginForm"
                         >
                             ย้อนกลับ
@@ -417,6 +417,9 @@
                 lineConnectUiLocked() {
                     return !!this.lineConnect.loadingAny;
                 },
+                lineConnectActionLocked() {
+                    return !!this.lineConnect.pollActive;
+                },
                 lineConnectStageText() {
                     const stage = (this.lineConnect.lastStage || '').toLowerCase();
                     if (!stage) return '';
@@ -604,6 +607,10 @@
                         return;
                     }
 
+                    if (this.lineConnect.pollActive) {
+                        this.lineConnect.message = 'กำลังเชื่อมต่ออยู่ กรุณารอสักครู่';
+                        return;
+                    }
                     if (this.lineConnect.loadingAny) return;
 
                     this.stopLineConnectPolling();
@@ -659,6 +666,10 @@
                         return;
                     }
 
+                    if (this.lineConnect.pollActive) {
+                        this.lineConnect.message = 'กำลังเชื่อมต่ออยู่ กรุณารอสักครู่';
+                        return;
+                    }
                     if (this.lineConnect.loadingAny) return;
 
                     this.stopLineConnectPolling();
@@ -738,6 +749,10 @@
                         return;
                     }
 
+                    if (this.lineConnect.pollActive) {
+                        this.lineConnect.message = 'กำลังเชื่อมต่ออยู่ กรุณารอสักครู่';
+                        return;
+                    }
                     if (this.lineConnect.loadingAny) return;
 
                     const email = (this.lineConnect.email || '').trim();
@@ -802,6 +817,7 @@
                     this.lineConnect.pollStartedAt = Date.now();
                     this.lineConnect.pollErrorDelayCurrentMs = 0;
                     this.lineConnect.noProgressCount = 0;
+                    this.lineConnect.canConnect = false;
 
                     const hardTimeoutMs = this.lineConnect.pollHardTimeoutMs;
 
