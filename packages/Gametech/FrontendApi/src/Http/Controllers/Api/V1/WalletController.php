@@ -2,6 +2,8 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
+use App\Events\MemberBalanceUpdated;
+use App\Events\RealtimeMemberActivityUpdated;
 use App\Notifications\RealTimeNotification;
 use Gametech\Core\Core;
 use Illuminate\Database\Query\Builder;
@@ -91,6 +93,7 @@ class WalletController extends BaseController
 
             $freshMember = app('Gametech\Member\Repositories\MemberRepository')->findOrFail($memberCode);
             $this->notifyBalanceAdjusted($freshMember);
+            $this->broadcastClaimRealtimeEvents($freshMember, $type, $legacyType, $claimSourceAmount, $targetWallet);
 
             return $this->sendResponse([
                 'source' => $source,
@@ -116,6 +119,46 @@ class WalletController extends BaseController
     {
         try {
             Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    private function broadcastClaimRealtimeEvents(
+        $member,
+        string $source,
+        string $legacyType,
+        float $amount,
+        string $targetWallet
+    ): void {
+        try {
+            $walletBalance = (float) ($targetWallet === 'balance_free'
+                ? ($member->balance_free ?? 0)
+                : ($member->balance ?? 0));
+
+            event(new MemberBalanceUpdated(
+                (int) $member->code,
+                $walletBalance,
+                $amount,
+                'wallet_claim',
+                0,
+                'ดำเนินการโยก เข้ากระเป๋าสำเร็จแล้ว'
+            ));
+
+            event(new RealtimeMemberActivityUpdated(
+                (int) $member->code,
+                'wallet',
+                'claim',
+                [
+                    'source' => $source,
+                    'legacy_type' => $legacyType,
+                    'amount' => $amount,
+                    'target_wallet' => $targetWallet,
+                    'balance' => (float) ($member->balance ?? 0),
+                    'balance_free' => (float) ($member->balance_free ?? 0),
+                ],
+                'wallet claim success'
+            ));
         } catch (\Throwable $exception) {
             report($exception);
         }

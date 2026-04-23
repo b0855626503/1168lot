@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\FrontendApi;
 
+use App\Events\MemberBalanceUpdated;
+use App\Events\RealtimeMemberActivityUpdated;
 use Gametech\Core\Core;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WalletController;
 use Gametech\Member\Models\Member;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
 use Mockery;
 use Tests\TestCase;
@@ -14,6 +17,11 @@ class WalletClaimControllerTest extends TestCase
 {
     public function test_claim_moves_bonus_to_main_wallet_when_freecredit_is_disabled(): void
     {
+        Event::fake([
+            MemberBalanceUpdated::class,
+            RealtimeMemberActivityUpdated::class,
+        ]);
+
         $member = $this->customer([
             'balance' => 0,
             'balance_free' => 0,
@@ -65,6 +73,22 @@ class WalletClaimControllerTest extends TestCase
         $response->assertJsonPath('data.target_wallet', 'balance');
         $response->assertJsonPath('data.profile.balance', 120);
         $response->assertJsonPath('data.profile.bonus', 0);
+
+        Event::assertDispatched(MemberBalanceUpdated::class, function (MemberBalanceUpdated $event): bool {
+            return $event->memberCode === 9001
+                && $event->balance === 120.0
+                && $event->amount === 120.0
+                && $event->reason === 'wallet_claim';
+        });
+
+        Event::assertDispatched(RealtimeMemberActivityUpdated::class, function (RealtimeMemberActivityUpdated $event): bool {
+            return $event->memberCode === 9001
+                && $event->method === 'wallet'
+                && $event->event === 'claim'
+                && ($event->data['legacy_type'] ?? '') === 'BONUS'
+                && (float) ($event->data['amount'] ?? 0) === 120.0
+                && ($event->data['target_wallet'] ?? '') === 'balance';
+        });
     }
 
     public function test_claim_moves_faststart_to_free_wallet_when_freecredit_is_enabled(): void
