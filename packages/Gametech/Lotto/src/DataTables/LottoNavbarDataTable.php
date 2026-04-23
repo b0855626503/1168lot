@@ -22,6 +22,7 @@ class LottoNavbarDataTable extends DataTable
     {
         $query = $model->newQuery()
             ->select('lotto_navbars.*')
+            ->where('lotto_navbars.is_active', true)
             ->orderByDesc('id');
 
         $code = trim((string) request()->get('code', ''));
