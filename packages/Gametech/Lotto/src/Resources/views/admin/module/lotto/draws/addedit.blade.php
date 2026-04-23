@@ -1276,6 +1276,25 @@
 
                     $select.prop('disabled', shouldDisable);
                 },
+                toNativeDateTimeLocal(value) {
+                    if (!value) {
+                        return '';
+                    }
+
+                    return String(value).trim().replace(' ', 'T').substring(0, 16);
+                },
+                getDateTimeWidgetParent($input) {
+                    if (!$input || !$input.length || !window.jQuery) {
+                        return window.jQuery ? window.jQuery(document.body) : null;
+                    }
+
+                    const $modal = $input.closest('.modal');
+                    if ($modal.length) {
+                        return $modal;
+                    }
+
+                    return window.jQuery(document.body);
+                },
                 initDateTimePickers() {
                     if (!window.jQuery) {
                         return;
@@ -1293,7 +1312,15 @@
                             return;
                         }
 
-                        if (typeof $input.datetimepicker !== 'function') {
+                        if (typeof $input.datetimepicker !== 'function' || typeof window.moment === 'undefined') {
+                            $input.attr('type', 'datetime-local');
+                            $input.attr('step', '60');
+                            $input.attr('placeholder', '');
+                            $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
+                            $input.off('change.drawNative');
+                            $input.on('change.drawNative', (event) => {
+                                this.formaddedit[field] = toDateTimeInput(event.target.value || '');
+                            });
                             return;
                         }
 
@@ -1301,26 +1328,50 @@
                             $input.datetimepicker('destroy');
                         }
 
-                        $input.datetimepicker({
-                            format: 'YYYY-MM-DD HH:mm',
-                            stepping: 1,
-                            useCurrent: false,
-                            icons: {
-                                time: 'far fa-clock',
-                                date: 'far fa-calendar',
-                                up: 'fas fa-chevron-up',
-                                down: 'fas fa-chevron-down',
-                                previous: 'fas fa-chevron-left',
-                                next: 'fas fa-chevron-right',
-                                today: 'far fa-calendar-check',
-                                clear: 'far fa-trash-alt',
-                                close: 'far fa-times-circle',
-                            },
-                        });
+                        try {
+                            $input.attr('type', 'text');
+                            $input.attr('placeholder', 'YYYY-MM-DD HH:mm');
+
+                            $input.datetimepicker({
+                                format: 'YYYY-MM-DD HH:mm',
+                                stepping: 1,
+                                useCurrent: false,
+                                sideBySide: true,
+                                allowInputToggle: true,
+                                widgetParent: this.getDateTimeWidgetParent($input),
+                                icons: {
+                                    time: 'far fa-clock',
+                                    date: 'far fa-calendar',
+                                    up: 'fas fa-chevron-up',
+                                    down: 'fas fa-chevron-down',
+                                    previous: 'fas fa-chevron-left',
+                                    next: 'fas fa-chevron-right',
+                                    today: 'far fa-calendar-check',
+                                    clear: 'far fa-trash-alt',
+                                    close: 'far fa-times-circle',
+                                },
+                            });
+                        } catch (error) {
+                            $input.attr('type', 'datetime-local');
+                            $input.attr('step', '60');
+                            $input.attr('placeholder', '');
+                            $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
+                            $input.off('change.drawNative');
+                            $input.on('change.drawNative', (event) => {
+                                this.formaddedit[field] = toDateTimeInput(event.target.value || '');
+                            });
+                            return;
+                        }
 
                         $input.off('change.datetimepicker');
                         $input.on('change.datetimepicker', (event) => {
                             this.formaddedit[field] = event.target.value || '';
+                        });
+                        $input.off('focus.drawPicker');
+                        $input.on('focus.drawPicker', () => {
+                            if ($input.data('datetimepicker')) {
+                                $input.datetimepicker('show');
+                            }
                         });
 
                         const currentValue = this.formaddedit[field];
