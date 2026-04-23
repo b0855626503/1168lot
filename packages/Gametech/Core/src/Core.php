@@ -642,7 +642,9 @@ class Core
     {
         $game = null;
         if ($method == '') {
-            $game = $this->gameRepository->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
+            $game = $this->gameRepository
+                ->orderBy('code', 'asc')
+                ->findOneWhere(['enable' => 'Y', 'status_open' => 'Y']);
 
         } else {
             $game = $this->gameRepository->findOneWhere(['enable' => 'Y', 'status_open' => 'Y', 'id' => $method]);

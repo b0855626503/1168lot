@@ -1875,10 +1875,16 @@ class MemberCreditLogRepository extends Repository
         $ip = request()->ip();
         $amount = 0;
         $member_code = $data['member_code'];
+        $allowedMethods = ['BONUS', 'FASTSTART', 'CASHBACK', 'IC'];
+        $id = strtoupper((string) $id);
 
         $member = $this->memberRepository->find($member_code);
         //        dd($member);
         if (! $member) {
+            return false;
+        }
+
+        if (! in_array($id, $allowedMethods, true)) {
             return false;
         }
 
@@ -1906,7 +1912,7 @@ class MemberCreditLogRepository extends Repository
             }
         }
         $min = 0;
-        if ($promotion->amount_min > 0) {
+        if ($promotion && $promotion->amount_min > 0) {
             $min = $promotion->amount_min;
         }
 
@@ -1963,15 +1969,6 @@ class MemberCreditLogRepository extends Repository
             $msg = 'รับ IC เข้ากระเป๋า (โยกเข้าเกม)';
             $member->ic = 0;
 
-        } elseif ($id == 'SPIN') {
-            if ($member->bonus <= 0) {
-                return false;
-            }
-            $amount = $member->bonus;
-            $kind = 'TRANBONUS';
-            $msg = 'รับ โบนัสวงล้อ เข้ากระเป๋า (โยกเข้าเกม)';
-            $member->bonus = 0;
-
         }
         // apply source-balance mutation inside transaction with row lock
 
@@ -2014,10 +2011,6 @@ class MemberCreditLogRepository extends Repository
                         } elseif ($id == 'IC') {
 
                             $member->ic = $amount;
-
-                        } elseif ($id == 'SPIN') {
-
-                            $member->credit = $amount;
 
                         }
                         $member->save();

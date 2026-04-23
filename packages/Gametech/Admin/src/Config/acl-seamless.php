@@ -113,20 +113,25 @@ return [
         'route' => 'admin.bank_in.delete',
         'sort' => 3
     ], [
-        'key' => 'bank_out',
-        'name' => 'รายการ เงินออก',
-        'route' => 'admin.bank_out.index',
-        'sort' => 3
+        'key' => 'bank_in_old',
+        'name' => 'รายการฝากค้าง',
+        'route' => 'admin.bank_in_old.index',
+        'sort' => 20
     ], [
-        'key' => 'bank_out.clear',
-        'name' => 'สิทธิ์ เคลียร์ รายการ เงินออก',
-        'route' => 'admin.bank_out.clear',
+        'key' => 'bank_in_old.update',
+        'name' => 'สิทธิ์ เติมเงิน รายการฝากค้าง',
+        'route' => 'admin.bank_in_old.update',
         'sort' => 1
     ], [
-        'key' => 'bank_out.delete',
-        'name' => 'สิทธิ์ ลบ รายการ เงินออก',
-        'route' => 'admin.bank_out.delete',
+        'key' => 'bank_in_old.clear',
+        'name' => 'สิทธิ์ ปฏิเสธ รายการฝากค้าง',
+        'route' => 'admin.bank_in_old.clear',
         'sort' => 2
+    ], [
+        'key' => 'bank_in_old.delete',
+        'name' => 'สิทธิ์ ลบ รายการฝากค้าง',
+        'route' => 'admin.bank_in_old.delete',
+        'sort' => 3
     ], [
         'key' => 'withdraw',
         'name' => 'รายการ ถอนเงิน',
