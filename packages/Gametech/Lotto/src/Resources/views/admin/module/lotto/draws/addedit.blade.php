@@ -701,6 +701,10 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .flatpickr-calendar {
+            z-index: 99999 !important;
+        }
     </style>
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
@@ -1330,6 +1334,10 @@
                                 dateFormat: 'Y-m-d H:i',
                                 allowInput: true,
                                 minuteIncrement: 1,
+                                disableMobile: true,
+                                appendTo: document.body,
+                                positionElement: inputEl,
+                                position: 'auto left',
                                 defaultDate: this.formaddedit[field] || null,
                                 onChange: (_, dateStr) => {
                                     this.formaddedit[field] = dateStr || '';
