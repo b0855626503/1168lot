@@ -1125,14 +1125,14 @@ class MemberController extends AppBaseController
             $acc_no = (string) ($data['acc_no'] ?? '');
         }
 
-        // tel & user_name: บังคับเป็นเลข 10 หลัก (กันเคสมีขีด/เว้นวรรค/ตัวอักษรพิเศษ)
+        // tel: บังคับเป็นเลข 10 หลัก (กันเคสมีขีด/เว้นวรรค/ตัวอักษรพิเศษ)
         $data['tel'] = Str::of($data['tel'] ?? '')
             ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
 
+        // user_name: คงค่าตามที่ส่งมา (เช่น boatjunior) ไม่แปลงเป็นเลข
         $data['user_name'] = Str::of($data['user_name'] ?? '')
-            ->replaceMatches('/[^0-9]++/', '')
             ->trim()
             ->__toString();
 
@@ -1166,7 +1166,8 @@ class MemberController extends AppBaseController
 
         $userNameRules = [
             'required',
-            'digits:10',
+            'string',
+            'max:20',
             Rule::unique('members', 'user_name')
                 ->ignore($id, 'code'),
         ];
