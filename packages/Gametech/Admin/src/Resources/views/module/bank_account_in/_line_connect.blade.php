@@ -717,6 +717,7 @@
                             acc: this.lineConnect.acc,
                             baseapi: this.lineConnect.baseapi,
                             device: this.lineConnect.device || 'DESKTOPWIN',
+                            forceRefresh: true,
                         }, {
                             timeout: 12000,
                         });
@@ -816,6 +817,7 @@
                             email: email,
                             password: password,
                             device: this.lineConnect.device || 'DESKTOPWIN',
+                            forceRefresh: true,
                         }, {
                             timeout: 12000,
                         });
