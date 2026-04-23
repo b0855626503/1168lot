@@ -24,7 +24,7 @@ class BankinTransformer extends TransformerAbstract
             return $this->btn('btn-secondary', '<i class="fas fa-plus"></i>', "editModal({$code})");
         }
         if ($status === 0 && $member_topup > 0) {
-            return $this->btn('btn-info', '<i class="fas fa-check"></i>', "approveModal({$code})");
+            return $this->btn('btn-secondary', '<i class="fas fa-plus"></i>', "editModal({$code})");
         }
         return '';
     }
