@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 class WheelController extends BaseController
 {
+    private const WEIGHT_SCALE = 1000;
+
     public function list(Request $request)
     {
         try {
@@ -45,20 +47,20 @@ class WheelController extends BaseController
                 return $this->sendError(Lang::get('app.spin.fail'), 200);
             }
 
-            $range = 360 / $spins->count();
+            $spinCount = $spins->count();
             $change = [];
             $noChange = [];
             $wheel = [];
             $random = [];
 
             foreach ($spins as $i => $item) {
-                $change[$item['code']] = $item['winloss'];
+                $change[$item['code']] = (float) $item['winloss'];
                 if ((float) $item['amount'] == 0) {
-                    $noChange[$item['code']] = $item['winloss'];
+                    $noChange[$item['code']] = (float) $item['winloss'];
                 }
 
-                $start = (($i * $range) + 1);
-                $stop = (($i + 1) * $range);
+                $start = (int) floor(($i * 360) / $spinCount) + 1;
+                $stop = (int) floor((($i + 1) * 360) / $spinCount);
 
                 $wheel[] = [
                     'text' => $item['amount'],
@@ -82,7 +84,7 @@ class WheelController extends BaseController
                 return $this->sendError(Lang::get('app.spin.fail'), 200);
             }
 
-            $point = rand((int) $random[$spinId]['start'], (int) $random[$spinId]['stop']);
+            $point = $this->randomIntInclusive((int) $random[$spinId]['start'], (int) $random[$spinId]['stop']);
             $nameStop = (string) $random[$spinId]['name'];
             $amountStop = (float) $random[$spinId]['amount'];
             $rewardType = (string) $random[$spinId]['types'];
@@ -157,7 +159,7 @@ class WheelController extends BaseController
                 'diamond' => $diamond,
                 'format' => $amountStop > 0
                     ? [
-                        'title' => Lang::get('app.spin.win') . $nameStop,
+                        'title' => Lang::get('app.spin.win').$nameStop,
                         'msg' => Lang::get('app.spin.win_msg'),
                         'img' => Storage::url('spin_img/spin-win.png'),
                         'point' => $point,
@@ -198,7 +200,7 @@ class WheelController extends BaseController
 
                 return [
                     'fillStyle' => $item->spincolor,
-                    'image' => Storage::url('spin_img/' . $item->filepic),
+                    'image' => Storage::url('spin_img/'.$item->filepic),
                     'text' => number_format($item->amount, 0),
                     'code' => $item->code,
                     'amount' => $item->amount,
@@ -216,24 +218,52 @@ class WheelController extends BaseController
             return null;
         }
 
-        $sum = (int) array_sum($weightedValues);
-        if ($sum <= 0) {
-            $keys = array_keys($weightedValues);
+        $normalized = [];
+        foreach ($weightedValues as $key => $value) {
+            $weight = max(0.0, (float) $value);
+            if ($weight <= 0) {
+                continue;
+            }
 
-            return (string) $keys[array_rand($keys)];
+            $scaled = max(1, (int) round($weight * self::WEIGHT_SCALE));
+            $normalized[(string) $key] = $scaled;
         }
 
-        $rand = mt_rand(1, $sum);
-        foreach ($weightedValues as $key => $value) {
-            $rand -= (int) $value;
+        $sum = (int) array_sum($normalized);
+        if ($sum <= 0) {
+            return $this->randomKey($weightedValues);
+        }
+
+        $rand = $this->randomIntInclusive(1, $sum);
+        foreach ($normalized as $key => $value) {
+            $rand -= $value;
             if ($rand <= 0) {
                 return (string) $key;
             }
         }
 
-        $keys = array_keys($weightedValues);
+        return (string) array_key_last($normalized);
+    }
 
-        return (string) end($keys);
+    private function randomKey(array $values): ?string
+    {
+        $keys = array_keys($values);
+        if (empty($keys)) {
+            return null;
+        }
+
+        $randomIndex = $this->randomIntInclusive(0, count($keys) - 1);
+
+        return (string) $keys[$randomIndex];
+    }
+
+    private function randomIntInclusive(int $min, int $max): int
+    {
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        return random_int($min, $max);
     }
 
     private function grantSpinReward($config, int $memberId, string $memberName, float $amount, string $rewardType, int $spinRecordCode): bool
@@ -347,7 +377,7 @@ class WheelController extends BaseController
 
         foreach ($results as $item) {
             $credit = (float) $item->amount > 0
-                ? 'ได้รับรางวัล ' . $item->bonus_name . ' จำนวน ' . $item->amount
+                ? 'ได้รับรางวัล '.$item->bonus_name.' จำนวน '.$item->amount
                 : 'ไม่ได้รับรางวัล';
 
             $responses[$item->date]['date'] = $item->date;
