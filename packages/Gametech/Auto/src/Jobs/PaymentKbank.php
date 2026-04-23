@@ -139,7 +139,12 @@ class PaymentKbank implements ShouldQueue, ShouldBeUnique
                 if (!$txDate) {
                     continue;
                 }
-                if (core()->DateDiff($txDate) > 1) { // คงเงื่อนไขเดิม
+//                if (core()->DateDiff($txDate) > 1) { // คงเงื่อนไขเดิม
+//                    continue;
+//                }
+                $diff = core()->DateDiffMin($txDate);
+
+                if ($diff < 0 || $diff > 20) {
                     continue;
                 }
 
