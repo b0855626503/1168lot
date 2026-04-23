@@ -4,7 +4,6 @@ namespace Gametech\Auto\Jobs;
 
 use App\Libraries\Kbank;
 use App\Libraries\KbankBiz;
-use App\Libraries\KbankBizNew;
 use App\Libraries\KbankOut;
 use App\Libraries\simple_html_dom;
 use Gametech\Member\Models\Member;
