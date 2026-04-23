@@ -47,11 +47,9 @@
                         <b-form-input
                             id="open_at"
                             v-model="formaddedit.open_at"
-                            type="text"
+                            type="datetime-local"
                             size="sm"
                             required
-                            placeholder="YYYY-MM-DD HH:mm"
-                            autocomplete="off"
                             :readonly="!canEditOpenAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
@@ -60,11 +58,9 @@
                         <b-form-input
                             id="close_at"
                             v-model="formaddedit.close_at"
-                            type="text"
+                            type="datetime-local"
                             size="sm"
                             required
-                            placeholder="YYYY-MM-DD HH:mm"
-                            autocomplete="off"
                             :readonly="!canEditCloseAtField"></b-form-input>
                     </b-form-group>
                 </b-col>
@@ -73,10 +69,8 @@
                 <b-form-input
                     id="result_at"
                     v-model="formaddedit.result_at"
-                    type="text"
+                    type="datetime-local"
                     size="sm"
-                    placeholder="YYYY-MM-DD HH:mm"
-                    autocomplete="off"
                     :readonly="!canEditResultAtField"></b-form-input>
             </b-form-group>
 
@@ -702,9 +696,6 @@
             white-space: nowrap;
         }
 
-        .flatpickr-calendar {
-            z-index: 99999 !important;
-        }
     </style>
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
@@ -716,7 +707,7 @@
     <script type="module">
         const toDateTimeInput = (value) => {
             if (!value) return '';
-            return String(value).replace('T', ' ').substring(0, 16);
+            return String(value).replace(' ', 'T').substring(0, 16);
         };
 
         const toDateTimePayload = (value) => {
@@ -1285,126 +1276,13 @@
                     return String(value).trim().replace(' ', 'T').substring(0, 16);
                 },
                 initDateTimePickers() {
-                    if (!window.jQuery) {
-                        return;
-                    }
-
-                    const bindings = [
-                        { id: '#open_at', field: 'open_at' },
-                        { id: '#close_at', field: 'close_at' },
-                        { id: '#result_at', field: 'result_at' },
-                    ];
-
-                    bindings.forEach(({ id, field }) => {
-                        const $input = window.jQuery(id);
-                        if (!$input.length) {
-                            return;
-                        }
-
-                        const inputEl = $input.get(0);
-                        if (!inputEl) {
-                            return;
-                        }
-
-                        $input.off('change.drawNative');
-                        $input.off('change.drawFlatpickr');
-
-                        if (inputEl._flatpickr) {
-                            inputEl._flatpickr.destroy();
-                        }
-
-                        if (typeof window.flatpickr !== 'function') {
-                            $input.attr('type', 'datetime-local');
-                            $input.attr('step', '60');
-                            $input.attr('placeholder', '');
-                            $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
-                            $input.on('change.drawNative', (event) => {
-                                this.formaddedit[field] = toDateTimeInput(event.target.value || '');
-                            });
-                            return;
-                        }
-
-                        try {
-                            $input.attr('type', 'text');
-                            $input.attr('placeholder', 'YYYY-MM-DD HH:mm');
-
-                            window.flatpickr(inputEl, {
-                                enableTime: true,
-                                time_24hr: true,
-                                dateFormat: 'Y-m-d H:i',
-                                allowInput: true,
-                                minuteIncrement: 1,
-                                disableMobile: true,
-                                appendTo: document.body,
-                                positionElement: inputEl,
-                                position: 'auto left',
-                                defaultDate: this.formaddedit[field] || null,
-                                onChange: (_, dateStr) => {
-                                    this.formaddedit[field] = dateStr || '';
-                                },
-                            });
-                        } catch (error) {
-                            $input.attr('type', 'datetime-local');
-                            $input.attr('step', '60');
-                            $input.attr('placeholder', '');
-                            $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
-                            $input.on('change.drawNative', (event) => {
-                                this.formaddedit[field] = toDateTimeInput(event.target.value || '');
-                            });
-                            return;
-                        }
-
-                        $input.on('change.drawFlatpickr', (event) => {
-                            this.formaddedit[field] = toDateTimeInput(event.target.value || '');
-                        });
-                    });
+                    return;
                 },
                 destroyDateTimePickers() {
-                    if (!window.jQuery) {
-                        return;
-                    }
-
-                    ['#open_at', '#close_at', '#result_at'].forEach((id) => {
-                        const $input = window.jQuery(id);
-                        if (!$input.length) {
-                            return;
-                        }
-
-                        $input.off('change.drawNative');
-                        $input.off('change.drawFlatpickr');
-
-                        const inputEl = $input.get(0);
-                        if (inputEl && inputEl._flatpickr) {
-                            inputEl._flatpickr.destroy();
-                        }
-                    });
+                    return;
                 },
                 applyDateTimePickersDisabledState() {
-                    if (!window.jQuery) {
-                        return;
-                    }
-
-                    const states = [
-                        { id: '#open_at', disabled: !this.canEditOpenAtField },
-                        { id: '#close_at', disabled: !this.canEditCloseAtField },
-                        { id: '#result_at', disabled: !this.canEditResultAtField },
-                    ];
-
-                    states.forEach(({ id, disabled }) => {
-                        const $input = window.jQuery(id);
-                        if (!$input.length) {
-                            return;
-                        }
-
-                        $input.prop('readonly', disabled);
-                        const inputEl = $input.get(0);
-                        if (inputEl && inputEl._flatpickr) {
-                            inputEl._flatpickr.set('clickOpens', !disabled);
-                            if (disabled) {
-                                inputEl._flatpickr.close();
-                            }
-                        }
-                    });
+                    return;
                 },
                 statusLabel(status) {
                     const map = {
