@@ -712,8 +712,7 @@
 
         const toDateTimePayload = (value) => {
             if (!value) return null;
-            const normalized = String(value).trim().replace('T', ' ').substring(0, 16);
-            return `${normalized}:00`;
+            return String(value).trim().replace('T', ' ').substring(0, 16);
         };
 
         const toDateTimeTimestamp = (value) => {
