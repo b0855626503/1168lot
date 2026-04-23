@@ -315,6 +315,9 @@ class PaymentKbank implements ShouldQueue, ShouldBeUnique
             case 'TISCO':
                 $result = 9;
                 break;
+            case 'TMB':
+                $result = 10;
+                break;
             case 'BAY':
                 $result = 11;
                 break;
@@ -335,7 +338,6 @@ class PaymentKbank implements ShouldQueue, ShouldBeUnique
                 $result = 17;
                 break;
             case 'TTB':
-            case 'TMB':
                 $result = 19;
                 break;
             default:
