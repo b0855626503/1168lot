@@ -295,6 +295,20 @@
         }
     }
 
+    const MAX_ACTIVE_TOASTS = 3;
+
+    function showToastWithLimit(options, max = MAX_ACTIVE_TOASTS) {
+        const activeToasts = Array.from(document.querySelectorAll('.toastify'));
+        while (activeToasts.length >= max) {
+            const oldestToast = activeToasts.shift();
+            if (oldestToast) {
+                oldestToast.remove();
+            }
+        }
+
+        Toastify(options).showToast();
+    }
+
     function handleRT(e) {
         if (e.ui === 'swal') {
             if (typeof Swal !== 'undefined') Swal.fire(e.swal);
@@ -342,7 +356,7 @@
             }
         }
 
-        Toastify({
+        showToastWithLimit({
             text: e.message,
             duration: t.duration ?? 20000,
             newWindow: t.newWindow ?? true,
@@ -353,7 +367,7 @@
             className: classes.join(' '),
             style: t.style || undefined,
             avatar: t.avatar || undefined,
-        }).showToast();
+        });
 
         const tableKey = t.reloadDataTable || '';
         const reloadOnPath = t.reloadOnPath || '';
@@ -374,7 +388,7 @@
     const currentUserId = {{ auth()->guard('admin')->id() ?? 'null' }};
     Echo.channel('{{ config('app.name')  }}_events')
         .listen('RealTimeMessage', (e) => {
-            Toastify({
+            showToastWithLimit({
                 text: e.message,
                 duration: 20000,
                 newWindow: true,
@@ -382,13 +396,13 @@
                 gravity: "top", // `top` or `bottom`
                 position: "right", // `left`, `center` or `right`
                 stopOnFocus: true, // Prevents dismissing of toast on hover
-            }).showToast();
+            });
 
         })
         .listen('.RealTime.Message.All', handleRT)
         .listen('.lotto.draw.status.changed', (e) => {
             const message = e.message || 'มีการปรับสถานะงวดหวย';
-            Toastify({
+            showToastWithLimit({
                 text: message,
                 duration: 25000,
                 newWindow: true,
@@ -398,7 +412,7 @@
                 stopOnFocus: true,
                 className: 'rt-toast rt-info gt-toast gt-toast-info',
                 avatar: '/assets/admin/icons/alert.webp?v=1',
-            }).showToast();
+            });
 
             const tableKey = e.datatable_id || 'lottoDrawsTable';
             const reloadOnPath = e.path || '/lotto/draws';
@@ -436,7 +450,7 @@
                 badgeElement.textContent = badgeValue;
             }
 
-            Toastify({
+            showToastWithLimit({
                 text: message,
                 duration: 20000,
                 newWindow: true,
@@ -446,7 +460,7 @@
                 stopOnFocus: true,
                 className: 'rt-toast rt-info gt-toast gt-toast-info',
                 avatar: '/assets/admin/icons/alert.webp?v=1',
-            }).showToast();
+            });
 
             const tableKey = e.datatable_id || 'lottoTicketsTable';
             const reloadOnPath = e.path || '/lotto/tickets';
