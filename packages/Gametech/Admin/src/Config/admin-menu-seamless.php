@@ -319,6 +319,15 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1
     ], [
+        'key' => 'mep.member_log',
+        'name' => 'ประวัติการ Login Fail',
+        'route' => 'admin.member_log.index',
+        'sort' => 8,
+        'icon-class' => 'fa-university',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1
+    ], [
         'key' => 'gamelog',
         'name' => 'Games Log (Amb)',
         'route' => 'admin.gamelog.index',

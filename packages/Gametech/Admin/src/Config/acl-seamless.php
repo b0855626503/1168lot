@@ -397,6 +397,11 @@ return [
         'route' => 'admin.rp_recommender.index',
         'sort' => 7
     ], [
+        'key' => 'mep.member_log',
+        'name' => 'ประวัติการ Login Fail',
+        'route' => 'admin.member_log.index',
+        'sort' => 8
+    ], [
         'key' => 'gamelog',
         'name' => 'Games Log (amb)',
         'route' => 'admin.gamelog.index',
