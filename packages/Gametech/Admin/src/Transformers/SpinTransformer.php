@@ -22,7 +22,7 @@ class SpinTransformer extends TransformerAbstract
             'name' => $model->name,
             'amount' => $model->amount,
             'winloss' => $model->winloss,
-            'filepic' => '<img src="' . Storage::url('spin_img/' . $model->filepic) . '" class="rounded" style="width:50px;height:50px;">',
+            'filepic' => '<img src="' . Storage::url('spin_img/' . $model->filepic) . '?v=2" class="rounded" style="width:50px;height:50px;">',
             'action' => view('admin::module.spin.datatables_actions', ['code' => $model->code])->render(),
         ];
     }
