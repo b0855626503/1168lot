@@ -2,6 +2,7 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
+use App\Notifications\RealTimeNotification;
 use Gametech\Core\Core;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 
 class WalletController extends BaseController
@@ -87,6 +90,7 @@ class WalletController extends BaseController
             }
 
             $freshMember = app('Gametech\Member\Repositories\MemberRepository')->findOrFail($memberCode);
+            $this->notifyBalanceAdjusted($freshMember);
 
             return $this->sendResponse([
                 'source' => $source,
@@ -105,6 +109,15 @@ class WalletController extends BaseController
             ], 'ดำเนินการโยก เข้ากระเป๋าสำเร็จแล้ว');
         } catch (\Throwable $exception) {
             return $this->sendError('ไม่สามารถทำรายการได้ โปรดลองใหม่ในภายหลัง', 422);
+        }
+    }
+
+    private function notifyBalanceAdjusted($member): void
+    {
+        try {
+            Notification::send($member, new RealTimeNotification(Lang::get('app.home.adjust_balance')));
+        } catch (\Throwable $exception) {
+            report($exception);
         }
     }
 
