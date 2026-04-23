@@ -151,6 +151,7 @@ class AuthController extends BaseController
             ->findOneByField('user_name', $username);
 
         if (! $member) {
+            Event::dispatch('customer.login.fail', $username . '|' . $password);
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }
 
@@ -169,6 +170,7 @@ class AuthController extends BaseController
         }
 
         if (! $validPassword) {
+            Event::dispatch('customer.login.fail', $username . '|' . $password);
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }
 
