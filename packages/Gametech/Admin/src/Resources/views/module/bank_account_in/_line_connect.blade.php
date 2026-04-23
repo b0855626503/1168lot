@@ -5,21 +5,21 @@
      ========================= --}}
 
 <b-modal
-        ref="lineConnectModal"
-        id="lineConnectModal"
-        centered
-        size="lg"
-        title="เชื่อมต่อกับ LINE"
-        :no-stacking="true"
-        :no-close-on-backdrop="lineConnectUiLocked"
-        :no-close-on-esc="lineConnectUiLocked"
-        :hide-header-close="lineConnectUiLocked"
-        :hide-footer="true"
-        :lazy="true"
-        :data-bank="lineConnect.bank"
-        :data-acc="lineConnect.acc"
-        :data-baseapi="lineConnect.baseapi"
-        @hidden="onLineConnectHidden"
+    ref="lineConnectModal"
+    id="lineConnectModal"
+    centered
+    size="lg"
+    title="เชื่อมต่อกับ LINE"
+    :no-stacking="true"
+    :no-close-on-backdrop="lineConnectUiLocked"
+    :no-close-on-esc="lineConnectUiLocked"
+    :hide-header-close="lineConnectUiLocked"
+    :hide-footer="true"
+    :lazy="true"
+    :data-bank="lineConnect.bank"
+    :data-acc="lineConnect.acc"
+    :data-baseapi="lineConnect.baseapi"
+    @hidden="onLineConnectHidden"
 >
     <b-container class="bv-example-row">
         <b-form v-if="lineConnect.show" id="frmLineConnect" ref="frmLineConnect" @submit.prevent>
@@ -44,32 +44,32 @@
                     <div class="line-connect-modal-admin__section-title">การเชื่อมต่อ</div>
 
                     <b-button
-                            type="button"
-                            class="line-connect-modal-admin__btn -status mb-2"
-                            :disabled="lineConnectUiLocked"
-                            @click="lineConnectCheckStatus"
+                        type="button"
+                        class="line-connect-modal-admin__btn -status mb-2"
+                        :disabled="lineConnectUiLocked"
+                        @click="lineConnectCheckStatus"
                     >
                         <i class="fas fa-search"></i>
                         ตรวจสอบสถานะ
                     </b-button>
 
                     <b-button
-                            v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
-                            type="button"
-                            class="line-connect-modal-admin__btn -connect-qr mb-2"
-                            :disabled="lineConnectUiLocked"
-                            @click="lineConnectConnectQr"
+                        v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
+                        type="button"
+                        class="line-connect-modal-admin__btn -connect-qr mb-2"
+                        :disabled="lineConnectUiLocked"
+                        @click="lineConnectConnectQr"
                     >
                         <i class="fas fa-qrcode"></i>
                         เชื่อมต่อด้วย QR
                     </b-button>
 
                     <b-button
-                            v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
-                            type="button"
-                            class="line-connect-modal-admin__btn -connect-email"
-                            :disabled="lineConnectUiLocked"
-                            @click="lineConnectOpenLoginForm"
+                        v-if="lineConnect.canConnect && !lineConnect.showLoginForm"
+                        type="button"
+                        class="line-connect-modal-admin__btn -connect-email"
+                        :disabled="lineConnectUiLocked"
+                        @click="lineConnectOpenLoginForm"
                     >
                         <i class="fas fa-envelope"></i>
                         เชื่อมต่อด้วย Email
@@ -79,46 +79,46 @@
                     <div v-if="lineConnect.showLoginForm" class="line-connect-modal-admin__login">
                         <b-form-group label="Email" label-for="line_login_email" class="mb-2">
                             <b-form-input
-                                    id="line_login_email"
-                                    v-model="lineConnect.email"
-                                    type="email"
-                                    size="sm"
-                                    autocomplete="off"
-                                    placeholder="กรอกอีเมล"
-                                    :disabled="lineConnectUiLocked"
-                                    required
+                                id="line_login_email"
+                                v-model="lineConnect.email"
+                                type="email"
+                                size="sm"
+                                autocomplete="off"
+                                placeholder="กรอกอีเมล"
+                                :disabled="lineConnectUiLocked"
+                                required
                             ></b-form-input>
                         </b-form-group>
 
                         <b-form-group label="Password" label-for="line_login_password" class="mb-2">
                             <b-form-input
-                                    id="line_login_password"
-                                    v-model="lineConnect.password"
-                                    type="password"
-                                    size="sm"
-                                    autocomplete="off"
-                                    placeholder="กรอกรหัสผ่าน"
-                                    :disabled="lineConnectUiLocked"
-                                    required
-                                    @keyup.enter="lineConnectSubmitLogin"
+                                id="line_login_password"
+                                v-model="lineConnect.password"
+                                type="password"
+                                size="sm"
+                                autocomplete="off"
+                                placeholder="กรอกรหัสผ่าน"
+                                :disabled="lineConnectUiLocked"
+                                required
+                                @keyup.enter="lineConnectSubmitLogin"
                             ></b-form-input>
                         </b-form-group>
 
                         <b-button
-                                type="button"
-                                class="line-connect-modal-admin__btn -send"
-                                :disabled="lineConnectUiLocked"
-                                @click="lineConnectSubmitLogin"
+                            type="button"
+                            class="line-connect-modal-admin__btn -send"
+                            :disabled="lineConnectUiLocked"
+                            @click="lineConnectSubmitLogin"
                         >
                             <i class="fas fa-paper-plane"></i>
                             ส่ง
                         </b-button>
 
                         <b-button
-                                type="button"
-                                class="line-connect-modal-admin__btn -cancel"
-                                :disabled="lineConnectUiLocked"
-                                @click="lineConnectCancelLoginForm"
+                            type="button"
+                            class="line-connect-modal-admin__btn -cancel"
+                            :disabled="lineConnectUiLocked"
+                            @click="lineConnectCancelLoginForm"
                         >
                             ย้อนกลับ
                         </b-button>
@@ -143,7 +143,7 @@
                     <template v-else>
 
                         {{-- ✅ FIX (B): ระหว่าง polling อย่าทับ qr_required / pincode_required --}}
-                        <template v-if="lineConnect.pollActive && lineConnect.status !== 'qr_required' && lineConnect.status !== 'pincode_required'">
+                        <template v-if="lineConnect.pollActive && lineConnect.status === 'unknown'">
                             <div class="line-connect-modal-admin__status">
                                 <div class="line-connect-modal-admin__status-title">กำลังรอผลการเชื่อมต่อ</div>
                                 <div class="line-connect-modal-admin__status-text">
@@ -166,7 +166,7 @@
                             <div class="line-connect-modal-admin__status">
                                 <div class="line-connect-modal-admin__status-title">กำลังเริ่มเชื่อมต่อ</div>
                                 <div class="line-connect-modal-admin__status-text">
-                                    ระบบกำลังเตรียมการเชื่อมต่อ…
+                                    @{{ lineConnectStageText || 'ระบบกำลังเตรียมการเชื่อมต่อ…' }}
                                 </div>
                             </div>
                         </template>
@@ -178,7 +178,7 @@
                             <div v-else class="line-connect-modal-admin__status">
                                 <div class="line-connect-modal-admin__status-title">ต้องสแกน QR</div>
                                 <div class="line-connect-modal-admin__status-text">
-                                    กำลังสร้างรูป QR…
+                                    @{{ lineConnectStageText || 'กำลังสร้างรูป QR…' }}
                                 </div>
                             </div>
                             <div class="line-connect-modal-admin__qr-caption">สแกน QR Code ด้วย LINE</div>
@@ -406,6 +406,9 @@
                         pollErrorDelayBaseMs: 1000,
                         pollErrorDelayMaxMs: 5000,
                         pollErrorDelayCurrentMs: 0,
+                        lastStage: '',
+                        updatedAt: 0,
+                        noProgressCount: 0,
                     },
                 };
             },
@@ -413,8 +416,30 @@
                 lineConnectUiLocked() {
                     return !!this.lineConnect.loadingAny;
                 },
+                lineConnectStageText() {
+                    const stage = (this.lineConnect.lastStage || '').toLowerCase();
+                    if (!stage) return '';
+                    const map = {
+                        'listener:queued': 'กำลังเตรียมเริ่มตัวเชื่อมต่อ',
+                        'listener:connecting': 'กำลังเชื่อมต่อ LINE',
+                        'login:qr_waiting': 'กำลังรอ QR จาก LINE',
+                        'login:qr_issued': 'ได้รับ QR แล้ว กรุณาสแกนใน LINE',
+                        'login:pin_required': 'ได้รับ PIN แล้ว กรุณากรอกใน LINE',
+                        'listener:running': 'เชื่อมต่อสำเร็จ กำลังรอข้อความเข้า',
+                        'recover:queued': 'กำลังกู้คืนการเชื่อมต่อ',
+                    };
+                    return map[stage] || (`ขั้นตอนล่าสุด: ${this.lineConnect.lastStage}`);
+                },
             },
             methods: {
+                deriveStatusFromStage(status, lastStage) {
+                    const s = (status || '').toLowerCase();
+                    const stage = (lastStage || '').toLowerCase();
+                    if (s !== 'starting') return status || 'unknown';
+                    if (stage.includes('pin_required')) return 'pincode_required';
+                    if (stage.includes('qr_waiting') || stage.includes('qr_issued')) return 'qr_required';
+                    return status || 'unknown';
+                },
 
                 // ===== QR render from text (qrUrl) via CDN =====
                 async renderQrFromText(text) {
@@ -471,6 +496,9 @@
                     this.lineConnect.device = 'DESKTOPWIN';
 
                     this.lineConnect.pollErrorDelayCurrentMs = 0;
+                    this.lineConnect.lastStage = '';
+                    this.lineConnect.updatedAt = 0;
+                    this.lineConnect.noProgressCount = 0;
 
                     this.$bvModal.show('lineConnectModal');
                 },
@@ -505,6 +533,9 @@
                     this.lineConnect.loadingAny = false;
 
                     this.lineConnect.pollErrorDelayCurrentMs = 0;
+                    this.lineConnect.lastStage = '';
+                    this.lineConnect.updatedAt = 0;
+                    this.lineConnect.noProgressCount = 0;
 
                     this.stopLineConnectPolling();
                 },
@@ -529,6 +560,9 @@
                     const message = payload.message || payload.error || data.message || '';
 
                     const timedOut = !!(payload.timedOut || payload.timed_out);
+                    const lastStage = payload.lastStage || payload.last_stage || '';
+                    const updatedAtRaw = payload.updatedAt || payload.updated_at || 0;
+                    const updatedAt = Number(updatedAtRaw) || 0;
 
                     let qrSrc = '';
                     if (typeof qrBase64 === 'string' && qrBase64.length) {
@@ -537,13 +571,15 @@
 
                     const qrText = (typeof qrUrl === 'string' && qrUrl.length) ? qrUrl : '';
 
-                    return { status, pin, qrSrc, qrText, timedOut, message, raw: payload };
+                    return { status, pin, qrSrc, qrText, timedOut, message, lastStage, updatedAt, raw: payload };
                 },
 
                 applyLinePayload(p) {
-                    this.lineConnect.status = p.status || 'unknown';
+                    this.lineConnect.status = this.deriveStatusFromStage(p.status, p.lastStage);
                     this.lineConnect.pin = p.pin || '';
                     this.lineConnect.message = p.message || '';
+                    this.lineConnect.lastStage = p.lastStage || '';
+                    this.lineConnect.updatedAt = p.updatedAt || 0;
 
                     if (p.qrSrc) this.lineConnect.qrSrc = p.qrSrc;
                     if (p.qrText) this.lineConnect.qrText = p.qrText;
@@ -585,6 +621,12 @@
                         }
 
                         if (this.lineConnect.status === 'error') {
+                            this.lineConnect.canConnect = true;
+                            this.stopLineConnectPolling();
+                            return;
+                        }
+
+                        if (this.lineConnect.status === 'unknown') {
                             this.lineConnect.canConnect = true;
                             this.stopLineConnectPolling();
                             return;
@@ -777,6 +819,18 @@
                             this.applyLinePayload(p);
 
                             this.lineConnect.pollErrorDelayCurrentMs = 0;
+                            const waitingConnect = p.status === 'starting' && p.lastStage === 'listener:connecting';
+                            const waitingQr = this.lineConnect.status === 'qr_required'
+                                && !this.lineConnect.qrText
+                                && !this.lineConnect.qrSrc
+                                && (p.lastStage === 'login:qr_waiting'
+                                    || p.lastStage === 'login:qr_issued'
+                                    || p.lastStage === 'listener:connecting');
+                            if (p.timedOut && (waitingConnect || waitingQr)) {
+                                this.lineConnect.noProgressCount += 1;
+                            } else {
+                                this.lineConnect.noProgressCount = 0;
+                            }
 
                             if (this.lineConnect.status === 'ready') {
                                 this.lineConnect.pollActive = false;
@@ -787,6 +841,14 @@
                             if (this.lineConnect.status === 'error') {
                                 this.lineConnect.pollActive = false;
                                 this.lineConnect.canConnect = true;
+                                return;
+                            }
+
+                            if (this.lineConnect.noProgressCount >= 12) {
+                                this.lineConnect.pollActive = false;
+                                this.lineConnect.status = 'error';
+                                this.lineConnect.canConnect = true;
+                                this.lineConnect.message = 'ยังไม่ได้ QR จาก LINE ภายในเวลาที่กำหนด กรุณาลองใหม่';
                                 return;
                             }
 
