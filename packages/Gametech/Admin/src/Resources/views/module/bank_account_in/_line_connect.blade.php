@@ -171,6 +171,15 @@
                             </div>
                         </template>
 
+                        <template v-else-if="lineConnect.status === 'choose_login_mode'">
+                            <div class="line-connect-modal-admin__status">
+                                <div class="line-connect-modal-admin__status-title">เลือกวิธีเชื่อมต่อ</div>
+                                <div class="line-connect-modal-admin__status-text">
+                                    เลือกเชื่อมต่อด้วย QR หรือ Email จากปุ่มด้านซ้าย
+                                </div>
+                            </div>
+                        </template>
+
                         <template v-else-if="lineConnect.status === 'qr_required'">
                             <div v-if="lineConnect.qrSrc" class="line-connect-modal-admin__qr">
                                 <img :src="lineConnect.qrSrc" class="line-connect-modal-admin__qr-img" alt="LINE QR" />
@@ -410,6 +419,7 @@
                         updatedAt: 0,
                         noProgressCount: 0,
                         loginMode: '',
+                        allowedModes: ['qr', 'email'],
                     },
                 };
             },
@@ -487,7 +497,7 @@
                     this.lineConnect.baseapi = baseapi;
 
                     this.lineConnect.show = true;
-                    this.lineConnect.canConnect = false;
+                    this.lineConnect.canConnect = true;
                     this.lineConnect.status = 'unknown';
                     this.lineConnect.message = '';
                     this.lineConnect.pin = '';
@@ -504,6 +514,7 @@
                     this.lineConnect.updatedAt = 0;
                     this.lineConnect.noProgressCount = 0;
                     this.lineConnect.loginMode = '';
+                    this.lineConnect.allowedModes = ['qr', 'email'];
 
                     this.$bvModal.show('lineConnectModal');
                 },
@@ -542,6 +553,7 @@
                     this.lineConnect.updatedAt = 0;
                     this.lineConnect.noProgressCount = 0;
                     this.lineConnect.loginMode = '';
+                    this.lineConnect.allowedModes = ['qr', 'email'];
 
                     this.stopLineConnectPolling();
                 },
@@ -568,6 +580,9 @@
                     const timedOut = !!(payload.timedOut || payload.timed_out);
                     const lastStage = payload.lastStage || payload.last_stage || '';
                     const loginMode = (payload.loginMode || payload.login_mode || '').toLowerCase();
+                    const allowedModes = Array.isArray(payload.allowedModes || payload.allowed_modes)
+                        ? (payload.allowedModes || payload.allowed_modes)
+                        : null;
                     const updatedAtRaw = payload.updatedAt || payload.updated_at || 0;
                     const updatedAt = Number(updatedAtRaw) || 0;
 
@@ -578,7 +593,19 @@
 
                     const qrText = (typeof qrUrl === 'string' && qrUrl.length) ? qrUrl : '';
 
-                    return { status, pin, qrSrc, qrText, timedOut, message, lastStage, loginMode, updatedAt, raw: payload };
+                    return {
+                        status,
+                        pin,
+                        qrSrc,
+                        qrText,
+                        timedOut,
+                        message,
+                        lastStage,
+                        loginMode,
+                        allowedModes,
+                        updatedAt,
+                        raw: payload,
+                    };
                 },
 
                 applyLinePayload(p) {
@@ -587,6 +614,9 @@
                     this.lineConnect.message = p.message || '';
                     this.lineConnect.lastStage = p.lastStage || '';
                     this.lineConnect.loginMode = p.loginMode || this.lineConnect.loginMode || '';
+                    this.lineConnect.allowedModes = Array.isArray(p.allowedModes) && p.allowedModes.length
+                        ? p.allowedModes
+                        : this.lineConnect.allowedModes;
                     this.lineConnect.updatedAt = p.updatedAt || 0;
 
                     if (p.qrSrc) this.lineConnect.qrSrc = p.qrSrc;
@@ -716,6 +746,7 @@
                             bank: this.lineConnect.bank,
                             acc: this.lineConnect.acc,
                             baseapi: this.lineConnect.baseapi,
+                            loginMode: 'qr',
                             device: this.lineConnect.device || 'DESKTOPWIN',
                             forceRefresh: true,
                         }, {
@@ -814,6 +845,7 @@
                             bank: this.lineConnect.bank,
                             acc: this.lineConnect.acc,
                             baseapi: this.lineConnect.baseapi,
+                            loginMode: 'email',
                             email: email,
                             password: password,
                             device: this.lineConnect.device || 'DESKTOPWIN',
