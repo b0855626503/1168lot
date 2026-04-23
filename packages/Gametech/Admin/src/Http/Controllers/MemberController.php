@@ -1094,6 +1094,13 @@ class MemberController extends AppBaseController
             $data = $request->except(['data']);
         }
 
+        if ($data === []) {
+            $rawPayload = json_decode((string) $request->getContent(), true);
+            if (is_array($rawPayload)) {
+                $data = $rawPayload;
+            }
+        }
+
         // ===== 2FA (เปิดใช้เมื่อพร้อม) =====
         // if ($this->user()->superadmin == 'N') {
         //     $secret = $data['one_time_password'] ?? null;
