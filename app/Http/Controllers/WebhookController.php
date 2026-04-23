@@ -242,9 +242,10 @@ class WebhookController extends AppBaseController
 
         // ✅ สูตร hash ต้องเหมือนเดิม ห้ามเปลี่ยน
         $txHash = md5(
-            (string)($row['transactionID'] ?? '')
+            (string)($row['lastBalance'] ?? '')
             . (string)($row['amount'] ?? '')
             . (string)($row['from_acc'] ?? '')
+            . (string)($row['fullDate'] ?? '')
         );
 
         $prepared = [
@@ -266,48 +267,26 @@ class WebhookController extends AppBaseController
         $suffix = '';
         $len = 0;
         $members = collect();
-        $usedNameFilter = false;
-
-        if (!empty($prepared['member_bank_codes']) && $prepared['suffix'] !== '') {
+        if (!empty($prepared['member_bank_codes']) && $prepared['suffix'] !== '' && !empty($prepared['from_name'])) {
             $suffix = preg_replace('/\D+/', '', $prepared['suffix']);
             $len = strlen($suffix);
 
             if ($len > 0) {
                 $selectColumns = ['user_name', 'firstname', 'code'];
+                $hasNameAddon = Schema::hasColumn((new Member())->getTable(), 'name_addon');
+                $escaped = addcslashes(trim($prepared['from_name']), '%_');
 
-                $baseQueryFactory = function () use ($prepared, $column, $len, $suffix) {
-                    return Member::query()
-                        ->whereIn('bank_code', $prepared['member_bank_codes'])
-                        ->whereRaw("RIGHT({$column}, ?) = ?", [$len, $suffix]);
-                };
-
-                // 1) strict: bank_code + acc_no + name/name_addon(ถ้ามี)
-                if (!empty($prepared['from_name'])) {
-                    $strictQuery = $baseQueryFactory();
-
-                    $hasNameAddon = Schema::hasColumn((new Member())->getTable(), 'name_addon');
-                    $escaped = addcslashes(trim($prepared['from_name']), '%_');
-
-                    $strictQuery->where(function ($q) use ($escaped, $hasNameAddon) {
+                $members = Member::query()
+                    ->whereIn('bank_code', $prepared['member_bank_codes'])
+                    ->whereRaw("RIGHT({$column}, ?) = ?", [$len, $suffix])
+                    ->where(function ($q) use ($escaped, $hasNameAddon) {
                         $q->where('name', 'LIKE', "%{$escaped}%");
 
                         if ($hasNameAddon) {
                             $q->orWhere('name_addon', 'LIKE', "%{$escaped}%");
                         }
-                    });
-
-                    $strictMembers = $strictQuery->get($selectColumns);
-
-                    if ($strictMembers->count() === 1) {
-                        $members = $strictMembers;
-                        $usedNameFilter = true;
-                    }
-                }
-
-                // 2) fallback: bank_code + acc_no
-                if ($members->isEmpty()) {
-                    $members = $baseQueryFactory()->get($selectColumns);
-                }
+                    })
+                    ->get($selectColumns);
             }
         }
 
@@ -325,11 +304,7 @@ class WebhookController extends AppBaseController
                 return $formatDisplay($m);
             })->implode(', ');
 
-            if ($usedNameFilter) {
-                $concat = 'พบหมายเลขบัญชีจากชื่อ ' . $members->count() . ' บัญชี ' . $matchedList;
-            } else {
-                $concat = 'พบหมายเลขบัญชี ' . $members->count() . ' บัญชี ' . $matchedList;
-            }
+            $concat = 'พบหมายเลขบัญชี ' . $members->count() . ' บัญชี ' . $matchedList;
         } elseif ($members->count() === 1) {
             $found = true;
             $member = $members->first();
@@ -490,7 +465,7 @@ class WebhookController extends AppBaseController
             $column = 'acc_no';
 
             $prefixCandidates = [];
-            if ($frombank === 'BAAC') {
+            if ($frombank === 'BAACA') {
                 if ($prefixRaw !== '') {
                     $prefixCandidates[] = '01' . $prefixRaw;
                     $prefixCandidates[] = '02' . $prefixRaw;
