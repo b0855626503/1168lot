@@ -1219,7 +1219,7 @@
                 refill(code) {
                     this.code = code;
                     this.formrefill = {
-                        id: null,
+                        id: code,
                         amount: 0,
                         account_code: '',
                         bank_time: this.nowDatetimeLocal(),
@@ -1229,7 +1229,6 @@
                     this.show = false;
                     this.$nextTick(() => {
                         this.show = true;
-                        this.formrefill.id = code;
                         this.$refs.refill.show();
 
                     })
@@ -1288,7 +1287,8 @@
                 refillSubmit(event) {
                     event.preventDefault();
                     this.toggleButtonDisable(true);
-                    this.$http.post("{{ url($menu->currentRoute.'/refill') }}", this.formrefill)
+                    const payload = Object.assign({}, this.formrefill, {id: this.code});
+                    this.$http.post("{{ url($menu->currentRoute.'/refill') }}", payload)
                         .then(response => {
                             this.$bvModal.msgBoxOk(response.data.message, {
                                 title: 'ผลการดำเนินการ',
