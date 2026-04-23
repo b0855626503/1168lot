@@ -599,6 +599,35 @@
                     }
                 },
 
+                shouldStartWaitLoop(p) {
+                    const status = (this.lineConnect.status || '').toLowerCase();
+                    const stage = (this.lineConnect.lastStage || p.lastStage || '').toLowerCase();
+
+                    if (status === 'ready' || status === 'error' || status === 'unknown') return false;
+
+                    if (status === 'starting') {
+                        return stage === 'listener:queued'
+                            || stage === 'listener:connecting'
+                            || stage === 'recover:queued'
+                            || stage === 'login:qr_waiting'
+                            || stage === 'login:qr_issued'
+                            || stage === 'login:pin_required';
+                    }
+
+                    if (status === 'qr_required') {
+                        return stage === 'login:qr_waiting'
+                            || stage === 'login:qr_issued'
+                            || stage === 'listener:connecting'
+                            || (!this.lineConnect.qrSrc && !this.lineConnect.qrText);
+                    }
+
+                    if (status === 'pincode_required') {
+                        return stage === 'login:pin_required';
+                    }
+
+                    return false;
+                },
+
                 async lineConnectCheckStatus() {
                     if (!this.lineConnect.bank || !this.lineConnect.acc) {
                         this.lineConnect.status = 'error';
@@ -626,28 +655,32 @@
 
                         const p = this.extractLineStatusPayload(resp);
                         this.applyLinePayload(p);
+                        this.stopLineConnectPolling();
+                        this.lineConnect.showLoginForm = false;
 
                         if (this.lineConnect.status === 'ready') {
                             this.lineConnect.canConnect = false;
-                            this.lineConnect.showLoginForm = false;
-                            this.stopLineConnectPolling();
                             return;
                         }
 
                         if (this.lineConnect.status === 'error') {
                             this.lineConnect.canConnect = true;
-                            this.stopLineConnectPolling();
                             return;
                         }
 
                         if (this.lineConnect.status === 'unknown') {
                             this.lineConnect.canConnect = true;
-                            this.stopLineConnectPolling();
+                            return;
+                        }
+
+                        if (this.shouldStartWaitLoop(p)) {
+                            this.lineConnect.canConnect = true;
+                            this.startLineConnectWaitLoop();
                             return;
                         }
 
                         this.lineConnect.canConnect = true;
-                        this.startLineConnectWaitLoop();
+                        return;
 
                     } catch (e) {
                         this.lineConnect.status = 'error';
@@ -698,6 +731,12 @@
                         }
 
                         if (this.lineConnect.status === 'error') {
+                            this.lineConnect.canConnect = true;
+                            this.stopLineConnectPolling();
+                            return;
+                        }
+
+                        if (!this.shouldStartWaitLoop(p)) {
                             this.lineConnect.canConnect = true;
                             this.stopLineConnectPolling();
                             return;
@@ -792,6 +831,12 @@
                         }
 
                         if (this.lineConnect.status === 'error') {
+                            this.lineConnect.canConnect = true;
+                            this.stopLineConnectPolling();
+                            return;
+                        }
+
+                        if (!this.shouldStartWaitLoop(p)) {
                             this.lineConnect.canConnect = true;
                             this.stopLineConnectPolling();
                             return;
