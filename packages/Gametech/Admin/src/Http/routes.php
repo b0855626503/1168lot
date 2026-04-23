@@ -154,6 +154,8 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
 
             Route::get('chuba8', 'TestController@chuba')->name('admin.test.chuba');
 
+            Route::get('fix/cashback/start', 'FixController@cashbackstart')->name('admin.fix.cashback.start');
+
             Route::get('fix/cashback/list/{date?}', 'FixController@cashback')->name('admin.fix.cashback');
 
             Route::get('fix/cashback/topup/{date?}', 'FixController@cashbackTopup')->name('admin.fix.cashbacktopup');
@@ -622,13 +624,13 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
                 Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
 
             });
-	        
+
 	        $route = ['name' => 'check_case', 'controller' => 'CheckCaseController'];
 	        Route::group(['prefix' => $route['name']], function () use ($route) {
 		        Route::get('/', $route['controller'].'@index')->defaults('_config', [
 			        'view' => 'admin::module.'.$route['name'].'.index',
 		        ])->name('admin.'.$route['name'].'.index');
-		        
+
 	        });
 
 

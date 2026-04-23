@@ -371,4 +371,11 @@ class FixController extends AppBaseController
 
     }
 
+    public function cashbackstart()
+    {
+        Artisan::call('cashback:start');
+        $result = Artisan::output();
+        return $this->sendResponse($result, 'คำนวนและมอบ Cashback ให้ลูกค้า ยอดเข้าทันทีไม่ต้องกดกรับ');
+    }
+
 }

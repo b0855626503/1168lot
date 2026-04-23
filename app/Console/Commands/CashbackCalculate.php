@@ -56,7 +56,7 @@ class CashbackCalculate extends Command
         $startDate = $lastSaturday->startOfDay();  // เสาร์ที่แล้ว เวลา 00:00
         $endDate = $lastFriday->endOfDay();
 
-        $roundLabel = 'รอบสัปดาห์ (' . $startDate->format('d/m') . ' - ' . $endDate->format('d/m') . ')';
+        $roundLabel = 'รอบสัปดาห์ ('.$startDate->format('d/m').' - '.$endDate->format('d/m').')';
         $this->info($roundLabel);
         $promotion = DB::table('promotions')->where('id', 'pro_cashback')->first();
 
@@ -66,7 +66,6 @@ class CashbackCalculate extends Command
 
         $latestBi = DB::table('bills')
             ->select('bills.member_code', DB::raw('SUM(bills.credit_bonus)  as bonus_amount'))
-            ->where('bills.pro_code', '>', 0)
             ->where('bills.enable', 'Y')
             ->where('bills.transfer_type', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
@@ -84,10 +83,10 @@ class CashbackCalculate extends Command
             ->groupBy('withdraws.member_code');
 
         $latestBP = DB::table('bank_payment')
-            ->select(DB::raw('MAX(bank_payment.code) as code'), DB::raw('SUM(bank_payment.value) as deposit_amount'), DB::raw("'" . $startDate . "' as date_cashback"), 'bank_payment.member_topup')
+            ->select(DB::raw('MAX(bank_payment.code) as code'), DB::raw('SUM(bank_payment.value) as deposit_amount'), DB::raw("'".$startDate."' as date_cashback"), 'bank_payment.member_topup')
             ->where('bank_payment.value', '>', 0)
             ->where('bank_payment.bankstatus', 1)
-//            ->where('bank_payment.pro_id', 0)
+            ->where('bank_payment.pro_id', 0)
             ->where('bank_payment.enable', 'Y')
             ->where('bank_payment.status', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
@@ -96,7 +95,7 @@ class CashbackCalculate extends Command
             ->groupBy('bank_payment.member_topup');
 
         $lists = DB::table('members')
-            ->select('members.upline_code', 'members.code as member_code', 'members.user_name as user_name', 'members.name as member_name', 'members.balance as balance', DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'), 'bank_payment.deposit_amount', DB::raw('IFNULL(bonus_amount,0) as bonus_amount'), DB::raw("'" . $startDate . "' as date_start"), DB::raw("'" . $endDate . "' as date_stop"), 'bank_payment.code')
+            ->select('members.upline_code', 'members.code as member_code', 'members.user_name as user_name', 'members.name as member_name', 'members.balance as balance', DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'), 'bank_payment.deposit_amount', DB::raw('IFNULL(bonus_amount,0) as bonus_amount'), DB::raw("'".$startDate."' as date_start"), DB::raw("'".$endDate."' as date_stop"), 'bank_payment.code')
             ->orderByDesc('members.code')
             ->joinSub($latestBP, 'bank_payment', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'members.code');

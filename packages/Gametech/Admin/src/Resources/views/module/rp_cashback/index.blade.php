@@ -55,9 +55,9 @@
         <div class="card">
 
             <div class="card-body text-center">
-                <p>1. ระบบจะคำนวนแล้ว มอบ ช่วงเวลา 00.00-01.00</p>
-                <p>2. ระบบมอบไม่ครบ แก้ได้ด้วยการ copy url <a href="{{ route('admin.fix.cashbacktopup') }}" target="_blank">{{ route('admin.fix.cashbacktopup') }}</a> สามารถ f5 ที่ลิงค์ดังกล่าว ได้ จน ยอดเป็น 0%</p>
-                <p>3. กดข้อที่ 2 แล้วยังไม่มอบ แสดงว่า ขั้นตอนการคำนวนมีปัญหา แก้ได้ด้วยการ copy url <a href="{{ route('admin.fix.cashback') }}" target="_blank">{{ route('admin.fix.cashback') }}</a> กดทีเดียวพอ แล้วไปกด ข้อ 2 ใหม่</p>
+
+                <p>กดเพื่อคำนวนและมอบให้ลุกค้า <a href="{{ route('admin.fix.cashback.start') }}" target="_blank">{{ route('admin.fix.cashback.start') }}</a> กดทีเดียวพอ</p>
+                <p>ข้อมูล ด้านล่างไม่ตรงนะ</p>
             </div>
             <!-- /.card-body -->
         </div>
