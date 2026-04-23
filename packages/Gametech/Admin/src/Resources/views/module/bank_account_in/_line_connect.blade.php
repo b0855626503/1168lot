@@ -409,6 +409,7 @@
                         lastStage: '',
                         updatedAt: 0,
                         noProgressCount: 0,
+                        loginMode: '',
                     },
                 };
             },
@@ -499,6 +500,7 @@
                     this.lineConnect.lastStage = '';
                     this.lineConnect.updatedAt = 0;
                     this.lineConnect.noProgressCount = 0;
+                    this.lineConnect.loginMode = '';
 
                     this.$bvModal.show('lineConnectModal');
                 },
@@ -536,6 +538,7 @@
                     this.lineConnect.lastStage = '';
                     this.lineConnect.updatedAt = 0;
                     this.lineConnect.noProgressCount = 0;
+                    this.lineConnect.loginMode = '';
 
                     this.stopLineConnectPolling();
                 },
@@ -561,6 +564,7 @@
 
                     const timedOut = !!(payload.timedOut || payload.timed_out);
                     const lastStage = payload.lastStage || payload.last_stage || '';
+                    const loginMode = (payload.loginMode || payload.login_mode || '').toLowerCase();
                     const updatedAtRaw = payload.updatedAt || payload.updated_at || 0;
                     const updatedAt = Number(updatedAtRaw) || 0;
 
@@ -571,7 +575,7 @@
 
                     const qrText = (typeof qrUrl === 'string' && qrUrl.length) ? qrUrl : '';
 
-                    return { status, pin, qrSrc, qrText, timedOut, message, lastStage, updatedAt, raw: payload };
+                    return { status, pin, qrSrc, qrText, timedOut, message, lastStage, loginMode, updatedAt, raw: payload };
                 },
 
                 applyLinePayload(p) {
@@ -579,6 +583,7 @@
                     this.lineConnect.pin = p.pin || '';
                     this.lineConnect.message = p.message || '';
                     this.lineConnect.lastStage = p.lastStage || '';
+                    this.lineConnect.loginMode = p.loginMode || this.lineConnect.loginMode || '';
                     this.lineConnect.updatedAt = p.updatedAt || 0;
 
                     if (p.qrSrc) this.lineConnect.qrSrc = p.qrSrc;
@@ -819,14 +824,13 @@
                             this.applyLinePayload(p);
 
                             this.lineConnect.pollErrorDelayCurrentMs = 0;
-                            const waitingConnect = p.status === 'starting' && p.lastStage === 'listener:connecting';
                             const waitingQr = this.lineConnect.status === 'qr_required'
                                 && !this.lineConnect.qrText
                                 && !this.lineConnect.qrSrc
                                 && (p.lastStage === 'login:qr_waiting'
                                     || p.lastStage === 'login:qr_issued'
                                     || p.lastStage === 'listener:connecting');
-                            if (p.timedOut && (waitingConnect || waitingQr)) {
+                            if (p.timedOut && waitingQr) {
                                 this.lineConnect.noProgressCount += 1;
                             } else {
                                 this.lineConnect.noProgressCount = 0;
