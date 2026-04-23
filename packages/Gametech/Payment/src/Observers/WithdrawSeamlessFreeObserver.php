@@ -284,7 +284,6 @@ HTML;
 
         $oldStatus = (int) $data->getOriginal('status');
         $newStatus = (int) $data->status;
-        $oldEnable = (string) $data->getOriginal('enable');
         $newEnable = (string) $data->enable;
 
         $method = null;
@@ -293,7 +292,7 @@ HTML;
         if ($newStatus === 1 && $newEnable === 'Y') {
             $method = 'withdraw';
             $event = 'wallet.withdraw_approved';
-        } elseif (($oldStatus === 1 && $newStatus !== 1) || ($oldEnable === 'Y' && $newEnable !== 'Y')) {
+        } elseif (in_array($oldStatus, [0, 1], true) && $newStatus === 2) {
             $method = 'rollback';
             $event = 'wallet.rollback_applied';
         } elseif ($newStatus === 2) {
