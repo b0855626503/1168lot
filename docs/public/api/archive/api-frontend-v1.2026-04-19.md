@@ -1,6 +1,6 @@
 # คู่มือ Frontend API V1 (Gametech)
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-23
 
 เอกสารฉบับนี้ rewrite ใหม่ให้เป็นรูปแบบ API Reference เต็มรูปแบบ โดยรวบรวมครบทุก route ที่ประกาศใน `packages/Gametech/FrontendApi/src/Routes/api.php` และจัดโครงหัวข้อให้อ่านง่ายสำหรับทีม Frontend/QA/Backend
 
@@ -10,7 +10,7 @@
 - Source เสริมด้านตัวอย่าง payload:
   - `docs/public/api/frontend-v1/05-route-reference.md`
   - test suite ที่เกี่ยวข้องใน `tests/Feature/FrontendApi/*`
-- จำนวน route ทั้งหมดในเอกสารนี้: **59 routes**
+- จำนวน route ทั้งหมดในเอกสารนี้: **63 routes**
 
 ## 2) มาตรฐานการเรียกใช้งาน
 
@@ -57,66 +57,66 @@
 | 1 | Auth | `GET` | `/api/v1/auth/register/banks` | No | `frontend.api.v1.auth.register.banks` |
 | 2 | Auth | `POST` | `/api/v1/auth/register/bank-account-name` | No | `frontend.api.v1.auth.register.bank_account_name` |
 | 3 | Auth | `POST` | `/api/v1/auth/register` | No | `frontend.api.v1.auth.register` |
-| 4 | Auth | `POST` | `/api/v1/auth/login` | No | `frontend.api.v1.auth.login` |
-| 5 | Games | `GET` | `/api/v1/games/types` | No | `frontend.api.v1.games.types` |
-| 6 | Games | `GET` | `/api/v1/games/providers/{type}` | No | `frontend.api.v1.games.providers` |
-| 7 | Games | `GET` | `/api/v1/games/{type}/{provider}` | No | `frontend.api.v1.games.list` |
-| 8 | Other | `GET` | `/api/v1/slides` | No | `frontend.api.v1.slides.list` |
-| 9 | Realtime & Meta | `GET` | `/api/v1/meta/online-members` | No | `frontend.api.v1.meta.online_members` |
-| 10 | Realtime & Meta | `GET` | `/api/v1/meta/contact-channels` | No | `frontend.api.v1.meta.contact_channels` |
-| 11 | Realtime & Meta | `GET` | `/api/v1/meta/site` | No | `frontend.api.v1.meta.site` |
-| 12 | Realtime & Meta | `GET` | `/api/v1/realtime/config` | No | `frontend.api.v1.realtime.config` |
-| 13 | Lotto | `GET` | `/api/v1/lotto/draws` | No | `frontend.api.v1.lotto.draws` |
-| 14 | Lotto | `GET` | `/api/v1/lotto/draws/{id}` | No | `frontend.api.v1.lotto.draw` |
-| 15 | Lotto | `GET` | `/api/v1/lotto/markets/latest` | No | `frontend.api.v1.lotto.markets.latest` |
-| 16 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/betting-context` | No | `frontend.api.v1.lotto.betting_context` |
-| 17 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/results` | No | `frontend.api.v1.lotto.market_results` |
-| 18 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/draws/{drawId}/result` | No | `frontend.api.v1.lotto.draw_result` |
-| 19 | Lotto | `GET` | `/api/v1/lotto/results/by-date` | No | `frontend.api.v1.lotto.results_by_date` |
-| 20 | Lotto | `GET` | `/api/v1/lotto/navbar-config` | No | `frontend.api.v1.lotto.navbar_config` |
-| 21 | Auth | `POST` | `/api/v1/auth/logout` | Yes | `frontend.api.v1.auth.logout` |
-| 22 | Member | `GET` | `/api/v1/member/profile` | Yes | `frontend.api.v1.member.profile` |
-| 23 | Member | `GET` | `/api/v1/member/balance` | Yes | `frontend.api.v1.member.balance` |
-| 24 | Member | `GET` | `/api/v1/member/loadbalance` | Yes | `frontend.api.v1.member.loadbalance` |
-| 25 | Member | `POST` | `/api/v1/member/change-password` | Yes | `frontend.api.v1.member.change_password` |
-| 26 | Member | `POST` | `/api/v1/member/wallet-address` | Yes | `frontend.api.v1.member.wallet_address` |
-| 27 | Member | `GET` | `/api/v1/member/contributor` | Yes | `frontend.api.v1.member.contributor` |
-| 28 | Member | `GET` | `/api/v1/member/history` | Yes | `frontend.api.v1.member.history` |
-| 29 | Member | `GET` | `/api/v1/member/history/{type}` | Yes | `frontend.api.v1.member.history.type` |
-| 30 | Member | `GET` | `/api/v1/member/realtime-context` | Yes | `frontend.api.v1.member.realtime_context` |
-| 31 | Member | `POST` | `/api/v1/member/heartbeat` | Yes | `frontend.api.v1.member.heartbeat` |
-| 32 | Realtime & Meta | `POST` | `/api/v1/realtime/auth` | Yes | `frontend.api.v1.realtime.auth` |
-| 33 | Wallet & Payment | `POST` | `/api/v1/wallet/withdraw` | Yes | `frontend.api.v1.wallet.withdraw` |
-| 34 | Wallet & Payment | `POST` | `/api/v1/wallet/claim` | Yes | `frontend.api.v1.wallet.claim` |
-| 35 | Wallet & Payment | `GET` | `/api/v1/wallet/transactions` | Yes | `frontend.api.v1.wallet.transactions` |
-| 36 | Wallet & Payment | `POST` | `/api/v1/coupon/redeem` | Yes | `frontend.api.v1.coupon.redeem` |
-| 37 | Wallet & Payment | `GET` | `/api/v1/coupon/my` | Yes | `frontend.api.v1.coupon.my` |
-| 38 | Wallet & Payment | `POST` | `/api/v1/coupon/my/{code}/claim` | Yes | `frontend.api.v1.coupon.claim` |
-| 39 | Wallet & Payment | `GET` | `/api/v1/deposit/channels` | Yes | `frontend.api.v1.deposit.channels` |
-| 40 | Wallet & Payment | `POST` | `/api/v1/deposit/loadbank` | Yes | `frontend.api.v1.deposit.loadbank` |
-| 41 | Wallet & Payment | `GET` | `/api/v1/smkpay/deposit/status/{txid}` | Yes | `api.smkpay.deposit.status` |
-| 42 | Wallet & Payment | `POST` | `/api/v1/smkpay/deposit/expire/{txid}` | Yes | `api.smkpay.deposit.expire` |
-| 43 | Wallet & Payment | `POST` | `/api/v1/smkpay/deposit/create` | Yes | `api.smkpay.deposit` |
-| 44 | Wallet & Payment | `GET` | `/api/v1/smkpay/qrcode/{id}` | Yes | `api.smkpay.index` |
-| 45 | Promotion | `GET` | `/api/v1/promotion/list` | Yes | `frontend.api.v1.promotion.list` |
-| 46 | Promotion | `POST` | `/api/v1/promotion/select` | Yes | `frontend.api.v1.promotion.select` |
-| 47 | Promotion | `POST` | `/api/v1/promotion/deselect` | Yes | `frontend.api.v1.promotion.deselect` |
-| 48 | Games | `POST` | `/api/v1/games/login` | Yes | `frontend.api.v1.games.login` |
-| 49 | Games | `GET` | `/api/v1/games/login/{game}/{code}` | Yes | `frontend.api.v1.games.login.path` |
-| 50 | Lotto | `POST` | `/api/v1/lotto/bet` | Yes | `frontend.api.v1.lotto.bet` |
-| 51 | Lotto | `GET` | `/api/v1/lotto/groups/{groupId}/packages` | Yes | `frontend.api.v1.lotto.packages` |
-| 52 | Lotto | `POST` | `/api/v1/lotto/groups/{groupId}/select-package` | Yes | `frontend.api.v1.lotto.select_package` |
-| 53 | Lotto | `GET` | `/api/v1/lotto/groups/{groupId}/selected-package` | Yes | `frontend.api.v1.lotto.selected_package` |
-| 54 | Lotto | `GET` | `/api/v1/lotto/tickets` | Yes | `frontend.api.v1.lotto.tickets` |
-| 55 | Lotto | `GET` | `/api/v1/lotto/tickets/{id}` | Yes | `frontend.api.v1.lotto.ticket` |
-| 56 | Lotto | `POST` | `/api/v1/lotto/tickets/{id}/cancel` | Yes | `frontend.api.v1.lotto.cancel` |
-| 57 | Wheel | `GET` | `/api/v1/wheel/list` | Yes | `frontend.api.v1.wheel.list` |
-| 58 | Wheel | `POST` | `/api/v1/wheel/spin` | Yes | `frontend.api.v1.wheel.spin` |
-| 59 | Wheel | `GET` | `/api/v1/wheel/history` | Yes | `frontend.api.v1.wheel.history` |
-| 60 | Reward | `GET` | `/api/v1/reward/list` | Yes | `frontend.api.v1.reward.list` |
-| 61 | Reward | `POST` | `/api/v1/reward/redeem` | Yes | `frontend.api.v1.reward.redeem` |
-| 62 | Reward | `GET` | `/api/v1/reward/history` | Yes | `frontend.api.v1.reward.history` |
-
+| 4 | Auth | `POST` | `/api/v1/auth/register-with-username` | No | `frontend.api.v1.auth.register_with_username` |
+| 5 | Auth | `POST` | `/api/v1/auth/login` | No | `frontend.api.v1.auth.login` |
+| 6 | Games | `GET` | `/api/v1/games/types` | No | `frontend.api.v1.games.types` |
+| 7 | Games | `GET` | `/api/v1/games/providers/{type}` | No | `frontend.api.v1.games.providers` |
+| 8 | Games | `GET` | `/api/v1/games/{type}/{provider}` | No | `frontend.api.v1.games.list` |
+| 9 | Other | `GET` | `/api/v1/slides` | No | `frontend.api.v1.slides.list` |
+| 10 | Realtime & Meta | `GET` | `/api/v1/meta/online-members` | No | `frontend.api.v1.meta.online_members` |
+| 11 | Realtime & Meta | `GET` | `/api/v1/meta/contact-channels` | No | `frontend.api.v1.meta.contact_channels` |
+| 12 | Realtime & Meta | `GET` | `/api/v1/meta/site` | No | `frontend.api.v1.meta.site` |
+| 13 | Realtime & Meta | `GET` | `/api/v1/realtime/config` | No | `frontend.api.v1.realtime.config` |
+| 14 | Lotto | `GET` | `/api/v1/lotto/draws` | No | `frontend.api.v1.lotto.draws` |
+| 15 | Lotto | `GET` | `/api/v1/lotto/draws/{id}` | No | `frontend.api.v1.lotto.draw` |
+| 16 | Lotto | `GET` | `/api/v1/lotto/markets/latest` | No | `frontend.api.v1.lotto.markets.latest` |
+| 17 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/betting-context` | No | `frontend.api.v1.lotto.betting_context` |
+| 18 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/results` | No | `frontend.api.v1.lotto.market_results` |
+| 19 | Lotto | `GET` | `/api/v1/lotto/markets/{marketId}/draws/{drawId}/result` | No | `frontend.api.v1.lotto.draw_result` |
+| 20 | Lotto | `GET` | `/api/v1/lotto/results/by-date` | No | `frontend.api.v1.lotto.results_by_date` |
+| 21 | Lotto | `GET` | `/api/v1/lotto/navbar-config` | No | `frontend.api.v1.lotto.navbar_config` |
+| 22 | Auth | `POST` | `/api/v1/auth/logout` | Yes | `frontend.api.v1.auth.logout` |
+| 23 | Member | `GET` | `/api/v1/member/profile` | Yes | `frontend.api.v1.member.profile` |
+| 24 | Member | `GET` | `/api/v1/member/balance` | Yes | `frontend.api.v1.member.balance` |
+| 25 | Member | `GET` | `/api/v1/member/loadbalance` | Yes | `frontend.api.v1.member.loadbalance` |
+| 26 | Member | `POST` | `/api/v1/member/change-password` | Yes | `frontend.api.v1.member.change_password` |
+| 27 | Member | `POST` | `/api/v1/member/wallet-address` | Yes | `frontend.api.v1.member.wallet_address` |
+| 28 | Member | `GET` | `/api/v1/member/contributor` | Yes | `frontend.api.v1.member.contributor` |
+| 29 | Member | `GET` | `/api/v1/member/history` | Yes | `frontend.api.v1.member.history` |
+| 30 | Member | `GET` | `/api/v1/member/history/{type}` | Yes | `frontend.api.v1.member.history.type` |
+| 31 | Member | `GET` | `/api/v1/member/realtime-context` | Yes | `frontend.api.v1.member.realtime_context` |
+| 32 | Member | `POST` | `/api/v1/member/heartbeat` | Yes | `frontend.api.v1.member.heartbeat` |
+| 33 | Realtime & Meta | `POST` | `/api/v1/realtime/auth` | Yes | `frontend.api.v1.realtime.auth` |
+| 34 | Wallet & Payment | `POST` | `/api/v1/wallet/withdraw` | Yes | `frontend.api.v1.wallet.withdraw` |
+| 35 | Wallet & Payment | `POST` | `/api/v1/wallet/claim` | Yes | `frontend.api.v1.wallet.claim` |
+| 36 | Wallet & Payment | `GET` | `/api/v1/wallet/transactions` | Yes | `frontend.api.v1.wallet.transactions` |
+| 37 | Wallet & Payment | `POST` | `/api/v1/coupon/redeem` | Yes | `frontend.api.v1.coupon.redeem` |
+| 38 | Wallet & Payment | `GET` | `/api/v1/coupon/my` | Yes | `frontend.api.v1.coupon.my` |
+| 39 | Wallet & Payment | `POST` | `/api/v1/coupon/my/{code}/claim` | Yes | `frontend.api.v1.coupon.claim` |
+| 40 | Wallet & Payment | `GET` | `/api/v1/deposit/channels` | Yes | `frontend.api.v1.deposit.channels` |
+| 41 | Wallet & Payment | `POST` | `/api/v1/deposit/loadbank` | Yes | `frontend.api.v1.deposit.loadbank` |
+| 42 | Wallet & Payment | `GET` | `/api/v1/smkpay/deposit/status/{txid}` | Yes | `api.smkpay.deposit.status` |
+| 43 | Wallet & Payment | `POST` | `/api/v1/smkpay/deposit/expire/{txid}` | Yes | `api.smkpay.deposit.expire` |
+| 44 | Wallet & Payment | `POST` | `/api/v1/smkpay/deposit/create` | Yes | `api.smkpay.deposit` |
+| 45 | Wallet & Payment | `GET` | `/api/v1/smkpay/qrcode/{id}` | Yes | `api.smkpay.index` |
+| 46 | Promotion | `GET` | `/api/v1/promotion/list` | Yes | `frontend.api.v1.promotion.list` |
+| 47 | Promotion | `POST` | `/api/v1/promotion/select` | Yes | `frontend.api.v1.promotion.select` |
+| 48 | Promotion | `POST` | `/api/v1/promotion/deselect` | Yes | `frontend.api.v1.promotion.deselect` |
+| 49 | Games | `POST` | `/api/v1/games/login` | Yes | `frontend.api.v1.games.login` |
+| 50 | Games | `GET` | `/api/v1/games/login/{game}/{code}` | Yes | `frontend.api.v1.games.login.path` |
+| 51 | Lotto | `POST` | `/api/v1/lotto/bet` | Yes | `frontend.api.v1.lotto.bet` |
+| 52 | Lotto | `GET` | `/api/v1/lotto/groups/{groupId}/packages` | Yes | `frontend.api.v1.lotto.packages` |
+| 53 | Lotto | `POST` | `/api/v1/lotto/groups/{groupId}/select-package` | Yes | `frontend.api.v1.lotto.select_package` |
+| 54 | Lotto | `GET` | `/api/v1/lotto/groups/{groupId}/selected-package` | Yes | `frontend.api.v1.lotto.selected_package` |
+| 55 | Lotto | `GET` | `/api/v1/lotto/tickets` | Yes | `frontend.api.v1.lotto.tickets` |
+| 56 | Lotto | `GET` | `/api/v1/lotto/tickets/{id}` | Yes | `frontend.api.v1.lotto.ticket` |
+| 57 | Lotto | `POST` | `/api/v1/lotto/tickets/{id}/cancel` | Yes | `frontend.api.v1.lotto.cancel` |
+| 58 | Wheel | `GET` | `/api/v1/wheel/list` | Yes | `frontend.api.v1.wheel.list` |
+| 59 | Wheel | `POST` | `/api/v1/wheel/spin` | Yes | `frontend.api.v1.wheel.spin` |
+| 60 | Wheel | `GET` | `/api/v1/wheel/history` | Yes | `frontend.api.v1.wheel.history` |
+| 61 | Reward | `GET` | `/api/v1/reward/list` | Yes | `frontend.api.v1.reward.list` |
+| 62 | Reward | `POST` | `/api/v1/reward/redeem` | Yes | `frontend.api.v1.reward.redeem` |
+| 63 | Reward | `GET` | `/api/v1/reward/history` | Yes | `frontend.api.v1.reward.history` |
 ## 4) Detailed Route Reference
 
 > ส่วนนี้เป็นรายละเอียดราย route พร้อมตัวอย่าง request/response ครบทุกเส้น
@@ -194,6 +194,31 @@ GET /api/v1/auth/register/banks
 }
 ```
 
+### `POST /api/v1/auth/register-with-username`
+- คำอธิบาย: สมัครสมาชิกแบบแยก `user_name` (ไม่บังคับเป็นเบอร์โทร)
+- ใช้เมื่อ: หน้า signup เวอร์ชันที่รองรับ username แยกจากเบอร์
+- Auth: ไม่ต้องใช้ token
+- Request example:
+```json
+{
+  "user_name": "apiuser01",
+  "tel": "0900000014",
+  "password": "pass1234",
+  "password_confirm": "pass1234",
+  "firstname": "Api",
+  "lastname": "User",
+  "acc_no": "1234567890",
+  "bank": 1
+}
+```
+- Response example:
+```json
+{
+  "success": true,
+  "message": "สมัครสมาชิกสำเร็จ"
+}
+```
+
 ### `POST /api/v1/auth/login`
 - คำอธิบาย: เข้าสู่ระบบและออก access token สำหรับเรียก API ที่ต้องยืนยันตัวตน
 - ใช้เมื่อ: ผู้ใช้ล็อกอินจากหน้าแรก/หน้าเข้าสู่ระบบ
@@ -219,7 +244,7 @@ GET /api/v1/auth/register/banks
 ```
 
 ### `GET /api/v1/games/types`
-- คำอธิบาย: ดึงประเภทเกมที่เปิดให้บริการ เช่น slot, casino, sport
+- คำอธิบาย: ดึงประเภทเกมที่เปิดให้บริการ
 - ใช้เมื่อ: แสดงแท็บหรือหมวดหมู่เกมบนหน้าเกม
 - Auth: ไม่ต้องใช้ token
 - Request example:
@@ -230,12 +255,14 @@ GET /api/v1/games/types
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
-  "data": {
-    "items": [
-      { "type": "slot", "title": "Slot" }
-    ]
-  }
+  "message": "ดึงประเภทเกมสำเร็จ",
+  "data": [
+    {
+      "id": "slot",
+      "name": "Slot",
+      "status_open": "Y"
+    }
+  ]
 }
 ```
 
@@ -253,13 +280,19 @@ GET /api/v1/games/providers/slot
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
-  "data": {
-    "type": "slot",
-    "providers": [
-      { "code": "PGSOFT", "name": "PG Soft" }
-    ]
-  }
+  "message": "ดึงรายการค่ายเกมสำเร็จ",
+  "data": [
+    {
+      "provider": "PGSOFT",
+      "providerTier": "standard",
+      "providerName": "PG Soft",
+      "providerType": "SLOT",
+      "logoURL": "https://...",
+      "logoTransparentURL": "https://...",
+      "status": "ACTIVE",
+      "detailStatus": "1"
+    }
+  ]
 }
 ```
 
@@ -278,12 +311,16 @@ GET /api/v1/games/slot/PGSOFT
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
-  "data": {
-    "items": [
-      { "code": "treasures-aztec", "name": "Treasures of Aztec" }
-    ]
-  }
+  "message": "ดึงรายการเกมสำเร็จ",
+  "data": [
+    {
+      "id": "treasures-aztec",
+      "provider": "PGSOFT",
+      "gameName": "Treasures of Aztec",
+      "loginURL": "https://.../api/v1/games/login/PGSOFT/treasures-aztec",
+      "status": "ACTIVE"
+    }
+  ]
 }
 ```
 
@@ -656,16 +693,19 @@ GET /api/v1/member/loadbalance
 - Request example:
 ```json
 {
-  "password_old": "pass1234",
-  "password_new": "pass5678",
-  "password_confirm": "pass5678"
+  "password": "pass5678",
+  "password_confirmation": "pass5678"
 }
 ```
+- หมายเหตุ: ระบบรองรับ `password_confirm` ได้ด้วย
 - Response example:
 ```json
 {
   "success": true,
-  "message": "เปลี่ยนรหัสผ่านสำเร็จ"
+  "message": "เปลี่ยนรหัสผ่านสำเร็จ",
+  "data": {
+    "member_code": 9001
+  }
 }
 ```
 
@@ -753,7 +793,7 @@ GET /api/v1/member/history/withdraw
 
 ### `GET /api/v1/member/realtime-context`
 - คำอธิบาย: ดึงข้อมูล context สำหรับ subscribe ช่อง realtime ของสมาชิก
-- ใช้เมื่อ: ตั้งค่า presence/channel หลังล็อกอิน
+- ใช้เมื่อ: ตั้งค่า private channel หลังล็อกอิน
 - Request example:
 ```http
 GET /api/v1/member/realtime-context
@@ -762,10 +802,10 @@ GET /api/v1/member/realtime-context
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
+  "message": "ดึง realtime member context สำเร็จ",
   "data": {
-    "member_channel": "member.9001",
-    "activity_channel": "member.activity.9001"
+    "member_code": 9001,
+    "private_channel": "app_members.9001"
   }
 }
 ```
@@ -775,15 +815,17 @@ GET /api/v1/member/realtime-context
 - ใช้เมื่อ: ยิงเป็นช่วงเวลาเพื่อคงสถานะ active session
 - Request example:
 ```json
-{
-  "at": "2026-04-19T12:34:56+07:00"
-}
+{}
 ```
 - Response example:
 ```json
 {
   "success": true,
-  "message": "heartbeat received"
+  "message": "อัปเดตสถานะออนไลน์สำเร็จ",
+  "data": {
+    "heartbeat": "ok",
+    "online": 126
+  }
 }
 ```
 
@@ -829,17 +871,27 @@ GET /api/v1/member/realtime-context
 - Request example:
 ```json
 {
-  "source": "bonus"
+  "type": "bonus"
 }
 ```
 - Response example:
 ```json
 {
   "success": true,
-  "message": "โอนยอดสำเร็จ",
+  "message": "ดำเนินการโยก เข้ากระเป๋าสำเร็จแล้ว",
   "data": {
+    "type": "bonus",
+    "legacy_type": "BONUS",
+    "claimed_amount": 100,
     "target_wallet": "balance",
-    "amount": 100
+    "profile": {
+      "balance": 1200,
+      "balance_free": 0,
+      "bonus": 0,
+      "cashback": 0,
+      "ic": 0,
+      "faststart": 0
+    }
   }
 }
 ```
@@ -879,14 +931,19 @@ GET /api/v1/wallet/transactions?type=all&date_start=2026-04-01&date_stop=2026-04
 - Request example:
 ```json
 {
-  "code": "WELCOME100"
+  "coupon": "WELCOME100"
 }
 ```
 - Response example:
 ```json
 {
   "success": true,
-  "message": "รับคูปองสำเร็จ"
+  "message": "รับคูปองสำเร็จ",
+  "data": {
+    "item": {
+      "code": "WELCOME100"
+    }
+  }
 }
 ```
 
@@ -938,34 +995,44 @@ GET /api/v1/deposit/channels
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
+  "message": "ดึงช่องทางเติมเงินสำเร็จ",
   "data": {
-    "items": [
-      { "code": "smkpay", "name": "SMKPay" }
-    ]
+    "deposit": {
+      "bank": 1,
+      "payment": 1,
+      "tw": 0,
+      "slip": 1,
+      "sort": {
+        "payment": 1,
+        "tw": null,
+        "slip": 3,
+        "bank": 2
+      }
+    }
   }
 }
 ```
 
 ### `POST /api/v1/deposit/loadbank`
 - คำอธิบาย: ดึงข้อมูลบัญชีธนาคารปลายทางของระบบสำหรับฝาก
-- ใช้เมื่อ: ผู้ใช้เลือกฝากผ่านธนาคารและต้องการข้อมูลบัญชีรับโอน
+- ใช้เมื่อ: ผู้ใช้เลือกวิธีฝากและต้องการข้อมูลปลายทาง
 - Request example:
 ```json
 {
-  "channel": "bank"
+  "method": "bank"
 }
 ```
 - Response example:
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
-  "data": {
-    "banks": [
-      { "code": 1, "name": "Kasikorn Bank" }
-    ]
-  }
+  "bank": [
+    {
+      "acc_no": "1234567890",
+      "acc_name": "COMPANY",
+      "bank_name": "Kasikorn Bank"
+    }
+  ]
 }
 ```
 
@@ -1013,8 +1080,7 @@ GET /api/v1/smkpay/deposit/status/REQ-202604130001
 - Request example:
 ```json
 {
-  "amount": 300,
-  "channel": "smkpay"
+  "amount": 300
 }
 ```
 - Response example:
@@ -1061,11 +1127,12 @@ GET /api/v1/promotion/list
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
+  "message": "Complete",
   "data": {
-    "items": [
-      { "code": "PRO2026", "name": "โบนัสต้อนรับ" }
-    ]
+    "promotions": [
+      { "code": 1, "name_th": "โบนัสต้อนรับ" }
+    ],
+    "getpro": false
   }
 }
 ```
@@ -1076,7 +1143,7 @@ GET /api/v1/promotion/list
 - Request example:
 ```json
 {
-  "pro_code": "PRO2026"
+  "promotion": "PRO2026"
 }
 ```
 - Response example:
@@ -1092,9 +1159,7 @@ GET /api/v1/promotion/list
 - ใช้เมื่อ: ผู้ใช้ต้องการออกจากโปรก่อนเปลี่ยนโปรใหม่
 - Request example:
 ```json
-{
-  "pro_code": "PRO2026"
-}
+{}
 ```
 - Response example:
 ```json
@@ -1110,8 +1175,8 @@ GET /api/v1/promotion/list
 - Request example:
 ```json
 {
-  "game_code": "treasures-aztec",
-  "provider_code": "PGSOFT"
+  "id": "PGSOFT",
+  "game": "treasures-aztec"
 }
 ```
 - Response example:
@@ -1153,9 +1218,9 @@ GET /api/v1/games/login/PGSOFT/treasures-aztec
 ```json
 {
   "draw_id": 101,
-  "market_id": 1,
-  "numbers": [
-    { "number": "12", "price": 100 }
+  "package_id": 11,
+  "items": [
+    { "bet_type": "2_top", "number": "12", "amount": 100 }
   ]
 }
 ```
@@ -1163,10 +1228,16 @@ GET /api/v1/games/login/PGSOFT/treasures-aztec
 ```json
 {
   "success": true,
-  "message": "บันทึกโพยสำเร็จ",
+  "message": "แทงหวยสำเร็จ",
   "data": {
     "ticket_id": 1001,
-    "total_amount": 100
+    "total_amount": 100,
+    "total_bet_amount": 100,
+    "total_discount_amount": 0,
+    "total_net_amount": 100,
+    "total_win_amount": 0,
+    "status": "pending",
+    "item_count": 1
   }
 }
 ```
@@ -1310,11 +1381,12 @@ GET /api/v1/wheel/list
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
+  "message": "ดึงข้อมูลวงล้อสำเร็จ",
   "data": {
-    "items": [
-      { "id": 1, "name": "Lucky Wheel", "spins_left": 1 }
-    ]
+    "wheel": [
+      { "code": 1, "text": "20", "name": "BONUS_20" }
+    ],
+    "enabled": true
   }
 }
 ```
@@ -1324,20 +1396,24 @@ GET /api/v1/wheel/list
 - ใช้เมื่อ: ผู้ใช้กดปุ่มหมุนวงล้อ
 - Request example:
 ```json
-{
-  "wheel_id": 1
-}
+{}
 ```
 - Response example:
 ```json
 {
   "success": true,
-  "message": "หมุนวงล้อสำเร็จ",
-  "data": {
-    "wheel_id": 1,
-    "prize": "BONUS_20",
-    "amount": 20
-  }
+  "message": "complete",
+  "diamond": 9,
+  "format": {
+    "title": "ยินดีด้วย",
+    "msg": "ระบบเพิ่มรางวัลให้แล้ว",
+    "img": "https://.../spin_img/spin-win.png",
+    "point": 88,
+    "diamond": 9
+  },
+  "spin": [
+    { "text": 20, "image": "https://..." }
+  ]
 }
 ```
 
@@ -1352,10 +1428,10 @@ GET /api/v1/wheel/history?page=1
 ```json
 {
   "success": true,
-  "message": "สำเร็จ",
+  "message": "ดึงประวัติวงล้อสำเร็จ",
   "data": {
-    "items": [
-      { "wheel_id": 1, "prize": "BONUS_20", "created_at": "2026-04-19 10:30:00" }
+    "history": [
+      { "id": 1, "amount": 20, "created_at": "2026-04-19 10:30:00" }
     ]
   }
 }

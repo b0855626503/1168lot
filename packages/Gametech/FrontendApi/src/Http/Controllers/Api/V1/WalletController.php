@@ -49,7 +49,8 @@ class WalletController extends BaseController
                 return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
-            $type = strtolower(trim((string) $request->input('type')));
+            $source = strtolower(trim((string) $request->input('source', $request->input('type'))));
+            $type = $source;
             if (! array_key_exists($type, self::CLAIMABLE_TYPES)) {
                 return $this->sendError('ไม่รองรับประเภทโบนัสที่ร้องขอ', 422);
             }
@@ -66,7 +67,7 @@ class WalletController extends BaseController
 
             if ($currentWalletBalance > $proReset) {
                 return $this->sendError(
-                    'ไม่สามารถทำรายการได้ โยกเข้าได้เมื่อยอดเครดิต น้อยกว่าหรือเท่ากับ ' . $proReset,
+                    'ไม่สามารถทำรายการได้ โยกเข้าได้เมื่อยอดเครดิต น้อยกว่าหรือเท่ากับ '.$proReset,
                     422
                 );
             }
@@ -88,6 +89,7 @@ class WalletController extends BaseController
             $freshMember = app('Gametech\Member\Repositories\MemberRepository')->findOrFail($memberCode);
 
             return $this->sendResponse([
+                'source' => $source,
                 'type' => $type,
                 'legacy_type' => $legacyType,
                 'claimed_amount' => $claimSourceAmount,
@@ -376,7 +378,7 @@ class WalletController extends BaseController
     }
 
     /**
-     * @param Collection<int, object> $rows
+     * @param  Collection<int, object>  $rows
      * @return array<int, array{ticket_id:int,market_name:string,draw_date:?string}>
      */
     private function lottoContextByTicketIds(Collection $rows): array
@@ -548,11 +550,11 @@ class WalletController extends BaseController
 
         return match ($this->normalizeLanguage($language)) {
             'en' => $base
-                . ($marketName !== '' ? ': ' . $marketName : '')
-                . ($drawDate !== '' ? ' draw ' . $drawDate : ''),
+                .($marketName !== '' ? ': '.$marketName : '')
+                .($drawDate !== '' ? ' draw '.$drawDate : ''),
             default => $base
-                . ($marketName !== '' ? ': ' . $marketName : '')
-                . ($drawDate !== '' ? ' งวดวันที่ ' . $drawDate : ''),
+                .($marketName !== '' ? ': '.$marketName : '')
+                .($drawDate !== '' ? ' งวดวันที่ '.$drawDate : ''),
         };
     }
 
