@@ -30,7 +30,6 @@ class KbankBiz
     private int $logBodyPreviewLen = 1500;
     private ?string $logFile = null;
     private array $lastRequestHeaders = [];
-    private $debugEmitter = null;
 
     // === UA เดียวทั้งระบบ ===
     private string $UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
@@ -47,13 +46,13 @@ class KbankBiz
     private string $proxyStrategy = 'random'; // 'random' | 'round_robin'
     private int $proxyIndex = 0;              // ใช้กับ round-robin
 
-    private bool $logEnabled = false;
+    private bool $logEnabled = true;
 
-    private bool $randSleepMs = false;
+    private bool $randSleepMs = true;
 
     private int $rowPerPage = 30;
 
-    private bool $outBoundIP = false;
+    private bool $outBoundIP = true;
 
     public function __construct()
     {
@@ -86,11 +85,6 @@ class KbankBiz
     public function disableProxy(): void
     {
         $this->useProxy = false;
-        $this->proxyHost = '';
-        $this->proxyPort = 0;
-        $this->proxyUser = null;
-        $this->proxyPass = null;
-        $this->proxyPorts = [];
     }
 
     /** เปิดใช้งาน Web Unblocker/DC proxy (รับได้ทั้งพอร์ตเดี่ยวหรือหลายพอร์ต) */
@@ -118,11 +112,10 @@ class KbankBiz
         $this->logEnabled = (bool)($cfg['log_enabled'] ?? true);
         $this->randSleepMs = (bool)($cfg['sleep_enabled'] ?? true);
         $this->outBoundIP = (bool)($cfg['outbound_enabled'] ?? true);
-        $rowPerPage = (int)($cfg['row_per_page'] ?? $this->rowPerPage);
-        $this->rowPerPage = max(1, min($rowPerPage, 100));
+        $this->rowPerPage = (int)($cfg['row_per_page'] ?? $this->rowPerPage);
 
         if (!$cfg || empty($cfg['enabled'])) {
-            $this->disableProxy();
+            $this->useProxy = false;
             return;
         }
 
@@ -152,7 +145,7 @@ class KbankBiz
                 $this->useWebUnblocker($user, $pass, $host, $port);
             }
         } else {
-            $this->disableProxy();
+            $this->useProxy = false;
         }
     }
 
@@ -168,7 +161,16 @@ class KbankBiz
         // เปิดใช้ proxy ตาม config อัตโนมัติ (ถ้าตั้งค่าไว้)
         $this->applyProxyFromConfig();
 
-        $this->logProxyConfig('proxy.cfg');
+        // log แบบปลอดภัย (ไม่ dump cfg ตรง ๆ)
+        $this->logStep('proxy.cfg', [
+            'enabled' => (bool)(config('proxy.web_unblocker.enabled') ?? false),
+            'host' => $this->proxyHost ?: null,
+            'port' => $this->proxyPort ?: null,
+            'ports' => !empty($this->proxyPorts) ? $this->proxyPorts : null,
+            'strategy' => $this->proxyStrategy,
+            'useProxy' => $this->useProxy,
+            'user_set' => (bool)$this->proxyUser,
+        ]);
     }
 
     public function setAccountNumber($accnum)
@@ -193,6 +195,15 @@ class KbankBiz
     private function reqId(): string
     {
         return date('YmdHis') . sprintf('%06d', mt_rand(0, 999999));
+    }
+
+    private function isSecurityPage(string $bodyOrHeaders): bool
+    {
+        if (stripos($bodyOrHeaders, 'HTTP/1.1 555') !== false) return true;
+        if (stripos($bodyOrHeaders, '555 Security') !== false) return true;
+        if (stripos($bodyOrHeaders, '_event_transid') !== false) return true;
+        if (stripos($bodyOrHeaders, '<html') !== false && stripos($bodyOrHeaders, 'text/html') !== false) return true;
+        return false;
     }
 
     private function warmUpForWaf(): void
@@ -243,6 +254,10 @@ class KbankBiz
 
     private function logStep(string $step, array $data = []): void
     {
+        if (!$this->logEnabled) {
+            return;
+        }
+        if (!$this->logFile) return;
         if ($this->maskSensitive) $data = $this->maskArray($data);
         $row = [
             'ts' => date('Y-m-d H:i:s'),
@@ -250,23 +265,7 @@ class KbankBiz
             'acc' => $this->accnum,
             'data' => $data,
         ];
-
-        if ($this->logEnabled && $this->logFile) {
-            @file_put_contents($this->logFile, json_encode($row, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
-        }
-
-        if (is_callable($this->debugEmitter)) {
-            try {
-                call_user_func($this->debugEmitter, $row);
-            } catch (\Throwable $e) {
-                // Debug callback must never interrupt banking flow.
-            }
-        }
-    }
-
-    public function setDebugEmitter(?callable $emitter): void
-    {
-        $this->debugEmitter = $emitter;
+        @file_put_contents($this->logFile, json_encode($row, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
     }
 
     private function maskArray(array $arr): array
@@ -352,7 +351,6 @@ class KbankBiz
         curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($this->ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($this->ch, CURLOPT_COOKIEJAR, $this->PATH . '/' . $this->cookiefilename);
         curl_setopt($this->ch, CURLOPT_COOKIEFILE, $this->PATH . '/' . $this->cookiefilename);
 
@@ -386,40 +384,6 @@ class KbankBiz
         curl_setopt($this->ch, CURLOPT_HTTPHEADER, $headers);
     }
 
-    private function encodeJson(array $payload): string
-    {
-        $json = json_encode($payload);
-        if ($json === false) {
-            return '{}';
-        }
-
-        return $json;
-    }
-
-    private function resetAuthState(bool $deleteFiles = false): void
-    {
-        $this->X_SESSION_TOKEN = '';
-        $this->OWNERID = '';
-        $this->COMPANYID = '';
-
-        if ($deleteFiles) {
-            $this->deleteFile();
-        }
-    }
-
-    private function logProxyConfig(string $step): void
-    {
-        $this->logStep($step, [
-            'enabled' => (bool)(config('proxy.web_unblocker.enabled') ?? false),
-            'host' => $this->proxyHost ?: null,
-            'port' => $this->proxyPort ?: null,
-            'ports' => !empty($this->proxyPorts) ? $this->proxyPorts : null,
-            'strategy' => $this->proxyStrategy,
-            'useProxy' => $this->useProxy,
-            'user_set' => (bool)$this->proxyUser,
-        ]);
-    }
-
     private function isHtmlOrNotJson(string $body, array $respHeaders): bool
     {
         $ct = '';
@@ -441,32 +405,6 @@ class KbankBiz
         $data = json_decode($body, true);
         if (json_last_error() !== JSON_ERROR_NONE) return null;
         return $data;
-    }
-
-    private function splitCurlResponse(string $response): array
-    {
-        $headerSize = (int) curl_getinfo($this->ch, CURLINFO_HEADER_SIZE);
-        $rawHeaders = substr($response, 0, $headerSize);
-        $body = substr($response, $headerSize);
-
-        return [$rawHeaders, $body];
-    }
-
-    private function extractSessionToken(array $headersResp): string
-    {
-        return (string) ($headersResp['x-session-token'] ?? ($headersResp['X-SESSION-TOKEN'] ?? ''));
-    }
-
-    private function syncSessionTokenFromHeaders(array $headersResp): bool
-    {
-        $newToken = $this->extractSessionToken($headersResp);
-        if ($newToken === '') {
-            return false;
-        }
-
-        $this->X_SESSION_TOKEN = $newToken;
-        $this->setToken();
-        return true;
     }
 
     private function buildKbizHeadersMinimal(array $extras = []): array
@@ -531,6 +469,30 @@ class KbankBiz
         return $res;
     }
 
+    private function retryOnceIfChallenged_(callable $fn)
+    {
+        $res = $fn();
+        $status = $res['status'] ?? 0;
+        $headers = $res['headers'] ?? [];
+        $body = $res['body'] ?? '';
+
+        if ($status === 401 || stripos($body, 'UNAUTHORIZED') !== false || $this->isHtmlOrNotJson($body, $headers)) {
+            $this->logStep('retry.trigger', ['status' => $status, 'reason' => 'challenge_or_unauth']);
+            $this->X_SESSION_TOKEN = '';
+            $this->deleteFile();
+            if (!$this->login()) {
+                return $res;
+            }
+            $res2 = $fn();
+            $this->logStep('retry.result', [
+                'status' => $res2['status'] ?? 0,
+                'body_preview' => $this->sampleBody($res2['body'] ?? '')
+            ]);
+            return $res2;
+        }
+        return $res;
+    }
+
     // === [WAF-Retry] หมุน proxy หนึ่งครั้งบนแฮนด์เดิม ===
     private function rotateProxyOnce(): bool
     {
@@ -552,7 +514,10 @@ class KbankBiz
     private function reloginFromScratch(): bool
     {
         $this->logStep('relogin.begin', []);
-        $this->resetAuthState(true);
+        $this->X_SESSION_TOKEN = '';
+        $this->OWNERID = '';
+        $this->COMPANYID = '';
+        $this->deleteFile();
         $this->curlInit();
         $ok = $this->login();
         $this->logStep('relogin.result', ['ok' => $ok]);
@@ -583,7 +548,15 @@ class KbankBiz
             'dataRsso_len' => strlen($dataRsso),
         ]);
 
-        $this->logProxyConfig('proxy.cfg.login');
+        $this->logStep('proxy.cfg.login', [
+            'enabled' => (bool)(config('proxy.web_unblocker.enabled') ?? false),
+            'host' => $this->proxyHost ?: null,
+            'port' => $this->proxyPort ?: null,
+            'ports' => !empty($this->proxyPorts) ? $this->proxyPorts : null,
+            'strategy' => $this->proxyStrategy,
+            'useProxy' => $this->useProxy,
+            'user_set' => (bool)$this->proxyUser,
+        ]);
 
         $ip = $this->testOutboundIp();
         $this->logStep('chk.out_ip', [
@@ -595,42 +568,16 @@ class KbankBiz
             return true;
         }
 
-        $ok = $this->performInteractiveLoginFlow();
-        if ($ok) {
-            return true;
-        }
-
-        // Fallback: ถ้ากำลังใช้ proxy ให้ลองตัด proxy แล้ว login ใหม่อีก 1 รอบ
-        if ($this->useProxy) {
-            $this->logStep('login.fallback.disable_proxy', [
-                'reason' => 'interactive_login_failed',
-            ]);
-            $this->disableProxy();
-            $this->resetAuthState(false);
-            $ok = $this->performInteractiveLoginFlow();
-            if ($ok) {
-                $this->logStep('login.fallback.success', []);
-                return true;
-            }
-            $this->logStep('login.fallback.failed', []);
-        }
-
-        return false;
-    }
-
-    private function performInteractiveLoginFlow(): bool
-    {
         $this->deleteFile();
         $this->curlInit();
 
         // 1) GET login.jsp
-        curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/authen");
+        curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/authen/login.jsp?lang=en");
         curl_setopt($this->ch, CURLOPT_POST, 0);
-        curl_setopt($this->ch, CURLOPT_POSTFIELDS, null);
         curl_setopt($this->ch, CURLOPT_HEADER, true);
         $this->setCurlHeaders([
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Referer: https://kbiz.kasikornbank.com/authen',
+            'Referer: https://kbiz.kasikornbank.com/authen/login.jsp?lang=en',
             'User-Agent: ' . $this->UA,
             'Accept-Language: th,en;q=0.9',
         ]);
@@ -656,8 +603,8 @@ class KbankBiz
         }
 
         // 2) POST login.do
-        curl_setopt($this->ch, CURLOPT_REFERER, 'https://kbiz.kasikornbank.com/authen');
-        curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/authen/loginAuthen.do");
+        curl_setopt($this->ch, CURLOPT_REFERER, 'https://kbiz.kasikornbank.com/authen/login.jsp?lang=en');
+        curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/authen/login.do");
         curl_setopt($this->ch, CURLOPT_POST, 1);
         $post2 = "tokenId=" . $tokenid . "&userName=" . urlencode($this->username) . "&password=" . urlencode($this->password) . "&cmd=authenticate&locale=en&captcha=&app=0";
         curl_setopt($this->ch, CURLOPT_POSTFIELDS, $post2);
@@ -665,7 +612,7 @@ class KbankBiz
         $this->setCurlHeaders([
             'Accept: application/json, text/plain, */*',
             'Content-Type: application/x-www-form-urlencoded',
-            'Referer: https://kbiz.kasikornbank.com/authen',
+            'Referer: https://kbiz.kasikornbank.com/authen/login.jsp?lang=en',
             'User-Agent: ' . $this->UA,
             'Accept-Language: th,en;q=0.9',
         ]);
@@ -682,14 +629,14 @@ class KbankBiz
         ]);
 
         // 3) GET redirectToIB.jsp
-        curl_setopt($this->ch, CURLOPT_REFERER, 'https://kbiz.kasikornbank.com/authen/loginAuthen.do');
+        curl_setopt($this->ch, CURLOPT_REFERER, 'https://kbiz.kasikornbank.com/authen/login.do');
         curl_setopt($this->ch, CURLOPT_URL, 'https://kbiz.kasikornbank.com/authen/ib/redirectToIB.jsp');
         curl_setopt($this->ch, CURLOPT_POST, 0);
         curl_setopt($this->ch, CURLOPT_POSTFIELDS, null);
         curl_setopt($this->ch, CURLOPT_HEADER, true);
         $this->setCurlHeaders([
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Referer: https://kbiz.kasikornbank.com/authen/loginAuthen.do',
+            'Referer: https://kbiz.kasikornbank.com/authen/login.do',
             'User-Agent: ' . $this->UA,
             'Accept-Language: th,en;q=0.9',
         ]);
@@ -715,10 +662,6 @@ class KbankBiz
             'redirect_to' => $redirect_to,
             'body_preview' => $this->sampleBody($body3),
         ]);
-        if ($redirect_to === '') {
-            $this->logStep('login.redirect.empty', []);
-            return false;
-        }
 
         // 4) follow redirect (เพื่อรับ cookie WAF/AlteonP)
         curl_setopt($this->ch, CURLOPT_URL, $redirect_to);
@@ -779,21 +722,26 @@ class KbankBiz
         $this->setCurlHeaders($headers);
 
         curl_setopt($this->ch, CURLOPT_POST, 1);
-        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $this->encodeJson($post_fields));
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, json_encode($post_fields));
         curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/services/api/authentication/validateSession");
 
-        $response = (string) curl_exec($this->ch);
-        [$rawHeaders, $body] = $this->splitCurlResponse($response);
+        $response = curl_exec($this->ch);
+        $header_size = curl_getinfo($this->ch, CURLINFO_HEADER_SIZE);
+        $rawHeaders = substr($response, 0, $header_size);
+        $body = substr($response, $header_size);
 
         $headersResp = $this->get_headers_from_curl_response($rawHeaders);
+
+        $newToken = $headersResp['x-session-token'] ?? ($headersResp['X-SESSION-TOKEN'] ?? '');
 
         $body_array = $this->jsonDecodeSafe($body) ?? [];
         $this->OWNERID = $body_array['data']['userProfiles'][0]['ibId'] ?? $this->OWNERID;
         $this->COMPANYID = $body_array['data']['userProfiles'][0]['companyId'] ?? $this->COMPANYID;
 
         $httpCode = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
-        if ($httpCode === 200) {
-            $this->syncSessionTokenFromHeaders($headersResp);
+        if ($httpCode === 200 && !empty($newToken)) {
+            $this->X_SESSION_TOKEN = $newToken;
+            $this->setToken();
         }
 
         $this->logStep('validateSession.POST', [
@@ -836,26 +784,29 @@ class KbankBiz
         curl_setopt($this->ch, CURLOPT_POST, 1);
         $headers = $this->buildKbizHeadersMinimal();
         $this->setCurlHeaders($headers);
-        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $this->encodeJson(['dataRsso' => $dataRsso]));
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, json_encode(['dataRsso' => $dataRsso]));
 
-        $response = (string) curl_exec($this->ch);
+        $response = curl_exec($this->ch);
 
         if (curl_errno($this->ch)) {
             $this->logStep('refresh.curl_error', ['errno' => curl_errno($this->ch)]);
             return false;
         }
 
-        [$rawHeaders, $body] = $this->splitCurlResponse($response);
-        $headersResp = $this->get_headers_from_curl_response($rawHeaders);
+        $header_size = curl_getinfo($this->ch, CURLINFO_HEADER_SIZE);
+        $headersResp = $this->get_headers_from_curl_response(substr($response, 0, $header_size));
+        $body = substr($response, $header_size);
 
         $httpCode = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+        $newToken = $headersResp['x-session-token'] ?? ($headersResp['X-SESSION-TOKEN'] ?? '');
 
         $bodyArr = $this->jsonDecodeSafe($body) ?? [];
         $this->OWNERID = $bodyArr['data']['userProfiles'][0]['ibId'] ?? $this->OWNERID;
         $this->COMPANYID = $bodyArr['data']['userProfiles'][0]['companyId'] ?? $this->COMPANYID;
 
-        if ($httpCode === 200) {
-            $this->syncSessionTokenFromHeaders($headersResp);
+        if ($httpCode === 200 && !empty($newToken)) {
+            $this->X_SESSION_TOKEN = $newToken;
+            $this->setToken();
         }
 
         $this->logStep('refresh.POST', [
@@ -903,12 +854,15 @@ class KbankBiz
         $this->setCurlHeaders($headers);
         curl_setopt($this->ch, CURLOPT_POSTFIELDS, '{}');
 
-        $resp = (string) curl_exec($this->ch);
-        [$rawHeaders, $body] = $this->splitCurlResponse($resp);
-        $headersResp = $this->get_headers_from_curl_response($rawHeaders);
+        $resp = curl_exec($this->ch);
+        $hsize = curl_getinfo($this->ch, CURLINFO_HEADER_SIZE);
+        $headersResp = $this->get_headers_from_curl_response(substr($resp, 0, $hsize));
+        $body = substr($resp, $hsize);
         $code = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
 
-        $this->syncSessionTokenFromHeaders($headersResp);
+        if (isset($headersResp['x-session-token'])) $this->X_SESSION_TOKEN = $headersResp['x-session-token'];
+        if (isset($headersResp['X-SESSION-TOKEN'])) $this->X_SESSION_TOKEN = $headersResp['X-SESSION-TOKEN'];
+        $this->setToken();
 
         $this->logStep('refresh.quick.POST', [
             'request_headers' => $this->lastRequestHeaders,
@@ -952,7 +906,7 @@ class KbankBiz
                 'ownerType' => 'Company',
                 'nicknameType' => 'OWNAC',
             ];
-            $payload = $this->encodeJson($formdata);
+            $payload = json_encode($formdata);
             curl_setopt($this->ch, CURLOPT_POSTFIELDS, $payload);
 
             $resp = curl_exec($this->ch);
@@ -1018,7 +972,7 @@ class KbankBiz
             'rowPerPage' => $this->rowPerPage,
             'startDate' => $startdate,
         ];
-        $payload = $this->encodeJson($formdata);
+        $payload = json_encode($formdata);
 
         $buildHeaders = function () use ($payload) {
             return $this->buildKbizHeadersMinimal([
@@ -1044,6 +998,7 @@ class KbankBiz
         $doRequest = function () use ($payload, $buildHeaders) {
             $headers = $buildHeaders();
             $this->setCurlHeaders($headers);
+            curl_setopt($this->ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($this->ch, CURLOPT_URL, "https://kbiz.kasikornbank.com/services/api/accountsummary/getRecentTransactionList");
             curl_setopt($this->ch, CURLOPT_POST, 1);
             curl_setopt($this->ch, CURLOPT_HEADER, true);
@@ -1185,7 +1140,7 @@ class KbankBiz
             $formdata['transDate'] = $trandate[0] ?? '';
             $formdata['transType'] = $data->transType ?? '';
 
-            $payload = $this->encodeJson($formdata);
+            $payload = json_encode($formdata);
             curl_setopt($this->ch, CURLOPT_POSTFIELDS, $payload);
 
             $resp = curl_exec($this->ch);
