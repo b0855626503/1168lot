@@ -702,14 +702,11 @@
             white-space: nowrap;
         }
     </style>
-    <link rel="stylesheet" href="{{ asset('vendor/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
 @endpush
 
 @push('scripts')
-    <script src="{{ asset('vendor/moment/moment.min.js') }}"></script>
-    <script src="{{ asset('vendor/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js') }}"></script>
     <script src="{{ asset('vendor/select2/js/select2.full.min.js') }}"></script>
 
     <script type="module">
@@ -1283,18 +1280,6 @@
 
                     return String(value).trim().replace(' ', 'T').substring(0, 16);
                 },
-                getDateTimeWidgetParent($input) {
-                    if (!$input || !$input.length || !window.jQuery) {
-                        return window.jQuery ? window.jQuery(document.body) : null;
-                    }
-
-                    const $modal = $input.closest('.modal');
-                    if ($modal.length) {
-                        return $modal;
-                    }
-
-                    return window.jQuery(document.body);
-                },
                 initDateTimePickers() {
                     if (!window.jQuery) {
                         return;
@@ -1312,43 +1297,42 @@
                             return;
                         }
 
-                        if (typeof $input.datetimepicker !== 'function' || typeof window.moment === 'undefined') {
+                        const inputEl = $input.get(0);
+                        if (!inputEl) {
+                            return;
+                        }
+
+                        $input.off('change.drawNative');
+                        $input.off('change.drawFlatpickr');
+
+                        if (inputEl._flatpickr) {
+                            inputEl._flatpickr.destroy();
+                        }
+
+                        if (typeof window.flatpickr !== 'function') {
                             $input.attr('type', 'datetime-local');
                             $input.attr('step', '60');
                             $input.attr('placeholder', '');
                             $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
-                            $input.off('change.drawNative');
                             $input.on('change.drawNative', (event) => {
                                 this.formaddedit[field] = toDateTimeInput(event.target.value || '');
                             });
                             return;
                         }
 
-                        if ($input.data('datetimepicker')) {
-                            $input.datetimepicker('destroy');
-                        }
-
                         try {
                             $input.attr('type', 'text');
                             $input.attr('placeholder', 'YYYY-MM-DD HH:mm');
 
-                            $input.datetimepicker({
-                                format: 'YYYY-MM-DD HH:mm',
-                                stepping: 1,
-                                useCurrent: false,
-                                sideBySide: true,
-                                allowInputToggle: true,
-                                widgetParent: this.getDateTimeWidgetParent($input),
-                                icons: {
-                                    time: 'far fa-clock',
-                                    date: 'far fa-calendar',
-                                    up: 'fas fa-chevron-up',
-                                    down: 'fas fa-chevron-down',
-                                    previous: 'fas fa-chevron-left',
-                                    next: 'fas fa-chevron-right',
-                                    today: 'far fa-calendar-check',
-                                    clear: 'far fa-trash-alt',
-                                    close: 'far fa-times-circle',
+                            window.flatpickr(inputEl, {
+                                enableTime: true,
+                                time_24hr: true,
+                                dateFormat: 'Y-m-d H:i',
+                                allowInput: true,
+                                minuteIncrement: 1,
+                                defaultDate: this.formaddedit[field] || null,
+                                onChange: (_, dateStr) => {
+                                    this.formaddedit[field] = dateStr || '';
                                 },
                             });
                         } catch (error) {
@@ -1356,26 +1340,15 @@
                             $input.attr('step', '60');
                             $input.attr('placeholder', '');
                             $input.val(this.toNativeDateTimeLocal(this.formaddedit[field]));
-                            $input.off('change.drawNative');
                             $input.on('change.drawNative', (event) => {
                                 this.formaddedit[field] = toDateTimeInput(event.target.value || '');
                             });
                             return;
                         }
 
-                        $input.off('change.datetimepicker');
-                        $input.on('change.datetimepicker', (event) => {
-                            this.formaddedit[field] = event.target.value || '';
+                        $input.on('change.drawFlatpickr', (event) => {
+                            this.formaddedit[field] = toDateTimeInput(event.target.value || '');
                         });
-                        $input.off('focus.drawPicker');
-                        $input.on('focus.drawPicker', () => {
-                            if ($input.data('datetimepicker')) {
-                                $input.datetimepicker('show');
-                            }
-                        });
-
-                        const currentValue = this.formaddedit[field];
-                        $input.datetimepicker('date', currentValue ? window.moment(currentValue, 'YYYY-MM-DD HH:mm') : null);
                     });
                 },
                 destroyDateTimePickers() {
@@ -1385,12 +1358,16 @@
 
                     ['#open_at', '#close_at', '#result_at'].forEach((id) => {
                         const $input = window.jQuery(id);
-                        if (!$input.length || typeof $input.datetimepicker !== 'function') {
+                        if (!$input.length) {
                             return;
                         }
 
-                        if ($input.data('datetimepicker')) {
-                            $input.datetimepicker('destroy');
+                        $input.off('change.drawNative');
+                        $input.off('change.drawFlatpickr');
+
+                        const inputEl = $input.get(0);
+                        if (inputEl && inputEl._flatpickr) {
+                            inputEl._flatpickr.destroy();
                         }
                     });
                 },
@@ -1412,12 +1389,11 @@
                         }
 
                         $input.prop('readonly', disabled);
-
-                        if (typeof $input.datetimepicker === 'function' && $input.data('datetimepicker')) {
+                        const inputEl = $input.get(0);
+                        if (inputEl && inputEl._flatpickr) {
+                            inputEl._flatpickr.set('clickOpens', !disabled);
                             if (disabled) {
-                                $input.datetimepicker('disable');
-                            } else {
-                                $input.datetimepicker('enable');
+                                inputEl._flatpickr.close();
                             }
                         }
                     });
