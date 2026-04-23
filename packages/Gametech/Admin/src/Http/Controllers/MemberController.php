@@ -1077,8 +1077,22 @@ class MemberController extends AppBaseController
         $acc_no = '';
         $user = $this->user()->name.' '.$this->user()->surname;
 
-        // ปลอดภัยไว้ก่อน กรณี data ไม่มีหรือไม่ใช่ JSON
-        $data = json_decode($request['data'] ?? '{}', true) ?: [];
+        // รองรับทั้งรูปแบบเดิม (ส่ง data เป็น JSON string)
+        // และรูปแบบใหม่ (ส่ง JSON body ตรง ๆ)
+        $data = [];
+        $rawData = $request->input('data');
+        if (is_string($rawData) && $rawData !== '') {
+            $decoded = json_decode($rawData, true);
+            if (is_array($decoded)) {
+                $data = $decoded;
+            }
+        } elseif (is_array($rawData)) {
+            $data = $rawData;
+        }
+
+        if ($data === []) {
+            $data = $request->except(['data']);
+        }
 
         // ===== 2FA (เปิดใช้เมื่อพร้อม) =====
         // if ($this->user()->superadmin == 'N') {
