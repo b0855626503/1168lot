@@ -359,7 +359,7 @@
 
 @push('scripts')
     {{-- CDN QRCode generator --}}
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js"></script>
 
     <script>
         function lineConnectModal(id) {
