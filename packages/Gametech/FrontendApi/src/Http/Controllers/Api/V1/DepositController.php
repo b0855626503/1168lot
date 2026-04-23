@@ -15,7 +15,7 @@ class DepositController extends BaseController
 
             return $this->sendResponse([
                 'deposit' => [
-                    'bank' => (int) ($deposit['bank'] ?? 0),
+                    'bank' => ((int) ($deposit['bank'] ?? 0)) > 0 ? 1 : 0,
                     'payment' => (int) ($deposit['payment'] ?? 0),
                     'tw' => (int) ($deposit['tw'] ?? 0),
                     'slip' => (int) ($deposit['slip'] ?? 0),
