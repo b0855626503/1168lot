@@ -1927,7 +1927,7 @@ class MemberCreditLogRepository extends Repository
             if ($member->faststart <= 0) {
                 return false;
             }
-            if ($member->faststart < 10) {
+            if ($member->faststart < $min) {
                 return false;
             }
             $pro_name = 'ค่าแนะนำ';
