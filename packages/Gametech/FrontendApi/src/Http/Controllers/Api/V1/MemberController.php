@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class MemberController extends BaseController
 {
@@ -45,7 +46,7 @@ class MemberController extends BaseController
                 'member_code' => (int) $member->code,
                 'wallet_address' => (string) $validated['wallet_address'],
             ], 'อัปเดต wallet address สำเร็จ');
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return $this->sendError($e->validator->errors()->first() ?: 'ข้อมูลไม่ถูกต้อง', 422);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถอัปเดต wallet address ได้ในขณะนี้', 422);
@@ -78,7 +79,7 @@ class MemberController extends BaseController
             return $this->sendResponseNew([
                 'member_code' => (int) $member->code,
             ], 'เปลี่ยนรหัสผ่านสำเร็จ');
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return $this->sendError($e->validator->errors()->first() ?: 'ข้อมูลเปลี่ยนรหัสผ่านไม่ถูกต้อง', 422);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้', 422);
@@ -108,7 +109,7 @@ class MemberController extends BaseController
 
             if ($promotion) {
                 $ruleDisplay = $promotionLengthType === 'PERCENT'
-                    ? number_format((float) $bonusPercent, 2, '.', '') . ' %'
+                    ? number_format((float) $bonusPercent, 2, '.', '').' %'
                     : number_format((float) $bonusPrice, 2, '.', '');
 
                 $ruleMoreMessage = Lang::get(
@@ -199,7 +200,7 @@ class MemberController extends BaseController
                             $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
 
                             return [
-                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#DP'.Str::of($item->code)->padLeft(8, 0),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
                                 'amount' => $item->amount,
                                 'amount_request' => $item->amount_request,
@@ -227,7 +228,7 @@ class MemberController extends BaseController
                             $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
 
                             return [
-                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#DP'.Str::of($item->code)->padLeft(8, 0),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
                                 'amount' => $item->amount,
                                 'amount_request' => $item->amount_request,
@@ -255,7 +256,7 @@ class MemberController extends BaseController
 
                             return [
                                 'code' => $item->code,
-                                'id' => '#BL' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#BL'.Str::of($item->code)->padLeft(8, 0),
                                 'promotion_name' => data_get($item, 'promotion.name_th', 'ไม่มี'),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                                 'amount' => $item->amount,
@@ -268,7 +269,7 @@ class MemberController extends BaseController
                                 'credit_after' => $item->credit_after,
                                 'game_name' => $gameName,
                                 'filepic' => $item->transfer_type == 1
-                                    ? Storage::url('game_img/' . ltrim((string) $gameFile, '/'))
+                                    ? Storage::url('game_img/'.ltrim((string) $gameFile, '/'))
                                     : Storage::url('game_img/wallet.png'),
                                 'transfer' => $item->transfer_type == 1 ? 'Wallet -> Game (โยกเข้าเกม)' : 'Wallet <- Game (โยกออกเกม)',
                                 'status' => $item->transfer_type == 1 ? 'text-success' : 'text-danger',
@@ -285,7 +286,7 @@ class MemberController extends BaseController
 
                             return [
                                 'code' => $item->code,
-                                'id' => '#SP' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#SP'.Str::of($item->code)->padLeft(8, 0),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/y H:i'),
                                 'amount' => $item->amount,
                                 'image' => 'ic_success',
@@ -376,7 +377,7 @@ class MemberController extends BaseController
                             $color = ['N' => 'bg-info', 'Y' => 'bg-success', 'R' => 'bg-danger'];
 
                             return [
-                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#DP'.Str::of($item->code)->padLeft(8, 0),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
                                 'amount' => ((float) $item->credit_bonus > 0 ? $item->credit_bonus : $item->amount),
                                 'pro_name' => $item->pro_name,
@@ -408,7 +409,7 @@ class MemberController extends BaseController
                             ];
 
                             return [
-                                'id' => '#DP' . Str::of($item->code)->padLeft(8, 0),
+                                'id' => '#DP'.Str::of($item->code)->padLeft(8, 0),
                                 'date_create' => core()->formatDate($item->date_create, 'd/m/Y H:i'),
                                 'amount' => $item->amount,
                                 'pro_name' => $item->pro_name,
@@ -462,18 +463,30 @@ class MemberController extends BaseController
             ];
 
             $game = core()->getGame();
-            $gameUser = $gameRepository->findOneWhere([
-                'member_code' => $member->code,
-                'game_code' => $game->code,
-            ]);
+            $gameCode = (int) data_get($game, 'code', 0);
+            $gameUser = null;
+            if ($gameCode > 0) {
+                $gameUser = $gameRepository->findOneWhere([
+                    'member_code' => $member->code,
+                    'game_code' => $gameCode,
+                ]);
+            }
 
             $member = $memberRepository->findOrFail($member->code);
 
             $today = now()->toDateString();
             if (($config['seamless'] ?? 'N') === 'Y') {
-                $withdrawToday = $memberRepository->sumWithdrawSeamless($member->code, $today)->withdraw_seamless_amount_sum;
+                $withdrawToday = data_get(
+                    $memberRepository->sumWithdrawSeamless($member->code, $today),
+                    'withdraw_seamless_amount_sum',
+                    0
+                );
             } else {
-                $withdrawToday = $memberRepository->sumWithdraw($member->code, $today)->withdraw_amount_sum;
+                $withdrawToday = data_get(
+                    $memberRepository->sumWithdraw($member->code, $today),
+                    'withdraw_amount_sum',
+                    0
+                );
             }
 
             $withdraw = is_null($withdrawToday) ? 0 : $withdrawToday;
@@ -508,7 +521,7 @@ class MemberController extends BaseController
             $profile['acc_no'] = (string) ($member->acc_no ?? '');
             $profile['tel'] = (string) ($member->tel ?? '');
             $profile['phone'] = (string) ($member->tel ?? '');
-            $profile['pic_id'] = $member->pic_id ? $this->appendMediaCacheBust(asset('storage/' . ltrim((string) $member->pic_id, '/'))) : '';
+            $profile['pic_id'] = $member->pic_id ? $this->appendMediaCacheBust(asset('storage/'.ltrim((string) $member->pic_id, '/'))) : '';
             $profile['balance'] = $member->balance;
             $profile['diamond'] = (int) $member->diamond;
             $profile['amount_balance'] = data_get($gameUser, 'amount_balance', 0);
@@ -522,14 +535,18 @@ class MemberController extends BaseController
             $profile['withdraw_remain_today'] = $withdrawRemain;
             $profile['lastupdate'] = now()->format('d/m/Y H:i:s');
 
-            $promotionSelect = core()->getSelectPro();
+            $promotionSelect = rescue(static function () {
+                return core()->getSelectPro();
+            }, []);
             $promotion = [
                 'select' => ! empty($promotionSelect),
                 'name' => ! empty($promotionSelect) ? ($promotionSelect['name_th'] ?? '') : '',
                 'min' => ! empty($promotionSelect) ? ($promotionSelect['amount_min'] ?? '') : '',
             ];
 
-            $depositCount = core()->getBankTopupCountsNew();
+            $depositCount = rescue(static function () {
+                return core()->getBankTopupCountsNew();
+            }, []);
             $deposit = [
                 'bank' => $depositCount['bank'] ?? 0,
                 'payment' => $depositCount['payment'] ?? 0,
@@ -567,7 +584,9 @@ class MemberController extends BaseController
                 }
 
                 $payload['profile']['bank_name'] = $bankName;
-                $payload['spin'] = app('Gametech\Wallet\Http\Controllers\HomeController')->loadSpin();
+                $payload['spin'] = rescue(static function () {
+                    return app('Gametech\Wallet\Http\Controllers\HomeController')->loadSpin();
+                }, []);
             }
 
             return $this->sendResponseNew($payload, 'complete');
@@ -588,14 +607,16 @@ class MemberController extends BaseController
 
         if (Str::startsWith($filepic, ['http://', 'https://'])) {
             $url = $this->appendMediaCacheBust($filepic);
+
             return ['path' => $url, 'url' => $url];
         }
 
         if (Str::startsWith($filepic, '/')) {
             $path = $this->appendMediaCacheBust($filepic);
+
             return ['path' => $path, 'url' => url($path)];
         }
 
-        return $this->storageMediaUrls('bank_img/' . ltrim($filepic, '/'));
+        return $this->storageMediaUrls('bank_img/'.ltrim($filepic, '/'));
     }
 }
