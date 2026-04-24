@@ -5,8 +5,8 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoTicketsCancelReportDataTable;
 use Gametech\Lotto\Enums\BetType;
-use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoTicket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -47,6 +47,7 @@ class LottoTicketsCancelReportController extends AppBaseController
             ['value' => 'active', 'text' => 'รอผล'],
             ['value' => 'cancelled', 'text' => 'ยกเลิก'],
             ['value' => 'resulted', 'text' => 'ตัดสินแล้ว'],
+            ['value' => 'won', 'text' => 'ถูกรางวัล'],
         ];
 
         return $dataTable->render($this->_config['view'], [
@@ -111,9 +112,9 @@ class LottoTicketsCancelReportController extends AppBaseController
 
         $memberDisplay = trim((string) ($ticket->member?->user_name ?: $ticket->member?->name ?: ''));
         if ($memberDisplay === '') {
-            $memberDisplay = 'MEM-' . (int) $ticket->member_id;
+            $memberDisplay = 'MEM-'.(int) $ticket->member_id;
         }
-        $memberDisplay .= ' (' . (int) $ticket->member_id . ')';
+        $memberDisplay .= ' ('.(int) $ticket->member_id.')';
 
         $reason = trim((string) ($ticket->reason ?? ''));
         if ($reason === '' && $cancelTx && is_string($cancelTx->meta) && trim($cancelTx->meta) !== '') {
@@ -154,6 +155,7 @@ class LottoTicketsCancelReportController extends AppBaseController
             'items' => collect($ticket->items ?? [])->map(static function ($item): array {
                 $betType = (string) ($item->bet_type ?? '');
                 $knownBetType = in_array($betType, BetType::all(), true);
+
                 return [
                     'bet_type' => $betType,
                     'bet_type_label' => $knownBetType ? BetType::label($betType) : $betType,

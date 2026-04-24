@@ -22,10 +22,12 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         $totalWinAmount = (float) ($row->total_win_amount ?? 0);
         $totalWinAmountDisplay = number_format($totalWinAmount, 2);
 
+        $statusBadge = $this->statusBadge((string) ($row->status ?? ''), $totalWinAmount);
+
         return [
             'created_at' => $createdAt ? date('d/m/Y H:i', strtotime((string) $createdAt)) : '-',
             'id' => (int) ($row->id ?? 0),
-            'member_display' => e(($memberName !== '' ? $memberName : ('MEM-' . (int) ($row->member_id ?? 0))) . ' (' . (int) ($row->member_id ?? 0) . ')'),
+            'member_display' => e(($memberName !== '' ? $memberName : ('MEM-'.(int) ($row->member_id ?? 0))).' ('.(int) ($row->member_id ?? 0).')'),
             'market_name' => $this->formatMarket((string) ($row->market_name ?? '-'), (string) ($row->market_logo ?? ''), (string) ($row->market_icon ?? '')),
             'draw_date' => $drawDate,
             'package_name' => $packageNames->isNotEmpty() ? e($packageNames->implode(', ')) : '-',
@@ -33,13 +35,13 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'total_discount_amount' => number_format((float) ($row->total_discount_amount ?? 0), 2),
             'total_net_amount' => number_format((float) ($row->total_net_amount ?? $row->total_amount ?? 0), 2),
             'total_win_amount' => $totalWinAmount > 0
-                ? '<span class="text-danger font-weight-bold">' . $totalWinAmountDisplay . '</span>'
+                ? '<span class="text-danger font-weight-bold">'.$totalWinAmountDisplay.'</span>'
                 : $totalWinAmountDisplay,
-            'status' => $this->statusBadge((string) ($row->status ?? '')),
+            'status' => $statusBadge,
             'reason' => e($this->resolveReason($row)),
             'cancelled_by_name' => e($cancelledBy !== '' ? $cancelledBy : '-'),
             'latest_updated_at' => $latestUpdatedAt ? date('d/m/Y H:i', strtotime((string) $latestUpdatedAt)) : '-',
-            'actions' => '<button type="button" class="btn btn-outline-primary btn-xs js-tickets-cancel-detail" data-ticket-id="' . (int) ($row->id ?? 0) . '"><i class="fa fa-file-text-o"></i> รายละเอียด</button>',
+            'actions' => '<button type="button" class="btn btn-outline-primary btn-xs js-tickets-cancel-detail" data-ticket-id="'.(int) ($row->id ?? 0).'"><i class="fa fa-file-text-o"></i> รายละเอียด</button>',
         ];
     }
 
@@ -86,18 +88,22 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         }
 
         return '<span class="d-inline-flex align-items-center">'
-            . '<img src="' . e($image) . '" alt="" style="width:18px;height:18px;object-fit:contain;margin-right:6px;" />'
-            . '<span>' . $safeName . '</span>'
-            . '</span>';
+            .'<img src="'.e($image).'" alt="" style="width:18px;height:18px;object-fit:contain;margin-right:6px;" />'
+            .'<span>'.$safeName.'</span>'
+            .'</span>';
     }
 
-    private function statusBadge(string $status): string
+    private function statusBadge(string $status, float $totalWinAmount): string
     {
+        if ($status === 'resulted' && $totalWinAmount > 0) {
+            return '<span class="badge badge-warning">ถูกรางวัล</span>';
+        }
+
         return match ($status) {
             'active' => '<span class="badge badge-success">รอผล</span>',
             'cancelled' => '<span class="badge badge-danger">ยกเลิก</span>',
             'resulted' => '<span class="badge badge-info">ตัดสินแล้ว</span>',
-            default => '<span class="badge badge-light">' . e($status !== '' ? $status : '-') . '</span>',
+            default => '<span class="badge badge-light">'.e($status !== '' ? $status : '-').'</span>',
         };
     }
 }

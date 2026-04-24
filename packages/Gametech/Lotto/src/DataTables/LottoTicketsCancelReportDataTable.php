@@ -3,13 +3,14 @@
 namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Models\LottoTicket;
-use Illuminate\Support\Facades\DB;
 use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
 use Yajra\DataTables\Services\DataTable;
-use function Laravel\Prompts\search;
 
 class LottoTicketsCancelReportDataTable extends DataTable
 {
@@ -18,20 +19,21 @@ class LottoTicketsCancelReportDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
 
         return $dataTable
-            ->setTransformer(new LottoTicketsCancelReportTransformer())
+            ->setTransformer(new LottoTicketsCancelReportTransformer)
+            ->with('totals', $this->resolveTotals())
             ->filterColumn('member_display', function ($query, $keyword): void {
-                $like = '%' . $keyword . '%';
+                $like = '%'.$keyword.'%';
                 $query->where(function ($sub) use ($like): void {
                     $sub->where('members.user_name', 'like', $like)
                         ->orWhere('members.name', 'like', $like);
                 });
             })
             ->filterColumn('market_name', function ($query, $keyword): void {
-                $like = '%' . $keyword . '%';
+                $like = '%'.$keyword.'%';
                 $query->where('lotto_markets.name', 'like', $like);
             })
             ->filterColumn('draw_date', function ($query, $keyword): void {
-                $like = '%' . $keyword . '%';
+                $like = '%'.$keyword.'%';
                 $query->where('lotto_draws.draw_date', 'like', $like);
             });
     }
@@ -85,6 +87,49 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ->orderByRaw('COALESCE(lotto_tickets.cancelled_at, lotto_tickets.created_at) DESC')
             ->orderByDesc('lotto_tickets.id');
 
+        $this->applyFilters($query);
+
+        if ($searchValue = trim((string) request('search.value'))) {
+            $likeValue = '%'.$searchValue.'%';
+            $query->where(function ($subQuery) use ($likeValue): void {
+                $subQuery->where('lotto_tickets.id', 'like', $likeValue)
+                    ->orWhere('members.user_name', 'like', $likeValue)
+                    ->orWhere('members.name', 'like', $likeValue)
+                    ->orWhere('lotto_markets.name', 'like', $likeValue);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array{total_bet_amount:float,total_discount_amount:float,total_net_amount:float,total_win_amount:float}
+     */
+    private function resolveTotals(): array
+    {
+        $query = DB::table('lotto_tickets')
+            ->join('lotto_draws', 'lotto_draws.id', '=', 'lotto_tickets.draw_id')
+            ->join('lotto_markets', 'lotto_markets.id', '=', 'lotto_draws.market_id')
+            ->leftJoin('members', 'members.code', '=', 'lotto_tickets.member_id')
+            ->selectRaw('COALESCE(SUM(lotto_tickets.total_bet_amount), 0) as total_bet_amount')
+            ->selectRaw('COALESCE(SUM(lotto_tickets.total_discount_amount), 0) as total_discount_amount')
+            ->selectRaw('COALESCE(SUM(lotto_tickets.total_net_amount), 0) as total_net_amount')
+            ->selectRaw('COALESCE(SUM(lotto_tickets.total_win_amount), 0) as total_win_amount');
+
+        $this->applyFilters($query);
+
+        $totals = $query->first();
+
+        return [
+            'total_bet_amount' => (float) ($totals->total_bet_amount ?? 0),
+            'total_discount_amount' => (float) ($totals->total_discount_amount ?? 0),
+            'total_net_amount' => (float) ($totals->total_net_amount ?? 0),
+            'total_win_amount' => (float) ($totals->total_win_amount ?? 0),
+        ];
+    }
+
+    private function applyFilters(EloquentBuilder|QueryBuilder $query): void
+    {
         if ($dateStart = trim((string) request('date_start'))) {
             $query->whereRaw('date(COALESCE(lotto_tickets.cancelled_at, lotto_tickets.created_at)) >= ?', [$dateStart]);
         }
@@ -98,24 +143,17 @@ class LottoTicketsCancelReportDataTable extends DataTable
         }
 
         if ($status = trim((string) request('status'))) {
-            $query->where('lotto_tickets.status', $status);
+            if ($status === 'won') {
+                $query->where('lotto_tickets.status', 'resulted')
+                    ->whereRaw('COALESCE(lotto_tickets.total_win_amount, 0) > 0');
+            } else {
+                $query->where('lotto_tickets.status', $status);
+            }
         }
 
         if ($memberUsername = trim((string) request('member_username'))) {
-            $query->where('members.user_name', 'like', '%' . $memberUsername . '%');
+            $query->where('members.user_name', 'like', '%'.$memberUsername.'%');
         }
-
-        if ($searchValue = trim((string) request('search.value'))) {
-            $likeValue = '%' . $searchValue . '%';
-            $query->where(function ($subQuery) use ($likeValue): void {
-                $subQuery->where('lotto_tickets.id', 'like', $likeValue)
-                    ->orWhere('members.user_name', 'like', $likeValue)
-                    ->orWhere('members.name', 'like', $likeValue)
-                    ->orWhere('lotto_markets.name', 'like', $likeValue);
-            });
-        }
-
-        return $query;
     }
 
     public function html(): Builder
