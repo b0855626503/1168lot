@@ -10,41 +10,90 @@
 
 @push('styles')
     <style>
+        :root {
+            --wr-ink: #111827;
+            --wr-muted: #64748b;
+            --wr-line: #d8dee8;
+            --wr-panel: #ffffff;
+            --wr-surface: #f5f7fb;
+            --wr-soft: #eef6f5;
+            --wr-accent: #0f766e;
+            --wr-accent-dark: #115e59;
+            --wr-danger: #b91c1c;
+            --wr-warning: #b45309;
+            --wr-success: #15803d;
+        }
+
         .wr-shell {
-            background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f0fdf4 100%);
-            border-radius: 16px;
-            padding: 14px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.96)),
+                linear-gradient(135deg, #ecfeff 0%, #f8fafc 42%, #f0fdf4 100%);
+            border: 1px solid #e5edf4;
+            border-radius: 8px;
+            padding: 16px;
         }
 
         .wr-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            background: #ffffff;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            border: 1px solid var(--wr-line);
+            border-radius: 8px;
+            background: var(--wr-panel);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+        }
+
+        .wr-hero {
+            background: linear-gradient(135deg, #0f766e 0%, #155e75 100%);
+            color: #ffffff;
+            border: 0;
+            overflow: hidden;
+        }
+
+        .wr-hero .wr-title,
+        .wr-hero .wr-subtitle {
+            color: #ffffff;
         }
 
         .wr-title {
             font-weight: 700;
-            color: #0f172a;
-            letter-spacing: 0.2px;
+            color: var(--wr-ink);
+            letter-spacing: 0;
         }
 
         .wr-subtitle {
-            color: #475569;
+            color: var(--wr-muted);
             font-size: 0.85rem;
+        }
+
+        .wr-meta-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .wr-meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 999px;
+            padding: 4px 10px;
+            color: #e0f2fe;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.78rem;
+            font-weight: 600;
         }
 
         .wr-kpi-grid {
             display: grid;
             grid-template-columns: repeat(6, minmax(0, 1fr));
-            gap: 10px;
+            gap: 12px;
         }
 
         .wr-kpi {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #f8fafc;
+            border: 1px solid var(--wr-line);
+            border-radius: 8px;
+            padding: 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
             transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
 
@@ -54,27 +103,36 @@
         }
 
         .wr-kpi__label {
-            color: #64748b;
+            color: var(--wr-muted);
             font-size: 0.74rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0;
         }
 
         .wr-kpi__value {
-            color: #0f172a;
+            color: var(--wr-ink);
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 1.06rem;
             margin-top: 4px;
+        }
+
+        .wr-kpi--money .wr-kpi__value {
+            color: var(--wr-accent-dark);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .wr-kpi--loss .wr-kpi__value {
+            color: var(--wr-danger);
         }
 
         .wr-status {
             display: inline-flex;
             align-items: center;
             border-radius: 999px;
-            padding: 2px 10px;
+            padding: 3px 10px;
             font-size: 0.75rem;
             font-weight: 700;
             border: 1px solid transparent;
+            white-space: nowrap;
         }
 
         .wr-status--settled,
@@ -98,10 +156,11 @@
         }
 
         .wr-filter-block {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            border: 1px solid var(--wr-line);
+            border-radius: 8px;
             padding: 10px;
-            background: #ffffff;
+            background: var(--wr-panel);
+            height: 100%;
         }
 
         .wr-filter-label {
@@ -111,9 +170,19 @@
             font-weight: 600;
         }
 
+        .wr-filter-block .form-control {
+            border-color: #cbd5e1;
+            border-radius: 6px;
+        }
+
+        .wr-filter-block .form-control:focus {
+            border-color: var(--wr-accent);
+            box-shadow: 0 0 0 0.12rem rgba(15, 118, 110, 0.15);
+        }
+
         .wr-table-wrap {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            border: 1px solid var(--wr-line);
+            border-radius: 8px;
             overflow: hidden;
         }
 
@@ -125,11 +194,10 @@
         .wr-table thead th {
             position: sticky;
             top: 0;
-            background: #f8fafc;
+            background: #f1f5f9;
             z-index: 2;
             font-size: 0.74rem;
-            text-transform: uppercase;
-            letter-spacing: 0.45px;
+            letter-spacing: 0;
             color: #475569;
             border-bottom: 1px solid #cbd5e1;
             white-space: nowrap;
@@ -146,17 +214,34 @@
         }
 
         .wr-empty {
-            color: #64748b;
+            color: var(--wr-muted);
             text-align: center;
-            padding: 18px 10px;
+            padding: 28px 10px;
+            background: #f8fafc;
         }
 
         .wr-actions .btn {
-            min-width: 110px;
+            min-width: 118px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .wr-actions .btn-primary {
+            background: var(--wr-accent);
+            border-color: var(--wr-accent);
+        }
+
+        .wr-actions .btn-primary:hover {
+            background: var(--wr-accent-dark);
+            border-color: var(--wr-accent-dark);
         }
 
         .wr-loading {
             color: #334155;
+            border: 1px solid #bae6fd;
+            background: #f0f9ff;
+            border-radius: 8px;
+            padding: 8px 10px;
             font-size: 0.83rem;
         }
 
@@ -164,7 +249,16 @@
             border: 1px solid #fecaca;
             background: #fef2f2;
             color: #991b1b;
-            border-radius: 10px;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
+        }
+
+        .wr-note {
+            border: 1px solid #fed7aa;
+            background: #fff7ed;
+            color: #9a3412;
+            border-radius: 8px;
             padding: 8px 10px;
             font-size: 0.82rem;
         }
@@ -172,6 +266,28 @@
         .wr-pending {
             color: #854d0e;
             font-weight: 600;
+        }
+
+        .wr-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .wr-row-count {
+            border-radius: 999px;
+            padding: 3px 9px;
+            color: #334155;
+            background: #e2e8f0;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .wr-money {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
         }
 
         @media (max-width: 1199.98px) {
@@ -222,31 +338,39 @@
         <section class="content text-sm">
             <div class="container-fluid">
                 <div class="wr-shell">
-                    <div class="wr-card p-3">
+                    <div class="wr-card wr-hero p-3 mb-3">
                         <div class="d-flex flex-wrap justify-content-between align-items-start mb-2">
                             <div>
-                                <div class="wr-title">Winning Report / Settlement Report</div>
-                                <div class="wr-subtitle">อ่านข้อมูลจาก materialized records เท่านั้น</div>
+                                <div class="wr-title">รายงานผู้ถูกรางวัล / รายงานสรุปผลจ่าย</div>
+                                <div class="wr-subtitle">ข้อมูลรายงานจากรายการที่สรุปผลแล้วเท่านั้น</div>
                             </div>
-                            <div class="wr-subtitle mt-1">Updated: @{{ nowLabel }}</div>
+                            <div class="wr-subtitle mt-1">อัปเดตล่าสุด: @{{ nowLabel }}</div>
                         </div>
+                        <div class="wr-meta-strip">
+                            <span class="wr-meta-pill"><i class="fas fa-calendar-day"></i> วันที่รายงาน: @{{ filters.date || '-' }}</span>
+                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบที่แสดง: @{{ filters.round_id || summary.latest_round_id || '-' }}</span>
+                            <span class="wr-meta-pill"><i class="fas fa-check-circle"></i> สถานะ: @{{ statusLabel(summary.settlement_status) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="wr-card p-3">
 
                         <div class="row">
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Round ID</div>
+                                    <div class="wr-filter-label">รหัสรอบ</div>
                                     <input v-model.number="filters.round_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadAll">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Date</div>
+                                    <div class="wr-filter-label">วันที่งวด</div>
                                     <input v-model="filters.date" type="date" class="form-control form-control-sm" @change="loadSummaryOnly">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Lottery Type</div>
+                                    <div class="wr-filter-label">ประเภทหวย</div>
                                     <select v-model="filters.lottery_type" class="form-control form-control-sm" @change="loadSummaryOnly">
                                         <option value="">ทั้งหมด</option>
                                         <option v-for="item in lotteryTypeOptions" :key="item" :value="item">@{{ item }}</option>
@@ -255,7 +379,7 @@
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Market</div>
+                                    <div class="wr-filter-label">ตลาด / หวย</div>
                                     <select v-model="filters.market" class="form-control form-control-sm" @change="loadSummaryOnly">
                                         <option value="">ทั้งหมด</option>
                                         <option v-for="item in marketOptions" :key="item" :value="item">@{{ item }}</option>
@@ -264,77 +388,80 @@
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">User ID</div>
+                                    <div class="wr-filter-label">รหัสสมาชิก</div>
                                     <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Bet Type</div>
+                                    <div class="wr-filter-label">ประเภทแทง</div>
                                     <input v-model="detailFilters.bet_type" type="text" class="form-control form-control-sm" placeholder="top_3" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Number</div>
+                                    <div class="wr-filter-label">เลขที่แทง</div>
                                     <input v-model="detailFilters.number" type="text" class="form-control form-control-sm" placeholder="123" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">Status</div>
+                                    <div class="wr-filter-label">สถานะรายการ</div>
                                     <select v-model="detailFilters.status" class="form-control form-control-sm" @change="loadDetails">
                                         <option value="">ทั้งหมด</option>
-                                        <option value="pending">pending</option>
-                                        <option value="settled">settled</option>
-                                        <option value="credited">credited</option>
-                                        <option value="failed">failed</option>
-                                        <option value="voided">voided</option>
+                                        <option value="pending">รอดำเนินการ</option>
+                                        <option value="settled">สรุปผลแล้ว</option>
+                                        <option value="credited">จ่ายเงินแล้ว</option>
+                                        <option value="failed">ผิดพลาด</option>
+                                        <option value="voided">ยกเลิก</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-lg-8 col-md-9 col-sm-6 mb-2 d-flex align-items-end">
                                 <div class="w-100 d-flex flex-wrap justify-content-end wr-actions">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2" @click.prevent="resetFilters">Reset</button>
-                                    <button type="button" class="btn btn-sm btn-primary mr-2" @click.prevent="loadAll">Apply</button>
-                                    <button type="button" class="btn btn-sm btn-success mr-2" @click.prevent="exportReport('summary', 'csv')">Summary CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" @click.prevent="exportReport('users', 'csv')">Users CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" @click.prevent="exportReport('bets', 'xlsx')">Bets XLSX</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2" @click.prevent="resetFilters"><i class="fas fa-undo-alt"></i> ล้างค่า</button>
+                                    <button type="button" class="btn btn-sm btn-primary mr-2" @click.prevent="loadAll"><i class="fas fa-search"></i> แสดงรายงาน</button>
+                                    <button type="button" class="btn btn-sm btn-success mr-2" @click.prevent="exportReport('summary', 'csv')"><i class="fas fa-file-csv"></i> สรุป CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" @click.prevent="exportReport('users', 'csv')"><i class="fas fa-users"></i> สมาชิก CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @click.prevent="exportReport('bets', 'xlsx')"><i class="fas fa-file-excel"></i> รายการ XLSX</button>
                                 </div>
                             </div>
                         </div>
 
                         <div v-if="isLoading" class="wr-loading mb-2">กำลังโหลดข้อมูล...</div>
                         <div v-if="!hasMaterializedReportData" class="wr-error mb-2">
-                            ยังไม่มีข้อมูลรายงานที่ materialized แล้ว กรุณา settle รอบใหม่ หรือรัน backfill สำหรับรอบเก่าก่อน
+                            ยังไม่มีข้อมูลรายงานที่จัดเก็บไว้แล้ว กรุณาสรุปผลรอบใหม่ หรือเติมข้อมูลย้อนหลังสำหรับรอบเก่าก่อน
                         </div>
                         <div v-if="errorMessage" class="wr-error mb-2">@{{ errorMessage }}</div>
+                        <div v-if="hasMaterializedReportData && !isLoading && users.length === 0 && bets.length === 0 && summary.latest_round_id && summary.winning_ticket_count === 0" class="wr-note mb-2">
+                            รอบที่เลือกมีการสรุปผลแล้ว แต่ยังไม่มีผู้ถูกรางวัลในเงื่อนไขนี้
+                        </div>
 
                         <div class="wr-kpi-grid mt-2">
-                            <div class="wr-kpi">
-                                <div class="wr-kpi__label">Total Stake</div>
+                            <div class="wr-kpi wr-kpi--money">
+                                <div class="wr-kpi__label">ยอดแทงที่ถูกรางวัล</div>
                                 <div class="wr-kpi__value">@{{ fm(summary.total_stake) }}</div>
                             </div>
-                            <div class="wr-kpi">
-                                <div class="wr-kpi__label">Total Payout</div>
+                            <div class="wr-kpi wr-kpi--money">
+                                <div class="wr-kpi__label">ยอดจ่ายรางวัล</div>
                                 <div class="wr-kpi__value">@{{ fm(summary.total_payout) }}</div>
                             </div>
-                            <div class="wr-kpi">
-                                <div class="wr-kpi__label">Net Profit/Loss</div>
+                            <div class="wr-kpi wr-kpi--loss">
+                                <div class="wr-kpi__label">กำไร / ขาดทุนสุทธิ</div>
                                 <div class="wr-kpi__value">@{{ fm(summary.net_profit_loss) }}</div>
                             </div>
                             <div class="wr-kpi">
-                                <div class="wr-kpi__label">Winner Count</div>
+                                <div class="wr-kpi__label">จำนวนผู้ถูกรางวัล</div>
                                 <div class="wr-kpi__value">@{{ intValue(summary.winner_count) }}</div>
                             </div>
                             <div class="wr-kpi">
-                                <div class="wr-kpi__label">Winning Ticket Count</div>
+                                <div class="wr-kpi__label">จำนวนรายการถูกรางวัล</div>
                                 <div class="wr-kpi__value">@{{ intValue(summary.winning_ticket_count) }}</div>
                             </div>
                             <div class="wr-kpi">
-                                <div class="wr-kpi__label">Settlement Status</div>
+                                <div class="wr-kpi__label">สถานะสรุปผล</div>
                                 <div class="wr-kpi__value">
-                                    <span :class="statusClass(summary.settlement_status)">@{{ summary.settlement_status || '-' }}</span>
+                                    <span :class="statusClass(summary.settlement_status)">@{{ statusLabel(summary.settlement_status) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -343,35 +470,38 @@
                     <div class="row mt-3">
                         <div class="col-12 mb-3">
                             <div class="wr-card p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="wr-title">Users</div>
-                                    <div class="wr-subtitle">Rows: @{{ users.length }}</div>
+                                <div class="wr-section-head">
+                                    <div>
+                                        <div class="wr-title">สรุปตามสมาชิก</div>
+                                        <div class="wr-subtitle">รวมยอดถูกรางวัลแยกตามสมาชิกในรอบที่เลือก</div>
+                                    </div>
+                                    <div class="wr-row-count">@{{ users.length }} รายการ</div>
                                 </div>
                                 <div class="wr-table-wrap table-responsive" style="max-height: 380px;">
                                     <table class="table table-sm wr-table">
                                         <thead>
                                             <tr>
-                                                <th>Username</th>
-                                                <th class="text-right">Total Stake</th>
-                                                <th class="text-right">Total Payout</th>
-                                                <th class="text-right">Net by User</th>
-                                                <th class="text-center">Winning Bet Count</th>
-                                                <th>Winning Numbers</th>
-                                                <th>Status</th>
+                                                <th>สมาชิก</th>
+                                                <th class="text-right">ยอดแทง</th>
+                                                <th class="text-right">ยอดจ่าย</th>
+                                                <th class="text-right">สุทธิรายสมาชิก</th>
+                                                <th class="text-center">จำนวนรายการ</th>
+                                                <th>เลขที่ถูกรางวัล</th>
+                                                <th>สถานะ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr v-for="row in users" :key="row.user_id">
                                                 <td>@{{ row.username || ('USER-' + row.user_id) }}</td>
-                                                <td class="text-right">@{{ fm(row.total_stake) }}</td>
-                                                <td class="text-right">@{{ fm(row.total_payout) }}</td>
-                                                <td class="text-right">@{{ fm(row.net_by_user) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.total_stake) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.total_payout) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.net_by_user) }}</td>
                                                 <td class="text-center">@{{ intValue(row.winning_bet_count) }}</td>
                                                 <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis;">@{{ row.winning_numbers || '-' }}</td>
-                                                <td><span :class="statusClass(row.credited_status)">@{{ row.credited_status || '-' }}</span></td>
+                                                <td><span :class="statusClass(row.credited_status)">@{{ statusLabel(row.credited_status) }}</span></td>
                                             </tr>
                                             <tr v-if="users.length === 0">
-                                                <td colspan="7" class="wr-empty">ไม่มีข้อมูลผู้ใช้</td>
+                                                <td colspan="7" class="wr-empty">ไม่มีข้อมูลสมาชิกตามเงื่อนไขนี้</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -381,26 +511,29 @@
 
                         <div class="col-12">
                             <div class="wr-card p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="wr-title">Winning Bets</div>
-                                    <div class="wr-subtitle">Rows: @{{ bets.length }}</div>
+                                <div class="wr-section-head">
+                                    <div>
+                                        <div class="wr-title">รายละเอียดรายการถูกรางวัล</div>
+                                        <div class="wr-subtitle">รายการระดับโพย/เลข พร้อมชุดสรุปผลอ้างอิง</div>
+                                    </div>
+                                    <div class="wr-row-count">@{{ bets.length }} รายการ</div>
                                 </div>
                                 <div class="wr-table-wrap table-responsive" style="max-height: 420px;">
                                     <table class="table table-sm wr-table">
                                         <thead>
                                             <tr>
-                                                <th>Ticket No</th>
-                                                <th>Bet Type</th>
-                                                <th>Number</th>
-                                                <th class="text-right">Stake</th>
-                                                <th class="text-right">Odds</th>
-                                                <th class="text-right">Payout</th>
-                                                <th>Result Number</th>
-                                                <th>Matched Rule</th>
-                                                <th>Batch</th>
-                                                <th>Settled At</th>
-                                                <th>Credited At</th>
-                                                <th>Status</th>
+                                                <th>เลขโพย</th>
+                                                <th>ประเภทแทง</th>
+                                                <th>เลขที่แทง</th>
+                                                <th class="text-right">ยอดแทง</th>
+                                                <th class="text-right">อัตราจ่าย</th>
+                                                <th class="text-right">ยอดจ่าย</th>
+                                                <th>ผลที่ออก</th>
+                                                <th>เงื่อนไขที่ถูก</th>
+                                                <th>ชุดสรุปผล</th>
+                                                <th>เวลาสรุปผล</th>
+                                                <th>เวลาจ่ายเงิน</th>
+                                                <th>สถานะ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -408,18 +541,18 @@
                                                 <td>@{{ row.ticket_no || '-' }}</td>
                                                 <td>@{{ row.bet_type || '-' }}</td>
                                                 <td>@{{ row.number || '-' }}</td>
-                                                <td class="text-right">@{{ fm(row.stake) }}</td>
-                                                <td class="text-right">@{{ fm(row.odds, 4) }}</td>
-                                                <td class="text-right">@{{ fm(row.payout) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.stake) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.odds, 4) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.payout) }}</td>
                                                 <td>@{{ row.result_number || '-' }}</td>
                                                 <td>@{{ row.matched_rule || '-' }}</td>
                                                 <td>@{{ row.settlement_batch_id || '-' }}</td>
                                                 <td>@{{ dt(row.settled_at) }}</td>
                                                 <td>@{{ dt(row.credited_at) }}</td>
-                                                <td><span :class="statusClass(row.status)">@{{ row.status || '-' }}</span></td>
+                                                <td><span :class="statusClass(row.status)">@{{ statusLabel(row.status) }}</span></td>
                                             </tr>
                                             <tr v-if="bets.length === 0">
-                                                <td colspan="12" class="wr-empty">ไม่มีข้อมูลรายการเดิมพัน</td>
+                                                <td colspan="12" class="wr-empty">ไม่มีรายการถูกรางวัลตามเงื่อนไขนี้</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -498,6 +631,18 @@
 
                     return value;
                 },
+                statusLabel(status) {
+                    const normalized = String(status || '').toLowerCase();
+                    const labels = {
+                        pending: 'รอดำเนินการ',
+                        settled: 'สรุปผลแล้ว',
+                        credited: 'จ่ายเงินแล้ว',
+                        failed: 'ผิดพลาด',
+                        voided: 'ยกเลิก',
+                    };
+
+                    return labels[normalized] || '-';
+                },
                 statusClass(status) {
                     const normalized = String(status || '').toLowerCase();
                     if (normalized === 'settled' || normalized === 'credited') {
@@ -541,7 +686,7 @@
                         this.summary.round_ids = summaryRes.data.round_ids || [];
                         this.summary.latest_round_id = summaryRes.data.latest_round_id || null;
                     } catch (error) {
-                        this.handleError(error, 'โหลด summary ไม่สำเร็จ');
+                        this.handleError(error, 'โหลดข้อมูลสรุปไม่สำเร็จ');
                     } finally {
                         this.isLoading = false;
                     }
@@ -585,14 +730,14 @@
                     try {
                         await this.loadSummaryOnly();
 
-                         if (!this.filters.round_id && this.summary.latest_round_id) {
+                        if (!this.filters.round_id && this.summary.latest_round_id) {
                             this.filters.round_id = this.summary.latest_round_id;
                         }
 
                         if (!this.filters.round_id) {
                             this.users = [];
                             this.bets = [];
-                            this.errorMessage = 'ไม่พบ Round ที่พร้อมรายงานตามเงื่อนไขที่เลือก';
+                            this.errorMessage = 'ไม่พบรอบที่พร้อมแสดงรายงานตามเงื่อนไขที่เลือก';
                             return;
                         }
 
@@ -610,7 +755,7 @@
                 resetFilters() {
                     this.filters = {
                         round_id: null,
-                        date: '',
+                        date: @json($initialDate ?? ''),
                         lottery_type: '',
                         market: '',
                     };
@@ -628,7 +773,7 @@
                 },
                 exportReport(level, format) {
                     if (!this.filters.round_id) {
-                        this.errorMessage = 'กรุณาระบุ Round ID ก่อน export';
+                        this.errorMessage = 'กรุณาระบุรหัสรอบก่อนส่งออกไฟล์';
                         return;
                     }
 
