@@ -27,8 +27,23 @@ class WinningReportSummaryQuery
             ];
         }
 
+        $latestDrawId = $this->resolveLatestDrawIdForDetails($drawIds);
+        if ($latestDrawId === null) {
+            return [
+                'draw_ids' => [],
+                'latest_draw_id' => null,
+                'total_stake' => 0.0,
+                'total_payout' => 0.0,
+                'net_profit_loss' => 0.0,
+                'winner_count' => 0,
+                'winning_ticket_count' => 0,
+                'settlement_status' => 'settled',
+                'has_pending' => false,
+            ];
+        }
+
         $aggregates = DB::table('lotto_winnings')
-            ->whereIn('draw_id', $drawIds)
+            ->where('draw_id', $latestDrawId)
             ->selectRaw('COALESCE(SUM(stake), 0) as total_stake')
             ->selectRaw('COALESCE(SUM(COALESCE(payout, 0)), 0) as total_payout_raw')
             ->selectRaw('COUNT(DISTINCT user_id) as winner_count')
@@ -41,13 +56,13 @@ class WinningReportSummaryQuery
         $totalPayout = $hasPending ? null : round((float) ($aggregates->total_payout_raw ?? 0), 2);
 
         $latestBatchStatus = (string) DB::table('settlement_batches')
-            ->whereIn('draw_id', $drawIds)
+            ->where('draw_id', $latestDrawId)
             ->orderByDesc('id')
             ->value('status');
 
         return [
             'draw_ids' => $drawIds,
-            'latest_draw_id' => $this->resolveLatestDrawIdForDetails($drawIds),
+            'latest_draw_id' => $latestDrawId,
             'total_stake' => $totalStake,
             'total_payout' => $totalPayout,
             'net_profit_loss' => $totalPayout === null ? null : round($totalStake - $totalPayout, 2),
