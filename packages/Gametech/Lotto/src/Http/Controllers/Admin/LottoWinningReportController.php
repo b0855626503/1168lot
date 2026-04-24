@@ -10,11 +10,13 @@ use Gametech\Lotto\Http\Requests\Admin\WinningReportExportRequest;
 use Gametech\Lotto\Http\Requests\Admin\WinningReportSummaryRequest;
 use Gametech\Lotto\Http\Requests\Admin\WinningReportUsersRequest;
 use Gametech\Lotto\Jobs\LottoWinningReportExportJob;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\WinningReport\WinningReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
@@ -36,57 +38,129 @@ class LottoWinningReportController extends AppBaseController
     {
         $this->assertCanView();
 
-        $lotteryTypeOptions = $this->resolveFilterOptions('lottery_type');
-        $marketOptions = $this->resolveFilterOptions('market');
+        $initialDate = (string) ($request->query('date') ?: now()->toDateString());
+        $initialLotteryType = (string) ($request->query('lottery_type') ?: '');
+        $initialMarket = (string) ($request->query('market') ?: '');
+        $filterPayload = $this->resolveFilterOptionsByDate($initialDate, $initialLotteryType);
 
         return view($this->_config['view'], [
-            'lotteryTypeOptions' => $lotteryTypeOptions,
-            'marketOptions' => $marketOptions,
-            'initialRoundId' => $this->normalizePositiveInt($request->query('round_id')),
-            'initialDate' => (string) ($request->query('date') ?: $this->latestReportDate() ?: now()->toDateString()),
+            'lotteryTypeOptions' => $filterPayload['lottery_type_options'],
+            'marketOptions' => $filterPayload['market_options'],
+            'initialDate' => $initialDate,
+            'initialLotteryType' => $initialLotteryType,
+            'initialMarket' => $initialMarket,
             'hasMaterializedReportData' => DB::table('settlement_batches')->exists(),
         ]);
     }
 
-    private function latestReportDate(): ?string
+    public function filterOptions(Request $request): JsonResponse
     {
-        if (! DB::getSchemaBuilder()->hasColumn('settlement_batches', 'draw_date')) {
-            return null;
-        }
+        $this->assertCanView();
 
-        $date = DB::table('settlement_batches')
-            ->whereNotNull('draw_date')
-            ->orderByDesc('draw_date')
-            ->value('draw_date');
+        $date = is_string($request->query('date')) && $request->query('date') !== ''
+            ? (string) $request->query('date')
+            : now()->toDateString();
+        $lotteryType = is_string($request->query('lottery_type')) ? (string) $request->query('lottery_type') : '';
+        $payload = $this->resolveFilterOptionsByDate($date, $lotteryType);
 
-        return is_string($date) && $date !== '' ? $date : null;
+        return response()->json([
+            'lottery_type_options' => $payload['lottery_type_options'],
+            'market_options' => $payload['market_options'],
+        ]);
     }
 
     /**
-     * @return array<int, string>
+     * @return array{lottery_type_options: array<int, string>, market_options: array<int, array<string, mixed>>}
      */
-    private function resolveFilterOptions(string $column): array
+    private function resolveFilterOptionsByDate(string $date, string $lotteryType = ''): array
     {
-        $fromBatches = DB::table('settlement_batches')
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
-            ->distinct()
-            ->pluck($column)
-            ->filter(static fn ($value): bool => is_string($value) && $value !== '');
+        $baseQuery = DB::table('lotto_winnings as w')
+            ->join('settlement_batches as b', 'b.id', '=', 'w.settlement_batch_id');
 
-        $fromWinnings = DB::table('lotto_winnings')
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
-            ->distinct()
-            ->pluck($column)
-            ->filter(static fn ($value): bool => is_string($value) && $value !== '');
+        if (Schema::hasColumn('settlement_batches', 'draw_date')) {
+            $baseQuery->whereDate('b.draw_date', $date);
+        } else {
+            $baseQuery->whereDate('b.started_at', $date);
+        }
 
-        return $fromBatches
-            ->merge($fromWinnings)
+        $lotteryTypeOptions = (clone $baseQuery)
+            ->select('w.lottery_type')
+            ->whereNotNull('w.lottery_type')
+            ->where('w.lottery_type', '!=', '')
+            ->distinct()
+            ->orderBy('w.lottery_type')
+            ->pluck('w.lottery_type')
+            ->filter(static fn ($value): bool => is_string($value) && $value !== '')
             ->unique()
             ->sort()
             ->values()
             ->all();
+
+        if ($lotteryType !== '') {
+            $baseQuery->where('w.lottery_type', $lotteryType);
+        }
+
+        $marketCodes = (clone $baseQuery)
+            ->select('w.market')
+            ->whereNotNull('w.market')
+            ->where('w.market', '!=', '')
+            ->distinct()
+            ->pluck('w.market')
+            ->filter(static fn ($value): bool => is_string($value) && $value !== '')
+            ->values()
+            ->all();
+
+        return [
+            'lottery_type_options' => $lotteryTypeOptions,
+            'market_options' => $this->resolveMarketOptions($marketCodes),
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $marketCodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolveMarketOptions(array $marketCodes): array
+    {
+        if ($marketCodes === []) {
+            return [];
+        }
+
+        $markets = LotteryMarket::query()
+            ->with('group:id,name')
+            ->whereIn('code', $marketCodes)
+            ->orderBy('group_id')
+            ->orderBy('name')
+            ->get(['id', 'group_id', 'name', 'logo', 'icon', 'code']);
+
+        $mappedCodes = $markets->pluck('code')->filter()->values()->all();
+        $missingCodes = array_values(array_diff($marketCodes, $mappedCodes));
+
+        $grouped = $markets->groupBy(static function (LotteryMarket $market): string {
+            return (string) (optional($market->group)->name ?: 'ไม่ระบุกลุ่ม');
+        })->map(static function ($groupMarkets, $groupName): array {
+            return [
+                'label' => (string) $groupName,
+                'options' => $groupMarkets->map(static fn (LotteryMarket $market): array => [
+                    'value' => (string) ($market->code ?? ''),
+                    'text' => (string) ($market->name ?: $market->code),
+                    'logo' => (string) ($market->logo ?: $market->icon ?: ''),
+                ])->values()->all(),
+            ];
+        })->values()->all();
+
+        if ($missingCodes !== []) {
+            $grouped[] = [
+                'label' => 'อื่นๆ',
+                'options' => collect($missingCodes)->map(static fn (string $code): array => [
+                    'value' => $code,
+                    'text' => $code,
+                    'logo' => '',
+                ])->values()->all(),
+            ];
+        }
+
+        return $grouped;
     }
 
     public function summary(WinningReportSummaryRequest $request, WinningReportService $service): JsonResponse

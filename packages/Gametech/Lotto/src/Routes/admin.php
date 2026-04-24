@@ -363,6 +363,8 @@ Route::domain(
             ])->name('admin.lotto.winning_report.index');
             Route::get('winning-report/summary', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@summary')
                 ->name('admin.lotto.winning_report.summary');
+            Route::get('winning-report/filter-options', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@filterOptions')
+                ->name('admin.lotto.winning_report.filter_options');
             Route::get('winning-report/users', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@users')
                 ->name('admin.lotto.winning_report.users');
             Route::get('winning-report/bets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@bets')

@@ -348,7 +348,7 @@
                         </div>
                         <div class="wr-meta-strip">
                             <span class="wr-meta-pill"><i class="fas fa-calendar-day"></i> วันที่รายงาน: @{{ filters.date || '-' }}</span>
-                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบที่แสดง: @{{ filters.round_id || summary.latest_round_id || '-' }}</span>
+                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบรายละเอียดอัตโนมัติ: @{{ effectiveRoundId || '-' }}</span>
                             <span class="wr-meta-pill"><i class="fas fa-check-circle"></i> สถานะ: @{{ statusLabel(summary.settlement_status) }}</span>
                         </div>
                     </div>
@@ -356,38 +356,35 @@
                     <div class="wr-card p-3">
 
                         <div class="row">
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
-                                <div class="wr-filter-block">
-                                    <div class="wr-filter-label">รหัสรอบ</div>
-                                    <input v-model.number="filters.round_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadAll">
-                                    <small class="text-muted d-block mt-1">เว้นว่างได้ หากดูภาพรวมตามวันที่</small>
-                                </div>
-                            </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">วันที่งวด</div>
-                                    <input v-model="filters.date" type="date" class="form-control form-control-sm" @change="loadSummaryOnly">
+                                    <input v-model="filters.date" type="date" class="form-control form-control-sm" @change="onSummaryFilterChange">
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">ประเภทหวย</div>
-                                    <select v-model="filters.lottery_type" class="form-control form-control-sm" @change="loadSummaryOnly">
+                                    <select v-model="filters.lottery_type" class="form-control form-control-sm" @change="onSummaryFilterChange">
                                         <option value="">ทั้งหมด</option>
                                         <option v-for="item in lotteryTypeOptions" :key="item" :value="item">@{{ item }}</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">ตลาด / หวย</div>
-                                    <select v-model="filters.market" class="form-control form-control-sm" @change="loadSummaryOnly">
+                                    <select ref="marketSelect" v-model="filters.market" class="form-control form-control-sm" @change="onSummaryFilterChange">
                                         <option value="">ทั้งหมด</option>
-                                        <option v-for="item in marketOptions" :key="item" :value="item">@{{ item }}</option>
+                                        <optgroup v-for="group in marketOptions" :key="group.label" :label="group.label">
+                                            <option v-for="option in group.options" :key="option.value" :value="option.value" :data-logo="option.logo || ''">
+                                                @{{ option.text }}
+                                            </option>
+                                        </optgroup>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">รหัสสมาชิก</div>
                                     <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadDetails">
@@ -437,8 +434,8 @@
                         <div v-if="hasMaterializedReportData && !isLoading && users.length === 0 && bets.length === 0 && summary.latest_round_id && summary.winning_ticket_count === 0" class="wr-note mb-2">
                             รอบที่เลือกมีการสรุปผลแล้ว แต่ยังไม่มีผู้ถูกรางวัลในเงื่อนไขนี้
                         </div>
-                        <div v-if="!filters.round_id" class="wr-note mb-2">
-                            โหมดภาพรวมตามวันที่: แสดงยอดรวมจำนวนผู้ถูกรางวัลและจำนวนบิลที่ถูกรางวัลโดยไม่ต้องระบุรหัสรอบ
+                        <div class="wr-note mb-2">
+                            รายละเอียดสมาชิกและรายการถูกหวยจะอิงรอบที่พบในวันที่เลือกโดยอัตโนมัติ ไม่ต้องจำรหัสรอบ
                         </div>
 
                         <div class="wr-kpi-grid mt-2">
@@ -577,10 +574,9 @@
                     lotteryTypeOptions: @json($lotteryTypeOptions ?? []),
                     marketOptions: @json($marketOptions ?? []),
                     filters: {
-                        round_id: @json($initialRoundId ?? null),
                         date: @json($initialDate ?? ''),
-                        lottery_type: '',
-                        market: '',
+                        lottery_type: @json($initialLotteryType ?? ''),
+                        market: @json($initialMarket ?? ''),
                     },
                     detailFilters: {
                         user_id: null,
@@ -595,13 +591,75 @@
                     errorMessage: '',
                     nowLabel: '-',
                     hasMaterializedReportData: @json($hasMaterializedReportData ?? false),
+                    effectiveRoundId: null,
                 };
             },
             mounted() {
                 this.nowLabel = this.formatNow();
+                this.initMarketSelect2();
                 this.loadAll();
             },
+            watch: {
+                marketOptions() {
+                    this.$nextTick(() => {
+                        this.initMarketSelect2();
+                    });
+                },
+            },
             methods: {
+                initMarketSelect2() {
+                    const marketSelect = this.$refs.marketSelect;
+                    if (!marketSelect || typeof window.$ !== 'function') {
+                        return;
+                    }
+
+                    const $market = window.$(marketSelect);
+                    if (typeof $market.select2 !== 'function') {
+                        return;
+                    }
+
+                    if ($market.hasClass('select2-hidden-accessible')) {
+                        $market.off('change.winning-report');
+                        $market.select2('destroy');
+                    }
+
+                    const renderMarketOption = function (state) {
+                        if (!state.id) {
+                            return state.text;
+                        }
+
+                        const optionEl = state.element;
+                        const logo = optionEl ? String(optionEl.getAttribute('data-logo') || '') : '';
+                        const safeText = window.$('<span/>').text(state.text || '').html();
+
+                        if (!logo) {
+                            return window.$('<span>' + safeText + '</span>');
+                        }
+
+                        return window.$(
+                            '<span style="display:flex;align-items:center;gap:8px;">'
+                            + '<img src="' + logo + '" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
+                            + '<span>' + safeText + '</span>'
+                            + '</span>'
+                        );
+                    };
+
+                    $market.select2({
+                        width: '100%',
+                        placeholder: 'ทั้งหมด',
+                        allowClear: true,
+                        templateResult: renderMarketOption,
+                        templateSelection: renderMarketOption,
+                        escapeMarkup(markup) {
+                            return markup;
+                        },
+                    });
+
+                    $market.val(this.filters.market || '').trigger('change.select2');
+                    $market.on('change.winning-report', (event) => {
+                        this.filters.market = String(window.$(event.currentTarget).val() || '');
+                    });
+                },
                 formatNow() {
                     return new Date().toLocaleString();
                 },
@@ -674,7 +732,163 @@
                         .map((key) => encodeURIComponent(key) + '=' + encodeURIComponent(params[key]))
                         .join('&');
                 },
-                async loadSummaryOnly() {
+                async refreshFilterOptions() {
+                    const filterRes = await axios.get('{{ route('admin.lotto.winning_report.filter_options') }}?' + this.query({
+                        date: this.filters.date,
+                        lottery_type: this.filters.lottery_type,
+                    }));
+
+                    this.lotteryTypeOptions = filterRes.data.lottery_type_options || [];
+                    this.marketOptions = filterRes.data.market_options || [];
+
+                    const marketExists = this.marketOptions.some((group) => {
+                        return Array.isArray(group.options) && group.options.some((option) => option.value === this.filters.market);
+                    });
+                    if (!marketExists) {
+                        this.filters.market = '';
+                    }
+                },
+                async onSummaryFilterChange() {
+                    this.errorMessage = '';
+                    this.isLoading = true;
+                    this.nowLabel = this.formatNow();
+
+                    try {
+                        await this.refreshFilterOptions();
+                        await this.loadAll();
+                    } catch (error) {
+                        this.handleError(error, 'โหลดตัวกรองไม่สำเร็จ');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async loadDetails() {
+                    const roundIds = this.resolveDetailRoundIds();
+                    if (roundIds.length === 0) {
+                        this.effectiveRoundId = null;
+                        this.users = [];
+                        this.bets = [];
+                        return;
+                    }
+
+                    this.effectiveRoundId = roundIds[0] || null;
+                    const usersRows = [];
+                    const betsRows = [];
+
+                    for (const roundId of roundIds) {
+                        const common = {
+                            round_id: roundId,
+                            user_id: this.detailFilters.user_id,
+                        };
+
+                        const usersQuery = this.query({
+                            ...common,
+                            per_page: 100,
+                        });
+
+                        const betsQuery = this.query({
+                            ...common,
+                            bet_type: this.detailFilters.bet_type,
+                            number: this.detailFilters.number,
+                            status: this.detailFilters.status,
+                            per_page: 100,
+                        });
+
+                        const [usersRes, betsRes] = await Promise.all([
+                            axios.get('{{ route('admin.lotto.winning_report.users') }}?' + usersQuery),
+                            axios.get('{{ route('admin.lotto.winning_report.bets') }}?' + betsQuery),
+                        ]);
+
+                        usersRows.push(...(usersRes.data.data || []));
+                        betsRows.push(...(betsRes.data.data || []));
+                    }
+
+                    this.users = this.mergeUsersRows(usersRows);
+                    this.bets = betsRows;
+                },
+                resolveDetailRoundIds() {
+                    if (this.summary.latest_round_id) {
+                        return [Number(this.summary.latest_round_id)];
+                    }
+
+                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length > 0) {
+                        return [Number(this.summary.round_ids[0])];
+                    }
+
+                    return [];
+                },
+                mergeUsersRows(rows) {
+                    const byUser = {};
+
+                    rows.forEach((row) => {
+                        const userId = Number(row.user_id || 0);
+                        if (!userId) {
+                            return;
+                        }
+
+                        if (!byUser[userId]) {
+                            byUser[userId] = {
+                                user_id: userId,
+                                username: row.username || '',
+                                total_stake: 0,
+                                total_payout: 0,
+                                net_by_user: 0,
+                                has_pending_financial: false,
+                                winning_bet_count: 0,
+                                winning_numbers: [],
+                                credited_status: 'settled',
+                            };
+                        }
+
+                        byUser[userId].total_stake += Number(row.total_stake || 0);
+
+                        if (row.total_payout === null || row.net_by_user === null) {
+                            byUser[userId].has_pending_financial = true;
+                        } else if (!byUser[userId].has_pending_financial) {
+                            byUser[userId].total_payout += Number(row.total_payout || 0);
+                            byUser[userId].net_by_user += Number(row.net_by_user || 0);
+                        }
+
+                        byUser[userId].winning_bet_count += Number(row.winning_bet_count || 0);
+
+                        if (row.winning_numbers) {
+                            String(row.winning_numbers).split(',').forEach((item) => {
+                                const normalized = String(item).trim();
+                                if (normalized && !byUser[userId].winning_numbers.includes(normalized)) {
+                                    byUser[userId].winning_numbers.push(normalized);
+                                }
+                            });
+                        }
+
+                        const status = String(row.credited_status || '').toLowerCase();
+                        if (status === 'pending') {
+                            byUser[userId].credited_status = 'pending';
+                        } else if (status === 'failed' && byUser[userId].credited_status !== 'pending') {
+                            byUser[userId].credited_status = 'failed';
+                        } else if (status === 'voided' && !['pending', 'failed'].includes(byUser[userId].credited_status)) {
+                            byUser[userId].credited_status = 'voided';
+                        }
+                    });
+
+                    return Object.values(byUser).map((row) => {
+                        const totalPayout = row.has_pending_financial ? null : Number(row.total_payout.toFixed(2));
+                        const netByUser = row.has_pending_financial ? null : Number(row.net_by_user.toFixed(2));
+
+                        return {
+                            ...row,
+                            total_stake: Number(row.total_stake.toFixed(2)),
+                            total_payout: totalPayout,
+                            net_by_user: netByUser,
+                            winning_numbers: row.winning_numbers.join(', '),
+                        };
+                    }).sort((a, b) => {
+                        const left = a.total_payout === null ? -1 : Number(a.total_payout);
+                        const right = b.total_payout === null ? -1 : Number(b.total_payout);
+
+                        return right - left;
+                    });
+                },
+                async loadAll() {
                     this.errorMessage = '';
                     this.isLoading = true;
                     this.nowLabel = this.formatNow();
@@ -685,56 +899,6 @@
                         this.summary = summaryRes.data.summary || {};
                         this.summary.round_ids = summaryRes.data.round_ids || [];
                         this.summary.latest_round_id = summaryRes.data.latest_round_id || null;
-                    } catch (error) {
-                        this.handleError(error, 'โหลดข้อมูลสรุปไม่สำเร็จ');
-                    } finally {
-                        this.isLoading = false;
-                    }
-                },
-                async loadDetails() {
-                    if (!this.filters.round_id) {
-                        this.users = [];
-                        this.bets = [];
-                        return;
-                    }
-
-                    const common = {
-                        round_id: this.filters.round_id,
-                        user_id: this.detailFilters.user_id,
-                    };
-
-                    const usersQuery = this.query({
-                        ...common,
-                        per_page: 100,
-                    });
-
-                    const betsQuery = this.query({
-                        ...common,
-                        bet_type: this.detailFilters.bet_type,
-                        number: this.detailFilters.number,
-                        status: this.detailFilters.status,
-                        per_page: 100,
-                    });
-
-                    const usersRes = await axios.get('{{ route('admin.lotto.winning_report.users') }}?' + usersQuery);
-                    this.users = usersRes.data.data || [];
-
-                    const betsRes = await axios.get('{{ route('admin.lotto.winning_report.bets') }}?' + betsQuery);
-                    this.bets = betsRes.data.data || [];
-                },
-                async loadAll() {
-                    this.errorMessage = '';
-                    this.isLoading = true;
-                    this.nowLabel = this.formatNow();
-
-                    try {
-                        await this.loadSummaryOnly();
-
-                        if (!this.filters.round_id) {
-                            this.users = [];
-                            this.bets = [];
-                            return;
-                        }
 
                         await this.loadDetails();
                     } catch (error) {
@@ -749,7 +913,6 @@
                 },
                 resetFilters() {
                     this.filters = {
-                        round_id: null,
                         date: @json($initialDate ?? ''),
                         lottery_type: '',
                         market: '',
@@ -761,19 +924,24 @@
                         status: '',
                     };
                     this.summary = {};
+                    this.effectiveRoundId = null;
                     this.users = [];
                     this.bets = [];
                     this.errorMessage = '';
                     this.nowLabel = this.formatNow();
+                    this.$nextTick(() => {
+                        this.initMarketSelect2();
+                    });
                 },
                 exportReport(level, format) {
-                    if (!this.filters.round_id) {
-                        this.errorMessage = 'กรุณาระบุรหัสรอบก่อนส่งออกไฟล์';
+                    const roundId = this.effectiveRoundId || this.summary.latest_round_id || null;
+                    if (!roundId) {
+                        this.errorMessage = 'ยังไม่พบรอบข้อมูลสำหรับส่งออกไฟล์';
                         return;
                     }
 
                     const q = this.query({
-                        round_id: this.filters.round_id,
+                        round_id: roundId,
                         user_id: this.detailFilters.user_id,
                         bet_type: this.detailFilters.bet_type,
                         number: this.detailFilters.number,
