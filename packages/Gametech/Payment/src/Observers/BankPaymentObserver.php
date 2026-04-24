@@ -128,7 +128,10 @@ class BankPaymentObserver
 
     private function shouldRecountPendingOnUpdate(EventData $data): bool
     {
-        return $data->wasChanged('status') || $data->wasChanged('enable');
+        return $data->wasChanged('status')
+            || $data->wasChanged('enable')
+            || $data->wasChanged('value')
+            || $data->wasChanged('date_create');
     }
 
     private function shouldSyncDashboardOnUpdate(EventData $data): bool
