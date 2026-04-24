@@ -360,6 +360,7 @@
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">รหัสรอบ</div>
                                     <input v-model.number="filters.round_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadAll">
+                                    <small class="text-muted d-block mt-1">เว้นว่างได้ หากดูภาพรวมตามวันที่</small>
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
@@ -435,6 +436,9 @@
                         <div v-if="errorMessage" class="wr-error mb-2">@{{ errorMessage }}</div>
                         <div v-if="hasMaterializedReportData && !isLoading && users.length === 0 && bets.length === 0 && summary.latest_round_id && summary.winning_ticket_count === 0" class="wr-note mb-2">
                             รอบที่เลือกมีการสรุปผลแล้ว แต่ยังไม่มีผู้ถูกรางวัลในเงื่อนไขนี้
+                        </div>
+                        <div v-if="!filters.round_id" class="wr-note mb-2">
+                            โหมดภาพรวมตามวันที่: แสดงยอดรวมจำนวนผู้ถูกรางวัลและจำนวนบิลที่ถูกรางวัลโดยไม่ต้องระบุรหัสรอบ
                         </div>
 
                         <div class="wr-kpi-grid mt-2">
@@ -726,14 +730,9 @@
                     try {
                         await this.loadSummaryOnly();
 
-                        if (!this.filters.round_id && this.summary.latest_round_id) {
-                            this.filters.round_id = this.summary.latest_round_id;
-                        }
-
                         if (!this.filters.round_id) {
                             this.users = [];
                             this.bets = [];
-                            this.errorMessage = 'ไม่พบรอบที่พร้อมแสดงรายงานตามเงื่อนไขที่เลือก';
                             return;
                         }
 
