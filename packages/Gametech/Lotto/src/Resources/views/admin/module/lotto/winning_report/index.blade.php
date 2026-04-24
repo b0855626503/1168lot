@@ -298,7 +298,7 @@
             border-radius: 12px;
             background: #ffffff;
             border: 1px solid #bae6fd;
-            box-shadow: 0 20px 46px rgba(2, 132, 199, 0.28);
+            box-shadow: 0 12px 25px rgba(15, 23, 42, 0.25);
             padding: 14px 16px;
             text-align: center;
         }
@@ -465,8 +465,8 @@
                             </div>
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
-                                    <div class="wr-filter-label">รหัสสมาชิก</div>
-                                    <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadDetails">
+                                    <div class="wr-filter-label">รหัสสมาชิก (ไอดีลูกค้า)</div>
+                                    <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" placeholder="เช่น 12345" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
