@@ -8,17 +8,21 @@ use Illuminate\Support\Carbon;
 class DrawScheduleResolver
 {
     /**
-     * @return array{should_generate:bool,schedule_type:string,skip_reason:string}
+     * @return array{should_generate:bool,schedule_type:string,draw_days:array<int,int>,draw_dates:array<int,int>,skip_reason:string}
      */
     public function resolve(LotteryMarket $market, Carbon $date): array
     {
         $resolvedSchedule = $this->resolveSchedule($market);
         $scheduleType = $resolvedSchedule['schedule_type'];
+        $drawDays = $resolvedSchedule['draw_days'];
+        $drawDates = $resolvedSchedule['draw_dates'];
 
         if ($resolvedSchedule['is_valid'] !== true) {
             return [
                 'should_generate' => false,
                 'schedule_type' => $scheduleType,
+                'draw_days' => $drawDays,
+                'draw_dates' => $drawDates,
                 'skip_reason' => 'invalid_schedule_config',
             ];
         }
@@ -27,6 +31,8 @@ class DrawScheduleResolver
             return [
                 'should_generate' => false,
                 'schedule_type' => $scheduleType,
+                'draw_days' => $drawDays,
+                'draw_dates' => $drawDates,
                 'skip_reason' => 'manual',
             ];
         }
@@ -37,6 +43,8 @@ class DrawScheduleResolver
                 return [
                     'should_generate' => true,
                     'schedule_type' => $scheduleType,
+                    'draw_days' => $drawDays,
+                    'draw_dates' => $drawDates,
                     'skip_reason' => '',
                 ];
             }
@@ -44,6 +52,8 @@ class DrawScheduleResolver
             return [
                 'should_generate' => false,
                 'schedule_type' => $scheduleType,
+                'draw_days' => $drawDays,
+                'draw_dates' => $drawDates,
                 'skip_reason' => 'not_in_weekly_schedule',
             ];
         }
@@ -54,6 +64,8 @@ class DrawScheduleResolver
                 return [
                     'should_generate' => true,
                     'schedule_type' => $scheduleType,
+                    'draw_days' => $drawDays,
+                    'draw_dates' => $drawDates,
                     'skip_reason' => '',
                 ];
             }
@@ -61,6 +73,8 @@ class DrawScheduleResolver
             return [
                 'should_generate' => false,
                 'schedule_type' => $scheduleType,
+                'draw_days' => $drawDays,
+                'draw_dates' => $drawDates,
                 'skip_reason' => 'not_in_monthly_schedule',
             ];
         }
@@ -68,6 +82,8 @@ class DrawScheduleResolver
         return [
             'should_generate' => false,
             'schedule_type' => $scheduleType,
+            'draw_days' => $drawDays,
+            'draw_dates' => $drawDates,
             'skip_reason' => 'invalid_schedule_config',
         ];
     }

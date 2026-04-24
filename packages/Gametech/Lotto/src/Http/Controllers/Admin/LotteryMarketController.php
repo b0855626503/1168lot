@@ -55,6 +55,9 @@ class LotteryMarketController extends AppBaseController
             'icon'       => ['nullable', 'string', 'max:255'],
             'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code'],
             'draw_mode' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawModes())],
+            'draw_schedule_type' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawScheduleTypes())],
+            'draw_days' => ['nullable', 'array'],
+            'draw_dates' => ['nullable', 'array'],
             'auto_open_time' => ['nullable', 'date_format:H:i'],
             'auto_close_time' => ['nullable', 'date_format:H:i'],
             'auto_result_time' => ['nullable', 'date_format:H:i'],
@@ -65,7 +68,8 @@ class LotteryMarketController extends AppBaseController
             'is_enabled' => ['nullable'],
         ])->validate();
 
-        $this->validateAutoDrawConfiguration($validated);
+        $schedulePayload = $this->resolveSchedulePayloadForSave($validated);
+        $this->validateAutoDrawConfiguration($validated, $schedulePayload);
 
         $request->validate([
             'logo_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
@@ -81,7 +85,10 @@ class LotteryMarketController extends AppBaseController
             'logo'       => $this->nullableString($validated['logo'] ?? null),
             'icon'       => $this->nullableString($validated['icon'] ?? null),
             'code'       => strtolower($validated['code']),
-            'draw_mode'  => (string) ($validated['draw_mode'] ?? LotteryMarket::DRAW_MODE_MANUAL),
+            'draw_mode'  => $schedulePayload['legacy_draw_mode'],
+            'draw_schedule_type' => $schedulePayload['draw_schedule_type'],
+            'draw_days' => $schedulePayload['draw_days'],
+            'draw_dates' => $schedulePayload['draw_dates'],
             'auto_open_time' => $this->normalizeTime($validated['auto_open_time'] ?? null),
             'auto_close_time' => $this->normalizeTime($validated['auto_close_time'] ?? null),
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
@@ -144,6 +151,9 @@ class LotteryMarketController extends AppBaseController
             'icon'       => ['nullable', 'string', 'max:255'],
             'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code,' . $market->id],
             'draw_mode' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawModes())],
+            'draw_schedule_type' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawScheduleTypes())],
+            'draw_days' => ['nullable', 'array'],
+            'draw_dates' => ['nullable', 'array'],
             'auto_open_time' => ['nullable', 'date_format:H:i'],
             'auto_close_time' => ['nullable', 'date_format:H:i'],
             'auto_result_time' => ['nullable', 'date_format:H:i'],
@@ -154,7 +164,8 @@ class LotteryMarketController extends AppBaseController
             'is_enabled' => ['nullable'],
         ])->validate();
 
-        $this->validateAutoDrawConfiguration($validated);
+        $schedulePayload = $this->resolveSchedulePayloadForSave($validated);
+        $this->validateAutoDrawConfiguration($validated, $schedulePayload);
 
         $request->validate([
             'logo_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
@@ -170,7 +181,10 @@ class LotteryMarketController extends AppBaseController
             'logo'       => $this->nullableString($validated['logo'] ?? null),
             'icon'       => $this->nullableString($validated['icon'] ?? null),
             'code'       => strtolower($validated['code']),
-            'draw_mode'  => (string) ($validated['draw_mode'] ?? LotteryMarket::DRAW_MODE_MANUAL),
+            'draw_mode'  => $schedulePayload['legacy_draw_mode'],
+            'draw_schedule_type' => $schedulePayload['draw_schedule_type'],
+            'draw_days' => $schedulePayload['draw_days'],
+            'draw_dates' => $schedulePayload['draw_dates'],
             'auto_open_time' => $this->normalizeTime($validated['auto_open_time'] ?? null),
             'auto_close_time' => $this->normalizeTime($validated['auto_close_time'] ?? null),
             'auto_result_time' => $this->normalizeTime($validated['auto_result_time'] ?? null),
@@ -255,11 +269,13 @@ class LotteryMarketController extends AppBaseController
         return $trimmed === '' ? null : $trimmed . ':00';
     }
 
-    private function validateAutoDrawConfiguration(array $validated): void
+    /**
+     * @param array{draw_schedule_type:string,draw_days:array<int,int>,draw_dates:array<int,int>} $schedulePayload
+     */
+    private function validateAutoDrawConfiguration(array $validated, array $schedulePayload): void
     {
-        $drawMode = (string) ($validated['draw_mode'] ?? LotteryMarket::DRAW_MODE_MANUAL);
-
-        if ($drawMode === LotteryMarket::DRAW_MODE_MANUAL) {
+        $scheduleType = (string) $schedulePayload['draw_schedule_type'];
+        if ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_MANUAL) {
             return;
         }
 
@@ -272,6 +288,114 @@ class LotteryMarketController extends AppBaseController
                 throw new InvalidArgumentException('เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน');
             }
         }
+
+        if ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY && count($schedulePayload['draw_days']) === 0) {
+            throw new InvalidArgumentException('กรุณาเลือกวันออกงวดอย่างน้อย 1 วัน สำหรับโหมดรายสัปดาห์');
+        }
+
+        if ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_MONTHLY && count($schedulePayload['draw_dates']) === 0) {
+            throw new InvalidArgumentException('กรุณาเลือกวันที่ออกงวดอย่างน้อย 1 วัน สำหรับโหมดรายเดือน');
+        }
+    }
+
+    /**
+     * @return array{draw_schedule_type:string,draw_days:array<int,int>,draw_dates:array<int,int>,legacy_draw_mode:string}
+     */
+    private function resolveSchedulePayloadForSave(array $validated): array
+    {
+        $scheduleType = $this->nullableString($validated['draw_schedule_type'] ?? null);
+        $drawDays = $this->normalizeIntegerArray($validated['draw_days'] ?? null, 1, 7);
+        $drawDates = $this->normalizeIntegerArray($validated['draw_dates'] ?? null, 1, 31);
+
+        if ($scheduleType === null) {
+            $legacyDrawMode = (string) ($validated['draw_mode'] ?? LotteryMarket::DRAW_MODE_MANUAL);
+            if ($legacyDrawMode === LotteryMarket::DRAW_MODE_DAILY) {
+                $scheduleType = LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY;
+                $drawDays = [1, 2, 3, 4, 5, 6, 7];
+                $drawDates = [];
+            } elseif ($legacyDrawMode === LotteryMarket::DRAW_MODE_WEEKDAYS) {
+                $scheduleType = LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY;
+                $drawDays = [1, 2, 3, 4, 5];
+                $drawDates = [];
+            } elseif ($legacyDrawMode === LotteryMarket::DRAW_MODE_WED_SAT_SUN) {
+                $scheduleType = LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY;
+                $drawDays = [3, 6, 7];
+                $drawDates = [];
+            } else {
+                $scheduleType = LotteryMarket::DRAW_SCHEDULE_TYPE_MANUAL;
+                $drawDays = [];
+                $drawDates = [];
+            }
+        }
+
+        if ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_MANUAL) {
+            $drawDays = [];
+            $drawDates = [];
+        } elseif ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY) {
+            $drawDates = [];
+        } elseif ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_MONTHLY) {
+            $drawDays = [];
+        }
+
+        return [
+            'draw_schedule_type' => $scheduleType,
+            'draw_days' => $drawDays,
+            'draw_dates' => $drawDates,
+            'legacy_draw_mode' => $this->mapScheduleToLegacyDrawMode($scheduleType, $drawDays),
+        ];
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function normalizeIntegerArray($value, int $min, int $max): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $item) {
+            if (is_string($item) && trim($item) === '') {
+                continue;
+            }
+
+            $number = (int) $item;
+            if ($number < $min || $number > $max) {
+                continue;
+            }
+
+            $normalized[$number] = $number;
+        }
+
+        $result = array_values($normalized);
+        sort($result);
+
+        return $result;
+    }
+
+    /**
+     * @param array<int,int> $drawDays
+     */
+    private function mapScheduleToLegacyDrawMode(string $scheduleType, array $drawDays): string
+    {
+        if ($scheduleType !== LotteryMarket::DRAW_SCHEDULE_TYPE_WEEKLY) {
+            return LotteryMarket::DRAW_MODE_MANUAL;
+        }
+
+        if ($drawDays === [1, 2, 3, 4, 5, 6, 7]) {
+            return LotteryMarket::DRAW_MODE_DAILY;
+        }
+
+        if ($drawDays === [1, 2, 3, 4, 5]) {
+            return LotteryMarket::DRAW_MODE_WEEKDAYS;
+        }
+
+        if ($drawDays === [3, 6, 7]) {
+            return LotteryMarket::DRAW_MODE_WED_SAT_SUN;
+        }
+
+        return LotteryMarket::DRAW_MODE_MANUAL;
     }
 
 }

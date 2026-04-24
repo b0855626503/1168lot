@@ -15,7 +15,7 @@ class LotteryMarketTransformer extends TransformerAbstract
             'name'       => $model->name,
             'group_name' => optional($model->group)->name ?? '-',
             'code'       => '<code>' . $model->code . '</code>',
-            'draw_mode'  => $this->drawModeLabel((string) ($model->draw_mode ?? 'manual')),
+            'draw_mode'  => $this->drawScheduleLabel($model),
             'auto_open_time' => $this->formatTime((string) ($model->auto_open_time ?? '')),
             'auto_close_time' => $this->formatTime((string) ($model->auto_close_time ?? '')),
             'auto_result_time' => $this->formatTime((string) ($model->auto_result_time ?? '')),
@@ -36,21 +36,102 @@ class LotteryMarketTransformer extends TransformerAbstract
         ];
     }
 
-    private function drawModeLabel(string $mode): string
+    private function drawScheduleLabel(LotteryMarket $model): string
     {
-        if ($mode === 'daily') {
-            return 'Auto ทุกวัน';
+        $scheduleType = trim((string) ($model->draw_schedule_type ?? ''));
+        $drawDays = is_array($model->draw_days ?? null) ? $model->draw_days : [];
+        $drawDates = is_array($model->draw_dates ?? null) ? $model->draw_dates : [];
+
+        if ($scheduleType === 'weekly') {
+            $labels = $this->drawDayLabels($drawDays);
+            if (count($labels) > 0) {
+                return 'Auto: ' . implode(', ', $labels);
+            }
         }
 
-        if ($mode === 'weekdays') {
-            return 'Auto จันทร์-ศุกร์';
+        if ($scheduleType === 'monthly') {
+            $dateLabels = $this->drawDateLabels($drawDates);
+            if (count($dateLabels) > 0) {
+                return 'Auto: วันที่ ' . implode(', ', $dateLabels);
+            }
         }
 
-        if ($mode === 'wed_sat_sun') {
-            return 'Auto พุธ/เสาร์/อาทิตย์';
+        if ($scheduleType === 'manual') {
+            return 'Manual';
+        }
+
+        $legacyMode = (string) ($model->draw_mode ?? 'manual');
+        if ($legacyMode === 'daily') {
+            return 'Auto: จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์, เสาร์, อาทิตย์';
+        }
+
+        if ($legacyMode === 'weekdays') {
+            return 'Auto: จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์';
+        }
+
+        if ($legacyMode === 'wed_sat_sun') {
+            return 'Auto: พุธ, เสาร์, อาทิตย์';
         }
 
         return 'Manual';
+    }
+
+    /**
+     * @param mixed $days
+     * @return array<int,string>
+     */
+    private function drawDayLabels($days): array
+    {
+        if (! is_array($days)) {
+            return [];
+        }
+
+        $map = [
+            1 => 'จันทร์',
+            2 => 'อังคาร',
+            3 => 'พุธ',
+            4 => 'พฤหัสบดี',
+            5 => 'ศุกร์',
+            6 => 'เสาร์',
+            7 => 'อาทิตย์',
+        ];
+
+        $labels = [];
+        foreach ($days as $day) {
+            $value = (int) $day;
+            if (! array_key_exists($value, $map)) {
+                continue;
+            }
+
+            $labels[$value] = $map[$value];
+        }
+
+        return array_values($labels);
+    }
+
+    /**
+     * @param mixed $dates
+     * @return array<int,int>
+     */
+    private function drawDateLabels($dates): array
+    {
+        if (! is_array($dates)) {
+            return [];
+        }
+
+        $values = [];
+        foreach ($dates as $date) {
+            $value = (int) $date;
+            if ($value < 1 || $value > 31) {
+                continue;
+            }
+
+            $values[$value] = $value;
+        }
+
+        ksort($values);
+
+        return array_values($values);
     }
 
     private function formatTime(string $value): string
