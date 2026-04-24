@@ -633,7 +633,7 @@
                                                 <td>@{{ betTypeLabel(row.bet_type) }}</td>
                                                 <td class="text-center">@{{ row.number || '-' }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.stake) }}</td>
-                                                <td class="text-right wr-money">@{{ fm(row.odds, 4) }}</td>
+                                                <td class="text-right wr-money">@{{ fm(row.odds, 2) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.payout) }}</td>
                                                 <td>@{{ row.settlement_batch_id || '-' }}</td>
                                                 <td>@{{ dt(row.settled_at) }}</td>
