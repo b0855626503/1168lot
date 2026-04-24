@@ -235,7 +235,7 @@
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">Round ID</div>
-                                    <input v-model.number="filters.round_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter="loadAll">
+                                    <input v-model.number="filters.round_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadAll">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
@@ -265,19 +265,19 @@
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">User ID</div>
-                                    <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter="loadDetails">
+                                    <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">Bet Type</div>
-                                    <input v-model="detailFilters.bet_type" type="text" class="form-control form-control-sm" placeholder="top_3" @keyup.enter="loadDetails">
+                                    <input v-model="detailFilters.bet_type" type="text" class="form-control form-control-sm" placeholder="top_3" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">Number</div>
-                                    <input v-model="detailFilters.number" type="text" class="form-control form-control-sm" placeholder="123" @keyup.enter="loadDetails">
+                                    <input v-model="detailFilters.number" type="text" class="form-control form-control-sm" placeholder="123" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
@@ -295,11 +295,11 @@
                             </div>
                             <div class="col-lg-8 col-md-9 col-sm-6 mb-2 d-flex align-items-end">
                                 <div class="w-100 d-flex flex-wrap justify-content-end wr-actions">
-                                    <button class="btn btn-sm btn-outline-secondary mr-2" @click="resetFilters">Reset</button>
-                                    <button class="btn btn-sm btn-primary mr-2" @click="loadAll">Apply</button>
-                                    <button class="btn btn-sm btn-success mr-2" @click="exportReport('summary', 'csv')">Summary CSV</button>
-                                    <button class="btn btn-sm btn-outline-success mr-2" @click="exportReport('users', 'csv')">Users CSV</button>
-                                    <button class="btn btn-sm btn-outline-primary" @click="exportReport('bets', 'xlsx')">Bets XLSX</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2" @click.prevent="resetFilters">Reset</button>
+                                    <button type="button" class="btn btn-sm btn-primary mr-2" @click.prevent="loadAll">Apply</button>
+                                    <button type="button" class="btn btn-sm btn-success mr-2" @click.prevent="exportReport('summary', 'csv')">Summary CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" @click.prevent="exportReport('users', 'csv')">Users CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @click.prevent="exportReport('bets', 'xlsx')">Bets XLSX</button>
                                 </div>
                             </div>
                         </div>
@@ -510,7 +510,18 @@
                 },
                 query(params) {
                     return Object.keys(params)
-                        .filter((key) => params[key] !== null && params[key] !== '' && params[key] !== undefined)
+                        .filter((key) => {
+                            const value = params[key];
+                            if (value === null || value === '' || value === undefined) {
+                                return false;
+                            }
+
+                            if (typeof value === 'number' && Number.isNaN(value)) {
+                                return false;
+                            }
+
+                            return true;
+                        })
                         .map((key) => encodeURIComponent(key) + '=' + encodeURIComponent(params[key]))
                         .join('&');
                 },
