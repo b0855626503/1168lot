@@ -84,6 +84,10 @@ class WinningReportService
             $query->where('number', (string) $filters['number']);
         }
 
+        if (! empty($filters['status'])) {
+            $query->where('status', (string) $filters['status']);
+        }
+
         $rows = $query
             ->orderBy('id')
             ->get()

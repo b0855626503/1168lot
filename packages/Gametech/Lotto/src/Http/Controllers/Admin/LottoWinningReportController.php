@@ -136,6 +136,7 @@ class LottoWinningReportController extends AppBaseController
                 'user_id' => $this->normalizePositiveInt($request->query('user_id')),
                 'bet_type' => $request->query('bet_type'),
                 'number' => $request->query('number'),
+                'status' => $request->query('status'),
             ];
             $perPage = (int) ($request->query('per_page') ?? 20);
 
@@ -189,6 +190,7 @@ class LottoWinningReportController extends AppBaseController
                 'user_id' => $this->normalizePositiveInt($request->query('user_id')),
                 'bet_type' => $request->query('bet_type'),
                 'number' => $request->query('number'),
+                'status' => $request->query('status'),
                 'level' => $level,
             ]);
         } catch (RuntimeException $exception) {

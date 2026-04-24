@@ -52,6 +52,10 @@ class WinningReportBetsQuery
             $query->where('number', (string) $filters['number']);
         }
 
+        if (! empty($filters['status'])) {
+            $query->where('status', (string) $filters['status']);
+        }
+
         return $query->paginate($perPage);
     }
 }

@@ -19,6 +19,7 @@ class WinningReportExportRequest extends FormRequest
             'user_id' => ['nullable', 'integer', 'min:1'],
             'bet_type' => ['nullable', 'string', 'max:100'],
             'number' => ['nullable', 'string', 'max:32'],
+            'status' => ['nullable', Rule::in(['pending', 'settled', 'credited', 'failed', 'voided'])],
             'level' => ['required', Rule::in(['summary', 'users', 'bets'])],
             'format' => ['required', Rule::in(['csv', 'xlsx'])],
         ];

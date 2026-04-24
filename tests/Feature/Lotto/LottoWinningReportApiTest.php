@@ -108,6 +108,34 @@ class LottoWinningReportApiTest extends TestCase
         $this->assertSame('SETTLEMENT_PENDING', $response->getData(true)['message']);
     }
 
+    public function test_bets_status_filter_returns_only_requested_status(): void
+    {
+        app()->instance(AdminBouncer::class, new class
+        {
+            public function hasPermission(string $key): bool
+            {
+                return true;
+            }
+        });
+
+        $controller = new LottoWinningReportController;
+        $request = WinningReportBetsRequest::create('/', 'GET', [
+            'round_id' => 101,
+            'status' => 'pending',
+            'per_page' => 100,
+        ]);
+        $request->setContainer(app());
+        $request->setRedirector(app('redirect'));
+        $request->validateResolved();
+
+        $response = $controller->bets($request, app(WinningReportService::class));
+        $payload = $response->getData(true);
+
+        $this->assertCount(1, $payload['data']);
+        $this->assertSame('pending', $payload['data'][0]['status']);
+        $this->assertNull($payload['data'][0]['payout']);
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('lotto_draws', function (Blueprint $table): void {
