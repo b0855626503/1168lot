@@ -163,6 +163,13 @@
             height: 100%;
         }
 
+        .wr-filter-heading {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+
         .wr-filter-label {
             color: #334155;
             font-size: 0.78rem;
@@ -248,18 +255,25 @@
             background: #f8fafc;
         }
 
-        .wr-actions .btn {
-            min-width: 118px;
+        .wr-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .wr-actions-grid .btn {
+            min-width: 0;
+            width: 100%;
             border-radius: 6px;
             font-weight: 600;
         }
 
-        .wr-actions .btn-primary {
+        .wr-actions-grid .btn-primary {
             background: var(--wr-accent);
             border-color: var(--wr-accent);
         }
 
-        .wr-actions .btn-primary:hover {
+        .wr-actions-grid .btn-primary:hover {
             background: var(--wr-accent-dark);
             border-color: var(--wr-accent-dark);
         }
@@ -391,14 +405,8 @@
                 font-size: 0.78rem;
             }
 
-            .wr-actions .btn {
-                min-width: 0;
-                width: 100%;
-                margin-bottom: 6px;
-            }
-
-            .wr-actions {
-                width: 100%;
+            .wr-actions-grid {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
             }
         }
 
@@ -430,7 +438,7 @@
                     </div>
 
                     <div class="wr-card p-3">
-
+                        <div class="wr-filter-heading">ตัวกรองรายงาน</div>
                         <div class="row">
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
@@ -466,7 +474,7 @@
                                     <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">ประเภทแทง</div>
                                     <select v-model="detailFilters.bet_type" class="form-control form-control-sm" @change="loadDetails">
@@ -475,13 +483,13 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">เลขที่แทง</div>
                                     <input v-model="detailFilters.number" type="text" class="form-control form-control-sm" placeholder="123" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">สถานะรายการ</div>
                                     <select v-model="detailFilters.status" class="form-control form-control-sm" @change="loadDetails">
@@ -494,13 +502,21 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-8 col-md-9 col-sm-6 mb-2 d-flex align-items-end">
-                                <div class="w-100 d-flex flex-wrap justify-content-end wr-actions">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2" @click.prevent="resetFilters"><i class="fas fa-undo-alt"></i> ล้างค่า</button>
-                                    <button type="button" class="btn btn-sm btn-primary mr-2" :disabled="isLoading" @click.prevent="loadAll"><i class="fas fa-search"></i> แสดงรายงาน</button>
-                                    <button type="button" class="btn btn-sm btn-success mr-2" :disabled="isLoading" @click.prevent="exportReport('summary', 'csv')"><i class="fas fa-file-csv"></i> สรุป CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" :disabled="isLoading" @click.prevent="exportReport('users', 'csv')"><i class="fas fa-users"></i> สมาชิก CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" :disabled="isLoading" @click.prevent="exportReport('bets', 'xlsx')"><i class="fas fa-file-excel"></i> รายการ XLSX</button>
+                            <div class="col-lg-3 col-md-3 col-sm-6 mb-2 d-flex align-items-stretch">
+                                <div class="wr-filter-block w-100">
+                                    <div class="wr-filter-label">การทำงาน</div>
+                                    <div class="wr-actions-grid">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @click.prevent="resetFilters"><i class="fas fa-undo-alt"></i> ล้างค่า</button>
+                                        <button type="button" class="btn btn-sm btn-primary" :disabled="isLoading" @click.prevent="loadAll"><i class="fas fa-search"></i> แสดงรายงาน</button>
+                                        <button type="button" class="btn btn-sm btn-success" :disabled="isLoading" @click.prevent="exportReport('summary', 'csv')"><i class="fas fa-file-csv"></i> สรุป CSV</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success" :disabled="isLoading" @click.prevent="exportReport('users', 'csv')"><i class="fas fa-users"></i> สมาชิก CSV</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" :disabled="isLoading" @click.prevent="exportReport('bets', 'xlsx')"><i class="fas fa-file-excel"></i> รายการ XLSX</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="wr-subtitle" style="font-size:0.78rem;">
+                                    เปลี่ยนตัวกรองแล้วข้อมูลจะอัปเดตโดยอัตโนมัติ กด “แสดงรายงาน” เพื่อรีโหลดแบบเต็มอีกครั้งได้
                                 </div>
                             </div>
                         </div>
@@ -607,7 +623,7 @@
                                                 <th>สมาชิก</th>
                                                 <th>เลขโพย</th>
                                                 <th>ประเภทแทง</th>
-                                                <th>เลขที่แทง / ถูกรางวัล</th>
+                                                <th class="text-center">เลขที่แทง / ถูกรางวัล</th>
                                                 <th class="text-right">ยอดแทง</th>
                                                 <th class="text-right">อัตราจ่าย</th>
                                                 <th class="text-right">ยอดจ่าย</th>
@@ -622,10 +638,7 @@
                                                 <td>@{{ row.username || ('USER-' + row.user_id) }}</td>
                                                 <td>@{{ row.ticket_no || '-' }}</td>
                                                 <td>@{{ betTypeLabel(row.bet_type) }}</td>
-                                                <td>
-                                                    <div>@{{ row.number || '-' }}</div>
-                                                    <small class="text-muted">@{{ row.result_number || '-' }}</small>
-                                                </td>
+                                                <td class="text-center">@{{ row.number || '-' }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.stake) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.odds, 4) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.payout) }}</td>
