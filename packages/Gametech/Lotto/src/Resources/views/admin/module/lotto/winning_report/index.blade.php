@@ -595,11 +595,7 @@
             },
             mounted() {
                 this.nowLabel = this.formatNow();
-                if (this.filters.round_id) {
-                    this.loadAll();
-                } else {
-                    this.loadSummaryOnly();
-                }
+                this.loadAll();
             },
             methods: {
                 formatNow() {
