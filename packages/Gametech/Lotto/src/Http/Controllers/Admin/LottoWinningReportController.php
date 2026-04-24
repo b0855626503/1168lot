@@ -248,6 +248,8 @@ class LottoWinningReportController extends AppBaseController
                     $isPending = (string) $row->status === 'pending';
 
                     return [
+                        'user_id' => (int) $row->user_id,
+                        'username' => (string) ($row->username ?? ''),
                         'ticket_no' => (string) ($row->ticket_no ?? ''),
                         'bet_type' => (string) $row->bet_type,
                         'number' => (string) $row->number,

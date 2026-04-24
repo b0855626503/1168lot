@@ -348,7 +348,7 @@
                         </div>
                         <div class="wr-meta-strip">
                             <span class="wr-meta-pill"><i class="fas fa-calendar-day"></i> วันที่รายงาน: @{{ filters.date || '-' }}</span>
-                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบรายละเอียดอัตโนมัติ: @{{ effectiveRoundId || '-' }}</span>
+                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบรายละเอียดอัตโนมัติ: @{{ roundScopeLabel() }}</span>
                             <span class="wr-meta-pill"><i class="fas fa-check-circle"></i> สถานะ: @{{ statusLabel(summary.settlement_status) }}</span>
                         </div>
                     </div>
@@ -523,6 +523,7 @@
                                     <table class="table table-sm wr-table">
                                         <thead>
                                             <tr>
+                                                <th>สมาชิก</th>
                                                 <th>เลขโพย</th>
                                                 <th>ประเภทแทง</th>
                                                 <th>เลขที่แทง</th>
@@ -538,7 +539,8 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="row in bets" :key="row.ticket_no + '-' + row.number + '-' + row.settlement_batch_id">
+                                            <tr v-for="row in bets" :key="(row.user_id || '-') + '-' + row.ticket_no + '-' + row.number + '-' + row.settlement_batch_id">
+                                                <td>@{{ row.username || ('USER-' + row.user_id) }}</td>
                                                 <td>@{{ row.ticket_no || '-' }}</td>
                                                 <td>@{{ row.bet_type || '-' }}</td>
                                                 <td>@{{ row.number || '-' }}</td>
@@ -553,7 +555,7 @@
                                                 <td><span :class="statusClass(row.status)">@{{ statusLabel(row.status) }}</span></td>
                                             </tr>
                                             <tr v-if="bets.length === 0">
-                                                <td colspan="12" class="wr-empty">ไม่มีรายการถูกรางวัลตามเงื่อนไขนี้</td>
+                                                <td colspan="13" class="wr-empty">ไม่มีรายการถูกรางวัลตามเงื่อนไขนี้</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -662,6 +664,21 @@
                 },
                 formatNow() {
                     return new Date().toLocaleString();
+                },
+                roundScopeLabel() {
+                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length > 1) {
+                        return this.summary.round_ids.join(', ');
+                    }
+
+                    if (this.effectiveRoundId) {
+                        return String(this.effectiveRoundId);
+                    }
+
+                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length === 1) {
+                        return String(this.summary.round_ids[0]);
+                    }
+
+                    return '-';
                 },
                 fm(value, fraction = 2) {
                     if (value === null || value === undefined || value === '') {
@@ -807,12 +824,14 @@
                     this.bets = betsRows;
                 },
                 resolveDetailRoundIds() {
-                    if (this.summary.latest_round_id) {
-                        return [Number(this.summary.latest_round_id)];
+                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length > 0) {
+                        return this.summary.round_ids
+                            .map((id) => Number(id))
+                            .filter((id) => Number.isInteger(id) && id > 0);
                     }
 
-                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length > 0) {
-                        return [Number(this.summary.round_ids[0])];
+                    if (this.summary.latest_round_id) {
+                        return [Number(this.summary.latest_round_id)];
                     }
 
                     return [];
