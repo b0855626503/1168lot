@@ -534,6 +534,8 @@
                         const summaryQ = this.query(this.filters);
                         const summaryRes = await axios.get('{{ route('admin.lotto.winning_report.summary') }}?' + summaryQ);
                         this.summary = summaryRes.data.summary || {};
+                        this.summary.round_ids = summaryRes.data.round_ids || [];
+                        this.summary.latest_round_id = summaryRes.data.latest_round_id || null;
                     } catch (error) {
                         this.handleError(error, 'โหลด summary ไม่สำเร็จ');
                     } finally {
@@ -578,6 +580,18 @@
 
                     try {
                         await this.loadSummaryOnly();
+
+                         if (!this.filters.round_id && this.summary.latest_round_id) {
+                            this.filters.round_id = this.summary.latest_round_id;
+                        }
+
+                        if (!this.filters.round_id) {
+                            this.users = [];
+                            this.bets = [];
+                            this.errorMessage = 'ไม่พบ Round ที่พร้อมรายงานตามเงื่อนไขที่เลือก';
+                            return;
+                        }
+
                         await this.loadDetails();
                     } catch (error) {
                         this.handleError(error, 'โหลดรายงานไม่สำเร็จ');

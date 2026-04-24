@@ -39,6 +39,8 @@ class WinningReportService
                 'winning_ticket_count' => $payload['winning_ticket_count'],
                 'settlement_status' => $payload['settlement_status'],
             ],
+            'round_ids' => $payload['draw_ids'],
+            'latest_round_id' => $payload['draw_ids'][0] ?? null,
         ];
     }
 

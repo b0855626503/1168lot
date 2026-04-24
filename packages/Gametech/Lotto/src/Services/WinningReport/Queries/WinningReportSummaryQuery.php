@@ -62,7 +62,10 @@ class WinningReportSummaryQuery
      */
     private function resolveDrawIds(array $filters): array
     {
-        $query = DB::table('settlement_batches')->select('draw_id')->distinct();
+        $query = DB::table('settlement_batches')
+            ->select('draw_id')
+            ->distinct()
+            ->orderByDesc('draw_id');
 
         if (! empty($filters['draw_id'])) {
             $query->where('draw_id', (int) $filters['draw_id']);
