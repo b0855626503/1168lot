@@ -43,7 +43,7 @@ class WinningReportSummaryQuery
         }
 
         $aggregates = DB::table('lotto_winnings')
-            ->where('draw_id', $latestDrawId)
+            ->whereIn('draw_id', $drawIds)
             ->selectRaw('COALESCE(SUM(stake), 0) as total_stake')
             ->selectRaw('COALESCE(SUM(COALESCE(payout, 0)), 0) as total_payout_raw')
             ->selectRaw('COUNT(DISTINCT user_id) as winner_count')
@@ -56,7 +56,7 @@ class WinningReportSummaryQuery
         $totalPayout = $hasPending ? null : round((float) ($aggregates->total_payout_raw ?? 0), 2);
 
         $latestBatchStatus = (string) DB::table('settlement_batches')
-            ->where('draw_id', $latestDrawId)
+            ->whereIn('draw_id', $drawIds)
             ->orderByDesc('id')
             ->value('status');
 

@@ -143,9 +143,9 @@ class LottoWinningReportApiTest extends TestCase
         $payload = $service->summary([]);
 
         $this->assertSame(103, $payload['latest_round_id']);
-        $this->assertSame(2, $payload['summary']['winner_count']);
-        $this->assertSame(2, $payload['summary']['winning_ticket_count']);
-        $this->assertSame(220.0, (float) $payload['summary']['total_payout']);
+        $this->assertSame(4, $payload['summary']['winner_count']);
+        $this->assertSame(5, $payload['summary']['winning_ticket_count']);
+        $this->assertNull($payload['summary']['total_payout']);
     }
 
     private function prepareSchema(): void
