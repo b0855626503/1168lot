@@ -174,7 +174,7 @@ class BankPaymentObserver
         $cacheKey = $this->pendingDepositCountCacheKey($today);
         $cachedCount = Cache::get($cacheKey);
 
-        if ($delta !== null && is_numeric($cachedCount)) {
+        if ($delta !== null && $delta !== 0 && is_numeric($cachedCount)) {
             $nextCount = max(0, (int) $cachedCount + $delta);
             Cache::put($cacheKey, $nextCount, now()->addMinutes(5));
 
@@ -194,6 +194,7 @@ class BankPaymentObserver
         return (int) app('Gametech\Payment\Repositories\BankPaymentRepository')
             ->where('status', 0)
             ->where('enable', 'Y')
+            ->where('value', '>', 0)
             ->where('date_create', '>=', $rangeStart)
             ->where('date_create', '<', $rangeEndExclusive)
             ->count();
@@ -204,6 +205,7 @@ class BankPaymentObserver
         return $this->matchesPendingDepositSnapshot(
             (int) ($data->status ?? 0),
             (string) ($data->enable ?? ''),
+            (float) ($data->value ?? 0),
             $data->date_create
         ) ? 1 : 0;
     }
@@ -213,6 +215,7 @@ class BankPaymentObserver
         return $this->matchesPendingDepositSnapshot(
             (int) ($data->status ?? 0),
             (string) ($data->enable ?? ''),
+            (float) ($data->value ?? 0),
             $data->date_create
         ) ? -1 : 0;
     }
@@ -222,21 +225,23 @@ class BankPaymentObserver
         $wasPending = $this->matchesPendingDepositSnapshot(
             (int) ($data->getOriginal('status') ?? 0),
             (string) ($data->getOriginal('enable') ?? ''),
+            (float) ($data->getOriginal('value') ?? 0),
             $data->getOriginal('date_create')
         );
 
         $isPending = $this->matchesPendingDepositSnapshot(
             (int) ($data->status ?? 0),
             (string) ($data->enable ?? ''),
+            (float) ($data->value ?? 0),
             $data->date_create
         );
 
         return ((int) $isPending) - ((int) $wasPending);
     }
 
-    private function matchesPendingDepositSnapshot(int $status, string $enable, mixed $dateCreate): bool
+    private function matchesPendingDepositSnapshot(int $status, string $enable, float $value, mixed $dateCreate): bool
     {
-        if ($status !== 0 || $enable !== 'Y' || empty($dateCreate)) {
+        if ($status !== 0 || $enable !== 'Y' || $value <= 0 || empty($dateCreate)) {
             return false;
         }
 
