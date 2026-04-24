@@ -287,28 +287,23 @@
             font-size: 0.83rem;
         }
 
-        .wr-loading-zone {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 190px;
-            border-radius: 12px;
-            border: 2px dashed #7dd3fc;
-            background: linear-gradient(180deg, #f0f9ff 0%, #ecfeff 100%);
-        }
-
-        .wr-loading-zone__card {
-            min-width: 280px;
-            max-width: 90%;
+        .wr-loading-float {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            min-width: 320px;
+            max-width: 92vw;
             border-radius: 12px;
             background: #ffffff;
             border: 1px solid #bae6fd;
-            box-shadow: 0 16px 40px rgba(2, 132, 199, 0.22);
+            box-shadow: 0 20px 46px rgba(2, 132, 199, 0.28);
             padding: 14px 16px;
             text-align: center;
         }
 
-        .wr-loading-zone__spinner {
+        .wr-loading-float__spinner {
             width: 34px;
             height: 34px;
             border-radius: 50%;
@@ -318,13 +313,13 @@
             animation: wr-spin 0.8s linear infinite;
         }
 
-        .wr-loading-zone__title {
+        .wr-loading-float__title {
             font-size: 0.9rem;
             font-weight: 700;
             color: #0f172a;
         }
 
-        .wr-loading-zone__desc {
+        .wr-loading-float__desc {
             margin-top: 4px;
             font-size: 0.8rem;
             color: #475569;
@@ -521,12 +516,10 @@
                             </div>
                         </div>
 
-                        <div v-if="isLoading" class="wr-loading-zone mb-3">
-                            <div class="wr-loading-zone__card">
-                                <div class="wr-loading-zone__spinner"></div>
-                                <div class="wr-loading-zone__title">กำลังโหลดข้อมูลรายงาน</div>
-                                <div class="wr-loading-zone__desc">โปรดรอสักครู่ ระบบกำลังดึงข้อมูลให้ครบ</div>
-                            </div>
+                        <div v-if="isLoading" class="wr-loading-float">
+                            <div class="wr-loading-float__spinner"></div>
+                            <div class="wr-loading-float__title">กำลังอัปเดตข้อมูลรายงาน</div>
+                            <div class="wr-loading-float__desc">โปรดรอสักครู่ ระบบกำลังประมวลผลข้อมูลล่าสุด</div>
                         </div>
                         <div v-if="!hasMaterializedReportData" class="wr-error mb-2">
                             ยังไม่มีข้อมูลรายงานที่จัดเก็บไว้แล้ว กรุณาสรุปผลรอบใหม่ หรือเติมข้อมูลย้อนหลังสำหรับรอบเก่าก่อน
