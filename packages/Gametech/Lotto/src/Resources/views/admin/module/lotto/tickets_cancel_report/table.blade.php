@@ -54,19 +54,19 @@
 <div id="ticketsCancelTotals" class="mt-2 p-2 border rounded bg-light text-sm">
     <div class="row">
         <div class="col-md-3 col-6 mb-1">
-            <span class="text-muted">sum ยอดแทง:</span>
+            <span class="text-muted">ผลรวมยอดแทง:</span>
             <strong id="ticketsCancelTotalBet" class="d-inline-block ml-1">0.00</strong>
         </div>
         <div class="col-md-3 col-6 mb-1">
-            <span class="text-muted">sum ส่วนลด:</span>
+            <span class="text-muted">ผลรวมส่วนลด:</span>
             <strong id="ticketsCancelTotalDiscount" class="d-inline-block ml-1">0.00</strong>
         </div>
         <div class="col-md-3 col-6 mb-1">
-            <span class="text-muted">sum สุทธิ:</span>
+            <span class="text-muted">ผลรวมสุทธิ:</span>
             <strong id="ticketsCancelTotalNet" class="d-inline-block ml-1">0.00</strong>
         </div>
         <div class="col-md-3 col-6 mb-1">
-            <span class="text-muted">sum ยอดถูก:</span>
+            <span class="text-muted">ผลรวมยอดถูก:</span>
             <strong id="ticketsCancelTotalWin" class="d-inline-block ml-1 text-danger">0.00</strong>
         </div>
     </div>
