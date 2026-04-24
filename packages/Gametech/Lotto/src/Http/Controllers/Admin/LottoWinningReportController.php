@@ -221,8 +221,10 @@ class LottoWinningReportController extends AppBaseController
         $drawId = (int) $request->validated('round_id');
 
         try {
+            $userFilter = $this->resolveUserFilter($request->query('user_id'));
             $filters = [
-                'user_id' => $this->normalizePositiveInt($request->query('user_id')),
+                'user_id' => $userFilter['user_id'],
+                'username' => $userFilter['username'],
             ];
             $perPage = (int) ($request->query('per_page') ?? 20);
 
@@ -263,8 +265,10 @@ class LottoWinningReportController extends AppBaseController
         $drawId = (int) $request->validated('round_id');
 
         try {
+            $userFilter = $this->resolveUserFilter($request->query('user_id'));
             $filters = [
-                'user_id' => $this->normalizePositiveInt($request->query('user_id')),
+                'user_id' => $userFilter['user_id'],
+                'username' => $userFilter['username'],
                 'bet_type' => $request->query('bet_type'),
                 'number' => $request->query('number'),
                 'status' => $request->query('status'),
@@ -319,8 +323,10 @@ class LottoWinningReportController extends AppBaseController
         $format = (string) $request->validated('format');
 
         try {
+            $userFilter = $this->resolveUserFilter($request->query('user_id'));
             $exportData = $service->exportRows($drawId, [
-                'user_id' => $this->normalizePositiveInt($request->query('user_id')),
+                'user_id' => $userFilter['user_id'],
+                'username' => $userFilter['username'],
                 'bet_type' => $request->query('bet_type'),
                 'number' => $request->query('number'),
                 'status' => $request->query('status'),
@@ -409,6 +415,24 @@ class LottoWinningReportController extends AppBaseController
         $normalized = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
         return $normalized === false ? null : (int) $normalized;
+    }
+
+    /**
+     * @return array{user_id:?int,username:?string}
+     */
+    private function resolveUserFilter(mixed $value): array
+    {
+        $normalized = trim((string) ($value ?? ''));
+        if ($normalized === '') {
+            return ['user_id' => null, 'username' => null];
+        }
+
+        $numeric = $this->normalizePositiveInt($normalized);
+        if ($numeric !== null) {
+            return ['user_id' => $numeric, 'username' => null];
+        }
+
+        return ['user_id' => null, 'username' => $normalized];
     }
 
     private function isQueueUsable(): bool

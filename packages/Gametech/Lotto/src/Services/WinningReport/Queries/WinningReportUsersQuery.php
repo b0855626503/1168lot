@@ -34,6 +34,10 @@ class WinningReportUsersQuery
             $query->where('user_id', (int) $filters['user_id']);
         }
 
+        if (! empty($filters['username'])) {
+            $query->where('username', 'like', '%'.(string) $filters['username'].'%');
+        }
+
         return $query->paginate($perPage);
     }
 }

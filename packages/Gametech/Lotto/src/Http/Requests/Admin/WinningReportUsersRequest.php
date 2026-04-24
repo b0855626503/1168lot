@@ -15,7 +15,7 @@ class WinningReportUsersRequest extends FormRequest
     {
         return [
             'round_id' => ['required', 'integer', 'min:1'],
-            'user_id' => ['nullable', 'integer', 'min:1'],
+            'user_id' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];

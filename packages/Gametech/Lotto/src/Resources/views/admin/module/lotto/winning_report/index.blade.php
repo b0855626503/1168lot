@@ -466,7 +466,7 @@
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">รหัสสมาชิก (ไอดีลูกค้า)</div>
-                                    <input v-model.number="detailFilters.user_id" type="number" min="1" class="form-control form-control-sm" placeholder="เช่น 12345" @keyup.enter.prevent="loadDetails">
+                                    <input v-model.trim="detailFilters.user_id" type="text" class="form-control form-control-sm" placeholder="เช่น 12345 หรือ boat001" @keyup.enter.prevent="loadDetails">
                                 </div>
                             </div>
                             <div class="col-lg-3 col-md-3 col-sm-6 mb-2">
@@ -675,7 +675,7 @@
                         market: @json($initialMarket ?? ''),
                     },
                     detailFilters: {
-                        user_id: null,
+                        user_id: '',
                         bet_type: '',
                         number: '',
                         status: '',
@@ -1022,7 +1022,7 @@
                         market: '',
                     };
                     this.detailFilters = {
-                        user_id: null,
+                        user_id: '',
                         bet_type: '',
                         number: '',
                         status: '',

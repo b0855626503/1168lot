@@ -16,7 +16,7 @@ class WinningReportBetsRequest extends FormRequest
     {
         return [
             'round_id' => ['required', 'integer', 'min:1'],
-            'user_id' => ['nullable', 'integer', 'min:1'],
+            'user_id' => ['nullable', 'string', 'max:100'],
             'bet_type' => ['nullable', 'string', 'max:100'],
             'number' => ['nullable', 'string', 'max:32'],
             'status' => ['nullable', Rule::in(['pending', 'settled', 'credited', 'failed', 'voided'])],

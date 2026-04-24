@@ -78,6 +78,10 @@ class WinningReportService
             $query->where('user_id', (int) $filters['user_id']);
         }
 
+        if (! empty($filters['username'])) {
+            $query->where('username', 'like', '%'.(string) $filters['username'].'%');
+        }
+
         if (! empty($filters['bet_type'])) {
             $query->where('bet_type', (string) $filters['bet_type']);
         }
