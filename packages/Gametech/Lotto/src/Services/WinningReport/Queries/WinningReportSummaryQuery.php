@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\Services\WinningReport\Queries;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -27,7 +28,7 @@ class WinningReportSummaryQuery
             ];
         }
 
-        $latestDrawId = $this->resolveLatestDrawIdForDetails($drawIds);
+        $latestDrawId = $this->resolveLatestDrawIdForDetails($drawIds, $filters);
         if ($latestDrawId === null) {
             return [
                 'draw_ids' => [],
@@ -42,8 +43,12 @@ class WinningReportSummaryQuery
             ];
         }
 
-        $aggregates = DB::table('lotto_winnings')
-            ->whereIn('draw_id', $drawIds)
+        $aggregatesQuery = DB::table('lotto_winnings')
+            ->whereIn('draw_id', $drawIds);
+
+        $this->applyUserFilter($aggregatesQuery, $filters);
+
+        $aggregates = $aggregatesQuery
             ->selectRaw('COALESCE(SUM(stake), 0) as total_stake')
             ->selectRaw('COALESCE(SUM(COALESCE(payout, 0)), 0) as total_payout_raw')
             ->selectRaw('COUNT(DISTINCT user_id) as winner_count')
@@ -101,16 +106,37 @@ class WinningReportSummaryQuery
             $query->where('market', (string) $filters['market']);
         }
 
+        if (! empty($filters['user_id']) || ! empty($filters['username'])) {
+            $query->whereExists(function ($subQuery) use ($filters): void {
+                $subQuery->selectRaw('1')
+                    ->from('lotto_winnings as w')
+                    ->whereColumn('w.draw_id', 'settlement_batches.draw_id');
+
+                if (! empty($filters['user_id'])) {
+                    $subQuery->where('w.user_id', (int) $filters['user_id']);
+                }
+
+                if (! empty($filters['username'])) {
+                    $subQuery->where('w.username', 'like', '%'.(string) $filters['username'].'%');
+                }
+            });
+        }
+
         return $query->pluck('draw_id')->map(static fn ($id): int => (int) $id)->values()->all();
     }
 
     /**
      * @param  array<int, int>  $drawIds
+     * @param  array<string, mixed>  $filters
      */
-    private function resolveLatestDrawIdForDetails(array $drawIds): ?int
+    private function resolveLatestDrawIdForDetails(array $drawIds, array $filters): ?int
     {
-        $latestWinningDrawId = DB::table('lotto_winnings')
-            ->whereIn('draw_id', $drawIds)
+        $latestQuery = DB::table('lotto_winnings')
+            ->whereIn('draw_id', $drawIds);
+
+        $this->applyUserFilter($latestQuery, $filters);
+
+        $latestWinningDrawId = $latestQuery
             ->orderByDesc('draw_id')
             ->value('draw_id');
 
@@ -119,5 +145,19 @@ class WinningReportSummaryQuery
         }
 
         return $drawIds[0] ?? null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyUserFilter(Builder $query, array $filters): void
+    {
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', (int) $filters['user_id']);
+        }
+
+        if (! empty($filters['username'])) {
+            $query->where('username', 'like', '%'.(string) $filters['username'].'%');
+        }
     }
 }

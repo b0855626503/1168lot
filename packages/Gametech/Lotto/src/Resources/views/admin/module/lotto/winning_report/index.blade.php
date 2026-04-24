@@ -998,7 +998,10 @@
                     this.nowLabel = this.formatNow();
 
                     try {
-                        const summaryQ = this.query(this.filters);
+                        const summaryQ = this.query({
+                            ...this.filters,
+                            user_id: this.detailFilters.user_id,
+                        });
                         const summaryRes = await axios.get('{{ route('admin.lotto.winning_report.summary') }}?' + summaryQ);
                         this.summary = summaryRes.data.summary || {};
                         this.summary.round_ids = summaryRes.data.round_ids || [];

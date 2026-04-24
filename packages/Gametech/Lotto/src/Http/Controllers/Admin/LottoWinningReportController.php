@@ -199,8 +199,11 @@ class LottoWinningReportController extends AppBaseController
         $this->assertCanView();
 
         try {
+            $userFilter = $this->resolveUserFilter($request->query('user_id'));
             $filters = [
                 'draw_id' => $this->normalizePositiveInt($request->query('round_id')),
+                'user_id' => $userFilter['user_id'],
+                'username' => $userFilter['username'],
                 'date' => $request->query('date'),
                 'lottery_type' => $request->query('lottery_type'),
                 'market' => $request->query('market'),
