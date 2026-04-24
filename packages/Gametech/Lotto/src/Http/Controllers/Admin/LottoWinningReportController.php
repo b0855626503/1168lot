@@ -36,31 +36,41 @@ class LottoWinningReportController extends AppBaseController
     {
         $this->assertCanView();
 
-        $lotteryTypeOptions = DB::table('settlement_batches')
-            ->select('lottery_type')
-            ->whereNotNull('lottery_type')
-            ->where('lottery_type', '!=', '')
-            ->distinct()
-            ->orderBy('lottery_type')
-            ->pluck('lottery_type')
-            ->values()
-            ->all();
-
-        $marketOptions = DB::table('settlement_batches')
-            ->select('market')
-            ->whereNotNull('market')
-            ->where('market', '!=', '')
-            ->distinct()
-            ->orderBy('market')
-            ->pluck('market')
-            ->values()
-            ->all();
+        $lotteryTypeOptions = $this->resolveFilterOptions('lottery_type');
+        $marketOptions = $this->resolveFilterOptions('market');
 
         return view($this->_config['view'], [
             'lotteryTypeOptions' => $lotteryTypeOptions,
             'marketOptions' => $marketOptions,
             'initialRoundId' => $this->normalizePositiveInt($request->query('round_id')),
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveFilterOptions(string $column): array
+    {
+        $fromBatches = DB::table('settlement_batches')
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->pluck($column)
+            ->filter(static fn ($value): bool => is_string($value) && $value !== '');
+
+        $fromWinnings = DB::table('lotto_winnings')
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->pluck($column)
+            ->filter(static fn ($value): bool => is_string($value) && $value !== '');
+
+        return $fromBatches
+            ->merge($fromWinnings)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 
     public function summary(WinningReportSummaryRequest $request, WinningReportService $service): JsonResponse
