@@ -313,4 +313,16 @@ return [
         'route' => 'admin.lotto.reports.results_by_date',
         'sort' => 6,
     ],
+    [
+        'key' => 'lotto_reports.winning_report',
+        'name' => 'ดูรายงานผลชนะ',
+        'route' => 'admin.lotto.winning_report.index',
+        'sort' => 7,
+    ],
+    [
+        'key' => 'lotto_reports.winning_report.export',
+        'name' => 'ส่งออกรายงานผลชนะ',
+        'route' => 'admin.lotto.winning_report.export',
+        'sort' => 8,
+    ],
 ];

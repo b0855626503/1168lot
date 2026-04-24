@@ -13,6 +13,8 @@ use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayConsumeStreamCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayHealthCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayPublishReadyCommand;
+use Gametech\Lotto\Console\Commands\LottoWinningReportBackfillCommand;
+use Gametech\Lotto\Console\Commands\LottoWinningReportReconcileCommand;
 use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointCommand;
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
@@ -30,6 +32,8 @@ use Gametech\Lotto\Models\LottoNumberBlockProxy;
 use Gametech\Lotto\Models\LottoNumberExposureProxy;
 use Gametech\Lotto\Models\LottoTicketItemProxy;
 use Gametech\Lotto\Models\LottoTicketProxy;
+use Gametech\Lotto\Models\LottoWinningProxy;
+use Gametech\Lotto\Models\SettlementBatchProxy;
 use Gametech\Lotto\Observers\LottoAuditObserver;
 use Gametech\Lotto\Observers\LottoDashboardSummaryObserver;
 use Gametech\Lotto\Observers\LottoDrawAutoResultObserver;
@@ -48,6 +52,7 @@ use Gametech\Lotto\Services\Relay\LotteryRelayStream;
 use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\WalletTransactionService;
+use Gametech\Lotto\Services\WinningReport\WinningReportService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -100,6 +105,10 @@ class LottoServiceProvider extends ServiceProvider
             return new WalletTransactionService;
         });
 
+        $this->app->singleton(WinningReportService::class, function ($app) {
+            return new WinningReportService;
+        });
+
         $this->app->singleton(AutoResultHardeningService::class, function ($app) {
             return new AutoResultHardeningService;
         });
@@ -141,6 +150,8 @@ class LottoServiceProvider extends ServiceProvider
             MigrateLegacyLottoPermissionsCommand::class,
             MigrateRelayResultSourcesCommand::class,
             SyncLottoDrawStatusesCommand::class,
+            LottoWinningReportBackfillCommand::class,
+            LottoWinningReportReconcileCommand::class,
         ]);
     }
 
@@ -197,5 +208,7 @@ class LottoServiceProvider extends ServiceProvider
         LottoTicketProxy::observe(LottoDashboardSummaryObserver::class);
         LottoTicketItemProxy::observe(LottoAuditObserver::class);
         LottoTicketItemProxy::observe(LottoDashboardSummaryObserver::class);
+        SettlementBatchProxy::observe(LottoAuditObserver::class);
+        LottoWinningProxy::observe(LottoAuditObserver::class);
     }
 }

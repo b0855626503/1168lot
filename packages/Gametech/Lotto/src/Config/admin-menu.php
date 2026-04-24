@@ -171,4 +171,14 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
+    [
+        'key' => 'lotto_reports.winning_report',
+        'name' => 'Winning Report',
+        'route' => 'admin.lotto.winning_report.index',
+        'sort' => 7,
+        'icon-class' => 'fa-ticket',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1,
+    ],
 ];

@@ -17,7 +17,9 @@ use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\LottoWinning;
 use Gametech\Lotto\Models\MemberLottoMarketPolicy;
+use Gametech\Lotto\Models\SettlementBatch;
 use Konekt\Concord\BaseModuleServiceProvider;
 
 /**
@@ -38,6 +40,8 @@ class ModuleServiceProvider extends BaseModuleServiceProvider
         LottoGroupPackageBetSetting::class,
         LottoTicket::class,
         LottoTicketItem::class,
+        SettlementBatch::class,
+        LottoWinning::class,
         LottoResultSource::class,
         LottoResultFetchLog::class,
         MemberLottoMarketPolicy::class,

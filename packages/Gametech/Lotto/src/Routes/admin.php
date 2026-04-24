@@ -357,6 +357,18 @@ Route::domain(
             ])->name('admin.lotto.reports.results_by_date');
             Route::get('reports/results-by-date/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultsByDateReportController@loadData')
                 ->name('admin.lotto.reports.results_by_date.loaddata');
+
+            Route::get('winning-report', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.winning_report.index',
+            ])->name('admin.lotto.winning_report.index');
+            Route::get('winning-report/summary', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@summary')
+                ->name('admin.lotto.winning_report.summary');
+            Route::get('winning-report/users', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@users')
+                ->name('admin.lotto.winning_report.users');
+            Route::get('winning-report/bets', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@bets')
+                ->name('admin.lotto.winning_report.bets');
+            Route::get('winning-report/export', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@export')
+                ->name('admin.lotto.winning_report.export');
         });
     });
 });

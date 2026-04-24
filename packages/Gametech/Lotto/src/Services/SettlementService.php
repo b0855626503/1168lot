@@ -7,10 +7,14 @@ use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\LottoWinning;
+use Gametech\Lotto\Models\SettlementBatch;
 use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use Throwable;
 
 class SettlementService
 {
@@ -26,78 +30,193 @@ class SettlementService
      *
      * @throws Exception
      */
-    public function settleDraw(LottoDraw $draw, array $resultNumber): array
+    public function settleDraw(LottoDraw $draw, array $resultNumber, string $mode = 'settlement'): array
     {
         $normalizedResult = $this->normalizeResultNumber($resultNumber);
+        $resultHash = ResultHash::fromPayload($normalizedResult);
+        $batch = $this->findOrCreateSettlementBatch($draw, $resultHash, $mode);
 
-        return DB::transaction(function () use ($draw, $normalizedResult) {
-            $draw = LottoDraw::query()->lockForUpdate()->findOrFail($draw->id);
+        $startedAt = microtime(true);
 
-            if ((string) $draw->status === 'resulted') {
-                throw new InvalidArgumentException('งวดนี้ประกาศผลไปแล้ว');
-            }
+        try {
+            $summary = DB::transaction(function () use ($draw, $normalizedResult, $resultHash, $batch, $mode) {
+                $draw = LottoDraw::query()->lockForUpdate()->findOrFail($draw->id);
 
-            $draw->update([
-                'result_number' => $normalizedResult,
-                'result_at' => now(),
-                'status' => 'resulted',
-                'result_fetch_status' => 'APPLIED',
-                'result_fetch_error' => null,
-                'result_hash' => ResultHash::fromPayload($normalizedResult),
-                'result_applied_at' => now(),
-                'result_fetched_at' => now(),
-            ]);
+                if (
+                    (string) $draw->status === 'resulted'
+                    && (string) ($draw->result_hash ?? '') === $resultHash
+                    && $mode === 'settlement'
+                ) {
+                    return $this->buildSummaryFromMaterializedData($draw, $normalizedResult);
+                }
 
-            $tickets = LottoTicket::query()
-                ->with('items')
-                ->where('draw_id', $draw->id)
-                ->where('status', '!=', 'cancelled')
-                ->lockForUpdate()
-                ->get();
+                if ((string) $draw->status === 'resulted' && $mode === 'settlement') {
+                    throw new InvalidArgumentException('งวดนี้ประกาศผลไปแล้ว');
+                }
 
-            $winningTickets = 0;
-            $winningItems = 0;
-            $totalWinAmount = 0.0;
-            $canWriteWalletTransactions = Schema::hasTable('wallet_transactions');
+                if ((string) $draw->status !== 'resulted') {
+                    $draw->update([
+                        'result_number' => $normalizedResult,
+                        'result_at' => now(),
+                        'status' => 'resulted',
+                        'result_fetch_status' => 'APPLIED',
+                        'result_fetch_error' => null,
+                        'result_hash' => $resultHash,
+                        'result_applied_at' => now(),
+                        'result_fetched_at' => now(),
+                    ]);
+                }
 
-            foreach ($tickets as $ticket) {
-                $ticketWinAmount = 0.0;
-                $hasWinningItem = false;
+                $context = $this->resolveLottoContext((int) $draw->id);
+                $lotteryType = $context['lottery_type'];
+                $marketCode = $context['market'];
 
-                foreach ($ticket->items as $item) {
-                    $isWinner = $this->isWinningItem($item, $normalizedResult);
-                    $winAmount = $this->resolveWinAmount($item, $isWinner);
-                    $this->applyItemSettlement($item, $isWinner, $winAmount);
+                $tickets = LottoTicket::query()
+                    ->with(['items', 'member:code,user_name'])
+                    ->where('draw_id', $draw->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->lockForUpdate()
+                    ->get();
 
-                    if ($isWinner) {
+                $winningTickets = 0;
+                $winningItems = 0;
+                $totalWinAmount = 0.0;
+                $totalStake = 0.0;
+                $canWriteWalletTransactions = Schema::hasTable('wallet_transactions');
+
+                foreach ($tickets as $ticket) {
+                    $ticketWinAmount = 0.0;
+                    $hasWinningItem = false;
+                    $winningRecordIds = [];
+
+                    foreach ($ticket->items as $item) {
+                        $isWinner = $this->isWinningItem($item, $normalizedResult);
+                        $winAmount = $this->resolveWinAmount($item, $isWinner);
+                        $this->applyItemSettlement($item, $isWinner, $winAmount);
+
+                        if (! $isWinner) {
+                            continue;
+                        }
+
+                        $matchedContext = $this->resolveMatchedContext((string) $item->bet_type, $normalizedResult);
+                        $winningRecord = LottoWinning::query()->updateOrCreate(
+                            [
+                                'draw_id' => (int) $draw->id,
+                                'bet_item_id' => (int) $item->id,
+                            ],
+                            [
+                                'bet_id' => (int) $ticket->id,
+                                'ticket_no' => (string) $ticket->id,
+                                'user_id' => (int) $ticket->member_id,
+                                'username' => (string) ($ticket->member->user_name ?? ''),
+                                'lottery_type' => $lotteryType,
+                                'market' => $marketCode !== '' ? $marketCode : null,
+                                'bet_type' => (string) $item->bet_type,
+                                'number' => (string) $item->number,
+                                'stake' => round((float) $item->amount, 2),
+                                'odds' => round((float) $item->payout_at_time, 4),
+                                'payout' => round($winAmount, 2),
+                                'net_profit' => round((float) $item->amount - $winAmount, 2),
+                                'result_number' => $matchedContext['result_number'],
+                                'matched_rule' => $matchedContext['matched_rule'],
+                                'status' => 'settled',
+                                'settlement_batch_id' => (int) $batch->id,
+                                'settled_at' => now(),
+                                'credited_at' => null,
+                            ]
+                        );
+
+                        $winningRecordIds[] = (int) $winningRecord->id;
+
                         $hasWinningItem = true;
                         $winningItems++;
                         $ticketWinAmount += $winAmount;
+                        $totalStake += (float) $item->amount;
                     }
-                }
 
-                $ticket->update([
-                    'status' => 'resulted',
-                    'total_win_amount' => round($ticketWinAmount, 2),
-                ]);
+                    $ticket->update([
+                        'status' => 'resulted',
+                        'total_win_amount' => round($ticketWinAmount, 2),
+                    ]);
 
-                if ($hasWinningItem) {
+                    if (! $hasWinningItem) {
+                        continue;
+                    }
+
                     $winningTickets++;
                     $totalWinAmount += $ticketWinAmount;
 
-                    $this->creditWinnerIfNeeded($draw, $ticket, $ticketWinAmount, $canWriteWalletTransactions);
-                }
-            }
+                    $creditSuccess = $this->creditWinnerIfNeeded($draw, $ticket, $ticketWinAmount, $canWriteWalletTransactions);
 
-            return [
+                    if ($creditSuccess && $winningRecordIds !== []) {
+                        LottoWinning::query()
+                            ->whereIn('id', $winningRecordIds)
+                            ->update([
+                                'status' => 'credited',
+                                'credited_at' => now(),
+                            ]);
+                    }
+                }
+
+                $batch->update([
+                    'status' => 'settled',
+                    'finished_at' => now(),
+                    'total_bets_processed' => (int) $tickets->count(),
+                    'total_winning_records' => (int) $winningItems,
+                    'total_stake' => round($totalStake, 2),
+                    'total_payout' => round($totalWinAmount, 2),
+                    'error_message' => null,
+                ]);
+
+                return [
+                    'draw_id' => (int) $draw->id,
+                    'result_number' => $normalizedResult,
+                    'ticket_count' => (int) $tickets->count(),
+                    'winning_ticket_count' => $winningTickets,
+                    'winning_item_count' => $winningItems,
+                    'total_win_amount' => round($totalWinAmount, 2),
+                ];
+            });
+
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+            $batchPayload = SettlementBatch::query()->find((int) $batch->id);
+
+            Log::info('lotto.settlement.batch.settled', [
+                'settlement_batch_id' => (int) $batch->id,
                 'draw_id' => (int) $draw->id,
-                'result_number' => $normalizedResult,
-                'ticket_count' => (int) $tickets->count(),
-                'winning_ticket_count' => $winningTickets,
-                'winning_item_count' => $winningItems,
-                'total_win_amount' => round($totalWinAmount, 2),
-            ];
-        });
+                'lottery_type' => (string) ($batchPayload->lottery_type ?? ''),
+                'processed_count' => (int) ($summary['ticket_count'] ?? 0),
+                'winning_count' => (int) ($summary['winning_item_count'] ?? 0),
+                'total_payout' => (float) ($summary['total_win_amount'] ?? 0),
+                'duration_ms' => $durationMs,
+                'error_message' => null,
+            ]);
+
+            return $summary;
+        } catch (Throwable $exception) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            SettlementBatch::query()
+                ->where('id', (int) $batch->id)
+                ->update([
+                    'status' => 'failed',
+                    'finished_at' => now(),
+                    'error_message' => mb_substr($exception->getMessage(), 0, 65535),
+                ]);
+
+            Log::error('lotto.settlement.batch.failed', [
+                'settlement_batch_id' => (int) $batch->id,
+                'draw_id' => (int) $draw->id,
+                'lottery_type' => (string) ($batch->lottery_type ?? ''),
+                'processed_count' => 0,
+                'winning_count' => 0,
+                'total_payout' => 0,
+                'duration_ms' => $durationMs,
+                'error_message' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     /**
@@ -245,13 +364,13 @@ class SettlementService
         LottoTicket $ticket,
         float $ticketWinAmount,
         bool $canWriteWalletTransactions
-    ): void {
+    ): bool {
         if ($ticketWinAmount <= 0) {
-            return;
+            return false;
         }
 
         if (! $canWriteWalletTransactions) {
-            return;
+            return false;
         }
 
         $alreadyCredited = DB::table('wallet_transactions')
@@ -262,7 +381,7 @@ class SettlementService
             ->exists();
 
         if ($alreadyCredited) {
-            return;
+            return true;
         }
 
         $this->walletTransactionService()->creditMemberBalance(
@@ -280,6 +399,8 @@ class SettlementService
             createdById: null,
             description: 'จ่ายรางวัลหวย'
         );
+
+        return true;
     }
 
     private function walletTransactionService(): WalletTransactionService
@@ -291,5 +412,106 @@ class SettlementService
         $this->walletTransactionService = app(WalletTransactionService::class);
 
         return $this->walletTransactionService;
+    }
+
+    private function findOrCreateSettlementBatch(LottoDraw $draw, string $resultHash, string $mode): SettlementBatch
+    {
+        $context = $this->resolveLottoContext((int) $draw->id);
+        $lotteryType = $context['lottery_type'];
+        $marketCode = $context['market'];
+
+        $idempotencyKey = sprintf('settlement:%d:%s', (int) $draw->id, $resultHash);
+
+        return SettlementBatch::query()->firstOrCreate(
+            [
+                'idempotency_key' => $idempotencyKey,
+            ],
+            [
+                'draw_id' => (int) $draw->id,
+                'lottery_type' => $lotteryType,
+                'market' => $marketCode !== '' ? $marketCode : null,
+                'mode' => $mode,
+                'status' => 'pending',
+                'started_at' => now(),
+                'triggered_by' => auth()->check() ? (string) auth()->id() : 'system',
+            ]
+        );
+    }
+
+    /**
+     * @param  array<string, string>  $normalizedResult
+     * @return array<string, int|float|array<string, string>>
+     */
+    private function buildSummaryFromMaterializedData(LottoDraw $draw, array $normalizedResult): array
+    {
+        $winningQuery = LottoWinning::query()->where('draw_id', (int) $draw->id);
+
+        $ticketCount = LottoTicket::query()
+            ->where('draw_id', (int) $draw->id)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        return [
+            'draw_id' => (int) $draw->id,
+            'result_number' => $normalizedResult,
+            'ticket_count' => (int) $ticketCount,
+            'winning_ticket_count' => (int) (clone $winningQuery)->distinct('bet_id')->count('bet_id'),
+            'winning_item_count' => (int) (clone $winningQuery)->count(),
+            'total_win_amount' => round((float) (clone $winningQuery)->sum('payout'), 2),
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $normalizedResult
+     * @return array{result_number:?string, matched_rule:?string}
+     */
+    private function resolveMatchedContext(string $betType, array $normalizedResult): array
+    {
+        return match ($betType) {
+            BetType::TOP_3, BetType::TOD_3, BetType::RUN_TOP => [
+                'result_number' => $normalizedResult['top_3'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            BetType::TOP_2 => [
+                'result_number' => $normalizedResult['top_2'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            BetType::BOTTOM_2, BetType::RUN_BOTTOM => [
+                'result_number' => $normalizedResult['bottom_2'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            default => [
+                'result_number' => null,
+                'matched_rule' => $betType,
+            ],
+        };
+    }
+
+    /**
+     * @return array{lottery_type:string, market:?string}
+     */
+    private function resolveLottoContext(int $drawId): array
+    {
+        $row = DB::table('lotto_draws as d')
+            ->leftJoin('lotto_markets as m', 'm.id', '=', 'd.market_id')
+            ->leftJoin('lotto_groups as g', 'g.id', '=', 'm.group_id')
+            ->where('d.id', $drawId)
+            ->select([
+                'g.code as lottery_type',
+                'm.code as market_code',
+            ])
+            ->first();
+
+        $lotteryType = (string) ($row->lottery_type ?? '');
+        if ($lotteryType === '') {
+            throw new InvalidArgumentException('ไม่พบ lottery_type จาก market.group.code');
+        }
+
+        $marketCode = (string) ($row->market_code ?? '');
+
+        return [
+            'lottery_type' => $lotteryType,
+            'market' => $marketCode !== '' ? $marketCode : null,
+        ];
     }
 }
