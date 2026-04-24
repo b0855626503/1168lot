@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LotteryMarket extends Model implements LotteryMarketContract
 {
+    public const DRAW_SCHEDULE_TYPE_MANUAL = 'manual';
+    public const DRAW_SCHEDULE_TYPE_WEEKLY = 'weekly';
+    public const DRAW_SCHEDULE_TYPE_MONTHLY = 'monthly';
+
     public const DRAW_MODE_MANUAL = 'manual';
     public const DRAW_MODE_DAILY = 'daily';
     public const DRAW_MODE_WEEKDAYS = 'weekdays';
@@ -29,6 +33,9 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'icon',
         'code',      // unique: gsb, kbank
         'draw_mode',
+        'draw_schedule_type',
+        'draw_days',
+        'draw_dates',
         'auto_open_time',
         'auto_close_time',
         'auto_result_time',
@@ -48,7 +55,18 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'notify_result_telegram' => 'boolean',
         'affect_existing_members' => 'boolean',
         'policy_version' => 'integer',
+        'draw_days' => 'array',
+        'draw_dates' => 'array',
     ];
+
+    public static function drawScheduleTypes(): array
+    {
+        return [
+            self::DRAW_SCHEDULE_TYPE_MANUAL,
+            self::DRAW_SCHEDULE_TYPE_WEEKLY,
+            self::DRAW_SCHEDULE_TYPE_MONTHLY,
+        ];
+    }
 
     public static function drawModes(): array
     {
@@ -86,4 +104,3 @@ class LotteryMarket extends Model implements LotteryMarketContract
         return $this->hasMany(LottoResultSource::class, 'market_id');
     }
 }
-
