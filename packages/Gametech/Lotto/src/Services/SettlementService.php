@@ -47,6 +47,8 @@ class SettlementService
                     && (string) ($draw->result_hash ?? '') === $resultHash
                     && $mode === 'settlement'
                 ) {
+                    $this->syncWinningCreditStatusFromWallet((int) $draw->id);
+
                     return $this->buildSummaryFromMaterializedData($draw, $normalizedResult);
                 }
 
@@ -148,12 +150,18 @@ class SettlementService
 
                     $creditSuccess = $this->creditWinnerIfNeeded($draw, $ticket, $ticketWinAmount, $canWriteWalletTransactions);
 
-                    if ($creditSuccess && $winningRecordIds !== []) {
+                    $walletCreditedAt = $this->resolveWalletCreditAt(
+                        (int) $ticket->id,
+                        (int) $ticket->member_id,
+                        (int) $draw->id
+                    );
+
+                    if (($creditSuccess || $walletCreditedAt !== null) && $winningRecordIds !== []) {
                         LottoWinning::query()
                             ->whereIn('id', $winningRecordIds)
                             ->update([
                                 'status' => 'credited',
-                                'credited_at' => now(),
+                                'credited_at' => $walletCreditedAt ?? now(),
                             ]);
                     }
                 }
@@ -412,6 +420,51 @@ class SettlementService
         $this->walletTransactionService = app(WalletTransactionService::class);
 
         return $this->walletTransactionService;
+    }
+
+    private function resolveWalletCreditAt(int $ticketId, int $memberId, int $drawId): ?string
+    {
+        $creditedAt = DB::table('wallet_transactions')
+            ->where('member_id', $memberId)
+            ->where('direction', 'CREDIT')
+            ->where('ref_type', self::SETTLE_WIN_REF_TYPE)
+            ->where('ref_id', $ticketId)
+            ->where('ref_code', (string) $drawId)
+            ->orderBy('id')
+            ->value('created_at');
+
+        return $creditedAt === null ? null : (string) $creditedAt;
+    }
+
+    private function syncWinningCreditStatusFromWallet(int $drawId): void
+    {
+        LottoWinning::query()
+            ->where('draw_id', $drawId)
+            ->where(function ($query): void {
+                $query->whereNull('credited_at')
+                    ->orWhere('status', '!=', 'credited');
+            })
+            ->orderBy('id')
+            ->chunkById(200, function ($winnings) use ($drawId): void {
+                foreach ($winnings as $winning) {
+                    $walletCreditedAt = $this->resolveWalletCreditAt(
+                        (int) $winning->bet_id,
+                        (int) $winning->user_id,
+                        $drawId
+                    );
+
+                    if ($walletCreditedAt === null) {
+                        continue;
+                    }
+
+                    LottoWinning::query()
+                        ->where('id', (int) $winning->id)
+                        ->update([
+                            'status' => 'credited',
+                            'credited_at' => $walletCreditedAt,
+                        ]);
+                }
+            });
     }
 
     private function findOrCreateSettlementBatch(LottoDraw $draw, string $resultHash, string $mode): SettlementBatch

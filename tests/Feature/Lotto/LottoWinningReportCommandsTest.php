@@ -82,6 +82,42 @@ class LottoWinningReportCommandsTest extends TestCase
         $this->assertDatabaseMissing('settlement_batches', ['draw_id' => 302]);
     }
 
+    public function test_backfill_marks_winning_as_credited_when_wallet_credit_already_exists(): void
+    {
+        \DB::table('wallet_transactions')->insert([
+            'member_id' => 88,
+            'scope' => 'MEMBER',
+            'direction' => 'CREDIT',
+            'amount' => 1000,
+            'balance_before' => 0,
+            'balance_after' => 1000,
+            'ref_type' => 'LOTTO_SETTLE_WIN',
+            'ref_id' => 7001,
+            'ref_code' => '301',
+            'group_code' => 'LOTTO_SETTLE_DRAW_301',
+            'status' => 'SUCCESS',
+            'description' => 'จ่ายรางวัลหวย',
+            'created_by_type' => 'system',
+            'created_at' => now()->subMinutes(5),
+            'updated_at' => now()->subMinutes(5),
+        ]);
+
+        $exit = Artisan::call('lotto:winning-report:backfill', [
+            '--round_id' => 301,
+        ]);
+
+        $this->assertSame(0, $exit);
+        $this->assertDatabaseHas('lotto_winnings', [
+            'draw_id' => 301,
+            'bet_item_id' => 9001,
+            'status' => 'credited',
+        ]);
+        $this->assertNotNull(\DB::table('lotto_winnings')
+            ->where('draw_id', 301)
+            ->where('bet_item_id', 9001)
+            ->value('credited_at'));
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('logs', function (Blueprint $table): void {

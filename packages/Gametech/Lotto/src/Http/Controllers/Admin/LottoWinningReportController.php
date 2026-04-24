@@ -70,7 +70,10 @@ class LottoWinningReportController extends AppBaseController
     }
 
     /**
-     * @return array{lottery_type_options: array<int, string>, market_options: array<int, array<string, mixed>>}
+     * @return array{
+     *     lottery_type_options: array<int, array{value:string, text:string}>,
+     *     market_options: array<int, array<string, mixed>>
+     * }
      */
     private function resolveFilterOptionsByDate(string $date, string $lotteryType = ''): array
     {
@@ -83,7 +86,7 @@ class LottoWinningReportController extends AppBaseController
             $baseQuery->whereDate('b.started_at', $date);
         }
 
-        $lotteryTypeOptions = (clone $baseQuery)
+        $lotteryTypeCodes = (clone $baseQuery)
             ->select('w.lottery_type')
             ->whereNotNull('w.lottery_type')
             ->where('w.lottery_type', '!=', '')
@@ -111,9 +114,37 @@ class LottoWinningReportController extends AppBaseController
             ->all();
 
         return [
-            'lottery_type_options' => $lotteryTypeOptions,
+            'lottery_type_options' => $this->resolveLotteryTypeOptions($lotteryTypeCodes),
             'market_options' => $this->resolveMarketOptions($marketCodes),
         ];
+    }
+
+    /**
+     * @param  array<int, string>  $lotteryTypeCodes
+     * @return array<int, array{value:string, text:string}>
+     */
+    private function resolveLotteryTypeOptions(array $lotteryTypeCodes): array
+    {
+        if ($lotteryTypeCodes === []) {
+            return [];
+        }
+
+        $groupLabels = DB::table('lotto_groups')
+            ->whereIn('code', $lotteryTypeCodes)
+            ->pluck('name', 'code')
+            ->mapWithKeys(static function ($name, $code): array {
+                return [(string) $code => (string) $name];
+            })
+            ->all();
+
+        return collect($lotteryTypeCodes)->map(static function (string $code) use ($groupLabels): array {
+            $label = (string) ($groupLabels[$code] ?? '');
+
+            return [
+                'value' => $code,
+                'text' => $label !== '' ? $label : $code,
+            ];
+        })->values()->all();
     }
 
     /**

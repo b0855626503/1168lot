@@ -207,6 +207,34 @@
             background: #f8fafc;
         }
 
+        .wr-users-table thead th {
+            background: #e0f2fe;
+            color: #0c4a6e;
+            border-bottom-color: #bae6fd;
+        }
+
+        .wr-users-table tbody tr:nth-child(odd) {
+            background: #f0f9ff;
+        }
+
+        .wr-users-table tbody tr:hover {
+            background: #e0f2fe;
+        }
+
+        .wr-bets-table thead th {
+            background: #ecfdf5;
+            color: #14532d;
+            border-bottom-color: #bbf7d0;
+        }
+
+        .wr-bets-table tbody tr:nth-child(odd) {
+            background: #f0fdf4;
+        }
+
+        .wr-bets-table tbody tr:hover {
+            background: #dcfce7;
+        }
+
         .wr-table td,
         .wr-table th {
             vertical-align: middle;
@@ -348,7 +376,6 @@
                         </div>
                         <div class="wr-meta-strip">
                             <span class="wr-meta-pill"><i class="fas fa-calendar-day"></i> วันที่รายงาน: @{{ filters.date || '-' }}</span>
-                            <span class="wr-meta-pill"><i class="fas fa-layer-group"></i> รอบรายละเอียดอัตโนมัติ: @{{ roundScopeLabel() }}</span>
                             <span class="wr-meta-pill"><i class="fas fa-check-circle"></i> สถานะ: @{{ statusLabel(summary.settlement_status) }}</span>
                         </div>
                     </div>
@@ -367,7 +394,7 @@
                                     <div class="wr-filter-label">ประเภทหวย</div>
                                     <select v-model="filters.lottery_type" class="form-control form-control-sm" @change="onSummaryFilterChange">
                                         <option value="">ทั้งหมด</option>
-                                        <option v-for="item in lotteryTypeOptions" :key="item" :value="item">@{{ item }}</option>
+                                        <option v-for="item in lotteryTypeOptions" :key="item.value" :value="item.value">@{{ item.text }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -393,7 +420,10 @@
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
                                 <div class="wr-filter-block">
                                     <div class="wr-filter-label">ประเภทแทง</div>
-                                    <input v-model="detailFilters.bet_type" type="text" class="form-control form-control-sm" placeholder="top_3" @keyup.enter.prevent="loadDetails">
+                                    <select v-model="detailFilters.bet_type" class="form-control form-control-sm" @change="loadDetails">
+                                        <option value="">ทั้งหมด</option>
+                                        <option v-for="item in betTypeOptions" :key="item.value" :value="item.value">@{{ item.text }}</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6 mb-2">
@@ -434,10 +464,6 @@
                         <div v-if="hasMaterializedReportData && !isLoading && users.length === 0 && bets.length === 0 && summary.latest_round_id && summary.winning_ticket_count === 0" class="wr-note mb-2">
                             รอบที่เลือกมีการสรุปผลแล้ว แต่ยังไม่มีผู้ถูกรางวัลในเงื่อนไขนี้
                         </div>
-                        <div class="wr-note mb-2">
-                            รายละเอียดสมาชิกและรายการถูกหวยจะอิงรอบที่พบในวันที่เลือกโดยอัตโนมัติ ไม่ต้องจำรหัสรอบ
-                        </div>
-
                         <div class="wr-kpi-grid mt-2">
                             <div class="wr-kpi wr-kpi--money">
                                 <div class="wr-kpi__label">ยอดแทงที่ถูกรางวัล</div>
@@ -479,7 +505,7 @@
                                     <div class="wr-row-count">@{{ users.length }} รายการ</div>
                                 </div>
                                 <div class="wr-table-wrap table-responsive" style="max-height: 380px;">
-                                    <table class="table table-sm wr-table">
+                                    <table class="table table-sm wr-table wr-users-table">
                                         <thead>
                                             <tr>
                                                 <th>สมาชิก</th>
@@ -520,7 +546,7 @@
                                     <div class="wr-row-count">@{{ bets.length }} รายการ</div>
                                 </div>
                                 <div class="wr-table-wrap table-responsive" style="max-height: 420px;">
-                                    <table class="table table-sm wr-table">
+                                    <table class="table table-sm wr-table wr-bets-table">
                                         <thead>
                                             <tr>
                                                 <th>สมาชิก</th>
@@ -542,7 +568,7 @@
                                             <tr v-for="row in bets" :key="(row.user_id || '-') + '-' + row.ticket_no + '-' + row.number + '-' + row.settlement_batch_id">
                                                 <td>@{{ row.username || ('USER-' + row.user_id) }}</td>
                                                 <td>@{{ row.ticket_no || '-' }}</td>
-                                                <td>@{{ row.bet_type || '-' }}</td>
+                                                <td>@{{ betTypeLabel(row.bet_type) }}</td>
                                                 <td>@{{ row.number || '-' }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.stake) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.odds, 4) }}</td>
@@ -575,6 +601,14 @@
                 return {
                     lotteryTypeOptions: @json($lotteryTypeOptions ?? []),
                     marketOptions: @json($marketOptions ?? []),
+                    betTypeOptions: [
+                        { value: 'top_3', text: '3 ตัวบน' },
+                        { value: 'tod_3', text: '3 ตัวโต๊ด' },
+                        { value: 'top_2', text: '2 ตัวบน' },
+                        { value: 'bottom_2', text: '2 ตัวล่าง' },
+                        { value: 'run_top', text: 'วิ่งบน' },
+                        { value: 'run_bottom', text: 'วิ่งล่าง' },
+                    ],
                     filters: {
                         date: @json($initialDate ?? ''),
                         lottery_type: @json($initialLotteryType ?? ''),
@@ -665,20 +699,11 @@
                 formatNow() {
                     return new Date().toLocaleString();
                 },
-                roundScopeLabel() {
-                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length > 1) {
-                        return this.summary.round_ids.join(', ');
-                    }
+                betTypeLabel(betType) {
+                    const normalized = String(betType || '');
+                    const item = this.betTypeOptions.find((option) => option.value === normalized);
 
-                    if (this.effectiveRoundId) {
-                        return String(this.effectiveRoundId);
-                    }
-
-                    if (Array.isArray(this.summary.round_ids) && this.summary.round_ids.length === 1) {
-                        return String(this.summary.round_ids[0]);
-                    }
-
-                    return '-';
+                    return item ? item.text : (normalized || '-');
                 },
                 fm(value, fraction = 2) {
                     if (value === null || value === undefined || value === '') {
