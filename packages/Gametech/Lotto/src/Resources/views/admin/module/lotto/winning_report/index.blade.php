@@ -273,6 +273,55 @@
             font-size: 0.83rem;
         }
 
+        .wr-loading-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 190px;
+            border-radius: 12px;
+            border: 2px dashed #7dd3fc;
+            background: linear-gradient(180deg, #f0f9ff 0%, #ecfeff 100%);
+        }
+
+        .wr-loading-zone__card {
+            min-width: 280px;
+            max-width: 90%;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #bae6fd;
+            box-shadow: 0 16px 40px rgba(2, 132, 199, 0.22);
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        .wr-loading-zone__spinner {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 3px solid #cbd5e1;
+            border-top-color: #0f766e;
+            margin: 0 auto 10px;
+            animation: wr-spin 0.8s linear infinite;
+        }
+
+        .wr-loading-zone__title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .wr-loading-zone__desc {
+            margin-top: 4px;
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        @keyframes wr-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .wr-error {
             border: 1px solid #fecaca;
             background: #fef2f2;
@@ -448,15 +497,21 @@
                             <div class="col-lg-8 col-md-9 col-sm-6 mb-2 d-flex align-items-end">
                                 <div class="w-100 d-flex flex-wrap justify-content-end wr-actions">
                                     <button type="button" class="btn btn-sm btn-outline-secondary mr-2" @click.prevent="resetFilters"><i class="fas fa-undo-alt"></i> ล้างค่า</button>
-                                    <button type="button" class="btn btn-sm btn-primary mr-2" @click.prevent="loadAll"><i class="fas fa-search"></i> แสดงรายงาน</button>
-                                    <button type="button" class="btn btn-sm btn-success mr-2" @click.prevent="exportReport('summary', 'csv')"><i class="fas fa-file-csv"></i> สรุป CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" @click.prevent="exportReport('users', 'csv')"><i class="fas fa-users"></i> สมาชิก CSV</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" @click.prevent="exportReport('bets', 'xlsx')"><i class="fas fa-file-excel"></i> รายการ XLSX</button>
+                                    <button type="button" class="btn btn-sm btn-primary mr-2" :disabled="isLoading" @click.prevent="loadAll"><i class="fas fa-search"></i> แสดงรายงาน</button>
+                                    <button type="button" class="btn btn-sm btn-success mr-2" :disabled="isLoading" @click.prevent="exportReport('summary', 'csv')"><i class="fas fa-file-csv"></i> สรุป CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success mr-2" :disabled="isLoading" @click.prevent="exportReport('users', 'csv')"><i class="fas fa-users"></i> สมาชิก CSV</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" :disabled="isLoading" @click.prevent="exportReport('bets', 'xlsx')"><i class="fas fa-file-excel"></i> รายการ XLSX</button>
                                 </div>
                             </div>
                         </div>
 
-                        <div v-if="isLoading" class="wr-loading mb-2">กำลังโหลดข้อมูล...</div>
+                        <div v-if="isLoading" class="wr-loading-zone mb-3">
+                            <div class="wr-loading-zone__card">
+                                <div class="wr-loading-zone__spinner"></div>
+                                <div class="wr-loading-zone__title">กำลังโหลดข้อมูลรายงาน</div>
+                                <div class="wr-loading-zone__desc">โปรดรอสักครู่ ระบบกำลังดึงข้อมูลให้ครบ</div>
+                            </div>
+                        </div>
                         <div v-if="!hasMaterializedReportData" class="wr-error mb-2">
                             ยังไม่มีข้อมูลรายงานที่จัดเก็บไว้แล้ว กรุณาสรุปผลรอบใหม่ หรือเติมข้อมูลย้อนหลังสำหรับรอบเก่าก่อน
                         </div>
@@ -552,12 +607,10 @@
                                                 <th>สมาชิก</th>
                                                 <th>เลขโพย</th>
                                                 <th>ประเภทแทง</th>
-                                                <th>เลขที่แทง</th>
+                                                <th>เลขที่แทง / ถูกรางวัล</th>
                                                 <th class="text-right">ยอดแทง</th>
                                                 <th class="text-right">อัตราจ่าย</th>
                                                 <th class="text-right">ยอดจ่าย</th>
-                                                <th>ผลที่ออก</th>
-                                                <th>เงื่อนไขที่ถูก</th>
                                                 <th>ชุดสรุปผล</th>
                                                 <th>เวลาสรุปผล</th>
                                                 <th>เวลาจ่ายเงิน</th>
@@ -569,19 +622,20 @@
                                                 <td>@{{ row.username || ('USER-' + row.user_id) }}</td>
                                                 <td>@{{ row.ticket_no || '-' }}</td>
                                                 <td>@{{ betTypeLabel(row.bet_type) }}</td>
-                                                <td>@{{ row.number || '-' }}</td>
+                                                <td>
+                                                    <div>@{{ row.number || '-' }}</div>
+                                                    <small class="text-muted">@{{ row.result_number || '-' }}</small>
+                                                </td>
                                                 <td class="text-right wr-money">@{{ fm(row.stake) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.odds, 4) }}</td>
                                                 <td class="text-right wr-money">@{{ fm(row.payout) }}</td>
-                                                <td>@{{ row.result_number || '-' }}</td>
-                                                <td>@{{ row.matched_rule || '-' }}</td>
                                                 <td>@{{ row.settlement_batch_id || '-' }}</td>
                                                 <td>@{{ dt(row.settled_at) }}</td>
                                                 <td>@{{ dt(row.credited_at) }}</td>
                                                 <td><span :class="statusClass(row.status)">@{{ statusLabel(row.status) }}</span></td>
                                             </tr>
                                             <tr v-if="bets.length === 0">
-                                                <td colspan="13" class="wr-empty">ไม่มีรายการถูกรางวัลตามเงื่อนไขนี้</td>
+                                                <td colspan="11" class="wr-empty">ไม่มีรายการถูกรางวัลตามเงื่อนไขนี้</td>
                                             </tr>
                                         </tbody>
                                     </table>
