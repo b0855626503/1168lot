@@ -126,7 +126,7 @@ class MemberDataTable extends DataTable
                     ],
                 ],
                 'columnDefs' => [
-                    ['targets' => '_all', 'className' => 'text-center text-nowrap'],
+                    ['targets' => '_all', 'className' => 'text-nowrap'],
                 ],
             ]);
     }
