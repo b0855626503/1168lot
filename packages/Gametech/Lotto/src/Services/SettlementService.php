@@ -82,7 +82,7 @@ class SettlementService
                 $winningItems = 0;
                 $totalWinAmount = 0.0;
                 $totalStake = 0.0;
-                $canWriteWalletTransactions = Schema::hasTable('wallet_transactions');
+                $canWriteWalletTransactions = $mode === 'settlement' && Schema::hasTable('wallet_transactions');
 
                 foreach ($tickets as $ticket) {
                     $ticketWinAmount = 0.0;
@@ -428,6 +428,7 @@ class SettlementService
             ],
             [
                 'draw_id' => (int) $draw->id,
+                'draw_date' => $draw->draw_date,
                 'lottery_type' => $lotteryType,
                 'market' => $marketCode !== '' ? $marketCode : null,
                 'mode' => $mode,

@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Services\WinningReport\Queries;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class WinningReportSummaryQuery
 {
@@ -72,7 +73,8 @@ class WinningReportSummaryQuery
         }
 
         if (! empty($filters['date'])) {
-            $query->whereDate('started_at', (string) $filters['date']);
+            $dateColumn = Schema::hasColumn('settlement_batches', 'draw_date') ? 'draw_date' : 'started_at';
+            $query->whereDate($dateColumn, (string) $filters['date']);
         }
 
         if (! empty($filters['lottery_type'])) {

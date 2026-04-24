@@ -305,6 +305,9 @@
                         </div>
 
                         <div v-if="isLoading" class="wr-loading mb-2">กำลังโหลดข้อมูล...</div>
+                        <div v-if="!hasMaterializedReportData" class="wr-error mb-2">
+                            ยังไม่มีข้อมูลรายงานที่ materialized แล้ว กรุณา settle รอบใหม่ หรือรัน backfill สำหรับรอบเก่าก่อน
+                        </div>
                         <div v-if="errorMessage" class="wr-error mb-2">@{{ errorMessage }}</div>
 
                         <div class="wr-kpi-grid mt-2">
@@ -438,7 +441,7 @@
                     marketOptions: @json($marketOptions ?? []),
                     filters: {
                         round_id: @json($initialRoundId ?? null),
-                        date: '',
+                        date: @json($initialDate ?? ''),
                         lottery_type: '',
                         market: '',
                     },
@@ -454,6 +457,7 @@
                     isLoading: false,
                     errorMessage: '',
                     nowLabel: '-',
+                    hasMaterializedReportData: @json($hasMaterializedReportData ?? false),
                 };
             },
             mounted() {

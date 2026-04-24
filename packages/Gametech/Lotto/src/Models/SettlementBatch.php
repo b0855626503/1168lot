@@ -11,6 +11,7 @@ class SettlementBatch extends Model implements SettlementBatchContract
 
     protected $fillable = [
         'draw_id',
+        'draw_date',
         'lottery_type',
         'market',
         'mode',
@@ -28,6 +29,7 @@ class SettlementBatch extends Model implements SettlementBatchContract
 
     protected $casts = [
         'draw_id' => 'integer',
+        'draw_date' => 'date',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'total_bets_processed' => 'integer',

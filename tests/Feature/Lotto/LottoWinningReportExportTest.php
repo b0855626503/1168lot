@@ -86,6 +86,7 @@ class LottoWinningReportExportTest extends TestCase
         Schema::create('settlement_batches', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('draw_id');
+            $table->date('draw_date')->nullable();
             $table->string('lottery_type');
             $table->string('market')->nullable();
             $table->string('mode');

@@ -43,7 +43,23 @@ class LottoWinningReportController extends AppBaseController
             'lotteryTypeOptions' => $lotteryTypeOptions,
             'marketOptions' => $marketOptions,
             'initialRoundId' => $this->normalizePositiveInt($request->query('round_id')),
+            'initialDate' => (string) ($request->query('date') ?: $this->latestReportDate() ?: now()->toDateString()),
+            'hasMaterializedReportData' => DB::table('settlement_batches')->exists(),
         ]);
+    }
+
+    private function latestReportDate(): ?string
+    {
+        if (! DB::getSchemaBuilder()->hasColumn('settlement_batches', 'draw_date')) {
+            return null;
+        }
+
+        $date = DB::table('settlement_batches')
+            ->whereNotNull('draw_date')
+            ->orderByDesc('draw_date')
+            ->value('draw_date');
+
+        return is_string($date) && $date !== '' ? $date : null;
     }
 
     /**

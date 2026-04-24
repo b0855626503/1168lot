@@ -5,6 +5,8 @@ namespace Gametech\Lotto\Console\Commands;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Services\SettlementService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class LottoWinningReportBackfillCommand extends Command
 {
@@ -39,6 +41,8 @@ class LottoWinningReportBackfillCommand extends Command
             return self::SUCCESS;
         }
 
+        $failedCount = 0;
+
         foreach ($draws as $draw) {
             $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
             if ($resultNumber === []) {
@@ -47,7 +51,18 @@ class LottoWinningReportBackfillCommand extends Command
                 continue;
             }
 
-            $summary = $settlementService->settleDraw($draw, $resultNumber, 'backfill');
+            try {
+                $summary = $settlementService->settleDraw($draw, $resultNumber, 'backfill');
+            } catch (Throwable $exception) {
+                $failedCount++;
+                $this->warn(sprintf('Skip draw=%d (%s)', (int) $draw->id, $exception->getMessage()));
+                Log::warning('lotto.winning_report.backfill.skip_failed_draw', [
+                    'draw_id' => (int) $draw->id,
+                    'error_message' => $exception->getMessage(),
+                ]);
+
+                continue;
+            }
 
             $this->line(sprintf(
                 'draw=%d tickets=%d winning_items=%d total_win=%0.2f',
@@ -56,6 +71,10 @@ class LottoWinningReportBackfillCommand extends Command
                 (int) ($summary['winning_item_count'] ?? 0),
                 (float) ($summary['total_win_amount'] ?? 0)
             ));
+        }
+
+        if ($failedCount > 0) {
+            $this->warn(sprintf('Skipped %d draw(s) due to invalid or unsupported result data', $failedCount));
         }
 
         return self::SUCCESS;

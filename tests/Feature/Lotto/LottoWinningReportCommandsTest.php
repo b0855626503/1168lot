@@ -40,17 +40,46 @@ class LottoWinningReportCommandsTest extends TestCase
         $this->assertSame(0, $exit1);
 
         $this->assertDatabaseCount('lotto_winnings', 1);
+        $this->assertDatabaseCount('wallet_transactions', 0);
 
         $exit2 = Artisan::call('lotto:winning-report:backfill', [
             '--round_id' => 301,
         ]);
         $this->assertSame(0, $exit2);
         $this->assertDatabaseCount('lotto_winnings', 1);
+        $this->assertDatabaseCount('wallet_transactions', 0);
 
         $exit3 = Artisan::call('lotto:winning-report:reconcile', [
             '--round_id' => 301,
         ]);
         $this->assertSame(0, $exit3);
+    }
+
+    public function test_backfill_skips_invalid_result_draw_and_continues(): void
+    {
+        \DB::table('lotto_draws')->insert([
+            'id' => 302,
+            'market_id' => 1,
+            'draw_date' => now()->toDateString(),
+            'open_at' => now()->subHour(),
+            'close_at' => now()->subMinutes(30),
+            'result_at' => now()->subMinutes(5),
+            'status' => 'resulted',
+            'result_number' => json_encode([
+                'top_3' => '',
+                'top_2' => '',
+                'bottom_2' => '',
+            ]),
+            'result_hash' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $exit = Artisan::call('lotto:winning-report:backfill');
+
+        $this->assertSame(0, $exit);
+        $this->assertDatabaseHas('settlement_batches', ['draw_id' => 301, 'status' => 'settled']);
+        $this->assertDatabaseMissing('settlement_batches', ['draw_id' => 302]);
     }
 
     private function prepareSchema(): void
@@ -155,6 +184,7 @@ class LottoWinningReportCommandsTest extends TestCase
         Schema::create('settlement_batches', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('draw_id');
+            $table->date('draw_date')->nullable();
             $table->string('lottery_type');
             $table->string('market')->nullable();
             $table->string('mode');

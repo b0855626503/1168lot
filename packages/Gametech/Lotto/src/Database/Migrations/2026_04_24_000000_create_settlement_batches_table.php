@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('settlement_batches', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('draw_id')->constrained('lotto_draws')->onDelete('cascade');
+            $table->date('draw_date')->nullable();
             $table->string('lottery_type', 100);
             $table->string('market', 100)->nullable();
             $table->enum('mode', ['settlement', 'backfill', 'replay'])->default('settlement');
@@ -31,6 +32,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('draw_id');
+            $table->index('draw_date');
             $table->index(['draw_id', 'status']);
             $table->index('status');
             $table->index('started_at');
