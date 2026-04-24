@@ -60,7 +60,7 @@ class DrawScheduleResolver
 
         if ($scheduleType === LotteryMarket::DRAW_SCHEDULE_TYPE_MONTHLY) {
             $drawDates = $resolvedSchedule['draw_dates'];
-            if (in_array($date->dayOfMonth, $drawDates, true)) {
+            if (in_array($date->day, $drawDates, true)) {
                 return [
                     'should_generate' => true,
                     'schedule_type' => $scheduleType,
@@ -155,7 +155,7 @@ class DrawScheduleResolver
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      * @return array<int,int>
      */
     private function normalizeIntList($value, int $min, int $max): array
