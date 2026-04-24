@@ -47,6 +47,7 @@ class WinningReportSummaryQuery
 
         return [
             'draw_ids' => $drawIds,
+            'latest_draw_id' => $this->resolveLatestDrawIdForDetails($drawIds),
             'total_stake' => $totalStake,
             'total_payout' => $totalPayout,
             'net_profit_loss' => $totalPayout === null ? null : round($totalStake - $totalPayout, 2),
@@ -86,5 +87,22 @@ class WinningReportSummaryQuery
         }
 
         return $query->pluck('draw_id')->map(static fn ($id): int => (int) $id)->values()->all();
+    }
+
+    /**
+     * @param  array<int, int>  $drawIds
+     */
+    private function resolveLatestDrawIdForDetails(array $drawIds): ?int
+    {
+        $latestWinningDrawId = DB::table('lotto_winnings')
+            ->whereIn('draw_id', $drawIds)
+            ->orderByDesc('draw_id')
+            ->value('draw_id');
+
+        if ($latestWinningDrawId !== null) {
+            return (int) $latestWinningDrawId;
+        }
+
+        return $drawIds[0] ?? null;
     }
 }

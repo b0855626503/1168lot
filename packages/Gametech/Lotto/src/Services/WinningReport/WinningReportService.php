@@ -40,7 +40,7 @@ class WinningReportService
                 'settlement_status' => $payload['settlement_status'],
             ],
             'round_ids' => $payload['draw_ids'],
-            'latest_round_id' => $payload['draw_ids'][0] ?? null,
+            'latest_round_id' => $payload['latest_draw_id'] ?? ($payload['draw_ids'][0] ?? null),
         ];
     }
 

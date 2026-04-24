@@ -136,6 +136,15 @@ class LottoWinningReportApiTest extends TestCase
         $this->assertNull($payload['data'][0]['payout']);
     }
 
+    public function test_summary_without_date_prefers_latest_round_that_has_winning_records_for_detail_tables(): void
+    {
+        $service = app(WinningReportService::class);
+
+        $payload = $service->summary([]);
+
+        $this->assertSame(103, $payload['latest_round_id']);
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -194,6 +203,7 @@ class LottoWinningReportApiTest extends TestCase
             ['id' => 101, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 102, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 103, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 104, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         \DB::table('settlement_batches')->insert([
@@ -245,6 +255,23 @@ class LottoWinningReportApiTest extends TestCase
                 'total_stake' => 200,
                 'total_payout' => 220,
                 'idempotency_key' => 'settlement:103:ghi',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 4,
+                'draw_id' => 104,
+                'lottery_type' => 'thai',
+                'market' => 'gsb',
+                'mode' => 'settlement',
+                'status' => 'settled',
+                'started_at' => now(),
+                'finished_at' => now(),
+                'total_bets_processed' => 1,
+                'total_winning_records' => 0,
+                'total_stake' => 0,
+                'total_payout' => 0,
+                'idempotency_key' => 'settlement:104:jkl',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
