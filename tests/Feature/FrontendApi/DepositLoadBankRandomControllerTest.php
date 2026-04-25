@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\FrontendApi;
 
+use Gametech\Core\Core;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
+use Mockery;
 use Tests\TestCase;
 
 class DepositLoadBankRandomControllerTest extends TestCase
@@ -15,6 +17,8 @@ class DepositLoadBankRandomControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->bindCoreDepositMin(0);
 
         Schema::dropIfExists('banks_account');
         Schema::dropIfExists('banks');
@@ -49,6 +53,7 @@ class DepositLoadBankRandomControllerTest extends TestCase
     {
         Schema::dropIfExists('banks_account');
         Schema::dropIfExists('banks');
+        Mockery::close();
 
         parent::tearDown();
     }
@@ -113,6 +118,42 @@ class DepositLoadBankRandomControllerTest extends TestCase
         $response->assertJsonPath('bank.qrcode', false);
     }
 
+    public function test_load_bank_uses_config_deposit_min_when_account_deposit_min_is_zero(): void
+    {
+        $this->bindCoreDepositMin('150.00');
+        $this->seedBankAccount('1111111111', 0);
+
+        $response = $this->loadBank('bank');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('bank.0.deposit_min', '150.00');
+    }
+
+    public function test_load_bank_prefers_account_deposit_min_when_both_config_and_account_have_value(): void
+    {
+        $this->bindCoreDepositMin('150.00');
+        $this->seedBankAccount('1111111111', 300);
+
+        $response = $this->loadBank('bank');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('bank.0.deposit_min', 300);
+    }
+
+    public function test_load_bank_returns_zero_deposit_min_when_config_and_account_are_zero(): void
+    {
+        $this->bindCoreDepositMin(0);
+        $this->seedBankAccount('1111111111', 0);
+
+        $response = $this->loadBank('bank');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('bank.0.deposit_min', 0);
+    }
+
     private function seedBankAccounts(): void
     {
         DB::table('banks')->insert([
@@ -158,6 +199,53 @@ class DepositLoadBankRandomControllerTest extends TestCase
                 'sort' => 2,
             ],
         ]);
+    }
+
+    private function seedBankAccount(string $accountNumber, int $depositMin): void
+    {
+        DB::table('banks')->insert([
+            'code' => 1,
+            'name_th' => 'Kasikorn Bank',
+            'shortcode' => 'KBANK',
+            'filepic' => 'kbank.png',
+        ]);
+
+        DB::table('banks_account')->insert([
+            'code' => 101,
+            'acc_no' => $accountNumber,
+            'acc_name' => 'COMPANY',
+            'banks' => 1,
+            'bank_type' => 1,
+            'enable' => 'Y',
+            'display_wallet' => 'Y',
+            'slip' => 'N',
+            'payment' => 'N',
+            'qrcode' => 'N',
+            'filepic' => '',
+            'deposit_min' => $depositMin,
+            'remark' => 'deposit min',
+            'visibility_scope' => null,
+            'sort' => 1,
+        ]);
+    }
+
+    private function bindCoreDepositMin(mixed $depositMin): void
+    {
+        $core = Mockery::mock(Core::class);
+        $core->shouldReceive('getConfigData')->andReturn((object) [
+            'deposit_min' => $depositMin,
+        ]);
+
+        $this->app->instance(Core::class, $core);
+    }
+
+    private function loadBank(string $method): TestResponse
+    {
+        $request = Request::create('/api/v1/deposit/loadbank', 'POST', [
+            'method' => $method,
+        ]);
+
+        return TestResponse::fromBaseResponse(app(DepositController::class)->loadBank($request));
     }
 
     private function loadRandomBank(string $method): TestResponse

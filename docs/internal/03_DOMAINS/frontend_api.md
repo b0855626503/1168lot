@@ -19,6 +19,7 @@
 - Deposit API:
   - `POST /api/v1/deposit/loadbank` คืนบัญชีรับฝากตาม method เดิม
   - `POST /api/v1/deposit/loadbank/random` คืนบัญชีรับฝากแบบสุ่ม 1 รายการสำหรับ `bank|tw|slip`
+  - `deposit_min` ของบัญชีใช้ `bank_account.deposit_min` ก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`; ถ้าทั้งคู่เป็น `0` ส่ง `0`
   - field รูป `bank_pic` และ `qr_pic` ถูก normalize เป็น public URL ผ่าน `BaseController`
 
 ## เส้นสำคัญที่มีอยู่

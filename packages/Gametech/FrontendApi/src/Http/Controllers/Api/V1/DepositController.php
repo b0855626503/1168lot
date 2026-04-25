@@ -78,6 +78,7 @@ class DepositController extends BaseController
         $member = $request->user() ?: $request->user('customer');
         $memberCode = (int) ($member->code ?? 0);
         $isLegacy = $this->isLegacyMember($memberCode);
+        $configDepositMin = data_get(core()->getConfigData(), 'deposit_min', 0);
         $result = [];
 
         $query = app('Gametech\Payment\Repositories\BankAccountRepository')
@@ -107,7 +108,7 @@ class DepositController extends BaseController
                         'qr_pic' => $this->storagePathOrEmpty('bank_qr', $data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'code' => $data->code,
-                        'deposit_min' => $data->deposit_min,
+                        'deposit_min' => $this->resolveDepositMin($data->deposit_min, $configDepositMin),
                         'remark' => $data->remark,
                     ];
                 }
@@ -133,7 +134,7 @@ class DepositController extends BaseController
                         'bank_pic' => $this->storagePathOrEmpty('bank_img', optional($data->bank)->filepic),
                         'qr_pic' => $this->storagePathOrEmpty('bank_qr', $data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
-                        'deposit_min' => $data->deposit_min,
+                        'deposit_min' => $this->resolveDepositMin($data->deposit_min, $configDepositMin),
                         'remark' => $data->remark,
                     ];
                 }
@@ -160,6 +161,7 @@ class DepositController extends BaseController
                         'qrcode' => $data->qrcode === 'Y',
                         'slip_bank' => $this->getBankCode((string) optional($data->bank)->shortcode),
                         'code' => $data->code,
+                        'deposit_min' => $this->resolveDepositMin($data->deposit_min, $configDepositMin),
                     ];
                 }
 
@@ -248,6 +250,19 @@ class DepositController extends BaseController
         }
 
         return Storage::url(trim($directory, '/').'/'.$fileName);
+    }
+
+    private function resolveDepositMin(mixed $bankAccountDepositMin, mixed $configDepositMin): mixed
+    {
+        if ((float) $bankAccountDepositMin > 0) {
+            return $bankAccountDepositMin;
+        }
+
+        if ((float) $configDepositMin > 0) {
+            return $configDepositMin;
+        }
+
+        return 0;
     }
 
     private function getBankCode(string $bank): ?string
