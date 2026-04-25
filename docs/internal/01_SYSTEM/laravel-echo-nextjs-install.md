@@ -133,6 +133,8 @@ export function createRealtimeConnection({
 }
 ```
 
+`public.activity.updated` ของ Lotto จะมี `message` พร้อมแสดงผล เช่น `หวยออมสิน งวดวันที่ 25 ออกผลแล้ว`
+
 ## จุดสำคัญ
 - ใช้ `"use client"` เพราะ Echo ต้องทำงานใน browser
 - `authEndpoint` ต้องชี้ไป `/realtime/auth`

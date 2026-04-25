@@ -1,6 +1,6 @@
 # System Current State - Flows
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-25
 
 ## Critical Flows
 
@@ -13,6 +13,7 @@
   - public API อ่านเฉพาะ active published row
 - Dashboard summary ใช้ queue+bucket และต้องระวัง dedup/merge payload
 - Realtime ลูกค้าแยก channel จาก admin เสมอ
+- Shared member feed `.public.activity.updated` ของ Lotto แนบ `message` พร้อมแสดงบน frontend สำหรับ draw closed/resulted/reopened และ ticket-list resulted update
 
 ## Targeted Lookup
 

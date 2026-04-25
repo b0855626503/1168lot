@@ -19,7 +19,22 @@ class RealtimePublicActivityUpdatedEventTest extends TestCase
         $channel = $event->broadcastOn();
 
         $this->assertInstanceOf(PrivateChannel::class, $channel);
-        $this->assertSame('private-' . config('app.name') . '_members', $channel->name);
+        $this->assertSame('private-'.config('app.name').'_members', $channel->name);
         $this->assertSame('public.activity.updated', $event->broadcastAs());
+    }
+
+    public function test_public_activity_updated_includes_message_when_provided(): void
+    {
+        $event = new RealtimePublicActivityUpdated(
+            'lotto',
+            'lotto.draw_resulted',
+            ['draw_id' => 120],
+            'หวยออมสิน งวดวันที่ 25 ออกผลแล้ว'
+        );
+
+        $payload = $event->broadcastWith();
+
+        $this->assertSame('หวยออมสิน งวดวันที่ 25 ออกผลแล้ว', $payload['message']);
+        $this->assertSame(['draw_id' => 120], $payload['data']);
     }
 }
