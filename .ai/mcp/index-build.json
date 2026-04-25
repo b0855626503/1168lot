@@ -1,6 +1,8 @@
 {
     "built_at": "2026-04-25T19:45:00+07:00",
     "commit_hash": "efa66284",
+    "built_at": "2026-04-25T20:45:00+07:00",
+    "commit_hash": "efa66284",
     "mode": "changed-only",
     "indexed_files": [
         "app/Events/RealtimePublicActivityUpdated.php",
@@ -9,6 +11,8 @@
         "docs/internal/02_DECISIONS/decision-log/02-flows.md",
         "docs/internal/03_DOMAINS/auth.md",
         "docs/internal/03_DOMAINS/realtime.md",
+        "docs/public/api/frontend-v1/03-endpoints.md",
+        "docs/internal/03_DOMAINS/frontend_api.md",
         "docs/public/api/frontend-v1/03-endpoints.md",
         "docs/public/api/frontend-v1/05-route-reference.md",
         "memory/auth.md",
@@ -21,5 +25,10 @@
         "tests/Unit/FrontendApi/FrontendTokenServiceTest.php",
         "tests/Unit/FrontendApi/RealtimePublicActivityUpdatedEventTest.php",
         "tests/Unit/Lotto/LottoRealtimeObserverTest.php"
+        "memory/PROJECT.md",
+        "packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/MemberController.php",
+        "packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/SiteMetaController.php",
+        "tests/Feature/FrontendApi/MemberBalanceControllerTest.php",
+        "tests/Feature/FrontendApi/SiteMetaControllerTest.php"
     ]
 }

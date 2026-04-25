@@ -77,6 +77,7 @@ class MemberBalanceControllerTest extends TestCase
             'seamless' => 'N',
             'maxwithdraw_day' => 1000,
             'wallet_withdraw_all' => 'N',
+            'deposit_min' => '100.00',
             'minwithdraw' => 100,
             'withdraw_status' => 'Y',
         ]);
@@ -98,6 +99,7 @@ class MemberBalanceControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('profile.user_name', 'boatjunior');
+        $response->assertJsonPath('profile.deposit_min', '100.00');
         $response->assertJsonPath('profile.withdraw_sum_today', 100);
         $response->assertJsonPath('profile.withdraw_remain_today', 900);
     }
@@ -189,6 +191,7 @@ class MemberBalanceControllerTest extends TestCase
             'pro_reset' => 1000,
             'maxwithdraw_day' => 1000,
             'wallet_withdraw_all' => 'N',
+            'deposit_min' => 100,
             'minwithdraw' => 100,
             'withdraw_status' => 'Y',
         ]);
