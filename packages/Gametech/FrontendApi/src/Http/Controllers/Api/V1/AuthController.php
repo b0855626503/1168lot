@@ -151,7 +151,8 @@ class AuthController extends BaseController
             ->findOneByField('user_name', $username);
 
         if (! $member) {
-            Event::dispatch('customer.login.fail', $username . '|' . $password);
+            Event::dispatch('customer.login.fail', $username.'|'.$password);
+
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }
 
@@ -170,7 +171,8 @@ class AuthController extends BaseController
         }
 
         if (! $validPassword) {
-            Event::dispatch('customer.login.fail', $username . '|' . $password);
+            Event::dispatch('customer.login.fail', $username.'|'.$password);
+
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }
 
@@ -204,7 +206,7 @@ class AuthController extends BaseController
     private function registerFallback(Request $request, bool $useSeparatedUsernameFlow = false): JsonResponse
     {
         $config = core()->getConfigData();
-        Log::error('frontend_api_register.entry', [
+        Log::info('frontend_api_register.entry', [
             'path' => (string) $request->path(),
             'seamless_config' => (string) ($config->seamless ?? 'N'),
             'has_name' => $request->filled('name'),
@@ -482,7 +484,7 @@ class AuthController extends BaseController
         $gameUserRepo = app('Gametech\Game\Repositories\GameUserRepository');
 
         if ($seamlessConfig === 'Y') {
-            Log::error('frontend_api_register.seamless_branch_entered', [
+            Log::info('frontend_api_register.seamless_branch_entered', [
                 'member_code' => (int) ($member->code ?? 0),
                 'user_name' => $username,
                 'seamless_config' => $seamlessConfig,
@@ -494,7 +496,7 @@ class AuthController extends BaseController
                 'id' => 'seamless',
             ]);
 
-            Log::error('frontend_api_register.seamless_game_lookup', [
+            Log::info('frontend_api_register.seamless_game_lookup', [
                 'member_code' => (int) ($member->code ?? 0),
                 'user_name' => $username,
                 'game_found' => (bool) $game,
@@ -515,7 +517,7 @@ class AuthController extends BaseController
 
             $resultMessage = $this->normalizeRegisterFailureMessage($result['msg'] ?? null);
 
-            Log::error('frontend_api_register.seamless_add_game_user_result', [
+            Log::info('frontend_api_register.seamless_add_game_user_result', [
                 'member_code' => (int) ($member->code ?? 0),
                 'user_name' => $username,
                 'game_code' => (int) $game->code,
@@ -529,7 +531,7 @@ class AuthController extends BaseController
 
             $isUnauthorizedIp = $this->isRegisterInvalidIpFailure($resultMessage);
             if ($isUnauthorizedIp) {
-                Log::error('frontend_api_register.seamless_fallback_local_game_user', [
+                Log::warning('frontend_api_register.seamless_fallback_local_game_user', [
                     'member_code' => (int) ($member->code ?? 0),
                     'user_name' => $username,
                     'game_code' => (int) $game->code,
@@ -568,7 +570,7 @@ class AuthController extends BaseController
                     );
                 }
 
-                Log::error('frontend_api_register.seamless_fallback_local_game_user_success', [
+                Log::info('frontend_api_register.seamless_fallback_local_game_user_success', [
                     'member_code' => (int) ($member->code ?? 0),
                     'user_name' => $username,
                     'game_code' => (int) $game->code,

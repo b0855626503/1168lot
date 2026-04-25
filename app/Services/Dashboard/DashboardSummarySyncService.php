@@ -239,6 +239,7 @@ class DashboardSummarySyncService
                         $rows[] = $filtered;
                     }
                 }
+                $rows = $this->deduplicateRiskSnapshotRows($rows);
 
                 if (! empty($rows)) {
                     $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
@@ -451,5 +452,29 @@ class DashboardSummarySyncService
         $text = trim((string) $value);
 
         return $text === '' ? null : $text;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicateRiskSnapshotRows(array $rows): array
+    {
+        $deduplicated = [];
+
+        foreach ($rows as $row) {
+            $key = implode('|', [
+                (string) ($row['web_code'] ?? ''),
+                (string) ($row['market_id'] ?? ''),
+                (string) ($row['round_id'] ?? ''),
+                (string) ($row['bet_type'] ?? ''),
+                (string) ($row['number'] ?? ''),
+                (string) ($row['snapshot_at'] ?? ''),
+            ]);
+
+            $deduplicated[$key] = $row;
+        }
+
+        return array_values($deduplicated);
     }
 }

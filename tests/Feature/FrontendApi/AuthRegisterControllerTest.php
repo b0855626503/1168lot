@@ -9,6 +9,7 @@ use Gametech\FrontendApi\Services\RegisterBankAccountNameService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Mockery;
@@ -126,6 +127,48 @@ class AuthRegisterControllerTest extends TestCase
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('message', 'ข้อมูลสมัครสมาชิกไม่ถูกต้อง');
         $response->assertJsonPath('error_fields.0', 'user_name');
+    }
+
+    public function test_register_seamless_success_uses_info_level_trace_logs(): void
+    {
+        $this->mockCoreConfig('Y');
+
+        Log::spy();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 9876]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $gameRepo = Mockery::mock();
+        $gameRepo->shouldReceive('findOneWhere')
+            ->once()
+            ->andReturn((object) ['code' => 1, 'id' => 'seamless']);
+        $this->app->instance('Gametech\Game\Repositories\GameRepository', $gameRepo);
+
+        $gameUserRepo = Mockery::mock();
+        $gameUserRepo->shouldReceive('addGameUser')
+            ->once()
+            ->andReturn([
+                'success' => true,
+                'msg' => 'ok',
+            ]);
+        $this->app->instance('Gametech\Game\Repositories\GameUserRepository', $gameUserRepo);
+
+        $response = $this->register($this->validPayload('0899999999', '0899999999'));
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+
+        Log::shouldHaveReceived('info')->with('frontend_api_register.entry', Mockery::type('array'))->once();
+        Log::shouldHaveReceived('info')->with('frontend_api_register.seamless_branch_entered', Mockery::type('array'))->once();
+        Log::shouldHaveReceived('info')->with('frontend_api_register.seamless_game_lookup', Mockery::type('array'))->once();
+        Log::shouldHaveReceived('info')->with('frontend_api_register.seamless_add_game_user_result', Mockery::type('array'))->once();
+        Log::shouldNotHaveReceived('error', ['frontend_api_register.entry', Mockery::type('array')]);
+        Log::shouldNotHaveReceived('error', ['frontend_api_register.seamless_branch_entered', Mockery::type('array')]);
+        Log::shouldNotHaveReceived('error', ['frontend_api_register.seamless_game_lookup', Mockery::type('array')]);
+        Log::shouldNotHaveReceived('error', ['frontend_api_register.seamless_add_game_user_result', Mockery::type('array')]);
     }
 
     /**

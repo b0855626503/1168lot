@@ -109,6 +109,7 @@ class RebuildLottoDashboardSummaryCommand extends Command
                         ->when($roundId !== null, fn ($c) => $c->where('round_id', $roundId))
                         ->values()
                         ->all();
+                    $rows = $this->deduplicateRiskSnapshotRows($rows);
 
                     if (! empty($rows)) {
                         foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
@@ -197,5 +198,29 @@ class RebuildLottoDashboardSummaryCommand extends Command
         }
 
         return $dates;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicateRiskSnapshotRows(array $rows): array
+    {
+        $deduplicated = [];
+
+        foreach ($rows as $row) {
+            $key = implode('|', [
+                (string) ($row['web_code'] ?? ''),
+                (string) ($row['market_id'] ?? ''),
+                (string) ($row['round_id'] ?? ''),
+                (string) ($row['bet_type'] ?? ''),
+                (string) ($row['number'] ?? ''),
+                (string) ($row['snapshot_at'] ?? ''),
+            ]);
+
+            $deduplicated[$key] = $row;
+        }
+
+        return array_values($deduplicated);
     }
 }

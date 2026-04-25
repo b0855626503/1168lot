@@ -79,6 +79,8 @@ class DashboardSummarySyncServiceTest extends TestCase
         $content = file_get_contents(base_path('app/Services/Dashboard/DashboardSummarySyncService.php'));
 
         $this->assertStringContainsString('RISK_SNAPSHOT_UPSERT_CHUNK_SIZE', $content);
+        $this->assertStringContainsString('$rows = $this->deduplicateRiskSnapshotRows($rows);', $content);
+        $this->assertStringContainsString('private function deduplicateRiskSnapshotRows(array $rows): array', $content);
         $this->assertStringContainsString('array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE)', $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_aggregates')->upsert", $content);
@@ -89,6 +91,8 @@ class DashboardSummarySyncServiceTest extends TestCase
         $content = file_get_contents(base_path('app/Console/Commands/RebuildLottoDashboardSummaryCommand.php'));
 
         $this->assertStringContainsString('RISK_SNAPSHOT_UPSERT_CHUNK_SIZE', $content);
+        $this->assertStringContainsString('$rows = $this->deduplicateRiskSnapshotRows($rows);', $content);
+        $this->assertStringContainsString('private function deduplicateRiskSnapshotRows(array $rows): array', $content);
         $this->assertStringContainsString('array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE)', $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_aggregates')->upsert", $content);
