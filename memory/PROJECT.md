@@ -13,10 +13,18 @@
    - locale fallback: requested -> `th` -> `en` -> `key`
    - default code unpublish/ไม่พบ published row ต้องตอบ `404` แบบคงที่
 
+3. **Admin status route + dashboard load blocking** (2026-04-25)
+   - แก้ admin root `/` ให้กลับไปหน้า login แทน redirect ไป `/status`
+   - แยก status ping เป็น `status.ping` ที่ `/status/ping` เพื่อไม่ชน route name ของ admin package
+   - Dashboard admin จำกัด request หนักด้วย queue concurrency, โหลดข้อมูลรองตามหลัง, abort request พื้นหลังเมื่อกดเมนูอื่น
+   - ตัด initial refresh ซ้ำจาก datepicker initialization เพื่อให้เปิด dashboard แล้วโหลดรอบเดียว
+   - Location: `routes/web.php`, `resources/views/status/index.blade.php`, `packages/Gametech/Admin/src/Resources/views/module/dashboard/index.blade.php`
+
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth
 - **ADR-005**: Ticket cancellation ต้องเก็บ audit context
 - **ADR-011**: Admin `loadCnt` คือ single aggregate source สำหรับ Lotto menu badges
+- **Admin Dashboard Load Policy**: หน้า dashboard ต้องไม่ block navigation; request พื้นหลังต้องถูกจำกัด concurrency และ abort ได้เมื่อ user ไปเมนูอื่น
 
 ## Tech Stack:
 - **Backend**: Laravel 8 (กำลัง upgrade ไป 9)
