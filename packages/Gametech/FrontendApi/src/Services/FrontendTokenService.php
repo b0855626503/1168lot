@@ -27,6 +27,12 @@ class FrontendTokenService
 
         $token = JWT::encode($payload, $this->jwtSecret(), 'HS256');
 
+        Cache::put(
+            $this->activeTokenKey((int) $member->code),
+            (string) $payload['jti'],
+            $expiresAt
+        );
+
         return [
             'token' => $token,
             'token_type' => 'Bearer',
@@ -44,7 +50,11 @@ class FrontendTokenService
             return null;
         }
 
-        if (! isset($decoded['jti']) || $this->isBlacklisted((string) $decoded['jti'])) {
+        if (
+            ! isset($decoded['jti']) ||
+            $this->isBlacklisted((string) $decoded['jti']) ||
+            ! $this->isActiveToken($decoded)
+        ) {
             return null;
         }
 
@@ -76,6 +86,10 @@ class FrontendTokenService
         $seconds = max(60, $exp - now()->timestamp);
 
         Cache::put($this->blacklistKey((string) $payload['jti']), true, now()->addSeconds($seconds));
+
+        if (isset($payload['sub']) && $this->activeTokenJti((int) $payload['sub']) === (string) $payload['jti']) {
+            Cache::forget($this->activeTokenKey((int) $payload['sub']));
+        }
     }
 
     private function isBlacklisted(string $jti): bool
@@ -85,7 +99,30 @@ class FrontendTokenService
 
     private function blacklistKey(string $jti): string
     {
-        return 'frontend_api:blacklist:' . $jti;
+        return 'frontend_api:blacklist:'.$jti;
+    }
+
+    private function isActiveToken(array $payload): bool
+    {
+        if (! isset($payload['sub'], $payload['jti'])) {
+            return false;
+        }
+
+        $activeJti = $this->activeTokenJti((int) $payload['sub']);
+
+        return $activeJti === null || $activeJti === (string) $payload['jti'];
+    }
+
+    private function activeTokenJti(int $memberCode): ?string
+    {
+        $activeJti = Cache::get($this->activeTokenKey($memberCode));
+
+        return is_string($activeJti) && $activeJti !== '' ? $activeJti : null;
+    }
+
+    private function activeTokenKey(int $memberCode): string
+    {
+        return 'frontend_api:active_token:'.$memberCode;
     }
 
     private function jwtSecret(): string

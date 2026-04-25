@@ -1,15 +1,18 @@
 {
-    "built_at": "2026-04-25T10:45:00+00:00",
-    "commit_hash": "0e075807",
+    "built_at": "2026-04-25T18:30:00+07:00",
+    "commit_hash": "b4fe45e8",
     "mode": "changed-only",
     "indexed_files": [
-        "docs/internal/03_DOMAINS/frontend_api.md",
-        "docs/public/api/frontend-v1/01-overview.md",
+        "docs/internal/01_SYSTEM/system-current-state/02-flows.md",
+        "docs/internal/02_DECISIONS/decision-log/02-flows.md",
+        "docs/internal/03_DOMAINS/auth.md",
         "docs/public/api/frontend-v1/03-endpoints.md",
         "docs/public/api/frontend-v1/05-route-reference.md",
-        "memory/payment.md",
-        "memory/wallet.md",
+        "memory/auth.md",
+        "memory/PROJECT.md",
         "packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/DepositController.php",
-        "packages/Gametech/FrontendApi/src/Routes/api.php"
+        "packages/Gametech/FrontendApi/src/Services/FrontendTokenService.php",
+        "tests/Feature/FrontendApi/DepositLoadBankRandomControllerTest.php",
+        "tests/Unit/FrontendApi/FrontendTokenServiceTest.php"
     ]
 }

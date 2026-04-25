@@ -78,6 +78,41 @@ class DepositLoadBankRandomControllerTest extends TestCase
         $response->assertJsonPath('bank', '');
     }
 
+    public function test_load_random_bank_returns_empty_qr_pic_when_bank_account_has_no_qr_image(): void
+    {
+        DB::table('banks')->insert([
+            'code' => 1,
+            'name_th' => 'Kasikorn Bank',
+            'shortcode' => 'KBANK',
+            'filepic' => 'kbank.png',
+        ]);
+
+        DB::table('banks_account')->insert([
+            'code' => 101,
+            'acc_no' => '1111111111',
+            'acc_name' => 'COMPANY',
+            'banks' => 1,
+            'bank_type' => 1,
+            'enable' => 'Y',
+            'display_wallet' => 'Y',
+            'slip' => 'N',
+            'payment' => 'N',
+            'qrcode' => 'N',
+            'filepic' => '',
+            'deposit_min' => 100,
+            'remark' => 'no qr',
+            'visibility_scope' => null,
+            'sort' => 1,
+        ]);
+
+        $response = $this->loadRandomBank('bank');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('bank.qr_pic', '');
+        $response->assertJsonPath('bank.qrcode', false);
+    }
+
     private function seedBankAccounts(): void
     {
         DB::table('banks')->insert([

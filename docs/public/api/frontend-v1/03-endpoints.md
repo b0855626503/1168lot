@@ -1,6 +1,6 @@
 # Frontend API V1 - Endpoints
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-25
 
 ## Public Endpoints
 
@@ -70,3 +70,8 @@
 - `GET /api/v1/reward/list`
 - `POST /api/v1/reward/redeem`
 - `GET /api/v1/reward/history`
+
+## Contract Notes
+
+- `POST /api/v1/auth/login` ออก active token ล่าสุดได้ครั้งละ 1 ตัวต่อ member; token เดิมของ member เดียวกันจะใช้ต่อไม่ได้หลัง login ใหม่
+- `POST /api/v1/deposit/loadbank` และ `/deposit/loadbank/random` ส่ง `qr_pic` เป็น `""` เมื่อบัญชีไม่มีรูป QR ที่อัปโหลดไว้
