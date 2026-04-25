@@ -8,10 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spiritix\LadaCache\Database\LadaCacheTrait;
 
-
 class MemberCashback extends Model implements MemberCashbackContract
 {
-    use  LadaCacheTrait;
+    use LadaCacheTrait;
 
     protected function serializeDate(DateTimeInterface $date)
     {
@@ -45,9 +44,12 @@ class MemberCashback extends Model implements MemberCashbackContract
         'enable',
         'startdate',
         'enddate',
+        'sum_deposit',
+        'sum_withdraw',
+        'sum_balance',
         'game_user',
         'user_create',
-        'user_update'
+        'user_update',
     ];
 
     /**
@@ -69,8 +71,13 @@ class MemberCashback extends Model implements MemberCashbackContract
         'ip_admin' => 'string',
         'date_approve' => 'datetime',
         'enable' => 'string',
+        'startdate' => 'datetime',
+        'enddate' => 'datetime',
+        'sum_deposit' => 'decimal:2',
+        'sum_withdraw' => 'decimal:2',
+        'sum_balance' => 'decimal:2',
         'user_create' => 'string',
-        'user_update' => 'string'
+        'user_update' => 'string',
     ];
 
     public function member(): BelongsTo

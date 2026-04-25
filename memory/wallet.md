@@ -37,6 +37,7 @@
 - withdraw policy check + state transition
 - reward catalog read + point redemption + redemption history timeline
 - `MemberCashbackRepository::refillSeamlessDirect()` append `wallet_transactions` แบบ `TRANCB` เมื่อเครดิต cashback เข้า `member.balance`
+- `cashback:start` รองรับ `--mode=range|daily` และ `--target=wallet|cashback`; daily mode ใช้วันธุรกิจเดียว และ target cashback จะเติมเข้า `member.cashback`
 
 ## Important Dependencies
 

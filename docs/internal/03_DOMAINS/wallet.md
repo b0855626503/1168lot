@@ -25,6 +25,7 @@
 
 - direct cashback refill ที่เพิ่มยอดเข้า `member.balance` ต้อง append `wallet_transactions`
 - cashback wallet history ใช้ `ref_type = TRANCB`
+- `cashback:start` ใช้ `--target=wallet|cashback` เพื่อเลือกระหว่างเติมเข้ากระเป๋าหลักทันทีหรือสะสมใน `member.cashback`
 
 ## Entry Points
 

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,44 +15,83 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $item;
+    protected string $dateStart;
 
-    protected $date;
+    protected string $dateEnd;
 
-    protected $promotion;
+    protected string $cashbackDate;
+
+    protected object $item;
+
+    protected object $promotion;
+
+    protected string $target;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($date, $item, $promotion)
-    {
-        $this->date = $date;
+    public function __construct(
+        string $dateStart,
+        string $dateEnd,
+        string $cashbackDate,
+        object $item,
+        object $promotion,
+        string $target = 'wallet'
+    ) {
+        $this->dateStart = $dateStart;
+        $this->dateEnd = $dateEnd;
+        $this->cashbackDate = $cashbackDate;
         $this->item = $item;
         $this->promotion = $promotion;
+        $this->target = $target;
     }
 
-    public function tags()
+    public function tags(): array
     {
         return ['render', 'cashback:'.$this->item->member_code];
     }
 
-    public function uniqueId()
+    public function uniqueId(): string
     {
-        return $this->item->member_code;
+        return implode(':', [
+            'cashback',
+            $this->cashbackDate,
+            $this->dateStart,
+            $this->dateEnd,
+            $this->target,
+            (string) $this->item->member_code,
+        ]);
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle()
+    public function getDateStart(): string
     {
-        $startDate = $this->date;
+        return $this->dateStart;
+    }
+
+    public function getDateEnd(): string
+    {
+        return $this->dateEnd;
+    }
+
+    public function getCashbackDate(): string
+    {
+        return $this->cashbackDate;
+    }
+
+    public function getTarget(): string
+    {
+        return $this->target;
+    }
+
+    public function handle(): void
+    {
+        $startDate = Carbon::parse($this->dateStart);
+        $endDate = Carbon::parse($this->dateEnd);
         $item = $this->item;
         $promotion = $this->promotion;
+        $target = $this->normalizeTarget($this->target);
 
         $bonus = $promotion->bonus_percent;
         $bonusmin = $promotion->bonus_min;
@@ -89,12 +129,15 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
             $topup = 'X';
         }
 
-        $chk = DB::table('members_cashback')->whereDate('date_cashback', $startDate)->where('downline_code', $item->member_code);
+        $chk = DB::table('members_cashback')
+            ->whereDate('date_cashback', $this->cashbackDate)
+            ->where('downline_code', $item->member_code);
+
         if ($chk->doesntExist()) {
             $response = app('Gametech\Member\Repositories\MemberCashbackRepository')->create([
                 'member_code' => $item->upline_code,
                 'downline_code' => $item->member_code,
-                'date_cashback' => $startDate,
+                'date_cashback' => $this->cashbackDate,
                 'balance' => $item->balance_total,
                 'cashback' => $cashback,
                 'amount' => $item->balance,
@@ -115,7 +158,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
                     'member_code' => $item->member_code,
                     'balance' => $item->balance_total,
                     'cashback' => $cashback,
-                    'date_cashback' => $startDate,
+                    'date_cashback' => $this->cashbackDate,
                     'ip' => request()->ip(),
                     'emp_code' => $item->emp_code,
                     'emp_name' => $item->emp_name,
@@ -124,9 +167,18 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
                     'sum_withdraw' => $item->withdraw_amount,
                 ];
 
-                app('Gametech\Member\Repositories\MemberCashbackRepository')->refillSeamlessDirect($data);
+                if ($target === 'cashback') {
+                    app('Gametech\Member\Repositories\MemberCashbackRepository')->refillSeamless($data);
+                } else {
+                    app('Gametech\Member\Repositories\MemberCashbackRepository')->refillSeamlessDirect($data);
+                }
             }
 
         }
+    }
+
+    private function normalizeTarget(string $target): string
+    {
+        return strtolower(trim($target)) === 'cashback' ? 'cashback' : 'wallet';
     }
 }

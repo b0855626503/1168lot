@@ -9,12 +9,10 @@ use Illuminate\Support\Facades\Log;
 
 class CashbackCalculate extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'cashback:start';
+    protected $signature = 'cashback:start
+                            {--mode=range : Calculation mode: range or daily}
+                            {--date= : Anchor date for range mode or business date for daily mode (Y-m-d)}
+                            {--target=wallet : Credit target: wallet or cashback}';
 
     /**
      * The console command description.
@@ -33,35 +31,45 @@ class CashbackCalculate extends Command
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-    public function handle()
+    public function handle(): int
     {
-        $now = now();
+        $mode = $this->normalizeMode((string) $this->option('mode'));
+        $target = $this->normalizeTarget((string) $this->option('target'));
+        $anchorDate = $this->resolveAnchorDate($mode, $this->option('date'));
 
-        //        $lastWeekStart = $now->copy()->subWeek()->startOfWeek();  // จันทร์ที่แล้ว
-        //        $lastWeekEnd = $now->copy()->subWeek()->endOfWeek();      // อาทิตย์ที่แล้ว
-        //        $startDate = $lastWeekStart->startOfDay();
-        //        $endDate = $lastWeekEnd->endOfDay();
+        if ($mode === null) {
+            $this->error('โหมดไม่ถูกต้อง กรุณาใช้ --mode=range หรือ --mode=daily');
 
-        $lastFriday = $now->copy()->subWeek()->endOfWeek(Carbon::FRIDAY);
+            return self::FAILURE;
+        }
 
-        // หา "เสาร์ก่อนหน้าศุกร์นั้น"
-        $lastSaturday = $lastFriday->copy()->subDays(6);
+        if ($target === null) {
+            $this->error('ปลายทางไม่ถูกต้อง กรุณาใช้ --target=wallet หรือ --target=cashback');
 
-        // สร้างช่วงเวลา
-        $startDate = $lastSaturday->startOfDay();  // เสาร์ที่แล้ว เวลา 00:00
-        $endDate = $lastFriday->endOfDay();
+            return self::FAILURE;
+        }
 
-        $roundLabel = 'รอบสัปดาห์ ('.$startDate->format('d/m').' - '.$endDate->format('d/m').')';
-        $this->info($roundLabel);
+        if ($anchorDate === null) {
+            $this->error('รูปแบบวันที่ไม่ถูกต้อง กรุณาใช้รูปแบบ Y-m-d');
+
+            return self::FAILURE;
+        }
+
+        [$startDate, $endDate, $cashbackDate, $roundLabel] = $this->resolvePeriod($mode, $anchorDate);
+
+        $this->info($roundLabel.' | ปลายทางเครดิต: '.$target);
         $promotion = DB::table('promotions')->where('id', 'pro_cashback')->first();
 
+        if (! $promotion) {
+            $this->error('ไม่พบ promotion pro_cashback');
+
+            return self::FAILURE;
+        }
+
         if ($promotion->enable != 'Y' || $promotion->active != 'Y' || $promotion->use_auto != 'Y') {
-            return false;
+            $this->warn('promotion cashback ยังไม่พร้อมสำหรับ auto calculate');
+
+            return self::SUCCESS;
         }
 
         $latestBi = DB::table('bills')
@@ -69,7 +77,7 @@ class CashbackCalculate extends Command
             ->where('bills.enable', 'Y')
             ->where('bills.transfer_type', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('bills.date_create', [$startDate, $endDate]);
+                $query->whereBetween('bills.date_create', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
             })
             ->groupBy('bills.member_code');
 
@@ -78,24 +86,42 @@ class CashbackCalculate extends Command
             ->where('withdraws.enable', 'Y')
             ->where('withdraws.status', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('withdraws.date_approve', [$startDate, $endDate]);
+                $query->whereBetween('withdraws.date_approve', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
             })
             ->groupBy('withdraws.member_code');
 
         $latestBP = DB::table('bank_payment')
-            ->select(DB::raw('MAX(bank_payment.code) as code'), DB::raw('SUM(bank_payment.value) as deposit_amount'), DB::raw("'".$startDate."' as date_cashback"), 'bank_payment.member_topup')
+            ->select(
+                DB::raw('MAX(bank_payment.code) as code'),
+                DB::raw('SUM(bank_payment.value) as deposit_amount'),
+                DB::raw("'".$cashbackDate."' as date_cashback"),
+                'bank_payment.member_topup'
+            )
             ->where('bank_payment.value', '>', 0)
             ->where('bank_payment.bankstatus', 1)
             ->where('bank_payment.pro_id', 0)
             ->where('bank_payment.enable', 'Y')
             ->where('bank_payment.status', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('bank_payment.date_approve', [$startDate, $endDate]);
+                $query->whereBetween('bank_payment.date_approve', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
             })
             ->groupBy('bank_payment.member_topup');
 
         $lists = DB::table('members')
-            ->select('members.upline_code', 'members.code as member_code', 'members.user_name as user_name', 'members.name as member_name', 'members.balance as balance', DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'), 'bank_payment.deposit_amount', DB::raw('IFNULL(bonus_amount,0) as bonus_amount'), DB::raw("'".$startDate."' as date_start"), DB::raw("'".$endDate."' as date_stop"), 'bank_payment.code')
+            ->select(
+                'members.upline_code',
+                'members.code as member_code',
+                'members.user_name as user_name',
+                'members.name as member_name',
+                'members.balance as balance',
+                DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'),
+                'bank_payment.deposit_amount',
+                DB::raw('IFNULL(bonus_amount,0) as bonus_amount'),
+                DB::raw("'".$cashbackDate."' as date_cashback"),
+                DB::raw("'".$startDate->toDateTimeString()."' as date_start"),
+                DB::raw("'".$endDate->toDateTimeString()."' as date_stop"),
+                'bank_payment.code'
+            )
             ->orderByDesc('members.code')
             ->joinSub($latestBP, 'bank_payment', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'members.code');
@@ -107,24 +133,89 @@ class CashbackCalculate extends Command
             })
             ->leftJoinSub($latestWD, 'withdraws', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'withdraws.member_code');
-                //                $join->on(DB::raw('Date(bank_payment.date_approve)'), '=', 'withdraws.date_approve');
-
             });
 
-        //        dd($lists->get());
+        $selectedCount = (clone $lists)->count();
+        $dispatchedCount = 0;
 
-        $results = [];
-        $lists->chunk(50, function ($itemlist) use ($startDate, $promotion) {
+        $lists->chunk(50, function ($itemlist) use ($startDate, $endDate, $cashbackDate, $promotion, $target, &$dispatchedCount) {
 
             foreach ($itemlist as $items) {
-//	            Log::channel('cashback')->info(json_encode($items));
+                Log::channel('cashback')->info(json_encode([
+                    'member_code' => $items->member_code,
+                    'mode' => $this->option('mode'),
+                    'target' => $target,
+                    'cashback_date' => $cashbackDate,
+                ]));
 
-                \App\Jobs\CashbackCalculate::dispatch($startDate, $items, $promotion)->onQueue('cashback');
+                \App\Jobs\CashbackCalculate::dispatch(
+                    $startDate->toDateTimeString(),
+                    $endDate->toDateTimeString(),
+                    $cashbackDate,
+                    $items,
+                    $promotion,
+                    $target
+                )->onQueue('cashback');
 
+                $dispatchedCount++;
             }
 
         });
 
-        return 0;
+        $this->info('selected='.$selectedCount.' dispatched='.$dispatchedCount);
+
+        return self::SUCCESS;
+    }
+
+    private function normalizeMode(string $mode): ?string
+    {
+        $normalized = strtolower(trim($mode));
+
+        return in_array($normalized, ['range', 'daily'], true) ? $normalized : null;
+    }
+
+    private function normalizeTarget(string $target): ?string
+    {
+        $normalized = strtolower(trim($target));
+
+        return in_array($normalized, ['wallet', 'cashback'], true) ? $normalized : null;
+    }
+
+    private function resolveAnchorDate(string $mode, mixed $input): ?Carbon
+    {
+        if (filled($input)) {
+            try {
+                return Carbon::createFromFormat('Y-m-d', (string) $input)->startOfDay();
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
+
+        if ($mode === 'daily') {
+            return now()->subDay()->startOfDay();
+        }
+
+        return now()->startOfDay();
+    }
+
+    private function resolvePeriod(string $mode, Carbon $anchorDate): array
+    {
+        if ($mode === 'daily') {
+            $startDate = $anchorDate->copy()->startOfDay();
+            $endDate = $anchorDate->copy()->endOfDay();
+            $cashbackDate = $anchorDate->toDateString();
+            $roundLabel = 'รอบวันเดียว ('.$anchorDate->format('d/m/Y').')';
+
+            return [$startDate, $endDate, $cashbackDate, $roundLabel];
+        }
+
+        $lastFriday = $anchorDate->copy()->subWeek()->endOfWeek(Carbon::FRIDAY);
+        $lastSaturday = $lastFriday->copy()->subDays(6);
+        $startDate = $lastSaturday->startOfDay();
+        $endDate = $lastFriday->endOfDay();
+        $cashbackDate = $startDate->toDateString();
+        $roundLabel = 'รอบสัปดาห์ ('.$startDate->format('d/m').' - '.$endDate->format('d/m').')';
+
+        return [$startDate, $endDate, $cashbackDate, $roundLabel];
     }
 }
