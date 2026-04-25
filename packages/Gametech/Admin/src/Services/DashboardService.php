@@ -3339,7 +3339,7 @@ class DashboardService
             && $this->hasColumn('lotto_dashboard_risk_snapshot', 'bet_type')
             && $this->hasColumn('lotto_dashboard_risk_snapshot', 'number')
         ) {
-            $snapshotRows = DB::table('lotto_dashboard_risk_snapshot')
+            $snapshotRows = DB::query()->from('lotto_dashboard_risk_snapshot')
                 ->where('web_code', $this->dashboardWebCode())
                 ->whereIn('round_id', $roundIds->all())
                 ->whereIn('bet_type', $topRows->pluck('bet_type')->unique()->values()->all())
