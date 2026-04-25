@@ -1,6 +1,6 @@
 # Payment Memory
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-25
 
 ## Responsibility
 
@@ -10,6 +10,7 @@
 
 - `GET /api/v1/deposit/channels`
 - `POST /api/v1/deposit/loadbank`
+- `POST /api/v1/deposit/loadbank/random`
 - `GET /api/v1/smkpay/deposit/status/{txid}`
 - `POST /api/v1/smkpay/deposit/expire/{txid}`
 - `POST /api/v1/smkpay/deposit/create`
@@ -24,6 +25,7 @@
 ## Main Services / Actions
 
 - channel discovery / bank resolution
+- random single account selection reusing `deposit/loadbank` visibility and media URL rules
 - create payment transaction
 - provider status + expire handling
 

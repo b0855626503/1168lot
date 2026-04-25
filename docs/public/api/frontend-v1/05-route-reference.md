@@ -864,24 +864,18 @@ GET /api/v1/deposit/channels
 ### `POST /api/v1/deposit/loadbank`
 - คำอธิบาย: ดึงข้อมูลบัญชีธนาคารปลายทางของระบบสำหรับฝาก
 - ใช้เมื่อ: ผู้ใช้เลือกฝากผ่านธนาคารและต้องการข้อมูลบัญชีรับโอน
-- Request example:
-```json
-{
-  "channel": "bank"
-}
-```
-- Response example:
-```json
-{
-  "success": true,
-  "message": "สำเร็จ",
-  "data": {
-    "banks": [
-      { "code": 1, "name": "Kasikorn Bank" }
-    ]
-  }
-}
-```
+- Request example: `{ "method": "bank" }`
+- Response shape: `{ "success": true, "bank": [BankAccount] }`
+- `BankAccount` fields: `acc_no`, `acc_name`, `bank_name`, `bank_pic`, `qr_pic`, `qrcode`, `code`, `deposit_min`, `remark`
+- หมายเหตุ: `bank_pic` และ `qr_pic` เป็น public URL สำหรับแสดงรูปธนาคารและรูป QR ไม่ใช่ path ใน filesystem
+
+### `POST /api/v1/deposit/loadbank/random`
+- คำอธิบาย: ดึงบัญชีธนาคารปลายทางแบบสุ่ม 1 รายการจากรายการที่เปิดใช้งาน
+- ใช้เมื่อ: ต้องการให้ลูกค้าเห็นบัญชีรับโอนเพียงบัญชีเดียวต่อครั้ง
+- Request example: `{ "method": "bank" }`
+- Response shape: `{ "success": true, "bank": BankAccount }`
+- Empty response: `{ "success": false, "bank": "" }`
+- Request `method` รองรับ `bank`, `tw`, `slip`
 
 ### `GET /api/v1/smkpay/deposit/status/{txid}`
 - คำอธิบาย: ตรวจสอบสถานะรายการฝากผ่าน SMKPay ตาม txid
