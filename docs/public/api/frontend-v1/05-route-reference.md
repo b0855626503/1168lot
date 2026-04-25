@@ -261,7 +261,7 @@ GET /api/v1/meta/contact-channels
 
 ### `GET /api/v1/meta/site`
 - คำอธิบาย: ดึงข้อมูลเมตาของเว็บ เช่น ชื่อเว็บ สถานะบำรุงรักษา
-- ใช้เมื่อ: โหลดค่าคอนฟิกพื้นฐานก่อน render แอป
+- ใช้เมื่อ: โหลดค่าคอนฟิกพื้นฐานก่อน render แอป รวมถึง `header_code` สำหรับ script/header integration ที่ frontend ต้องนำไปใช้งาน
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http
@@ -273,8 +273,11 @@ GET /api/v1/meta/site
   "success": true,
   "message": "สำเร็จ",
   "data": {
-    "site_name": "1168lot",
-    "maintenance": false
+    "logo": "https://example.com/storage/img/logo.png",
+    "title": "1168lot",
+    "name": "1168lot",
+    "description": "เว็บเกมออนไลน์",
+    "header_code": "<script>window.analytics=true;</script>"
   }
 }
 ```

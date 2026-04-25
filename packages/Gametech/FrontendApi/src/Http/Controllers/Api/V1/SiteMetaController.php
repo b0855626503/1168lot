@@ -17,6 +17,7 @@ class SiteMetaController extends BaseController
             'title' => (string) ($config->title ?? ''),
             'name' => (string) ($config->sitename ?? ($config->name_th ?? '')),
             'description' => (string) ($config->description ?? ''),
+            'header_code' => (string) ($config->header_code ?? ''),
         ], 'ดึงข้อมูลเว็บไซต์สำเร็จ');
     }
 

@@ -14,6 +14,7 @@
 - ห้ามเรียก controller ของ package อื่นโดยตรง
 - อนุญาตให้ reuse ผ่าน repository, model, query, domain service
 - response contract ของลูกค้าต้องอยู่ใน `FrontendApi`
+- `GET /api/v1/meta/site` ส่ง `header_code` จาก `configs.header_code` ให้ frontend ใช้กับ script/header integration ได้โดยตรง
 
 ## เส้นสำคัญที่มีอยู่
 
