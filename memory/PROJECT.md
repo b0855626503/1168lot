@@ -13,6 +13,9 @@
    - locale fallback: requested -> `th` -> `en` -> `key`
    - default code unpublish/ไม่พบ published row ต้องตอบ `404` แบบคงที่
 
+3. **Lotto public realtime message** (2026-04-25)
+   - `.public.activity.updated` ของ Lotto แนบ `message` พร้อมแสดงผลสำหรับ draw closed/resulted/reopened และ ticket-list resulted update
+
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth
 - **ADR-005**: Ticket cancellation ต้องเก็บ audit context

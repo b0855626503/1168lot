@@ -1,6 +1,6 @@
 # Realtime Domain Note
 
-อัปเดตล่าสุด: 2026-04-06
+อัปเดตล่าสุด: 2026-04-25
 
 ## ใช้อ่านเมื่อ
 
@@ -14,6 +14,7 @@
 - สมาชิกใช้ `{APP_NAME}_members`
 - event ของทีมงานห้าม expose ให้ลูกค้า
 - realtime total/badge ของ lotto tickets ต้องตรงกับ active-only semantics
+- `public.activity.updated` ที่เป็น Lotto feed ต้องแนบ `message` พร้อมแสดงผลสำหรับ `lotto.draw_closed`, `lotto.draw_resulted`, `lotto.draw_status_changed`, และ `lotto.ticket.list.changed`
 
 ## Entry Points
 
