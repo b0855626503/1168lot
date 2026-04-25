@@ -1,6 +1,6 @@
 # Frontend API V1 - Endpoints
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-25
 
 ## Public Endpoints
 
@@ -70,3 +70,8 @@
 - `GET /api/v1/reward/list`
 - `POST /api/v1/reward/redeem`
 - `GET /api/v1/reward/history`
+
+## Contract Notes
+
+- `GET /api/v1/meta/site` ส่ง `deposit_min` จาก `configs.deposit_min`
+- `GET /api/v1/member/profile` ส่ง `profile.deposit_min` จาก `configs.deposit_min`

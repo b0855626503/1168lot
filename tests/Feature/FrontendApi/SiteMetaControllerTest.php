@@ -27,6 +27,7 @@ class SiteMetaControllerTest extends TestCase
             'name_th' => null,
             'description' => 'Desc',
             'header_code' => '<script>window.analytics=true;</script>',
+            'deposit_min' => '100.00',
         ]);
 
         $this->app->instance(Core::class, $core);
@@ -36,6 +37,7 @@ class SiteMetaControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('header_code', '<script>window.analytics=true;</script>');
+        $response->assertJsonPath('deposit_min', '100.00');
         $this->assertStringStartsWith((string) url('/storage/img/tkTXUbWIoi.png'), (string) $response->json('logo'));
     }
 
@@ -49,6 +51,7 @@ class SiteMetaControllerTest extends TestCase
             'name_th' => null,
             'description' => 'Desc',
             'header_code' => null,
+            'deposit_min' => 100,
         ]);
 
         $this->app->instance(Core::class, $core);

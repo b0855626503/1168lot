@@ -277,7 +277,8 @@ GET /api/v1/meta/site
     "title": "1168lot",
     "name": "1168lot",
     "description": "เว็บเกมออนไลน์",
-    "header_code": "<script>window.analytics=true;</script>"
+    "header_code": "<script>window.analytics=true;</script>",
+    "deposit_min": "100.00"
   }
 }
 ```
@@ -523,7 +524,8 @@ GET /api/v1/member/profile
   "data": {
     "member_code": 9001,
     "user_name": "0900000014",
-    "name": "Api User"
+    "name": "Api User",
+    "deposit_min": "100.00"
   }
 }
 ```

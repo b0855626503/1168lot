@@ -16,6 +16,9 @@
 3. **Lotto public realtime message** (2026-04-25)
    - `.public.activity.updated` ของ Lotto แนบ `message` พร้อมแสดงผลสำหรับ draw closed/resulted/reopened และ ticket-list resulted update
 
+4. **Frontend deposit minimum config exposure** (2026-04-25)
+   - `GET /api/v1/meta/site` และ `GET /api/v1/member/profile` ส่ง `deposit_min` จาก `configs.deposit_min`
+
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth
 - **ADR-005**: Ticket cancellation ต้องเก็บ audit context

@@ -539,6 +539,7 @@ class MemberController extends BaseController
             $profile['winlost'] = 0;
             $profile['downline'] = $member->load('down')->down->count();
             $profile['maxwithdraw_day'] = $maxWithdraw;
+            $profile['deposit_min'] = $config['deposit_min'] ?? 0;
             $profile['withdraw_min'] = $config['minwithdraw'] ?? 0;
             $profile['withdraw_max'] = $withdrawRemain;
             $profile['withdraw_sum_today'] = $withdraw;

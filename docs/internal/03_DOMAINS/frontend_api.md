@@ -14,7 +14,8 @@
 - ห้ามเรียก controller ของ package อื่นโดยตรง
 - อนุญาตให้ reuse ผ่าน repository, model, query, domain service
 - response contract ของลูกค้าต้องอยู่ใน `FrontendApi`
-- `GET /api/v1/meta/site` ส่ง `header_code` จาก `configs.header_code` ให้ frontend ใช้กับ script/header integration ได้โดยตรง
+- `GET /api/v1/meta/site` ส่ง `header_code` จาก `configs.header_code` และ `deposit_min` จาก `configs.deposit_min`
+- `GET /api/v1/member/profile` ส่ง `profile.deposit_min` จาก `configs.deposit_min`
 - Deposit API:
   - `POST /api/v1/deposit/loadbank` คืนบัญชีรับฝากตาม method เดิม
   - `POST /api/v1/deposit/loadbank/random` คืนบัญชีรับฝากแบบสุ่ม 1 รายการสำหรับ `bank|tw|slip`
