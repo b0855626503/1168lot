@@ -13,7 +13,7 @@ class CashbackBubu_bk extends Command
      *
      * @var string
      */
-    protected $signature = 'cashback:start';
+    protected $signature = 'cashback:start_';
 
     /**
      * The console command description.
