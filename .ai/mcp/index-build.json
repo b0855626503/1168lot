@@ -1,16 +1,24 @@
 {
-    "built_at": "2026-04-25T14:30:00+07:00",
-    "commit_hash": "5c376010",
+    "built_at": "2026-04-25T19:45:00+07:00",
+    "commit_hash": "efa66284",
     "mode": "changed-only",
     "indexed_files": [
         "app/Events/RealtimePublicActivityUpdated.php",
         "docs/internal/01_SYSTEM/laravel-echo-nextjs-install.md",
         "docs/internal/01_SYSTEM/system-current-state/02-flows.md",
         "docs/internal/02_DECISIONS/decision-log/02-flows.md",
+        "docs/internal/03_DOMAINS/auth.md",
         "docs/internal/03_DOMAINS/realtime.md",
+        "docs/public/api/frontend-v1/03-endpoints.md",
         "docs/public/api/frontend-v1/05-route-reference.md",
+        "memory/auth.md",
+        "memory/PROJECT.md",
+        "packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/DepositController.php",
+        "packages/Gametech/FrontendApi/src/Services/FrontendTokenService.php",
         "packages/Gametech/Lotto/src/Observers/LottoDrawRealtimeObserver.php",
         "packages/Gametech/Lotto/src/Observers/LottoTicketRealtimeObserver.php",
+        "tests/Feature/FrontendApi/DepositLoadBankRandomControllerTest.php",
+        "tests/Unit/FrontendApi/FrontendTokenServiceTest.php",
         "tests/Unit/FrontendApi/RealtimePublicActivityUpdatedEventTest.php",
         "tests/Unit/Lotto/LottoRealtimeObserverTest.php"
     ]

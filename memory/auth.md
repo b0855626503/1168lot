@@ -1,6 +1,6 @@
 # Auth Memory
 
-อัปเดตล่าสุด: 2026-04-18
+อัปเดตล่าสุด: 2026-04-25
 
 ## Responsibility
 
@@ -26,6 +26,7 @@
 
 - register validation + member creation
 - token issue/revoke lifecycle
+- single active token ต่อ member; login ใหม่ invalidate token เดิมทันทีผ่าน active token cache
 - auth guard enforcement for protected endpoints
 
 ## Important Dependencies

@@ -5,6 +5,7 @@
 ## Flow Decisions ที่ต้องเช็คบ่อย
 
 - wallet ledger append-only semantics
+- 2026-04-25: customer Frontend API ต้องยอมรับ active token ล่าสุดต่อ member เพียงตัวเดียว เพื่อกันใช้งานหลายเครื่องพร้อมกัน
 - customer realtime channel separation
 - lotto draw/settlement/auto-result constraints
 - dashboard summary queue dedup strategy

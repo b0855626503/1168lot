@@ -13,7 +13,10 @@
    - locale fallback: requested -> `th` -> `en` -> `key`
    - default code unpublish/ไม่พบ published row ต้องตอบ `404` แบบคงที่
 
-3. **Lotto public realtime message** (2026-04-25)
+3. **Frontend API single active login** (2026-04-25)
+   - สมาชิก 1 คนมี active token ได้ครั้งละ 1 ตัว; login ใหม่ invalidate token เดิมทันที
+
+4. **Lotto public realtime message** (2026-04-25)
    - `.public.activity.updated` ของ Lotto แนบ `message` พร้อมแสดงผลสำหรับ draw closed/resulted/reopened และ ticket-list resulted update
 
 ## Architecture Decisions (ต้องจำ):

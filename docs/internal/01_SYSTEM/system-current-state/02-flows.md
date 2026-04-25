@@ -5,6 +5,7 @@
 ## Critical Flows
 
 - Auth/Register/Login/Logout ผ่าน FrontendApi controllers เท่านั้น
+- Frontend API login จำกัด active token 1 ตัวต่อ member; login ใหม่จากอุปกรณ์อื่นทำให้ token เดิมใช้ต่อไม่ได้
 - Wallet transactions/claim/withdraw ต้องยึด `wallet_transactions` เป็น financial source-of-truth
 - Lotto lifecycle หลัก: `draft -> open -> closed -> resulted`
 - Lotto navbar config lifecycle:
