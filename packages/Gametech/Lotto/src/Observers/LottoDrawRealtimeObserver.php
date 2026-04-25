@@ -2,8 +2,8 @@
 
 namespace Gametech\Lotto\Observers;
 
-use App\Events\LottoTicketListChanged;
 use App\Events\LottoDrawStatusChanged;
+use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Jobs\SendDrawResultSummaryTelegramJob;
 use Gametech\Lotto\Models\LottoDraw;
@@ -159,11 +159,17 @@ class LottoDrawRealtimeObserver
     }
 
     /**
-     * @param array<string,mixed> $data
+     * @param  array<string,mixed>  $data
      */
     protected function broadcastDrawPublicActivityUpdated(string $method, string $event, array $data): void
     {
-        broadcast(new RealtimePublicActivityUpdated($method, $event, $data));
+        $message = $this->buildDrawActivityMessage(
+            $event,
+            (string) ($data['market_name'] ?? '-'),
+            (string) ($data['draw_date'] ?? '-')
+        );
+
+        broadcast(new RealtimePublicActivityUpdated($method, $event, $data, $message));
     }
 
     protected function broadcastResultedTicketListChanged(LottoDraw $draw, string $marketName, string $drawDate): void
@@ -181,8 +187,63 @@ class LottoDrawRealtimeObserver
                 'draw_date' => $drawDate,
                 'actor_id' => null,
                 'amount' => null,
-            ]
+            ],
+            $this->buildTicketListActivityMessage('resulted', $marketName, $drawDate, null, null)
         ));
+    }
+
+    private function buildDrawActivityMessage(string $event, string $marketName, string $drawDate): string
+    {
+        $drawLabel = $this->formatDrawDateMessage($drawDate);
+
+        return match ($event) {
+            'lotto.draw_closed' => "{$marketName} งวดวันที่ {$drawLabel} ปิดรับแล้ว",
+            'lotto.draw_resulted' => "{$marketName} งวดวันที่ {$drawLabel} ออกผลแล้ว",
+            default => "{$marketName} งวดวันที่ {$drawLabel} เปิดรับแล้ว",
+        };
+    }
+
+    private function buildTicketListActivityMessage(
+        string $action,
+        string $marketName,
+        string $drawDate,
+        ?string $actorId,
+        ?float $amount
+    ): string {
+        $drawLabel = $this->formatDrawDateMessage($drawDate);
+
+        if ($action === 'resulted') {
+            return "{$marketName} งวดวันที่ {$drawLabel} อัปเดตรายการโพยหลังออกผลแล้ว";
+        }
+
+        if ($action === 'created') {
+            $message = "มีรายการโพยหวยใหม่: {$marketName} งวดวันที่ {$drawLabel}";
+
+            if ($actorId !== null && $actorId !== '') {
+                $message .= " โดย {$actorId}";
+            }
+
+            if ($amount !== null) {
+                $message .= ' จำนวน '.number_format($amount, 2, '.', '');
+            }
+
+            return $message;
+        }
+
+        return "มีการอัปเดตรายการโพยหวย: {$marketName} งวดวันที่ {$drawLabel}";
+    }
+
+    private function formatDrawDateMessage(string $drawDate): string
+    {
+        if ($drawDate === '' || $drawDate === '-') {
+            return '-';
+        }
+
+        try {
+            return (string) (int) Carbon::parse($drawDate)->format('d');
+        } catch (\Throwable) {
+            return $drawDate;
+        }
     }
 
     protected function dispatchResultSummaryTelegram(int $drawId): void

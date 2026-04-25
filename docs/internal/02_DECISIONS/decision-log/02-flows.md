@@ -9,6 +9,7 @@
 - customer realtime channel separation
 - lotto draw/settlement/auto-result constraints
 - dashboard summary queue dedup strategy
+- 2026-04-25: Lotto shared member feed `.public.activity.updated` ต้องแนบ `message` พร้อมแสดงผลกับ activity ที่ลูกค้าเห็น
 
 ## Lookup Pattern
 

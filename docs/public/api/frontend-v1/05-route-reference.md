@@ -286,6 +286,7 @@ GET /api/v1/meta/site
 ### `GET /api/v1/realtime/config`
 - คำอธิบาย: ดึงคอนฟิกระบบ realtime ที่ frontend ต้องใช้เชื่อมต่อ
 - ใช้เมื่อ: ตั้งค่า websocket/reverb client ตอนเริ่มแอป
+- Broadcast note: `.public.activity.updated` ของ Lotto มี `message` พร้อมแสดงผลสำหรับ draw closed/resulted/reopened และ ticket-list resulted update
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```http

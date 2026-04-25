@@ -335,6 +335,34 @@ class LottoRealtimeObserverTest extends TestCase
         $this->assertSame([548], $observer->telegramDispatches);
     }
 
+    public function test_public_activity_messages_are_ready_for_member_feed(): void
+    {
+        $observer = new LottoDrawRealtimeObserver;
+
+        $drawMessage = new \ReflectionMethod($observer, 'buildDrawActivityMessage');
+        $drawMessage->setAccessible(true);
+
+        $ticketMessage = new \ReflectionMethod($observer, 'buildTicketListActivityMessage');
+        $ticketMessage->setAccessible(true);
+
+        $this->assertSame(
+            'หวยออมสิน งวดวันที่ 25 ปิดรับแล้ว',
+            $drawMessage->invoke($observer, 'lotto.draw_closed', 'หวยออมสิน', '2026-04-25')
+        );
+        $this->assertSame(
+            'หวยออมสิน งวดวันที่ 25 ออกผลแล้ว',
+            $drawMessage->invoke($observer, 'lotto.draw_resulted', 'หวยออมสิน', '2026-04-25')
+        );
+        $this->assertSame(
+            'หวยออมสิน งวดวันที่ 25 เปิดรับแล้ว',
+            $drawMessage->invoke($observer, 'lotto.draw_status_changed', 'หวยออมสิน', '2026-04-25')
+        );
+        $this->assertSame(
+            'หวยออมสิน งวดวันที่ 25 อัปเดตรายการโพยหลังออกผลแล้ว',
+            $ticketMessage->invoke($observer, 'resulted', 'หวยออมสิน', '2026-04-25', null, null)
+        );
+    }
+
     public function test_ticket_observer_total_counts_only_active_tickets(): void
     {
         $this->recreateMinimalLottoTicketsTable();

@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Observers;
 use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoTicket;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -92,8 +93,68 @@ class LottoTicketRealtimeObserver
                 'owner_id' => $ownerId,
                 'actor_id' => $actorId,
                 'amount' => $amount,
-            ]
+            ],
+            $this->buildPublicActivityMessage($action, $marketName, $drawDate, $ownerId, $actorId, $amount)
         ));
+    }
+
+    private function buildPublicActivityMessage(
+        string $action,
+        ?string $marketName,
+        ?string $drawDate,
+        ?string $ownerId,
+        ?string $actorId,
+        ?float $amount
+    ): string {
+        $marketLabel = $marketName ?: '-';
+        $drawLabel = $this->formatDrawDateMessage($drawDate);
+
+        if ($action === 'created') {
+            $message = "มีรายการโพยหวยใหม่: {$marketLabel} งวดวันที่ {$drawLabel}";
+
+            if ($actorId !== null && $actorId !== '') {
+                $message .= " โดย {$actorId}";
+            }
+
+            if ($amount !== null) {
+                $message .= ' จำนวน '.number_format($amount, 2, '.', '');
+            }
+
+            return $message;
+        }
+
+        if ($action === 'cancelled') {
+            $message = "มีการคืนโพยหวย: {$marketLabel} งวดวันที่ {$drawLabel}";
+
+            if ($ownerId !== null && $ownerId !== '') {
+                $message .= " ของ {$ownerId}";
+            }
+
+            if ($actorId !== null && $actorId !== '') {
+                $message .= " โดย {$actorId}";
+            }
+
+            return $message;
+        }
+
+        if ($action === 'resulted') {
+            return "{$marketLabel} งวดวันที่ {$drawLabel} อัปเดตรายการโพยหลังออกผลแล้ว";
+        }
+
+        return "มีการอัปเดตรายการโพยหวย: {$marketLabel} งวดวันที่ {$drawLabel}";
+    }
+
+    private function formatDrawDateMessage(?string $drawDate): string
+    {
+        if ($drawDate === null || $drawDate === '' || $drawDate === '-') {
+            return '-';
+        }
+
+        try {
+            return (string) (int) Carbon::parse($drawDate)->format('d');
+        } catch (\Throwable) {
+            return $drawDate;
+        }
     }
 
     /**

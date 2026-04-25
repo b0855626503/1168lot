@@ -14,19 +14,21 @@ class RealtimePublicActivityUpdated implements ShouldBroadcastNow
     public string $method;
     public string $event;
     public string $occurredAt;
+    public ?string $message;
     public array $data;
 
-    public function __construct(string $method, string $event, array $data = [])
+    public function __construct(string $method, string $event, array $data = [], ?string $message = null)
     {
         $this->method = strtolower(trim($method));
         $this->event = trim($event);
         $this->occurredAt = now()->format('Y-m-d H:i:s');
+        $this->message = $message !== null ? trim($message) : null;
         $this->data = $data;
     }
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel(config('app.name') . '_members');
+        return new PrivateChannel(config('app.name').'_members');
     }
 
     public function broadcastAs(): string
@@ -40,6 +42,7 @@ class RealtimePublicActivityUpdated implements ShouldBroadcastNow
             'method' => $this->method,
             'event' => $this->event,
             'occurred_at' => $this->occurredAt,
+            'message' => $this->message,
             'data' => $this->data,
         ];
     }
