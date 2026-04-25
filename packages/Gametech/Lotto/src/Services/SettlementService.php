@@ -63,7 +63,7 @@ class SettlementService
                         'status' => 'resulted',
                         'result_fetch_status' => 'APPLIED',
                         'result_fetch_error' => null,
-                        'result_hash' => $resultHash,
+                        'result_hash' => ResultHash::fromPayload($normalizedResult),
                         'result_applied_at' => now(),
                         'result_fetched_at' => now(),
                     ]);

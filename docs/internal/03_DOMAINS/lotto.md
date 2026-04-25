@@ -1,6 +1,6 @@
 # Lotto Domain Note
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-24
 
 ## ใช้อ่านเมื่อ
 
@@ -16,6 +16,10 @@
 - cancel/refund ต้องเก็บ audit context ให้ครบ
 - งาน auto-result เป็น high-risk; ถ้างานแตะ retry/backoff/exhausted ให้เปิด full docs เพิ่ม
 - market สามารถตั้ง `auto_refund_on_no_result` เพื่อให้ no-result คืนเงินทั้งงวดอัตโนมัติได้
+- การสร้างงวดอัตโนมัติของ market ใช้ schedule config ใหม่:
+  - `draw_schedule_type` = `manual|weekly|monthly`
+  - `draw_days` (1-7, จันทร์=1)
+  - `draw_dates` (1-31)
 
 ## ข้อควรจำ
 
@@ -27,6 +31,17 @@
 - สมาชิกกดยกเลิกเองนับ daily quota แยกจาก admin/system cancel
 - manual retry ของทีมงาน bypass auto scheduler retry gating ได้แล้ว
 - internal result source `exphuay` มี request budget cap (`LOTTO_EXPHUAY_REQUEST_BUDGET_SECONDS`) เพื่อกัน fallback latency ยาวผิดปกติ
+- runtime ของ command `lotto:generate-auto-draws` ใช้ resolver เดียว:
+  - `manual` = ไม่สร้างงวดอัตโนมัติ
+  - `weekly` ใช้ `dayOfWeekIso`
+  - `monthly` ใช้ day-of-month
+  - monthly วันที่ที่ไม่มีในเดือนนั้นจะถูก skip ตามธรรมชาติ (ไม่ throw)
+- fallback boundary:
+  - ถ้า schedule ใหม่หาย/null จะ fallback ไป `draw_mode` เดิม
+  - ถ้า schedule ใหม่มีค่าแต่ invalid จะ skip (`invalid_schedule_config`) และไม่ fallback
+- rollback safety:
+  - ยังเก็บ `draw_mode` ไว้ (ยังไม่ลบในรอบนี้)
+  - save path จะ map schedule กลับ legacy `draw_mode` แบบ best-effort (`daily|weekdays|wed_sat_sun|manual`)
 - Frontend API `POST /api/v1/lotto/bet` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `lotto_dashboard_risk_snapshot` และ `lotto_result_fetch_logs` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `lotto_tickets` และ `lotto_ticket_items` จะไม่เขียน audit ลงตาราง `logs`

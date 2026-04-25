@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Console\Commands;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\DrawService;
+use Gametech\Lotto\Support\DrawScheduleResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -18,7 +19,7 @@ class GenerateAutoLottoDrawsCommand extends Command
 
     protected $description = 'Generate lotto draws automatically from market schedule settings';
 
-    public function handle(DrawService $drawService): int
+    public function handle(DrawService $drawService, DrawScheduleResolver $scheduleResolver): int
     {
         $startDate = $this->resolveStartDate((string) $this->option('date'));
         if (! $startDate) {
@@ -35,11 +36,6 @@ class GenerateAutoLottoDrawsCommand extends Command
 
         $marketQuery = LotteryMarket::query()
             ->with('group')
-            ->whereIn('draw_mode', [
-                LotteryMarket::DRAW_MODE_DAILY,
-                LotteryMarket::DRAW_MODE_WEEKDAYS,
-                LotteryMarket::DRAW_MODE_WED_SAT_SUN,
-            ])
             ->where('is_enabled', true);
 
         if ($marketId !== null && $marketId !== '') {
@@ -68,6 +64,9 @@ class GenerateAutoLottoDrawsCommand extends Command
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
                     'draw_mode' => (string) $market->draw_mode,
+                    'draw_schedule_type' => (string) ($market->draw_schedule_type ?? ''),
+                    'draw_days' => is_array($market->draw_days) ? $market->draw_days : [],
+                    'draw_dates' => is_array($market->draw_dates) ? $market->draw_dates : [],
                     'draw_date' => null,
                     'open_at' => null,
                     'close_at' => null,
@@ -83,6 +82,9 @@ class GenerateAutoLottoDrawsCommand extends Command
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
                     'draw_mode' => (string) $market->draw_mode,
+                    'draw_schedule_type' => (string) ($market->draw_schedule_type ?? ''),
+                    'draw_days' => is_array($market->draw_days) ? $market->draw_days : [],
+                    'draw_dates' => is_array($market->draw_dates) ? $market->draw_dates : [],
                     'draw_date' => null,
                     'open_at' => null,
                     'close_at' => null,
@@ -95,18 +97,28 @@ class GenerateAutoLottoDrawsCommand extends Command
             for ($offset = 0; $offset < $days; $offset++) {
                 $targetDate = $startDate->copy()->addDays($offset);
                 $payload = $this->buildDrawPayload($market, $targetDate);
+                $scheduleDecision = $scheduleResolver->resolve($market, $targetDate);
 
-                if (! $this->shouldGenerateForDate($market, $targetDate)) {
-                    $summary['not_in_schedule']++;
+                if (! $scheduleDecision['should_generate']) {
+                    $skipStatus = $this->mapSkipStatus((string) $scheduleDecision['skip_reason']);
+                    if ($skipStatus === 'skip_not_in_schedule') {
+                        $summary['not_in_schedule']++;
+                    } else {
+                        $summary['skipped']++;
+                    }
+
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
                         'market_name' => (string) $market->name,
                         'draw_mode' => (string) $market->draw_mode,
+                        'draw_schedule_type' => (string) $scheduleDecision['schedule_type'],
+                        'draw_days' => $scheduleDecision['draw_days'],
+                        'draw_dates' => $scheduleDecision['draw_dates'],
                         'draw_date' => (string) $payload['draw_date'],
                         'open_at' => (string) $payload['open_at'],
                         'close_at' => (string) $payload['close_at'],
                         'result_at' => $payload['result_at'] ? (string) $payload['result_at'] : null,
-                        'status' => 'skip_not_in_schedule',
+                        'status' => $skipStatus,
                     ];
                     continue;
                 }
@@ -122,6 +134,9 @@ class GenerateAutoLottoDrawsCommand extends Command
                         'market_id' => (int) $market->id,
                         'market_name' => (string) $market->name,
                         'draw_mode' => (string) $market->draw_mode,
+                        'draw_schedule_type' => (string) $scheduleDecision['schedule_type'],
+                        'draw_days' => $scheduleDecision['draw_days'],
+                        'draw_dates' => $scheduleDecision['draw_dates'],
                         'draw_date' => (string) $payload['draw_date'],
                         'open_at' => (string) $payload['open_at'],
                         'close_at' => (string) $payload['close_at'],
@@ -140,6 +155,9 @@ class GenerateAutoLottoDrawsCommand extends Command
                     'market_id' => (int) $market->id,
                     'market_name' => (string) $market->name,
                     'draw_mode' => (string) $market->draw_mode,
+                    'draw_schedule_type' => (string) $scheduleDecision['schedule_type'],
+                    'draw_days' => $scheduleDecision['draw_days'],
+                    'draw_dates' => $scheduleDecision['draw_dates'],
                     'draw_date' => (string) $payload['draw_date'],
                     'open_at' => (string) $payload['open_at'],
                     'close_at' => (string) $payload['close_at'],
@@ -176,21 +194,21 @@ class GenerateAutoLottoDrawsCommand extends Command
         }
     }
 
-    private function shouldGenerateForDate(LotteryMarket $market, Carbon $date): bool
+    private function mapSkipStatus(string $skipReason): string
     {
-        if ((string) $market->draw_mode === LotteryMarket::DRAW_MODE_DAILY) {
-            return true;
+        if (in_array($skipReason, ['not_in_weekly_schedule', 'not_in_monthly_schedule'], true)) {
+            return 'skip_not_in_schedule';
         }
 
-        if ((string) $market->draw_mode === LotteryMarket::DRAW_MODE_WEEKDAYS) {
-            return $date->dayOfWeekIso >= 1 && $date->dayOfWeekIso <= 5;
+        if ($skipReason === 'manual') {
+            return 'skip_manual';
         }
 
-        if ((string) $market->draw_mode === LotteryMarket::DRAW_MODE_WED_SAT_SUN) {
-            return in_array($date->dayOfWeekIso, [3, 6, 7], true);
+        if ($skipReason === 'invalid_schedule_config') {
+            return 'skip_invalid_schedule_config';
         }
 
-        return false;
+        return 'skip_not_in_schedule';
     }
 
     private function buildDrawPayload(LotteryMarket $market, Carbon $date): array

@@ -945,7 +945,7 @@
                             market_id: item.market_id || null,
                             market_name: item.market_name || '-',
                             draw_date: item.draw_date || '-',
-                            draw_mode_label: this.autoGenDrawModeLabel(String(item.draw_mode || '')),
+                            draw_mode_label: this.autoGenDrawModeLabel(item),
                             open_at: item.open_at || '-',
                             close_at: item.close_at || '-',
                             result_at: item.result_at || '-',
@@ -959,7 +959,9 @@
                 },
                 autoGenMissingItems() {
                     return this.autoGenNormalizedItems.filter((item) =>
-                        item.status === 'skip_group_disabled'
+                        item.status === 'skip_manual'
+                        || item.status === 'skip_invalid_schedule_config'
+                        || item.status === 'skip_group_disabled'
                         || item.status === 'skip_missing_close_time'
                         || item.status === 'unknown'
                     );
@@ -1454,6 +1456,8 @@
                         will_create: 'จะสร้าง',
                         exists: 'มีอยู่แล้ว',
                         skip_not_in_schedule: 'ไม่เข้าเกณฑ์วันนั้น',
+                        skip_manual: 'ขาด: โหมดแมนนวล',
+                        skip_invalid_schedule_config: 'ขาด: schedule ไม่ถูกต้อง',
                         skip_group_disabled: 'ขาด: กลุ่มปิด',
                         skip_missing_close_time: 'ขาด: ไม่มีเวลาปิด',
                         unknown: 'ขาด: ไม่ทราบสาเหตุ',
@@ -1461,15 +1465,59 @@
 
                     return map[status] || `ขาด: ไม่ทราบ (${status || '-'})`;
                 },
-                autoGenDrawModeLabel(mode) {
-                    const map = {
-                        daily: 'ทุกวัน',
-                        weekdays: 'จ.-ศ.',
-                        wed_sat_sun: 'พุธ/ส./อา.',
-                        manual: 'แมนนวล',
-                    };
+                autoGenDrawModeLabel(item) {
+                    const scheduleType = String(item.draw_schedule_type || '').trim();
+                    const drawDays = Array.isArray(item.draw_days) ? item.draw_days : [];
+                    const drawDates = Array.isArray(item.draw_dates) ? item.draw_dates : [];
 
-                    return map[mode] || mode || '-';
+                    if (scheduleType === 'manual') {
+                        return 'Manual';
+                    }
+
+                    if (scheduleType === 'weekly') {
+                        const dayMap = {
+                            1: 'จันทร์',
+                            2: 'อังคาร',
+                            3: 'พุธ',
+                            4: 'พฤหัสบดี',
+                            5: 'ศุกร์',
+                            6: 'เสาร์',
+                            7: 'อาทิตย์',
+                        };
+                        const labels = Array.from(new Set(drawDays.map((day) => parseInt(day, 10))))
+                            .filter((day) => Number.isInteger(day) && dayMap[day])
+                            .sort((a, b) => a - b)
+                            .map((day) => dayMap[day]);
+
+                        if (labels.length > 0) {
+                            return `Auto: ${labels.join(', ')}`;
+                        }
+                    }
+
+                    if (scheduleType === 'monthly') {
+                        const dates = Array.from(new Set(drawDates.map((date) => parseInt(date, 10))))
+                            .filter((date) => Number.isInteger(date) && date >= 1 && date <= 31)
+                            .sort((a, b) => a - b);
+
+                        if (dates.length > 0) {
+                            return `Auto: วันที่ ${dates.join(', ')}`;
+                        }
+                    }
+
+                    const legacyMode = String(item.draw_mode || '');
+                    if (legacyMode === 'daily') {
+                        return 'Auto: จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์, เสาร์, อาทิตย์';
+                    }
+
+                    if (legacyMode === 'weekdays') {
+                        return 'Auto: จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์';
+                    }
+
+                    if (legacyMode === 'wed_sat_sun') {
+                        return 'Auto: พุธ, เสาร์, อาทิตย์';
+                    }
+
+                    return 'Manual';
                 },
                 prepareAutoGenSummary(summary, dryRun) {
                     const knownStatuses = [
@@ -1477,6 +1525,8 @@
                         'will_create',
                         'exists',
                         'skip_not_in_schedule',
+                        'skip_manual',
+                        'skip_invalid_schedule_config',
                         'skip_group_disabled',
                         'skip_missing_close_time',
                     ];

@@ -63,8 +63,26 @@
                 </b-form-group>
             </b-col>
         </b-row>
-        <b-form-group label="โหมดงวด:" label-for="draw_mode" description="manual = ทีมงานสร้างงวดเอง, daily = ทุกวัน, weekdays = จันทร์-ศุกร์, wed_sat_sun = พุธ/เสาร์/อาทิตย์">
-            <b-form-select id="draw_mode" v-model="formaddedit.draw_mode" :options="option.drawModes" size="sm"></b-form-select>
+        <b-form-group label="รูปแบบออกงวด:" label-for="draw_schedule_type" description="Manual = ทีมงานสร้างงวดเอง, Weekly = ออกรายสัปดาห์, Monthly = ออกรายเดือน">
+            <b-form-select id="draw_schedule_type" v-model="formaddedit.draw_schedule_type" :options="option.drawScheduleTypes" size="sm"></b-form-select>
+        </b-form-group>
+        <b-form-group v-if="formaddedit.draw_schedule_type === 'weekly'" label="เลือกวันออกรายสัปดาห์:">
+            <b-form-checkbox-group
+                v-model="formaddedit.draw_days"
+                :options="option.weeklyDays"
+                size="sm"
+                switches
+                stacked
+            ></b-form-checkbox-group>
+        </b-form-group>
+        <b-form-group v-if="formaddedit.draw_schedule_type === 'monthly'" label="เลือกวันที่ออกรายเดือน:">
+            <b-form-select
+                v-model="formaddedit.draw_dates"
+                :options="option.monthlyDates"
+                size="sm"
+                multiple
+                :select-size="8"
+            ></b-form-select>
         </b-form-group>
         <b-row>
             <b-col cols="12" md="4">
@@ -557,7 +575,9 @@
                         logo_file:  null,
                         icon_file:  null,
                         code:       '',
-                        draw_mode: 'manual',
+                        draw_schedule_type: 'manual',
+                        draw_days: [],
+                        draw_dates: [],
                         auto_open_time: '',
                         auto_close_time: '',
                         auto_result_time: '',
@@ -574,12 +594,24 @@
                             { value: {{ $g->id }}, text: '{{ $g->name }} ({{ $g->code }})' },
                             @endforeach
                         ],
-                        drawModes: [
+                        drawScheduleTypes: [
                             { value: 'manual', text: 'Manual (เพิ่มงวดเอง)' },
-                            { value: 'daily', text: 'Auto ทุกวัน' },
-                            { value: 'weekdays', text: 'Auto จันทร์-ศุกร์' },
-                            { value: 'wed_sat_sun', text: 'Auto พุธ/เสาร์/อาทิตย์' },
+                            { value: 'weekly', text: 'Weekly (เลือกรายวัน)' },
+                            { value: 'monthly', text: 'Monthly (เลือกรายเดือน)' },
                         ],
+                        weeklyDays: [
+                            { value: 1, text: 'จันทร์' },
+                            { value: 2, text: 'อังคาร' },
+                            { value: 3, text: 'พุธ' },
+                            { value: 4, text: 'พฤหัสบดี' },
+                            { value: 5, text: 'ศุกร์' },
+                            { value: 6, text: 'เสาร์' },
+                            { value: 7, text: 'อาทิตย์' },
+                        ],
+                        monthlyDates: Array.from({ length: 31 }, (_, index) => {
+                            const day = index + 1;
+                            return { value: day, text: `วันที่ ${day}` };
+                        }),
                     },
                     permissions: {
                         canTestFetch: @json($canAutoResultTestFetch),
@@ -1302,7 +1334,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1314,7 +1346,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_mode: 'manual', auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1688,6 +1720,8 @@
                 async loadData() {
                     const response = await axios.post("{{ route('admin.lotto.markets.loaddata') }}", { id: this.code });
                     const d = response.data.data;
+                    const legacySchedule = this.resolveScheduleFromLegacyDrawMode(d.draw_mode);
+                    const resolvedScheduleType = d.draw_schedule_type || legacySchedule.type;
                     this.formaddedit = {
                         group_id:   d.group_id,
                         name:       d.name,
@@ -1699,7 +1733,9 @@
                         logo_file:  null,
                         icon_file:  null,
                         code:       d.code,
-                        draw_mode:  d.draw_mode || 'manual',
+                        draw_schedule_type: resolvedScheduleType,
+                        draw_days: this.normalizeNumberArray(d.draw_days, 1, 7),
+                        draw_dates: this.normalizeNumberArray(d.draw_dates, 1, 31),
                         auto_open_time: d.auto_open_time ? String(d.auto_open_time).substring(0, 5) : '',
                         auto_close_time: d.auto_close_time ? String(d.auto_close_time).substring(0, 5) : '',
                         auto_result_time: d.auto_result_time ? String(d.auto_result_time).substring(0, 5) : '',
@@ -1709,8 +1745,61 @@
                         notify_result_telegram: d.notify_result_telegram === undefined || d.notify_result_telegram === null ? 1 : (d.notify_result_telegram ? 1 : 0),
                         is_enabled: d.is_enabled ? 1 : 0,
                     };
+
+                    if (!d.draw_schedule_type) {
+                        this.formaddedit.draw_days = legacySchedule.days;
+                        this.formaddedit.draw_dates = legacySchedule.dates;
+                    }
+
+                    this.normalizeScheduleFormData();
+                },
+                normalizeNumberArray(value, min, max) {
+                    if (!Array.isArray(value)) {
+                        return [];
+                    }
+
+                    const normalized = value
+                        .map((item) => parseInt(item, 10))
+                        .filter((item) => Number.isInteger(item) && item >= min && item <= max);
+
+                    return Array.from(new Set(normalized)).sort((a, b) => a - b);
+                },
+                resolveScheduleFromLegacyDrawMode(drawMode) {
+                    const mode = String(drawMode || 'manual');
+                    if (mode === 'daily') {
+                        return { type: 'weekly', days: [1, 2, 3, 4, 5, 6, 7], dates: [] };
+                    }
+
+                    if (mode === 'weekdays') {
+                        return { type: 'weekly', days: [1, 2, 3, 4, 5], dates: [] };
+                    }
+
+                    if (mode === 'wed_sat_sun') {
+                        return { type: 'weekly', days: [3, 6, 7], dates: [] };
+                    }
+
+                    return { type: 'manual', days: [], dates: [] };
+                },
+                normalizeScheduleFormData() {
+                    const type = String(this.formaddedit.draw_schedule_type || 'manual');
+                    this.formaddedit.draw_days = this.normalizeNumberArray(this.formaddedit.draw_days, 1, 7);
+                    this.formaddedit.draw_dates = this.normalizeNumberArray(this.formaddedit.draw_dates, 1, 31);
+
+                    if (type === 'manual') {
+                        this.formaddedit.draw_days = [];
+                        this.formaddedit.draw_dates = [];
+                    }
+
+                    if (type === 'weekly') {
+                        this.formaddedit.draw_dates = [];
+                    }
+
+                    if (type === 'monthly') {
+                        this.formaddedit.draw_days = [];
+                    }
                 },
                 addEditSubmit() {
+                    this.normalizeScheduleFormData();
                     const validationMessage = this.validateAutoDrawConfig();
                     if (validationMessage) {
                         this.$bvModal.msgBoxOk(validationMessage, {
@@ -1734,7 +1823,15 @@
                     Object.keys(this.formaddedit)
                         .filter((key) => !['logo_file', 'icon_file'].includes(key))
                         .forEach((key) => {
-                            formData.append(`data[${key}]`, this.formaddedit[key] ?? '');
+                            const value = this.formaddedit[key];
+                            if (Array.isArray(value)) {
+                                value.forEach((item) => {
+                                    formData.append(`data[${key}][]`, item);
+                                });
+                                return;
+                            }
+
+                            formData.append(`data[${key}]`, value ?? '');
                         });
 
                     if (this.formaddedit.logo_file) {
@@ -1762,7 +1859,7 @@
                         .catch(() => console.error('addEditSubmit error'));
                 },
                 validateAutoDrawConfig() {
-                    const mode = this.formaddedit.draw_mode || 'manual';
+                    const mode = this.formaddedit.draw_schedule_type || 'manual';
                     const open = (this.formaddedit.auto_open_time || '').trim();
                     const close = (this.formaddedit.auto_close_time || '').trim();
 
@@ -1778,10 +1875,21 @@
                         return 'เวลาเปิดรับและเวลาปิดรับต้องไม่เท่ากัน';
                     }
 
+                    if (mode === 'weekly' && this.formaddedit.draw_days.length === 0) {
+                        return 'โหมดรายสัปดาห์จำเป็นต้องเลือกวันออกงวดอย่างน้อย 1 วัน';
+                    }
+
+                    if (mode === 'monthly' && this.formaddedit.draw_dates.length === 0) {
+                        return 'โหมดรายเดือนจำเป็นต้องเลือกวันที่ออกงวดอย่างน้อย 1 วัน';
+                    }
+
                     return '';
                 },
             },
             watch: {
+                'formaddedit.draw_schedule_type'() {
+                    this.normalizeScheduleFormData();
+                },
                 'autoSourceForm.lookup_date_mode'() {
                     this.enforceQuickDependencyRules();
                 },
