@@ -9,4 +9,5 @@ return [
             'target' => env('CASHBACK_START_TARGET', 'wallet'),
         ],
     ],
+    'api_external_url' => env('APP_EXTERNAL_API_URL', 'api2.joker.com'),
 ];

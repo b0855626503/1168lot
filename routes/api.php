@@ -28,3 +28,13 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
         Route::post('/daily-report', 'ReportController@daily')->name('api.daily.report');
     });
 });
+
+$apiRoute = config('gametech.api_external_url');
+
+Route::domain("$apiRoute")->group(function () {
+
+    Route::group(['middleware' => ['api']], function () {
+        Route::any('tw/{mobile}/webhook', 'WebhookController@index');
+    });
+
+});
