@@ -5,6 +5,7 @@ namespace Gametech\Member\Repositories;
 use Gametech\Core\Eloquent\Repository;
 use Gametech\Game\Repositories\GameUserEventRepository;
 use Gametech\LogAdmin\Http\Traits\ActivityLogger;
+use Gametech\Member\Models\MemberCashback;
 use Illuminate\Container\Container as App;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -23,16 +24,14 @@ class MemberCashbackRepository extends Repository
 
     private $memberCreditLogRepository;
 
-    public function __construct
-    (
-        MemberRepository           $memberRepo,
+    public function __construct(
+        MemberRepository $memberRepo,
         MemberFreeCreditRepository $memberFreeCreditRepo,
-        GameUserEventRepository    $gameUserEventRepo,
+        GameUserEventRepository $gameUserEventRepo,
         MemberCreditFreeLogRepository $memberCreditFreeLogRepo,
         MemberCreditLogRepository $memberCreditLogRepo,
-        App                        $app
-    )
-    {
+        App $app
+    ) {
         $this->memberRepository = $memberRepo;
         $this->memberFreeCreditRepository = $memberFreeCreditRepo;
         $this->gameUserEventRepository = $gameUserEventRepo;
@@ -43,12 +42,10 @@ class MemberCashbackRepository extends Repository
 
     /**
      * Specify Model class name
-     *
-     * @return string
      */
-    function model(): string
+    public function model(): string
     {
-        return \Gametech\Member\Models\MemberCashback::class;
+        return MemberCashback::class;
 
     }
 
@@ -84,7 +81,7 @@ class MemberCashbackRepository extends Repository
         $emp_code = $data['emp_code'];
         $emp_name = $data['emp_name'];
 
-//        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
+        //        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
         $chk = $this->find($code);
         if ($chk) {
             if ($chk->topupic == 'Y' || $chk->topupic == 'X') {
@@ -100,40 +97,37 @@ class MemberCashbackRepository extends Repository
         $withdraw_limit_rate = $promotion->withdraw_limit_rate;
 
         $member = $this->memberRepository->find($downline_code);
-        if (!$member) {
+        if (! $member) {
             return false;
         }
 
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'เริ่มรายการ CASHBACK');
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'เริ่มรายการ CASHBACK');
-
-
-//        DB::beginTransaction();
+        //        DB::beginTransaction();
         try {
-
 
             if ($chk) {
                 $chk->topupic = 'Y';
                 $chk->save();
 
-//                $bill = $this->update([
-//                    'member_code' => $member_code,
-//                    'downline_code' => $downline_code,
-//                    'date_cashback' => $date_cashback,
-//                    'balance' => $amount,
-//                    'cashback' => $cashback,
-//                    'amount' => $cashback,
-//                    'topupic' => 'Y',
-//                    'ip_admin' => $ip,
-//                    'emp_code' => $emp_code,
-//                    'date_approve' => now()->toDateTimeString(),
-//                    'user_create' => $emp_name,
-//                    'user_update' => $emp_name
-//                ], $chk->code);
+                //                $bill = $this->update([
+                //                    'member_code' => $member_code,
+                //                    'downline_code' => $downline_code,
+                //                    'date_cashback' => $date_cashback,
+                //                    'balance' => $amount,
+                //                    'cashback' => $cashback,
+                //                    'amount' => $cashback,
+                //                    'topupic' => 'Y',
+                //                    'ip_admin' => $ip,
+                //                    'emp_code' => $emp_code,
+                //                    'date_approve' => now()->toDateTimeString(),
+                //                    'user_create' => $emp_name,
+                //                    'user_update' => $emp_name
+                //                ], $chk->code);
 
-//                if ($bill->wasChanged()) {
+                //                if ($bill->wasChanged()) {
                 $code = $chk->code;
-//                }
+                //                }
 
             } else {
                 $bill = $this->create([
@@ -148,7 +142,7 @@ class MemberCashbackRepository extends Repository
                     'emp_code' => $emp_code,
                     'date_approve' => now()->toDateTimeString(),
                     'user_create' => $emp_name,
-                    'user_update' => $emp_name
+                    'user_update' => $emp_name,
                 ]);
 
                 $code = $bill->code;
@@ -158,7 +152,7 @@ class MemberCashbackRepository extends Repository
 
                 $game = core()->getGame();
                 $game_user = $this->gameUserEventRepository->findOneWhere(['method' => 'CASHBACK', 'member_code' => $member->code, 'game_code' => $game->code, 'enable' => 'Y']);
-                if (!$game_user) {
+                if (! $game_user) {
                     $game_user = $this->gameUserEventRepository->create([
                         'game_code' => $game->code,
                         'member_code' => $member->code,
@@ -214,8 +208,8 @@ class MemberCashbackRepository extends Repository
                     'amount_balance' => $game_user->amount_balance,
                     'withdraw_limit' => $game_user->withdraw_limit,
                     'withdraw_limit_amount' => $game_user->withdraw_limit_amount,
-                    'user_create' => "System Auto",
-                    'user_update' => "System Auto"
+                    'user_create' => 'System Auto',
+                    'user_update' => 'System Auto',
                 ]);
 
             } else {
@@ -246,8 +240,8 @@ class MemberCashbackRepository extends Repository
                     'amount_balance' => 0,
                     'withdraw_limit' => 0,
                     'withdraw_limit_amount' => 0,
-                    'user_create' => "System Auto",
-                    'user_update' => "System Auto"
+                    'user_create' => 'System Auto',
+                    'user_update' => 'System Auto',
                 ]);
 
                 $this->memberFreeCreditRepository->create([
@@ -259,7 +253,7 @@ class MemberCashbackRepository extends Repository
                     'credit_balance' => $total,
                     'member_code' => $downline_code,
                     'kind' => 'CASHBACK',
-                    'remark' => "เพิ่ม Cashback อ้างอิง record : " . $code,
+                    'remark' => 'เพิ่ม Cashback อ้างอิง record : '.$code,
                     'emp_code' => $emp_code,
                     'user_create' => $emp_name,
                     'user_update' => $emp_name,
@@ -270,18 +264,18 @@ class MemberCashbackRepository extends Repository
 
             }
 
-//            DB::commit();
-
+            //            DB::commit();
 
         } catch (Throwable $e) {
-//            DB::rollBack();
-            ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'พบข้อผิดพลาด CASHBACK');
+            //            DB::rollBack();
+            ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'พบข้อผิดพลาด CASHBACK');
 
             report($e);
+
             return false;
         }
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
 
         return true;
     }
@@ -300,7 +294,7 @@ class MemberCashbackRepository extends Repository
         $emp_code = $data['emp_code'];
         $emp_name = $data['emp_name'];
 
-//        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
+        //        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
         $chk = $this->find($code);
         if ($chk) {
             if ($chk->topupic == 'Y' || $chk->topupic == 'X') {
@@ -316,41 +310,37 @@ class MemberCashbackRepository extends Repository
         $withdraw_limit_rate = $promotion->withdraw_limit_rate;
 
         $member = $this->memberRepository->find($downline_code);
-        if (!$member) {
+        if (! $member) {
             return false;
         }
 
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'เริ่มรายการ CASHBACK');
 
-
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'เริ่มรายการ CASHBACK');
-
-
-//        DB::beginTransaction();
+        //        DB::beginTransaction();
         try {
-
 
             if ($chk) {
                 $chk->topupic = 'Y';
                 $chk->save();
 
-//                $bill = $this->update([
-//                    'member_code' => $member_code,
-//                    'downline_code' => $downline_code,
-//                    'date_cashback' => $date_cashback,
-//                    'balance' => $amount,
-//                    'cashback' => $cashback,
-//                    'amount' => $cashback,
-//                    'topupic' => 'Y',
-//                    'ip_admin' => $ip,
-//                    'emp_code' => $emp_code,
-//                    'date_approve' => now()->toDateTimeString(),
-//                    'user_create' => $emp_name,
-//                    'user_update' => $emp_name
-//                ], $chk->code);
+                //                $bill = $this->update([
+                //                    'member_code' => $member_code,
+                //                    'downline_code' => $downline_code,
+                //                    'date_cashback' => $date_cashback,
+                //                    'balance' => $amount,
+                //                    'cashback' => $cashback,
+                //                    'amount' => $cashback,
+                //                    'topupic' => 'Y',
+                //                    'ip_admin' => $ip,
+                //                    'emp_code' => $emp_code,
+                //                    'date_approve' => now()->toDateTimeString(),
+                //                    'user_create' => $emp_name,
+                //                    'user_update' => $emp_name
+                //                ], $chk->code);
 
-//                if ($bill->wasChanged()) {
+                //                if ($bill->wasChanged()) {
                 $code = $chk->code;
-//                }
+                //                }
 
             } else {
                 $bill = $this->create([
@@ -365,7 +355,7 @@ class MemberCashbackRepository extends Repository
                     'emp_code' => $emp_code,
                     'date_approve' => now()->toDateTimeString(),
                     'user_create' => $emp_name,
-                    'user_update' => $emp_name
+                    'user_update' => $emp_name,
                 ]);
 
                 $code = $bill->code;
@@ -375,7 +365,7 @@ class MemberCashbackRepository extends Repository
 
                 $game = core()->getGame();
                 $game_user = $this->gameUserEventRepository->findOneWhere(['method' => 'CASHBACK', 'member_code' => $member->code, 'game_code' => $game->code, 'enable' => 'Y']);
-                if (!$game_user) {
+                if (! $game_user) {
                     $game_user = $this->gameUserEventRepository->create([
                         'game_code' => $game->code,
                         'member_code' => $member->code,
@@ -427,8 +417,8 @@ class MemberCashbackRepository extends Repository
                     'amount_balance' => $game_user->amount_balance,
                     'withdraw_limit' => $game_user->withdraw_limit,
                     'withdraw_limit_amount' => $game_user->withdraw_limit_amount,
-                    'user_create' => "System Auto",
-                    'user_update' => "System Auto"
+                    'user_create' => 'System Auto',
+                    'user_update' => 'System Auto',
                 ]);
 
             } else {
@@ -443,7 +433,7 @@ class MemberCashbackRepository extends Repository
                     'credit_balance' => $total,
                     'member_code' => $downline_code,
                     'kind' => 'CASHBACK',
-                    'remark' => "เพิ่ม Cashback อ้างอิง record : " . $code,
+                    'remark' => 'เพิ่ม Cashback อ้างอิง record : '.$code,
                     'emp_code' => $emp_code,
                     'user_create' => $emp_name,
                     'user_update' => $emp_name,
@@ -454,18 +444,19 @@ class MemberCashbackRepository extends Repository
 
             }
 
-//            DB::commit();
-//
+            //            DB::commit();
+            //
 
         } catch (Throwable $e) {
-//            DB::rollBack();
-            ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'พบข้อผิดพลาด CASHBACK');
+            //            DB::rollBack();
+            ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'พบข้อผิดพลาด CASHBACK');
 
             report($e);
+
             return false;
         }
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
 
         return true;
     }
@@ -482,7 +473,7 @@ class MemberCashbackRepository extends Repository
         $emp_code = $data['emp_code'];
         $emp_name = $data['emp_name'];
 
-//        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
+        //        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
         $chk = $this->find($code);
         if ($chk) {
             if ($chk->topupic == 'N' || $chk->topupic == 'X') {
@@ -491,41 +482,39 @@ class MemberCashbackRepository extends Repository
         }
 
         $member = $this->memberRepository->find($downline_code);
-        if (!$member) {
+        if (! $member) {
             return false;
         }
 
         $total = ($member->balance_free - $cashback);
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'เริ่มรายการ ลบ CASHBACK');
-
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'เริ่มรายการ ลบ CASHBACK');
 
         DB::beginTransaction();
         try {
-
 
             if ($chk) {
                 $chk->topupic = 'Y';
                 $chk->save();
 
-//                $bill = $this->update([
-//                    'member_code' => $member_code,
-//                    'downline_code' => $downline_code,
-//                    'date_cashback' => $date_cashback,
-//                    'balance' => $amount,
-//                    'cashback' => $cashback,
-//                    'amount' => $cashback,
-//                    'topupic' => 'Y',
-//                    'ip_admin' => $ip,
-//                    'emp_code' => $emp_code,
-//                    'date_approve' => now()->toDateTimeString(),
-//                    'user_create' => $emp_name,
-//                    'user_update' => $emp_name
-//                ], $chk->code);
+                //                $bill = $this->update([
+                //                    'member_code' => $member_code,
+                //                    'downline_code' => $downline_code,
+                //                    'date_cashback' => $date_cashback,
+                //                    'balance' => $amount,
+                //                    'cashback' => $cashback,
+                //                    'amount' => $cashback,
+                //                    'topupic' => 'Y',
+                //                    'ip_admin' => $ip,
+                //                    'emp_code' => $emp_code,
+                //                    'date_approve' => now()->toDateTimeString(),
+                //                    'user_create' => $emp_name,
+                //                    'user_update' => $emp_name
+                //                ], $chk->code);
 
-//                if ($bill->wasChanged()) {
-//                    $bill->code = $chk->code;
-//                }
+                //                if ($bill->wasChanged()) {
+                //                    $bill->code = $chk->code;
+                //                }
 
             } else {
                 $bill = $this->create([
@@ -540,7 +529,7 @@ class MemberCashbackRepository extends Repository
                     'emp_code' => $emp_code,
                     'date_approve' => now()->toDateTimeString(),
                     'user_create' => $emp_name,
-                    'user_update' => $emp_name
+                    'user_update' => $emp_name,
                 ]);
 
                 $code = $bill->code;
@@ -555,7 +544,7 @@ class MemberCashbackRepository extends Repository
                 'credit_balance' => $total,
                 'member_code' => $downline_code,
                 'kind' => 'CASHBACK',
-                'remark' => "ลบ Cashback อ้างอิง record : " . $code,
+                'remark' => 'ลบ Cashback อ้างอิง record : '.$code,
                 'emp_code' => $emp_code,
                 'user_create' => $emp_name,
                 'user_update' => $emp_name,
@@ -565,16 +554,16 @@ class MemberCashbackRepository extends Repository
             $member->save();
             DB::commit();
 
-
         } catch (Throwable $e) {
             DB::rollBack();
-            ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'พบข้อผิดพลาด CASHBACK');
+            ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'พบข้อผิดพลาด CASHBACK');
 
             report($e);
+
             return false;
         }
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
 
         return true;
     }
@@ -592,7 +581,7 @@ class MemberCashbackRepository extends Repository
         $emp_code = $data['emp_code'];
         $emp_name = $data['emp_name'];
 
-//        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
+        //        $chk = $this->findOneWhere(['date_cashback' => $date_cashback, 'downline_code' => $downline_code]);
         $chk = $this->find($code);
         if ($chk) {
             if ($chk->topupic == 'Y' || $chk->topupic == 'X') {
@@ -608,46 +597,43 @@ class MemberCashbackRepository extends Repository
         $withdraw_limit_rate = $promotion->withdraw_limit_rate;
 
         $member = $this->memberRepository->find($downline_code);
-        if (!$member) {
+        if (! $member) {
             return false;
         }
 
-        if($config->freecredit_open == 'Y'){
+        if ($config->freecredit_open == 'Y') {
             $total = ($member->balance_free + $cashback);
-        }else{
+        } else {
             $total = ($member->balance + $cashback);
         }
 
-
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'เริ่มรายการ CASHBACK');
-
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'เริ่มรายการ CASHBACK');
 
         DB::beginTransaction();
         try {
-
 
             if ($chk) {
                 $chk->topupic = 'Y';
                 $chk->save();
 
-//                $bill = $this->update([
-//                    'member_code' => $member_code,
-//                    'downline_code' => $downline_code,
-//                    'date_cashback' => $date_cashback,
-//                    'balance' => $amount,
-//                    'cashback' => $cashback,
-//                    'amount' => $cashback,
-//                    'topupic' => 'Y',
-//                    'ip_admin' => $ip,
-//                    'emp_code' => $emp_code,
-//                    'date_approve' => now()->toDateTimeString(),
-//                    'user_create' => $emp_name,
-//                    'user_update' => $emp_name
-//                ], $chk->code);
+                //                $bill = $this->update([
+                //                    'member_code' => $member_code,
+                //                    'downline_code' => $downline_code,
+                //                    'date_cashback' => $date_cashback,
+                //                    'balance' => $amount,
+                //                    'cashback' => $cashback,
+                //                    'amount' => $cashback,
+                //                    'topupic' => 'Y',
+                //                    'ip_admin' => $ip,
+                //                    'emp_code' => $emp_code,
+                //                    'date_approve' => now()->toDateTimeString(),
+                //                    'user_create' => $emp_name,
+                //                    'user_update' => $emp_name
+                //                ], $chk->code);
 
-//                if ($bill->wasChanged()) {
+                //                if ($bill->wasChanged()) {
                 $code = $chk->code;
-//                }
+                //                }
 
             } else {
                 $bill = $this->create([
@@ -662,7 +648,7 @@ class MemberCashbackRepository extends Repository
                     'emp_code' => $emp_code,
                     'date_approve' => now()->toDateTimeString(),
                     'user_create' => $emp_name,
-                    'user_update' => $emp_name
+                    'user_update' => $emp_name,
                 ]);
 
                 $code = $bill->code;
@@ -672,7 +658,7 @@ class MemberCashbackRepository extends Repository
 
                 $game = core()->getGame();
                 $game_user = $this->gameUserEventRepository->findOneWhere(['method' => 'CASHBACK', 'member_code' => $member->code, 'game_code' => $game->code, 'enable' => 'Y']);
-                if (!$game_user) {
+                if (! $game_user) {
                     $game_user = $this->gameUserEventRepository->create([
                         'game_code' => $game->code,
                         'member_code' => $member->code,
@@ -688,9 +674,9 @@ class MemberCashbackRepository extends Repository
                         'withdraw_limit_amount' => 0,
                     ]);
                 }
-                if($config->freecredit_open == 'Y') {
+                if ($config->freecredit_open == 'Y') {
                     $game_user->amount = $member->balance_free;
-                }else{
+                } else {
                     $game_user->amount = $member->balance;
                 }
                 $game_user->pro_code = $pro_code;
@@ -706,7 +692,7 @@ class MemberCashbackRepository extends Repository
                 $member->cashback += $cashback;
                 $member->save();
 
-                if($config->freecredit_open == 'Y') {
+                if ($config->freecredit_open == 'Y') {
                     $this->memberCreditFreeLogRepository->create([
                         'ip' => $ip,
                         'credit_type' => 'D',
@@ -732,10 +718,10 @@ class MemberCashbackRepository extends Repository
                         'amount_balance' => $game_user->amount_balance,
                         'withdraw_limit' => $game_user->withdraw_limit,
                         'withdraw_limit_amount' => $game_user->withdraw_limit_amount,
-                        'user_create' => "System Auto",
-                        'user_update' => "System Auto"
+                        'user_create' => 'System Auto',
+                        'user_update' => 'System Auto',
                     ]);
-                }else{
+                } else {
                     $this->memberCreditLogRepository->create([
                         'ip' => $ip,
                         'credit_type' => 'D',
@@ -761,15 +747,12 @@ class MemberCashbackRepository extends Repository
                         'amount_balance' => $game_user->amount_balance,
                         'withdraw_limit' => $game_user->withdraw_limit,
                         'withdraw_limit_amount' => $game_user->withdraw_limit_amount,
-                        'user_create' => "System Auto",
-                        'user_update' => "System Auto"
+                        'user_create' => 'System Auto',
+                        'user_update' => 'System Auto',
                     ]);
                 }
 
-
-
             } else {
-
 
                 $this->memberFreeCreditRepository->create([
                     'ip' => $ip,
@@ -780,7 +763,7 @@ class MemberCashbackRepository extends Repository
                     'credit_balance' => $total,
                     'member_code' => $downline_code,
                     'kind' => 'CASHBACK',
-                    'remark' => "เพิ่ม Cashback อ้างอิง record : " . $code,
+                    'remark' => 'เพิ่ม Cashback อ้างอิง record : '.$code,
                     'emp_code' => $emp_code,
                     'user_create' => $emp_name,
                     'user_update' => $emp_name,
@@ -793,16 +776,16 @@ class MemberCashbackRepository extends Repository
 
             DB::commit();
 
-
         } catch (Throwable $e) {
             DB::rollBack();
-            ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'พบข้อผิดพลาด CASHBACK');
+            ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'พบข้อผิดพลาด CASHBACK');
 
             report($e);
+
             return false;
         }
 
-        ActivityLogger::activitie('CASHBACK REFER USER : ' . $member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
+        ActivityLogger::activitie('CASHBACK REFER USER : '.$member->user_name, 'ทำรายการ CASHBACK สำเร็จ');
 
         return true;
     }
@@ -987,7 +970,7 @@ class MemberCashbackRepository extends Repository
                         'refer_code' => $code,
                         'refer_table' => 'members_cashback',
                         'auto' => 'Y',
-                        'remark' => 'ได้รับยอด Cashback (รอรับ) สะสมจากการคำนวนประจำวัน รวมฝาก '.$sum_deposit.' ถอน '.$sum_withdraw.' ยอดเงินตอนคำนวน '.$sum_balance. ' คิดเป็นยอดคำนวน '.($sum_deposit - $sum_withdraw - $sum_balance),
+                        'remark' => 'ได้รับยอด Cashback (รอรับ) สะสมจากการคำนวนประจำวัน รวมฝาก '.$sum_deposit.' ถอน '.$sum_withdraw.' ยอดเงินตอนคำนวน '.$sum_balance.' คิดเป็นยอดคำนวน '.($sum_deposit - $sum_withdraw - $sum_balance),
                         'kind' => 'CASHBACK',
                         'amount_balance' => $game_user->amount_balance,
                         'withdraw_limit' => $game_user->withdraw_limit,
@@ -1162,8 +1145,28 @@ class MemberCashbackRepository extends Repository
                 $game_user->withdraw_limit_amount += ($cashback * $withdraw_limit_rate);
                 $game_user->save();
 
+                $balanceBefore = (float) $member->balance;
                 $member->balance += $cashback;
                 $member->save();
+
+                $this->memberCreditLogRepository->appendWalletTransaction(
+                    (int) $member->code,
+                    'CREDIT',
+                    (float) $cashback,
+                    $balanceBefore,
+                    (float) $member->balance,
+                    'TRANCB',
+                    (int) $code,
+                    'cashback:members_cashback:'.$code,
+                    'Auto cashback refill via refillSeamlessDirect',
+                    [
+                        'source' => 'MemberCashbackRepository::refillSeamlessDirect',
+                        'event' => 'CASHBACK',
+                        'freecredit_open' => (string) ($config->freecredit_open ?? 'N'),
+                    ],
+                    'system',
+                    null
+                );
 
                 if ($config->freecredit_open == 'Y') {
                     $this->memberCreditFreeLogRepository->create([
@@ -1215,7 +1218,7 @@ class MemberCashbackRepository extends Repository
                         'refer_code' => $code,
                         'refer_table' => 'members_cashback',
                         'auto' => 'Y',
-                        'remark' => 'ได้รับยอด Cashback สะสมจากการคำนวนประจำวัน รวมฝาก '.$sum_deposit.' ถอน '.$sum_withdraw.' ยอดเงินตอนคำนวน '.$sum_balance. ' คิดเป็นยอดคำนวน '.($sum_deposit - $sum_withdraw - $sum_balance),
+                        'remark' => 'ได้รับยอด Cashback สะสมจากการคำนวนประจำวัน รวมฝาก '.$sum_deposit.' ถอน '.$sum_withdraw.' ยอดเงินตอนคำนวน '.$sum_balance.' คิดเป็นยอดคำนวน '.($sum_deposit - $sum_withdraw - $sum_balance),
                         'kind' => 'CASHBACK',
                         'amount_balance' => $game_user->amount_balance,
                         'withdraw_limit' => $game_user->withdraw_limit,

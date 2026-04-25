@@ -21,6 +21,11 @@
 - referral / cashback / ic / bonus
 - admin adjust / rollback
 
+## ledger note เพิ่มเติม
+
+- direct cashback refill ที่เพิ่มยอดเข้า `member.balance` ต้อง append `wallet_transactions`
+- cashback wallet history ใช้ `ref_type = TRANCB`
+
 ## Entry Points
 
 - Wallet package: `packages/Gametech/Wallet/src/`

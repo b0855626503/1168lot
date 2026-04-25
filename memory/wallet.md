@@ -36,6 +36,7 @@
 - claim source validation + ledger append
 - withdraw policy check + state transition
 - reward catalog read + point redemption + redemption history timeline
+- `MemberCashbackRepository::refillSeamlessDirect()` append `wallet_transactions` แบบ `TRANCB` เมื่อเครดิต cashback เข้า `member.balance`
 
 ## Important Dependencies
 

@@ -52,6 +52,36 @@ class MemberCreditLogRepository extends Repository
 
     }
 
+    public function appendWalletTransaction(
+        int $memberId,
+        string $direction,
+        float $amount,
+        float $balanceBefore,
+        float $balanceAfter,
+        string $refType,
+        ?int $refId,
+        string $refCode,
+        string $description,
+        array $meta = [],
+        string $createdByType = 'system',
+        ?int $createdById = null
+    ): void {
+        $this->recordWalletTransaction(
+            $memberId,
+            $direction,
+            $amount,
+            $balanceBefore,
+            $balanceAfter,
+            $refType,
+            $refId,
+            $refCode,
+            $description,
+            $meta,
+            $createdByType,
+            $createdById
+        );
+    }
+
     public function setBonus(array $data): bool
     {
 
