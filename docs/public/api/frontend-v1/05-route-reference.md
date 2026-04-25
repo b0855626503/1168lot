@@ -871,7 +871,7 @@ GET /api/v1/deposit/channels
 - Request example: `{ "method": "bank" }`
 - Response shape: `{ "success": true, "bank": [BankAccount] }`
 - `BankAccount` fields: `acc_no`, `acc_name`, `bank_name`, `bank_pic`, `qr_pic`, `qrcode`, `code`, `deposit_min`, `remark`
-- หมายเหตุ: `bank_pic` เป็น public URL; `qr_pic` เป็น public URL เฉพาะเมื่อบัญชีมีรูป QR จริง ถ้าไม่อัปโหลด QR จะเป็นค่าว่าง `""`
+- หมายเหตุ: `bank_pic` เป็น public URL; `qr_pic` เป็น URL เมื่อมีรูปจริง; `deposit_min` ใช้ค่าบัญชีก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`
 
 ### `POST /api/v1/deposit/loadbank/random`
 - คำอธิบาย: ดึงบัญชีธนาคารปลายทางแบบสุ่ม 1 รายการจากรายการที่เปิดใช้งาน
@@ -880,7 +880,7 @@ GET /api/v1/deposit/channels
 - Response shape: `{ "success": true, "bank": BankAccount }`
 - Empty response: `{ "success": false, "bank": "" }`
 - Request `method` รองรับ `bank`, `tw`, `slip`
-- หมายเหตุ: `qr_pic` จะเป็น `""` เมื่อบัญชีนั้นไม่มีรูป QR ที่อัปโหลดไว้
+- หมายเหตุ: `qr_pic` เป็น `""` เมื่อไม่มีรูป QR; `deposit_min` ใช้กติกาเดียวกับ `/deposit/loadbank`
 
 ### `GET /api/v1/smkpay/deposit/status/{txid}`
 - คำอธิบาย: ตรวจสอบสถานะรายการฝากผ่าน SMKPay ตาม txid
