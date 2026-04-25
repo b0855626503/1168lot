@@ -1,6 +1,6 @@
 # FrontendApi Domain Note
 
-อัปเดตล่าสุด: 2026-04-19
+อัปเดตล่าสุด: 2026-04-25
 
 ## ใช้อ่านเมื่อ
 
@@ -15,6 +15,10 @@
 - อนุญาตให้ reuse ผ่าน repository, model, query, domain service
 - response contract ของลูกค้าต้องอยู่ใน `FrontendApi`
 - `GET /api/v1/meta/site` ส่ง `header_code` จาก `configs.header_code` ให้ frontend ใช้กับ script/header integration ได้โดยตรง
+- Deposit API:
+  - `POST /api/v1/deposit/loadbank` คืนบัญชีรับฝากตาม method เดิม
+  - `POST /api/v1/deposit/loadbank/random` คืนบัญชีรับฝากแบบสุ่ม 1 รายการสำหรับ `bank|tw|slip`
+  - field รูป `bank_pic` และ `qr_pic` ถูก normalize เป็น public URL ผ่าน `BaseController`
 
 ## เส้นสำคัญที่มีอยู่
 

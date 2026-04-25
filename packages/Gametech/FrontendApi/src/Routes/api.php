@@ -121,6 +121,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.deposit.channels');
             Route::post('deposit/loadbank', [DepositController::class, 'loadBank'])
                 ->name('frontend.api.v1.deposit.loadbank');
+            Route::post('deposit/loadbank/random', [DepositController::class, 'loadRandomBank'])
+                ->name('frontend.api.v1.deposit.loadbank.random');
             Route::get('smkpay/deposit/status/{txid}', [SmkPayController::class, 'checkStatus'])
                 ->name('api.smkpay.deposit.status');
             Route::post('smkpay/deposit/expire/{txid}', [SmkPayController::class, 'expire'])

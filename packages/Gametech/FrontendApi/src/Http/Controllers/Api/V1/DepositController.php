@@ -3,6 +3,7 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -40,6 +41,25 @@ class DepositController extends BaseController
             ])->validate();
 
             return $this->normalizedJsonResponse($this->loadBankPayload($request, (string) $validated['method']));
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงข้อมูลบัญชีเติมเงินได้ในขณะนี้', 422);
+        }
+    }
+
+    public function loadRandomBank(Request $request)
+    {
+        try {
+            $validated = validator($request->all(), [
+                'method' => ['required', 'in:bank,tw,slip'],
+            ])->validate();
+
+            $payload = $this->loadBankPayload($request, (string) $validated['method']);
+            $account = $this->randomAccountFromPayload($payload['bank'] ?? []);
+
+            return $this->normalizedJsonResponse([
+                'success' => $account !== null,
+                'bank' => $account ?? '',
+            ]);
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงข้อมูลบัญชีเติมเงินได้ในขณะนี้', 422);
         }
@@ -197,6 +217,27 @@ class DepositController extends BaseController
                 ->orWhere('visibility_scope', 'all')
                 ->orWhere('visibility_scope', $isLegacy ? 'legacy' : 'new');
         });
+    }
+
+    private function randomAccountFromPayload($bankPayload): ?array
+    {
+        if (! is_array($bankPayload) || empty($bankPayload)) {
+            return null;
+        }
+
+        if (Arr::isAssoc($bankPayload) && array_key_exists('acc_no', $bankPayload)) {
+            return $bankPayload;
+        }
+
+        $accounts = collect($bankPayload)
+            ->filter(static fn ($item): bool => is_array($item) && array_key_exists('acc_no', $item))
+            ->values();
+
+        if ($accounts->isEmpty()) {
+            return null;
+        }
+
+        return $accounts->random();
     }
 
     private function getBankCode(string $bank): ?string

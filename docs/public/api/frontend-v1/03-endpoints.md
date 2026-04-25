@@ -47,6 +47,7 @@
 - `POST /api/v1/coupon/my/{code}/claim`
 - `GET /api/v1/deposit/channels`
 - `POST /api/v1/deposit/loadbank`
+- `POST /api/v1/deposit/loadbank/random`
 - `GET /api/v1/smkpay/deposit/status/{txid}`
 - `POST /api/v1/smkpay/deposit/expire/{txid}`
 - `POST /api/v1/smkpay/deposit/create`
