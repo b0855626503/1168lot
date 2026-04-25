@@ -85,6 +85,11 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         return $this->target;
     }
 
+    public function getItem(): object
+    {
+        return $this->item;
+    }
+
     public function handle(): void
     {
         $startDate = Carbon::parse($this->dateStart);
@@ -99,7 +104,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
         $balance = $item->balance;
 
-        if ($item->bonus_amount > 0 || ($item->deposit_amount - $item->withdraw_amount - $balance) <= 0) {
+        if (($item->deposit_amount - $item->withdraw_amount - $balance) <= 0) {
             return;
         }
 

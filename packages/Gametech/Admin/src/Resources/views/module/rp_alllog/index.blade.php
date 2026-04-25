@@ -32,7 +32,7 @@
 
                                 <div class="form-group col-6">
                                     @if($webconfig->seamless == 'Y')
-                                        {!! Form::select('kind',  ['' => '== ประเภท ==' , 'PROMOTION' => 'รับโปร' , 'TOPUP' => 'ฝากเงิน' , 'WITHDRAW' => 'แจ้งถอนเงิน' , 'SETWALLET' => 'เพิ่มยอดโดยทีมงาน' , 'FASTSTART' => 'แนะนำเพื่อน (มอบโดยระบบ)', 'FASTSTARTS' => 'แนะนำเพื่อน (แจ้งเตือน)' , 'ROLLBACK' => 'คืนยอด', 'FREE' => 'รับเครดิตฟรี'], '',['id' => 'kind', 'class' => 'form-control form-control-sm']) !!}
+                                        {!! Form::select('kind',  ['' => '== ประเภท ==' , 'PROMOTION' => 'รับโปร' , 'TOPUP' => 'ฝากเงิน' , 'WITHDRAW' => 'แจ้งถอนเงิน' , 'SETWALLET' => 'เพิ่มยอดโดยทีมงาน' , 'FASTSTART' => 'แนะนำเพื่อน (มอบโดยระบบ)', 'FASTSTARTS' => 'แนะนำเพื่อน (แจ้งเตือน)' , 'ROLLBACK' => 'คืนยอด', 'FREE' => 'รับเครดิตฟรี', 'MONEY' => 'ฝาก - ถอน', 'CASHBACK' => 'การคำนวนยอดเสีย'], '',['id' => 'kind', 'class' => 'form-control form-control-sm']) !!}
                                     @else
                                         {!! Form::select('kind',  ['' => '== ประเภท ==' , 'TRANSFER' => 'โยกเงิน' , 'TOPUP' => 'ฝากเงิน' , 'WITHDRAW' => 'แจ้งถอนเงิน' , 'SETWALLET' => 'เพิ่มยอดโดยทีมงาน' , 'FASTSTART' => 'แนะนำเพื่อน (มอบโดยระบบ)', 'FASTSTARTS' => 'แนะนำเพื่อน (แจ้งเตือน)' , 'ROLLBACK' => 'คืนยอด', 'FREE' => 'รับเครดิตฟรี', 'MONEY' => 'ฝาก - ถอน', 'CASHBACK' => 'การคำนวนยอดเสีย'], '',['id' => 'kind', 'class' => 'form-control form-control-sm']) !!}
 

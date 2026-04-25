@@ -7,6 +7,7 @@ return [
         'start' => [
             'mode' => env('CASHBACK_START_MODE', 'range'),
             'target' => env('CASHBACK_START_TARGET', 'wallet'),
+            'promo_policy' => env('CASHBACK_START_PROMO_POLICY', 'exclude_member'),
         ],
     ],
     'api_external_url' => env('APP_EXTERNAL_API_URL', 'api2.joker.com'),

@@ -92,7 +92,7 @@ class Kernel extends ConsoleKernel
         //            ->weeklyOn(2, '0:00')
         //            ->runInBackground();
 
-        $schedule->command('newcashback2:list')->dailyAt('00:05');
+        //        $schedule->command('newcashback2:list')->dailyAt('00:05');
 
         //        $schedule->command('newic2:list')->dailyAt('12:00');
 
@@ -109,7 +109,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('migrate --force')->dailyAt('23:28');
         //        $schedule->command('postupdate:work')->everyFiveMinutes();
 
-        //        $schedule->command('payment:get kbank')->everyMinute()
+        $schedule->command('payment:get kbank')->everyMinute();
         //            ->after(function () {
         // //                $this->call('payment:get scb');
         // //                $this->call('payment:get gsb');

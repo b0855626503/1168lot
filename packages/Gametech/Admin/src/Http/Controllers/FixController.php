@@ -390,14 +390,16 @@ class FixController extends AppBaseController
     {
         $mode = $this->resolveCashbackStartMode();
         $target = $this->resolveCashbackStartTarget();
+        $promoPolicy = $this->resolveCashbackStartPromoPolicy();
 
         Artisan::call('cashback:start', [
             '--mode' => $mode,
             '--target' => $target,
+            '--promo-policy' => $promoPolicy,
         ]);
         $result = Artisan::output();
 
-        return $this->sendResponse($result, 'คำนวนและมอบ Cashback ให้ลูกค้า (mode: '.$mode.', target: '.$target.')');
+        return $this->sendResponse($result, 'คำนวนและมอบ Cashback ให้ลูกค้า (mode: '.$mode.', target: '.$target.', promo_policy: '.$promoPolicy.')');
     }
 
     private function resolveCashbackStartMode(): string
@@ -412,5 +414,14 @@ class FixController extends AppBaseController
         $target = strtolower(trim((string) config('gametech.cashback.start.target', 'wallet')));
 
         return in_array($target, ['wallet', 'cashback'], true) ? $target : 'wallet';
+    }
+
+    private function resolveCashbackStartPromoPolicy(): string
+    {
+        $policy = strtolower(trim((string) config('gametech.cashback.start.promo_policy', 'exclude_member')));
+
+        return in_array($policy, ['exclude_member', 'exclude_deposit'], true)
+            ? $policy
+            : 'exclude_member';
     }
 }

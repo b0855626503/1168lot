@@ -12,7 +12,8 @@ class CashbackCalculate extends Command
     protected $signature = 'cashback:start
                             {--mode=range : Calculation mode: range or daily}
                             {--date= : Anchor date for range mode or business date for daily mode (Y-m-d)}
-                            {--target=wallet : Credit target: wallet or cashback}';
+                            {--target=wallet : Credit target: wallet or cashback}
+                            {--promo-policy= : Promotion handling: exclude_member or exclude_deposit}';
 
     /**
      * The console command description.
@@ -35,6 +36,7 @@ class CashbackCalculate extends Command
     {
         $mode = $this->normalizeMode((string) $this->option('mode'));
         $target = $this->normalizeTarget((string) $this->option('target'));
+        $promoPolicy = $this->resolvePromoPolicy((string) $this->option('promo-policy'));
         $anchorDate = $this->resolveAnchorDate($mode, $this->option('date'));
 
         if ($mode === null) {
@@ -57,7 +59,7 @@ class CashbackCalculate extends Command
 
         [$startDate, $endDate, $cashbackDate, $roundLabel] = $this->resolvePeriod($mode, $anchorDate);
 
-        $this->info($roundLabel.' | ปลายทางเครดิต: '.$target);
+        $this->info($roundLabel.' | ปลายทางเครดิต: '.$target.' | promo policy: '.$promoPolicy);
         $promotion = DB::table('promotions')->where('id', 'pro_cashback')->first();
 
         if (! $promotion) {
@@ -72,10 +74,12 @@ class CashbackCalculate extends Command
             return self::SUCCESS;
         }
 
-        $latestBi = DB::table('bills')
-            ->select('bills.member_code', DB::raw('SUM(bills.credit_bonus)  as bonus_amount'))
+        $promoTopupBills = DB::table('bills')
+            ->select('bills.member_code', DB::raw('COUNT(*) as promo_topup_count'))
             ->where('bills.enable', 'Y')
+            ->where('bills.pro_code', '>', 0)
             ->where('bills.transfer_type', 1)
+            ->where('bills.method', 'TOPUP')
             ->when($startDate, function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('bills.date_create', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
             })
@@ -99,13 +103,31 @@ class CashbackCalculate extends Command
             )
             ->where('bank_payment.value', '>', 0)
             ->where('bank_payment.bankstatus', 1)
-            ->where('bank_payment.pro_id', 0)
             ->where('bank_payment.enable', 'Y')
             ->where('bank_payment.status', 1)
             ->when($startDate, function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('bank_payment.date_approve', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
             })
             ->groupBy('bank_payment.member_topup');
+
+        $promoTopupDeposits = DB::table('bank_payment')
+            ->select(
+                DB::raw('SUM(bank_payment.value) as promo_deposit_amount'),
+                'bank_payment.member_topup'
+            )
+            ->where('bank_payment.value', '>', 0)
+            ->where('bank_payment.bankstatus', 1)
+            ->where('bank_payment.pro_id', '>', 0)
+            ->where('bank_payment.enable', 'Y')
+            ->where('bank_payment.status', 1)
+            ->when($startDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('bank_payment.date_approve', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
+            })
+            ->groupBy('bank_payment.member_topup');
+
+        $depositAmountExpression = $promoPolicy === 'exclude_deposit'
+            ? 'CASE WHEN IFNULL(bank_payment.deposit_amount,0) - IFNULL(promo_bank_payment.promo_deposit_amount,0) > 0 THEN IFNULL(bank_payment.deposit_amount,0) - IFNULL(promo_bank_payment.promo_deposit_amount,0) ELSE 0 END'
+            : 'IFNULL(bank_payment.deposit_amount,0)';
 
         $lists = DB::table('members')
             ->select(
@@ -115,8 +137,9 @@ class CashbackCalculate extends Command
                 'members.name as member_name',
                 'members.balance as balance',
                 DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'),
-                'bank_payment.deposit_amount',
-                DB::raw('IFNULL(bonus_amount,0) as bonus_amount'),
+                DB::raw($depositAmountExpression.' as deposit_amount'),
+                DB::raw('IFNULL(promo_topup_bills.promo_topup_count,0) as promo_topup_count'),
+                DB::raw('IFNULL(promo_bank_payment.promo_deposit_amount,0) as promo_deposit_amount'),
                 DB::raw("'".$cashbackDate."' as date_cashback"),
                 DB::raw("'".$startDate->toDateTimeString()."' as date_start"),
                 DB::raw("'".$endDate->toDateTimeString()."' as date_stop"),
@@ -126,25 +149,41 @@ class CashbackCalculate extends Command
             ->joinSub($latestBP, 'bank_payment', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'members.code');
             })
-            ->leftJoinSub($latestBi, 'bills', function ($join) {
-                $join->on('bank_payment.member_topup', '=', 'bills.member_code');
-                //                $join->on(DB::raw('Date(bank_payment.date_approve)'), '=', 'bills.date_approve');
-
+            ->leftJoinSub($promoTopupBills, 'promo_topup_bills', function ($join) {
+                $join->on('bank_payment.member_topup', '=', 'promo_topup_bills.member_code');
+            })
+            ->leftJoinSub($promoTopupDeposits, 'promo_bank_payment', function ($join) {
+                $join->on('bank_payment.member_topup', '=', 'promo_bank_payment.member_topup');
             })
             ->leftJoinSub($latestWD, 'withdraws', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'withdraws.member_code');
             });
 
+        if ($promoPolicy === 'exclude_member') {
+            $this->logExcludedMembersByPromotion(
+                clone $lists,
+                $cashbackDate,
+                $startDate->toDateTimeString(),
+                $endDate->toDateTimeString()
+            );
+
+            $lists->whereRaw('IFNULL(promo_topup_bills.promo_topup_count, 0) = 0');
+        }
+
         $selectedCount = (clone $lists)->count();
         $dispatchedCount = 0;
 
-        $lists->chunk(50, function ($itemlist) use ($startDate, $endDate, $cashbackDate, $promotion, $target, &$dispatchedCount) {
+        $lists->chunk(50, function ($itemlist) use ($startDate, $endDate, $cashbackDate, $promotion, $target, $promoPolicy, &$dispatchedCount) {
 
             foreach ($itemlist as $items) {
                 Log::channel('cashback')->info(json_encode([
                     'member_code' => $items->member_code,
                     'mode' => $this->option('mode'),
                     'target' => $target,
+                    'promo_policy' => $promoPolicy,
+                    'promo_topup_count' => $items->promo_topup_count,
+                    'promo_deposit_amount' => $items->promo_deposit_amount,
+                    'deposit_amount' => $items->deposit_amount,
                     'cashback_date' => $cashbackDate,
                 ]));
 
@@ -179,6 +218,88 @@ class CashbackCalculate extends Command
         $normalized = strtolower(trim($target));
 
         return in_array($normalized, ['wallet', 'cashback'], true) ? $normalized : null;
+    }
+
+    private function resolvePromoPolicy(string $policyOption = ''): string
+    {
+        $policy = strtolower(trim($policyOption));
+
+        if ($policy === '') {
+            $policy = strtolower(trim((string) config('gametech.cashback.start.promo_policy', 'exclude_member')));
+        }
+
+        return in_array($policy, ['exclude_member', 'exclude_deposit'], true)
+            ? $policy
+            : 'exclude_member';
+    }
+
+    private function logExcludedMembersByPromotion($lists, string $cashbackDate, string $dateStart, string $dateEnd): void
+    {
+        $excludedLists = $lists
+            ->whereRaw('IFNULL(promo_topup_bills.promo_topup_count, 0) > 0')
+            ->select(
+                'members.code as member_code',
+                'members.user_name as user_name',
+                DB::raw('IFNULL(promo_topup_bills.promo_topup_count,0) as promo_topup_count')
+            );
+
+        $excludedLists->chunk(50, function ($members) use ($cashbackDate, $dateStart, $dateEnd) {
+            foreach ($members as $member) {
+                $this->insertExcludedMemberCreditLog($member, $cashbackDate, $dateStart, $dateEnd);
+            }
+        });
+    }
+
+    private function insertExcludedMemberCreditLog(object $member, string $cashbackDate, string $dateStart, string $dateEnd): void
+    {
+        $promoTopupCount = (int) ($member->promo_topup_count ?? 0);
+        $remark = sprintf(
+            'ตัดสิทธิ์ Cashback รอบ %s (%s - %s) เพราะรับโปรจากการฝาก %d รายการ',
+            $cashbackDate,
+            Carbon::parse($dateStart)->format('Y-m-d'),
+            Carbon::parse($dateEnd)->format('Y-m-d'),
+            $promoTopupCount
+        );
+
+        $existing = DB::table('members_credit_log')
+            ->where('member_code', $member->member_code)
+            ->where('kind', 'CASHBACK')
+            ->where('refer_table', 'cashback')
+            ->where('remark', $remark)
+            ->exists();
+
+        if ($existing) {
+            return;
+        }
+
+        DB::table('members_credit_log')->insert([
+            'refer_code' => 0,
+            'refer_table' => 'cashback',
+            'credit_type' => 'W',
+            'amount' => 0,
+            'bonus' => 0,
+            'total' => 0,
+            'balance_before' => 0,
+            'balance_after' => 0,
+            'credit' => 0,
+            'credit_bonus' => 0,
+            'credit_total' => 0,
+            'credit_before' => 0,
+            'credit_after' => 0,
+            'member_code' => $member->member_code,
+            'kind' => 'CASHBACK',
+            'auto' => 'Y',
+            'remark' => $remark,
+            'emp_code' => 0,
+            'ip' => request()->ip() ?? 'SYSTEM',
+            'amount_balance' => 0,
+            'withdraw_limit' => 0,
+            'withdraw_limit_amount' => 0,
+            'user_create' => 'SYSTEM',
+            'user_update' => 'SYSTEM',
+            'date_create' => now()->toDateTimeString(),
+            'date_update' => now()->toDateTimeString(),
+        ]);
     }
 
     private function resolveAnchorDate(string $mode, mixed $input): ?Carbon
