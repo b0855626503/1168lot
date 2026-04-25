@@ -22,8 +22,6 @@ use Illuminate\Support\Facades\Route;
 // ])->name('welcome.index');
 //
 
-Route::redirect('/', '/status');
-
 $domain = config('app.admin_url') === ''
     ? (config('app.admin_domain_url') ?? config('app.domain_url'))
     : config('app.admin_url').'.'.(config('app.admin_domain_url') ?? config('app.domain_url'));
@@ -33,9 +31,9 @@ Route::domain($domain)->group(function () {
         return view('status.index');
     })->name('status.index');
 
-    Route::get('/ping', function () {
+    Route::get('/status/ping', function () {
         return response()->json(['pong' => true, 'time' => now()]);
-    })->name('api.ping');
+    })->name('status.ping');
 
 });
 

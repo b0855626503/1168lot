@@ -13,6 +13,8 @@
 - `/lotto/tickets` แสดงเฉพาะ `active`
 - badge เมนู Lotto ต้องยึด `DashboardController@loadCnt`
 - หน้า Lotto ทุกหน้าต้อง trigger `loadCnt`
+- Dashboard admin ต้องไม่ยิง request หนักพร้อมกันจนเต็มช่อง browser connection; request สรุป/กราฟให้เข้าคิวแบบจำกัด concurrency, โหลดข้อมูลรองตามหลัง, และ abort request พื้นหลังเมื่อ user กดเมนูไปหน้าอื่น
+- Dashboard initial load ต้อง refresh รอบเดียวเท่านั้น; datepicker initialization ห้ามยิง date-change refresh ซ้ำกับ `refreshAll(initial)`
 - report ที่มี filter ตลาด ใช้ grouped select และ immediate apply
 - Lotto navbar admin ต้องตาม convention เดิม:
   - `index + loaddata + create + edit + update + delete`

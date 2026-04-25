@@ -46,7 +46,7 @@
         while (true) {
             const start = performance.now();
             try {
-                let url = '{{ route('api.ping') }}?_=' + Date.now();
+                let url = '{{ route('status.ping') }}?_=' + Date.now();
                 // let url = 'https://api.168csn.com/api/ping?_=' + Date.now();
                 const res = await fetch(url);
                 const end = performance.now();

@@ -1756,7 +1756,11 @@
                 reload() {
                     if (!axios || typeof axios.post !== 'function') return;
                     this.loading = true;
-                    axios.post("{{ route('admin.dashboard.loadsum') }}", { method: 'online' })
+                    axios.post("{{ route('admin.dashboard.loadsum') }}", { method: 'online' }, {
+                        headers: {
+                            'X-Dashboard-Background': '1'
+                        }
+                    })
                         .then((res) => {
                             const data = this.normalizeResponse(res);
                             let value = '-';
@@ -2058,6 +2062,11 @@
                     trendMode: 'hour',
                     charts: { money: null, funnel: null },
                     refreshTimer: null,
+                    secondaryRefreshTimer: null,
+                    dashboardAbortControllers: [],
+                    dashboardNavigationAborted: false,
+                    dashboardNavigationAbortHandler: null,
+                    suppressFilterRefresh: false,
                     realtime: {
                         channelName: '',
                         channel: null,
@@ -2230,6 +2239,10 @@
                 filters: {
                     deep: true,
                     handler() {
+                        if (this.suppressFilterRefresh) {
+                            return;
+                        }
+
                         this.scheduleRefresh();
                     }
                 }
@@ -2241,6 +2254,7 @@
                     this.initDatepicker();
                     this.initLottoRecentMarketSelect();
                     this.animateKpiValues(this.summaryAnimationSnapshot(), 0);
+                    this.setupDashboardNavigationAbort();
                     this.refreshAll({ reason: 'initial', skeleton: false });
                     this.subscribeRealtime();
                     this.bindActivityRealtimeSignal();
@@ -2249,6 +2263,9 @@
             },
             beforeDestroy() {
                 if (this.refreshTimer) clearTimeout(this.refreshTimer);
+                if (this.secondaryRefreshTimer) clearTimeout(this.secondaryRefreshTimer);
+                this.abortDashboardRequests();
+                this.teardownDashboardNavigationAbort();
                 this.stopRealtimePollingFallback();
                 this.unsubscribeRealtime();
                 this.unbindActivityRealtimeSignal();
@@ -2735,7 +2752,7 @@
                 refreshActivityOnly() {
                     if (!axios || typeof axios.post !== 'function') return;
 
-                    axios.post("{{ route('admin.dashboard.activity') }}", this.buildPayload({
+                    this.dashboardPost("{{ route('admin.dashboard.activity') }}", this.buildPayload({
                         lotto_market_id: this.lottoRecentMarketId || '',
                     }))
                         .then((res) => {
@@ -2800,27 +2817,20 @@
                     });
                     const loadingToken = this.startLoading('realtime', { skeleton: false });
                     const requests = lottoOnly
-                        ? [axios.post("{{ route('admin.dashboard.summary') }}", payload)]
+                        ? [() => this.dashboardPost("{{ route('admin.dashboard.summary') }}", payload)]
                         : [
-                            axios.post("{{ route('admin.dashboard.summary') }}", payload),
-                            axios.post("{{ route('admin.dashboard.trends') }}", payload),
-                            axios.post("{{ route('admin.dashboard.alerts') }}", payload),
-                            axios.post("{{ route('admin.dashboard.activity') }}", activityPayload)
+                            () => this.dashboardPost("{{ route('admin.dashboard.summary') }}", payload),
+                            () => this.dashboardPost("{{ route('admin.dashboard.trends') }}", payload),
+                            () => this.dashboardPost("{{ route('admin.dashboard.alerts') }}", payload),
+                            () => this.dashboardPost("{{ route('admin.dashboard.activity') }}", activityPayload)
                         ];
 
                     if (!lottoOnly && needRegisterFlow) {
-                        requests.push(axios.post("{{ route('admin.dashboard.conversion') }}", payload));
-                        requests.push(axios.post("{{ route('admin.dashboard.funnel') }}", payload));
+                        requests.push(() => this.dashboardPost("{{ route('admin.dashboard.conversion') }}", payload));
+                        requests.push(() => this.dashboardPost("{{ route('admin.dashboard.funnel') }}", payload));
                     }
 
-                    const settle = Promise.allSettled
-                        ? Promise.allSettled.bind(Promise)
-                        : (list) => Promise.all(list.map((p) => p
-                            .then((value) => ({ status: 'fulfilled', value }))
-                            .catch((reason) => ({ status: 'rejected', reason }))
-                        ));
-
-                    settle(requests).then((results) => {
+                    this.settleDashboardQueue(requests).then((results) => {
                         const [summaryRes, trendRes, alertsRes, activityRes, conversionRes, funnelRes] = results;
 
                         if (summaryRes && summaryRes.status === 'fulfilled') {
@@ -2883,6 +2893,149 @@
                         ...extra
                     };
                 },
+                dashboardPost(url, payload = {}) {
+                    if (this.dashboardNavigationAborted) {
+                        return Promise.reject(new Error('Dashboard navigation started'));
+                    }
+
+                    const controller = typeof AbortController !== 'undefined'
+                        ? new AbortController()
+                        : null;
+                    if (controller) {
+                        this.dashboardAbortControllers.push(controller);
+                    }
+
+                    const config = {
+                        headers: {
+                            'X-Dashboard-Background': '1'
+                        }
+                    };
+
+                    if (controller) {
+                        config.signal = controller.signal;
+                    }
+
+                    return axios.post(url, payload, config)
+                        .finally(() => {
+                            if (!controller) {
+                                return;
+                            }
+
+                            this.dashboardAbortControllers = this.dashboardAbortControllers
+                                .filter((item) => item !== controller);
+                        });
+                },
+                settleDashboardQueue(requestFactories, concurrency = 2) {
+                    const factories = Array.isArray(requestFactories) ? requestFactories : [];
+                    const results = new Array(factories.length);
+                    let nextIndex = 0;
+
+                    const worker = () => {
+                        const currentIndex = nextIndex;
+                        nextIndex += 1;
+
+                        if (currentIndex >= factories.length || this.dashboardNavigationAborted) {
+                            return Promise.resolve();
+                        }
+
+                        let request;
+                        try {
+                            request = factories[currentIndex]();
+                        } catch (error) {
+                            results[currentIndex] = { status: 'rejected', reason: error };
+                            return worker();
+                        }
+
+                        return Promise.resolve(request)
+                            .then((value) => {
+                                results[currentIndex] = { status: 'fulfilled', value };
+                            })
+                            .catch((reason) => {
+                                results[currentIndex] = { status: 'rejected', reason };
+                            })
+                            .then(worker);
+                    };
+
+                    const workerCount = Math.min(Math.max(Number(concurrency) || 1, 1), factories.length || 1);
+                    const workers = Array.from({ length: workerCount }, worker);
+
+                    return Promise.all(workers).then(() => results);
+                },
+                scheduleSecondaryRefresh() {
+                    if (this.secondaryRefreshTimer) {
+                        clearTimeout(this.secondaryRefreshTimer);
+                    }
+
+                    this.secondaryRefreshTimer = setTimeout(() => {
+                        this.secondaryRefreshTimer = null;
+                        if (this.dashboardNavigationAborted) {
+                            return;
+                        }
+
+                        this.refreshBankAndLogin();
+                        if (this.$refs && this.$refs.online && typeof this.$refs.online.reload === 'function') {
+                            this.$refs.online.reload();
+                        }
+                    }, 250);
+                },
+                setupDashboardNavigationAbort() {
+                    if (this.dashboardNavigationAbortHandler) {
+                        return;
+                    }
+
+                    this.dashboardNavigationAbortHandler = (event) => {
+                        if (!event || event.defaultPrevented || event.button !== 0) {
+                            return;
+                        }
+                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                            return;
+                        }
+
+                        const link = event.target && event.target.closest
+                            ? event.target.closest('a[href]')
+                            : null;
+                        if (!link || link.target === '_blank' || link.hasAttribute('download')) {
+                            return;
+                        }
+
+                        const href = link.getAttribute('href') || '';
+                        if (!href || href === '#' || href.indexOf('javascript:') === 0) {
+                            return;
+                        }
+
+                        this.prepareDashboardNavigation();
+                    };
+
+                    document.addEventListener('click', this.dashboardNavigationAbortHandler, true);
+                },
+                teardownDashboardNavigationAbort() {
+                    if (!this.dashboardNavigationAbortHandler) {
+                        return;
+                    }
+
+                    document.removeEventListener('click', this.dashboardNavigationAbortHandler, true);
+                    this.dashboardNavigationAbortHandler = null;
+                },
+                prepareDashboardNavigation() {
+                    this.dashboardNavigationAborted = true;
+                    if (this.secondaryRefreshTimer) {
+                        clearTimeout(this.secondaryRefreshTimer);
+                        this.secondaryRefreshTimer = null;
+                    }
+                    this.stopLoading();
+                    this.abortDashboardRequests();
+                },
+                abortDashboardRequests() {
+                    const controllers = this.dashboardAbortControllers.slice();
+                    this.dashboardAbortControllers = [];
+
+                    controllers.forEach((controller) => {
+                        try {
+                            controller.abort();
+                        } catch (error) {
+                        }
+                    });
+                },
                 switchLottoRiskTab(nextTab) {
                     const normalizedTab = nextTab === 'highest' ? 'highest' : 'today';
                     if (this.lottoRiskTab === normalizedTab) {
@@ -2901,7 +3054,7 @@
                     const payload = this.buildPayload();
                     const loadingToken = this.startLoading('lotto-risk-tab', { skeleton: false });
 
-                    axios.post("{{ route('admin.dashboard.summary') }}", payload)
+                    this.dashboardPost("{{ route('admin.dashboard.summary') }}", payload)
                         .then((res) => {
                             const data = this.normalizeResponse(res);
                             if (data && data.deposit) {
@@ -2919,6 +3072,7 @@
                 refreshAll(options = {}) {
                     if (!axios || typeof axios.post !== 'function') return;
 
+                    this.dashboardNavigationAborted = false;
                     const config = options && options.target
                         ? {}
                         : (options || {});
@@ -2933,54 +3087,47 @@
                     const activityPayload = this.buildPayload({
                         lotto_market_id: this.lottoRecentMarketId || '',
                     });
-                    const settle = Promise.allSettled
-                        ? Promise.allSettled.bind(Promise)
-                        : (list) => Promise.all(list.map((p) => p
-                            .then((value) => ({ status: 'fulfilled', value }))
-                            .catch((reason) => ({ status: 'rejected', reason }))
-                        ));
-
-                    settle([
-                        axios.post("{{ route('admin.dashboard.summary') }}", payload),
-                        axios.post("{{ route('admin.dashboard.conversion') }}", payload),
-                        axios.post("{{ route('admin.dashboard.trends') }}", payload),
-                        axios.post("{{ route('admin.dashboard.funnel') }}", payload),
-                        axios.post("{{ route('admin.dashboard.activity') }}", activityPayload),
-                        axios.post("{{ route('admin.dashboard.alerts') }}", payload)
+                    this.settleDashboardQueue([
+                        () => this.dashboardPost("{{ route('admin.dashboard.summary') }}", payload),
+                        () => this.dashboardPost("{{ route('admin.dashboard.conversion') }}", payload),
+                        () => this.dashboardPost("{{ route('admin.dashboard.trends') }}", payload),
+                        () => this.dashboardPost("{{ route('admin.dashboard.funnel') }}", payload),
+                        () => this.dashboardPost("{{ route('admin.dashboard.activity') }}", activityPayload),
+                        () => this.dashboardPost("{{ route('admin.dashboard.alerts') }}", payload)
                     ]).then((results) => {
                         const [summaryRes, convRes, trendRes, funnelRes, activityRes, alertsRes] = results;
-                        if (summaryRes.status === 'fulfilled') {
+                        if (summaryRes && summaryRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(summaryRes.value);
                             if (data && data.deposit) {
                                 this.summary = Object.assign({}, this.summary, data);
                                 this.animateKpiValues(this.summaryAnimationSnapshot(this.summary), 800);
                             }
                         }
-                        if (convRes.status === 'fulfilled') {
+                        if (convRes && convRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(convRes.value);
                             if (data && data.register) {
                                 this.conversion = Object.assign({}, this.conversion, data);
                             }
                         }
-                        if (trendRes.status === 'fulfilled') {
+                        if (trendRes && trendRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(trendRes.value);
                             if (data && data.labels) {
                                 this.trends = Object.assign({}, this.trends, data);
                             }
                         }
-                        if (funnelRes.status === 'fulfilled') {
+                        if (funnelRes && funnelRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(funnelRes.value);
                             if (data && data.funnel) {
                                 this.funnel = Object.assign({}, this.funnel, data);
                             }
                         }
-                        if (activityRes.status === 'fulfilled') {
+                        if (activityRes && activityRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(activityRes.value);
                             if (data && data.deposits) {
                                 this.activity = Object.assign({}, this.activity, data);
                             }
                         }
-                        if (alertsRes.status === 'fulfilled') {
+                        if (alertsRes && alertsRes.status === 'fulfilled') {
                             const data = this.normalizeResponse(alertsRes.value);
                             this.processAlertsAsToast(data);
                         }
@@ -2990,20 +3137,31 @@
                         this.stopLoading(loadingToken);
                     });
 
-                    this.refreshBankAndLogin();
-                    if (this.$refs && this.$refs.online && typeof this.$refs.online.reload === 'function') {
-                        this.$refs.online.reload();
-                    }
+                    this.scheduleSecondaryRefresh();
 
                 },
                 refreshBankAndLogin() {
                     if (!axios || typeof axios.post !== 'function') return;
-                    Promise.all([
-                        axios.post("{{ route('admin.dashboard.loadbank') }}", { method: 'bankin' }),
-                        axios.post("{{ route('admin.dashboard.loadbank') }}", { method: 'bankout' }),
-                        axios.post("{{ route('admin.dashboard.loadlogin') }}", { method: 'login' }),
-                        axios.post("{{ route('admin.dashboard.loadlogin') }}", { method: 'logout' })
-                    ]).then(([bankInRes, bankOutRes, loginRes, logoutRes]) => {
+                    this.settleDashboardQueue([
+                        () => this.dashboardPost("{{ route('admin.dashboard.loadbank') }}", { method: 'bankin' }),
+                        () => this.dashboardPost("{{ route('admin.dashboard.loadbank') }}", { method: 'bankout' }),
+                        () => this.dashboardPost("{{ route('admin.dashboard.loadlogin') }}", { method: 'login' }),
+                        () => this.dashboardPost("{{ route('admin.dashboard.loadlogin') }}", { method: 'logout' })
+                    ]).then((results) => {
+                        const [bankInResult, bankOutResult, loginResult, logoutResult] = results;
+                        if (
+                            !bankInResult || bankInResult.status !== 'fulfilled'
+                            || !bankOutResult || bankOutResult.status !== 'fulfilled'
+                            || !loginResult || loginResult.status !== 'fulfilled'
+                            || !logoutResult || logoutResult.status !== 'fulfilled'
+                        ) {
+                            return;
+                        }
+
+                        const bankInRes = bankInResult.value;
+                        const bankOutRes = bankOutResult.value;
+                        const loginRes = loginResult.value;
+                        const logoutRes = logoutResult.value;
                         const bankIn = this.normalizeResponse(bankInRes);
                         const bankOut = this.normalizeResponse(bankOutRes);
                         const login = this.normalizeResponse(loginRes);
@@ -3012,7 +3170,7 @@
                         this.bank.out = (bankOut && bankOut.list) ? bankOut.list : [];
                         this.adminLogs.login = (login && login.list) ? login.list : [];
                         this.adminLogs.logout = (logout && logout.list) ? logout.list : [];
-                    }).catch(() => {});
+                    });
                 },
                 runSummarySync() {
                     if (this.ui.syncing) return;
@@ -3023,7 +3181,7 @@
                     const token = this.startLoading('resync', { skeleton: false });
                     const payload = this.buildPayload();
 
-                    axios.post(dashboardRoutes.syncSummary, payload)
+                    this.dashboardPost(dashboardRoutes.syncSummary, payload)
                         .then(() => {
                             this.refreshAll({
                                 reason: 'resync',
@@ -3238,7 +3396,14 @@
                         }
                     });
 
-                    broadcastDateChanged();
+                    const { start, end } = getHiddenDates();
+                    if (start && end) {
+                        self.suppressFilterRefresh = true;
+                        self.setDateRangeValues(start, end);
+                        self.$nextTick(() => {
+                            self.suppressFilterRefresh = false;
+                        });
+                    }
                 },
                 renderMoneyChart() {
                     const ctx = document.getElementById('chart-money');
@@ -3666,7 +3831,9 @@
             },
             created() {
                 const self = this;
-                self.autoCnt(false);
+                setTimeout(() => {
+                    self.autoCnt(false);
+                }, 500);
             },
             watch: {
                 withdraw_cnt: function (event) {
@@ -3797,4 +3964,3 @@
         });
     </script>
 @endpush
-
