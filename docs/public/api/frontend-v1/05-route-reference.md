@@ -864,59 +864,17 @@ GET /api/v1/deposit/channels
 ### `POST /api/v1/deposit/loadbank`
 - คำอธิบาย: ดึงข้อมูลบัญชีธนาคารปลายทางของระบบสำหรับฝาก
 - ใช้เมื่อ: ผู้ใช้เลือกฝากผ่านธนาคารและต้องการข้อมูลบัญชีรับโอน
-- Request example:
-```json
-{
-  "method": "bank"
-}
-```
-- Response example:
-```json
-{
-  "success": true,
-  "bank": [
-    {
-      "acc_no": "1234567890",
-      "acc_name": "COMPANY",
-      "bank_name": "Kasikorn Bank",
-      "bank_pic": "https://example.com/storage/bank_img/kbank.png",
-      "qr_pic": "https://example.com/storage/bank_qr/qr.png",
-      "qrcode": true,
-      "code": 1,
-      "deposit_min": 100,
-      "remark": "โอนตามยอดที่แจ้ง"
-    }
-  ]
-}
-```
+- Request example: `{ "method": "bank" }`
+- Response shape: `{ "success": true, "bank": [BankAccount] }`
+- `BankAccount` fields: `acc_no`, `acc_name`, `bank_name`, `bank_pic`, `qr_pic`, `qrcode`, `code`, `deposit_min`, `remark`
 - หมายเหตุ: `bank_pic` และ `qr_pic` เป็น public URL สำหรับแสดงรูปธนาคารและรูป QR ไม่ใช่ path ใน filesystem
 
 ### `POST /api/v1/deposit/loadbank/random`
 - คำอธิบาย: ดึงบัญชีธนาคารปลายทางแบบสุ่ม 1 รายการจากรายการที่เปิดใช้งาน
 - ใช้เมื่อ: ต้องการให้ลูกค้าเห็นบัญชีรับโอนเพียงบัญชีเดียวต่อครั้ง
-- Request example:
-```json
-{
-  "method": "bank"
-}
-```
-- Response example:
-```json
-{
-  "success": true,
-  "bank": {
-    "acc_no": "1234567890",
-    "acc_name": "COMPANY",
-    "bank_name": "Kasikorn Bank",
-    "bank_pic": "https://example.com/storage/bank_img/kbank.png",
-    "qr_pic": "https://example.com/storage/bank_qr/qr.png",
-    "qrcode": true,
-    "code": 1,
-    "deposit_min": 100,
-    "remark": "โอนตามยอดที่แจ้ง"
-  }
-}
-```
+- Request example: `{ "method": "bank" }`
+- Response shape: `{ "success": true, "bank": BankAccount }`
+- Empty response: `{ "success": false, "bank": "" }`
 - Request `method` รองรับ `bank`, `tw`, `slip`
 
 ### `GET /api/v1/smkpay/deposit/status/{txid}`
