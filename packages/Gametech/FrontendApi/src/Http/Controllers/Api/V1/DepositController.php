@@ -103,8 +103,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
+                        'bank_pic' => $this->storagePathOrEmpty('bank_img', optional($data->bank)->filepic),
+                        'qr_pic' => $this->storagePathOrEmpty('bank_qr', $data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'code' => $data->code,
                         'deposit_min' => $data->deposit_min,
@@ -130,8 +130,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
+                        'bank_pic' => $this->storagePathOrEmpty('bank_img', optional($data->bank)->filepic),
+                        'qr_pic' => $this->storagePathOrEmpty('bank_qr', $data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'deposit_min' => $data->deposit_min,
                         'remark' => $data->remark,
@@ -155,8 +155,8 @@ class DepositController extends BaseController
                         'acc_no' => $data->acc_no,
                         'acc_name' => $data->acc_name,
                         'bank_name' => (string) optional($data->bank)->name_th,
-                        'bank_pic' => Storage::url('bank_img/'.(string) optional($data->bank)->filepic),
-                        'qr_pic' => Storage::url('bank_qr/'.$data->filepic),
+                        'bank_pic' => $this->storagePathOrEmpty('bank_img', optional($data->bank)->filepic),
+                        'qr_pic' => $this->storagePathOrEmpty('bank_qr', $data->filepic),
                         'qrcode' => $data->qrcode === 'Y',
                         'slip_bank' => $this->getBankCode((string) optional($data->bank)->shortcode),
                         'code' => $data->code,
@@ -238,6 +238,16 @@ class DepositController extends BaseController
         }
 
         return $accounts->random();
+    }
+
+    private function storagePathOrEmpty(string $directory, mixed $fileName): string
+    {
+        $fileName = trim((string) $fileName);
+        if ($fileName === '') {
+            return '';
+        }
+
+        return Storage::url(trim($directory, '/').'/'.$fileName);
     }
 
     private function getBankCode(string $bank): ?string

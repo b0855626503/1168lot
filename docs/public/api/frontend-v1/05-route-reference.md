@@ -108,6 +108,7 @@ GET /api/v1/auth/register/banks
 ### `POST /api/v1/auth/login`
 - คำอธิบาย: เข้าสู่ระบบและออก access token สำหรับเรียก API ที่ต้องยืนยันตัวตน
 - ใช้เมื่อ: ผู้ใช้ล็อกอินจากหน้าแรก/หน้าเข้าสู่ระบบ
+- Session policy: สมาชิก 1 คนมี active token ได้ครั้งละ 1 ตัว; login ใหม่จะทำให้ token เดิมใช้ต่อไม่ได้
 - Auth: ไม่ต้องใช้ token
 - Request example:
 ```json
@@ -870,7 +871,7 @@ GET /api/v1/deposit/channels
 - Request example: `{ "method": "bank" }`
 - Response shape: `{ "success": true, "bank": [BankAccount] }`
 - `BankAccount` fields: `acc_no`, `acc_name`, `bank_name`, `bank_pic`, `qr_pic`, `qrcode`, `code`, `deposit_min`, `remark`
-- หมายเหตุ: `bank_pic` และ `qr_pic` เป็น public URL สำหรับแสดงรูปธนาคารและรูป QR ไม่ใช่ path ใน filesystem
+- หมายเหตุ: `bank_pic` เป็น public URL; `qr_pic` เป็น public URL เฉพาะเมื่อบัญชีมีรูป QR จริง ถ้าไม่อัปโหลด QR จะเป็นค่าว่าง `""`
 
 ### `POST /api/v1/deposit/loadbank/random`
 - คำอธิบาย: ดึงบัญชีธนาคารปลายทางแบบสุ่ม 1 รายการจากรายการที่เปิดใช้งาน
@@ -879,6 +880,7 @@ GET /api/v1/deposit/channels
 - Response shape: `{ "success": true, "bank": BankAccount }`
 - Empty response: `{ "success": false, "bank": "" }`
 - Request `method` รองรับ `bank`, `tw`, `slip`
+- หมายเหตุ: `qr_pic` จะเป็น `""` เมื่อบัญชีนั้นไม่มีรูป QR ที่อัปโหลดไว้
 
 ### `GET /api/v1/smkpay/deposit/status/{txid}`
 - คำอธิบาย: ตรวจสอบสถานะรายการฝากผ่าน SMKPay ตาม txid

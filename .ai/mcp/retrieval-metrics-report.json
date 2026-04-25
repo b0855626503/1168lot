@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-04-25T11:15:34+00:00",
+    "generated_at": "2026-04-25T12:34:28+00:00",
     "retrieval_metrics": {
         "estimated_hops_before": 4,
         "estimated_hops_after": 2,
@@ -10,10 +10,10 @@
     },
     "token_estimate": {
         "legacy_pack_words": 23192,
-        "current_pack_words": 955,
+        "current_pack_words": 969,
         "legacy_token_estimate": 30149,
-        "current_token_estimate": 1241,
-        "estimated_token_reduction": 28908
+        "current_token_estimate": 1259,
+        "estimated_token_reduction": 28890
     },
     "drift": {
         "before_total": 97,
