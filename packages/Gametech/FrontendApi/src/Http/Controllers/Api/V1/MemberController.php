@@ -484,20 +484,11 @@ class MemberController extends BaseController
                 }
             }
 
+            $member->loadCount('down');
             $today = now()->toDateString();
-            if (($config['seamless'] ?? 'N') === 'Y') {
-                $withdrawToday = data_get(
-                    $memberRepository->sumWithdrawSeamless($member->code, $today),
-                    'withdraw_seamless_amount_sum',
-                    0
-                );
-            } else {
-                $withdrawToday = data_get(
-                    $memberRepository->sumWithdraw($member->code, $today),
-                    'withdraw_amount_sum',
-                    0
-                );
-            }
+            $withdrawToday = $isSeamless
+                ? $memberRepository->sumWithdrawSeamlessAmountByDate((int) $member->code, $today)
+                : $memberRepository->sumWithdrawAmountByDate((int) $member->code, $today);
 
             $withdraw = is_null($withdrawToday) ? 0 : $withdrawToday;
             $maxWithdraw = ((float) $member->maxwithdraw_day) === 0.0
@@ -537,7 +528,7 @@ class MemberController extends BaseController
             $profile['amount_balance'] = data_get($gameUser, 'amount_balance', 0);
             $profile['withdraw_limit_amount'] = data_get($gameUser, 'withdraw_limit_amount', 0);
             $profile['winlost'] = 0;
-            $profile['downline'] = $member->load('down')->down->count();
+            $profile['downline'] = (int) ($member->down_count ?? 0);
             $profile['maxwithdraw_day'] = $maxWithdraw;
             $profile['deposit_min'] = $config['deposit_min'] ?? 0;
             $profile['withdraw_min'] = $config['minwithdraw'] ?? 0;

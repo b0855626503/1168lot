@@ -6,7 +6,6 @@ use Gametech\Game\Repositories\GameRepository;
 use Gametech\Game\Repositories\GameSeamlessRepository;
 use Gametech\Game\Repositories\GameUserRepository;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Tests\TestCase;
@@ -102,6 +101,46 @@ class GameUserRepositoryTest extends TestCase
             'user_create' => 'Api Test',
             'user_update' => 'Api Update',
         ]);
+    }
+
+    public function test_auto_login_seamless_by_game_user_uses_preloaded_username(): void
+    {
+        $gameRepository = Mockery::mock(GameRepository::class);
+        $gameSeamlessRepository = Mockery::mock(GameSeamlessRepository::class);
+        $gameSeamlessRepository->shouldReceive('findOneWhere')
+            ->once()
+            ->with(['id' => 'PGSOFT', 'enable' => 'Y'])
+            ->andReturn((object) [
+                'method' => 'seamless',
+            ]);
+
+        $this->app->instance(GameRepository::class, $gameRepository);
+        $this->app->instance(GameSeamlessRepository::class, $gameSeamlessRepository);
+
+        $driver = Mockery::mock();
+        $driver->shouldReceive('login')
+            ->once()
+            ->with(Mockery::on(function (array $payload): bool {
+                return ($payload['username'] ?? null) === 'object-user'
+                    && ($payload['productId'] ?? null) === 'PGSOFT'
+                    && ($payload['gameCode'] ?? null) === 'treasures-aztec';
+            }))
+            ->andReturn([
+                'success' => false,
+                'msg' => 'provider rejected',
+            ]);
+
+        $this->app->bind('Gametech\Game\Repositories\Games\SeamlessRepository', static function () use ($driver) {
+            return $driver;
+        });
+
+        $repository = $this->app->make(GameUserRepository::class);
+        $result = $repository->autoLoginSeamlessByGameUser((object) [
+            'user_name' => 'object-user',
+        ], 'PGSOFT', 'treasures-aztec');
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('provider rejected', $result['msg']);
     }
 
     private function makeRepositoryWithDriverResult(array $driverResult): GameUserRepository

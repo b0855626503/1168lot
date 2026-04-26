@@ -4,13 +4,13 @@ namespace Gametech\Game\Repositories;
 
 use Gametech\API\Models\GameListProxy;
 use Gametech\Core\Eloquent\Repository;
+use Gametech\Game\Models\GameUser;
 use Illuminate\Container\Container as App;
 use Illuminate\Support\Str;
 use Throwable;
 
 /**
  * Class GameUserRepository
- * @package Gametech\Game\Repositories
  */
 class GameUserRepository extends Repository
 {
@@ -26,16 +26,12 @@ class GameUserRepository extends Repository
 
     /**
      * GameRepository constructor.
-     * @param GameRepository $gameRepo
-     * @param App $app
      */
-    public function __construct
-    (
-        GameRepository         $gameRepo,
+    public function __construct(
+        GameRepository $gameRepo,
         GameSeamlessRepository $gameSeamlessRepo,
-        App                    $app
-    )
-    {
+        App $app
+    ) {
         $this->gameRepository = $gameRepo;
 
         $this->gameSeamlessRepository = $gameSeamlessRepo;
@@ -50,9 +46,9 @@ class GameUserRepository extends Repository
      *
      * @return mixed
      */
-    function model(): string
+    public function model(): string
     {
-        return \Gametech\Game\Models\GameUser::class;
+        return GameUser::class;
 
     }
 
@@ -96,13 +92,13 @@ class GameUserRepository extends Repository
             $return['msg'] = 'พบยอด Outstanding Credit';
         }
 
-
         $return['data'] = $result;
+
         return $return;
 
     }
 
-    public function getGameList($product_id,$method='seamless')
+    public function getGameList($product_id, $method = 'seamless')
     {
 
         $product_id = Str::upper($product_id);
@@ -111,7 +107,6 @@ class GameUserRepository extends Repository
         return $this->gameList($game->id, $product_id);
 
     }
-
 
     public function getOneUser($id, $game, $update = true): array
     {
@@ -124,11 +119,11 @@ class GameUserRepository extends Repository
             $query->active()->open()->select('code', 'id', 'filepic', 'game_type', 'name', 'link_ios', 'link_android', 'link_web', 'autologin');
         }])->with(['promotion'])->where('enable', 'Y')->where('game_code', $game)->where('member_code', $id)->first();
 
-
         if (empty($result)) {
             $return['new'] = true;
             $return['success'] = false;
             $return['data'] = null;
+
             return $return;
         }
 
@@ -143,14 +138,12 @@ class GameUserRepository extends Repository
                 $result->balance = $response['score'];
                 $result->save();
 
-
             } else {
 
                 $return['connect'] = $response['connect'];
                 $return['success'] = false;
                 $return['msg'] = $response['msg'];
             }
-
 
         } else {
 
@@ -159,8 +152,8 @@ class GameUserRepository extends Repository
             $return['msg'] = 'ไม่ได้อัพเดท Wallet';
         }
 
-
         $return['data'] = $result;
+
         return $return;
 
     }
@@ -168,16 +161,16 @@ class GameUserRepository extends Repository
     public function getUser($id, $getall = false, $getturn = false, $withdraw = false)
     {
         $config = $this->getCoreConfig();
-        $results = $this->gameRepository->orderBy('sort')->findWhere(['status_open' => 'Y', 'enable' => 'Y', ['filepic', '<>', '']], array('code', 'id', 'filepic', 'game_type', 'name'));
+        $results = $this->gameRepository->orderBy('sort')->findWhere(['status_open' => 'Y', 'enable' => 'Y', ['filepic', '<>', '']], ['code', 'id', 'filepic', 'game_type', 'name']);
 
         foreach ($results as $i => $result) {
             $score = 0;
             $game_user = $this->findOneWhere(['member_code' => $id, 'game_code' => $result->code, 'enable' => 'Y']);
             $game_id = preg_replace('/\d/', '', $result->id);
             $game = ucfirst($game_id);
-            if (!is_null($game_user)) {
-                if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-                    $response = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod])->viewBalance($game_user->user_name);
+            if (! is_null($game_user)) {
+                if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+                    $response = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod])->viewBalance($game_user->user_name);
                     if ($response['success'] === true) {
 
                         $score = $response['score'];
@@ -204,7 +197,7 @@ class GameUserRepository extends Repository
                 if ($getturn) {
                     if ($game_user->pro_code > 0) {
                         if ($withdraw) {
-                            $turn_balance = doubleval($game_user->amount_balance);
+                            $turn_balance = floatval($game_user->amount_balance);
                             if ($score < $turn_balance) {
                                 unset($results[$i]);
                             }
@@ -238,11 +231,10 @@ class GameUserRepository extends Repository
         $games = $this->gameRepository->findOneByField('code', $game_code);
         $game_id = preg_replace('/\d/', '', $games->id);
         $game = ucfirst($game_id);
-//        dd($game);
+        //        dd($game);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-            $result = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->addGameAccount($data);
-
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+            $result = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->addGameAccount($data);
 
             if ($debug) {
                 return $result;
@@ -320,8 +312,8 @@ class GameUserRepository extends Repository
         $games = $this->gameRepository->findOneByField('code', $game_code);
         $game_id = preg_replace('/\d/', '', $games->id);
         $game = ucfirst($game_id);
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-            $return = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->changePass($data);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+            $return = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->changePass($data);
             if ($return['success'] === true) {
 
                 $game_user = $this->findOrFail($id);
@@ -343,15 +335,14 @@ class GameUserRepository extends Repository
         $game = ucfirst($game_id);
 
         if ($debug) {
-            return app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total);
-
+            return app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total);
 
         }
 
         $user = $this->findOneWhere(['user_name' => $user_name, 'game_code' => $game_code]);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-                $return = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total);
+        if (! is_null($games) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+                $return = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total);
                 if ($update) {
 
                     if ($return['success'] == true) {
@@ -376,15 +367,15 @@ class GameUserRepository extends Repository
         $game = ucfirst($game_id);
 
         if ($debug) {
-            return app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total);
+            return app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total);
 
         }
 
         $user = $this->findOneWhere(['user_name' => $user_name, 'game_code' => $game_code]);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
+        if (! is_null($games) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
 
-                $return = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total);
+                $return = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total);
                 if ($update) {
                     if ($return['success'] == true) {
                         $user->balance = $return['after'];
@@ -402,15 +393,13 @@ class GameUserRepository extends Repository
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
 
-
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-            return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->viewBalance($user_name);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->viewBalance($user_name);
 
         }
-
 
         return $result;
     }
@@ -420,15 +409,13 @@ class GameUserRepository extends Repository
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
 
-
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-            return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->viewBalance($user_name, $product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->viewBalance($user_name, $product_id);
 
         }
-
 
         return $result;
     }
@@ -441,76 +428,111 @@ class GameUserRepository extends Repository
         $games = $this->gameSeamlessRepository->findOneWhere(['id' => $product_id, 'enable' => 'Y']);
         if (is_null($games)) {
             $result['msg'] = 'ไม่พบค่ายเกมที่เลือก';
+
             return $result;
         }
 
         $game = core()->getGame($games->method);
         if (is_null($game)) {
             $result['msg'] = 'ไม่พบการตั้งค่าระบบเกม';
+
             return $result;
         }
 
         $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
         if (is_null($user)) {
             $result['msg'] = 'ไม่พบข้อมูลบัญชีเกมของสมาชิก';
+
             return $result;
         }
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . ucfirst($games->method) . 'Repository.php'))) {
-            $traceId = null;
-            if (app()->bound('request')) {
-                $traceId = app('request')->attributes->get('frontend_game_login_trace_id');
-            }
+        return $this->autoLoginSeamlessByGameUser($user, $product_id, $game_code, $debug);
+    }
 
-            return app('Gametech\Game\Repositories\Games\\' . ucfirst($games->method) . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login([
-                'username' => $user->user_name,
-                'productId' => $product_id,
-                'gameCode' => $game_code,
-                'trace_id' => $traceId,
-            ]);
+    public function autoLoginSeamlessByGameUser($gameUser, $product_id, $game_code, $debug = false): array
+    {
+        $result['success'] = false;
+        $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
+
+        $games = $this->gameSeamlessRepository->findOneWhere(['id' => $product_id, 'enable' => 'Y']);
+        if (is_null($games)) {
+            $result['msg'] = 'ไม่พบค่ายเกมที่เลือก';
+
+            return $result;
         }
 
+        if (empty($gameUser?->user_name)) {
+            $result['msg'] = 'ไม่พบข้อมูลบัญชีเกมของสมาชิก';
 
-        return $result;
+            return $result;
+        }
+
+        return $this->loginSeamlessProvider(
+            (string) $games->method,
+            (string) $gameUser->user_name,
+            (string) $product_id,
+            (string) $game_code,
+            (bool) $debug
+        );
+    }
+
+    private function loginSeamlessProvider(string $method, string $username, string $productId, string $gameCode, bool $debug = false): array
+    {
+        $repositoryClass = 'Gametech\Game\Repositories\Games\\'.ucfirst($method).'Repository';
+        if (! is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.ucfirst($method).'Repository.php'))) {
+            return [
+                'success' => false,
+                'msg' => 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้',
+            ];
+        }
+
+        $traceId = null;
+        if (app()->bound('request')) {
+            $traceId = app('request')->attributes->get('frontend_game_login_trace_id');
+        }
+
+        return app($repositoryClass, ['method' => $this->gameMethod, 'debug' => $debug])->login([
+            'username' => $username,
+            'productId' => $productId,
+            'gameCode' => $gameCode,
+            'trace_id' => $traceId,
+        ]);
     }
 
     public function autoLoginTransfer($member_code, $product_id, $game_code, $debug = false): array
     {
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
-//        $game = core()->getGame();
+        //        $game = core()->getGame();
         $game = $this->gameRepository->findOneWhere(['id' => $product_id, 'status_open' => 'Y', 'enable' => 'Y']);
         $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
         $game_id = preg_replace('/\d/', '', $game->id);
         $game_id = ucfirst($game_id);
-        if (!is_null($game) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-                return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'productId' => $product_id, 'gameCode' => $game_code]);
+        if (! is_null($game) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+                return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'productId' => $product_id, 'gameCode' => $game_code]);
 
             }
         }
 
-
         return $result;
     }
-
 
     public function autoLoginSingle($member_code, $product_id, $game_code, $provider, $debug = false): array
     {
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
         $game = core()->getGame();
-//        $game = $this->gameRepository->findOneWhere(['id' => $provider, 'status_open' => 'Y', 'enable' => 'Y']);
+        //        $game = $this->gameRepository->findOneWhere(['id' => $provider, 'status_open' => 'Y', 'enable' => 'Y']);
         $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
         $game_id = preg_replace('/\d/', '', $game->id);
         $game_id = ucfirst($game_id);
-        if (!is_null($game) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-                return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'password' => $user->user_pass, 'productId' => $product_id, 'gameCode' => $game_code , 'gamelist' => $game->gamelist , 'provider' => $provider]);
+        if (! is_null($game) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+                return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'password' => $user->user_pass, 'productId' => $product_id, 'gameCode' => $game_code, 'gamelist' => $game->gamelist, 'provider' => $provider]);
 
             }
         }
-
 
         return $result;
     }
@@ -519,18 +541,17 @@ class GameUserRepository extends Repository
     {
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
-//        $game = core()->getGame();
+        //        $game = core()->getGame();
         $game = $this->gameRepository->findOneWhere(['id' => $method, 'status_open' => 'Y', 'enable' => 'Y']);
         $user = $this->findOneWhere(['member_code' => $member_code, 'game_code' => $game->code]);
         $game_id = preg_replace('/\d/', '', $game->id);
         $game_id = ucfirst($game_id);
-        if (!is_null($game) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-                return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'password' => $user->user_pass, 'productId' => $product_id]);
+        if (! is_null($game) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+                return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login(['username' => $user->user_name, 'password' => $user->user_pass, 'productId' => $product_id]);
 
             }
         }
-
 
         return $result;
     }
@@ -542,11 +563,10 @@ class GameUserRepository extends Repository
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-            return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login($user_name, $password);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->login($user_name, $password);
 
         }
-
 
         return $result;
     }
@@ -558,32 +578,29 @@ class GameUserRepository extends Repository
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-
-
-//        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
-//        dd($product_id);
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-//           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
-            $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+        //        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
+        //        dd($product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            //           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+            $response = app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
             $mongoGames = $this->getEnabledGameListFromMongo($product_id);
 
-            if($response['success']){
+            if ($response['success']) {
                 $result['success'] = true;
-                if (!empty($mongoGames)) {
+                if (! empty($mongoGames)) {
                     // Keep Mongo as primary source because click/rank ordering lives there.
                     $result['games'] = $mongoGames;
-                } elseif (!empty($response['games']) && is_array($response['games'])) {
+                } elseif (! empty($response['games']) && is_array($response['games'])) {
                     $result['games'] = $response['games'];
                 } else {
                     $result['games'] = [];
                 }
-            }else{
+            } else {
                 $result['success'] = true;
                 $result['games'] = $mongoGames;
 
             }
         }
-
 
         return $result;
     }
@@ -605,7 +622,7 @@ class GameUserRepository extends Repository
             ->get()
             ->toArray();
 
-        if (!empty($enabledGames)) {
+        if (! empty($enabledGames)) {
             return $enabledGames;
         }
 
@@ -616,34 +633,31 @@ class GameUserRepository extends Repository
             ->toArray();
     }
 
-
-    public function gameListSingle($game_id, $product_id,$provider, $debug = false): array
+    public function gameListSingle($game_id, $product_id, $provider, $debug = false): array
     {
         $result['success'] = false;
         $result['msg'] = 'ไม่สามารถดึงข้อมูล รายการเกมได้';
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-//        dd($game_id);
+        //        dd($game_id);
 
-//        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
-//        dd($product_id);
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-//           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
-            $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id,$provider);
-            if($response['success']){
+        //        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
+        //        dd($product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            //           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+            $response = app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id, $provider);
+            if ($response['success']) {
                 $result['success'] = true;
                 $result['msg'] = $response['msg'];
                 $result['games'] = $response['games'];
             }
         }
 
-
         return $result;
     }
 
-
-    public function providerListSingle($game_id,$member_code, $debug = false): array
+    public function providerListSingle($game_id, $member_code, $debug = false): array
     {
         $result['success'] = false;
         $result['msg'] = 'ไม่สามารถดึงข้อมูล รายการเกมได้';
@@ -651,25 +665,22 @@ class GameUserRepository extends Repository
         $game_id = ucfirst($game_id);
         $user = $this->findOneWhere(['member_code' => $member_code]);
 
-//        dd($game_id);
+        //        dd($game_id);
 
-
-//        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
-//        dd($product_id);
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-//           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
-            $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->providerList(['username' => $user->user_name , 'password' => $user->user_pass]);
-            if($response['success']){
+        //        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
+        //        dd($product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            //           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+            $response = app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->providerList(['username' => $user->user_name, 'password' => $user->user_pass]);
+            if ($response['success']) {
                 $result['success'] = true;
                 $result['msg'] = $response['msg'];
                 $result['provider'] = $response['provider'];
             }
         }
 
-
         return $result;
     }
-
 
     public function providerListSinglePublic($game_id, $debug = false): array
     {
@@ -678,26 +689,22 @@ class GameUserRepository extends Repository
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
+        //        dd($game_id);
 
-//        dd($game_id);
-
-
-//        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
-//        dd($product_id);
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-//           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
-            $response = app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->providerListPublic();
-            if($response['success']){
+        //        $games = GameListProxy::where('product',$product_id)->where('enable',true)->get()->toArray();
+        //        dd($product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            //           return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->gameList($product_id);
+            $response = app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->providerListPublic();
+            if ($response['success']) {
                 $result['success'] = true;
                 $result['msg'] = $response['msg'];
                 $result['provider'] = $response['provider'];
             }
         }
 
-
         return $result;
     }
-
 
     public function GameLog($data): array
     {
@@ -708,24 +715,23 @@ class GameUserRepository extends Repository
         return [];
     }
 
-    public function UserDepositTransfer($product_id,$game_code, $user_name, $total, $update = true, $debug = false): array
+    public function UserDepositTransfer($product_id, $game_code, $user_name, $total, $update = true, $debug = false): array
     {
         $return['success'] = false;
 
         $games = $this->gameRepository->find($game_code);
         $game_id = preg_replace('/\d/', '', $games->id);
         $game = ucfirst($game_id);
-//        dd($total);
+        //        dd($total);
         if ($debug) {
-            return app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total,$product_id);
-
+            return app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total, $product_id);
 
         }
 
         $user = $this->findOneWhere(['user_name' => $user_name, 'game_code' => $game_code]);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-                $return = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total,$product_id);
+        if (! is_null($games) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+                $return = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->deposit($user_name, $total, $product_id);
                 if ($update) {
 
                     if ($return['success'] === true) {
@@ -741,24 +747,24 @@ class GameUserRepository extends Repository
         return $return;
     }
 
-    public function UserWithdrawTransfer($product_id,$game_code, $user_name, $total, $update = true, $debug = false): array
+    public function UserWithdrawTransfer($product_id, $game_code, $user_name, $total, $update = true, $debug = false): array
     {
         $return['success'] = false;
 
         $games = $this->gameRepository->find($game_code);
         $game_id = preg_replace('/\d/', '', $games->id);
         $game = ucfirst($game_id);
-//        dd($game);
+        //        dd($game);
         if ($debug) {
-            return app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total,$product_id);
+            return app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total, $product_id);
 
         }
 
         $user = $this->findOneWhere(['user_name' => $user_name, 'game_code' => $game_code]);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
+        if (! is_null($games) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
 
-                $return = app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total,$product_id);
+                $return = app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->withdraw($user_name, $total, $product_id);
                 if ($update) {
                     if ($return['success'] === true) {
                         $user->balance = $return['after'];
@@ -770,22 +776,19 @@ class GameUserRepository extends Repository
 
         return $return;
     }
-
 
     public function checkOutStanding($game_id, $user_name, $product_id, $debug = false): array
     {
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
 
-
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-            return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->outStanding($user_name, $product_id);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->outStanding($user_name, $product_id);
 
         }
-
 
         return $result;
     }
@@ -795,15 +798,13 @@ class GameUserRepository extends Repository
         $result['success'] = false;
         $result['msg'] = 'เกมดังกล่าว ยังไม่พร้อมให้บริการในขณะนี้';
 
-
         $game_id = preg_replace('/\d/', '', $game_id);
         $game_id = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game_id . 'Repository.php'))) {
-            return app('Gametech\Game\Repositories\Games\\' . $game_id . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->outStandings($user_name);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game_id.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game_id.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->outStandings($user_name);
 
         }
-
 
         return $result;
     }
@@ -815,16 +816,15 @@ class GameUserRepository extends Repository
 
         $games = $this->gameSeamlessRepository->findOneWhere(['id' => $data['product_id'], 'enable' => 'Y']);
         $game = core()->getGame($games->method);
-//        dd($game);
+        //        dd($game);
         $user = $this->findOneWhere(['member_code' => $data['member_code'], 'game_code' => $game->code]);
-//        dd($user);
-        if (!is_null($games) && !is_null($user)) {
-            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . ucfirst($games->method) . 'Repository.php'))) {
-                return app('Gametech\Game\Repositories\Games\\' . ucfirst($games->method) . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->freegame($data);
+        //        dd($user);
+        if (! is_null($games) && ! is_null($user)) {
+            if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.ucfirst($games->method).'Repository.php'))) {
+                return app('Gametech\Game\Repositories\Games\\'.ucfirst($games->method).'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->freegame($data);
 
             }
         }
-
 
         return $result;
     }
@@ -846,8 +846,8 @@ class GameUserRepository extends Repository
         $game_id = preg_replace('/\d/', '', $games->id);
         $game = ucfirst($game_id);
 
-        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/' . $game . 'Repository.php'))) {
-            return  app('Gametech\Game\Repositories\Games\\' . $game . 'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->GetTurn($data);
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/'.$game.'Repository.php'))) {
+            return app('Gametech\Game\Repositories\Games\\'.$game.'Repository', ['method' => $this->gameMethod, 'debug' => $debug])->GetTurn($data);
         }
 
         return $return;

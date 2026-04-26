@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class AdminQueryAuditCommand extends Command
 {
     protected $signature = 'admin:query-audit
-        {--log=storage/logs/slow-requests.log : Path to SQL slow log}
+        {--log=storage/logs/01-02-03-slow-requests.log : Path to SQL slow log}
         {--output=docs/ADMIN_QUERY_AUDIT_2026_RUNTIME.md : Output markdown report}
         {--top-routes=25 : Number of routes to report}
         {--top-queries=5 : Number of repeated queries per route}
@@ -27,18 +27,21 @@ class AdminQueryAuditCommand extends Command
 
         if (! is_file($logPath)) {
             $this->error("Log file not found: {$logPath}");
+
             return self::FAILURE;
         }
 
         $entries = $this->readSqlLogEntries($logPath);
         if (empty($entries)) {
             $this->warn('No SQL log entries found in target log file.');
+
             return self::SUCCESS;
         }
 
         $entries = $this->applyFilters($entries);
         if (empty($entries)) {
             $this->warn('No entries left after filters.');
+
             return self::SUCCESS;
         }
 
@@ -107,11 +110,12 @@ class AdminQueryAuditCommand extends Command
             $report[] = '';
             $report[] = "## Route: `{$route}`";
             $menuKeys = $menuMap[$route] ?? [];
-            $report[] = '- Menu key(s): ' . (empty($menuKeys) ? '`-`' : '`' . implode('`, `', $menuKeys) . '`');
-            $report[] = '- SQL count: `' . (int) $routeRow['sql_count'] . '`, unique: `' . (int) $routeRow['unique_sql_count'] . '`, duplicate: `' . (int) $routeRow['duplicate_sql_count'] . '`, total ms: `' . (int) $routeRow['total_ms'] . '`';
+            $report[] = '- Menu key(s): '.(empty($menuKeys) ? '`-`' : '`'.implode('`, `', $menuKeys).'`');
+            $report[] = '- SQL count: `'.(int) $routeRow['sql_count'].'`, unique: `'.(int) $routeRow['unique_sql_count'].'`, duplicate: `'.(int) $routeRow['duplicate_sql_count'].'`, total ms: `'.(int) $routeRow['total_ms'].'`';
 
             if (empty($repeatRows)) {
                 $report[] = '- No repeated SQL above threshold.';
+
                 continue;
             }
 
@@ -125,15 +129,15 @@ class AdminQueryAuditCommand extends Command
                 $indexSummary = $primaryTable ? $this->loadIndexSummary($dbName, $primaryTable) : [];
 
                 $report[] = '';
-                $report[] = '### Repeated SQL #' . ($i + 1);
-                $report[] = '- repeat count: `' . (int) $repeat['count'] . '`, duplicate count: `' . (int) $repeat['duplicate_count'] . '`, total ms: `' . (int) $repeat['total_ms'] . '`, max ms: `' . (int) $repeat['max_ms'] . '`';
-                $report[] = '- tables: ' . (empty($tables) ? '`unknown`' : '`' . implode('`, `', $tables) . '`');
+                $report[] = '### Repeated SQL #'.($i + 1);
+                $report[] = '- repeat count: `'.(int) $repeat['count'].'`, duplicate count: `'.(int) $repeat['duplicate_count'].'`, total ms: `'.(int) $repeat['total_ms'].'`, max ms: `'.(int) $repeat['max_ms'].'`';
+                $report[] = '- tables: '.(empty($tables) ? '`unknown`' : '`'.implode('`, `', $tables).'`');
                 $report[] = '- sql:';
                 $report[] = '```sql';
                 $report[] = $sql;
                 $report[] = '```';
                 if (! empty($bindings)) {
-                    $report[] = '- bindings: `' . json_encode($bindings, JSON_UNESCAPED_UNICODE) . '`';
+                    $report[] = '- bindings: `'.json_encode($bindings, JSON_UNESCAPED_UNICODE).'`';
                 }
 
                 if ($explain !== null) {
@@ -148,18 +152,18 @@ class AdminQueryAuditCommand extends Command
                 if (! empty($indexSummary)) {
                     $report[] = '- indexes on primary table:';
                     foreach ($indexSummary as $indexName => $columns) {
-                        $report[] = '  - `' . $indexName . '`: `' . implode(', ', $columns) . '`';
+                        $report[] = '  - `'.$indexName.'`: `'.implode(', ', $columns).'`';
                     }
                 }
             }
         }
 
-        $markdown = implode("\n", $report) . "\n";
+        $markdown = implode("\n", $report)."\n";
         @mkdir(dirname($outputPath), 0775, true);
         file_put_contents($outputPath, $markdown);
 
-        $this->info('Query audit report generated: ' . $outputPath);
-        $this->info('Route groups analyzed: ' . count($rankedRoutes));
+        $this->info('Query audit report generated: '.$outputPath);
+        $this->info('Route groups analyzed: '.count($rankedRoutes));
 
         return self::SUCCESS;
     }
@@ -213,7 +217,7 @@ class AdminQueryAuditCommand extends Command
     }
 
     /**
-     * @param array<int, array<string, mixed>> $entries
+     * @param  array<int, array<string, mixed>>  $entries
      * @return array<int, array<string, mixed>>
      */
     private function applyFilters(array $entries): array
@@ -247,7 +251,7 @@ class AdminQueryAuditCommand extends Command
     }
 
     /**
-     * @param array<int, array<string, mixed>> $entries
+     * @param  array<int, array<string, mixed>>  $entries
      * @return array<string, array<int, array<string, mixed>>>
      */
     private function groupByRoute(array $entries): array
@@ -293,7 +297,7 @@ class AdminQueryAuditCommand extends Command
     }
 
     /**
-     * @param array<int, array<string, mixed>> $entries
+     * @param  array<int, array<string, mixed>>  $entries
      * @return array<int, array<string, mixed>>
      */
     private function summarizeRepeatedQueries(array $entries, int $top, int $minDup): array
@@ -322,6 +326,7 @@ class AdminQueryAuditCommand extends Command
         return collect($bucket)
             ->map(function (array $item) {
                 $count = (int) ($item['count'] ?? 0);
+
                 return [
                     'count' => $count,
                     'duplicate_count' => max(0, $count - 1),
@@ -335,6 +340,7 @@ class AdminQueryAuditCommand extends Command
                 if ($a['total_ms'] === $b['total_ms']) {
                     return $b['count'] <=> $a['count'];
                 }
+
                 return $b['total_ms'] <=> $a['total_ms'];
             })
             ->take($top)
@@ -348,7 +354,7 @@ class AdminQueryAuditCommand extends Command
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      * @return array<int, mixed>
      */
     private function extractBindings(array $context): array
@@ -363,6 +369,7 @@ class AdminQueryAuditCommand extends Command
             return [];
         }
         ksort($bindings);
+
         return array_values($bindings);
     }
 
@@ -380,6 +387,7 @@ class AdminQueryAuditCommand extends Command
                 }
             }
         }
+
         return $tables;
     }
 
@@ -391,7 +399,7 @@ class AdminQueryAuditCommand extends Command
         }
 
         try {
-            $rows = DB::select('EXPLAIN FORMAT=JSON ' . $sql, $bindings);
+            $rows = DB::select('EXPLAIN FORMAT=JSON '.$sql, $bindings);
             if (empty($rows)) {
                 return null;
             }
@@ -442,4 +450,3 @@ class AdminQueryAuditCommand extends Command
         return $result;
     }
 }
-

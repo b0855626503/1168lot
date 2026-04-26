@@ -151,4 +151,41 @@ class QueryOptimizationGuardTest extends TestCase
         $this->assertStringContainsString('idx_lotto_dash_risk_agg_type_exposure', $contents);
         $this->assertStringContainsString('idx_lotto_dash_risk_agg_number', $contents);
     }
+
+    public function test_bank_payment_webhook_lookup_has_tx_hash_account_code_index(): void
+    {
+        $contents = file_get_contents($this->rootPath.'/database/migrations/2026_04_26_150921_add_tx_hash_account_code_index_to_bank_payment_table.php');
+
+        $this->assertNotFalse($contents);
+        $this->assertStringContainsString("['tx_hash', 'account_code']", $contents);
+        $this->assertStringContainsString('idx_bp_tx_hash_account_code', $contents);
+    }
+
+    public function test_member_balance_uses_lightweight_withdraw_aggregation(): void
+    {
+        $repositoryContents = file_get_contents($this->rootPath.'/packages/Gametech/Member/src/Repositories/MemberRepository.php');
+        $controllerContents = file_get_contents($this->rootPath.'/packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/MemberController.php');
+
+        $this->assertNotFalse($repositoryContents);
+        $this->assertNotFalse($controllerContents);
+        $this->assertStringContainsString('sumWithdrawSeamlessAmountByDate', $repositoryContents);
+        $this->assertStringContainsString('sumWithdrawAmountByDate', $repositoryContents);
+        $this->assertStringContainsString("->where('date_create', '>=', \$rangeStart)", $repositoryContents);
+        $this->assertStringContainsString("->where('date_create', '<', \$rangeEndExclusive)", $repositoryContents);
+        $this->assertStringNotContainsString('sumWithdrawSeamless($member->code, $today)', $controllerContents);
+        $this->assertStringNotContainsString('sumWithdraw($member->code, $today)', $controllerContents);
+    }
+
+    public function test_game_login_avoids_reloading_game_user_before_seamless_handoff(): void
+    {
+        $repositoryContents = file_get_contents($this->rootPath.'/packages/Gametech/Game/src/Repositories/GameUserRepository.php');
+        $controllerContents = file_get_contents($this->rootPath.'/packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/GameController.php');
+
+        $this->assertNotFalse($repositoryContents);
+        $this->assertNotFalse($controllerContents);
+        $this->assertStringContainsString('autoLoginSeamlessByGameUser', $repositoryContents);
+        $this->assertStringContainsString('loginSeamlessProvider', $repositoryContents);
+        $this->assertStringContainsString('autoLoginSeamlessByGameUser($gameUser, $provider, $gameCode)', $controllerContents);
+        $this->assertStringNotContainsString('$this->gameUserRepository->autoLoginSeamless($user->code, $provider, $gameCode)', $controllerContents);
+    }
 }

@@ -2,11 +2,11 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
-use Gametech\Game\Repositories\GameSeamlessRepository;
+use Gametech\API\Models\GameListProxy;
 use Gametech\Game\Repositories\GameRepository;
+use Gametech\Game\Repositories\GameSeamlessRepository;
 use Gametech\Game\Repositories\GameTypeRepository;
 use Gametech\Game\Repositories\GameUserRepository;
-use Gametech\API\Models\GameListProxy;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,8 +27,7 @@ class GameController extends BaseController
         BankPaymentRepository $bankPaymentRepository,
         GameTypeRepository $gameTypeRepository,
         GameSeamlessRepository $gameSeamlessRepository
-    )
-    {
+    ) {
         $this->gameRepository = $gameRepository;
         $this->gameUserRepository = $gameUserRepository;
         $this->bankPaymentRepository = $bankPaymentRepository;
@@ -67,7 +66,7 @@ class GameController extends BaseController
                     'enable' => 'Y',
                 ])
                 ->map(function ($item) {
-                    $logo = $this->storageMediaUrls('game_img/' . strtolower((string) $item->filepic));
+                    $logo = $this->storageMediaUrls('game_img/'.strtolower((string) $item->filepic));
 
                     return [
                         'provider' => (string) $item->id,
@@ -112,6 +111,7 @@ class GameController extends BaseController
                 ->get()
                 ->map(function ($item) use ($providerModel, $providerId) {
                     $gameCode = (string) ($item['code'] ?? '');
+
                     return [
                         'id' => $gameCode,
                         'provider' => (string) ($item['product'] ?? ''),
@@ -171,6 +171,7 @@ class GameController extends BaseController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->sendError('ไม่สามารถเข้าสู่เกมได้ในขณะนี้', 422);
         }
     }
@@ -187,6 +188,7 @@ class GameController extends BaseController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return $this->sendError('ไม่สามารถเข้าสู่เกมได้ในขณะนี้', 422);
         }
     }
@@ -224,10 +226,6 @@ class GameController extends BaseController
                 'user_update' => $user->name,
             ]);
 
-        $gameItem = GameListProxy::where('code', $gameCode)
-            ->where('product', $provider)
-            ->first();
-
         $gameMain = $this->gameRepository->findOneWhere([
             'enable' => 'Y',
             'status_open' => 'Y',
@@ -255,13 +253,10 @@ class GameController extends BaseController
                 return $this->sendError((string) ($created['msg'] ?? 'ไม่สามารถสร้างบัญชีเกมได้ในขณะนี้'), 422);
             }
 
-            $gameUser = $this->gameUserRepository->findOneWhere([
-                'member_code' => $user->code,
-                'game_code' => $gameMain->code,
-            ]);
+            $gameUser = $created['data'] ?? null;
         }
 
-        $result = $this->gameUserRepository->autoLoginSeamless($user->code, $provider, $gameCode);
+        $result = $this->gameUserRepository->autoLoginSeamlessByGameUser($gameUser, $provider, $gameCode);
         Log::channel('api')->info('frontend.game.login.result', [
             'trace_id' => $traceId,
             'member_code' => (int) $user->code,
@@ -276,6 +271,11 @@ class GameController extends BaseController
         if (($result['success'] ?? false) !== true || empty($result['url'])) {
             return $this->sendError((string) ($result['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้'), 422);
         }
+
+        $gameItemName = GameListProxy::query()
+            ->where('code', $gameCode)
+            ->where('product', $provider)
+            ->value('name');
 
         app('Gametech\Member\Repositories\MemberCreditLogRepository')->create([
             'ip' => request()->ip(),
@@ -296,7 +296,7 @@ class GameController extends BaseController
             'user_update' => 'System Auto',
             'refer_code' => 0,
             'refer_table' => 'blank',
-            'remark' => 'กดเข้าเกม ค่าย ' . $provider . ' เกม ' . ($gameItem->name ?? $gameCode),
+            'remark' => 'กดเข้าเกม ค่าย '.$provider.' เกม '.($gameItemName ?: $gameCode),
             'kind' => 'OTHER',
             'amount' => 0,
             'amount_balance' => $gameUser->amount_balance ?? 0,

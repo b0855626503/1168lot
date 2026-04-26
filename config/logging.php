@@ -121,8 +121,8 @@ return [
         ],
 
         'slowlog' => [
-            'driver' => 'single',
-            'path' => log_path('slow-requests.log'),
+            'driver' => 'daily',
+            'path' => log_path('slow/slow-requests.log'),
             'level' => 'info',
         ],
 

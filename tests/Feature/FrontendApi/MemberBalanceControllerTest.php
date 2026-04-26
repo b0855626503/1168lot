@@ -45,6 +45,7 @@ class MemberBalanceControllerTest extends TestCase
             public string $acc_no = '1234567890';
             public string $tel = '0900000000';
             public float $maxwithdraw_day = 0.0;
+            public int $down_count = 0;
             public Collection $down;
 
             public function __construct()
@@ -56,13 +57,16 @@ class MemberBalanceControllerTest extends TestCase
             {
                 return $this;
             }
+
+            public function loadCount(string $relation): self
+            {
+                return $this;
+            }
         };
 
         $memberRepository = Mockery::mock();
         $memberRepository->shouldReceive('findOrFail')->once()->with(3)->andReturn($resolvedMember);
-        $memberRepository->shouldReceive('sumWithdraw')->once()->with(3, Mockery::type('string'))->andReturn((object) [
-            'withdraw_amount_sum' => 100.0,
-        ]);
+        $memberRepository->shouldReceive('sumWithdrawAmountByDate')->once()->with(3, Mockery::type('string'))->andReturn(100.0);
 
         $gameRepository = Mockery::mock();
         $gameRepository->shouldReceive('findOneWhere')->never();
@@ -130,6 +134,7 @@ class MemberBalanceControllerTest extends TestCase
             public string $acc_no = '1234567890';
             public string $tel = '0900000000';
             public float $maxwithdraw_day = 0.0;
+            public int $down_count = 0;
             public Collection $down;
 
             public function __construct()
@@ -138,6 +143,11 @@ class MemberBalanceControllerTest extends TestCase
             }
 
             public function load(string $relation): self
+            {
+                return $this;
+            }
+
+            public function loadCount(string $relation): self
             {
                 return $this;
             }
@@ -161,9 +171,7 @@ class MemberBalanceControllerTest extends TestCase
 
         $memberRepository = Mockery::mock();
         $memberRepository->shouldReceive('findOrFail')->once()->with(3)->andReturn($resolvedMember);
-        $memberRepository->shouldReceive('sumWithdrawSeamless')->once()->with(3, Mockery::type('string'))->andReturn((object) [
-            'withdraw_seamless_amount_sum' => 100.0,
-        ]);
+        $memberRepository->shouldReceive('sumWithdrawSeamlessAmountByDate')->once()->with(3, Mockery::type('string'))->andReturn(100.0);
 
         $gameRepository = Mockery::mock();
         $gameRepository->shouldReceive('findOneWhere')->once()->andReturn($gameUser);

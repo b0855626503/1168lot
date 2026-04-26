@@ -4,7 +4,10 @@ namespace Gametech\Member\Repositories;
 
 use Gametech\Core\Eloquent\Repository;
 use Gametech\Member\Models\Member;
+use Gametech\Payment\Models\WithdrawProxy;
+use Gametech\Payment\Models\WithdrawSeamlessProxy;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class MemberRepository extends Repository
@@ -107,6 +110,11 @@ class MemberRepository extends Repository
 
     }
 
+    public function sumWithdrawSeamlessAmountByDate(int $id, ?string $date = null): float
+    {
+        return $this->resolveWithdrawAmountByDate(WithdrawSeamlessProxy::query(), $id, $date);
+    }
+
     public function sumWithdrawSeamlessFree($id, $date = null)
     {
 
@@ -131,6 +139,11 @@ class MemberRepository extends Repository
         }])->find($id);
     }
 
+    public function sumWithdrawAmountByDate(int $id, ?string $date = null): float
+    {
+        return $this->resolveWithdrawAmountByDate(WithdrawProxy::query(), $id, $date);
+    }
+
     public function sumWithdrawFree($id, $date = null)
     {
         return $this->with('bank')->withSum(['withdrawFree:amount' => function ($query) use ($date) {
@@ -140,6 +153,24 @@ class MemberRepository extends Repository
             }
             $query->active()->whereIn('status', [0, 1]);
         }])->find($id);
+    }
+
+    private function resolveWithdrawAmountByDate(Builder $query, int $id, ?string $date = null): float
+    {
+        $query
+            ->where('member_code', $id)
+            ->active()
+            ->whereIn('status', [0, 1]);
+
+        if ($date) {
+            $rangeStart = Carbon::parse($date)->startOfDay();
+            $rangeEndExclusive = (clone $rangeStart)->addDay();
+
+            $query->where('date_create', '>=', $rangeStart)
+                ->where('date_create', '<', $rangeEndExclusive);
+        }
+
+        return (float) ($query->sum('amount') ?? 0);
     }
 
     public function sumBillFree($id)
