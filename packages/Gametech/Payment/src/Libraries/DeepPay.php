@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Gametech\Payment\Libraries;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -72,10 +71,10 @@ class DeepPay
         $ok = $httpCode >= 200 && $httpCode < 300 && $providerSuccess;
 
         $this->apiLog($ok ? 'info' : 'error', '[DEEPPAY] HTTP Response', [
-            'http_code' => $httpCode,
-            'success' => $ok,
-            'raw' => $this->limitText($raw, 12000),
-        ] + $requestInfo);
+                'http_code' => $httpCode,
+                'success' => $ok,
+                'raw' => $this->limitText($raw, 12000),
+            ] + $requestInfo);
 
         return [
             'success' => $ok,
@@ -89,15 +88,13 @@ class DeepPay
 
     public function auth(bool $forceRefresh = false): array
     {
+        /*
+         * DeepPay auth code is one-time-use.
+         *
+         * Keep $forceRefresh in the method signature for backward compatibility,
+         * but intentionally do not cache/reuse auth tokens.
+         */
         $username = $this->username();
-        $cacheKey = 'deeppay:auth:' . sha1($username);
-
-        if (!$forceRefresh) {
-            $cached = Cache::get($cacheKey);
-            if (is_string($cached) && $cached !== '') {
-                return ['success' => true, 'auth' => $cached, 'cached' => true];
-            }
-        }
 
         $token = base64_encode($username . ':' . $this->apiKey());
         $resp = $this->request('/auth', [
@@ -114,8 +111,6 @@ class DeepPay
             return ['success' => false, 'auth' => null, 'resp' => $resp, 'msg' => 'auth token missing'];
         }
 
-        Cache::put($cacheKey, $auth, 250);
-
         return ['success' => true, 'auth' => $auth, 'cached' => false];
     }
 
@@ -129,22 +124,22 @@ class DeepPay
     public function amountList(array $payload): array
     {
         return $this->request('/amount_list', $payload + [
-            'lang' => (string) config('deeppay.lang', 'th'),
-        ]);
+                'lang' => (string) config('deeppay.lang', 'th'),
+            ]);
     }
 
     public function deposit(array $payload): array
     {
         return $this->request('/deposit', $payload + [
-            'lang' => (string) config('deeppay.lang', 'th'),
-        ]);
+                'lang' => (string) config('deeppay.lang', 'th'),
+            ]);
     }
 
     public function withdraw(array $payload): array
     {
         return $this->request('/withdraw', $payload + [
-            'lang' => (string) config('deeppay.lang', 'th'),
-        ]);
+                'lang' => (string) config('deeppay.lang', 'th'),
+            ]);
     }
 
     public function depositTransaction(?string $txnNo, ?string $orderId): array
@@ -196,18 +191,18 @@ class DeepPay
 
     private function withAuthBody(array $body): array
     {
-        $auth = $this->auth();
+        $auth = $this->auth(true);
         if (!data_get($auth, 'success')) {
             return $body + [
-                'auth' => '',
-                'username' => $this->username(),
-            ];
+                    'auth' => '',
+                    'username' => $this->username(),
+                ];
         }
 
         return $body + [
-            'auth' => (string) data_get($auth, 'auth'),
-            'username' => $this->username(),
-        ];
+                'auth' => (string) data_get($auth, 'auth'),
+                'username' => $this->username(),
+            ];
     }
 
     private function username(): string
