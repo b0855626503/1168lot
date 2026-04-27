@@ -149,14 +149,12 @@ class DeepPayController extends AppBaseController
             'callback_url' => $callbackUrl,
         ];
 
-        Log::channel('deeppay_deposit_create')->info('[DEEPPAY] create deposit start', [
-            'txid' => $orderId,
-            'member_code' => (int) $member->code,
-            'request_amount' => $amountText,
-            'selected_amount' => $selectedAmount,
-        ]);
+        Log::channel('deeppay_deposit_create')->info('[DEEPPAY] create deposit start', ['payload' => $payload]);
 
         $resp = $api->deposit($payload);
+
+        Log::channel('deeppay_deposit_create')->info('[DEEPPAY] create deposit response', ['response' => $resp]);
+
         if (!data_get($resp, 'success')) {
             Log::channel('deeppay_deposit_create')->error('[DEEPPAY] create deposit failed', [
                 'txid' => $orderId,

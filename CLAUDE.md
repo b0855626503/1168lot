@@ -67,10 +67,10 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - php - 8.2.30
 - laravel/framework (LARAVEL) - v10
 - laravel/horizon (HORIZON) - v5
+- laravel/mcp (MCP) - v0
 - laravel/octane (OCTANE) - v2
 - laravel/prompts (PROMPTS) - v0
 - laravel/reverb (REVERB) - v1
-- laravel/mcp (MCP) - v0
 - laravel/pint (PINT) - v1
 - phpunit/phpunit (PHPUNIT) - v10
 - vue (VUE) - v2
@@ -228,6 +228,16 @@ protected function isAccessible(User $user, ?string $path = null): bool
     - Rate limits likely exist in `RouteServiceProvider` or `app/Http/Kernel.php`
 - When using Eloquent model casts, you must use `protected $casts = [];` and not the `casts()` method. The `casts()` method isn't available on models in Laravel 10.
 
+=== mcp/core rules ===
+
+## Laravel MCP
+
+- MCP (Model Context Protocol) is very new. You must use the `search-docs` tool to get documentation for how to write and test Laravel MCP servers, tools, resources, and prompts effectively.
+- MCP servers need to be registered with a route or handle in `routes/ai.php`. Typically, they will be registered using `Mcp::web()` to register an HTTP streaming MCP server.
+- Servers are very testable; use the `search-docs` tool to find testing instructions.
+- Do not run `mcp:start`. This command hangs waiting for JSON-RPC MCP requests.
+- Some MCP clients use Node, which has its own certificate store. If a user tries to connect to their web MCP server locally using HTTPS, it could fail due to this reason. They will need to switch to HTTP during local development.
+
 === pint/core rules ===
 
 ## Laravel Pint Code Formatter
@@ -251,4 +261,22 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - To run all tests: `php artisan test --compact`.
 - To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
+
+=== laravel/octane rules ===
+
+# Octane
+
+- Octane boots the application once and reuses it across requests, so singletons persist between requests.
+- The Laravel container's `scoped` method may be used as a safe alternative to `singleton`.
+- Never inject the container, request, or config repository into a singleton's constructor; use a resolver closure or `bind()` instead:
+
+```php
+// Bad
+$this->app->singleton(Service::class, fn (Application $app) => new Service($app['request']));
+
+// Good
+$this->app->singleton(Service::class, fn () => new Service(fn () => request()));
+```
+
+- Never append to static properties, as they accumulate in memory across requests.
 </laravel-boost-guidelines>
