@@ -202,8 +202,8 @@ class DeepPayController extends AppBaseController
         return response()->json([
             'success' => true,
             'msg' => __('app.topup.create'),
-            'url' => route('api.deeppay.index', ['id' => $txnNo !== '' ? $txnNo : $orderId]),
-            'upload_url' => $destUrl,
+            'url' => $destUrl,
+            'target' => 'blank',
             'amount' => $providerAmount,
         ]);
     }
