@@ -125,19 +125,19 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
             Route::post('deposit/loadbank/random', [DepositController::class, 'loadRandomBank'])
                 ->name('frontend.api.v1.deposit.loadbank.random');
             Route::get('smkpay/deposit/status/{txid}', [SmkPayController::class, 'checkStatus'])
-                ->name('api.smkpay.deposit.status');
+                ->name('frontend.api.v1.smkpay.deposit.status');
             Route::post('smkpay/deposit/expire/{txid}', [SmkPayController::class, 'expire'])
-                ->name('api.smkpay.deposit.expire');
+                ->name('frontend.api.v1.smkpay.deposit.expire');
             Route::post('smkpay/deposit/create', [SmkPayController::class, 'deposit'])
-                ->name('api.smkpay.deposit');
+                ->name('frontend.api.v1.smkpay.deposit');
             Route::get('smkpay/qrcode/{id}', [SmkPayController::class, 'index'])
-                ->name('api.smkpay.index');
+                ->name('frontend.api.v1.smkpay.index');
             Route::post('deeppay/deposit/expire/{txid}', [DeepPayController::class, 'expire'])
-                ->name('api.deeppay.deposit.expire');
+                ->name('frontend.api.v1.deeppay.deposit.expire');
             Route::post('deeppay/deposit/create', [DeepPayController::class, 'deposit'])
-                ->name('api.deeppay.deposit');
+                ->name('frontend.api.v1.deeppay.deposit');
             Route::get('deeppay/qrcode/{id}', [DeepPayController::class, 'index'])
-                ->name('api.deeppay.index');
+                ->name('frontend.api.v1.deeppay.index');
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');

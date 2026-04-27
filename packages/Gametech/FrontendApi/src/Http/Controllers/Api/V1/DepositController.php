@@ -183,8 +183,8 @@ class DepositController extends BaseController
                         'id' => $key,
                         'min_deposit' => ($data->deposit_min > 0 ? $data->deposit_min : config("$key.min_deposit")),
                         'deposit_range' => config("$key.deposit_range"),
-                        'payment_url' => route("api.$key.deposit"),
-                        'base_url' => route("api.$key.deposit"),
+                        'payment_url' => route("frontend.api.v1.$key.deposit"),
+                        'base_url' => route("frontend.api.v1.$key.deposit"),
                         'name' => ucfirst($key),
                         'remark' => $data->remark,
                     ];
