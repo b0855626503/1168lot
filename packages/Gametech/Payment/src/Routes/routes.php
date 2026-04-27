@@ -133,10 +133,10 @@ Route::domain($domain)->group(function () {
                 Route::get('xepay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\XEPayController@index')->name('api.xepay.index');
 
 
-                Route::get('deeppay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@checkStatus')->name('api.deeppay.deposit.status');
-                Route::post('deeppay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@expire')->name('api.deeppay.deposit.expire');
-                Route::post('deeppay/deposit/create', 'Gametech\Payment\Http\Controllers\DeepPayController@deposit')->name('api.deeppay.deposit');
-                Route::get('deeppay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\DeepPayController@index')->name('api.deeppay.index');
+//                Route::get('deeppay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@checkStatus')->name('api.deeppay.deposit.status');
+//                Route::post('deeppay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@expire')->name('api.deeppay.deposit.expire');
+//                Route::post('deeppay/deposit/create', 'Gametech\Payment\Http\Controllers\DeepPayController@deposit')->name('api.deeppay.deposit');
+//                Route::get('deeppay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\DeepPayController@index')->name('api.deeppay.index');
 
 //	            Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@checkStatus')->name('api.payment.deposit.status');
 //	            Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@expire')->name('api.payment.deposit.expire');

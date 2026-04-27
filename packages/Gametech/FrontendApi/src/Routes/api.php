@@ -20,6 +20,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
 use Gametech\Payment\Http\Controllers\SmkPayController;
+use Gametech\Payment\Http\Controllers\DeepPayController;
 use Illuminate\Support\Facades\Route;
 
 $apiSubdomain = config('gametech.api_url') ?? config('app.admin_url');
@@ -131,6 +132,12 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('api.smkpay.deposit');
             Route::get('smkpay/qrcode/{id}', [SmkPayController::class, 'index'])
                 ->name('api.smkpay.index');
+            Route::post('deeppay/deposit/expire/{txid}', [DeepPayController::class, 'expire'])
+                ->name('api.deeppay.deposit.expire');
+            Route::post('deeppay/deposit/create', [DeepPayController::class, 'deposit'])
+                ->name('api.deeppay.deposit');
+            Route::get('deeppay/qrcode/{id}', [DeepPayController::class, 'index'])
+                ->name('api.deeppay.index');
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');
