@@ -137,7 +137,7 @@ class DeepPayController extends AppBaseController
         $callbackUrl = (string) (config('deeppay.deposit_callback_url') ?: route('api.deeppay.deposit.callback'));
 
         $payload = [
-            'member_code' => (string) $member->code,
+            'member_code' => (string) $member->user_name,
             'currency' => (string) config('deeppay.currency', 'THB'),
             'order_id' => $orderId,
             'hash' => $api->hashOrderId($orderId),
