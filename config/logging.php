@@ -643,6 +643,48 @@ return [
             'days' => 14,
         ],
 
+        'deeppay_deposit_create' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/deposit_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'deeppay_deposit_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/deposit_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'deeppay_withdraw_create' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/withdraw_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'deeppay_withdraw_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/withdraw_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'deeppay_balance' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/balance.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'deeppay_api' => [
+            'driver' => 'daily',
+            'path' => log_path('deeppay/api.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
         'xepay_deposit_create' => [
             'driver' => 'daily',
             'path' => log_path('xepay/deposit_create.log'),

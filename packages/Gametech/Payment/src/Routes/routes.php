@@ -57,6 +57,10 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('payonex/deposit/callback', 'PayoneXController@deposit_callback')->name('api.payonex.deposit.callback');
             Route::post('payonex/withdraw/callback', 'PayoneXController@withdraw_callback')->name('api.payonex.withdraw.callback');
 
+            // ===== DEEPPAY =====
+            Route::post('deeppay/deposit/callback', 'DeepPayController@deposit_callback')->name('api.deeppay.deposit.callback');
+            Route::post('deeppay/withdraw/callback', 'DeepPayController@withdraw_callback')->name('api.deeppay.withdraw.callback');
+
 
         });
 
@@ -127,6 +131,12 @@ Route::domain($domain)->group(function () {
                 Route::post('xepay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\XEPayController@expire')->name('api.xepay.deposit.expire');
                 Route::post('xepay/deposit/create', 'Gametech\Payment\Http\Controllers\XEPayController@deposit')->name('api.xepay.deposit');
                 Route::get('xepay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\XEPayController@index')->name('api.xepay.index');
+
+
+                Route::get('deeppay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@checkStatus')->name('api.deeppay.deposit.status');
+                Route::post('deeppay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@expire')->name('api.deeppay.deposit.expire');
+                Route::post('deeppay/deposit/create', 'Gametech\Payment\Http\Controllers\DeepPayController@deposit')->name('api.deeppay.deposit');
+                Route::get('deeppay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\DeepPayController@index')->name('api.deeppay.index');
 
 //	            Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@checkStatus')->name('api.payment.deposit.status');
 //	            Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@expire')->name('api.payment.deposit.expire');
