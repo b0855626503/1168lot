@@ -5,6 +5,7 @@ namespace Gametech\Admin\Http\Controllers;
 use Gametech\Admin\DataTables\WithdrawDataTable;
 use Gametech\Auto\Jobs\PaymentOutAPay;
 use Gametech\Auto\Jobs\PaymentOutAutoTransfer;
+use Gametech\Auto\Jobs\PaymentOutDeepPay;
 use Gametech\Auto\Jobs\PaymentOutKingPay;
 use Gametech\Auto\Jobs\PaymentOutMaxPay;
 use Gametech\Auto\Jobs\PaymentOutOnPay;
@@ -144,6 +145,8 @@ class WithdrawController extends AppBaseController
                     $return = PaymentOutMaxPay::dispatchNow($id);
                 } elseif ($bank_code == 313) {
                     $return = PaymentOutSmkPay::dispatchNow($id);
+                } elseif ($bank_code == 316) {
+                    $return = PaymentOutDeepPay::dispatchNow($id);
 
                 } else {
                     $return = PaymentOutAutoTransfer::dispatchNow($id);
