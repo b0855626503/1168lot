@@ -134,8 +134,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('api.smkpay.index');
             Route::post('deeppay/deposit/expire/{txid}', [DeepPayController::class, 'expire'])
                 ->name('api.deeppay.deposit.expire');
-//            Route::post('deeppay/deposit/create', [DeepPayController::class, 'deposit'])
-//                ->name('api.deeppay.deposit');
+            Route::post('deeppay/deposit/create', [DeepPayController::class, 'deposit'])
+                ->name('api.deeppay.deposit');
             Route::get('deeppay/qrcode/{id}', [DeepPayController::class, 'index'])
                 ->name('api.deeppay.index');
 
