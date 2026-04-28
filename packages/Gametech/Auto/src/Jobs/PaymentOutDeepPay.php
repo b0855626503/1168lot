@@ -40,7 +40,7 @@ class PaymentOutDeepPay implements ShouldQueue
         $id = $this->id;
 
         if ($config->seamless === 'Y') {
-            $order = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->find($id);
+            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->find($id);
         } else {
             $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->find($id);
         }

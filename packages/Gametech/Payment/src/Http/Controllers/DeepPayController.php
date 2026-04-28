@@ -344,7 +344,7 @@ class DeepPayController extends AppBaseController
 
         $config = $this->getCoreConfig();
         if ($config->seamless === 'Y') {
-            $order = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')->findOneWhere(['txid' => $orderId, 'status_withdraw' => 'A']);
+            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere(['txid' => $orderId, 'status_withdraw' => 'A']);
         } else {
             $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere(['txid' => $orderId, 'status_withdraw' => 'A']);
         }
