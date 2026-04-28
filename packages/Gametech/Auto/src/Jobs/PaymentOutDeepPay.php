@@ -97,7 +97,7 @@ class PaymentOutDeepPay implements ShouldQueue
         $order->save();
 
         $payload = [
-            'member_code' => (string) $member->code,
+            'member_code' => (string) $member->user_name,
             'currency' => (string) config('deeppay.currency', 'THB'),
             'order_id' => $orderId,
             'hash' => $api->hashOrderId($orderId),
