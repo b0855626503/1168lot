@@ -128,28 +128,9 @@ class WithdrawController extends AppBaseController
             $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOne($data['account_code']);
             if (isset($bank)) {
                 $bank_code = $bank->bank->code;
-                if ($bank_code == 300) {
-                    $return = PaymentOutWildPay::dispatchNow($id);
-                } elseif ($bank_code == 304) {
-                    $return = PaymentOutKingPay::dispatchNow($id);
-                } elseif ($bank_code == 305) {
-                    $return = PaymentOutWellPay::dispatchNow($id);
-                } elseif ($bank_code == 307) {
-                    $return = PaymentOutPayoneX::dispatchNow($id);
+                if ($bank_code == 316) {
+                    $return = dispatch_sync(new PaymentOutDeepPay($id));
 
-                } elseif ($bank_code == 308) {
-                    $return = PaymentOutAPay::dispatchNow($id);
-                } elseif ($bank_code == 310) {
-                    $return = PaymentOutOnPay::dispatchNow($id);
-                } elseif ($bank_code == 311) {
-                    $return = PaymentOutMaxPay::dispatchNow($id);
-                } elseif ($bank_code == 313) {
-                    $return = PaymentOutSmkPay::dispatchNow($id);
-                } elseif ($bank_code == 316) {
-                    $return = PaymentOutDeepPay::dispatchNow($id);
-
-                } else {
-                    $return = PaymentOutAutoTransfer::dispatchNow($id);
                 }
             } else {
                 $return['success'] = 'NORMAL';
