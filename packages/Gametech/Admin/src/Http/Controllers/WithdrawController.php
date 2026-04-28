@@ -167,23 +167,41 @@ class WithdrawController extends AppBaseController
             }
         }
 
+        $paymentResponse = $return;
+
         if (! is_array($return)) {
             \Log::warning('Invalid payment out response', [
                 'withdraw_id' => $id,
                 'account_code' => $accountCode,
-                'response' => $return,
+                'response' => $paymentResponse,
             ]);
+
+            $message = 'ไม่สามารถทำรายการถอนอัตโนมัติได้';
+
+            if (is_string($paymentResponse) && trim($paymentResponse) !== '') {
+                $message = trim($paymentResponse);
+            } elseif (is_object($paymentResponse)) {
+                $message = (string) (
+                data_get($paymentResponse, 'msg')
+                    ?: data_get($paymentResponse, 'message')
+                    ?: $message
+                );
+            }
 
             $return = [
                 'success' => 'FAIL_AUTO',
                 'complete' => false,
-                'msg' => 'ไม่สามารถทำรายการถอนอัตโนมัติได้',
+                'msg' => $message,
             ];
         }
 
         $return['success'] = $return['success'] ?? 'FAIL_AUTO';
         $return['complete'] = (bool) ($return['complete'] ?? false);
-        $return['msg'] = (string) ($return['msg'] ?? 'ไม่สามารถทำรายการถอนอัตโนมัติได้');
+        $return['msg'] = (string) (
+            $return['msg']
+            ?? $return['message']
+            ?? 'ไม่สามารถทำรายการถอนอัตโนมัติได้'
+        );
 
         switch ($return['success']) {
             case 'NORMAL':
