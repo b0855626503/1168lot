@@ -45,7 +45,7 @@ class DeepPayController extends AppBaseController
     {
         $data = $this->repository->findOneWhere(['detail' => $id]) ?: $this->repository->findOneWhere(['txid' => $id]);
 
-        if (!$data) {
+        if (! $data) {
             return response()->json(['success' => false, 'message' => 'ไม่พบรายการฝากเงิน'], 404);
         }
 
@@ -63,7 +63,7 @@ class DeepPayController extends AppBaseController
                 'amount' => (float) ($data->amount ?? 0),
                 'payamount' => (float) ($data->payamount ?? 0),
                 'upload_url' => $data->url ?? null,
-                'expired_date' => !empty($data->expired_date) ? Carbon::parse($data->expired_date)->toDateTimeString() : null,
+                'expired_date' => ! empty($data->expired_date) ? Carbon::parse($data->expired_date)->toDateTimeString() : null,
             ],
         ]);
     }
@@ -73,7 +73,7 @@ class DeepPayController extends AppBaseController
         $request->validate(['amount' => 'required|numeric|min:1']);
 
         $member = auth()->guard('customer')->user();
-        if (!$member) {
+        if (! $member) {
             return response()->json(['success' => false, 'msg' => 'unauthenticated'], 401);
         }
 
@@ -89,7 +89,7 @@ class DeepPayController extends AppBaseController
             'status_auto' => 'Y',
         ]);
 
-        if (!$bankAccount) {
+        if (! $bankAccount) {
             return response()->json(['success' => false, 'msg' => __('app.topup.fail')]);
         }
 
@@ -109,7 +109,7 @@ class DeepPayController extends AppBaseController
             return response()->json(['success' => false, 'msg' => 'ข้อมูลบัญชีสมาชิกไม่ครบถ้วน']);
         }
 
-        $orderId = 'DDEP-' . str_pad((string) $member->code, 6, '0', STR_PAD_LEFT) . '-' . date('YmdHis');
+        $orderId = 'DDEP-'.str_pad((string) $member->code, 6, '0', STR_PAD_LEFT).'-'.date('YmdHis');
 
         $amountList = $api->amountList([
             'member_code' => (string) $member->code,
@@ -118,7 +118,7 @@ class DeepPayController extends AppBaseController
             'account_no' => $memberAccountNo,
         ]);
 
-        if (!data_get($amountList, 'success')) {
+        if (! data_get($amountList, 'success')) {
             Log::channel('deeppay_deposit_create')->error('[DEEPPAY] amount_list failed', [
                 'member_code' => (int) $member->code,
                 'amount' => $amountText,
@@ -129,7 +129,7 @@ class DeepPayController extends AppBaseController
         }
 
         $selected = $this->selectP2pToken((array) data_get($amountList, 'data.data.p2p', []), $amount);
-        if (!$selected) {
+        if (! $selected) {
             return response()->json(['success' => false, 'msg' => 'ไม่พบรายการฝาก P2P ที่พร้อมใช้งาน']);
         }
 
@@ -155,7 +155,7 @@ class DeepPayController extends AppBaseController
 
         Log::channel('deeppay_deposit_create')->info('[DEEPPAY] create deposit response', ['response' => $resp]);
 
-        if (!data_get($resp, 'success')) {
+        if (! data_get($resp, 'success')) {
             Log::channel('deeppay_deposit_create')->error('[DEEPPAY] create deposit failed', [
                 'txid' => $orderId,
                 'resp' => $resp,
@@ -196,7 +196,7 @@ class DeepPayController extends AppBaseController
                 'provider' => $provider,
             ]);
 
-            return response()->json(['success' => false, 'msg' => 'create check_case failed: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'msg' => 'create check_case failed: '.$e->getMessage()], 500);
         }
 
         return response()->json([
@@ -219,7 +219,7 @@ class DeepPayController extends AppBaseController
         }
 
         $case = $this->repository->findOneWhere(['txid' => $orderId]);
-        if (!$case) {
+        if (! $case) {
             return response()->json(['success' => true]);
         }
 
@@ -258,7 +258,7 @@ class DeepPayController extends AppBaseController
 
         $amount = (float) (data_get($payload, 'amount') ?: $case->payamount ?: $case->amount);
         $member = $this->memberRepository->findOneWhere(['user_name' => $case->username]);
-        if (!$member) {
+        if (! $member) {
             return response()->json(['success' => true]);
         }
 
@@ -270,7 +270,7 @@ class DeepPayController extends AppBaseController
             'status_auto' => 'Y',
         ]);
 
-        if (!$bankAccount) {
+        if (! $bankAccount) {
             return response()->json(['success' => true]);
         }
 
@@ -280,13 +280,13 @@ class DeepPayController extends AppBaseController
         }
 
         $bank = $this->bankRepository->find($bankAccount->banks);
-        $detail = ' REF ID : ' . ($txnNo !== '' ? $txnNo : data_get($payload, 'ref_id', '-'));
-        $hash = md5($bankAccount->code . $amount . $detail);
+        $detail = ' REF ID : '.($txnNo !== '' ? $txnNo : data_get($payload, 'ref_id', '-'));
+        $hash = md5($bankAccount->code.$amount.$detail);
         $datenow = now()->toDateTimeString();
 
         $this->bankPaymentRepository->create([
-            'bank' => strtolower($bank->shortcode . '_' . $bankAccount->acc_no),
-            'detail' => $detail . ' จำนวน ' . $amount,
+            'bank' => strtolower($bank->shortcode.'_'.$bankAccount->acc_no),
+            'detail' => $detail.' จำนวน '.$amount,
             'account_code' => $bankAccount->code,
             'autocheck' => 'W',
             'bankstatus' => 1,
@@ -327,13 +327,20 @@ class DeepPayController extends AppBaseController
             if (data_get($verify, 'success')) {
                 $incoming = $api->normalizeStatus((string) data_get($verify, 'data.data.status', $incoming));
                 $payload = array_merge($payload, (array) data_get($verify, 'data.data', []));
+            } else {
+                Log::channel('deeppay_withdraw_callback')->warning('[DEEPPAY] withdraw callback verify failed', [
+                    'order_id' => $orderId,
+                    'txn_no' => $txnNo,
+                    'verify' => $verify,
+                ]);
             }
         }
 
         $case = $this->repository->findOneWhere(['txid' => $orderId]);
         if ($case) {
             $current = strtolower((string) $case->status);
-            if (!in_array($current, ['completed', 'failed', 'reject', 'refunded'], true) && $incoming !== 'pending') {
+
+            if (! in_array($current, ['completed', 'failed', 'reject', 'rejected', 'refunded'], true) && $incoming !== 'pending') {
                 $this->repository->update(['status' => $incoming], $case->code);
             }
         }
@@ -343,27 +350,45 @@ class DeepPayController extends AppBaseController
         }
 
         $config = $this->getCoreConfig();
+
         if ($config->seamless === 'Y') {
-            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere(['txid' => $orderId, 'status_withdraw' => 'A']);
+            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere([
+                'txid' => $orderId,
+                'status_withdraw' => 'A',
+            ]);
         } else {
-            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere(['txid' => $orderId, 'status_withdraw' => 'A']);
+            $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')->findOneWhere([
+                'txid' => $orderId,
+                'status_withdraw' => 'A',
+            ]);
         }
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['code' => 0, 'msg' => 'success']);
         }
 
-        $amount = $order['amount'];
-
+        $amount = (float) $order['amount'];
         $refund = (float) data_get($payload, 'refund', 0);
         $transfer = (float) data_get($payload, 'transfer', data_get($payload, 'amount', 0));
 
         if ($incoming === 'completed' && $refund <= 0) {
             UpdateBalanceDeepPay::dispatch()->delay(5)->onQueue('topup');
 
-            $order->remark_admin = '[ Ref ID : ' . ($txnNo !== '' ? $txnNo : '-') . ' ] โอนให้ลูกค้าแล้ว (DeepPay)';
+            $order->remark_admin = '[ Ref ID : '.($txnNo !== '' ? $txnNo : '-').' ] โอนให้ลูกค้าแล้ว (DeepPay)';
+            $order->status = 1;
             $order->status_withdraw = 'C';
             $order->save();
+
+            $bill = app('Gametech\\Payment\\Repositories\\BillRepository')->findOneWhere([
+                'refer_code' => $order->code,
+                'refer_table' => 'withdraws',
+                'method' => 'WITHDRAW',
+            ]);
+
+            if ($bill) {
+                $bill->complete = 'Y';
+                $bill->save();
+            }
 
             app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')->create([
                 'ip' => request()->ip(),
@@ -384,7 +409,7 @@ class DeepPayController extends AppBaseController
                 'user_update' => 'System Auto',
                 'refer_code' => $order->code,
                 'refer_table' => 'withdraws',
-                'remark' => 'รายการแจ้งถอนที่ ' . $order->code . ' / ไอดีที่ถอน : ' . $order->member_user . ' จำนวนเงิน ' . $amount . ' โอนเงินให้ลูกค้าแล้ว DeepPay ' . $orderId . ' [ ' . ($txnNo !== '' ? $txnNo : '-') . ' ]',
+                'remark' => 'รายการแจ้งถอนที่ '.$order->code.' / ไอดีที่ถอน : '.$order->member_user.' จำนวนเงิน '.$amount.' โอนเงินให้ลูกค้าแล้ว DeepPay '.$orderId.' [ '.($txnNo !== '' ? $txnNo : '-').' ]',
                 'kind' => 'OTHER',
                 'amount' => $amount,
                 'amount_balance' => 0,
@@ -398,7 +423,7 @@ class DeepPayController extends AppBaseController
             ]);
 
             broadcast(new RealTimeNewMessage(
-                'DeepPay ' . $orderId . ' โอนเงินให้ลูกค้าแล้ว ID : ' . $order->member_user . ' จำนวนเงิน ' . $transfer . ' รายการแจ้งถอนที่ ' . $order->code,
+                'DeepPay '.$orderId.' โอนเงินให้ลูกค้าแล้ว ID : '.$order->member_user.' จำนวนเงิน '.$transfer.' รายการแจ้งถอนที่ '.$order->code,
                 [
                     'ui' => 'toast',
                     'as' => 'RealTime.Message.All',
@@ -418,7 +443,7 @@ class DeepPayController extends AppBaseController
         $datanew = [
             'refer_code' => $order->code,
             'refer_table' => 'withdraws',
-            'remark' => 'คืนยอดจากการถอน ' . $txnNo . ' (DeepPay ' . $incoming . ')',
+            'remark' => 'คืนยอดจากการถอน '.$txnNo.' (DeepPay '.$incoming.')',
             'kind' => 'ROLLBACK',
             'amount' => $amount,
             'amount_balance' => $order->amount_balance,
@@ -429,11 +454,28 @@ class DeepPayController extends AppBaseController
             'emp_code' => 0,
             'emp_name' => 'SYSTEM',
         ];
+
         $response = app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')->setWalletSeamlessWithdraw($datanew);
 
-        if($response) {
+        if ($response) {
+            $order->remark_admin = '[ Ref ID : '.($txnNo !== '' ? $txnNo : '-').' ] DeepPay '.$incoming.' transfer='.$transfer.' refund='.$refund.' ระบบคืนยอดให้ลูกค้าแล้ว';
+            $order->status = 2;
+            $order->status_withdraw = 'R';
+            $order->save();
+
+            $bill = app('Gametech\\Payment\\Repositories\\BillRepository')->findOneWhere([
+                'refer_code' => $order->code,
+                'refer_table' => 'withdraws',
+                'method' => 'WITHDRAW',
+            ]);
+
+            if ($bill) {
+                $bill->complete = 'R';
+                $bill->save();
+            }
+
             broadcast(new RealTimeNewMessage(
-                'DeepPay ยกเลิกรายการแจ้งถอน ของ ID ' . $order->member_user . ' จำนวนเงิน ' . $amount . ' Ref ID ' . ($txnNo !== '' ? $txnNo : '-') . ' ระบบคืนยอดให้ลูกค้าแล้ว (' . $incoming . ')',
+                'DeepPay ยกเลิกรายการแจ้งถอน ของ ID '.$order->member_user.' จำนวนเงิน '.$amount.' Ref ID '.($txnNo !== '' ? $txnNo : '-').' ระบบคืนยอดให้ลูกค้าแล้ว ('.$incoming.')',
                 [
                     'ui' => 'toast',
                     'as' => 'RealTime.Message.All',
@@ -446,10 +488,22 @@ class DeepPayController extends AppBaseController
                     ],
                 ]
             ));
+
+            return response()->json(['code' => 0, 'msg' => 'success']);
         }
 
-        $order->remark_admin = '[ Ref ID : ' . ($txnNo !== '' ? $txnNo : '-') . ' ] DeepPay ' . $incoming . ' transfer=' . $transfer . ' refund=' . $refund . ' ต้องตรวจสอบ/คืนยอดตาม flow ระบบ';
-        $order->status_withdraw = $incoming === 'completed' ? 'C' : 'R';
+        Log::channel('deeppay_withdraw_callback')->error('[DEEPPAY] withdraw rollback failed', [
+            'order_id' => $orderId,
+            'withdraw_code' => $order->code,
+            'member_user' => $order->member_user,
+            'amount' => $amount,
+            'incoming' => $incoming,
+            'refund' => $refund,
+            'transfer' => $transfer,
+            'payload' => $payload,
+        ]);
+
+        $order->remark_admin = '[ Ref ID : '.($txnNo !== '' ? $txnNo : '-').' ] DeepPay '.$incoming.' transfer='.$transfer.' refund='.$refund.' คืนยอดไม่สำเร็จ ต้องตรวจสอบ';
         $order->save();
 
         return response()->json(['code' => 0, 'msg' => 'success']);
@@ -475,13 +529,16 @@ class DeepPayController extends AppBaseController
     private function selectP2pToken(array $items, float $requestedAmount): ?array
     {
         $normalized = [];
+
         foreach ($items as $item) {
-            if (!is_array($item)) {
+            if (! is_array($item)) {
                 continue;
             }
+
             if ((string) data_get($item, 'token', '') === '') {
                 continue;
             }
+
             $normalized[] = $item;
         }
 
@@ -505,12 +562,15 @@ class DeepPayController extends AppBaseController
 
         foreach ($candidates as $candidate) {
             $value = strtoupper(trim((string) $candidate));
+
             if ($value === '') {
                 continue;
             }
+
             if (preg_match('/^\d{3}$/', $value)) {
                 return $value;
             }
+
             if (isset($map[$value])) {
                 return (string) $map[$value];
             }
