@@ -90,7 +90,18 @@ class WithdrawController extends AppBaseController
         $user = $this->user()->name.' '.$this->user()->surname;
         $datenow = now()->toDateTimeString();
 
-        $data = json_decode($request['data'], true);
+        $rawData = $request->input('data');
+        $data = is_array($rawData) ? $rawData : json_decode((string) $rawData, true);
+
+        if (! is_array($data)) {
+            \Log::warning('Invalid withdraw update payload', [
+                'withdraw_id' => $id,
+                'raw_data' => $rawData,
+                'user_id' => $this->id(),
+            ]);
+
+            return $this->sendError('ข้อมูลรายการถอนไม่ถูกต้อง โปรด F5 แล้วทำรายการใหม่', 200);
+        }
 
         $chk = $this->repository->find($id);
         if (! $chk) {
@@ -105,43 +116,74 @@ class WithdrawController extends AppBaseController
             return $this->sendSuccess('รายการนี้ เสรฺ็จสิ้นแล้ว โปรด F5');
         }
 
-        $amount = $data['amount'];
-        if($amount <= 0){
+        $amount = (float) ($data['amount'] ?? 0);
+        if ($amount <= 0) {
             return $this->sendSuccess('ยอดที่ลูกค้าจะได้รับจริง เป็น 0 โปรด F5 แล้วทำรายการใหม่');
         }
 
+        $accountCode = (int) ($data['account_code'] ?? 0);
+
         $data['member_code'] = $chk->member_code;
-//        $data['amount'] = $chk->amount;
         $data['emp_approve'] = $this->id();
         $data['ip_admin'] = $ip;
         $data['user_update'] = $user;
         $data['date_approve'] = $datenow;
+
         $this->repository->update($data, $id);
 
-        //        $return['success'] = 'NORMAL';
-        //        $return['msg'] = 'อนุมัติรายการเรียบร้อยแล้ว (รายการทั่วไป)';
+        $return = [
+            'success' => 'NORMAL',
+            'complete' => true,
+            'msg' => 'อนุมัติรายการเรียบร้อยแล้ว (รายการทั่วไป)',
+        ];
 
-        //        $return = PaymentOutSeamlessKbank::dispatchNow($id);
+        if ($accountCode !== 0) {
+            $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOne($accountCode);
 
-        if ($data['account_code'] != 0) {
-
-            $bank = app('Gametech\Payment\Repositories\BankAccountRepository')->getAccountOutOne($data['account_code']);
             if (isset($bank)) {
-                $bank_code = $bank->bank->code;
-                if ($bank_code == 316) {
-                    $return = dispatch_sync(new PaymentOutDeepPay($id));
+                $bankCode = (int) data_get($bank, 'bank.code', 0);
 
+                if ($bankCode === 300) {
+                    $return = dispatch_sync(new PaymentOutWildPay($id));
+                } elseif ($bankCode === 304) {
+                    $return = dispatch_sync(new PaymentOutKingPay($id));
+                } elseif ($bankCode === 305) {
+                    $return = dispatch_sync(new PaymentOutWellPay($id));
+                } elseif ($bankCode === 307) {
+                    $return = dispatch_sync(new PaymentOutPayoneX($id));
+                } elseif ($bankCode === 308) {
+                    $return = dispatch_sync(new PaymentOutAPay($id));
+                } elseif ($bankCode === 310) {
+                    $return = dispatch_sync(new PaymentOutOnPay($id));
+                } elseif ($bankCode === 311) {
+                    $return = dispatch_sync(new PaymentOutMaxPay($id));
+                } elseif ($bankCode === 313) {
+                    $return = dispatch_sync(new PaymentOutSmkPay($id));
+                } elseif ($bankCode === 316) {
+                    $return = dispatch_sync(new PaymentOutDeepPay($id));
+                } else {
+                    $return = dispatch_sync(new PaymentOutAutoTransfer($id));
                 }
-            } else {
-                $return['success'] = 'NORMAL';
-                $return['complete'] = true;
-                $return['msg'] = 'อนุมัติรายการเรียบร้อยแล้ว (รายการทั่วไป)';
             }
-        } else {
-            $return['success'] = 'NORMAL';
-            $return['complete'] = true;
-            $return['msg'] = 'อนุมัติรายการเรียบร้อยแล้ว (รายการทั่วไป)';
         }
+
+        if (! is_array($return)) {
+            \Log::warning('Invalid payment out response', [
+                'withdraw_id' => $id,
+                'account_code' => $accountCode,
+                'response' => $return,
+            ]);
+
+            $return = [
+                'success' => 'FAIL_AUTO',
+                'complete' => false,
+                'msg' => 'ไม่สามารถทำรายการถอนอัตโนมัติได้',
+            ];
+        }
+
+        $return['success'] = $return['success'] ?? 'FAIL_AUTO';
+        $return['complete'] = (bool) ($return['complete'] ?? false);
+        $return['msg'] = (string) ($return['msg'] ?? 'ไม่สามารถทำรายการถอนอัตโนมัติได้');
 
         switch ($return['success']) {
             case 'NORMAL':
@@ -164,6 +206,7 @@ class WithdrawController extends AppBaseController
             case 'NOTWAIT':
             case 'MONEY':
                 break;
+
             default:
                 $datanew['txid'] = '';
                 $datanew['account_code'] = 0;
@@ -172,56 +215,61 @@ class WithdrawController extends AppBaseController
                 $datanew['emp_approve'] = 0;
                 $datanew['ip_admin'] = '';
                 $this->repository->update($datanew, $id);
-
-
-
+                break;
         }
 
         if ($return['complete'] === true) {
-
             $member = app('Gametech\Member\Repositories\MemberRepository')->find($chk->member_code);
 
-            $member->sum_withdraw += $chk->amount;
-            $member->saveQuietly();
+            if ($member) {
+                $member->sum_withdraw += $chk->amount;
+                $member->saveQuietly();
 
-            $game_user = app('Gametech\Game\Repositories\GameUserRepository')->findOneByField('member_code', $chk->member_code);
+                $game_user = app('Gametech\Game\Repositories\GameUserRepository')->findOneByField('member_code', $chk->member_code);
 
-            $this->memberCreditLogRepository->create([
-                'ip' => $ip,
-                'credit_type' => 'D',
-                'balance_before' => $member->balance,
-                'balance_after' => $member->balance,
-                'credit' => 0,
-                'total' => $chk->amount,
-                'credit_bonus' => 0,
-                'credit_total' => 0,
-                'credit_before' => $member->balance,
-                'credit_after' => $member->balance,
-                'pro_code' => 0,
-                'bank_code' => $chk->bankm_code,
-                'auto' => 'N',
-                'enable' => 'Y',
-                'user_create' => 'System Auto',
-                'user_update' => 'System Auto',
-                'refer_code' => $id,
+                $this->memberCreditLogRepository->create([
+                    'ip' => $ip,
+                    'credit_type' => 'D',
+                    'balance_before' => $member->balance,
+                    'balance_after' => $member->balance,
+                    'credit' => 0,
+                    'total' => $chk->amount,
+                    'credit_bonus' => 0,
+                    'credit_total' => 0,
+                    'credit_before' => $member->balance,
+                    'credit_after' => $member->balance,
+                    'pro_code' => 0,
+                    'bank_code' => $chk->bankm_code,
+                    'auto' => 'N',
+                    'enable' => 'Y',
+                    'user_create' => 'System Auto',
+                    'user_update' => 'System Auto',
+                    'refer_code' => $id,
+                    'refer_table' => 'withdraws',
+                    'remark' => 'เครดิตที่หักออกจากระบบ '.$chk->balance.' / จะได้รับยอดเงินผ่านเลขที่บัญชี : '.$member->acc_no,
+                    'kind' => 'CONFIRM_WD',
+                    'amount' => $chk->amount,
+                    'amount_balance' => $game_user->amount_balance ?? 0,
+                    'withdraw_limit' => $game_user->withdraw_limit ?? 0,
+                    'withdraw_limit_amount' => $game_user->withdraw_limit_amount ?? 0,
+                    'method' => 'D',
+                    'member_code' => $chk->member_code,
+                    'user_name' => $member->user_name,
+                    'emp_code' => $this->id(),
+                    'emp_name' => $this->user()->name.' '.$this->user()->surname,
+                ]);
+            }
+
+            $bill = app('Gametech\Payment\Repositories\BillRepository')->findOneWhere([
+                'refer_code' => $chk->code,
                 'refer_table' => 'withdraws',
-                'remark' => 'เครดิตที่หักออกจากระบบ '.$chk->balance.' / จะได้รับยอดเงินผ่านเลขที่บัญชี : '.$member->acc_no,
-                'kind' => 'CONFIRM_WD',
-                'amount' => $chk->amount,
-                'amount_balance' => $game_user->amount_balance,
-                'withdraw_limit' => $game_user->withdraw_limit,
-                'withdraw_limit_amount' => $game_user->withdraw_limit_amount,
-                'method' => 'D',
-                'member_code' => $chk->member_code,
-                'user_name' => $member->user_name,
-                'emp_code' => $this->id(),
-                'emp_name' => $this->user()->name.' '.$this->user()->surname,
+                'method' => 'WITHDRAW',
             ]);
 
-            $bill = app('Gametech\Payment\Repositories\BillRepository')->findOneWhere(['refer_code' => $chk->code, 'refer_table' => 'withdraws', 'method' => 'WITHDRAW']);
-            $bill->complete = 'Y';
-            $bill->save();
-
+            if ($bill) {
+                $bill->complete = 'Y';
+                $bill->save();
+            }
         }
 
         return $this->sendSuccess($return['msg']);
@@ -236,7 +284,6 @@ class WithdrawController extends AppBaseController
         $id = (int) $request->input('id');
         $remark = (string) $request->input('remark', '');
 
-        // กัน double-click ระดับ endpoint (ไว ๆ)
         $lockKey = "withdraw:clear:{$id}";
         $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15);
 
@@ -247,9 +294,7 @@ class WithdrawController extends AppBaseController
         try {
             $chk = null;
 
-            // ===== 1) Claim แบบ atomic =====
             $claimed = \Illuminate\Support\Facades\DB::transaction(function () use ($id, $request, $remark, $user, &$chk) {
-                // ล็อกแถว withdraws กัน request ซ้อน
                 $chk = \Illuminate\Support\Facades\DB::table('withdraws')
                     ->where('code', $id)
                     ->lockForUpdate()
@@ -273,13 +318,12 @@ class WithdrawController extends AppBaseController
                     return ['ok' => false, 'type' => 'processing'];
                 }
 
-                // ตั้งเป็นกำลังดำเนินการก่อน (กันซ้ำ)
                 \Illuminate\Support\Facades\DB::table('withdraws')
                     ->where('code', $id)
                     ->update([
                         'ip_admin' => $request->ip(),
                         'remark_admin' => $remark,
-                        'status' => 9, // PROCESSING
+                        'status' => 9,
                         'emp_approve' => $this->id(),
                         'user_update' => $user,
                         'date_approve' => now()->toDateTimeString(),
@@ -305,7 +349,6 @@ class WithdrawController extends AppBaseController
                 return $this->sendSuccess('ไม่สามารถดำเนินการได้ โปรด F5');
             }
 
-            // ===== 2) ทำการคืนยอด (นอก transaction เพื่อไม่ล็อก DB นาน) =====
             $datanew = [
                 'refer_code' => $id,
                 'refer_table' => 'withdraws',
@@ -326,27 +369,15 @@ class WithdrawController extends AppBaseController
             $response = $this->memberCreditLogRepository->setWalletSeamlessWithdraw($datanew);
 
             if ($response) {
-                // finalize: คืนยอดสำเร็จ
-               $this->repository->update([
-                   'ip_admin' => $request->ip(),
-                   'remark_admin' => $remark,
-                   'status' => 2,
-                   'emp_approve' => $this->id(),
-                   'user_update' => $user,
-                   'date_approve' => now()->toDateTimeString(),
-               ], $id);
-//                \Illuminate\Support\Facades\DB::table('withdraws')
-//                    ->where('code', $id)
-//                    ->update([
-//                        'ip_admin' => $request->ip(),
-//                        'remark_admin' => $remark,
-//                        'status' => 2,
-//                        'emp_approve' => $this->id(),
-//                        'user_update' => $user,
-//                        'date_approve' => now()->toDateTimeString(),
-//                    ]);
+                $this->repository->update([
+                    'ip_admin' => $request->ip(),
+                    'remark_admin' => $remark,
+                    'status' => 2,
+                    'emp_approve' => $this->id(),
+                    'user_update' => $user,
+                    'date_approve' => now()->toDateTimeString(),
+                ], $id);
 
-                // ปิด bill เดิม (WITHDRAW) เป็น R ถ้ามี
                 $bill = app('Gametech\Payment\Repositories\BillRepository')->findOneWhere([
                     'refer_code' => $chk->code,
                     'refer_table' => 'withdraws',
@@ -361,7 +392,6 @@ class WithdrawController extends AppBaseController
                 return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
             }
 
-            // ถ้าไม่สำเร็จ: คืน status กลับไปให้ทำใหม่ได้
             \Illuminate\Support\Facades\DB::table('withdraws')
                 ->where('code', $id)
                 ->update([
@@ -389,6 +419,7 @@ class WithdrawController extends AppBaseController
         if ($chk->status === 1) {
             return $this->sendSuccess('รายการนี้ เสรฺ็จสิ้นแล้ว โปรด F5');
         }
+
         $data['enable'] = 'N';
         $data['user_update'] = $user;
         $this->repository->update($data, $id);
@@ -426,16 +457,14 @@ class WithdrawController extends AppBaseController
                 'id' => $id,
                 'status_withdraw' => $chk->status_withdraw,
                 'emp_approve' => $chk->emp_approve,
-                'status' => $chk->status
+                'status' => $chk->status,
             ]);
 
-            // ตรวจสอบว่า status ปัจจุบันสามารถคืนยอดได้หรือไม่
             if ($chk->status_withdraw === 'C' || $chk->status_withdraw === 'F') {
                 \Log::error('Cannot fix withdraw with status', ['status' => $chk->status_withdraw]);
-                return $this->sendError('ไม่สามารถคืนยอดรายการที่สถานะ: ' . $chk->status_withdraw, 200);
+                return $this->sendError('ไม่สามารถคืนยอดรายการที่สถานะ: '.$chk->status_withdraw, 200);
             }
 
-            // ตรวจสอบว่ารายการนี้มีคนอนุมัติแล้วหรือยัง
             if ($chk->emp_approve > 0 && $chk->status == 1) {
                 \Log::error('Withdraw already approved and completed', ['emp_approve' => $chk->emp_approve, 'status' => $chk->status]);
                 return $this->sendError('รายการนี้มีผู้ทำรายการแล้ว ไม่สามารถคืนยอดได้', 200);
@@ -452,17 +481,18 @@ class WithdrawController extends AppBaseController
             if ($result) {
                 \Log::info('Withdraw fixed successfully', ['id' => $id]);
                 return $this->sendSuccess('รายการนี้ถูกคืนยอดแล้ว โปรด F5');
-            } else {
-                \Log::error('Failed to update withdraw', ['id' => $id]);
-                return $this->sendError('ไม่สามารถคืนยอดได้ โปรดลองใหม่', 200);
             }
+
+            \Log::error('Failed to update withdraw', ['id' => $id]);
+            return $this->sendError('ไม่สามารถคืนยอดได้ โปรดลองใหม่', 200);
 
         } catch (\Exception $e) {
             \Log::error('Error in fixSubmit', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return $this->sendError('เกิดข้อผิดพลาด: ' . $e->getMessage(), 200);
+
+            return $this->sendError('เกิดข้อผิดพลาด: '.$e->getMessage(), 200);
         }
     }
 
@@ -478,24 +508,12 @@ class WithdrawController extends AppBaseController
         $responses = collect($responses)->map(function ($items) {
             $item = (object) $items;
 
-            //            dd($item);
             return [
                 'value' => $item->code,
                 'text' => $item->bank['name_th'].' ['.$item->acc_no.']'.$item->acc_name,
             ];
 
         })->prepend($banks);
-
-        //        $responses = collect(app('Gametech\Payment\Repositories\BankRepository')->getBankOutAccount()->toArray());
-        //
-        //        $responses = $responses->map(function ($items) {
-        //            $item = (object)$items;
-        //            return [
-        //                'value' => $item->bank_account['code'],
-        //                'text' => $item->name_th . ' [' . $item->bank_account['acc_no'] . ']'
-        //            ];
-        //
-        //        })->prepend($banks);
 
         $result['banks'] = $responses;
 
@@ -507,7 +525,7 @@ class WithdrawController extends AppBaseController
         $id = $request->input('id');
 
         $response = $this->memberRepository->getUser($id);
-        //        $data = $this->memberRepository->findOneWhere(['user_name' => $id , 'enable' => 'Y']);
+
         if (empty($response)) {
             $data = [
                 'member_username' => '',
@@ -545,39 +563,39 @@ class WithdrawController extends AppBaseController
         $user = $this->user()->name.' '.$this->user()->surname;
         $datenow = now()->toDateTimeString();
 
-        $data = json_decode($request['data'], true);
-        $id = $data['member_code'];
-        $amount = $data['amount'] * 1;
-        $date = $data['date_record'];
-        $time = $data['timedept'];
+        $rawData = $request->input('data');
+        $data = is_array($rawData) ? $rawData : json_decode((string) $rawData, true);
+
+        if (! is_array($data)) {
+            return $this->sendError('ข้อมูลรายการถอนไม่ถูกต้อง', 200);
+        }
+
+        $id = $data['member_code'] ?? 0;
+        $amount = (float) ($data['amount'] ?? 0);
+        $date = $data['date_record'] ?? now()->toDateString();
+        $time = $data['timedept'] ?? now()->format('H:i:s');
 
         $chk = $this->memberRepository->find($id);
         if (! $chk) {
             return $this->sendSuccess('ไม่พบข้อมูลดังกล่าว');
         }
+
         $balance = $chk->user->balance;
 
         if ($amount < 1) {
-
-            //            session()->flash('error', 'พบข้อผิดพลาด คุณป้อนจำนวนไม่ถูกต้อง');
             return $this->sendError('พบข้อผิดพลาด คุณป้อนจำนวนไม่ถูกต้อง');
-
-        } elseif ($balance < $amount) {
-
-            return $this->sendError('ไม่สามารถดำเนินการได้ จำนวนเงินไม่เพียงพอ');
-
-        } else {
-
-            $response = $this->repository->withdrawSingleNew($id, $amount, $date, $time);
-            if ($response['success'] === true) {
-                //                session()->flash('success', 'คุณทำรายการแจ้งถอนเงิน สำเร็จแล้ว');
-                return $this->sendSuccess('คุณทำรายการแจ้งถอนเงิน สำเร็จแล้ว');
-            } else {
-                //                session()->flash('error', $response['msg']);
-                return $this->sendError($response['msg']);
-            }
-
         }
 
+        if ($balance < $amount) {
+            return $this->sendError('ไม่สามารถดำเนินการได้ จำนวนเงินไม่เพียงพอ');
+        }
+
+        $response = $this->repository->withdrawSingleNew($id, $amount, $date, $time);
+
+        if ($response['success'] === true) {
+            return $this->sendSuccess('คุณทำรายการแจ้งถอนเงิน สำเร็จแล้ว');
+        }
+
+        return $this->sendError($response['msg']);
     }
 }
