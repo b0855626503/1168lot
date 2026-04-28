@@ -438,9 +438,10 @@ class WebhookController extends AppBaseController
         $accname = str_replace('-', '', (string)$bank->acc_no);
 
         $txHash = md5(
-            (string)($row['transactionID'] ?? '')
+            (string)($row['lastBalance'] ?? '')
             . (string)($row['amount'] ?? '')
             . (string)($row['from_acc'] ?? '')
+            . (string)($row['fullDate'] ?? '')
         );
 
         $frombank = rtrim((string)($row['from_bank'] ?? ''), 'A');
