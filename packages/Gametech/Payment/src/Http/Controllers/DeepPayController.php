@@ -333,7 +333,7 @@ class DeepPayController extends AppBaseController
         $case = $this->repository->findOneWhere(['txid' => $orderId]);
         if ($case) {
             $current = strtolower((string) $case->status);
-            if (!in_array($current, ['completed', 'failed', 'rejected', 'refunded'], true) && $incoming !== 'pending') {
+            if (!in_array($current, ['completed', 'failed', 'reject', 'refunded'], true) && $incoming !== 'pending') {
                 $this->repository->update(['status' => $incoming], $case->code);
             }
         }
@@ -353,6 +353,8 @@ class DeepPayController extends AppBaseController
             return response()->json(['code' => 0, 'msg' => 'success']);
         }
 
+        $amount = $order['amount'];
+
         $refund = (float) data_get($payload, 'refund', 0);
         $transfer = (float) data_get($payload, 'transfer', data_get($payload, 'amount', 0));
 
@@ -362,6 +364,38 @@ class DeepPayController extends AppBaseController
             $order->remark_admin = '[ Ref ID : ' . ($txnNo !== '' ? $txnNo : '-') . ' ] โอนให้ลูกค้าแล้ว (DeepPay)';
             $order->status_withdraw = 'C';
             $order->save();
+
+            app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')->create([
+                'ip' => request()->ip(),
+                'credit_type' => 'W',
+                'balance_before' => 0,
+                'balance_after' => 0,
+                'credit' => 0,
+                'total' => 0,
+                'credit_bonus' => 0,
+                'credit_total' => 0,
+                'credit_before' => $amount,
+                'credit_after' => $amount,
+                'pro_code' => 0,
+                'bank_code' => 0,
+                'auto' => 'N',
+                'enable' => 'Y',
+                'user_create' => 'System Auto',
+                'user_update' => 'System Auto',
+                'refer_code' => $order->code,
+                'refer_table' => 'withdraws',
+                'remark' => 'รายการแจ้งถอนที่ ' . $order->code . ' / ไอดีที่ถอน : ' . $order->member_user . ' จำนวนเงิน ' . $amount . ' โอนเงินให้ลูกค้าแล้ว DeepPay ' . $orderId . ' [ ' . ($txnNo !== '' ? $txnNo : '-') . ' ]',
+                'kind' => 'OTHER',
+                'amount' => $amount,
+                'amount_balance' => 0,
+                'withdraw_limit' => 0,
+                'withdraw_limit_amount' => 0,
+                'method' => 'D',
+                'member_code' => $order->member_code,
+                'user_name' => $order->member_user,
+                'emp_code' => 0,
+                'emp_name' => 'SYSTEM',
+            ]);
 
             broadcast(new RealTimeNewMessage(
                 'DeepPay ' . $orderId . ' โอนเงินให้ลูกค้าแล้ว ID : ' . $order->member_user . ' จำนวนเงิน ' . $transfer . ' รายการแจ้งถอนที่ ' . $order->code,
@@ -379,6 +413,39 @@ class DeepPayController extends AppBaseController
             ));
 
             return response()->json(['code' => 0, 'msg' => 'success']);
+        }
+
+        $datanew = [
+            'refer_code' => $order->code,
+            'refer_table' => 'withdraws',
+            'remark' => 'คืนยอดจากการถอน ' . $txnNo . ' (DeepPay ' . $incoming . ')',
+            'kind' => 'ROLLBACK',
+            'amount' => $amount,
+            'amount_balance' => $order->amount_balance,
+            'withdraw_limit' => $order->amount_limit,
+            'withdraw_limit_amount' => $order->amount_limit_rate,
+            'method' => 'D',
+            'member_code' => $order->member_code,
+            'emp_code' => 0,
+            'emp_name' => 'SYSTEM',
+        ];
+        $response = app('Gametech\\Member\\Repositories\\MemberCreditLogRepository')->setWalletSeamlessWithdraw($datanew);
+
+        if($response) {
+            broadcast(new RealTimeNewMessage(
+                'DeepPay ยกเลิกรายการแจ้งถอน ของ ID ' . $order->member_user . ' จำนวนเงิน ' . $amount . ' Ref ID ' . ($txnNo !== '' ? $txnNo : '-') . ' ระบบคืนยอดให้ลูกค้าแล้ว (' . $incoming . ')',
+                [
+                    'ui' => 'toast',
+                    'as' => 'RealTime.Message.All',
+                    'toast' => [
+                        'className' => 'gt-toast gt-toast-error',
+                        'duration' => 0,
+                        'gravity' => 'top',
+                        'position' => 'right',
+                        'avatar' => '/assets/admin/icons/alert.webp',
+                    ],
+                ]
+            ));
         }
 
         $order->remark_admin = '[ Ref ID : ' . ($txnNo !== '' ? $txnNo : '-') . ' ] DeepPay ' . $incoming . ' transfer=' . $transfer . ' refund=' . $refund . ' ต้องตรวจสอบ/คืนยอดตาม flow ระบบ';
