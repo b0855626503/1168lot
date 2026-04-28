@@ -201,6 +201,16 @@
                             </div>
                         </template>
 
+                        <template v-else-if="lineConnect.status === 'stopped'">
+                            <div class="line-connect-modal-admin__status">
+                                <div class="line-connect-modal-admin__status-title">หยุดการเชื่อมต่อแล้ว</div>
+                                <div class="line-connect-modal-admin__status-text">
+                                    ระบบไม่ได้ฟังข้อความจาก LINE อยู่ตอนนี้<br>
+                                    กด “เชื่อมต่อด้วย QR” หรือ “เชื่อมต่อด้วย Email” เพื่อเริ่มใหม่
+                                </div>
+                            </div>
+                        </template>
+
                         <template v-else-if="lineConnect.status === 'error'">
                             <div class="line-connect-modal-admin__status">
                                 <div class="line-connect-modal-admin__status-title">เกิดข้อผิดพลาด</div>
@@ -440,6 +450,7 @@
                         'login:qr_issued': 'ได้รับ QR แล้ว กรุณาสแกนใน LINE',
                         'login:pin_required': 'ได้รับ PIN แล้ว กรุณากรอกใน LINE',
                         'listener:running': 'เชื่อมต่อสำเร็จ กำลังรอข้อความเข้า',
+                        'listener:stopped': 'ตัวเชื่อมต่อหยุดทำงานแล้ว',
                         'recover:queued': 'กำลังกู้คืนการเชื่อมต่อ',
                     };
                     return map[stage] || (`ขั้นตอนล่าสุด: ${this.lineConnect.lastStage}`);
@@ -563,6 +574,17 @@
                     this.lineConnect.pollStartedAt = 0;
                 },
 
+                clearLineConnectTransientState() {
+                    this.lineConnect.pin = '';
+                    this.lineConnect.qrSrc = '';
+                    this.lineConnect.qrText = '';
+                    this.lineConnect.message = '';
+                    this.lineConnect.lastStage = '';
+                    this.lineConnect.updatedAt = 0;
+                    this.lineConnect.noProgressCount = 0;
+                    this.lineConnect.pollErrorDelayCurrentMs = 0;
+                },
+
                 extractLineStatusPayload(resp) {
                     const data = resp && resp.data ? resp.data : {};
                     const payload = (data && typeof data === 'object' && data.data && typeof data.data === 'object')
@@ -609,8 +631,9 @@
                 },
 
                 applyLinePayload(p) {
-                    this.lineConnect.status = this.deriveStatusFromStage(p.status, p.lastStage);
-                    this.lineConnect.pin = p.pin || '';
+                    const nextStatus = this.deriveStatusFromStage(p.status, p.lastStage);
+
+                    this.lineConnect.status = nextStatus;
                     this.lineConnect.message = p.message || '';
                     this.lineConnect.lastStage = p.lastStage || '';
                     this.lineConnect.loginMode = p.loginMode || this.lineConnect.loginMode || '';
@@ -619,13 +642,22 @@
                         : this.lineConnect.allowedModes;
                     this.lineConnect.updatedAt = p.updatedAt || 0;
 
-                    if (p.qrSrc) this.lineConnect.qrSrc = p.qrSrc;
-                    if (p.qrText) this.lineConnect.qrText = p.qrText;
+                    if (nextStatus === 'pincode_required') {
+                        this.lineConnect.pin = p.pin || '';
+                    } else {
+                        this.lineConnect.pin = '';
+                    }
 
-                    if (this.lineConnect.status === 'qr_required') {
+                    if (nextStatus === 'qr_required') {
+                        if (p.qrSrc) this.lineConnect.qrSrc = p.qrSrc;
+                        if (p.qrText) this.lineConnect.qrText = p.qrText;
+
                         if (!this.lineConnect.qrSrc && this.lineConnect.qrText) {
                             this.renderQrFromText(this.lineConnect.qrText);
                         }
+                    } else {
+                        this.lineConnect.qrSrc = '';
+                        this.lineConnect.qrText = '';
                     }
                 },
 
@@ -633,7 +665,7 @@
                     const status = (this.lineConnect.status || '').toLowerCase();
                     const stage = (this.lineConnect.lastStage || p.lastStage || '').toLowerCase();
 
-                    if (status === 'ready' || status === 'error' || status === 'unknown') return false;
+                    if (status === 'ready' || status === 'error' || status === 'unknown' || status === 'stopped') return false;
 
                     if (status === 'starting') {
                         return stage === 'listener:queued'
@@ -698,7 +730,7 @@
                             return;
                         }
 
-                        if (this.lineConnect.status === 'unknown') {
+                        if (this.lineConnect.status === 'unknown' || this.lineConnect.status === 'stopped') {
                             this.lineConnect.canConnect = true;
                             return;
                         }
@@ -736,9 +768,10 @@
                     if (this.lineConnect.loadingAny) return;
 
                     this.stopLineConnectPolling();
-                    this.lineConnect.noProgressCount = 0;
+                    this.clearLineConnectTransientState();
+                    this.lineConnect.status = 'starting';
+                    this.lineConnect.lastStage = 'listener:queued';
                     this.lineConnect.loadingAny = true;
-                    this.lineConnect.message = '';
                     this.lineConnect.showLoginForm = false;
 
                     try {
@@ -795,8 +828,8 @@
                     }
                     if (this.lineConnect.loadingAny) return;
 
+                    this.clearLineConnectTransientState();
                     this.lineConnect.showLoginForm = true;
-                    this.lineConnect.message = '';
 
                     this.$nextTick(() => {
                         const el = document.getElementById('line_login_email');
@@ -836,9 +869,10 @@
                     }
 
                     this.stopLineConnectPolling();
-                    this.lineConnect.noProgressCount = 0;
+                    this.clearLineConnectTransientState();
+                    this.lineConnect.status = 'starting';
+                    this.lineConnect.lastStage = 'listener:queued';
                     this.lineConnect.loadingAny = true;
-                    this.lineConnect.message = '';
 
                     try {
                         const resp = await axios.post('https://line.168csn.com/auth/login', {
@@ -906,6 +940,9 @@
                         if (Date.now() - this.lineConnect.pollStartedAt > hardTimeoutMs) {
                             this.lineConnect.pollActive = false;
                             this.lineConnect.status = 'error';
+                            this.lineConnect.pin = '';
+                            this.lineConnect.qrSrc = '';
+                            this.lineConnect.qrText = '';
                             this.lineConnect.message = 'connect timeout';
                             this.lineConnect.canConnect = true;
                             return;
@@ -953,6 +990,9 @@
                             if (this.lineConnect.noProgressCount >= 12) {
                                 this.lineConnect.pollActive = false;
                                 this.lineConnect.status = 'error';
+                                this.lineConnect.pin = '';
+                                this.lineConnect.qrSrc = '';
+                                this.lineConnect.qrText = '';
                                 this.lineConnect.canConnect = true;
                                 this.lineConnect.message = 'ยังไม่ได้ QR จาก LINE ภายในเวลาที่กำหนด กรุณาลองใหม่';
                                 return;
