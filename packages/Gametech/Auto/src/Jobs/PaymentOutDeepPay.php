@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Gametech\Auto\Jobs;
 
 use Gametech\Payment\Libraries\DeepPay;
