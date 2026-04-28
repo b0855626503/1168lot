@@ -60,7 +60,6 @@ class WithdrawController extends AppBaseController
         }
 
         return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
-
     }
 
     public function edit(Request $request)
@@ -81,7 +80,6 @@ class WithdrawController extends AppBaseController
         $this->repository->update($data, $id);
 
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
-
     }
 
     public function update($id, Request $request)
@@ -144,64 +142,32 @@ class WithdrawController extends AppBaseController
                 $bankCode = (int) data_get($bank, 'bank.code', 0);
 
                 if ($bankCode === 300) {
-                    $return = dispatch_sync(new PaymentOutWildPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutWildPay($id), $id, $accountCode);
                 } elseif ($bankCode === 304) {
-                    $return = dispatch_sync(new PaymentOutKingPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutKingPay($id), $id, $accountCode);
                 } elseif ($bankCode === 305) {
-                    $return = dispatch_sync(new PaymentOutWellPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutWellPay($id), $id, $accountCode);
                 } elseif ($bankCode === 307) {
-                    $return = dispatch_sync(new PaymentOutPayoneX($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutPayoneX($id), $id, $accountCode);
                 } elseif ($bankCode === 308) {
-                    $return = dispatch_sync(new PaymentOutAPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutAPay($id), $id, $accountCode);
                 } elseif ($bankCode === 310) {
-                    $return = dispatch_sync(new PaymentOutOnPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutOnPay($id), $id, $accountCode);
                 } elseif ($bankCode === 311) {
-                    $return = dispatch_sync(new PaymentOutMaxPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutMaxPay($id), $id, $accountCode);
                 } elseif ($bankCode === 313) {
-                    $return = dispatch_sync(new PaymentOutSmkPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutSmkPay($id), $id, $accountCode);
                 } elseif ($bankCode === 316) {
-                    $return = dispatch_sync(new PaymentOutDeepPay($id));
+                    $return = $this->runPaymentOutJob(new PaymentOutDeepPay($id), $id, $accountCode);
                 } else {
-                    $return = dispatch_sync(new PaymentOutAutoTransfer($id));
+                    $return['success'] = 'NORMAL';
+                    $return['complete'] = true;
+                    $return['msg'] = 'อนุมัติรายการเรียบร้อยแล้ว (รายการทั่วไป)';
                 }
             }
         }
 
-        $paymentResponse = $return;
-
-        if (! is_array($return)) {
-            \Log::warning('Invalid payment out response', [
-                'withdraw_id' => $id,
-                'account_code' => $accountCode,
-                'response' => $paymentResponse,
-            ]);
-
-            $message = 'ไม่สามารถทำรายการถอนอัตโนมัติได้';
-
-            if (is_string($paymentResponse) && trim($paymentResponse) !== '') {
-                $message = trim($paymentResponse);
-            } elseif (is_object($paymentResponse)) {
-                $message = (string) (
-                data_get($paymentResponse, 'msg')
-                    ?: data_get($paymentResponse, 'message')
-                    ?: $message
-                );
-            }
-
-            $return = [
-                'success' => 'FAIL_AUTO',
-                'complete' => false,
-                'msg' => $message,
-            ];
-        }
-
-        $return['success'] = $return['success'] ?? 'FAIL_AUTO';
-        $return['complete'] = (bool) ($return['complete'] ?? false);
-        $return['msg'] = (string) (
-            $return['msg']
-            ?? $return['message']
-            ?? 'ไม่สามารถทำรายการถอนอัตโนมัติได้'
-        );
+        $return = $this->normalizePaymentOutReturn($return);
 
         switch ($return['success']) {
             case 'NORMAL':
@@ -291,7 +257,113 @@ class WithdrawController extends AppBaseController
         }
 
         return $this->sendSuccess($return['msg']);
+    }
 
+    private function runPaymentOutJob($job, int $withdrawId, int $accountCode): array
+    {
+        try {
+            if (! method_exists($job, 'handle')) {
+                return [
+                    'success' => 'FAIL_AUTO',
+                    'complete' => false,
+                    'msg' => 'ไม่พบ method handle สำหรับรายการถอนอัตโนมัติ',
+                ];
+            }
+
+            return $this->normalizePaymentOutReturn($job->handle());
+        } catch (\Throwable $e) {
+            \Log::error('Payment out job failed', [
+                'withdraw_id' => $withdrawId,
+                'account_code' => $accountCode,
+                'job' => get_class($job),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => 'FAIL_AUTO',
+                'complete' => false,
+                'msg' => $e->getMessage() ?: 'ไม่สามารถทำรายการถอนอัตโนมัติได้',
+            ];
+        }
+    }
+
+    private function normalizePaymentOutReturn($return): array
+    {
+        if (! is_array($return)) {
+            $message = 'ไม่สามารถทำรายการถอนอัตโนมัติได้';
+
+            if (is_string($return) && trim($return) !== '') {
+                $message = trim($return);
+            } elseif (is_object($return)) {
+                $message = (string) (
+                data_get($return, 'msg')
+                    ?: data_get($return, 'message')
+                    ?: $message
+                );
+            }
+
+            return [
+                'success' => 'FAIL_AUTO',
+                'complete' => false,
+                'msg' => $message,
+            ];
+        }
+
+        $providerMessage = $this->extractProviderMessage($return);
+
+        return [
+            'success' => (string) ($return['success'] ?? 'FAIL_AUTO'),
+            'complete' => (bool) ($return['complete'] ?? false),
+            'msg' => (string) ($providerMessage ?: 'ไม่สามารถทำรายการถอนอัตโนมัติได้'),
+        ];
+    }
+
+    private function extractProviderMessage(array $payload): ?string
+    {
+        $message = data_get($payload, 'msg')
+            ?: data_get($payload, 'message')
+                ?: data_get($payload, 'data.message')
+                    ?: data_get($payload, 'data.msg')
+                        ?: data_get($payload, 'data.data.message')
+                            ?: data_get($payload, 'data.data.msg')
+                                ?: data_get($payload, 'resp.msg')
+                                    ?: data_get($payload, 'resp.message')
+                                        ?: data_get($payload, 'resp.data.message')
+                                            ?: data_get($payload, 'resp.data.msg')
+                                                ?: data_get($payload, 'resp.data.data.message')
+                                                    ?: data_get($payload, 'resp.data.data.msg');
+
+        if (is_string($message) && trim($message) !== '') {
+            return trim($message);
+        }
+
+        foreach (['raw', 'data.raw', 'resp.raw', 'resp.data.raw'] as $rawKey) {
+            $raw = data_get($payload, $rawKey);
+
+            if (! is_string($raw) || trim($raw) === '') {
+                continue;
+            }
+
+            $rawJson = json_decode($raw, true);
+
+            if (! is_array($rawJson)) {
+                continue;
+            }
+
+            $rawMessage = data_get($rawJson, 'message')
+                ?: data_get($rawJson, 'msg')
+                    ?: data_get($rawJson, 'data.message')
+                        ?: data_get($rawJson, 'data.msg')
+                            ?: data_get($rawJson, 'data.data.message')
+                                ?: data_get($rawJson, 'data.data.msg');
+
+            if (is_string($rawMessage) && trim($rawMessage) !== '') {
+                return trim($rawMessage);
+            }
+        }
+
+        return null;
     }
 
     public function clear(Request $request)
@@ -484,7 +556,11 @@ class WithdrawController extends AppBaseController
             }
 
             if ($chk->emp_approve > 0 && $chk->status == 1) {
-                \Log::error('Withdraw already approved and completed', ['emp_approve' => $chk->emp_approve, 'status' => $chk->status]);
+                \Log::error('Withdraw already approved and completed', [
+                    'emp_approve' => $chk->emp_approve,
+                    'status' => $chk->status,
+                ]);
+
                 return $this->sendError('รายการนี้มีผู้ทำรายการแล้ว ไม่สามารถคืนยอดได้', 200);
             }
 
@@ -502,8 +578,8 @@ class WithdrawController extends AppBaseController
             }
 
             \Log::error('Failed to update withdraw', ['id' => $id]);
-            return $this->sendError('ไม่สามารถคืนยอดได้ โปรดลองใหม่', 200);
 
+            return $this->sendError('ไม่สามารถคืนยอดได้ โปรดลองใหม่', 200);
         } catch (\Exception $e) {
             \Log::error('Error in fixSubmit', [
                 'message' => $e->getMessage(),
@@ -530,7 +606,6 @@ class WithdrawController extends AppBaseController
                 'value' => $item->code,
                 'text' => $item->bank['name_th'].' ['.$item->acc_no.']'.$item->acc_name,
             ];
-
         })->prepend($banks);
 
         $result['banks'] = $responses;
@@ -571,7 +646,6 @@ class WithdrawController extends AppBaseController
         ];
 
         return $this->sendResponse($data, 'ดำเนินการเสร็จสิ้น');
-
     }
 
     public function create(Request $request)
