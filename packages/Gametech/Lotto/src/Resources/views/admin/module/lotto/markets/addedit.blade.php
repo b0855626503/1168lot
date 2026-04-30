@@ -116,11 +116,39 @@
                     </b-form-group>
                 </b-col>
             </b-row>
+            <b-row v-if="formaddedit.yeekee_settings.reward_enabled">
+                <b-col cols="12" md="6">
+                    <b-form-group label="ยอดเดิมพันขั้นต่ำในรอบเดียวกัน">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_amount" type="number" min="0" step="0.01" size="sm"></b-form-input>
+                        <small class="text-muted d-block">สมาชิกต้องมียอดแทงขั้นต่ำในรอบเดียวกัน จึงจะได้รางวัลยิงเลข</small>
+                    </b-form-group>
+                </b-col>
+            </b-row>
+            <b-row v-if="formaddedit.yeekee_settings.refund_if_bet_entries_below_min">
+                <b-col cols="12" md="4">
+                    <b-form-group label="จำนวนรายการแทงขั้นต่ำ">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_entries_required" type="number" min="0" step="1" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="4">
+                    <b-form-group label="รูปแบบการนับรายการแทง">
+                        <b-form-select v-model="formaddedit.yeekee_settings.refund_count_mode" :options="option.yeekeeRefundCountModes" size="sm"></b-form-select>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="4">
+                    <b-form-group label="การดำเนินการเมื่อไม่ผ่านเงื่อนไข">
+                        <b-form-select v-model="formaddedit.yeekee_settings.refund_action" :options="option.yeekeeRefundActions" size="sm"></b-form-select>
+                    </b-form-group>
+                </b-col>
+            </b-row>
         </div>
-        <b-form-group label="รูปแบบออกงวด:" label-for="draw_schedule_type" description="Manual = ทีมงานสร้างงวดเอง, Weekly = ออกรายสัปดาห์, Monthly = ออกรายเดือน">
+        <div v-if="formaddedit.result_mode === 'yeekee'" class="alert alert-info py-2 px-3">
+            การตั้งค่าเวลาเปิด/ปิด/ออกผลแบบหวยปกติ และ Auto Source จะไม่ถูกใช้กับตลาดยี่กี่
+        </div>
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee'" label="รูปแบบออกงวด:" label-for="draw_schedule_type" description="Manual = ทีมงานสร้างงวดเอง, Weekly = ออกรายสัปดาห์, Monthly = ออกรายเดือน">
             <b-form-select id="draw_schedule_type" v-model="formaddedit.draw_schedule_type" :options="option.drawScheduleTypes" size="sm"></b-form-select>
         </b-form-group>
-        <b-form-group v-if="formaddedit.draw_schedule_type === 'weekly'" label="เลือกวันออกรายสัปดาห์:">
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee' && formaddedit.draw_schedule_type === 'weekly'" label="เลือกวันออกรายสัปดาห์:">
             <b-form-checkbox-group
                 v-model="formaddedit.draw_days"
                 :options="option.weeklyDays"
@@ -129,7 +157,7 @@
                 stacked
             ></b-form-checkbox-group>
         </b-form-group>
-        <b-form-group v-if="formaddedit.draw_schedule_type === 'monthly'" label="เลือกวันที่ออกรายเดือน:">
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee' && formaddedit.draw_schedule_type === 'monthly'" label="เลือกวันที่ออกรายเดือน:">
             <b-form-select
                 v-model="formaddedit.draw_dates"
                 :options="option.monthlyDates"
@@ -138,7 +166,7 @@
                 :select-size="8"
             ></b-form-select>
         </b-form-group>
-        <b-row>
+        <b-row v-if="formaddedit.result_mode !== 'yeekee'">
             <b-col cols="12" md="4">
                 <b-form-group label="เวลาเปิดรับอัตโนมัติ:" label-for="auto_open_time">
                     <b-form-input id="auto_open_time" v-model="formaddedit.auto_open_time" type="time" size="sm"></b-form-input>
@@ -155,7 +183,7 @@
                 </b-form-group>
             </b-col>
         </b-row>
-        <b-form-group label="ลิงก์ออกผล:" label-for="result_url">
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee'" label="ลิงก์ออกผล:" label-for="result_url">
             <b-form-input id="result_url" v-model="formaddedit.result_url" type="url" size="sm" placeholder="https://..."></b-form-input>
         </b-form-group>
         <b-row>
@@ -179,13 +207,13 @@
                 เปิดใช้งาน
             </b-form-checkbox>
         </b-form-group>
-        <b-form-group>
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee'">
             <b-form-checkbox v-model="formaddedit.auto_settle_on_result" :value="1" :unchecked-value="0">
                 ออกผลแล้วคำนวณยอดได้เสียอัตโนมัติทันที
             </b-form-checkbox>
             <small class="text-muted d-block">ถ้าปิดไว้ ระบบจะดึงและบันทึกผล แต่คงสถานะงวดเป็นปิดรับเพื่อให้ทีมงานกดออกผลเอง</small>
         </b-form-group>
-        <b-form-group>
+        <b-form-group v-if="formaddedit.result_mode !== 'yeekee'">
             <b-form-checkbox v-model="formaddedit.auto_refund_on_no_result" :value="1" :unchecked-value="0">
                 งดออกผลแล้วคืนเงินโพยอัตโนมัติ
             </b-form-checkbox>
@@ -639,6 +667,10 @@
                             subtract_position: 16,
                             reward_enabled: false,
                             refund_if_bet_entries_below_min: false,
+                            min_bet_amount: 0,
+                            min_bet_entries_required: 0,
+                            refund_count_mode: 'count_bet_entries',
+                            refund_action: 'VOID_AND_REFUND',
                         },
                         draw_schedule_type: 'manual',
                         draw_days: [],
@@ -671,6 +703,13 @@
                         yeekeeFormulaPresets: [
                             { value: 'SHOOTS_SUM_MINUS_POSITION', text: 'หาผลรวมเลขยิงแล้วลบลำดับที่กำหนด' },
                             { value: 'PRECOMMITTED_BASE64_MD5', text: 'ตรวจสอบผลด้วย Signature + Payload' },
+                        ],
+                        yeekeeRefundCountModes: [
+                            { value: 'count_bet_entries', text: 'นับทุกรายการแทง' },
+                            { value: 'count_distinct_members', text: 'นับสมาชิกไม่ซ้ำ' },
+                        ],
+                        yeekeeRefundActions: [
+                            { value: 'VOID_AND_REFUND', text: 'งดออกผลและคืนโพย' },
                         ],
                         weeklyDays: [
                             { value: 1, text: 'จันทร์' },
@@ -1407,7 +1446,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1419,7 +1458,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1816,6 +1855,10 @@
                             subtract_position: Number((d.yeekee_settings || {}).subtract_position || 16),
                             reward_enabled: Boolean((d.yeekee_settings || {}).reward_enabled || false),
                             refund_if_bet_entries_below_min: Boolean((d.yeekee_settings || {}).refund_if_bet_entries_below_min || false),
+                            min_bet_amount: Number((d.yeekee_settings || {}).min_bet_amount || 0),
+                            min_bet_entries_required: Number((d.yeekee_settings || {}).min_bet_entries_required || 0),
+                            refund_count_mode: String((d.yeekee_settings || {}).refund_count_mode || 'count_bet_entries'),
+                            refund_action: String((d.yeekee_settings || {}).refund_action || 'VOID_AND_REFUND'),
                         },
                         draw_schedule_type: resolvedScheduleType,
                         draw_days: this.normalizeNumberArray(d.draw_days, 1, 7),
@@ -1904,18 +1947,28 @@
                         formData.append('id', this.code);
                     }
 
+                    const appendPayload = (key, value) => {
+                        if (Array.isArray(value)) {
+                            value.forEach((item) => {
+                                appendPayload(`${key}[]`, item);
+                            });
+                            return;
+                        }
+
+                        if (value !== null && typeof value === 'object') {
+                            Object.keys(value).forEach((childKey) => {
+                                appendPayload(`${key}[${childKey}]`, value[childKey]);
+                            });
+                            return;
+                        }
+
+                        formData.append(key, value ?? '');
+                    };
+
                     Object.keys(this.formaddedit)
                         .filter((key) => !['logo_file', 'icon_file'].includes(key))
                         .forEach((key) => {
-                            const value = this.formaddedit[key];
-                            if (Array.isArray(value)) {
-                                value.forEach((item) => {
-                                    formData.append(`data[${key}][]`, item);
-                                });
-                                return;
-                            }
-
-                            formData.append(`data[${key}]`, value ?? '');
+                            appendPayload(`data[${key}]`, this.formaddedit[key]);
                         });
 
                     if (this.formaddedit.logo_file) {
