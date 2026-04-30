@@ -9,7 +9,7 @@
 - URL: `/docs/api/frontend-v1`
 
 2. Agent Lean (สำหรับระบบ/agent เพื่อลด token)
-- ไฟล์: `docs/public/api/frontend-v1/AGENT_LEAN.md`
+- ไฟล์: `docs/public/api/frontend-v1/agent-lean.md`
 
 Reference sections (legacy split):
 - [01-overview.md](./01-overview.md)
