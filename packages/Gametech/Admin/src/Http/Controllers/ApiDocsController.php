@@ -21,7 +21,7 @@ class ApiDocsController extends AppBaseController
         return view($this->_config['view'], [
             'title' => 'Frontend API V1',
             'markdown' => $this->loadFrontendApiV1Markdown(),
-            'meta' => 'docs/public/api/api-frontend-v1.md + docs/public/api/frontend-v1/*.md',
+            'meta' => 'docs/public/api/archive/api-frontend-v1.md',
             'rawRoute' => 'admin.docs.api.frontend_v1.raw',
         ]);
     }
@@ -60,23 +60,9 @@ class ApiDocsController extends AppBaseController
 
     private function loadFrontendApiV1Markdown(): string
     {
-        $bundle = [
-            'docs/public/api/api-frontend-v1.md',
-            'docs/public/api/frontend-v1/01-overview.md',
-            'docs/public/api/frontend-v1/02-flows.md',
-            'docs/public/api/frontend-v1/03-endpoints.md',
-            'docs/public/api/frontend-v1/04-edge-cases.md',
-            'docs/public/api/frontend-v1/05-route-reference.md',
-            'docs/public/api/frontend-v1/05-route-reference-wheel-reward.md',
-        ];
+        $path = base_path('docs/public/api/archive/api-frontend-v1.md');
+        abort_unless(File::exists($path), 404, 'API docs file not found');
 
-        $sections = [];
-        foreach ($bundle as $relativePath) {
-            $path = base_path($relativePath);
-            abort_unless(File::exists($path), 404, 'API docs file not found: '.$relativePath);
-            $sections[] = trim(File::get($path));
-        }
-
-        return implode("\n\n---\n\n", $sections)."\n";
+        return File::get($path);
     }
 }
