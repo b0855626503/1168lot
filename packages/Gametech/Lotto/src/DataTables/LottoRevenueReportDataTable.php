@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoDraw;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Transformers\LottoRevenueReportTransformer;
@@ -17,7 +18,7 @@ class LottoRevenueReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoRevenueReportTransformer());
+        return $dataTable->setTransformer(new LottoRevenueReportTransformer);
     }
 
     public function query(LottoDraw $model)
@@ -52,6 +53,11 @@ class LottoRevenueReportDataTable extends DataTable
             ->selectSub($winQuery, 'total_win_amount')
             ->selectSub($countQuery, 'ticket_count')
             ->selectSub($winningCountQuery, 'winning_ticket_count')
+            ->when($this->resolveMarketTypeFilter() !== 'all', function ($query): void {
+                $query->whereHas('market', function ($builder): void {
+                    $builder->where('result_mode', $this->resolveMarketTypeFilter());
+                });
+            })
             ->orderByDesc('draw_date')
             ->orderByDesc('id');
     }
@@ -62,20 +68,20 @@ class LottoRevenueReportDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'dom'         => 'Bfrtip',
-                'processing'  => true,
-                'serverSide'  => true,
-                'responsive'  => false,
-                'stateSave'   => true,
-                'scrollX'     => true,
-                'paging'      => true,
-                'searching'   => false,
+                'dom' => 'Bfrtip',
+                'processing' => true,
+                'serverSide' => true,
+                'responsive' => false,
+                'stateSave' => true,
+                'scrollX' => true,
+                'paging' => true,
+                'searching' => false,
                 'deferRender' => true,
-                'retrieve'    => true,
-                'ordering'    => true,
-                'order'       => [[1, 'desc']],
-                'buttons'     => ['pageLength'],
-                'columnDefs'  => [
+                'retrieve' => true,
+                'ordering' => true,
+                'order' => [[1, 'desc']],
+                'buttons' => ['pageLength'],
+                'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
                 ],
             ]);
@@ -94,5 +100,14 @@ class LottoRevenueReportDataTable extends DataTable
             ['data' => 'net_revenue', 'name' => 'net_revenue', 'title' => 'รายได้สุทธิ', 'className' => 'text-right'],
         ];
     }
-}
 
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', 'all')));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return 'all';
+    }
+}

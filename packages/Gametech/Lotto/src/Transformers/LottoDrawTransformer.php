@@ -45,6 +45,7 @@ class LottoDrawTransformer extends TransformerAbstract
             'action' => view('admin::module.lotto.draws.datatables_actions', [
                 'id' => $model->id,
                 'status' => (string) $model->status,
+                'is_yeekee' => (string) ($model->market->result_mode ?? 'normal') === 'yeekee',
                 'is_no_result' => $isNoResult,
                 'can_cancel_all_refund' => $this->canCancelAllRefundAction(
                     (string) $model->status,

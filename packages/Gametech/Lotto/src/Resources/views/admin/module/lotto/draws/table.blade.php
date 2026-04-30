@@ -198,6 +198,8 @@
                     data.market_id = $marketSelect.val() || '';
                     data.draw_date = $drawDateInput.val() || '';
                     data.status = $statusSelect.val() || '';
+                    const selectedMode = String($marketSelect.find(':selected').data('result-mode') || 'normal');
+                    data.include_yeekee = selectedMode === 'yeekee' ? 1 : 0;
                 });
 
             $groupSelect

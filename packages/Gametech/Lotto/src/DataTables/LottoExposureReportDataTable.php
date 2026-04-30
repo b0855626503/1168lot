@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoNumberExposure;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Transformers\LottoExposureReportTransformer;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
@@ -15,7 +16,7 @@ class LottoExposureReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoExposureReportTransformer());
+        return $dataTable->setTransformer(new LottoExposureReportTransformer);
     }
 
     public function query(LottoNumberExposure $model)
@@ -38,9 +39,23 @@ class LottoExposureReportDataTable extends DataTable
             $query->whereHas('draw', function ($builder) use ($marketId): void {
                 $builder->where('market_id', $marketId);
             });
+        } else {
+            $query->whereHas('draw.market', function ($builder): void {
+                $builder->where('result_mode', $this->resolveMarketTypeFilter());
+            });
         }
 
         return $query;
+    }
+
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', LotteryMarket::RESULT_MODE_NORMAL)));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
     }
 
     public function html(): Builder
@@ -81,4 +96,3 @@ class LottoExposureReportDataTable extends DataTable
         ];
     }
 }
-

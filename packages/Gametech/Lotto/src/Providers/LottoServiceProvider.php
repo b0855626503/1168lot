@@ -7,6 +7,7 @@ use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMissingResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
+use Gametech\Lotto\Console\Commands\GenerateYeekeeRoundsCommand;
 use Gametech\Lotto\Console\Commands\InsertInternalResultSourceMappingsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
@@ -139,6 +140,7 @@ class LottoServiceProvider extends ServiceProvider
             BackfillLottoPayoutCommand::class,
             CleanupBrowserRuntimeArtifactsCommand::class,
             GenerateAutoLottoDrawsCommand::class,
+            GenerateYeekeeRoundsCommand::class,
             InsertInternalResultSourceMappingsCommand::class,
             LottoFetchAutoResultsCommand::class,
             LottoAutoResultMetricsCommand::class,

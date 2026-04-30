@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class LotteryMarket extends Model implements LotteryMarketContract
 {
+    public const RESULT_MODE_NORMAL = 'normal';
+    public const RESULT_MODE_YEEKEE = 'yeekee';
+
     public const DRAW_SCHEDULE_TYPE_MANUAL = 'manual';
     public const DRAW_SCHEDULE_TYPE_WEEKLY = 'weekly';
     public const DRAW_SCHEDULE_TYPE_MONTHLY = 'monthly';
@@ -32,6 +35,7 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'logo',
         'icon',
         'code',      // unique: gsb, kbank
+        'result_mode',
         'draw_mode',
         'draw_schedule_type',
         'draw_days',
@@ -58,6 +62,14 @@ class LotteryMarket extends Model implements LotteryMarketContract
         'draw_days' => 'array',
         'draw_dates' => 'array',
     ];
+
+    public static function resultModes(): array
+    {
+        return [
+            self::RESULT_MODE_NORMAL,
+            self::RESULT_MODE_YEEKEE,
+        ];
+    }
 
     public static function drawScheduleTypes(): array
     {
@@ -102,5 +114,10 @@ class LotteryMarket extends Model implements LotteryMarketContract
     public function resultSources()
     {
         return $this->hasMany(LottoResultSource::class, 'market_id');
+    }
+
+    public function yeekeeSetting()
+    {
+        return $this->hasOne(YeekeeMarketSetting::class, 'market_id');
     }
 }

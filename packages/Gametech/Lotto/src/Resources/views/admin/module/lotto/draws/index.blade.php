@@ -27,7 +27,8 @@
                                     @foreach(($group['options'] ?? []) as $option)
                                         <option value="{{ $option['value'] }}"
                                                 data-group-id="{{ $option['group_id'] ?? '' }}"
-                                                data-logo="{{ $option['logo'] ?? '' }}">
+                                                data-logo="{{ $option['logo'] ?? '' }}"
+                                                data-result-mode="{{ $option['result_mode'] ?? 'normal' }}">
                                             {{ $option['text'] }}
                                         </option>
                                     @endforeach
@@ -66,4 +67,3 @@
 @push('scripts')
     @include('admin::layouts.loadcnt_js')
 @endpush
-

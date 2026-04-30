@@ -23,6 +23,8 @@ class ApiDocsControllerTest extends TestCase
         $this->assertStringContainsString('# คู่มือ Frontend API V1 (Gametech)', $rendered);
         $this->assertStringContainsString('## 3) Route Catalog (ครบทุกเส้น)', $rendered);
         $this->assertStringContainsString('/api/v1/wallet/transactions', $rendered);
+        $this->assertStringContainsString('## Yeekee API', $rendered);
+        $this->assertStringContainsString('/api/v1/lotto/yeekee/rounds/{roundId}/result-proof', $rendered);
     }
 
     public function test_frontend_api_v1_raw_returns_full_document_bundle(): void
@@ -40,5 +42,7 @@ class ApiDocsControllerTest extends TestCase
         $this->assertStringContainsString('# คู่มือ Frontend API V1 (Gametech)', $content);
         $this->assertStringContainsString('## 3) Route Catalog (ครบทุกเส้น)', $content);
         $this->assertStringContainsString('/api/v1/wallet/transactions', $content);
+        $this->assertStringContainsString('## Yeekee API', $content);
+        $this->assertStringContainsString('/api/v1/lotto/yeekee/rounds/{roundId}/result-proof', $content);
     }
 }

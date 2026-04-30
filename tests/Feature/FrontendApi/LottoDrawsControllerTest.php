@@ -3,6 +3,7 @@
 namespace Tests\Feature\FrontendApi;
 
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
+use Gametech\Member\Models\Member;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,9 @@ class LottoDrawsControllerTest extends TestCase
         parent::setUp();
 
         Schema::dropIfExists('lotto_draws');
+        Schema::dropIfExists('yeekee_shoot_reward_logs');
+        Schema::dropIfExists('yeekee_shoots');
+        Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
 
@@ -46,6 +50,7 @@ class LottoDrawsControllerTest extends TestCase
             $table->string('icon')->nullable();
             $table->string('code')->nullable();
             $table->boolean('is_enabled')->default(true);
+            $table->string('result_mode')->default('normal');
         });
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -54,8 +59,52 @@ class LottoDrawsControllerTest extends TestCase
             $table->date('draw_date')->nullable();
             $table->dateTime('open_at')->nullable();
             $table->dateTime('close_at')->nullable();
+            $table->dateTime('result_at')->nullable();
             $table->string('status')->default('draft');
             $table->text('result_number')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_rounds', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->date('round_date');
+            $table->unsignedInteger('round_no');
+            $table->dateTime('bet_open_at');
+            $table->dateTime('bet_close_at');
+            $table->dateTime('shoot_open_at');
+            $table->dateTime('shoot_close_at');
+            $table->dateTime('result_compute_at');
+            $table->dateTime('expected_settlement_deadline_at');
+            $table->string('status')->default('open_bet');
+            $table->json('config_snapshot_json')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_shoots', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('yeekee_round_id');
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('member_id');
+            $table->unsignedInteger('position');
+            $table->string('number_text', 5);
+            $table->unsignedInteger('number_value');
+            $table->dateTime('submitted_at');
+            $table->string('ip_address', 45)->nullable();
+            $table->string('user_agent', 255)->nullable();
+            $table->json('metadata_json')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_shoot_reward_logs', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('yeekee_round_id');
+            $table->unsignedBigInteger('member_id');
+            $table->unsignedInteger('position');
+            $table->decimal('credit_amount', 16, 2);
+            $table->string('reward_ref_type', 64);
             $table->timestamps();
         });
     }
@@ -63,6 +112,9 @@ class LottoDrawsControllerTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('lotto_draws');
+        Schema::dropIfExists('yeekee_shoot_reward_logs');
+        Schema::dropIfExists('yeekee_shoots');
+        Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
 
@@ -86,6 +138,7 @@ class LottoDrawsControllerTest extends TestCase
                 'name' => 'หวยออมสิน',
                 'code' => 'gsb',
                 'is_enabled' => 1,
+                'result_mode' => 'normal',
             ],
             [
                 'id' => 2,
@@ -93,6 +146,7 @@ class LottoDrawsControllerTest extends TestCase
                 'name' => 'หวยรัฐบาล',
                 'code' => 'government',
                 'is_enabled' => 1,
+                'result_mode' => 'normal',
             ],
             [
                 'id' => 3,
@@ -100,6 +154,7 @@ class LottoDrawsControllerTest extends TestCase
                 'name' => 'หวยคืนเงิน',
                 'code' => 'refunded-market',
                 'is_enabled' => 1,
+                'result_mode' => 'normal',
             ],
             [
                 'id' => 4,
@@ -107,6 +162,7 @@ class LottoDrawsControllerTest extends TestCase
                 'name' => 'หวยงดออกผล',
                 'code' => 'no-result-market',
                 'is_enabled' => 1,
+                'result_mode' => 'normal',
             ],
             [
                 'id' => 5,
@@ -114,6 +170,7 @@ class LottoDrawsControllerTest extends TestCase
                 'name' => 'หวยเปิดก่อนผล',
                 'code' => 'prefer-open-market',
                 'is_enabled' => 1,
+                'result_mode' => 'normal',
             ],
         ]);
 
@@ -175,6 +232,8 @@ class LottoDrawsControllerTest extends TestCase
             'id' => 10,
             'market_id' => 1,
             'status' => 'open',
+            'result_mode' => 'normal',
+            'is_yeekee' => false,
         ]);
         $response->assertJsonFragment([
             'id' => 21,
@@ -208,6 +267,7 @@ class LottoDrawsControllerTest extends TestCase
                     'name' => 'หวยออมสิน',
                     'code' => 'gsb',
                     'is_enabled' => 1,
+                    'result_mode' => 'normal',
                 ],
                 [
                     'id' => 2,
@@ -215,6 +275,7 @@ class LottoDrawsControllerTest extends TestCase
                     'name' => 'หวยรัฐบาล',
                     'code' => 'government',
                     'is_enabled' => 1,
+                    'result_mode' => 'normal',
                 ],
                 [
                     'id' => 3,
@@ -222,6 +283,7 @@ class LottoDrawsControllerTest extends TestCase
                     'name' => 'หวยคืนเงิน',
                     'code' => 'refunded-market',
                     'is_enabled' => 1,
+                    'result_mode' => 'normal',
                 ],
                 [
                     'id' => 4,
@@ -229,6 +291,7 @@ class LottoDrawsControllerTest extends TestCase
                     'name' => 'หวยงดออกผล',
                     'code' => 'no-result-market',
                     'is_enabled' => 1,
+                    'result_mode' => 'normal',
                 ],
                 [
                     'id' => 5,
@@ -236,6 +299,7 @@ class LottoDrawsControllerTest extends TestCase
                     'name' => 'หวยเปิดก่อนผล',
                     'code' => 'prefer-open-market',
                     'is_enabled' => 1,
+                    'result_mode' => 'normal',
                 ],
             ]);
 
@@ -367,5 +431,160 @@ class LottoDrawsControllerTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_markets_latest_includes_yeekee_additive_fields(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 9,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee-market',
+            'is_enabled' => 1,
+            'result_mode' => 'yeekee',
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 99,
+            'market_id' => 9,
+            'draw_date' => '2026-04-29',
+            'open_at' => '2026-04-29 23:30:00',
+            'close_at' => '2026-04-29 23:45:00',
+            'result_at' => null,
+            'status' => 'closed',
+            'result_number' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 501,
+            'market_id' => 9,
+            'lotto_draw_id' => 99,
+            'round_date' => '2026-04-29',
+            'round_no' => 95,
+            'bet_open_at' => '2026-04-29 23:30:00',
+            'bet_close_at' => '2026-04-29 23:45:00',
+            'shoot_open_at' => '2026-04-29 23:45:00',
+            'shoot_close_at' => '2026-04-29 23:46:00',
+            'result_compute_at' => '2026-04-29 23:47:00',
+            'expected_settlement_deadline_at' => '2026-04-29 23:52:00',
+            'status' => 'shoot_open',
+            'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_MINUS_POSITION']]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/markets/latest', 'GET');
+        $request->attributes->set('frontend_language', 'th');
+
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->marketsLatestByGroup($request));
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'market_id' => 9,
+            'result_mode' => 'yeekee',
+            'market_type' => 'yeekee',
+            'is_yeekee' => true,
+        ]);
+        $response->assertJsonPath('data.groups.0.markets.0.latest_draw.round_status', 'shoot_open');
+    }
+
+    public function test_yeekee_current_round_and_proof_visibility_follow_reveal_timing(): void
+    {
+        $member = new Member;
+        $member->code = 6001;
+        $member->exists = true;
+
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 9,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee-market',
+            'is_enabled' => 1,
+            'result_mode' => 'yeekee',
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 100,
+            'market_id' => 9,
+            'draw_date' => '2026-04-29',
+            'open_at' => '2026-04-29 23:30:00',
+            'close_at' => '2026-04-29 23:45:00',
+            'result_at' => null,
+            'status' => 'closed',
+            'result_number' => json_encode([
+                'precommit_signature' => 'pre-signature',
+                'proof_signature' => 'proof-signature',
+                'external_seed_reference' => 'seed-ref',
+                'raw_result' => '12345',
+                'top_3' => '345',
+                'bottom_2' => '45',
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 502,
+            'market_id' => 9,
+            'lotto_draw_id' => 100,
+            'round_date' => '2026-04-29',
+            'round_no' => 96,
+            'bet_open_at' => '2026-04-29 23:30:00',
+            'bet_close_at' => '2026-04-29 23:45:00',
+            'shoot_open_at' => '2026-04-29 23:45:00',
+            'shoot_close_at' => '2026-04-29 23:46:00',
+            'result_compute_at' => '2026-04-29 23:47:00',
+            'expected_settlement_deadline_at' => '2026-04-29 23:52:00',
+            'status' => 'shoot_open',
+            'config_snapshot_json' => json_encode([
+                'formula_config' => ['preset' => 'SHOOTS_SUM_MINUS_POSITION'],
+                'round_duration_minutes' => 15,
+                'shoot_window_after_bet_close_seconds' => 60,
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $currentRequest = Request::create('/api/v1/lotto/yeekee/markets/9/current-round', 'GET');
+        $currentRequest->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+        $currentResponse = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeCurrentRound($currentRequest, 9));
+        $currentResponse->assertOk();
+        $currentResponse->assertJsonPath('data.server_time', now()->format('Y-m-d H:i:s'));
+        $currentResponse->assertJsonPath('data.result_mode', 'yeekee');
+
+        $proofRequest = Request::create('/api/v1/lotto/yeekee/rounds/502/result-proof', 'GET');
+        $proofResponse = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeResultProof($proofRequest, 502));
+        $proofResponse->assertOk();
+        $proofResponse->assertJsonPath('data.is_revealed', false);
+        $proofResponse->assertJsonPath('data.proof.precommit_signature', 'pre-signature');
+        $proofResponse->assertJsonPath('data.proof.proof_signature', '');
+        $proofResponse->assertJsonPath('data.proof.result_payload', null);
+
+        DB::table('yeekee_rounds')->where('id', 502)->update(['status' => 'resulted']);
+        DB::table('lotto_draws')->where('id', 100)->update(['status' => 'resulted']);
+
+        $revealedResponse = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeResultProof($proofRequest, 502));
+        $revealedResponse->assertOk();
+        $revealedResponse->assertJsonPath('data.is_revealed', true);
+        $revealedResponse->assertJsonPath('data.proof.proof_signature', 'proof-signature');
+        $revealedResponse->assertJsonPath('data.proof.result_payload.raw_result', '12345');
     }
 }

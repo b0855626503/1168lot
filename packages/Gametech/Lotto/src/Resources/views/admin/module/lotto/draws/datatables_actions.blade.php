@@ -14,7 +14,7 @@
         </button>
     @endif
 
-    @if($status === 'closed' && ($canSettle || $canRetry))
+    @if($status === 'closed' && empty($is_yeekee) && ($canSettle || $canRetry))
         <button type="button" class="btn btn-success btn-block btn-xs mr-1 mb-1" onclick="settleModal({{ $id }})">
             <i class="fas fa-check-circle"></i> ออกผล
         </button>

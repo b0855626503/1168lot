@@ -1559,3 +1559,11 @@ GET /api/v1/reward/history?page=1&per_page=20
 - ตัวอย่างในเอกสารนี้อ้างอิงจาก implementation ปัจจุบันใน codebase และเอกสาร route reference ล่าสุด
 - Endpoint บางตัวของ legacy อาจมี field เพิ่ม/ลดตาม config หรือ provider integration ใน environment จริง
 - แนะนำให้ frontend ยึด `success/message/data` และทำ defensive parsing กับ field เฉพาะธุรกิจ
+
+## Yeekee API
+
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`

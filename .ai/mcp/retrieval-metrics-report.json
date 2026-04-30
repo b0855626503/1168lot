@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-04-30T04:47:05+00:00",
+    "generated_at": "2026-04-30T12:27:39+00:00",
     "retrieval_metrics": {
         "estimated_hops_before": 4,
         "estimated_hops_after": 2,
@@ -17,15 +17,15 @@
     },
     "drift": {
         "before_total": 97,
-        "after_total": 37,
-        "delta": 60,
+        "after_total": 42,
+        "delta": 55,
         "critical_after": 0,
-        "non_critical_after": 37,
+        "non_critical_after": 42,
         "domains_low_coverage": []
     },
     "non_critical_buckets": {
         "useful_soon": 6,
-        "docs_only_acceptable": 24,
+        "docs_only_acceptable": 29,
         "ignore_noise": 7
     }
 }

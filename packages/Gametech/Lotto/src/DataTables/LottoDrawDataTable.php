@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoDraw;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Transformers\LottoDrawTransformer;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
@@ -60,6 +61,13 @@ class LottoDrawDataTable extends DataTable
 
         if ($marketId = (int) request('market_id')) {
             $query->where('market_id', $marketId);
+        } else {
+            $includeYeekee = (bool) request('include_yeekee', false);
+            if (! $includeYeekee) {
+                $query->whereHas('market', function ($builder): void {
+                    $builder->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE);
+                });
+            }
         }
 
         $drawDate = (string) request('draw_date', '');
