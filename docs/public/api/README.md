@@ -3,6 +3,7 @@
 เอกสาร API ที่เปิดใช้งานสำหรับทีม frontend/integration:
 
 - `frontend-v1/index.md` (entrypoint ของ `/docs/api/frontend-v1`)
+- `frontend-lotto-market-content.md` (lotto market content endpoint)
 - `laravel-echo-nextjs-install.md`
 
 หมายเหตุ:
