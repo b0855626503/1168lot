@@ -200,7 +200,6 @@ class LotteryMarketResultModeTest extends TestCase
                     'settlement_delay_after_shoot_close_seconds' => 45,
                     'expected_payout_sla_minutes' => 3,
                     'formula_preset' => 'PRECOMMITTED_BASE64_MD5',
-                    'subtract_position' => 8,
                     'reward_enabled' => true,
                     'refund_if_bet_entries_below_min' => true,
                     'min_bet_entries_required' => 5,
@@ -227,6 +226,7 @@ class LotteryMarketResultModeTest extends TestCase
         $refundConfig = json_decode((string) $setting->refund_config, true);
         $this->assertSame(10, (int) ($roundConfig['round_duration_minutes'] ?? 0));
         $this->assertSame('PRECOMMITTED_BASE64_MD5', (string) ($formulaConfig['default_preset'] ?? ''));
+        $this->assertNull($formulaConfig['subtract_position'] ?? null);
         $this->assertSame('count_unique_members', (string) ($refundConfig['count_mode'] ?? ''));
     }
 

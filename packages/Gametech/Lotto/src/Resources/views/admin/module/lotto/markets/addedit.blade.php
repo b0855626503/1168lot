@@ -7,7 +7,7 @@
         : false;
 @endphp
 
-<b-modal ref="addedit" id="addedit" centered size="md" title="รายการหวย" :no-stacking="true"
+<b-modal ref="addedit" id="addedit" centered size="xl" title="รายการหวย" :no-stacking="true"
          :no-close-on-backdrop="true"
          :hide-footer="true">
     <b-form @submit.prevent="addEditSubmit" v-if="show">
@@ -66,116 +66,133 @@
         <b-form-group label="ประเภทตลาด:" label-for="result_mode" description="หวยปกติจะไม่แสดงค่าตั้งต้นของยี่กี่ และหวยยี่กี่จะไม่ใช้ Auto Source แบบหวยปกติ">
             <b-form-select id="result_mode" v-model="formaddedit.result_mode" :options="option.resultModes" size="sm"></b-form-select>
         </b-form-group>
-        <div v-if="formaddedit.result_mode === 'yeekee'" class="border rounded p-2 mb-3">
+        <div v-if="formaddedit.result_mode === 'yeekee'" class="border rounded p-2 mb-3 bg-light">
             <h6 class="mb-2">ตั้งค่ายี่กี่</h6>
-            <b-row>
-                <b-col cols="12" md="6">
-                    <b-form-group label="ระยะเวลาต่อรอบ (นาที)">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.round_duration_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="6">
-                    <b-form-group label="ระยะเวลายิงเลขหลังปิดรับแทง (วินาที)">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.shoot_window_after_bet_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col cols="12" md="6">
-                    <b-form-group label="เวลารอก่อนเริ่มคำนวณผล (วินาที)">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.settlement_delay_after_shoot_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="6">
-                    <b-form-group label="ระยะเวลาคาดหวังในการจ่ายรางวัล (นาที)">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.expected_payout_sla_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col cols="12" md="6">
-                    <b-form-group label="สูตรคำนวณผล">
-                        <b-form-select v-model="formaddedit.yeekee_settings.formula_preset" :options="option.yeekeeFormulaPresets" size="sm"></b-form-select>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="6">
-                    <b-form-group label="ลำดับเลขยิงที่ใช้ลบ">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.subtract_position" type="number" min="1" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col cols="12" md="6">
-                    <b-form-group>
-                        <b-form-checkbox v-model="formaddedit.yeekee_settings.reward_enabled" :value="true" :unchecked-value="false">เปิดรางวัลยิงเลข</b-form-checkbox>
-                        <small class="text-muted d-block">กำหนดลำดับยิงที่ได้รางวัล และจำนวนเครดิตต่ออันดับ</small>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="6">
-                    <b-form-group>
-                        <b-form-checkbox v-model="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" :value="true" :unchecked-value="false">เปิดเงื่อนไขงดออกผลและคืนโพย</b-form-checkbox>
-                        <small class="text-muted d-block">ใช้จำนวนรายการแทงจริงเป็นเกณฑ์ ไม่ใช่จำนวนยิงเลข</small>
-                    </b-form-group>
-                </b-col>
-            </b-row>
-            <b-row v-if="formaddedit.yeekee_settings.reward_enabled" class="pt-2 border-top">
-                <b-col cols="12" md="5">
-                    <b-form-group label="ยอดเดิมพันขั้นต่ำในรอบเดียวกัน">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_amount" type="number" min="0" step="0.01" size="sm"></b-form-input>
-                        <small class="text-muted d-block">สมาชิกต้องมียอดแทงขั้นต่ำในรอบเดียวกัน จึงจะได้รางวัลยิงเลข</small>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="7">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="mb-0 font-weight-bold">ลำดับที่ได้รางวัล</label>
-                        <b-button size="sm" variant="outline-primary" @click="addRewardPosition">เพิ่มลำดับรางวัล</b-button>
-                    </div>
-                    <div class="table-responsive border rounded bg-white">
-                        <table class="table table-sm mb-0">
-                            <thead class="thead-light">
-                            <tr>
-                                <th style="width: 32%;">ลำดับยิง</th>
-                                <th style="width: 48%;">เครดิตรางวัล</th>
-                                <th class="text-center" style="width: 20%;">ลบ</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr v-for="(item, index) in formaddedit.yeekee_settings.reward_positions" :key="`reward-pos-${index}`">
-                                <td>
-                                    <b-form-input v-model.number="item.position" type="number" min="1" step="1" size="sm"></b-form-input>
-                                </td>
-                                <td>
-                                    <b-form-input v-model.number="item.credit_amount" type="number" min="0.01" step="0.01" size="sm"></b-form-input>
-                                </td>
-                                <td class="text-center">
-                                    <b-button size="sm" variant="outline-danger" @click="removeRewardPosition(index)">ลบ</b-button>
-                                </td>
-                            </tr>
-                            <tr v-if="formaddedit.yeekee_settings.reward_positions.length === 0">
-                                <td colspan="3" class="text-center text-muted py-2">ยังไม่ได้เพิ่มลำดับรางวัล</td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </b-col>
-            </b-row>
-            <b-row v-if="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" class="pt-2 border-top mt-2">
-                <b-col cols="12" md="4">
-                    <b-form-group label="จำนวนรายการแทงขั้นต่ำ">
-                        <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_entries_required" type="number" min="0" step="1" size="sm"></b-form-input>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="4">
-                    <b-form-group label="รูปแบบการนับรายการแทง">
-                        <b-form-select v-model="formaddedit.yeekee_settings.refund_count_mode" :options="option.yeekeeRefundCountModes" size="sm"></b-form-select>
-                    </b-form-group>
-                </b-col>
-                <b-col cols="12" md="4">
-                    <b-form-group label="การดำเนินการเมื่อไม่ผ่านเงื่อนไข">
-                        <b-form-select v-model="formaddedit.yeekee_settings.refund_action" :options="option.yeekeeRefundActions" size="sm"></b-form-select>
-                    </b-form-group>
-                </b-col>
-            </b-row>
+            <b-tabs v-model="activeYeekeeTab" content-class="pt-3">
+                <b-tab title="ตั้งค่ารอบและผล">
+                    <b-row>
+                        <b-col cols="12" md="6">
+                            <b-form-group label="ระยะเวลาต่อรอบ (นาที)">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.round_duration_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="6">
+                            <b-form-group label="ระยะเวลายิงเลขหลังปิดรับแทง (วินาที)">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.shoot_window_after_bet_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                    <b-row>
+                        <b-col cols="12" md="6">
+                            <b-form-group label="เวลารอก่อนเริ่มคำนวณผล (วินาที)">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.settlement_delay_after_shoot_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="6">
+                            <b-form-group label="ระยะเวลาคาดหวังในการจ่ายรางวัล (นาที)">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.expected_payout_sla_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                    <b-row>
+                        <b-col cols="12" md="6">
+                            <b-form-group label="สูตรคำนวณผล">
+                                <b-form-select v-model="formaddedit.yeekee_settings.formula_preset" :options="option.yeekeeFormulaPresets" size="sm"></b-form-select>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="6" v-if="formaddedit.yeekee_settings.formula_preset === 'SHOOTS_SUM_MINUS_POSITION'">
+                            <b-form-group label="ลำดับเลขยิงที่ใช้ลบ">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.subtract_position" type="number" min="1" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="6" v-else>
+                            <b-form-group label="การตั้งค่าสูตร PRECOMMITTED_BASE64_MD5">
+                                <small class="text-muted d-block pt-2">สูตรนี้ไม่ใช้ลำดับเลขยิงที่ใช้ลบ ระบบจะใช้ Signature/Payload ตาม preset โดยตรง</small>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                    <b-row>
+                        <b-col cols="12" md="6">
+                            <b-form-group>
+                                <b-form-checkbox v-model="formaddedit.yeekee_settings.reward_enabled" :value="true" :unchecked-value="false" @change="onToggleYeekeeReward">เปิดรางวัลยิงเลข</b-form-checkbox>
+                                <small class="text-muted d-block">กำหนดลำดับยิงที่ได้รางวัล และจำนวนเครดิตต่ออันดับ</small>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="6">
+                            <b-form-group>
+                                <b-form-checkbox v-model="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" :value="true" :unchecked-value="false" @change="onToggleYeekeeRefund">เปิดเงื่อนไขงดออกผลและคืนโพย</b-form-checkbox>
+                                <small class="text-muted d-block">ใช้จำนวนรายการแทงจริงเป็นเกณฑ์ ไม่ใช่จำนวนยิงเลข</small>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                </b-tab>
+                <b-tab title="ตั้งค่ารางวัลยิงเลข" :disabled="!formaddedit.yeekee_settings.reward_enabled">
+                    <div v-if="!formaddedit.yeekee_settings.reward_enabled" class="text-muted">เปิดสวิตช์รางวัลยิงเลขจากแท็บ “ตั้งค่ารอบและผล” ก่อน</div>
+                    <template v-else>
+                        <b-row>
+                            <b-col cols="12" md="5">
+                                <b-form-group label="ยอดเดิมพันขั้นต่ำในรอบเดียวกัน">
+                                    <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_amount" type="number" min="0" step="0.01" size="sm"></b-form-input>
+                                    <small class="text-muted d-block">สมาชิกต้องมียอดแทงขั้นต่ำในรอบเดียวกัน จึงจะได้รางวัลยิงเลข</small>
+                                </b-form-group>
+                            </b-col>
+                            <b-col cols="12" md="7">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="mb-0 font-weight-bold">ลำดับที่ได้รางวัล</label>
+                                    <b-button size="sm" variant="outline-primary" @click="addRewardPosition">เพิ่มลำดับรางวัล</b-button>
+                                </div>
+                                <div class="table-responsive border rounded bg-white">
+                                    <table class="table table-sm mb-0">
+                                        <thead class="thead-light">
+                                        <tr>
+                                            <th style="width: 32%;">ลำดับยิง</th>
+                                            <th style="width: 48%;">เครดิตรางวัล</th>
+                                            <th class="text-center" style="width: 20%;">ลบ</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr v-for="(item, index) in formaddedit.yeekee_settings.reward_positions" :key="`reward-pos-${index}`">
+                                            <td>
+                                                <b-form-input v-model.number="item.position" type="number" min="1" step="1" size="sm"></b-form-input>
+                                            </td>
+                                            <td>
+                                                <b-form-input v-model.number="item.credit_amount" type="number" min="0.01" step="0.01" size="sm"></b-form-input>
+                                            </td>
+                                            <td class="text-center">
+                                                <b-button size="sm" variant="outline-danger" @click="removeRewardPosition(index)">ลบ</b-button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="formaddedit.yeekee_settings.reward_positions.length === 0">
+                                            <td colspan="3" class="text-center text-muted py-2">ยังไม่ได้เพิ่มลำดับรางวัล</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </b-col>
+                        </b-row>
+                    </template>
+                </b-tab>
+                <b-tab title="งดออกผลและคืนโพย" :disabled="!formaddedit.yeekee_settings.refund_if_bet_entries_below_min">
+                    <div v-if="!formaddedit.yeekee_settings.refund_if_bet_entries_below_min" class="text-muted">เปิดสวิตช์งดออกผลและคืนโพยจากแท็บ “ตั้งค่ารอบและผล” ก่อน</div>
+                    <b-row v-else>
+                        <b-col cols="12" md="4">
+                            <b-form-group label="จำนวนรายการแทงขั้นต่ำ">
+                                <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_entries_required" type="number" min="0" step="1" size="sm"></b-form-input>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="4">
+                            <b-form-group label="รูปแบบการนับรายการแทง">
+                                <b-form-select v-model="formaddedit.yeekee_settings.refund_count_mode" :options="option.yeekeeRefundCountModes" size="sm"></b-form-select>
+                            </b-form-group>
+                        </b-col>
+                        <b-col cols="12" md="4">
+                            <b-form-group label="การดำเนินการเมื่อไม่ผ่านเงื่อนไข">
+                                <b-form-select v-model="formaddedit.yeekee_settings.refund_action" :options="option.yeekeeRefundActions" size="sm"></b-form-select>
+                            </b-form-group>
+                        </b-col>
+                    </b-row>
+                </b-tab>
+            </b-tabs>
         </div>
         <div v-if="formaddedit.result_mode === 'yeekee'" class="alert alert-info py-2 px-3">
             การตั้งค่าเวลาเปิด/ปิด/ออกผลแบบหวยปกติ และ Auto Source จะไม่ถูกใช้กับตลาดยี่กี่
@@ -681,6 +698,7 @@
                     show: true,
                     formmethod: 'add',
                     code: null,
+                    activeYeekeeTab: 0,
                     formaddedit: {
                         group_id:   '',
                         name:       '',
@@ -2060,6 +2078,20 @@
                         position: 1,
                         credit_amount: 1,
                     });
+                },
+                onToggleYeekeeReward(enabled) {
+                    if (enabled) {
+                        this.activeYeekeeTab = 1;
+                    } else if (this.activeYeekeeTab === 1) {
+                        this.activeYeekeeTab = 0;
+                    }
+                },
+                onToggleYeekeeRefund(enabled) {
+                    if (enabled) {
+                        this.activeYeekeeTab = 2;
+                    } else if (this.activeYeekeeTab === 2) {
+                        this.activeYeekeeTab = 0;
+                    }
                 },
                 removeRewardPosition(index) {
                     if (!this.formaddedit.yeekee_settings || !Array.isArray(this.formaddedit.yeekee_settings.reward_positions)) {

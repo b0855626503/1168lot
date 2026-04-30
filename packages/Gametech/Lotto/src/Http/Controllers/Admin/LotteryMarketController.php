@@ -383,7 +383,7 @@ class LotteryMarketController extends AppBaseController
             throw ValidationException::withMessages(['yeekee_settings.formula_preset' => 'สูตรคำนวณผลไม่ถูกต้อง']);
         }
 
-        if ($subtractPosition <= 0) {
+        if ($formulaPreset === 'SHOOTS_SUM_MINUS_POSITION' && $subtractPosition <= 0) {
             throw ValidationException::withMessages(['yeekee_settings.subtract_position' => 'ลำดับเลขยิงที่ใช้ลบต้องมากกว่า 0']);
         }
 
@@ -429,7 +429,7 @@ class LotteryMarketController extends AppBaseController
             ],
             'formula_config' => [
                 'default_preset' => $formulaPreset,
-                'subtract_position' => $subtractPosition,
+                'subtract_position' => $formulaPreset === 'SHOOTS_SUM_MINUS_POSITION' ? $subtractPosition : null,
             ],
             'reward_config' => [
                 'reward_enabled' => $rewardEnabled,
