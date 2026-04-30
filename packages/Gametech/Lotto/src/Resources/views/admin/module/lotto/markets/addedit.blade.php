@@ -11,6 +11,8 @@
          :no-close-on-backdrop="true"
          :hide-footer="true">
     <b-form @submit.prevent="addEditSubmit" v-if="show">
+        <b-tabs v-model="activeMainTab" content-class="pt-3">
+            <b-tab title="ตั้งค่ารายการหวย">
         <b-form-group label="กลุ่มหวย:" label-for="group_id">
             <b-form-select
                 id="group_id"
@@ -63,42 +65,6 @@
                 </b-form-group>
             </b-col>
         </b-row>
-        <div class="border rounded p-2 mb-3 bg-light">
-            <h6 class="mb-2">กติกา/รายละเอียดหลายภาษา</h6>
-            <b-tabs content-class="pt-3" small>
-                <b-tab v-for="locale in ['th', 'en', 'lo', 'km']" :key="`content-${locale}`" :title="locale.toUpperCase()">
-                    <b-form-group label="Title">
-                        <b-form-input v-model="formaddedit.contents[locale].title" type="text" size="sm"></b-form-input>
-                    </b-form-group>
-                    <b-form-group label="Summary">
-                        <b-form-textarea v-model="formaddedit.contents[locale].summary" rows="2" max-rows="4"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="Rules Content">
-                        <b-form-textarea v-model="formaddedit.contents[locale].rules_content" rows="3" max-rows="6"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="Schedule Content">
-                        <b-form-textarea v-model="formaddedit.contents[locale].schedule_content" rows="3" max-rows="6"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="Prize Content">
-                        <b-form-textarea v-model="formaddedit.contents[locale].prize_content" rows="3" max-rows="6"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="Formula Content">
-                        <b-form-textarea v-model="formaddedit.contents[locale].formula_content" rows="3" max-rows="6"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group label="SEO Title">
-                        <b-form-input v-model="formaddedit.contents[locale].seo_title" type="text" size="sm"></b-form-input>
-                    </b-form-group>
-                    <b-form-group label="SEO Description">
-                        <b-form-textarea v-model="formaddedit.contents[locale].seo_description" rows="2" max-rows="4"></b-form-textarea>
-                    </b-form-group>
-                    <b-form-group>
-                        <b-form-checkbox v-model="formaddedit.contents[locale].is_enabled" :value="1" :unchecked-value="0">
-                            เปิดใช้งาน locale นี้
-                        </b-form-checkbox>
-                    </b-form-group>
-                </b-tab>
-            </b-tabs>
-        </div>
         <b-form-group label="ประเภทตลาด:" label-for="result_mode" description="หวยปกติจะไม่แสดงค่าตั้งต้นของยี่กี่ และหวยยี่กี่จะไม่ใช้ Auto Source แบบหวยปกติ">
             <b-form-select id="result_mode" v-model="formaddedit.result_mode" :options="option.resultModes" size="sm"></b-form-select>
         </b-form-group>
@@ -313,6 +279,45 @@
             </b-form-checkbox>
             <small class="text-muted d-block">ส่งผ่าน endpoint <code>notify/send</code></small>
         </b-form-group>
+            </b-tab>
+            <b-tab title="กติกา/รายละเอียด">
+                <div class="border rounded p-2 mb-3 bg-light">
+                    <b-tabs content-class="pt-3" small>
+                        <b-tab v-for="locale in ['th', 'en', 'lo', 'km']" :key="`content-${locale}`" :title="locale.toUpperCase()">
+                            <b-form-group label="Title">
+                                <b-form-input v-model="formaddedit.contents[locale].title" type="text" size="sm"></b-form-input>
+                            </b-form-group>
+                            <b-form-group label="Summary">
+                                <b-form-textarea v-model="formaddedit.contents[locale].summary" rows="2" max-rows="4"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group label="Rules Content">
+                                <b-form-textarea v-model="formaddedit.contents[locale].rules_content" rows="3" max-rows="6"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group label="Schedule Content">
+                                <b-form-textarea v-model="formaddedit.contents[locale].schedule_content" rows="3" max-rows="6"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group label="Prize Content">
+                                <b-form-textarea v-model="formaddedit.contents[locale].prize_content" rows="3" max-rows="6"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group label="Formula Content">
+                                <b-form-textarea v-model="formaddedit.contents[locale].formula_content" rows="3" max-rows="6"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group label="SEO Title">
+                                <b-form-input v-model="formaddedit.contents[locale].seo_title" type="text" size="sm"></b-form-input>
+                            </b-form-group>
+                            <b-form-group label="SEO Description">
+                                <b-form-textarea v-model="formaddedit.contents[locale].seo_description" rows="2" max-rows="4"></b-form-textarea>
+                            </b-form-group>
+                            <b-form-group>
+                                <b-form-checkbox v-model="formaddedit.contents[locale].is_enabled" :value="1" :unchecked-value="0">
+                                    เปิดใช้งาน locale นี้
+                                </b-form-checkbox>
+                            </b-form-group>
+                        </b-tab>
+                    </b-tabs>
+                </div>
+            </b-tab>
+        </b-tabs>
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
@@ -734,6 +739,7 @@
                     show: true,
                     formmethod: 'add',
                     code: null,
+                    activeMainTab: 0,
                     activeYeekeeTab: 0,
                     formaddedit: {
                         group_id:   '',
