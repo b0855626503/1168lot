@@ -3140,7 +3140,26 @@ class DashboardService
 
         $salesCurrent = 0.0;
         $salesPrevious = 0.0;
-        if ($this->hasTable('lotto_dashboard_summary_daily')) {
+        if (
+            $allowedMarketIds !== null
+            && $this->hasTable('lotto_dashboard_market_summary')
+        ) {
+            $allowedMarketIdList = array_keys($allowedMarketIds);
+            if (! empty($allowedMarketIdList)) {
+                $salesCurrent = (float) DB::table('lotto_dashboard_market_summary')
+                    ->where('web_code', $this->dashboardWebCode())
+                    ->where('summary_date', $latestDate)
+                    ->whereIn('market_id', $allowedMarketIdList)
+                    ->sum('total_sales');
+                if (! empty($previousDate)) {
+                    $salesPrevious = (float) DB::table('lotto_dashboard_market_summary')
+                        ->where('web_code', $this->dashboardWebCode())
+                        ->where('summary_date', $previousDate)
+                        ->whereIn('market_id', $allowedMarketIdList)
+                        ->sum('total_sales');
+                }
+            }
+        } elseif ($this->hasTable('lotto_dashboard_summary_daily')) {
             $salesCurrent = (float) DB::table('lotto_dashboard_summary_daily')
                 ->where('web_code', $this->dashboardWebCode())
                 ->where('summary_date', $latestDate)

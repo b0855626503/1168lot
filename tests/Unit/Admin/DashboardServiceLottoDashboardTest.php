@@ -1268,6 +1268,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_lotto_risk_trend_compares_latest_and_previous_snapshot(): void
     {
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
         Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
             $table->id();
             $table->string('web_code', 64);
@@ -1291,8 +1296,24 @@ class DashboardServiceLottoDashboardTest extends TestCase
             $table->decimal('total_sales', 18, 2)->default(0);
             $table->timestamps();
         });
+        Schema::create('lotto_dashboard_market_summary', function (Blueprint $table): void {
+            $table->id();
+            $table->date('summary_date');
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->decimal('total_sales', 18, 2)->default(0);
+            $table->unsignedInteger('total_tickets')->default(0);
+            $table->unsignedInteger('total_players')->default(0);
+            $table->decimal('total_payout', 18, 2)->default(0);
+            $table->string('status', 32)->default('pending');
+        });
 
         $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'Yeekee', 'result_mode' => 'yeekee'],
+        ]);
         DB::table('lotto_dashboard_risk_aggregates')->insert([
             [
                 'web_code' => $webCode,
@@ -1304,6 +1325,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
                 'liability_total' => 900000,
                 'market_count' => 3,
                 'round_count' => 3,
+                'market_ids_json' => '[1]',
                 'snapshot_at' => '2026-04-09 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -1318,6 +1340,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
                 'liability_total' => 1040000,
                 'market_count' => 4,
                 'round_count' => 4,
+                'market_ids_json' => '[2]',
                 'snapshot_at' => '2026-04-10 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -1339,6 +1362,30 @@ class DashboardServiceLottoDashboardTest extends TestCase
                 'updated_at' => now(),
             ],
         ]);
+        DB::table('lotto_dashboard_market_summary')->insert([
+            [
+                'summary_date' => '2026-04-09',
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 101,
+                'total_sales' => 30000,
+                'total_tickets' => 10,
+                'total_players' => 6,
+                'total_payout' => 1000,
+                'status' => 'resulted',
+            ],
+            [
+                'summary_date' => '2026-04-10',
+                'web_code' => $webCode,
+                'market_id' => 2,
+                'round_id' => 102,
+                'total_sales' => 5000,
+                'total_tickets' => 8,
+                'total_players' => 4,
+                'total_payout' => 500,
+                'status' => 'pending',
+            ],
+        ]);
 
         $method = new ReflectionMethod(DashboardService::class, 'lottoRiskTrendSummary');
         $method->setAccessible(true);
@@ -1350,6 +1397,12 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame('up', $trend['risk_direction']);
         $this->assertSame(10000.0, (float) $trend['sales_delta_raw']);
         $this->assertSame('up', $trend['sales_direction']);
+
+        $yeekeeTrend = $method->invoke($this->service, '2026-04-09', '2026-04-10', 'yeekee');
+        $this->assertSame('2026-04-10', $yeekeeTrend['current_date']);
+        $this->assertSame('', $yeekeeTrend['previous_date']);
+        $this->assertSame(5000.0, (float) $yeekeeTrend['sales_current_raw']);
+        $this->assertSame(0.0, (float) $yeekeeTrend['sales_previous_raw']);
     }
 
     public function test_lotto_product_summary_metrics_filters_by_market_type_when_market_summary_available(): void
