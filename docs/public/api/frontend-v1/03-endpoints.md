@@ -82,17 +82,17 @@
 - `GET /api/v1/lotto/tickets`
 - `GET /api/v1/lotto/tickets/{id}`
 - `POST /api/v1/lotto/tickets/{id}/cancel`
-- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
-- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 - `GET /api/v1/wheel/list`
 - `POST /api/v1/wheel/spin`
 - `GET /api/v1/wheel/history`
 - `GET /api/v1/reward/list`
 - `POST /api/v1/reward/redeem`
 - `GET /api/v1/reward/history`
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 
 ## Contract Notes
 
