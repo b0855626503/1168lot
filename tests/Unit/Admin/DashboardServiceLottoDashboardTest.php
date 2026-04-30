@@ -216,6 +216,93 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame('2026-04-09 10:15', $rows[0]['bet_at']);
     }
 
+    public function test_recent_lotto_bets_activity_filters_by_market_type(): void
+    {
+        Schema::create('members', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->nullable();
+            $table->unsignedBigInteger('code')->primary();
+            $table->string('user_name')->nullable();
+        });
+        Schema::create('lotto_groups', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+        });
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('group_id');
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id');
+            $table->date('draw_date')->nullable();
+        });
+        Schema::create('lotto_tickets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('member_id')->nullable();
+            $table->unsignedBigInteger('draw_id');
+            $table->string('status')->nullable();
+            $table->string('bet_type_summary')->nullable();
+            $table->decimal('total_net_amount', 12, 2)->default(0);
+            $table->decimal('total_win_amount', 12, 2)->default(0);
+            $table->timestamp('created_at')->nullable();
+        });
+
+        DB::table('members')->insert([
+            'id' => 1001,
+            'code' => 52,
+            'user_name' => 'member52',
+        ]);
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'หวยรายวัน',
+        ]);
+        DB::table('lotto_markets')->insert([
+            ['id' => 11, 'group_id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+            ['id' => 12, 'group_id' => 1, 'name' => 'Yeekee Market', 'result_mode' => 'yeekee'],
+        ]);
+        DB::table('lotto_draws')->insert([
+            ['id' => 101, 'market_id' => 11, 'draw_date' => '2026-04-10'],
+            ['id' => 102, 'market_id' => 12, 'draw_date' => '2026-04-10'],
+        ]);
+        DB::table('lotto_tickets')->insert([
+            [
+                'id' => 1001,
+                'member_id' => 52,
+                'draw_id' => 101,
+                'status' => 'active',
+                'bet_type_summary' => '2 ตัวบน',
+                'total_net_amount' => 180,
+                'total_win_amount' => 0,
+                'created_at' => '2026-04-10 10:00:00',
+            ],
+            [
+                'id' => 1002,
+                'member_id' => 52,
+                'draw_id' => 102,
+                'status' => 'active',
+                'bet_type_summary' => '3 ตัวบน',
+                'total_net_amount' => 260,
+                'total_win_amount' => 0,
+                'created_at' => '2026-04-10 10:05:00',
+            ],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'getRecentLottoBetsActivity');
+        $method->setAccessible(true);
+
+        $normalRows = $method->invoke($this->service, 20, null, '2026-04-10', '2026-04-10', 'normal');
+        $yeekeeRows = $method->invoke($this->service, 20, null, '2026-04-10', '2026-04-10', 'yeekee');
+        $allRows = $method->invoke($this->service, 20, null, '2026-04-10', '2026-04-10', 'all');
+
+        $this->assertCount(1, $normalRows);
+        $this->assertSame(1001, $normalRows[0]['ticket_id']);
+        $this->assertCount(1, $yeekeeRows);
+        $this->assertSame(1002, $yeekeeRows[0]['ticket_id']);
+        $this->assertCount(2, $allRows);
+    }
+
     public function test_summary_uses_deposit_minus_withdraw_only_for_net_balance(): void
     {
         $migration = require base_path('database/migrations/2026_03_09_120000_create_dashboard_summary_daily_table.php');

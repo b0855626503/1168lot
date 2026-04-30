@@ -8,6 +8,7 @@ use App\Services\Dashboard\DashboardWebCodeResolver;
 use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Carbon\Carbon;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -675,6 +676,7 @@ class DashboardService
             $dateColumn = $this->memberDateColumn();
             $depositCountColumn = $this->memberDepositCountColumn();
             $lottoMarketId = (int) Arr::get($filters, 'lotto_market_id', 0);
+            $lottoMarketType = (string) Arr::get($filters, 'lotto_market_type', 'all');
 
             $depositBase = app('Gametech\\Payment\\Repositories\\BankPaymentRepository')
                 ->income()->active()->whereIn('status', [0, 1]);
@@ -890,7 +892,8 @@ class DashboardService
                 20,
                 $lottoMarketId > 0 ? $lottoMarketId : null,
                 $startDate,
-                $endDate
+                $endDate,
+                $lottoMarketType
             );
 
             return [
@@ -911,7 +914,8 @@ class DashboardService
         int $limit = 20,
         ?int $marketId = null,
         ?string $startDate = null,
-        ?string $endDate = null
+        ?string $endDate = null,
+        ?string $marketType = null
     ): array {
         $limit = max(1, min($limit, 20));
 
@@ -957,6 +961,11 @@ class DashboardService
 
         if ($marketId !== null && $marketId > 0) {
             $query->where('d.market_id', $marketId);
+        }
+
+        $normalizedMarketType = $this->normalizeLottoMarketType($marketType);
+        if ($normalizedMarketType !== 'all' && $this->hasColumn('lotto_markets', 'result_mode')) {
+            $query->where('m.result_mode', $normalizedMarketType);
         }
 
         if ($startDate !== null || $endDate !== null) {
@@ -2137,8 +2146,19 @@ class DashboardService
             'register_channel' => Arr::get($filters, 'register_channel'),
             'deposit_channel' => Arr::get($filters, 'deposit_channel'),
             'lotto_market_id' => Arr::get($filters, 'lotto_market_id'),
+            'lotto_market_type' => $this->normalizeLottoMarketType(Arr::get($filters, 'lotto_market_type')),
             'trend_mode' => Arr::get($filters, 'trend_mode', 'day'),
         ];
+    }
+
+    private function normalizeLottoMarketType(?string $marketType): string
+    {
+        $normalized = strtolower(trim((string) $marketType));
+        if ($normalized === LotteryMarket::RESULT_MODE_NORMAL || $normalized === LotteryMarket::RESULT_MODE_YEEKEE) {
+            return $normalized;
+        }
+
+        return 'all';
     }
 
     private function range(array $filters): array
