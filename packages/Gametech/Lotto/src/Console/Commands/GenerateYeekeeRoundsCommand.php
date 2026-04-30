@@ -20,6 +20,7 @@ class GenerateYeekeeRoundsCommand extends Command
 
     public function handle(): int
     {
+        $lotteryTimezone = (string) config('app.timezone', 'UTC');
         $date = $this->resolveDate((string) $this->option('date'));
         if (! $date) {
             $this->error('Invalid --date format. Use Y-m-d');
@@ -53,14 +54,14 @@ class GenerateYeekeeRoundsCommand extends Command
             $settlementDelaySeconds = (int) ($roundConfig['settlement_delay_after_shoot_close_seconds'] ?? 60);
             $expectedPayoutSlaMinutes = (int) ($roundConfig['expected_payout_sla_minutes'] ?? 5);
 
-            $betOpenAt = Carbon::parse((string) $draw->open_at);
-            $betCloseAt = Carbon::parse((string) $draw->close_at);
+            $betOpenAt = Carbon::parse((string) $draw->open_at, $lotteryTimezone);
+            $betCloseAt = Carbon::parse((string) $draw->close_at, $lotteryTimezone);
             $shootOpenAt = $betCloseAt->copy();
             $shootCloseAt = $betCloseAt->copy()->addSeconds(max(0, $shootWindowSeconds));
             $resultComputeAt = $shootCloseAt->copy()->addSeconds(max(0, $settlementDelaySeconds));
             $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes(max(0, $expectedPayoutSlaMinutes));
-            $roundDate = Carbon::parse((string) $draw->draw_date)->toDateString();
-            $roundEndOfDay = Carbon::parse($roundDate.' 23:59:59');
+            $roundDate = Carbon::parse((string) $draw->draw_date, $lotteryTimezone)->toDateString();
+            $roundEndOfDay = Carbon::createFromFormat('Y-m-d H:i:s', $roundDate.' 23:59:59', $lotteryTimezone);
 
             if (
                 $betOpenAt->gt($roundEndOfDay)

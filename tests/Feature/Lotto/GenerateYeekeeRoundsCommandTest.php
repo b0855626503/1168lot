@@ -6,6 +6,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class GenerateYeekeeRoundsCommandTest extends TestCase
@@ -145,6 +146,71 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $output = json_decode((string) Artisan::output(), true);
         $this->assertSame(0, DB::table('yeekee_rounds')->count());
         $this->assertSame(1, (int) ($output['skipped_cross_day'] ?? 0));
+    }
+
+    public function test_generate_yeekee_rounds_keeps_last_safe_window_within_same_day_boundary(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Main',
+            'code' => 'main',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 11,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee_market',
+            'result_mode' => 'yeekee',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 11,
+            'round_config' => json_encode([
+                'shoot_window_after_bet_close_seconds' => 60,
+                'settlement_delay_after_shoot_close_seconds' => 60,
+                'expected_payout_sla_minutes' => 5,
+            ]),
+            'formula_config' => null,
+            'reward_config' => null,
+            'refund_config' => null,
+            'ui_config' => null,
+            'reward_enabled' => 0,
+            'refund_if_bet_entries_below_min' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 101,
+            'market_id' => 11,
+            'draw_date' => '2026-04-30',
+            'open_at' => '2026-04-30 23:30:00',
+            'close_at' => '2026-04-30 23:45:00',
+            'status' => 'draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Artisan::call('lotto:generate-yeekee-rounds', [
+            '--date' => '2026-04-30',
+        ]);
+
+        $round = DB::table('yeekee_rounds')
+            ->where('lotto_draw_id', 101)
+            ->first();
+
+        $this->assertNotNull($round);
+        $this->assertSame('2026-04-30', Carbon::parse((string) $round->round_date)->toDateString());
+        $this->assertSame('2026-04-30 23:45:00', (string) $round->bet_close_at);
+        $this->assertSame('2026-04-30 23:46:00', (string) $round->shoot_close_at);
+        $this->assertSame('2026-04-30 23:47:00', (string) $round->result_compute_at);
+        $this->assertSame('2026-04-30 23:52:00', (string) $round->expected_settlement_deadline_at);
     }
 
     private function prepareSchema(): void
