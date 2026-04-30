@@ -51,6 +51,42 @@
             line-height: 1.5;
             font-size: 13px;
         }
+        .markdown {
+            margin: 0;
+            padding: 16px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .markdown h1, .markdown h2, .markdown h3, .markdown h4 {
+            color: #f8fafc;
+            margin-top: 20px;
+        }
+        .markdown a {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        .markdown code {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        .markdown pre {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            overflow: auto;
+        }
+        .markdown table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .markdown th, .markdown td {
+            border: 1px solid #334155;
+            padding: 8px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -60,11 +96,11 @@
             <div class="title">{{ $title ?? 'API Docs' }}</div>
             <div class="meta">{{ $meta ?? 'docs/public/api/api-frontend-v1.md' }}</div>
         </div>
-        <a class="raw-link" href="{{ route($rawRoute ?? 'admin.docs.api.frontend_v1.raw') }}">Open Raw</a>
+        <a class="raw-link" href="{{ route($rawRoute ?? 'admin.docs.api.frontend_v1.raw', $rawRouteParams ?? []) }}">Open Raw</a>
     </div>
 
     <div class="panel">
-        <pre>{{ $markdown ?? '' }}</pre>
+        <div class="markdown">{!! \Illuminate\Support\Str::markdown($markdown ?? '') !!}</div>
     </div>
 </div>
 </body>

@@ -23,12 +23,31 @@ class ApiDocsController extends AppBaseController
             'markdown' => $this->loadFrontendApiV1Markdown(),
             'meta' => 'docs/public/api/frontend-v1/index.md',
             'rawRoute' => 'admin.docs.api.frontend_v1.raw',
+            'rawRouteParams' => [],
         ]);
     }
 
     public function frontendApiV1Raw(): Response
     {
         return response($this->loadFrontendApiV1Markdown(), 200, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
+    }
+
+    public function frontendApiV1Chapter(string $slug): View
+    {
+        return view($this->_config['view'], [
+            'title' => 'Frontend API V1 - '.$slug,
+            'markdown' => $this->loadFrontendApiV1ChapterMarkdown($slug),
+            'meta' => 'docs/public/api/frontend-v1/'.$slug.'.md',
+            'rawRoute' => 'admin.docs.api.frontend_v1.chapter.raw',
+            'rawRouteParams' => ['slug' => $slug],
+        ]);
+    }
+
+    public function frontendApiV1ChapterRaw(string $slug): Response
+    {
+        return response($this->loadFrontendApiV1ChapterMarkdown($slug), 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
         ]);
     }
@@ -61,6 +80,16 @@ class ApiDocsController extends AppBaseController
     private function loadFrontendApiV1Markdown(): string
     {
         $path = base_path('docs/public/api/frontend-v1/index.md');
+        abort_unless(File::exists($path), 404, 'API docs file not found');
+
+        return File::get($path);
+    }
+
+    private function loadFrontendApiV1ChapterMarkdown(string $slug): string
+    {
+        abort_unless(preg_match('/^[a-z0-9-]+$/', $slug) === 1, 404, 'API docs file not found');
+
+        $path = base_path('docs/public/api/frontend-v1/'.$slug.'.md');
         abort_unless(File::exists($path), 404, 'API docs file not found');
 
         return File::get($path);

@@ -102,6 +102,11 @@ Route::domain(config('app.admin_url').'.'.(is_null(config('app.admin_domain_url'
         ])->name('admin.docs.api.frontend_v1');
         Route::get('docs/api/frontend-v1/raw', 'ApiDocsController@frontendApiV1Raw')
             ->name('admin.docs.api.frontend_v1.raw');
+        Route::get('docs/api/frontend-v1/{slug}/raw', 'ApiDocsController@frontendApiV1ChapterRaw')
+            ->name('admin.docs.api.frontend_v1.chapter.raw');
+        Route::get('docs/api/frontend-v1/{slug}', 'ApiDocsController@frontendApiV1Chapter')->defaults('_config', [
+            'view' => 'admin::module.docs.frontend_api_v1',
+        ])->name('admin.docs.api.frontend_v1.chapter');
 
         Route::prefix('auth')->group(function () {
 
