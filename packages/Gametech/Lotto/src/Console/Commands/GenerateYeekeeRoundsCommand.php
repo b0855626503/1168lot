@@ -135,7 +135,7 @@ class GenerateYeekeeRoundsCommand extends Command
                     $drawPayload = [
                         'open_at' => $betOpenAt->format('Y-m-d H:i:s'),
                         'result_at' => $resultComputeAt->format('Y-m-d H:i:s'),
-                        'status' => 'open',
+                        'status' => $this->resolveInitialDrawStatus($betOpenAt, $betCloseAt, $lotteryTimezone),
                         'created_by' => null,
                     ];
 
@@ -324,5 +324,19 @@ class GenerateYeekeeRoundsCommand extends Command
         } catch (\Throwable $exception) {
             return null;
         }
+    }
+
+    private function resolveInitialDrawStatus(Carbon $openAt, Carbon $closeAt, string $timezone): string
+    {
+        $now = now($timezone);
+        if ($now->lt($openAt)) {
+            return 'draft';
+        }
+
+        if ($now->gte($closeAt)) {
+            return 'closed';
+        }
+
+        return 'open';
     }
 }

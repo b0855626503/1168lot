@@ -114,6 +114,10 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertIsArray($output);
         $this->assertSame([$expectedDate], $output['dates'] ?? []);
         $this->assertGreaterThan(0, (int) ($output['draw_created'] ?? 0));
+        $this->assertSame(
+            23,
+            DB::table('lotto_draws')->where('market_id', 11)->where('status', 'draft')->count()
+        );
 
         Carbon::setTestNow();
     }
@@ -142,8 +146,9 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(0, $crossDayResultAtRows);
     }
 
-    public function test_generate_yeekee_rounds_use_same_open_at_for_all_rounds_and_open_status(): void
+    public function test_generate_yeekee_rounds_use_same_open_at_for_all_rounds_and_draft_status_for_future_day(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-04-30 23:50:00'));
         $this->seedYeekeeMarket(11, 1, 15);
 
         Artisan::call('lotto:generate-yeekee-draws', [
@@ -158,12 +163,14 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(1, $openAtDistinctCount);
         $this->assertSame(
             95,
-            DB::table('lotto_draws')->where('market_id', 11)->where('status', 'open')->count()
+            DB::table('lotto_draws')->where('market_id', 11)->where('status', 'draft')->count()
         );
         $this->assertSame(
             95,
             DB::table('yeekee_rounds')->where('market_id', 11)->where('status', 'open')->count()
         );
+
+        Carbon::setTestNow();
     }
 
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void
