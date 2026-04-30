@@ -229,12 +229,13 @@ class DashboardService
             $bonus = $this->bonusTotals($filters, $startDate, $endDate);
             $lotto = $this->lottoCashMetrics($startDate, $endDate);
             $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
-            $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
-            $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
-            $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate);
-            $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
+            $lottoMarketType = (string) Arr::get($filters, 'lotto_market_type', 'all');
+            $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate, $lottoMarketType);
+            $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
+            $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
+            $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate, $lottoMarketType);
             $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
-            $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
+            $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate, $lottoMarketType);
             $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary(
                 $startDate,
                 $endDate,
@@ -1679,12 +1680,13 @@ class DashboardService
         $lottoRefundCash = (float) ($current['lotto_refund_cash'] ?? 0);
         $lottoNetCash = (float) ($current['lotto_net_cash'] ?? ($lottoSalesCash - $lottoPayoutCash - $lottoRefundCash));
         $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
-        $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate);
-        $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate);
-        $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate);
-        $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
+        $lottoMarketType = (string) Arr::get($filters, 'lotto_market_type', 'all');
+        $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate, $lottoMarketType);
+        $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
+        $highestRiskyNumbers = $this->lottoHighestRiskNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
+        $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate, $lottoMarketType);
         $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
-        $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
+        $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate, $lottoMarketType);
         $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary(
             $startDate,
             $endDate,
@@ -2169,6 +2171,57 @@ class DashboardService
         }
 
         return 'all';
+    }
+
+    /**
+     * @return array<int, true>|null
+     */
+    private function resolveAllowedLottoMarketIdsByType(?string $marketType): ?array
+    {
+        $normalized = $this->normalizeLottoMarketType($marketType);
+        if ($normalized === 'all') {
+            return null;
+        }
+
+        if (
+            ! $this->hasTable('lotto_markets')
+            || ! $this->hasColumn('lotto_markets', 'result_mode')
+        ) {
+            return null;
+        }
+
+        $marketIds = DB::table('lotto_markets')
+            ->where('result_mode', $normalized)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values()
+            ->all();
+
+        if (empty($marketIds)) {
+            return [];
+        }
+
+        return array_fill_keys($marketIds, true);
+    }
+
+    /**
+     * @param  array<int, int>  $rowMarketIds
+     * @param  array<int, true>|null  $allowedMarketIds
+     */
+    private function rowMarketIdsMatchFilter(array $rowMarketIds, ?array $allowedMarketIds): bool
+    {
+        if ($allowedMarketIds === null) {
+            return true;
+        }
+
+        foreach ($rowMarketIds as $marketId) {
+            if (isset($allowedMarketIds[(int) $marketId])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function range(array $filters): array
@@ -2810,7 +2863,7 @@ class DashboardService
         ];
     }
 
-    private function lottoRiskSummaryMetrics(string $startDate, string $endDate): array
+    private function lottoRiskSummaryMetrics(string $startDate, string $endDate, ?string $marketType = null): array
     {
         $defaults = [
             'markets' => 0,
@@ -2830,6 +2883,7 @@ class DashboardService
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return $defaults;
         }
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
 
         $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
@@ -2859,6 +2913,17 @@ class DashboardService
         $numberIds = [];
 
         foreach ($rows as $row) {
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            $rowMarketIds = [];
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $rowMarketIds[] = (int) $marketId;
+                }
+            }
+            if (! $this->rowMarketIdsMatchFilter($rowMarketIds, $allowedMarketIds)) {
+                continue;
+            }
+
             $number = trim((string) ($row->number ?? ''));
             $exposureAmount = (float) ($row->exposure_total ?? 0);
             $liabilityAmount = (float) ($row->liability_total ?? 0);
@@ -2877,7 +2942,6 @@ class DashboardService
                 $lastSnapshotAt = $snapshotAt;
             }
 
-            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
             if (is_array($marketJson)) {
                 foreach ($marketJson as $marketId) {
                     $marketIds[(string) ((int) $marketId)] = true;
@@ -2954,7 +3018,7 @@ class DashboardService
     /**
      * @return array<string, mixed>
      */
-    private function lottoRiskTrendSummary(string $startDate, string $endDate): array
+    private function lottoRiskTrendSummary(string $startDate, string $endDate, ?string $marketType = null): array
     {
         $defaults = [
             'current_date' => '',
@@ -2978,37 +3042,64 @@ class DashboardService
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return $defaults;
         }
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
 
-        $latestDate = DB::table('lotto_dashboard_risk_aggregates')
+        $riskRows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
             ->whereBetween('summary_date', [$startDate, $endDate])
-            ->max('summary_date');
+            ->get(['summary_date', 'market_ids_json', 'exposure_total']);
+
+        if ($riskRows->isEmpty()) {
+            return $defaults;
+        }
+
+        $riskByDate = [];
+        foreach ($riskRows as $riskRow) {
+            $marketJson = json_decode((string) ($riskRow->market_ids_json ?? '[]'), true);
+            $rowMarketIds = [];
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $rowMarketIds[] = (int) $marketId;
+                }
+            }
+            if (! $this->rowMarketIdsMatchFilter($rowMarketIds, $allowedMarketIds)) {
+                continue;
+            }
+
+            $summaryDate = (string) ($riskRow->summary_date ?? '');
+            if ($summaryDate === '') {
+                continue;
+            }
+            if (! isset($riskByDate[$summaryDate])) {
+                $riskByDate[$summaryDate] = 0.0;
+            }
+            $riskByDate[$summaryDate] = round(
+                (float) $riskByDate[$summaryDate] + (float) ($riskRow->exposure_total ?? 0),
+                2
+            );
+        }
+
+        if (empty($riskByDate)) {
+            return $defaults;
+        }
+
+        ksort($riskByDate);
+        $latestDate = (string) array_key_last($riskByDate);
         if (empty($latestDate)) {
             return $defaults;
         }
 
-        $previousDate = DB::table('lotto_dashboard_risk_aggregates')
-            ->where('web_code', $this->dashboardWebCode())
-            ->where('summary_date', '<', $latestDate)
-            ->whereBetween('summary_date', [$startDate, $endDate])
-            ->max('summary_date');
-        if (empty($previousDate)) {
-            $previousDate = DB::table('lotto_dashboard_risk_aggregates')
-                ->where('web_code', $this->dashboardWebCode())
-                ->where('summary_date', '<', $latestDate)
-                ->max('summary_date');
+        $previousDate = '';
+        $riskDates = array_keys($riskByDate);
+        $latestIndex = array_search($latestDate, $riskDates, true);
+        if (is_int($latestIndex) && $latestIndex > 0) {
+            $previousDate = (string) ($riskDates[$latestIndex - 1] ?? '');
         }
 
-        $riskCurrent = (float) DB::table('lotto_dashboard_risk_aggregates')
-            ->where('web_code', $this->dashboardWebCode())
-            ->where('summary_date', $latestDate)
-            ->sum('exposure_total');
+        $riskCurrent = (float) ($riskByDate[$latestDate] ?? 0);
         $riskPrevious = 0.0;
         if (! empty($previousDate)) {
-            $riskPrevious = (float) DB::table('lotto_dashboard_risk_aggregates')
-                ->where('web_code', $this->dashboardWebCode())
-                ->where('summary_date', $previousDate)
-                ->sum('exposure_total');
+            $riskPrevious = (float) ($riskByDate[$previousDate] ?? 0);
         }
 
         $salesCurrent = 0.0;
@@ -3064,13 +3155,14 @@ class DashboardService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function lottoTopRiskyNumbersSummary(string $startDate, string $endDate, int $limit = 10): array
+    private function lottoTopRiskyNumbersSummary(string $startDate, string $endDate, int $limit = 10, ?string $marketType = null): array
     {
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return [];
         }
 
         $limit = max(1, min(100, $limit));
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
 
         $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
@@ -3091,6 +3183,17 @@ class DashboardService
 
         $grouped = [];
         foreach ($rows as $row) {
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            $rowMarketIds = [];
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $rowMarketIds[] = (int) $marketId;
+                }
+            }
+            if (! $this->rowMarketIdsMatchFilter($rowMarketIds, $allowedMarketIds)) {
+                continue;
+            }
+
             $number = trim((string) ($row->number ?? ''));
             $betType = trim((string) ($row->bet_type ?? ''));
             if ($number === '' || $betType === '') {
@@ -3127,7 +3230,6 @@ class DashboardService
                 2
             );
 
-            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
             if (is_array($marketJson)) {
                 foreach ($marketJson as $marketId) {
                     $grouped[$key]['market_ids'][(string) ((int) $marketId)] = true;
@@ -3162,13 +3264,14 @@ class DashboardService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function lottoHighestRiskNumbersSummary(string $startDate, string $endDate, int $limit = 10): array
+    private function lottoHighestRiskNumbersSummary(string $startDate, string $endDate, int $limit = 10, ?string $marketType = null): array
     {
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return [];
         }
 
         $limit = max(1, min(100, $limit));
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
 
         $rows = DB::table('lotto_dashboard_risk_aggregates')
             ->where('web_code', $this->dashboardWebCode())
@@ -3190,6 +3293,17 @@ class DashboardService
 
         $grouped = [];
         foreach ($rows as $row) {
+            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
+            $rowMarketIds = [];
+            if (is_array($marketJson)) {
+                foreach ($marketJson as $marketId) {
+                    $rowMarketIds[] = (int) $marketId;
+                }
+            }
+            if (! $this->rowMarketIdsMatchFilter($rowMarketIds, $allowedMarketIds)) {
+                continue;
+            }
+
             $number = trim((string) ($row->number ?? ''));
             $betType = trim((string) ($row->bet_type ?? ''));
             if ($number === '' || $betType === '') {
@@ -3212,7 +3326,6 @@ class DashboardService
                 'round_ids' => [],
             ];
 
-            $marketJson = json_decode((string) ($row->market_ids_json ?? '[]'), true);
             if (is_array($marketJson)) {
                 foreach ($marketJson as $marketId) {
                     $candidate['market_ids'][(string) ((int) $marketId)] = true;
@@ -4028,7 +4141,7 @@ class DashboardService
             ->all();
     }
 
-    private function lottoBetTypeInsightsSummary(string $startDate, string $endDate): array
+    private function lottoBetTypeInsightsSummary(string $startDate, string $endDate, ?string $marketType = null): array
     {
         if (
             ! $this->hasTable('lotto_dashboard_bet_type_summary_daily')
@@ -4038,8 +4151,19 @@ class DashboardService
         }
 
         $isSingleDay = $startDate === $endDate;
+        $normalizedMarketType = $this->normalizeLottoMarketType($marketType);
 
-        $dailyRows = DB::table('lotto_dashboard_bet_type_summary_daily')
+        $dailyRows = DB::table('lotto_dashboard_bet_type_summary_daily');
+        if (
+            $normalizedMarketType !== 'all'
+            && $this->hasColumn('lotto_dashboard_bet_type_summary_daily', 'market_id')
+            && $this->hasTable('lotto_markets')
+            && $this->hasColumn('lotto_markets', 'result_mode')
+        ) {
+            $dailyRows->join('lotto_markets as m', 'm.id', '=', 'lotto_dashboard_bet_type_summary_daily.market_id')
+                ->where('m.result_mode', $normalizedMarketType);
+        }
+        $dailyRows = $dailyRows
             ->whereBetween('summary_date', [$startDate, $endDate])
             ->selectRaw(implode(",\n", [
                 'bet_type',
@@ -4175,7 +4299,17 @@ class DashboardService
                 }
             }
         }
-        $numberRows = DB::table('lotto_dashboard_bet_type_number_daily')
+        $numberRows = DB::table('lotto_dashboard_bet_type_number_daily');
+        if (
+            $normalizedMarketType !== 'all'
+            && $this->hasColumn('lotto_dashboard_bet_type_number_daily', 'market_id')
+            && $this->hasTable('lotto_markets')
+            && $this->hasColumn('lotto_markets', 'result_mode')
+        ) {
+            $numberRows->join('lotto_markets as m', 'm.id', '=', 'lotto_dashboard_bet_type_number_daily.market_id')
+                ->where('m.result_mode', $normalizedMarketType);
+        }
+        $numberRows = $numberRows
             ->whereBetween('summary_date', [$startDate, $endDate])
             ->selectRaw(implode(",\n", [
                 'bet_type',

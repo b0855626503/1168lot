@@ -457,6 +457,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_lotto_risk_summary_uses_latest_aggregate_layer_and_validates_587_case(): void
     {
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
         Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
             $table->id();
             $table->string('web_code', 64);
@@ -475,6 +480,10 @@ class DashboardServiceLottoDashboardTest extends TestCase
         });
 
         $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'Yeekee Market', 'result_mode' => 'yeekee'],
+        ]);
 
         DB::table('lotto_dashboard_risk_aggregates')->insert([
             [
@@ -542,6 +551,14 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertTrue((bool) $summary['liability_total_deprecated']);
         $this->assertTrue((bool) $summary['liability_total_same_as_exposure']);
         $this->assertSame('2026-04-10 10:00:00', $summary['last_snapshot_at']);
+
+        $yeekeeSummary = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'yeekee');
+        $this->assertSame(1044000.0, (float) $yeekeeSummary['exposure_total']);
+        $this->assertSame(2, $yeekeeSummary['numbers']);
+
+        $normalSummary = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'normal');
+        $this->assertSame(1042000.0, (float) $normalSummary['exposure_total']);
+        $this->assertSame(2, $normalSummary['numbers']);
     }
 
     public function test_lotto_top_risky_numbers_sorted_by_exposure_and_validates_587_case(): void
