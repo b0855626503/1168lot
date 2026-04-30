@@ -3,13 +3,16 @@
 namespace Tests\Feature\Lotto;
 
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
+use Gametech\Lotto\Services\Relay\LotteryRelayPublisher;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\YeekeeResultEngineService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -28,6 +31,7 @@ class SettleYeekeeRoundsCommandTest extends TestCase
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_draws');
+        Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('logs');
 
         parent::tearDown();
@@ -35,6 +39,16 @@ class SettleYeekeeRoundsCommandTest extends TestCase
 
     public function test_settle_yeekee_rounds_processes_all_policy_paths(): void
     {
+        Queue::fake();
+        $this->mock(AutoResultHardeningService::class)
+            ->shouldReceive('handleExhaustedTransition')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+        $this->mock(LotteryRelayPublisher::class)
+            ->shouldReceive('publishIfReady')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+
         $drawService = $this->mock(DrawService::class);
         $drawService->shouldReceive('syncScheduledStatuses')->once();
 
@@ -89,6 +103,14 @@ class SettleYeekeeRoundsCommandTest extends TestCase
 
     private function seedData(): void
     {
+        DB::table('lotto_markets')->insert([
+            'id' => 106,
+            'name' => 'Yeekee Test',
+            'notify_result_telegram' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         DB::table('lotto_draws')->insert([
             [
                 'id' => 3001,
@@ -230,6 +252,13 @@ class SettleYeekeeRoundsCommandTest extends TestCase
 
     private function prepareSchema(): void
     {
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->nullable();
+            $table->boolean('notify_result_telegram')->default(false);
+            $table->timestamps();
+        });
+
         Schema::create('lotto_draws', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('market_id');

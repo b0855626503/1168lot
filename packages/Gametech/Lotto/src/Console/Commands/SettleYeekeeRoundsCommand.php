@@ -94,12 +94,8 @@ class SettleYeekeeRoundsCommand extends Command
 
                     if ((string) $draw->status === 'resulted') {
                         if (! $dryRun) {
-                            DB::table('yeekee_rounds')
-                                ->where('id', (int) $round->id)
-                                ->update([
-                                    'status' => 'resulted',
-                                    'updated_at' => now(),
-                                ]);
+                            $round->status = 'resulted';
+                            $round->save();
                         }
 
                         return 'skipped_already_final';
@@ -121,12 +117,8 @@ class SettleYeekeeRoundsCommand extends Command
                                 'top_3' => (string) ($result['top_3'] ?? ''),
                                 'bottom_2' => (string) ($result['bottom_2'] ?? ''),
                             ], 'settlement');
-                            DB::table('yeekee_rounds')
-                                ->where('id', (int) $round->id)
-                                ->update([
-                                    'status' => 'resulted',
-                                    'updated_at' => now(),
-                                ]);
+                            $round->status = 'resulted';
+                            $round->save();
                         }
 
                         return 'computed_settled';
@@ -134,22 +126,16 @@ class SettleYeekeeRoundsCommand extends Command
 
                     if ($activeBetCount <= 0) {
                         if (! $dryRun) {
-                            DB::table('lotto_draws')
-                                ->where('id', (int) $draw->id)
-                                ->update([
-                                    'status' => 'resulted',
-                                    'result_number' => null,
-                                    'result_at' => $draw->result_at ?? now(),
-                                    'result_fetch_status' => 'NO_ACTIVITY',
-                                    'result_applied_at' => now(),
-                                    'updated_at' => now(),
-                                ]);
-                            DB::table('yeekee_rounds')
-                                ->where('id', (int) $round->id)
-                                ->update([
-                                    'status' => 'voided',
-                                    'updated_at' => now(),
-                                ]);
+                            $draw->forceFill([
+                                'status' => 'resulted',
+                                'result_number' => null,
+                                'result_at' => $draw->result_at ?? now(),
+                                'result_fetch_status' => 'NO_ACTIVITY',
+                                'result_applied_at' => now(),
+                            ])->save();
+
+                            $round->status = 'voided';
+                            $round->save();
                         }
 
                         return 'void_no_activity';
@@ -164,22 +150,16 @@ class SettleYeekeeRoundsCommand extends Command
                             groupCode: 'YEEKEE_VOID_REFUND_'.$draw->id.'_'.now()->format('YmdHis')
                         );
 
-                        DB::table('lotto_draws')
-                            ->where('id', (int) $draw->id)
-                            ->update([
-                                'status' => 'resulted',
-                                'result_number' => null,
-                                'result_at' => $draw->result_at ?? now(),
-                                'result_fetch_status' => 'VOID_REFUND',
-                                'result_applied_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-                        DB::table('yeekee_rounds')
-                            ->where('id', (int) $round->id)
-                            ->update([
-                                'status' => 'voided',
-                                'updated_at' => now(),
-                            ]);
+                        $draw->forceFill([
+                            'status' => 'resulted',
+                            'result_number' => null,
+                            'result_at' => $draw->result_at ?? now(),
+                            'result_fetch_status' => 'VOID_REFUND',
+                            'result_applied_at' => now(),
+                        ])->save();
+
+                        $round->status = 'voided';
+                        $round->save();
                     }
 
                     return 'void_refund';
