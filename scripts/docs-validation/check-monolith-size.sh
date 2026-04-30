@@ -20,6 +20,11 @@ while IFS= read -r file; do
     continue
   fi
 
+  if [[ "$file" == docs/public/api/frontend-v1/07-route-reference.md ]]; then
+    # Public runtime docs intentionally keep full reference in one page.
+    continue
+  fi
+
   lines=$(wc -l < "$file")
   if (( lines > DOC_MONOLITH_MAX_LINES )); then
     log_error "$file" "exceeds monolith threshold ($lines > $DOC_MONOLITH_MAX_LINES). Split to index + chapters"

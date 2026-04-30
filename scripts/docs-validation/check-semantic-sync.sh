@@ -36,11 +36,11 @@ MEMORY_FILES=(
 )
 
 # ----- Collect docs entities -----
-rg --no-filename -o '/api/v1[[:alnum:]_\-/{}]*' docs/public/api/frontend-v1/07-route-reference.md 2>/dev/null | sort -u > "$DOC_ENDPOINTS_ALL" || :
+sed -nE 's/^### `(GET|POST|PUT|PATCH|DELETE) (\/api\/v1[^`]+)`$/\2/p' docs/public/api/frontend-v1/07-route-reference.md | sort -u > "$DOC_ENDPOINTS_ALL" || :
 rg --no-filename -o '`(app|packages|routes|config|database)/[^`]+`' docs/internal/03_DOMAINS/auth.md docs/internal/03_DOMAINS/payment.md docs/internal/03_DOMAINS/wallet.md docs/internal/03_DOMAINS/frontend_api.md 2>/dev/null | tr -d '`' | sort -u > "$DOC_MODULES_ALL" || :
 
 # Critical endpoint scope: auth + wallet + payment + game
-grep -E '^/api/v1/(auth/|member/(balance|history|history/\{type\}|profile|change-password|wallet-address)$|wallet/(transactions|claim|withdraw)$|deposit/(channels|loadbank)$|smkpay/|games/)' "$DOC_ENDPOINTS_ALL" | sort -u > "$DOC_ENDPOINTS_CRITICAL" || :
+grep -E '^/api/v1/(auth/(register|login|logout)$|member/(balance|history|history/\{type\}|profile|change-password|wallet-address)$|wallet/(transactions|claim|withdraw)$|deposit/(channels|loadbank)$|smkpay/|games/)' "$DOC_ENDPOINTS_ALL" | sort -u > "$DOC_ENDPOINTS_CRITICAL" || :
 comm -23 "$DOC_ENDPOINTS_ALL" "$DOC_ENDPOINTS_CRITICAL" > "$DOC_ENDPOINTS_NONCRITICAL" || :
 
 # Critical modules expected for retrieval-first in 4 domains
