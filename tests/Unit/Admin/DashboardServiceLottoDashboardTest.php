@@ -385,6 +385,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString("switchLottoRiskTab('highest')", $contents);
         $this->assertStringContainsString('refreshLottoRiskSummary(normalizedTab);', $contents);
         $this->assertStringContainsString("lotto_risk_mode: this.lottoRiskTab === 'highest' ? 'peak' : 'today'", $contents);
+        $this->assertStringContainsString("lotto_market_type: this.lottoRecentMarketType || 'all'", $contents);
+        $this->assertStringContainsString("lottoRecentMarketType: 'all'", $contents);
+        $this->assertStringContainsString("{ value: 'all', text: 'ทุกประเภท' }", $contents);
+        $this->assertStringContainsString("{ value: 'normal', text: 'หวยปกติ' }", $contents);
+        $this->assertStringContainsString("{ value: 'yeekee', text: 'หวยยี่กี่' }", $contents);
         $this->assertStringContainsString('วันนี้', $contents);
         $this->assertStringContainsString('เสี่ยงสูงสุด', $contents);
         $this->assertStringContainsString('activeLottoRiskRows()', $contents);

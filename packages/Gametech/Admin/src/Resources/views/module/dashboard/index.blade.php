@@ -627,6 +627,11 @@
     <script src="{{ asset('vendor/daterangepicker/daterangepicker.js') }}"></script>
     <script>
         const lottoRecentMarketOptions = @json($lottoRecentMarketOptions ?? []);
+        const lottoRecentMarketTypeOptions = [
+            { value: 'all', text: 'ทุกประเภท' },
+            { value: 'normal', text: 'หวยปกติ' },
+            { value: 'yeekee', text: 'หวยยี่กี่' },
+        ];
     </script>
     <script type="text/x-template" id="admin-dashboard-template">
         @php
@@ -974,6 +979,11 @@
                                                 <div class="lotto-recent-title">รายการโพยล่าสุด (Recent Lotto Bets)</div>
                                                 <div class="lotto-recent-actions">
                                                     <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
+                                                    <select v-model="lottoRecentMarketType" class="form-control form-control-sm lotto-recent-filter" @change="refreshActivityOnly">
+                                                        <option v-for="option in lottoRecentMarketTypeOptions" :key="'lotto-type-opt-' + option.value" :value="option.value">
+                                                            @{{ option.text }}
+                                                        </option>
+                                                    </select>
                                                     <select ref="lottoRecentMarketSelect" class="form-control form-control-sm lotto-recent-filter">
                                                         <option value="">ทั้งหมดทุกรายการหวย</option>
                                                         <optgroup v-for="group in lottoRecentMarketOptions" :key="'lotto-opt-' + group.label" :label="group.label">
@@ -2037,6 +2047,8 @@
                     funnel: { funnel: { register: 0, register_deposit: 0, register_repeat_deposit: 0, confirmed: 0, first_deposit: 0, repeat_deposit: 0 }, sources: { direct: 0, campaign: 0, referral: 0 } },
                     activity: { deposits: [], deposits_manual: [], withdraws: [], registers: [], staff: [], lotto_recent_bets: [] },
                     lottoRecentMarketId: '',
+                    lottoRecentMarketType: 'all',
+                    lottoRecentMarketTypeOptions: lottoRecentMarketTypeOptions,
                     lottoRecentMarketOptions: lottoRecentMarketOptions,
                     depositTab: 'all',
                     lottoRiskTab: 'today',
@@ -2754,6 +2766,7 @@
 
                     this.dashboardPost("{{ route('admin.dashboard.activity') }}", this.buildPayload({
                         lotto_market_id: this.lottoRecentMarketId || '',
+                        lotto_market_type: this.lottoRecentMarketType || 'all',
                     }))
                         .then((res) => {
                             const data = this.normalizeResponse(res);
@@ -2814,6 +2827,7 @@
                     const payload = this.buildPayload();
                     const activityPayload = this.buildPayload({
                         lotto_market_id: this.lottoRecentMarketId || '',
+                        lotto_market_type: this.lottoRecentMarketType || 'all',
                     });
                     const loadingToken = this.startLoading('realtime', { skeleton: false });
                     const requests = lottoOnly
@@ -3086,6 +3100,7 @@
                     const payload = this.buildPayload();
                     const activityPayload = this.buildPayload({
                         lotto_market_id: this.lottoRecentMarketId || '',
+                        lotto_market_type: this.lottoRecentMarketType || 'all',
                     });
                     this.settleDashboardQueue([
                         () => this.dashboardPost("{{ route('admin.dashboard.summary') }}", payload),
