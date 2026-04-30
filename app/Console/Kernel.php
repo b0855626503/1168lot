@@ -147,6 +147,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // Yeekee result orchestrator: compute or void/refund by round activity policy.
+        $schedule->command('lotto:settle-yeekee-rounds --limit=200')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // End-to-end auto-result pipeline runner (resolve->build->fetch->parse->map->validate->apply).
         $schedule->command('lotto:fetch-auto-results --limit=100')
             ->everyMinute()
