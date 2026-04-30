@@ -228,7 +228,11 @@ class DashboardService
 
             $bonus = $this->bonusTotals($filters, $startDate, $endDate);
             $lotto = $this->lottoCashMetrics($startDate, $endDate);
-            $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
+            $lottoProduct = $this->lottoProductSummaryMetrics(
+                $startDate,
+                $endDate,
+                (string) Arr::get($filters, 'lotto_market_type', 'all')
+            );
             $lottoMarketType = (string) Arr::get($filters, 'lotto_market_type', 'all');
             $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate, $lottoMarketType);
             $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
@@ -1679,7 +1683,11 @@ class DashboardService
         $lottoPayoutCash = (float) ($current['lotto_payout_cash'] ?? 0);
         $lottoRefundCash = (float) ($current['lotto_refund_cash'] ?? 0);
         $lottoNetCash = (float) ($current['lotto_net_cash'] ?? ($lottoSalesCash - $lottoPayoutCash - $lottoRefundCash));
-        $lottoProduct = $this->lottoProductSummaryMetrics($startDate, $endDate);
+        $lottoProduct = $this->lottoProductSummaryMetrics(
+            $startDate,
+            $endDate,
+            (string) Arr::get($filters, 'lotto_market_type', 'all')
+        );
         $lottoMarketType = (string) Arr::get($filters, 'lotto_market_type', 'all');
         $lottoRisk = $this->lottoRiskSummaryMetrics($startDate, $endDate, $lottoMarketType);
         $topRiskyNumbers = $this->lottoTopRiskyNumbersSummary($startDate, $endDate, 10, $lottoMarketType);
@@ -2815,7 +2823,7 @@ class DashboardService
         return $defaults;
     }
 
-    private function lottoProductSummaryMetrics(string $startDate, string $endDate): array
+    private function lottoProductSummaryMetrics(string $startDate, string $endDate, ?string $marketType = null): array
     {
         $defaults = [
             'total_sales' => 0.0,
@@ -2832,20 +2840,48 @@ class DashboardService
             return $defaults;
         }
 
-        $row = DB::table('lotto_dashboard_summary_daily')
-            ->where('web_code', $this->dashboardWebCode())
-            ->whereBetween('summary_date', [$startDate, $endDate])
-            ->selectRaw(implode(",\n", [
-                'COALESCE(SUM(total_sales), 0) as total_sales',
-                'COALESCE(SUM(total_payout), 0) as total_payout',
-                'COALESCE(SUM(total_tickets), 0) as total_tickets',
-                'COALESCE(SUM(total_players), 0) as total_players',
-                'COALESCE(SUM(win_tickets), 0) as win_tickets',
-                'COALESCE(SUM(lose_tickets), 0) as lose_tickets',
-                'COALESCE(SUM(pending_tickets), 0) as pending_tickets',
-                'COALESCE(SUM(settled_tickets), 0) as settled_tickets',
-            ]))
-            ->first();
+        $normalizedMarketType = $this->normalizeLottoMarketType($marketType);
+        $row = null;
+        if (
+            $normalizedMarketType !== 'all'
+            && $this->hasTable('lotto_dashboard_market_summary')
+            && $this->hasTable('lotto_markets')
+            && $this->hasColumn('lotto_markets', 'result_mode')
+        ) {
+            $row = DB::table('lotto_dashboard_market_summary as ms')
+                ->join('lotto_markets as m', 'm.id', '=', 'ms.market_id')
+                ->where('ms.web_code', $this->dashboardWebCode())
+                ->whereBetween('ms.summary_date', [$startDate, $endDate])
+                ->where('m.result_mode', $normalizedMarketType)
+                ->selectRaw(implode(",\n", [
+                    'COALESCE(SUM(ms.total_sales), 0) as total_sales',
+                    'COALESCE(SUM(ms.total_payout), 0) as total_payout',
+                    'COALESCE(SUM(ms.total_tickets), 0) as total_tickets',
+                    'COALESCE(SUM(ms.total_players), 0) as total_players',
+                    '0 as win_tickets',
+                    '0 as lose_tickets',
+                    "COALESCE(SUM(CASE WHEN ms.status = 'pending' THEN ms.total_tickets ELSE 0 END), 0) as pending_tickets",
+                    "COALESCE(SUM(CASE WHEN ms.status = 'resulted' THEN ms.total_tickets ELSE 0 END), 0) as settled_tickets",
+                ]))
+                ->first();
+        }
+
+        if ($row === null) {
+            $row = DB::table('lotto_dashboard_summary_daily')
+                ->where('web_code', $this->dashboardWebCode())
+                ->whereBetween('summary_date', [$startDate, $endDate])
+                ->selectRaw(implode(",\n", [
+                    'COALESCE(SUM(total_sales), 0) as total_sales',
+                    'COALESCE(SUM(total_payout), 0) as total_payout',
+                    'COALESCE(SUM(total_tickets), 0) as total_tickets',
+                    'COALESCE(SUM(total_players), 0) as total_players',
+                    'COALESCE(SUM(win_tickets), 0) as win_tickets',
+                    'COALESCE(SUM(lose_tickets), 0) as lose_tickets',
+                    'COALESCE(SUM(pending_tickets), 0) as pending_tickets',
+                    'COALESCE(SUM(settled_tickets), 0) as settled_tickets',
+                ]))
+                ->first();
+        }
 
         if (! $row) {
             return $defaults;

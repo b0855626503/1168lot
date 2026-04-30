@@ -1352,6 +1352,97 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame('up', $trend['sales_direction']);
     }
 
+    public function test_lotto_product_summary_metrics_filters_by_market_type_when_market_summary_available(): void
+    {
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_dashboard_summary_daily', function (Blueprint $table): void {
+            $table->id();
+            $table->date('summary_date');
+            $table->string('web_code', 64);
+            $table->decimal('total_sales', 18, 2)->default(0);
+            $table->decimal('total_payout', 18, 2)->default(0);
+            $table->unsignedInteger('total_tickets')->default(0);
+            $table->unsignedInteger('total_players')->default(0);
+            $table->unsignedInteger('win_tickets')->default(0);
+            $table->unsignedInteger('lose_tickets')->default(0);
+            $table->unsignedInteger('pending_tickets')->default(0);
+            $table->unsignedInteger('settled_tickets')->default(0);
+        });
+        Schema::create('lotto_dashboard_market_summary', function (Blueprint $table): void {
+            $table->id();
+            $table->date('summary_date');
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->decimal('total_sales', 18, 2)->default(0);
+            $table->unsignedInteger('total_tickets')->default(0);
+            $table->unsignedInteger('total_players')->default(0);
+            $table->decimal('total_payout', 18, 2)->default(0);
+            $table->string('status', 32)->default('pending');
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'Yeekee Market', 'result_mode' => 'yeekee'],
+        ]);
+        DB::table('lotto_dashboard_summary_daily')->insert([
+            'summary_date' => '2026-04-10',
+            'web_code' => $webCode,
+            'total_sales' => 99999,
+            'total_payout' => 88888,
+            'total_tickets' => 777,
+            'total_players' => 666,
+            'win_tickets' => 333,
+            'lose_tickets' => 222,
+            'pending_tickets' => 111,
+            'settled_tickets' => 444,
+        ]);
+        DB::table('lotto_dashboard_market_summary')->insert([
+            [
+                'summary_date' => '2026-04-10',
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 101,
+                'total_sales' => 1000,
+                'total_payout' => 200,
+                'total_tickets' => 10,
+                'total_players' => 5,
+                'status' => 'resulted',
+            ],
+            [
+                'summary_date' => '2026-04-10',
+                'web_code' => $webCode,
+                'market_id' => 2,
+                'round_id' => 102,
+                'total_sales' => 3000,
+                'total_payout' => 800,
+                'total_tickets' => 20,
+                'total_players' => 7,
+                'status' => 'pending',
+            ],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoProductSummaryMetrics');
+        $method->setAccessible(true);
+
+        $normal = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'normal');
+        $yeekee = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'yeekee');
+        $all = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'all');
+
+        $this->assertSame(1000.0, (float) $normal['total_sales']);
+        $this->assertSame(10, (int) $normal['total_tickets']);
+        $this->assertSame(10, (int) $normal['settled_tickets']);
+        $this->assertSame(3000.0, (float) $yeekee['total_sales']);
+        $this->assertSame(20, (int) $yeekee['total_tickets']);
+        $this->assertSame(20, (int) $yeekee['pending_tickets']);
+        $this->assertSame(99999.0, (float) $all['total_sales']);
+    }
+
     public function test_top_risk_users_summary_returns_ranked_users_with_main_market(): void
     {
         Schema::create('members', function (Blueprint $table): void {
