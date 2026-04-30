@@ -174,8 +174,8 @@ Domain groups:
 
 ## Full Reference (Appendix)
 
-- [Route Reference (Main)](./frontend-v1/05-route-reference.md)
-- [Route Reference (Wheel/Reward Addendum)](./frontend-v1/05-route-reference-wheel-reward.md)
+- [Route Reference (Main)](../frontend-v1/05-route-reference.md)
+- [Route Reference (Wheel/Reward Addendum)](../frontend-v1/05-route-reference-wheel-reward.md)
 
 Source of truth (code):
 - `packages/Gametech/FrontendApi/src/Routes/api.php`
@@ -1551,13 +1551,13 @@ GET /api/v1/lotto/tickets/1001
 
 
 ### `POST /api/v1/lotto/tickets/{id}/cancel` (Moved)
-- ดูรายละเอียดที่ [05-route-reference-wheel-reward.md](./05-route-reference-wheel-reward.md)
+- ดูรายละเอียดที่ [05-route-reference-wheel-reward.md](../frontend-v1/05-route-reference-wheel-reward.md)
 
 ### Wheel / Reward / Common Errors (Moved)
 
 เนื้อหาส่วนนี้ถูกแยกออกไปที่:
 
-- [05-route-reference-wheel-reward.md](./05-route-reference-wheel-reward.md)
+- [05-route-reference-wheel-reward.md](../frontend-v1/05-route-reference-wheel-reward.md)
 
 
 ---
@@ -1566,7 +1566,7 @@ GET /api/v1/lotto/tickets/1001
 
 อัปเดตล่าสุด: 2026-04-19
 
-เอกสารนี้เป็น chapter ต่อจาก [05-route-reference.md](./05-route-reference.md)
+เอกสารนี้เป็น chapter ต่อจาก [05-route-reference.md](../frontend-v1/05-route-reference.md)
 
 ## Additional Moved Section
 

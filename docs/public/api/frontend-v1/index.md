@@ -1,24 +1,28 @@
-# Frontend API V1 (Index)
+# Frontend API V1 - Start Here
 
 อัปเดตล่าสุด: 2026-04-30
 
-เอกสารแยกเป็น 2 ชุด:
+เอกสารนี้เป็น entrypoint หลักของ `/docs/api/frontend-v1` สำหรับทีมที่นำ API ไปใช้งานจริง
 
-1. Public Manual (สำหรับทีมที่นำ API ไปใช้จริง)
-- ไฟล์หลัก: `docs/public/api/api-frontend-v1.md`
-- URL: `/docs/api/frontend-v1`
+## Start Here
 
-2. Agent Lean (สำหรับระบบ/agent เพื่อลด token)
-- ไฟล์: `docs/public/api/frontend-v1/agent-lean.md`
+1. [01-quick-start.md](./01-quick-start.md)
+2. [02-auth-language.md](./02-auth-language.md)
+3. [03-common-contract.md](./03-common-contract.md)
+4. [04-error-handling.md](./04-error-handling.md)
+5. [05-flows.md](./05-flows.md)
+6. [06-endpoint-index.md](./06-endpoint-index.md)
+7. [07-route-reference.md](./07-route-reference.md)
+8. [08-edge-cases.md](./08-edge-cases.md)
+9. [09-legacy-contract.md](./09-legacy-contract.md)
 
-Reference sections (legacy split):
-- [01-overview.md](./01-overview.md)
-- [02-flows.md](./02-flows.md)
-- [03-endpoints.md](./03-endpoints.md)
-- [04-edge-cases.md](./04-edge-cases.md)
-- [05-route-reference.md](./05-route-reference.md)
-- [05-route-reference-wheel-reward.md](./05-route-reference-wheel-reward.md)
+## Scope Rules
 
-Canonical code source:
+- `07-route-reference.md` คือ source of truth ของ request/response examples
+- `archive/api-frontend-v1.md` เป็น historical snapshot เท่านั้น
+- `agent-lean.md` สำหรับงาน agent/internal (ไม่ใช่ public manual)
+
+## Code Source of Truth
+
 - `packages/Gametech/FrontendApi/src/Routes/api.php`
-
+- `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`

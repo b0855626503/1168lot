@@ -21,7 +21,7 @@ class ApiDocsController extends AppBaseController
         return view($this->_config['view'], [
             'title' => 'Frontend API V1',
             'markdown' => $this->loadFrontendApiV1Markdown(),
-            'meta' => 'docs/public/api/archive/api-frontend-v1.md',
+            'meta' => 'docs/public/api/frontend-v1/index.md',
             'rawRoute' => 'admin.docs.api.frontend_v1.raw',
         ]);
     }
@@ -60,7 +60,7 @@ class ApiDocsController extends AppBaseController
 
     private function loadFrontendApiV1Markdown(): string
     {
-        $path = base_path('docs/public/api/archive/api-frontend-v1.md');
+        $path = base_path('docs/public/api/frontend-v1/index.md');
         abort_unless(File::exists($path), 404, 'API docs file not found');
 
         return File::get($path);

@@ -1,8 +1,10 @@
 # API Public Docs
 
-รายการเอกสาร API ที่เปิดใช้งานสำหรับทีม frontend/integration:
+เอกสาร API ที่เปิดใช้งานสำหรับทีม frontend/integration:
 
-- `frontend-v1/index.md`
+- `frontend-v1/index.md` (entrypoint ของ `/docs/api/frontend-v1`)
 - `laravel-echo-nextjs-install.md`
 
-หมายเหตุ: `api-frontend-v1.md` ยังอยู่เพื่อ redirect ไปโครงสร้างใหม่
+หมายเหตุ:
+- `archive/api-frontend-v1.md` เป็น historical snapshot
+- `api-frontend-v1.md` เป็น compatibility note เท่านั้น

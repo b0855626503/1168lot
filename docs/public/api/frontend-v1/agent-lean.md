@@ -5,13 +5,14 @@
 วัตถุประสงค์: เอกสารสั้นสำหรับ agent/internal เพื่อลด token cost
 
 - Canonical routes: `packages/Gametech/FrontendApi/src/Routes/api.php`
-- Public docs (สำหรับคนใช้งานจริง): `docs/public/api/api-frontend-v1.md`
+- Public docs (สำหรับคนใช้งานจริง): `docs/public/api/frontend-v1/index.md`
 - Public docs URL: `/docs/api/frontend-v1`
 
 ## Quick Rules
 
 - ถ้าแก้ route/controller ใน Frontend API ต้องอัปเดต:
-  - `docs/public/api/api-frontend-v1.md` (public manual)
+  - `docs/public/api/frontend-v1/index.md` (public manual entrypoint)
+  - `docs/public/api/frontend-v1/07-route-reference.md` (endpoint details)
   - และไฟล์นี้ (lean notes) เฉพาะถ้ามีผลต่อภาพรวม
 
 ## Minimal Contract
@@ -30,4 +31,3 @@
 - Lotto: draws/markets/betting/tickets/bet/cancel
 - Yeekee: shoot/current-round/shoots/reward-status/result-proof
 - Wheel/Reward: list/spin/history/redeem
-

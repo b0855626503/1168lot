@@ -36,7 +36,7 @@ MEMORY_FILES=(
 )
 
 # ----- Collect docs entities -----
-rg --no-filename -o '/api/v1[[:alnum:]_\-/{}]*' docs/public/api/frontend-v1/03-endpoints.md 2>/dev/null | sort -u > "$DOC_ENDPOINTS_ALL" || :
+rg --no-filename -o '/api/v1[[:alnum:]_\-/{}]*' docs/public/api/frontend-v1/07-route-reference.md 2>/dev/null | sort -u > "$DOC_ENDPOINTS_ALL" || :
 rg --no-filename -o '`(app|packages|routes|config|database)/[^`]+`' docs/internal/03_DOMAINS/auth.md docs/internal/03_DOMAINS/payment.md docs/internal/03_DOMAINS/wallet.md docs/internal/03_DOMAINS/frontend_api.md 2>/dev/null | tr -d '`' | sort -u > "$DOC_MODULES_ALL" || :
 
 # Critical endpoint scope: auth + wallet + payment + game
