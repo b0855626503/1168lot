@@ -181,9 +181,12 @@ class CashbackCalculate extends Command
                     'mode' => $this->option('mode'),
                     'target' => $target,
                     'promo_policy' => $promoPolicy,
+                    'eligibility_status' => 'passed',
+                    'eligibility_reason' => 'selected_for_cashback_calculation',
                     'promo_topup_count' => $items->promo_topup_count,
                     'promo_deposit_amount' => $items->promo_deposit_amount,
                     'deposit_amount' => $items->deposit_amount,
+                    'withdraw_amount' => $items->withdraw_amount,
                     'cashback_date' => $cashbackDate,
                 ]));
 
@@ -245,6 +248,18 @@ class CashbackCalculate extends Command
 
         $excludedLists->chunk(50, function ($members) use ($cashbackDate, $dateStart, $dateEnd) {
             foreach ($members as $member) {
+                Log::channel('cashback')->info(json_encode([
+                    'member_code' => $member->member_code,
+                    'mode' => $this->option('mode'),
+                    'target' => $this->option('target'),
+                    'promo_policy' => $this->option('promo-policy'),
+                    'eligibility_status' => 'failed',
+                    'eligibility_reason' => 'excluded_member_received_promo_topup',
+                    'promo_topup_count' => (int) ($member->promo_topup_count ?? 0),
+                    'cashback_date' => $cashbackDate,
+                    'date_start' => Carbon::parse($dateStart)->toDateString(),
+                    'date_end' => Carbon::parse($dateEnd)->toDateString(),
+                ]));
                 $this->insertExcludedMemberCreditLog($member, $cashbackDate, $dateStart, $dateEnd);
             }
         });

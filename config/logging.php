@@ -115,8 +115,8 @@ return [
         ],
 
         'cashback' => [
-            'driver' => 'single',
-            'path' => log_path('cashback_create.log'),
+            'driver' => 'daily',
+            'path' => log_path('cashback/cashback.log'),
             'level' => 'info',
         ],
 

@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 {
@@ -104,7 +105,10 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
         $balance = $item->balance;
 
-        if (($item->deposit_amount - $item->withdraw_amount - $balance) <= 0) {
+        $netAmount = ($item->deposit_amount - $item->withdraw_amount - $balance);
+        if ($netAmount <= 0) {
+            $this->recordSkippedCashback($item, $netAmount);
+
             return;
         }
 
@@ -185,5 +189,82 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
     private function normalizeTarget(string $target): string
     {
         return strtolower(trim($target)) === 'cashback' ? 'cashback' : 'wallet';
+    }
+
+    private function recordSkippedCashback(object $item, float $netAmount): void
+    {
+        $existing = DB::table('members_cashback')
+            ->whereDate('date_cashback', $this->cashbackDate)
+            ->where('downline_code', $item->member_code)
+            ->exists();
+
+        if (! $existing) {
+            app('Gametech\Member\Repositories\MemberCashbackRepository')->create([
+                'member_code' => $item->upline_code,
+                'downline_code' => $item->member_code,
+                'date_cashback' => $this->cashbackDate,
+                'balance' => $netAmount,
+                'cashback' => 0,
+                'amount' => $item->balance,
+                'topupic' => 'X',
+                'ip_admin' => request()->ip(),
+                'emp_code' => 0,
+                'user_create' => 'SYSTEM',
+                'user_update' => 'SYSTEM',
+                'sum_balance' => $item->balance,
+                'sum_deposit' => $item->deposit_amount,
+                'sum_withdraw' => $item->withdraw_amount,
+            ]);
+        }
+
+        if (! Schema::hasTable('members_credit_log')) {
+            return;
+        }
+
+        $remark = 'ไม่ผ่านคำนวน Cashback รอบ '.$this->cashbackDate
+            .' เนื่องจากยอดคำนวน <= 0 (ฝาก '.$item->deposit_amount
+            .' ถอน '.$item->withdraw_amount
+            .' ยอดเงินตอนคำนวน '.$item->balance
+            .' คิดเป็นยอดคำนวน '.$netAmount.')';
+
+        $alreadyLogged = DB::table('members_credit_log')
+            ->where('member_code', $item->member_code)
+            ->where('kind', 'CASHBACK')
+            ->where('refer_table', 'members_cashback')
+            ->where('remark', $remark)
+            ->exists();
+
+        if ($alreadyLogged) {
+            return;
+        }
+
+        DB::table('members_credit_log')->insert([
+            'refer_code' => 0,
+            'refer_table' => 'members_cashback',
+            'credit_type' => 'W',
+            'amount' => 0,
+            'bonus' => 0,
+            'total' => 0,
+            'balance_before' => 0,
+            'balance_after' => 0,
+            'credit' => 0,
+            'credit_bonus' => 0,
+            'credit_total' => 0,
+            'credit_before' => 0,
+            'credit_after' => 0,
+            'member_code' => $item->member_code,
+            'kind' => 'CASHBACK',
+            'auto' => 'Y',
+            'remark' => $remark,
+            'emp_code' => 0,
+            'ip' => request()->ip() ?? 'SYSTEM',
+            'amount_balance' => 0,
+            'withdraw_limit' => 0,
+            'withdraw_limit_amount' => 0,
+            'user_create' => 'SYSTEM',
+            'user_update' => 'SYSTEM',
+            'date_create' => now()->toDateTimeString(),
+            'date_update' => now()->toDateTimeString(),
+        ]);
     }
 }
