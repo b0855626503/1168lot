@@ -235,7 +235,12 @@ class DashboardService
             $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
             $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
             $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
-            $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary($startDate, $endDate);
+            $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary(
+                $startDate,
+                $endDate,
+                10,
+                (string) Arr::get($filters, 'lotto_market_type', 'all')
+            );
 
             $net = $depositSuccessAmount - $withdrawAmount;
             $prevNet = $this->netCashflow($filters, $prevStart, $prevEnd);
@@ -1680,7 +1685,12 @@ class DashboardService
         $lottoRiskTrend = $this->lottoRiskTrendSummary($startDate, $endDate);
         $lottoRiskAlerts = $this->lottoRiskThresholdAlerts($lottoRisk);
         $lottoBetTypeInsights = $this->lottoBetTypeInsightsSummary($startDate, $endDate);
-        $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary($startDate, $endDate);
+        $lottoTopRiskUsers = $this->lottoTopRiskUsersSummary(
+            $startDate,
+            $endDate,
+            10,
+            (string) Arr::get($filters, 'lotto_market_type', 'all')
+        );
 
         $net = $depositSuccessAmount - $withdrawAmount;
         $prevNet = (float) ($previous['deposit_success_amount'] ?? 0) - (float) ($previous['withdraw_total_amount'] ?? 0);
@@ -3832,9 +3842,10 @@ class DashboardService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function lottoTopRiskUsersSummary(string $startDate, string $endDate, int $limit = 10): array
+    private function lottoTopRiskUsersSummary(string $startDate, string $endDate, int $limit = 10, ?string $marketType = null): array
     {
         $limit = max(1, min(100, $limit));
+        $normalizedMarketType = $this->normalizeLottoMarketType($marketType);
 
         if (
             ! $this->hasTable('lotto_ticket_items')
@@ -3848,6 +3859,15 @@ class DashboardService
             ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
             ->join('lotto_draws as d', 'd.id', '=', 't.draw_id')
             ->whereBetween('d.draw_date', [$startDate, $endDate]);
+
+        if (
+            $normalizedMarketType !== 'all'
+            && $this->hasTable('lotto_markets')
+            && $this->hasColumn('lotto_markets', 'result_mode')
+        ) {
+            $base->join('lotto_markets as m', 'm.id', '=', 'd.market_id')
+                ->where('m.result_mode', $normalizedMarketType);
+        }
 
         if ($this->hasColumn('lotto_tickets', 'status')) {
             $base->whereNotIn('t.status', ['cancelled']);

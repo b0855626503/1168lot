@@ -547,6 +547,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
         });
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -746,6 +747,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
         });
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -957,6 +959,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
         });
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -1339,6 +1342,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
         });
         Schema::create('lotto_draws', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
@@ -1366,8 +1370,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
             ['code' => 102, 'user_name' => 'beta'],
         ]);
         DB::table('lotto_markets')->insert([
-            ['id' => 1, 'name' => 'หวยรัฐบาล'],
-            ['id' => 2, 'name' => 'หวยลาว'],
+            ['id' => 1, 'name' => 'หวยรัฐบาล', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'หวยลาว', 'result_mode' => 'yeekee'],
         ]);
         DB::table('lotto_draws')->insert([
             ['id' => 11, 'market_id' => 1, 'draw_date' => '2026-04-10'],
@@ -1398,6 +1402,14 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(2, $rows[0]['bet_count']);
         $this->assertSame(145000.0, (float) $rows[0]['total_exposure_raw']);
         $this->assertSame(1, $rows[0]['rank']);
+
+        $normalRows = $method->invoke($this->service, '2026-04-10', '2026-04-10', 5, 'normal');
+        $yeekeeRows = $method->invoke($this->service, '2026-04-10', '2026-04-10', 5, 'yeekee');
+
+        $this->assertCount(1, $normalRows);
+        $this->assertSame('101', $normalRows[0]['member_id']);
+        $this->assertCount(1, $yeekeeRows);
+        $this->assertSame('102', $yeekeeRows[0]['member_id']);
     }
 
     private function dropTableIfExists(string $table): void
