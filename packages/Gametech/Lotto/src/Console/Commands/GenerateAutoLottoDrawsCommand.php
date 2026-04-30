@@ -36,7 +36,11 @@ class GenerateAutoLottoDrawsCommand extends Command
 
         $marketQuery = LotteryMarket::query()
             ->with('group')
-            ->where('is_enabled', true);
+            ->where('is_enabled', true)
+            ->where(function ($query): void {
+                $query->whereNull('result_mode')
+                    ->orWhere('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE);
+            });
 
         if ($marketId !== null && $marketId !== '') {
             $marketQuery->where('id', (int) $marketId);

@@ -256,6 +256,7 @@ class GenerateAutoLottoDrawsScheduleConfigTest extends TestCase
             $table->unsignedBigInteger('group_id');
             $table->string('name')->nullable();
             $table->string('code')->nullable();
+            $table->string('result_mode', 20)->nullable();
             $table->string('draw_mode', 20)->default('manual');
             $table->string('draw_schedule_type', 20)->nullable();
             $table->json('draw_days')->nullable();
@@ -310,6 +311,7 @@ class GenerateAutoLottoDrawsScheduleConfigTest extends TestCase
             'group_id' => $groupId,
             'name' => 'market',
             'code' => 'market_'.uniqid('', true),
+            'result_mode' => 'normal',
             'draw_mode' => 'manual',
             'draw_schedule_type' => 'manual',
             'draw_days' => json_encode([], JSON_UNESCAPED_UNICODE),
@@ -331,6 +333,35 @@ class GenerateAutoLottoDrawsScheduleConfigTest extends TestCase
         }
 
         return (int) DB::table('lotto_markets')->insertGetId($payload);
+    }
+
+    public function test_yeekee_market_is_excluded_from_auto_draw_generation(): void
+    {
+        $groupId = $this->insertGroup(true);
+
+        $normalMarketId = $this->insertMarket($groupId, [
+            'name' => 'normal-market',
+            'result_mode' => 'normal',
+            'draw_schedule_type' => 'weekly',
+            'draw_days' => [1],
+            'draw_dates' => [],
+            'draw_mode' => 'manual',
+        ]);
+
+        $yeekeeMarketId = $this->insertMarket($groupId, [
+            'name' => 'yeekee-market',
+            'result_mode' => 'yeekee',
+            'draw_schedule_type' => 'weekly',
+            'draw_days' => [1],
+            'draw_dates' => [],
+            'draw_mode' => 'manual',
+        ]);
+
+        $result = $this->runGenerateAuto(['--date' => '2026-04-27', '--days' => 1]);
+
+        $this->assertSame(0, $result['exit_code']);
+        $this->assertSame(1, DB::table('lotto_draws')->where('market_id', $normalMarketId)->count());
+        $this->assertSame(0, DB::table('lotto_draws')->where('market_id', $yeekeeMarketId)->count());
     }
 
     /**
