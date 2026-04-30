@@ -323,192 +323,6 @@ Source of truth (code):
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 
-## Yeekee API
-
-- `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
-- lifecycle: `betting open -> betting closed -> shoot window -> pending result -> resulted/voided`
-- Yeekee ไม่มี manual result
-- response เดิมของ lotto จะเพิ่ม field แบบไม่กระทบของเดิม เช่น `result_mode`, `market_type`, `is_yeekee`, `has_shoot`, `round_status`
-
-### `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
-- คำอธิบาย: ส่งเลข 5 หลักเพื่อชิงลำดับยิงในรอบยี่กี่
-- ใช้เมื่อ: อยู่ในช่วงยิงเลขของรอบ และสมาชิกต้องการยิงเลข
-- Auth: ต้องใช้ token
-- Path params:
-  - `roundId` = id ของรอบยี่กี่
-- Request example:
-```json
-{
-  "number": "12345"
-}
-```
-- Response example:
-```json
-{
-  "success": true,
-  "message": "ยิงเลขสำเร็จ",
-  "data": {
-    "round_id": 901,
-    "position": 128,
-    "number_text": "12345",
-    "submitted_at": "2026-04-30 12:00:01",
-    "round_status": "shoot_open"
-  }
-}
-```
-- Error example (จากโค้ดจริง):
-  - `ยังไม่ถึงเวลายิงเลข`
-  - `หมดเวลายิงเลขแล้ว`
-  - `กรุณากรอกเลข 5 หลัก`
-  - `รายการหวยนี้ไม่รองรับการยิงเลข`
-  - `รอบนี้ไม่สามารถยิงเลขได้`
-  - `เกินจำนวนการยิงเลขสูงสุดต่อรอบ`
-
-### `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
-- คำอธิบาย: ดึงรอบยี่กี่ปัจจุบันของ market
-- ใช้เมื่อ: หน้า frontend ต้องรู้สถานะรอบล่าสุดและ timeline ของรอบ
-- Auth: ต้องใช้ token
-- Path params:
-  - `marketId` = id ของตลาดหวย
-- Response example:
-```json
-{
-  "success": true,
-  "message": "ดึงรอบยี่กี่ปัจจุบันสำเร็จ",
-  "data": {
-    "market_id": 12,
-    "draw_id": 7788,
-    "round_id": 901,
-    "result_mode": "yeekee",
-    "round_no": 42,
-    "status": "shoot_open",
-    "bet_open_at": "2026-04-30 12:00:00",
-    "bet_close_at": "2026-04-30 12:10:00",
-    "shoot_open_at": "2026-04-30 12:10:00",
-    "shoot_close_at": "2026-04-30 12:11:00",
-    "result_compute_at": "2026-04-30 12:12:00",
-    "server_time": "2026-04-30 12:10:15"
-  }
-}
-```
-- Error example:
-  - `ไม่พบหวยที่ระบุ`
-  - `รายการหวยนี้ไม่รองรับการยิงเลข`
-  - `ไม่พบรอบยี่กี่ที่เปิดอยู่`
-
-### `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
-- คำอธิบาย: ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน)
-- ใช้เมื่อ: หน้าแสดง feed ยิงเลขของรอบ
-- Auth: ต้องใช้ token
-- Path params:
-  - `roundId` = id ของรอบยี่กี่
-- Query params:
-  - `limit` (optional, default `50`, max `100`)
-- Response example:
-```json
-{
-  "success": true,
-  "message": "ดึงรายการยิงเลขสำเร็จ",
-  "data": {
-    "round_id": 901,
-    "limit": 50,
-    "count": 2,
-    "items": [
-      {
-        "position": 128,
-        "number_text": "12345",
-        "submitted_at": "2026-04-30 12:10:01"
-      },
-      {
-        "position": 127,
-        "number_text": "54321",
-        "submitted_at": "2026-04-30 12:09:58"
-      }
-    ]
-  }
-}
-```
-
-### `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
-- คำอธิบาย: ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่
-- ใช้เมื่อ: หน้า profile/round status ต้องแสดงสิทธิ์รางวัลยิงเลขของสมาชิก
-- Auth: ต้องใช้ token
-- Path params:
-  - `roundId` = id ของรอบยี่กี่
-- Response example:
-```json
-{
-  "success": true,
-  "message": "ดึงสถานะรางวัลยิงเลขสำเร็จ",
-  "data": {
-    "round_id": 901,
-    "member_id": 61240,
-    "reward_enabled": true,
-    "reward_count": 1,
-    "rewarded": true,
-    "items": [
-      {
-        "position": 88,
-        "credit_amount": 20
-      }
-    ]
-  }
-}
-```
-
-### `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
-- คำอธิบาย: ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่
-- ใช้เมื่อ: หน้า result/proof ต้องแสดงหลักฐานก่อนหรือหลัง reveal
-- Auth: ต้องใช้ token
-- Path params:
-  - `roundId` = id ของรอบยี่กี่
-- Response example (ก่อน reveal):
-```json
-{
-  "success": true,
-  "message": "ดึงข้อมูลผลและหลักฐานสำเร็จ",
-  "data": {
-    "round_id": 901,
-    "draw_id": 7788,
-    "status": "result_pending",
-    "is_revealed": false,
-    "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
-      "precommit_signature": "7f4d...",
-      "proof_signature": "",
-      "external_seed_reference": "",
-      "result_payload": null
-    },
-    "server_time": "2026-04-30 12:12:00"
-  }
-}
-```
-- Response example (หลัง reveal):
-```json
-{
-  "success": true,
-  "message": "ดึงข้อมูลผลและหลักฐานสำเร็จ",
-  "data": {
-    "round_id": 901,
-    "draw_id": 7788,
-    "status": "resulted",
-    "is_revealed": true,
-    "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
-      "precommit_signature": "7f4d...",
-      "proof_signature": "a9bc...",
-      "external_seed_reference": "NTP:2026-04-30T12:12:00Z",
-      "result_payload": {
-        "raw_result": "12345",
-        "top_3": "123",
-        "bottom_2": "45"
-      }
-    },
-    "server_time": "2026-04-30 12:13:00"
-  }
-}
-```
-
 
 ## Contract Notes
 
@@ -1961,6 +1775,194 @@ GET /api/v1/reward/history?page=1&per_page=20
   }
 }
 ```
+
+
+## Yeekee API
+
+- `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
+- lifecycle: `betting open -> betting closed -> shoot window -> pending result -> resulted/voided`
+- Yeekee ไม่มี manual result
+- response เดิมของ lotto จะเพิ่ม field แบบไม่กระทบของเดิม เช่น `result_mode`, `market_type`, `is_yeekee`, `has_shoot`, `round_status`
+
+### `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- คำอธิบาย: ส่งเลข 5 หลักเพื่อชิงลำดับยิงในรอบยี่กี่
+- ใช้เมื่อ: อยู่ในช่วงยิงเลขของรอบ และสมาชิกต้องการยิงเลข
+- Auth: ต้องใช้ token
+- Path params:
+  - `roundId` = id ของรอบยี่กี่
+- Request example:
+```json
+{
+  "number": "12345"
+}
+```
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ยิงเลขสำเร็จ",
+  "data": {
+    "round_id": 901,
+    "position": 128,
+    "number_text": "12345",
+    "submitted_at": "2026-04-30 12:00:01",
+    "round_status": "shoot_open"
+  }
+}
+```
+- Error example (จากโค้ดจริง):
+  - `ยังไม่ถึงเวลายิงเลข`
+  - `หมดเวลายิงเลขแล้ว`
+  - `กรุณากรอกเลข 5 หลัก`
+  - `รายการหวยนี้ไม่รองรับการยิงเลข`
+  - `รอบนี้ไม่สามารถยิงเลขได้`
+  - `เกินจำนวนการยิงเลขสูงสุดต่อรอบ`
+
+### `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- คำอธิบาย: ดึงรอบยี่กี่ปัจจุบันของ market
+- ใช้เมื่อ: หน้า frontend ต้องรู้สถานะรอบล่าสุดและ timeline ของรอบ
+- Auth: ต้องใช้ token
+- Path params:
+  - `marketId` = id ของตลาดหวย
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรอบยี่กี่ปัจจุบันสำเร็จ",
+  "data": {
+    "market_id": 12,
+    "draw_id": 7788,
+    "round_id": 901,
+    "result_mode": "yeekee",
+    "round_no": 42,
+    "status": "shoot_open",
+    "bet_open_at": "2026-04-30 12:00:00",
+    "bet_close_at": "2026-04-30 12:10:00",
+    "shoot_open_at": "2026-04-30 12:10:00",
+    "shoot_close_at": "2026-04-30 12:11:00",
+    "result_compute_at": "2026-04-30 12:12:00",
+    "server_time": "2026-04-30 12:10:15"
+  }
+}
+```
+- Error example:
+  - `ไม่พบหวยที่ระบุ`
+  - `รายการหวยนี้ไม่รองรับการยิงเลข`
+  - `ไม่พบรอบยี่กี่ที่เปิดอยู่`
+
+### `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+- คำอธิบาย: ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน)
+- ใช้เมื่อ: หน้าแสดง feed ยิงเลขของรอบ
+- Auth: ต้องใช้ token
+- Path params:
+  - `roundId` = id ของรอบยี่กี่
+- Query params:
+  - `limit` (optional, default `50`, max `100`)
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรายการยิงเลขสำเร็จ",
+  "data": {
+    "round_id": 901,
+    "limit": 50,
+    "count": 2,
+    "items": [
+      {
+        "position": 128,
+        "number_text": "12345",
+        "submitted_at": "2026-04-30 12:10:01"
+      },
+      {
+        "position": 127,
+        "number_text": "54321",
+        "submitted_at": "2026-04-30 12:09:58"
+      }
+    ]
+  }
+}
+```
+
+### `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+- คำอธิบาย: ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่
+- ใช้เมื่อ: หน้า profile/round status ต้องแสดงสิทธิ์รางวัลยิงเลขของสมาชิก
+- Auth: ต้องใช้ token
+- Path params:
+  - `roundId` = id ของรอบยี่กี่
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงสถานะรางวัลยิงเลขสำเร็จ",
+  "data": {
+    "round_id": 901,
+    "member_id": 61240,
+    "reward_enabled": true,
+    "reward_count": 1,
+    "rewarded": true,
+    "items": [
+      {
+        "position": 88,
+        "credit_amount": 20
+      }
+    ]
+  }
+}
+```
+
+### `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
+- คำอธิบาย: ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่
+- ใช้เมื่อ: หน้า result/proof ต้องแสดงหลักฐานก่อนหรือหลัง reveal
+- Auth: ต้องใช้ token
+- Path params:
+  - `roundId` = id ของรอบยี่กี่
+- Response example (ก่อน reveal):
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลผลและหลักฐานสำเร็จ",
+  "data": {
+    "round_id": 901,
+    "draw_id": 7788,
+    "status": "result_pending",
+    "is_revealed": false,
+    "proof": {
+      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "precommit_signature": "7f4d...",
+      "proof_signature": "",
+      "external_seed_reference": "",
+      "result_payload": null
+    },
+    "server_time": "2026-04-30 12:12:00"
+  }
+}
+```
+- Response example (หลัง reveal):
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลผลและหลักฐานสำเร็จ",
+  "data": {
+    "round_id": 901,
+    "draw_id": 7788,
+    "status": "resulted",
+    "is_revealed": true,
+    "proof": {
+      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "precommit_signature": "7f4d...",
+      "proof_signature": "a9bc...",
+      "external_seed_reference": "NTP:2026-04-30T12:12:00Z",
+      "result_payload": {
+        "raw_result": "12345",
+        "top_3": "123",
+        "bottom_2": "45"
+      }
+    },
+    "server_time": "2026-04-30 12:13:00"
+  }
+}
+```
+
 
 ---
 
