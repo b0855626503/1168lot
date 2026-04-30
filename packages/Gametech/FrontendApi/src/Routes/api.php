@@ -19,8 +19,8 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\WheelController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
-use Gametech\Payment\Http\Controllers\SmkPayController;
 use Gametech\Payment\Http\Controllers\DeepPayController;
+use Gametech\Payment\Http\Controllers\SmkPayController;
 use Illuminate\Support\Facades\Route;
 
 $apiSubdomain = config('gametech.api_url') ?? config('app.admin_url');
@@ -165,6 +165,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.ticket');
             Route::post('lotto/tickets/{id}/cancel', [LottoController::class, 'cancel'])
                 ->name('frontend.api.v1.lotto.cancel');
+            Route::post('lotto/yeekee/rounds/{roundId}/shoot', [LottoController::class, 'submitShoot'])
+                ->name('frontend.api.v1.lotto.yeekee.shoot');
 
             Route::get('wheel/list', [WheelController::class, 'list'])
                 ->name('frontend.api.v1.wheel.list');

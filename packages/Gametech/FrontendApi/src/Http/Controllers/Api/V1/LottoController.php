@@ -16,6 +16,7 @@ use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
+use Gametech\Lotto\Services\YeekeeShootService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -405,6 +406,39 @@ class LottoController extends BaseController
             );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการโพยได้ในขณะนี้', 422);
+        }
+    }
+
+    public function submitShoot(Request $request, int $roundId, YeekeeShootService $shootService): JsonResponse
+    {
+        try {
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $validated = validator($request->all(), [
+                'number' => ['required', 'string'],
+            ])->validate();
+
+            $shoot = $shootService->submitShoot(
+                memberId: (int) $member->code,
+                roundId: $roundId,
+                numberText: (string) $validated['number'],
+                ipAddress: $request->ip(),
+                userAgent: (string) $request->userAgent()
+            );
+
+            return $this->sendResponse([
+                'round_id' => (int) $shoot->yeekee_round_id,
+                'position' => (int) $shoot->position,
+                'number_text' => (string) $shoot->number_text,
+                'submitted_at' => (string) $shoot->submitted_at,
+            ], 'ยิงเลขสำเร็จ');
+        } catch (\InvalidArgumentException $exception) {
+            return $this->sendError($exception->getMessage(), 422);
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถยิงเลขได้ในขณะนี้', 422);
         }
     }
 
