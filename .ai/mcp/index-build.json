@@ -1,13 +1,11 @@
 {
-    "built_at": "2026-04-25T21:15:00+07:00",
-    "commit_hash": "1fd94ff7",
+    "built_at": "2026-04-30T04:44:52+00:00",
+    "commit_hash": "9cac5a86a7aad07dd77efe7448469c01b403e29c",
     "mode": "changed-only",
     "indexed_files": [
-        "docs/internal/03_DOMAINS/frontend_api.md",
-        "docs/public/api/frontend-v1/03-endpoints.md",
-        "docs/public/api/frontend-v1/05-route-reference.md",
-        "memory/PROJECT.md",
-        "packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/DepositController.php",
-        "tests/Feature/FrontendApi/DepositLoadBankRandomControllerTest.php"
+        "docs/README.md",
+        "docs/START_HERE.md",
+        "docs/internal/01_SYSTEM/startup_digest.md",
+        "memory/PROJECT.md"
     ]
 }

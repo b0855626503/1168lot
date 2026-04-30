@@ -1,5 +1,7 @@
 # 1168lot Project Memory
 
+อัปเดตล่าสุด: 2026-04-30
+
 ## Issues Fixed:
 1. **Withdraw clear ไม่ทำงาน** (2026-04-07)
    - ปัญหา: เรียก `setWalletSingleWithdraw()` ซึ่งพยายามฝากเงินเข้าเกม
@@ -23,13 +25,18 @@
    - `GET /api/v1/meta/site` และ `GET /api/v1/member/profile` ส่ง `deposit_min` จาก `configs.deposit_min`
    - `/api/v1/deposit/loadbank` และ `/deposit/loadbank/random` ใช้ `bank_account.deposit_min` ก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`
 
+6. **Docs startup optimization** (2026-04-30)
+   - ปรับเอกสารนำทางให้กระชับและลด token ที่ใช้ตอนเริ่มงาน
+   - ไฟล์ที่ปรับ: `docs/README.md`, `docs/START_HERE.md`, `docs/internal/01_SYSTEM/startup_digest.md`
+   - กำหนด workflow การอ่านเป็น `Memory First -> Domain On-Demand -> Escalation`
+
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth
 - **ADR-005**: Ticket cancellation ต้องเก็บ audit context
 - **ADR-011**: Admin `loadCnt` คือ single aggregate source สำหรับ Lotto menu badges
 
 ## Tech Stack:
-- **Backend**: Laravel 8 (กำลัง upgrade ไป 9)
+- **Backend**: Laravel 10 + PHP 8.2
 - **Frontend**: Vue.js + Bootstrap
 - **Database**: MySQL + Redis
 - **Integrations**: Telegram API, Payment gateways

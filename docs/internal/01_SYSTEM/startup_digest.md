@@ -2,8 +2,8 @@
 
 อัปเดตล่าสุด: 2026-04-13
 
-ไฟล์นี้เป็น startup core สำหรับ agent
-เป้าหมายคือให้เริ่มงานด้วย token ต่ำที่สุด โดยยังไม่เสีย source-of-truth และ boundary สำคัญ
+ไฟล์นี้คือ startup core สำหรับ agent
+เป้าหมาย: เริ่มงานเร็ว ใช้ token ต่ำ และไม่เสีย source-of-truth
 
 ## Core Startup Set
 
@@ -16,17 +16,7 @@
 5. `docs/04_PLANS/README.md`
 6. `docs/internal/01_SYSTEM/mcp_operating_guide.md` (เปิดเมื่อมีงาน MCP, knowledge graph, ADR memory)
 
-## สิ่งที่ startup core ต้องจำ
-
-- `/docs` คือ source of truth
-- ห้ามใช้ chat history เป็นหลัก
-- `FrontendApi` ห้ามเรียก controller ข้าม package
-- ลูกค้าและทีมงานต้องแยก realtime channel
-- `wallet_transactions` คือ financial source of truth
-- `/lotto/tickets` ฝั่ง admin คือ active-only operations view
-- งานใหม่ที่เปลี่ยน behavior ต้องอัปเดต doc
-
-## วิธีอ่านต่อแบบประหยัด token
+## Memory First (บังคับ)
 
 ให้อ่าน memory layer ก่อนเสมอ:
 
@@ -36,46 +26,31 @@
 ถ้าต้องตรวจสถานะ retrieval/memory/index ให้เปิด:
 - `docs/internal/01_SYSTEM/retrieval_system_status.md`
 
-ถ้า memory ไม่พอค่อยเปิด docs ตามลำดับด้านล่าง
+ถ้า memory ไม่พอ ค่อยเปิด docs ตามลำดับด้านล่าง
 
-หลังอ่าน core startup แล้ว ให้เลือกอ่านเฉพาะ domain ที่เกี่ยวข้อง:
+## Domain On-Demand
 
-- งาน `FrontendApi` -> `docs/internal/03_DOMAINS/frontend_api.md`
-- งาน `Wallet` / ledger / claim / financial history -> `docs/internal/03_DOMAINS/wallet.md`
-- งาน `Lotto` policy / draw / cancel / result -> `docs/internal/03_DOMAINS/lotto.md`
-- งาน `Admin Lotto` / report / badge / loadCnt -> `docs/internal/03_DOMAINS/admin_lotto.md`
-- งาน `Realtime` -> `docs/internal/03_DOMAINS/realtime.md`
-- งาน MCP / architecture memory / cross-session trace -> `docs/internal/01_SYSTEM/mcp_operating_guide.md`
+- `FrontendApi` -> `docs/internal/03_DOMAINS/frontend_api.md`
+- `Wallet` -> `docs/internal/03_DOMAINS/wallet.md`
+- `Lotto` -> `docs/internal/03_DOMAINS/lotto.md`
+- `Admin Lotto` -> `docs/internal/03_DOMAINS/admin_lotto.md`
+- `Realtime` -> `docs/internal/03_DOMAINS/realtime.md`
 
-## Fast Entry Map (ชี้ไฟล์ใช้งานจริงทันที)
+## Escalation (เฉพาะจำเป็น)
 
-- Frontend API routes: `packages/Gametech/FrontendApi/src/Routes/api.php`
-- Frontend API controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
-- Lotto domain: `packages/Gametech/Lotto/src/`
-- Wallet domain: `packages/Gametech/Wallet/src/`
-- Admin domain: `packages/Gametech/Admin/src/`
-- Main Laravel app: `app/`, `routes/`, `config/`
+เปิด `system-current-state/index.md` หรือ `decision-log/index.md` เมื่อ:
 
-หมายเหตุ: ให้เข้าไฟล์จาก map นี้ก่อน แล้วขยายเฉพาะ call chain ที่เกี่ยวข้องกับ task
-
-## เมื่อไรต้องเปิดไฟล์ใหญ่
-
-ให้เปิด `system-current-state/index.md` หรือ `decision-log/index.md` เพิ่มเฉพาะเมื่อ:
-
-- งานจะเปลี่ยน behavior จริง
-- งานแตะหลาย domain และ domain note ไม่พอ
-- งานมี state machine / retry / queue / cron / pipeline
-- งานมี schema rollout หรือ fallback compatibility
-- พบว่า code กับ doc อาจไม่ตรงกัน
-- เป็นงาน high-risk เช่น financial, settlement, refund, auth
+- งานเปลี่ยน behavior จริง
+- งานแตะ flow เสี่ยง: financial/auth/retry/queue/cron/schema
+- domain note ไม่พอ หรือ code อาจไม่ตรง doc
 
 ## ลำดับ escalation ที่แนะนำ
 
 1. อ่าน core startup
-2. อ่าน domain note ที่เกี่ยวข้อง
+2. อ่าน memory ของ domain
 3. อ่าน plan ที่ active ของ domain นั้น
-4. ค่อยเปิด section ที่เกี่ยวข้องใน `system-current-state/index.md`
-5. ค่อยเปิด decision ใน `decision-log/index.md` เฉพาะหัวข้อที่เกี่ยวข้อง
+4. อ่าน domain note ที่เกี่ยวข้อง
+5. ค่อยเปิดไฟล์ใหญ่เฉพาะ section ที่จำเป็น
 
 ## Targeted Lookup Playbook
 
@@ -85,9 +60,9 @@
 4. เก็บหลักฐานเป็น path + function ที่แตะ behavior จริง
 5. หยุดอ่านทันทีเมื่อได้ context เพียงพอ ไม่เปิดไฟล์เพิ่มโดยไม่จำเป็น
 
-## เป้าหมาย
+## สิ่งที่ต้องจำตลอด
 
-- งานเล็ก: ไม่ควรเสีย startup token เกินจำเป็น
-- งานกลาง: อ่านเพิ่มเฉพาะ domain
-- งานใหญ่: ค่อยขยายไป full docs ตาม risk
-- ทุกงาน: memory-first, docs-on-demand
+- `/docs` คือ source of truth
+- ห้ามใช้ chat history เป็นหลัก
+- ถ้า code ไม่ตรง doc ให้ report ก่อน
+- งานที่เปลี่ยน behavior ต้องอัปเดต doc/memory/index ให้ครบ
