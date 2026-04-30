@@ -135,6 +135,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // Yeekee round bootstrap from existing yeekee lotto draws (idempotent, rerun-safe).
+        $schedule->command('lotto:generate-yeekee-rounds')
+            ->hourly()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // End-to-end auto-result pipeline runner (resolve->build->fetch->parse->map->validate->apply).
         $schedule->command('lotto:fetch-auto-results --limit=100')
             ->everyMinute()
