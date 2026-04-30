@@ -2,77 +2,184 @@
 
 อัปเดตล่าสุด: 2026-04-30
 
-เอกสารนี้เป็น **ไฟล์หลักสำหรับหน้า** `/docs/api/frontend-v1` และเป็น entrypoint สำหรับทีมที่นำ API ไปใช้งานจริง
+เอกสารนี้เป็นไฟล์หลักสำหรับหน้า `/docs/api/frontend-v1` ที่เน้นให้ทีม frontend เริ่มใช้งาน API ได้เร็วที่สุด
 
-ข้อสำคัญ:
-- เอกสารฉบับเต็มแยกเป็น chapter เพื่อให้ดูแลง่ายและผ่าน docs-validation
-- เมื่อมีการเพิ่ม/แก้ route หรือ payload ต้องอัปเดต chapter ที่เกี่ยวข้อง + ไฟล์นี้
+## Navigation (Developer-first)
 
-## Source of Truth (Code)
+1. [Quick Start](#quick-start-login---balance)
+2. [Auth / Headers / Language](#auth--headers--language)
+3. [Common Contract](#common-contract-current--target)
+4. [Flows](#flows-optional)
+5. [Endpoint Groups](#endpoint-groups-core-first)
+6. [Full Reference (Appendix)](#full-reference-appendix)
 
-- `packages/Gametech/FrontendApi/src/Routes/api.php`
-- `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
+## Quick Start (Login -> Balance)
 
-## Contract พื้นฐาน
+### Step 1) Login เพื่อรับ token
+
+`POST /api/v1/auth/login`
+
+```bash
+curl -X POST "/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -H "X-Language: th" \
+  -d '{
+    "user_name": "0900000014",
+    "password": "pass1234"
+  }'
+```
+
+ตัวอย่าง response:
+
+```json
+{
+  "success": true,
+  "message": "เข้าสู่ระบบสำเร็จ",
+  "data": {
+    "access_token": "eyJ...",
+    "token_type": "Bearer",
+    "expires_in": 3600
+  }
+}
+```
+
+### Step 2) ใช้ token เรียก balance
+
+`GET /api/v1/member/balance`
+
+```bash
+curl "/api/v1/member/balance" \
+  -H "Authorization: Bearer eyJ..." \
+  -H "X-Language: th"
+```
+
+ตัวอย่าง response:
+
+```json
+{
+  "success": true,
+  "message": "ดึงยอดเงินสำเร็จ",
+  "data": {
+    "balance": 1200
+  }
+}
+```
+
+### Axios Example
+
+```js
+const login = await axios.post("/api/v1/auth/login", {
+  user_name: "0900000014",
+  password: "pass1234",
+}, {
+  headers: { "X-Language": "th" },
+});
+
+const token = login.data?.data?.access_token;
+
+const balance = await axios.get("/api/v1/member/balance", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "X-Language": "th",
+  },
+});
+```
+
+## Auth / Headers / Language
 
 - Base URL: `/api/v1`
-- Header: `Content-Type: application/json`
-- Language: `X-Language: th|en|kh|la`
-- Auth endpoints: `Authorization: Bearer <access_token>`
+- Required header: `Content-Type: application/json`
+- Language header: `X-Language: th|en|kh|la`
+- Auth header (authenticated routes): `Authorization: Bearer <access_token>`
 
-Response helpers ที่ใช้จริง:
-- `sendResponse(result, message)` => `{ success, data, message }`
-- `sendResponseNew(result, message)` => `result + { success: true, message }`
-- `sendSuccess(message)` => `{ success: true, message }`
-- `sendError(message, code)` => error envelope ของระบบ
-- `normalizedJsonResponse(payload)` => ส่ง payload ตรง
+Language fallback order:
+1. `language` / `lang` / `locale` (body/query)
+2. `X-Language`
+3. `Accept-Language`
+4. fallback `th`
 
-## 3) Route Catalog (ครบทุกเส้น)
+## Common Contract (Current + Target)
 
-> รายละเอียด endpoint แบบใช้งานจริง (ใช้ทำอะไร, token, request/response) อยู่ในไฟล์อ้างอิงด้านล่าง
+Current contracts (ของจริงในระบบตอนนี้):
+- Standard (ส่วนใหญ่): `{ success, message, data }`
+- Success แบบไม่มี data: `{ success, message }`
+- บาง endpoint เป็น custom payload (เช่น reward list/history)
 
-### Public / Auth / Member / Wallet / Payment / Lotto / Wheel / Reward
+Target contract (แนวทางที่ควร normalize ในงานถัดไป):
+- Standard: `{ success, message, data }`
+- List: `data.items`
+- Pagination: `data.meta`
+- Error: `{ success: false, message, errors? }`
+
+หมายเหตุ: ส่วน Target เป็น roadmap เพื่อความเสถียรของ frontend mapping; ยังไม่ใช่การเปลี่ยน contract runtime ทันที
+
+## Error Handling
+
+| HTTP | กรณี | แนวทางฝั่ง frontend |
+|---|---|---|
+| 401 | token หาย/หมดอายุ/ไม่ถูกต้อง | เด้ง login และล้าง token เดิม |
+| 422 | validation หรือ business rule ไม่ผ่าน | แสดง message จาก API ตรงๆ |
+| 404 | route/resource ไม่พบ | แสดง not found ตามบริบท |
+| 500 | server error | retry แบบ backoff และแจ้งผู้ใช้ |
+
+Retry guideline:
+- `GET` retry ได้ (1-2 ครั้งด้วย exponential backoff)
+- `POST/PUT` ให้ retry เฉพาะกรณีมี idempotency key และ timeout/network fail
+
+## Idempotency Guideline
+
+- แนะนำใช้ header `X-Idempotency-Key` กับ write endpoint ที่เสี่ยงยิงซ้ำ
+- ตัวอย่าง endpoint ที่รองรับในเอกสารนี้: `POST /api/v1/reward/redeem`
+- รูปแบบ key แนะนำ: `memberId-action-uuid`
+
+## Terminology (Lock Vocabulary)
+
+- `member` = ผู้ใช้ระบบฝั่งสมาชิก (ไม่ใช้สลับกับ `user`)
+- `wallet` = กระเป๋า/บัญชีธุรกรรม
+- `balance` = ยอดคงเหลือเชิงตัวเลข
+- `draw` = งวดหวยหลัก
+- `round` = รอบย่อย (เช่นยี่กี่)
+
+## Flows (Optional)
+
+- auth: register -> login -> logout
+- member: profile -> balance -> history
+- wallet: withdraw/claim/transactions
+- lotto: draws/markets -> bet -> tickets -> cancel
+- yeekee: current-round -> shoot -> result-proof -> reward-status
+
+## Endpoint Groups (Core-first)
+
+Core ที่ใช้บ่อยสุด:
+1. Auth: `/auth/register`, `/auth/login`, `/auth/logout`
+2. Member/Wallet: `/member/profile`, `/member/balance`, `/wallet/transactions`
+3. Lotto Core: `/lotto/draws`, `/lotto/markets/latest`, `/lotto/bet`, `/lotto/tickets`
+
+Domain groups:
+- Auth
+- Member
+- Wallet
+- Payment (deposit/smkpay/deeppay)
+- Lotto
+- Game
+- Promotion / Coupon
+- Wheel / Reward
+- Yeekee (อยู่ท้ายสุดใน authenticated list)
+
+## Edge-case Cross Reference
+
+- `/api/v1/lotto/navbar-config` -> ดู fallback locale policy ใน `Edge Cases`
+- `/api/v1/deposit/loadbank` และ `/api/v1/deposit/loadbank/random` -> ดู fallback `deposit_min` / `qr_pic` ใน `Contract Notes`
+- `/api/v1/lotto/yeekee/*` -> ดู timing/reveal behavior ในหัวข้อ `Yeekee API`
+
+## Full Reference (Appendix)
 
 - [Route Reference (Main)](./frontend-v1/05-route-reference.md)
 - [Route Reference (Wheel/Reward Addendum)](./frontend-v1/05-route-reference-wheel-reward.md)
 
-เส้นทางใหม่ที่เพิ่มจาก route ปัจจุบันและต้องใช้ร่วมด้วย:
-- `POST /api/v1/auth/register-with-username`
-- `POST /api/v1/deeppay/deposit/expire/{txid}`
-- `POST /api/v1/deeppay/deposit/create`
-- `GET /api/v1/deeppay/qrcode/{id}`
-
-## Yeekee API
-
-ชุด endpoint ยี่กี่:
-- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
-- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
-- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
-
-Response key ที่ยืนยันจากโค้ด:
-- `shoot`: `round_id`, `position`, `number_text`, `submitted_at`, `round_status`
-- `shoots`: `round_id`, `limit`, `count`, `items[]`
-- `reward-status`: `round_id`, `member_id`, `reward_enabled`, `reward_count`, `rewarded`, `items[]`
-- `result-proof`: `round_id`, `draw_id`, `status`, `is_revealed`, `proof`, `server_time`
-
-## Chapter Index
-
-- [Overview](./frontend-v1/01-overview.md)
-- [Flows](./frontend-v1/02-flows.md)
-- [Endpoints Summary](./frontend-v1/03-endpoints.md)
-- [Edge Cases](./frontend-v1/04-edge-cases.md)
-- [Route Reference (Main)](./frontend-v1/05-route-reference.md)
-- [Route Reference (Wheel/Reward)](./frontend-v1/05-route-reference-wheel-reward.md)
-
-## Rule การอัปเดต
-
-เมื่อมีการเปลี่ยน Frontend API:
-1. อัปเดต route/controller
-2. อัปเดต chapter ที่เกี่ยวข้อง (`frontend-v1/*.md`)
-3. อัปเดตไฟล์หลักนี้ (entrypoint)
-4. รัน `bash scripts/docs-validation/run.sh` ก่อน push
+Source of truth (code):
+- `packages/Gametech/FrontendApi/src/Routes/api.php`
+- `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
 
 
 
