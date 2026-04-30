@@ -7,7 +7,7 @@
         : false;
 @endphp
 
-<b-modal ref="addedit" id="addedit" centered size="xl" title="รายการหวย" :no-stacking="true"
+<b-modal ref="addedit" id="addedit" centered size="md" title="รายการหวย" :no-stacking="true"
          :no-close-on-backdrop="true"
          :hide-footer="true">
     <b-form @submit.prevent="addEditSubmit" v-if="show">
