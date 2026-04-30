@@ -323,14 +323,6 @@ Source of truth (code):
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 
-## Contract Notes
-
-- `GET /api/v1/meta/site` ส่ง `deposit_min` จาก `configs.deposit_min`
-- `GET /api/v1/member/profile` ส่ง `profile.deposit_min` จาก `configs.deposit_min`
-- `POST /api/v1/auth/login` ออก active token ล่าสุดได้ครั้งละ 1 ตัวต่อ member; token เดิมของ member เดียวกันจะใช้ต่อไม่ได้หลัง login ใหม่
-- `POST /api/v1/deposit/loadbank` และ `/deposit/loadbank/random` ส่ง `qr_pic` เป็น `""` เมื่อบัญชีไม่มีรูป QR ที่อัปโหลดไว้
-- `deposit_min` ของ `/deposit/loadbank` และ `/deposit/loadbank/random` ใช้ `bank_account.deposit_min` ก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`; ถ้าทั้งคู่เป็น `0` ส่ง `0`
-
 ## Yeekee API
 
 - `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
@@ -516,6 +508,16 @@ Source of truth (code):
   }
 }
 ```
+
+
+## Contract Notes
+
+- `GET /api/v1/meta/site` ส่ง `deposit_min` จาก `configs.deposit_min`
+- `GET /api/v1/member/profile` ส่ง `profile.deposit_min` จาก `configs.deposit_min`
+- `POST /api/v1/auth/login` ออก active token ล่าสุดได้ครั้งละ 1 ตัวต่อ member; token เดิมของ member เดียวกันจะใช้ต่อไม่ได้หลัง login ใหม่
+- `POST /api/v1/deposit/loadbank` และ `/deposit/loadbank/random` ส่ง `qr_pic` เป็น `""` เมื่อบัญชีไม่มีรูป QR ที่อัปโหลดไว้
+- `deposit_min` ของ `/deposit/loadbank` และ `/deposit/loadbank/random` ใช้ `bank_account.deposit_min` ก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`; ถ้าทั้งคู่เป็น `0` ส่ง `0`
+
 
 
 ---
