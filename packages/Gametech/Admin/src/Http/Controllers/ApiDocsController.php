@@ -18,14 +18,10 @@ class ApiDocsController extends AppBaseController
 
     public function frontendApiV1(): View
     {
-        $latestArchive = $this->resolveLatestFrontendApiArchivePath();
-
         return view($this->_config['view'], [
             'title' => 'Frontend API V1',
             'markdown' => $this->loadFrontendApiV1Markdown(),
-            'meta' => $latestArchive !== null
-                ? str_replace(base_path().'/', '', $latestArchive).' (preferred)'
-                : 'docs/public/api/archive/api-frontend-v1.<latest>.md (preferred)',
+            'meta' => 'docs/public/api/api-frontend-v1.md (source of truth)',
             'rawRoute' => 'admin.docs.api.frontend_v1.raw',
         ]);
     }
@@ -64,46 +60,9 @@ class ApiDocsController extends AppBaseController
 
     private function loadFrontendApiV1Markdown(): string
     {
-        $archivePath = $this->resolveLatestFrontendApiArchivePath();
-        if ($archivePath !== null && File::exists($archivePath)) {
-            return File::get($archivePath);
-        }
+        $path = base_path('docs/public/api/api-frontend-v1.md');
+        abort_unless(File::exists($path), 404, 'API docs file not found');
 
-        $paths = [
-            base_path('docs/public/api/frontend-v1/index.md'),
-            base_path('docs/public/api/frontend-v1/01-overview.md'),
-            base_path('docs/public/api/frontend-v1/02-flows.md'),
-            base_path('docs/public/api/frontend-v1/03-endpoints.md'),
-            base_path('docs/public/api/frontend-v1/04-edge-cases.md'),
-            base_path('docs/public/api/frontend-v1/05-route-reference.md'),
-        ];
-
-        $chunks = [];
-        foreach ($paths as $path) {
-            if (File::exists($path)) {
-                $chunks[] = trim(File::get($path));
-            }
-        }
-
-        if (! empty($chunks)) {
-            return implode("\n\n---\n\n", $chunks);
-        }
-
-        $legacyPath = base_path('docs/public/api/api-frontend-v1.md');
-        abort_unless(File::exists($legacyPath), 404, 'API docs file not found');
-
-        return File::get($legacyPath);
-    }
-
-    private function resolveLatestFrontendApiArchivePath(): ?string
-    {
-        $files = glob(base_path('docs/public/api/archive/api-frontend-v1.*.md'));
-        if ($files === false || empty($files)) {
-            return null;
-        }
-
-        sort($files, SORT_STRING);
-
-        return end($files) ?: null;
+        return File::get($path);
     }
 }
