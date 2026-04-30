@@ -8,4 +8,14 @@ return [
     'reward_enabled' => (bool) env('YEEKEE_REWARD_ENABLED', false),
     'settlement_enabled' => (bool) env('YEEKEE_SETTLEMENT_ENABLED', false),
     'max_shoots_per_member_per_round' => (int) env('YEEKEE_MAX_SHOOTS_PER_MEMBER_PER_ROUND', 100),
+    'external_seed' => [
+        'enabled' => (bool) env('YEEKEE_EXTERNAL_SEED_ENABLED', false),
+        'providers' => [
+            'ETH_BLOCK_HASH' => [
+                'min_supported_round_duration_minutes' => 15,
+                'default_timeout_seconds' => 15,
+                'supports_fast_rounds' => false,
+            ],
+        ],
+    ],
 ];

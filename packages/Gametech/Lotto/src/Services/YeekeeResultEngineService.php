@@ -5,11 +5,13 @@ namespace Gametech\Lotto\Services;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Services\Yeekee\Formulas\FormulaRegistry;
+use Gametech\Lotto\Services\Yeekee\Seed\ExternalSeedResolverService;
 
 class YeekeeResultEngineService
 {
     public function __construct(
-        private FormulaRegistry $formulaRegistry
+        private FormulaRegistry $formulaRegistry,
+        private ExternalSeedResolverService $seedResolver
     ) {}
 
     /**
@@ -36,6 +38,11 @@ class YeekeeResultEngineService
             ->all();
 
         $formula = $this->formulaRegistry->resolve($formulaKey);
+
+        if (str_starts_with($formulaKey, 'PROVABLY_FAIR_')) {
+            $seedConfig = is_array($snapshot['external_seed_config'] ?? null) ? $snapshot['external_seed_config'] : [];
+            $this->seedResolver->resolveForRound($roundId, $seedConfig);
+        }
 
         return $formula->compute($shoots, $formulaConfig);
     }
