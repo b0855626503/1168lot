@@ -53,7 +53,8 @@ class LottoDrawDataTable extends DataTable
                 },
             ]);
 
-        if ($groupId = (int) request('group_id')) {
+        $groupId = (int) request('group_id');
+        if ($groupId > 0) {
             $query->whereHas('market', function ($builder) use ($groupId): void {
                 $builder->where('group_id', $groupId);
             });
@@ -63,7 +64,7 @@ class LottoDrawDataTable extends DataTable
             $query->where('market_id', $marketId);
         } else {
             $includeYeekee = (bool) request('include_yeekee', false);
-            if (! $includeYeekee) {
+            if (! $includeYeekee && $groupId <= 0) {
                 $query->whereHas('market', function ($builder): void {
                     $builder->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE);
                 });
