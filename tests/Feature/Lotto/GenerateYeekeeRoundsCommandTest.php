@@ -89,6 +89,64 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(1, DB::table('yeekee_rounds')->count());
     }
 
+    public function test_generate_yeekee_rounds_skips_when_timeline_crosses_round_date_boundary(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Main',
+            'code' => 'main',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 11,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee_market',
+            'result_mode' => 'yeekee',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 11,
+            'round_config' => json_encode([
+                'shoot_window_after_bet_close_seconds' => 60,
+                'settlement_delay_after_shoot_close_seconds' => 60,
+                'expected_payout_sla_minutes' => 5,
+            ]),
+            'formula_config' => null,
+            'reward_config' => null,
+            'refund_config' => null,
+            'ui_config' => null,
+            'reward_enabled' => 0,
+            'refund_if_bet_entries_below_min' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 101,
+            'market_id' => 11,
+            'draw_date' => '2026-04-30',
+            'open_at' => '2026-04-30 23:40:00',
+            'close_at' => '2026-04-30 23:55:00',
+            'status' => 'draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Artisan::call('lotto:generate-yeekee-rounds', [
+            '--date' => '2026-04-30',
+        ]);
+
+        $output = json_decode((string) Artisan::output(), true);
+        $this->assertSame(0, DB::table('yeekee_rounds')->count());
+        $this->assertSame(1, (int) ($output['skipped_cross_day'] ?? 0));
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('lotto_groups', function (Blueprint $table): void {

@@ -43,6 +43,7 @@ class GenerateYeekeeRoundsCommand extends Command
         $draws = $query->orderBy('lotto_draws.market_id')->orderBy('lotto_draws.id')->get();
         $created = 0;
         $exists = 0;
+        $skippedCrossDay = 0;
 
         foreach ($draws as $draw) {
             $settings = YeekeeMarketSetting::query()->where('market_id', (int) $draw->market_id)->first();
@@ -58,6 +59,21 @@ class GenerateYeekeeRoundsCommand extends Command
             $shootCloseAt = $betCloseAt->copy()->addSeconds(max(0, $shootWindowSeconds));
             $resultComputeAt = $shootCloseAt->copy()->addSeconds(max(0, $settlementDelaySeconds));
             $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes(max(0, $expectedPayoutSlaMinutes));
+            $roundDate = Carbon::parse((string) $draw->draw_date)->toDateString();
+            $roundEndOfDay = Carbon::parse($roundDate.' 23:59:59');
+
+            if (
+                $betOpenAt->gt($roundEndOfDay)
+                || $betCloseAt->gt($roundEndOfDay)
+                || $shootOpenAt->gt($roundEndOfDay)
+                || $shootCloseAt->gt($roundEndOfDay)
+                || $resultComputeAt->gt($roundEndOfDay)
+                || $expectedSettlementDeadlineAt->gt($roundEndOfDay)
+            ) {
+                $skippedCrossDay++;
+
+                continue;
+            }
 
             $payload = [
                 'market_id' => (int) $draw->market_id,
@@ -103,6 +119,7 @@ class GenerateYeekeeRoundsCommand extends Command
             'draw_count' => $draws->count(),
             'created' => $created,
             'exists' => $exists,
+            'skipped_cross_day' => $skippedCrossDay,
         ], JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;
