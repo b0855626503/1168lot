@@ -1,8 +1,10 @@
-# PR-01: Yeekee Codebase Contract Lock
+> สถานะ: DONE
+> วันที่: 2026-04-30
+> โดเมน/เรื่อง: lotto / yeekee
+> แทนแผนเก่า: -
+> อ้างอิง: BOA-175
 
-สถานะ: DRAFT (analysis only)
-วันที่: 2026-04-30
-อ้างอิง: BOA-175
+# PR-01: Yeekee Codebase Contract Lock
 
 ## เป้าหมาย
 ล็อก execution contract จากโค้ดจริงสำหรับ PR-02..PR-12 โดยไม่เปลี่ยน behavior ระบบเดิม

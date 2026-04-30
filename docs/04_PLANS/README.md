@@ -19,6 +19,8 @@
 - `2026-03-27_lotto-auto-result-execution-tracker.md` (implementation memory only; merged plan is source of truth)
 
 ## DONE
+- `2026-04-27_payment-provider-mcp-generator.md`
+- `2026-04-30_yeekee-pr01-codebase-contract-lock.md`
 - `2026-03-30_lotto-internal-result-sources-integration.md`
 - `2026-03-30_browser-runtime-operational-follow-ups.md`
 - `2026-03-28_lotto-browser-worker-hardening.md`
