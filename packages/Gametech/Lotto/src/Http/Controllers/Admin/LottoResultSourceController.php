@@ -265,6 +265,7 @@ class LottoResultSourceController extends AppBaseController
         ])->validate();
 
         try {
+            $this->assertAutoResultSourceSupportedMarket((int) $validated['market_id']);
             $this->assertNoActivePriorityWindowConflict($validated);
 
             $source = ! empty($validated['id'])
@@ -471,6 +472,7 @@ class LottoResultSourceController extends AppBaseController
             'market_id' => ['required', 'integer', 'exists:lotto_markets,id'],
             'draw_date' => ['required', 'date_format:Y-m-d'],
         ])->validate();
+        $this->assertAutoResultSourceSupportedMarket((int) $validated['market_id']);
 
         $source = $this->resolveActiveSourceForMarket((int) $validated['market_id']);
         if (! $source instanceof LottoResultSource) {
@@ -611,6 +613,7 @@ class LottoResultSourceController extends AppBaseController
             'run_id' => ['nullable', 'string', 'max:64'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
         ])->validate();
+        $this->assertAutoResultSourceSupportedMarket((int) $validated['market_id']);
 
         $limit = (int) ($validated['limit'] ?? 100);
         $query = LottoResultFetchLog::query()->orderByDesc('id')->limit($limit);
@@ -684,6 +687,7 @@ class LottoResultSourceController extends AppBaseController
             'draw_date' => ['required', 'date_format:Y-m-d'],
             'data' => ['required', 'array'],
         ])->validate();
+        $this->assertAutoResultSourceSupportedMarket((int) $validated['market_id']);
 
         try {
             $payload = (array) $validated['data'];
@@ -1028,6 +1032,18 @@ class LottoResultSourceController extends AppBaseController
         $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return $encoded === false ? '' : $encoded;
+    }
+
+    private function assertAutoResultSourceSupportedMarket(int $marketId): void
+    {
+        $market = LotteryMarket::query()->find($marketId);
+        if (! $market instanceof LotteryMarket) {
+            throw new InvalidArgumentException('ไม่พบรายการหวยที่ระบุ');
+        }
+
+        if ((string) ($market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL) === LotteryMarket::RESULT_MODE_YEEKEE) {
+            throw new InvalidArgumentException('รายการหวยยี่กี่ไม่รองรับ Auto Result Source ของหวยปกติ');
+        }
     }
 
     private function saveRevision(LottoResultSource $source, string $reason, ?CompiledSourcePipelineData $compiled = null): void

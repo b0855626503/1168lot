@@ -63,6 +63,60 @@
                 </b-form-group>
             </b-col>
         </b-row>
+        <b-form-group label="ประเภทตลาด:" label-for="result_mode" description="หวยปกติจะไม่แสดงค่าตั้งต้นของยี่กี่ และหวยยี่กี่จะไม่ใช้ Auto Source แบบหวยปกติ">
+            <b-form-select id="result_mode" v-model="formaddedit.result_mode" :options="option.resultModes" size="sm"></b-form-select>
+        </b-form-group>
+        <div v-if="formaddedit.result_mode === 'yeekee'" class="border rounded p-2 mb-3">
+            <h6 class="mb-2">ตั้งค่ายี่กี่</h6>
+            <b-row>
+                <b-col cols="12" md="6">
+                    <b-form-group label="ระยะเวลาต่อรอบ (นาที)">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.round_duration_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="6">
+                    <b-form-group label="ระยะเวลายิงเลขหลังปิดรับแทง (วินาที)">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.shoot_window_after_bet_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+            </b-row>
+            <b-row>
+                <b-col cols="12" md="6">
+                    <b-form-group label="เวลารอก่อนเริ่มคำนวณผล (วินาที)">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.settlement_delay_after_shoot_close_seconds" type="number" min="0" max="3600" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="6">
+                    <b-form-group label="ระยะเวลาคาดหวังในการจ่ายรางวัล (นาที)">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.expected_payout_sla_minutes" type="number" min="1" max="60" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+            </b-row>
+            <b-row>
+                <b-col cols="12" md="6">
+                    <b-form-group label="สูตรคำนวณผล">
+                        <b-form-select v-model="formaddedit.yeekee_settings.formula_preset" :options="option.yeekeeFormulaPresets" size="sm"></b-form-select>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="6">
+                    <b-form-group label="ลำดับเลขยิงที่ใช้ลบ">
+                        <b-form-input v-model.number="formaddedit.yeekee_settings.subtract_position" type="number" min="1" size="sm"></b-form-input>
+                    </b-form-group>
+                </b-col>
+            </b-row>
+            <b-row>
+                <b-col cols="12" md="6">
+                    <b-form-group>
+                        <b-form-checkbox v-model="formaddedit.yeekee_settings.reward_enabled" :value="true" :unchecked-value="false">เปิดรางวัลยิงเลข</b-form-checkbox>
+                    </b-form-group>
+                </b-col>
+                <b-col cols="12" md="6">
+                    <b-form-group>
+                        <b-form-checkbox v-model="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" :value="true" :unchecked-value="false">เปิดเงื่อนไขงดออกผลและคืนโพย</b-form-checkbox>
+                    </b-form-group>
+                </b-col>
+            </b-row>
+        </div>
         <b-form-group label="รูปแบบออกงวด:" label-for="draw_schedule_type" description="Manual = ทีมงานสร้างงวดเอง, Weekly = ออกรายสัปดาห์, Monthly = ออกรายเดือน">
             <b-form-select id="draw_schedule_type" v-model="formaddedit.draw_schedule_type" :options="option.drawScheduleTypes" size="sm"></b-form-select>
         </b-form-group>
@@ -575,6 +629,17 @@
                         logo_file:  null,
                         icon_file:  null,
                         code:       '',
+                        result_mode: 'normal',
+                        yeekee_settings: {
+                            round_duration_minutes: 15,
+                            shoot_window_after_bet_close_seconds: 60,
+                            settlement_delay_after_shoot_close_seconds: 60,
+                            expected_payout_sla_minutes: 5,
+                            formula_preset: 'SHOOTS_SUM_MINUS_POSITION',
+                            subtract_position: 16,
+                            reward_enabled: false,
+                            refund_if_bet_entries_below_min: false,
+                        },
                         draw_schedule_type: 'manual',
                         draw_days: [],
                         draw_dates: [],
@@ -598,6 +663,14 @@
                             { value: 'manual', text: 'Manual (เพิ่มงวดเอง)' },
                             { value: 'weekly', text: 'Weekly (เลือกรายวัน)' },
                             { value: 'monthly', text: 'Monthly (เลือกรายเดือน)' },
+                        ],
+                        resultModes: [
+                            { value: 'normal', text: 'หวยปกติ (Normal)' },
+                            { value: 'yeekee', text: 'หวยยี่กี่ (Yeekee)' },
+                        ],
+                        yeekeeFormulaPresets: [
+                            { value: 'SHOOTS_SUM_MINUS_POSITION', text: 'หาผลรวมเลขยิงแล้วลบลำดับที่กำหนด' },
+                            { value: 'PRECOMMITTED_BASE64_MD5', text: 'ตรวจสอบผลด้วย Signature + Payload' },
                         ],
                         weeklyDays: [
                             { value: 1, text: 'จันทร์' },
@@ -1334,7 +1407,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1346,7 +1419,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1733,6 +1806,17 @@
                         logo_file:  null,
                         icon_file:  null,
                         code:       d.code,
+                        result_mode: d.result_mode || 'normal',
+                        yeekee_settings: {
+                            round_duration_minutes: Number((d.yeekee_settings || {}).round_duration_minutes || 15),
+                            shoot_window_after_bet_close_seconds: Number((d.yeekee_settings || {}).shoot_window_after_bet_close_seconds || 60),
+                            settlement_delay_after_shoot_close_seconds: Number((d.yeekee_settings || {}).settlement_delay_after_shoot_close_seconds || 60),
+                            expected_payout_sla_minutes: Number((d.yeekee_settings || {}).expected_payout_sla_minutes || 5),
+                            formula_preset: String((d.yeekee_settings || {}).formula_preset || 'SHOOTS_SUM_MINUS_POSITION'),
+                            subtract_position: Number((d.yeekee_settings || {}).subtract_position || 16),
+                            reward_enabled: Boolean((d.yeekee_settings || {}).reward_enabled || false),
+                            refund_if_bet_entries_below_min: Boolean((d.yeekee_settings || {}).refund_if_bet_entries_below_min || false),
+                        },
                         draw_schedule_type: resolvedScheduleType,
                         draw_days: this.normalizeNumberArray(d.draw_days, 1, 7),
                         draw_dates: this.normalizeNumberArray(d.draw_dates, 1, 31),
