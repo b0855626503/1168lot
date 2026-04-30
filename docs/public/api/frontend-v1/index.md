@@ -6,6 +6,14 @@
 
 ## Start Here
 
+## Quick Jump
+
+- Login -> [POST /api/v1/auth/login](./07-route-reference.md#post-apiv1authlogin)
+- Balance -> [GET /api/v1/member/balance](./07-route-reference.md#get-apiv1memberbalance)
+- Deposit -> [POST /api/v1/smkpay/deposit/create](./07-route-reference.md#post-apiv1smkpaydepositcreate)
+- Bet -> [POST /api/v1/lotto/bet](./07-route-reference.md#post-apiv1lottobet)
+
+
 1. [01-quick-start.md](./01-quick-start.md)
 2. [02-auth-language.md](./02-auth-language.md)
 3. [03-common-contract.md](./03-common-contract.md)
