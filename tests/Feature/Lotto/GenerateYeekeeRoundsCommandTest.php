@@ -124,6 +124,30 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(0, $crossDayResultAtRows);
     }
 
+    public function test_generate_yeekee_rounds_use_same_open_at_for_all_rounds_and_open_status(): void
+    {
+        $this->seedYeekeeMarket(11, 1, 15);
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--date' => '2026-05-01',
+        ]);
+
+        $openAtDistinctCount = DB::table('lotto_draws')
+            ->where('market_id', 11)
+            ->distinct()
+            ->count('open_at');
+
+        $this->assertSame(1, $openAtDistinctCount);
+        $this->assertSame(
+            95,
+            DB::table('lotto_draws')->where('market_id', 11)->where('status', 'open')->count()
+        );
+        $this->assertSame(
+            95,
+            DB::table('yeekee_rounds')->where('market_id', 11)->where('status', 'open')->count()
+        );
+    }
+
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void
     {
         if (! DB::table('lotto_groups')->where('id', $groupId)->exists()) {

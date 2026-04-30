@@ -101,8 +101,8 @@ class GenerateYeekeeRoundsCommand extends Command
 
                 for ($index = 0; $index < $roundCount; $index++) {
                     $roundNo = $index + 1;
-                    $betOpenAt = $dayStart->copy()->addMinutes($index * $durationMinutes);
-                    $betCloseAt = $betOpenAt->copy()->addMinutes($durationMinutes);
+                    $betOpenAt = $dayStart->copy();
+                    $betCloseAt = $dayStart->copy()->addMinutes($roundNo * $durationMinutes);
                     $shootOpenAt = $betCloseAt->copy();
                     $shootCloseAt = $shootOpenAt->copy()->addSeconds($shootWindowSeconds);
                     $resultComputeAt = $shootCloseAt->copy()->addSeconds($settlementDelaySeconds);
@@ -135,7 +135,7 @@ class GenerateYeekeeRoundsCommand extends Command
                     $drawPayload = [
                         'open_at' => $betOpenAt->format('Y-m-d H:i:s'),
                         'result_at' => $resultComputeAt->format('Y-m-d H:i:s'),
-                        'status' => 'draft',
+                        'status' => 'open',
                         'created_by' => null,
                     ];
 
@@ -187,7 +187,7 @@ class GenerateYeekeeRoundsCommand extends Command
                         'shoot_close_at' => $shootCloseAt->format('Y-m-d H:i:s'),
                         'result_compute_at' => $resultComputeAt->format('Y-m-d H:i:s'),
                         'expected_settlement_deadline_at' => $expectedSettlementDeadlineAt->format('Y-m-d H:i:s'),
-                        'status' => 'draft',
+                        'status' => 'open',
                         'config_snapshot_json' => [
                             'round_config' => [
                                 'round_duration_minutes' => $durationMinutes,
