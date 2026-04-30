@@ -26,7 +26,6 @@ workspace/
 !.ai/mcp/
 .ai/mcp/*
 !.ai/mcp/index-build.json
-!.ai/mcp/retrieval-metrics-report.json
 !.codebase-memory/
 .codebase-memory/*
 
