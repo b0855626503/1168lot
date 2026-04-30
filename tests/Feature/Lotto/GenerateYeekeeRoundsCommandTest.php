@@ -6,7 +6,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class GenerateYeekeeRoundsCommandTest extends TestCase
@@ -24,145 +23,84 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
+        Schema::dropIfExists('logs');
 
         parent::tearDown();
     }
 
-    public function test_generate_yeekee_rounds_creates_rows_once_and_is_idempotent(): void
+    public function test_generate_yeekee_rounds_creates_draws_and_rounds_from_config(): void
     {
-        DB::table('lotto_groups')->insert([
-            'id' => 1,
-            'name' => 'Main',
-            'code' => 'main',
-            'is_enabled' => 1,
-            'sort' => 1,
-        ]);
-
-        DB::table('lotto_markets')->insert([
-            'id' => 11,
-            'group_id' => 1,
-            'name' => 'Yeekee Market',
-            'code' => 'yeekee_market',
-            'result_mode' => 'yeekee',
-            'draw_mode' => 'manual',
-            'draw_schedule_type' => 'manual',
-            'is_enabled' => 1,
-        ]);
-
-        DB::table('yeekee_market_settings')->insert([
-            'market_id' => 11,
-            'round_config' => json_encode([
-                'shoot_window_after_bet_close_seconds' => 60,
-                'settlement_delay_after_shoot_close_seconds' => 60,
-                'expected_payout_sla_minutes' => 5,
-            ]),
-            'formula_config' => null,
-            'reward_config' => null,
-            'refund_config' => null,
-            'ui_config' => null,
-            'reward_enabled' => 0,
-            'refund_if_bet_entries_below_min' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('lotto_draws')->insert([
-            'id' => 101,
-            'market_id' => 11,
-            'draw_date' => '2026-04-30',
-            'open_at' => '2026-04-30 10:00:00',
-            'close_at' => '2026-04-30 10:15:00',
-            'status' => 'draft',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->seedYeekeeMarket(11, 1, 60);
 
         Artisan::call('lotto:generate-yeekee-rounds', [
-            '--date' => '2026-04-30',
+            '--date' => '2026-05-01',
         ]);
 
-        $this->assertSame(1, DB::table('yeekee_rounds')->count());
-
-        Artisan::call('lotto:generate-yeekee-rounds', [
-            '--date' => '2026-04-30',
-        ]);
-
-        $this->assertSame(1, DB::table('yeekee_rounds')->count());
+        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
     }
 
-    public function test_generate_yeekee_rounds_skips_when_timeline_crosses_round_date_boundary(): void
+    public function test_generate_yeekee_rounds_is_idempotent_on_rerun(): void
     {
-        DB::table('lotto_groups')->insert([
-            'id' => 1,
-            'name' => 'Main',
-            'code' => 'main',
-            'is_enabled' => 1,
-            'sort' => 1,
-        ]);
-
-        DB::table('lotto_markets')->insert([
-            'id' => 11,
-            'group_id' => 1,
-            'name' => 'Yeekee Market',
-            'code' => 'yeekee_market',
-            'result_mode' => 'yeekee',
-            'draw_mode' => 'manual',
-            'draw_schedule_type' => 'manual',
-            'is_enabled' => 1,
-        ]);
-
-        DB::table('yeekee_market_settings')->insert([
-            'market_id' => 11,
-            'round_config' => json_encode([
-                'shoot_window_after_bet_close_seconds' => 60,
-                'settlement_delay_after_shoot_close_seconds' => 60,
-                'expected_payout_sla_minutes' => 5,
-            ]),
-            'formula_config' => null,
-            'reward_config' => null,
-            'refund_config' => null,
-            'ui_config' => null,
-            'reward_enabled' => 0,
-            'refund_if_bet_entries_below_min' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('lotto_draws')->insert([
-            'id' => 101,
-            'market_id' => 11,
-            'draw_date' => '2026-04-30',
-            'open_at' => '2026-04-30 23:40:00',
-            'close_at' => '2026-04-30 23:55:00',
-            'status' => 'draft',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->seedYeekeeMarket(11, 1, 60);
 
         Artisan::call('lotto:generate-yeekee-rounds', [
-            '--date' => '2026-04-30',
+            '--date' => '2026-05-01',
+        ]);
+        Artisan::call('lotto:generate-yeekee-rounds', [
+            '--date' => '2026-05-01',
         ]);
 
-        $output = json_decode((string) Artisan::output(), true);
-        $this->assertSame(0, DB::table('yeekee_rounds')->count());
-        $this->assertSame(1, (int) ($output['skipped_cross_day'] ?? 0));
+        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
     }
 
-    public function test_generate_yeekee_rounds_keeps_last_safe_window_within_same_day_boundary(): void
+    public function test_generate_yeekee_rounds_respects_market_filter_and_ignores_non_yeekee_market(): void
     {
-        DB::table('lotto_groups')->insert([
-            'id' => 1,
-            'name' => 'Main',
-            'code' => 'main',
-            'is_enabled' => 1,
-            'sort' => 1,
-        ]);
+        $this->seedYeekeeMarket(11, 1, 60);
+        $this->seedYeekeeMarket(12, 1, 30);
 
         DB::table('lotto_markets')->insert([
-            'id' => 11,
+            'id' => 13,
             'group_id' => 1,
-            'name' => 'Yeekee Market',
-            'code' => 'yeekee_market',
+            'name' => 'Normal Market',
+            'code' => 'normal_market',
+            'result_mode' => 'normal',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        Artisan::call('lotto:generate-yeekee-rounds', [
+            '--date' => '2026-05-01',
+            '--market_id' => 11,
+        ]);
+
+        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+
+        $this->assertSame(0, DB::table('lotto_draws')->where('market_id', 12)->count());
+        $this->assertSame(0, DB::table('yeekee_rounds')->where('market_id', 12)->count());
+        $this->assertSame(0, DB::table('lotto_draws')->where('market_id', 13)->count());
+    }
+
+    private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void
+    {
+        if (! DB::table('lotto_groups')->where('id', $groupId)->exists()) {
+            DB::table('lotto_groups')->insert([
+                'id' => $groupId,
+                'name' => 'Main',
+                'code' => 'main_'.$groupId,
+                'is_enabled' => 1,
+                'sort' => 1,
+            ]);
+        }
+
+        DB::table('lotto_markets')->insert([
+            'id' => $marketId,
+            'group_id' => $groupId,
+            'name' => 'Yeekee '.$marketId,
+            'code' => 'yeekee_'.$marketId,
             'result_mode' => 'yeekee',
             'draw_mode' => 'manual',
             'draw_schedule_type' => 'manual',
@@ -170,8 +108,9 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         ]);
 
         DB::table('yeekee_market_settings')->insert([
-            'market_id' => 11,
+            'market_id' => $marketId,
             'round_config' => json_encode([
+                'round_duration_minutes' => $durationMinutes,
                 'shoot_window_after_bet_close_seconds' => 60,
                 'settlement_delay_after_shoot_close_seconds' => 60,
                 'expected_payout_sla_minutes' => 5,
@@ -185,32 +124,6 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        DB::table('lotto_draws')->insert([
-            'id' => 101,
-            'market_id' => 11,
-            'draw_date' => '2026-04-30',
-            'open_at' => '2026-04-30 23:30:00',
-            'close_at' => '2026-04-30 23:45:00',
-            'status' => 'draft',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        Artisan::call('lotto:generate-yeekee-rounds', [
-            '--date' => '2026-04-30',
-        ]);
-
-        $round = DB::table('yeekee_rounds')
-            ->where('lotto_draw_id', 101)
-            ->first();
-
-        $this->assertNotNull($round);
-        $this->assertSame('2026-04-30', Carbon::parse((string) $round->round_date)->toDateString());
-        $this->assertSame('2026-04-30 23:45:00', (string) $round->bet_close_at);
-        $this->assertSame('2026-04-30 23:46:00', (string) $round->shoot_close_at);
-        $this->assertSame('2026-04-30 23:47:00', (string) $round->result_compute_at);
-        $this->assertSame('2026-04-30 23:52:00', (string) $round->expected_settlement_deadline_at);
     }
 
     private function prepareSchema(): void
@@ -275,6 +188,20 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             $table->string('status', 32)->default('draft');
             $table->json('config_snapshot_json')->nullable();
             $table->timestamps();
+        });
+
+        Schema::create('logs', function (Blueprint $table): void {
+            $table->increments('id');
+            $table->unsignedBigInteger('emp_code')->nullable();
+            $table->string('mode', 16)->nullable();
+            $table->string('menu', 128)->nullable();
+            $table->unsignedBigInteger('record')->nullable();
+            $table->text('item_before')->nullable();
+            $table->text('item')->nullable();
+            $table->string('ip', 64)->nullable();
+            $table->string('user_create', 64)->nullable();
+            $table->dateTime('date_update')->nullable();
+            $table->dateTime('date_create')->nullable();
         });
     }
 }
