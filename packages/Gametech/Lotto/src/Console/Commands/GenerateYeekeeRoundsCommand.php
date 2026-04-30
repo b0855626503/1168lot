@@ -289,7 +289,7 @@ class GenerateYeekeeRoundsCommand extends Command
         }
 
         if ($dateOption !== '') {
-            $date = $this->resolveDate($dateOption);
+            $date = $this->resolveDate($dateOption, $timezone);
             if (! $date) {
                 return null;
             }
@@ -300,14 +300,27 @@ class GenerateYeekeeRoundsCommand extends Command
         return [now($timezone)->startOfDay()->format('Y-m-d')];
     }
 
-    private function resolveDate(string $date): ?Carbon
+    private function resolveDate(string $date, string $timezone): ?Carbon
     {
-        if (trim($date) === '') {
-            return now()->startOfDay();
+        $normalized = trim(strtolower($date));
+        if ($normalized === '') {
+            return now($timezone)->startOfDay();
+        }
+
+        if ($normalized === 'today') {
+            return now($timezone)->startOfDay();
+        }
+
+        if ($normalized === 'tomorrow') {
+            return now($timezone)->addDay()->startOfDay();
+        }
+
+        if ($normalized === 'yesterday') {
+            return now($timezone)->subDay()->startOfDay();
         }
 
         try {
-            return Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
+            return Carbon::createFromFormat('Y-m-d', $date, $timezone)->startOfDay();
         } catch (\Throwable $exception) {
             return null;
         }

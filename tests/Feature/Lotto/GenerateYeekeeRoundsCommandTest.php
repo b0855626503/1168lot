@@ -100,6 +100,24 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_generate_yeekee_rounds_supports_tomorrow_alias(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-01 00:05:00'));
+        $this->seedYeekeeMarket(11, 1, 60);
+        $expectedDate = now((string) config('app.timezone', 'UTC'))->addDay()->format('Y-m-d');
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--date' => 'tomorrow',
+        ]);
+        $output = json_decode((string) Artisan::output(), true);
+
+        $this->assertIsArray($output);
+        $this->assertSame([$expectedDate], $output['dates'] ?? []);
+        $this->assertGreaterThan(0, (int) ($output['draw_created'] ?? 0));
+
+        Carbon::setTestNow();
+    }
+
     public function test_generate_yeekee_rounds_skips_cross_day_boundary_rows(): void
     {
         $this->seedYeekeeMarket(11, 1, 15);
