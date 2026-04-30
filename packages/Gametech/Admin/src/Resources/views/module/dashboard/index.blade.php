@@ -979,7 +979,7 @@
                                                 <div class="lotto-recent-title">รายการโพยล่าสุด (Recent Lotto Bets)</div>
                                                 <div class="lotto-recent-actions">
                                                     <div class="lotto-recent-count">@{{ uiCount(activity.lotto_recent_bets.length) }} / 20</div>
-                                                    <select v-model="lottoRecentMarketType" class="form-control form-control-sm lotto-recent-filter" @change="refreshActivityOnly">
+                                                    <select v-model="lottoRecentMarketType" class="form-control form-control-sm lotto-recent-filter" @change="refreshLottoRecentFilters">
                                                         <option v-for="option in lottoRecentMarketTypeOptions" :key="'lotto-type-opt-' + option.value" :value="option.value">
                                                             @{{ option.text }}
                                                         </option>
@@ -2776,6 +2776,10 @@
                         })
                         .catch(() => {});
                 },
+                refreshLottoRecentFilters() {
+                    this.refreshActivityOnly();
+                    this.refreshLottoRiskSummary(this.lottoRiskTab);
+                },
                 onRealtimeSummaryUpdated(event) {
                     if (!event || !event.summary_date) return;
                     if (event.web_code && dashboardRealtime.webCode && event.web_code !== dashboardRealtime.webCode) return;
@@ -2904,6 +2908,7 @@
                         date_end: this.filters.end,
                         trend_mode: this.trendMode,
                         lotto_risk_mode: this.lottoRiskTab === 'highest' ? 'peak' : 'today',
+                        lotto_market_type: this.lottoRecentMarketType || 'all',
                         ...extra
                     };
                 },
