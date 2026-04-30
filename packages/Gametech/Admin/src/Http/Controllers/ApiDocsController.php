@@ -13,7 +13,7 @@ class ApiDocsController extends AppBaseController
     public function __construct()
     {
         $this->_config = (array) request('_config', []);
-        $this->middleware('admin');
+        $this->middleware('admin')->except(['frontendApiV1', 'frontendApiV1Raw']);
     }
 
     public function frontendApiV1(): View

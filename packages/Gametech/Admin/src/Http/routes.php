@@ -1,18 +1,16 @@
 <?php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Redirect;
 
-Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url')))->group(function () {
+Route::domain(config('app.admin_url').'.'.(is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url')))->group(function () {
 
-
-//Route::prefix('admin')->group(function () {
-
+    // Route::prefix('admin')->group(function () {
 
     Route::group(['middleware' => ['web'], 'namespace' => 'Gametech\Admin\Http\Controllers'], function () {
 
         Route::any('tw/{mobile}/webhook', 'WebhookController@index');
-//        Route::get('tw/{mobile}/webhook', 'WebhookController@tw');
+        //        Route::get('tw/{mobile}/webhook', 'WebhookController@tw');
         Route::post('tw/{mobile}/webhooks', 'WebhookController@index_2');
         Route::post('tw/{mobile}/webhook1', 'WebhookController@index_king89slot');
         Route::post('tw/{mobile}/webhook2', 'WebhookController@index_grand999slot');
@@ -46,7 +44,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
         Route::post('scb/webhook', 'WebhookController@scb_callback');
 
         Route::get('broadcast/{message}', 'TestController@TestBroadcast');
-
 
         Route::get('pompay/create', 'PomPayController@create')->defaults('_config', [
             'view' => 'admin::module.pompay.index',
@@ -90,16 +87,21 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
         Route::get('test/mongo', 'TestController@checkMango');
         Route::get('test/date', 'TestController@testDate');
 
-
         // Login Routes
         Route::get('/login', 'LoginController@show')->defaults('_config', [
             'view' => 'admin::auth.login',
         ])->name('admin.session.index');
 
-        //login post route to admin auth controller
+        // login post route to admin auth controller
         Route::post('login', 'LoginController@login')->defaults('_config', [
             'redirect' => 'admin.2fa.validate',
         ])->name('admin.session.create');
+
+        Route::get('docs/api/frontend-v1', 'ApiDocsController@frontendApiV1')->defaults('_config', [
+            'view' => 'admin::module.docs.frontend_api_v1',
+        ])->name('admin.docs.api.frontend_v1');
+        Route::get('docs/api/frontend-v1/raw', 'ApiDocsController@frontendApiV1Raw')
+            ->name('admin.docs.api.frontend_v1.raw');
 
         Route::prefix('auth')->group(function () {
 
@@ -113,9 +115,7 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
 
             Route::post('/', 'Google2FAController@index')->name('2fa')->middleware(['auth', '2fa']);
 
-
         });
-
 
         Route::group(['middleware' => ['admin', 'auth', '2fa']], function () {
 
@@ -136,7 +136,7 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::post('confirm-password', function (Request $request) {
                 if (! Hash::check($request->password, $request->user()->password)) {
                     return back()->withErrors([
-                        'password' => ['The provided password does not match our records.']
+                        'password' => ['The provided password does not match our records.'],
                     ]);
                 }
 
@@ -148,7 +148,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::get('fix', 'FixController@index')->defaults('_config', [
                 'view' => 'admin::module.fix.index',
             ])->name('admin.fix.index');
-
 
             Route::get('fix/optimize', 'FixController@optimize')->name('admin.fix.optimize');
 
@@ -196,9 +195,9 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
 
             Route::get('fix/payment', 'FixController@fixpayments')->name('admin.fix.payment');
 
-//            Route::get('/cashback', 'CmdController@cashback')->name('admin.cashback.index');
-//
-//            Route::get('/ic', 'CmdController@ic')->name('admin.ic.index');
+            //            Route::get('/cashback', 'CmdController@cashback')->name('admin.cashback.index');
+            //
+            //            Route::get('/ic', 'CmdController@ic')->name('admin.ic.index');
 
             Route::get('/update', 'CmdController@updatePatch')->name('admin.update.index');
 
@@ -211,8 +210,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::get('/chkbank', 'TestController@chkbank');
 
             Route::get('/kbank', 'TestController@kbank');
-
-
 
             Route::get('/test', 'TestController@test');
 
@@ -240,7 +237,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
 
             Route::get('/ping', 'GameController@gameCheck');
 
-
             Route::get('/logout', 'LoginController@logout')->defaults('_config', [
                 'redirect' => 'admin.session.index',
             ])->name('admin.session.destroy')->withoutMiddleware(['2fa']);
@@ -249,12 +245,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::get('dashboard', 'DashboardController@index')->defaults('_config', [
                 'view' => 'admin::module.dashboard.index',
             ])->name('admin.home.index');
-
-            Route::get('docs/api/frontend-v1', 'ApiDocsController@frontendApiV1')->defaults('_config', [
-                'view' => 'admin::module.docs.frontend_api_v1',
-            ])->name('admin.docs.api.frontend_v1');
-            Route::get('docs/api/frontend-v1/raw', 'ApiDocsController@frontendApiV1Raw')
-                ->name('admin.docs.api.frontend_v1.raw');
 
             Route::get('docs/api/laravel-echo-nextjs-install', 'ApiDocsController@laravelEchoNextjsInstall')->defaults('_config', [
                 'view' => 'admin::module.docs.frontend_api_v1',
@@ -277,7 +267,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             Route::post('dashboard/alerts', 'DashboardController@alerts')->name('admin.dashboard.alerts');
             Route::post('dashboard/member-list', 'DashboardController@memberList')->name('admin.dashboard.member-list');
             Route::post('dashboard/sync-summary', 'DashboardController@syncSummary')->name('admin.dashboard.sync-summary');
-
 
             Route::get('rp_log_cashback', 'ReportController@rp_log_cashback')->defaults('_config', [
                 'view' => 'admin::module.rp_log_cashback.index',
@@ -333,27 +322,21 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
                 'view' => 'admin::module.rp_staff_log.index',
             ])->name('admin.rp_staff_log.index');
 
-
             Route::get('rp_deposit', 'ReportController@rp_deposit')->defaults('_config', [
                 'view' => 'admin::module.rp_deposit.index',
             ])->name('admin.rp_deposit.index');
 
             Route::get('rp_deposit/export', 'RpDepositController@export')->name('admin.rp_deposit.export');
 
-
             Route::post('rp_deposit/edit', 'RpDepositController@edit')->name('admin.rp_deposit.edit');
 
             Route::post('rp_deposit/delete', 'BankinController@destroy')->name('admin.rp_deposit.delete');
-
-
 
             Route::get('rp_withdraw', 'ReportController@rp_withdraw')->defaults('_config', [
                 'view' => 'admin::module.rp_withdraw.index',
             ])->name('admin.rp_withdraw.index');
 
-
             Route::post('rp_withdraw/delete', 'BankoutController@destroy')->name('admin.rp_withdraw.delete');
-
 
             Route::get('rp_withdraw_seamless', 'ReportController@rp_withdraw_seamless')->defaults('_config', [
                 'view' => 'admin::module.rp_withdraw_seamless.index',
@@ -447,7 +430,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
                 'view' => 'admin::module.rp_member_pro.index',
             ])->name('admin.rp_member_pro.index');
 
-
             Route::get('rp_top_payment', 'ReportController@rp_top_payment')->defaults('_config', [
                 'view' => 'admin::module.rp_top_payment.index',
             ])->name('admin.rp_top_payment.index');
@@ -461,7 +443,6 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
             ])->name('admin.rp_sum_stat.index');
 
             Route::post('rp_sum_stat/loaddata', 'ReportController@loadData')->name('admin.rp_sum_stat.loaddata');
-
 
             Route::get('rp_sum_payment', 'ReportController@rp_sum_payment')->defaults('_config', [
                 'view' => 'admin::module.rp_sum_payment.index',
@@ -487,603 +468,592 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
                 'view' => 'admin::module.transaction.index',
             ])->name('admin.transaction.index');
 
-
             $route = ['name' => 'bank', 'controller' => 'BankController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'bank_rule', 'controller' => 'BankRuleController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'refer', 'controller' => 'ReferController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'spin', 'controller' => 'SpinController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
-
 
             $route = ['name' => 'confirm_wallet', 'controller' => 'ConfirmwalletController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
-
 
             $route = ['name' => 'employees', 'controller' => 'AdminController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadrole', $route['controller'] . '@loadRole')->name('admin.' . $route['name'] . '.loadrole');
+                Route::post('loadrole', $route['controller'].'@loadRole')->name('admin.'.$route['name'].'.loadrole');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-	        $route = ['name' => 'check_case', 'controller' => 'CheckCaseController'];
-	        Route::group(['prefix' => $route['name']], function () use ($route) {
-		        Route::get('/', $route['controller'].'@index')->defaults('_config', [
-			        'view' => 'admin::module.'.$route['name'].'.index',
-		        ])->name('admin.'.$route['name'].'.index');
+            $route = ['name' => 'check_case', 'controller' => 'CheckCaseController'];
+            Route::group(['prefix' => $route['name']], function () use ($route) {
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-	        });
-
+            });
 
             $route = ['name' => 'roles', 'controller' => 'RoleController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'announces', 'controller' => 'AnnounceController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->defaults('_config', [
-                    'redirect' => 'admin.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->defaults('_config', [
+                    'redirect' => 'admin.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'batch_user', 'controller' => 'BatchUserController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'setting', 'controller' => 'ConfigController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::get('getrule', $route['controller'] . '@getrule')->name('admin.' . $route['name'] . '.getrule');
+                Route::get('getrule', $route['controller'].'@getrule')->name('admin.'.$route['name'].'.getrule');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
-
 
             $route = ['name' => 'withdraw', 'controller' => 'WithdrawController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loaduser', $route['controller'] . '@loadUser')->name('admin.' . $route['name'] . '.loaduser');
+                Route::post('loaduser', $route['controller'].'@loadUser')->name('admin.'.$route['name'].'.loaduser');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('fix', $route['controller'] . '@fixSubmit')->name('admin.' . $route['name'] . '.fix');
+                Route::post('fix', $route['controller'].'@fixSubmit')->name('admin.'.$route['name'].'.fix');
 
             });
 
-//            $route = ['name' => 'freegame', 'controller' => 'FreeGameController'];
-//            Route::group(['prefix' => $route['name']], function () use ($route) {
-//                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-//                    'view' => 'admin::module.' . $route['name'] . '.index',
-//                ])->name('admin.' . $route['name'] . '.index');
-//
-//                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
-//
-//                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
-//
-//                Route::post('loadProduct', $route['controller'] . '@loadProduct')->name('admin.' . $route['name'] . '.loadProduct');
-//
-//                Route::post('loadGame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadGame');
-//
-//                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
-//
-//                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
-//
-//                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
-//
-//                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
-//
-//                Route::post('fix', $route['controller'] . '@fixSubmit')->name('admin.' . $route['name'] . '.fix');
-//
-//            });
-
+            //            $route = ['name' => 'freegame', 'controller' => 'FreeGameController'];
+            //            Route::group(['prefix' => $route['name']], function () use ($route) {
+            //                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
+            //                    'view' => 'admin::module.' . $route['name'] . '.index',
+            //                ])->name('admin.' . $route['name'] . '.index');
+            //
+            //                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+            //
+            //                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+            //
+            //                Route::post('loadProduct', $route['controller'] . '@loadProduct')->name('admin.' . $route['name'] . '.loadProduct');
+            //
+            //                Route::post('loadGame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadGame');
+            //
+            //                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+            //
+            //                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+            //
+            //                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+            //
+            //                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+            //
+            //                Route::post('fix', $route['controller'] . '@fixSubmit')->name('admin.' . $route['name'] . '.fix');
+            //
+            //            });
 
             $route = ['name' => 'withdraw_free', 'controller' => 'WithdrawfreeController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('fix', $route['controller'] . '@fixSubmit')->name('admin.' . $route['name'] . '.fix');
+                Route::post('fix', $route['controller'].'@fixSubmit')->name('admin.'.$route['name'].'.fix');
 
             });
 
             $route = ['name' => 'member', 'controller' => 'MemberController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
 
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-//                Route::post('sample/export', 'SampleController@index');
-//                Route::get('export', $route['controller'] . '@export')->name('admin.' . $route['name'] . '.export');
-                Route::get('export', $route['controller'] . '@export')->name('admin.' . $route['name'] . '.export');
+                //                Route::post('sample/export', 'SampleController@index');
+                //                Route::get('export', $route['controller'] . '@export')->name('admin.' . $route['name'] . '.export');
+                Route::get('export', $route['controller'].'@export')->name('admin.'.$route['name'].'.export');
 
-//                Route::post('export', $route['controller'] . '@export');
+                //                Route::post('export', $route['controller'] . '@export');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('createsub', $route['controller'] . '@createsub')->name('admin.' . $route['name'] . '.createsub');
+                Route::post('createsub', $route['controller'].'@createsub')->name('admin.'.$route['name'].'.createsub');
 
-                Route::get('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::get('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::get('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::get('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::get('loadaf', $route['controller'] . '@loadAf')->name('admin.' . $route['name'] . '.loadaf');
+                Route::get('loadaf', $route['controller'].'@loadAf')->name('admin.'.$route['name'].'.loadaf');
 
-                Route::get('loadrefer', $route['controller'] . '@loadRefer')->name('admin.' . $route['name'] . '.loadrefer');
+                Route::get('loadrefer', $route['controller'].'@loadRefer')->name('admin.'.$route['name'].'.loadrefer');
 
-                Route::get('loadbankaccount', $route['controller'] . '@loadBankAccount')->name('admin.' . $route['name'] . '.loadbankaccount');
+                Route::get('loadbankaccount', $route['controller'].'@loadBankAccount')->name('admin.'.$route['name'].'.loadbankaccount');
 
-                Route::get('gamelog', $route['controller'] . '@gameLog')->name('admin.' . $route['name'] . '.gamelog');
+                Route::get('gamelog', $route['controller'].'@gameLog')->name('admin.'.$route['name'].'.gamelog');
 
-                Route::get('balance', $route['controller'] . '@balance')->name('admin.' . $route['name'] . '.balance');
+                Route::get('balance', $route['controller'].'@balance')->name('admin.'.$route['name'].'.balance');
 
-                Route::get('remark', $route['controller'] . '@remark')->name('admin.' . $route['name'] . '.remark');
+                Route::get('remark', $route['controller'].'@remark')->name('admin.'.$route['name'].'.remark');
 
-                Route::post('setwallet', $route['controller'] . '@setWallet')->name('admin.' . $route['name'] . '.setwallet');
+                Route::post('setwallet', $route['controller'].'@setWallet')->name('admin.'.$route['name'].'.setwallet');
 
-                Route::post('setpoint', $route['controller'] . '@setPoint')->name('admin.' . $route['name'] . '.setpoint');
+                Route::post('setpoint', $route['controller'].'@setPoint')->name('admin.'.$route['name'].'.setpoint');
 
-                Route::post('setdiamond', $route['controller'] . '@setDiamond')->name('admin.' . $route['name'] . '.setdiamond');
+                Route::post('setdiamond', $route['controller'].'@setDiamond')->name('admin.'.$route['name'].'.setdiamond');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('editsub', $route['controller'] . '@editsub')->name('admin.' . $route['name'] . '.editsub');
+                Route::post('editsub', $route['controller'].'@editsub')->name('admin.'.$route['name'].'.editsub');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('deletesub', $route['controller'] . '@destroysub')->name('admin.' . $route['name'] . '.deletesub');
+                Route::post('deletesub', $route['controller'].'@destroysub')->name('admin.'.$route['name'].'.deletesub');
 
-                Route::post('changegamepass', $route['controller'] . '@changegamepass')->name('admin.' . $route['name'] . '.changegamepass');
+                Route::post('changegamepass', $route['controller'].'@changegamepass')->name('admin.'.$route['name'].'.changegamepass');
 
-                Route::post('addevent', $route['controller'] . '@addEvent')->name('admin.' . $route['name'] . '.addevent');
+                Route::post('addevent', $route['controller'].'@addEvent')->name('admin.'.$route['name'].'.addevent');
 
-                Route::get('loadevents', $route['controller'] . '@loadEvents')->name('admin.' . $route['name'] . '.loadevents');
+                Route::get('loadevents', $route['controller'].'@loadEvents')->name('admin.'.$route['name'].'.loadevents');
 
-                Route::post('refill', $route['controller'] . '@refill')->name('admin.' . $route['name'] . '.refill');
+                Route::post('refill', $route['controller'].'@refill')->name('admin.'.$route['name'].'.refill');
 
             });
 
             $route = ['name' => 'member_free', 'controller' => 'MemberfreeController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::get('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::get('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::get('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::get('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::get('loadbankaccount', $route['controller'] . '@loadBankAccount')->name('admin.' . $route['name'] . '.loadbankaccount');
+                Route::get('loadbankaccount', $route['controller'].'@loadBankAccount')->name('admin.'.$route['name'].'.loadbankaccount');
 
-                Route::get('gamelog', $route['controller'] . '@gameLog')->name('admin.' . $route['name'] . '.gamelog');
+                Route::get('gamelog', $route['controller'].'@gameLog')->name('admin.'.$route['name'].'.gamelog');
 
-                Route::get('balance', $route['controller'] . '@balance')->name('admin.' . $route['name'] . '.balance');
+                Route::get('balance', $route['controller'].'@balance')->name('admin.'.$route['name'].'.balance');
 
+                Route::post('setwallet', $route['controller'].'@setWallet')->name('admin.'.$route['name'].'.setwallet');
 
-                Route::post('setwallet', $route['controller'] . '@setWallet')->name('admin.' . $route['name'] . '.setwallet');
+                Route::post('setpoint', $route['controller'].'@setPoint')->name('admin.'.$route['name'].'.setpoint');
 
-                Route::post('setpoint', $route['controller'] . '@setPoint')->name('admin.' . $route['name'] . '.setpoint');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('editsub', $route['controller'].'@editsub')->name('admin.'.$route['name'].'.editsub');
 
-                Route::post('editsub', $route['controller'] . '@editsub')->name('admin.' . $route['name'] . '.editsub');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
-
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
-
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'member_confirm', 'controller' => 'MemberConfirmController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'bank_in', 'controller' => 'BankinController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('approve', $route['controller'] . '@approve')->name('admin.' . $route['name'] . '.approve');
+                Route::post('approve', $route['controller'].'@approve')->name('admin.'.$route['name'].'.approve');
 
             });
 
             $route = ['name' => 'bank_in_old', 'controller' => 'BankinOldController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('approve', $route['controller'] . '@approve')->name('admin.' . $route['name'] . '.approve');
+                Route::post('approve', $route['controller'].'@approve')->name('admin.'.$route['name'].'.approve');
 
             });
 
             $route = ['name' => 'game_user', 'controller' => 'GameUserController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::get('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::get('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::get('lastpayment', $route['controller'] . '@lastPayment')->name('admin.' . $route['name'] . '.lastpayment');
+                Route::get('lastpayment', $route['controller'].'@lastPayment')->name('admin.'.$route['name'].'.lastpayment');
 
-                Route::post('loadpromotion', $route['controller'] . '@loadPromotion')->name('admin.' . $route['name'] . '.loadpromotion');
+                Route::post('loadpromotion', $route['controller'].'@loadPromotion')->name('admin.'.$route['name'].'.loadpromotion');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'game_user_free', 'controller' => 'GameUserFreeController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::get('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::get('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'bank_out', 'controller' => 'BankoutController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'bank_account_in', 'controller' => 'BankAccountInController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'bank_account_out', 'controller' => 'BankAccountOutController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'faq', 'controller' => 'FaqController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
@@ -1111,360 +1081,353 @@ Route::domain(config('app.admin_url') . '.' . (is_null(config('app.admin_domain_
 
             $route = ['name' => 'notice', 'controller' => 'NoticeController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'notice_new', 'controller' => 'NoticeNewController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'game', 'controller' => 'GameController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loaddebug', $route['controller'] . '@loadDebug')->name('admin.' . $route['name'] . '.loaddebug');
+                Route::post('loaddebug', $route['controller'].'@loadDebug')->name('admin.'.$route['name'].'.loaddebug');
 
-                Route::post('loaddebugfree', $route['controller'] . '@loadDebugFree')->name('admin.' . $route['name'] . '.loaddebugfree');
+                Route::post('loaddebugfree', $route['controller'].'@loadDebugFree')->name('admin.'.$route['name'].'.loaddebugfree');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'game_type', 'controller' => 'GameTypeController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loaddebug', $route['controller'] . '@loadDebug')->name('admin.' . $route['name'] . '.loaddebug');
+                Route::post('loaddebug', $route['controller'].'@loadDebug')->name('admin.'.$route['name'].'.loaddebug');
 
-                Route::post('loaddebugfree', $route['controller'] . '@loadDebugFree')->name('admin.' . $route['name'] . '.loaddebugfree');
+                Route::post('loaddebugfree', $route['controller'].'@loadDebugFree')->name('admin.'.$route['name'].'.loaddebugfree');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'game_seamless', 'controller' => 'GameSeamlessController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadBetLimit', $route['controller'] . '@loadBetLimit')->name('admin.' . $route['name'] . '.loadBetLimit');
+                Route::post('loadBetLimit', $route['controller'].'@loadBetLimit')->name('admin.'.$route['name'].'.loadBetLimit');
 
-                Route::post('loaddebug', $route['controller'] . '@loadDebug')->name('admin.' . $route['name'] . '.loaddebug');
+                Route::post('loaddebug', $route['controller'].'@loadDebug')->name('admin.'.$route['name'].'.loaddebug');
 
-                Route::post('loaddebugfree', $route['controller'] . '@loadDebugFree')->name('admin.' . $route['name'] . '.loaddebugfree');
+                Route::post('loaddebugfree', $route['controller'].'@loadDebugFree')->name('admin.'.$route['name'].'.loaddebugfree');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'game_list', 'controller' => 'GameListController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loaddebug', $route['controller'] . '@loadDebug')->name('admin.' . $route['name'] . '.loaddebug');
+                Route::post('loaddebug', $route['controller'].'@loadDebug')->name('admin.'.$route['name'].'.loaddebug');
 
-                Route::post('loaddebugfree', $route['controller'] . '@loadDebugFree')->name('admin.' . $route['name'] . '.loaddebugfree');
+                Route::post('loaddebugfree', $route['controller'].'@loadDebugFree')->name('admin.'.$route['name'].'.loaddebugfree');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'game_single', 'controller' => 'GameSingleController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadprovider', $route['controller'] . '@loadProvider')->name('admin.' . $route['name'] . '.loadprovider');
+                Route::post('loadprovider', $route['controller'].'@loadProvider')->name('admin.'.$route['name'].'.loadprovider');
 
-                Route::post('loaddebug', $route['controller'] . '@loadDebug')->name('admin.' . $route['name'] . '.loaddebug');
+                Route::post('loaddebug', $route['controller'].'@loadDebug')->name('admin.'.$route['name'].'.loaddebug');
 
-                Route::post('loaddebugfree', $route['controller'] . '@loadDebugFree')->name('admin.' . $route['name'] . '.loaddebugfree');
+                Route::post('loaddebugfree', $route['controller'].'@loadDebugFree')->name('admin.'.$route['name'].'.loaddebugfree');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'gamelog', 'controller' => 'GameLogController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
 
-                Route::get('/seamless', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/seamless', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::get('/local', $route['controller'] . '@local')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . 'data.index',
-                ])->name('admin.' . $route['name'] . '.local');
+                Route::get('/local', $route['controller'].'@local')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'data.index',
+                ])->name('admin.'.$route['name'].'.local');
 
             });
 
-
             $route = ['name' => 'promotion', 'controller' => 'PromotionController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('createsub', $route['controller'] . '@createsub')->name('admin.' . $route['name'] . '.createsub');
+                Route::post('createsub', $route['controller'].'@createsub')->name('admin.'.$route['name'].'.createsub');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadpro', $route['controller'] . '@loadPro')->name('admin.' . $route['name'] . '.loadpro');
+                Route::post('loadpro', $route['controller'].'@loadPro')->name('admin.'.$route['name'].'.loadpro');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('deletesub', $route['controller'] . '@destroysub')->name('admin.' . $route['name'] . '.deletesub');
+                Route::post('deletesub', $route['controller'].'@destroysub')->name('admin.'.$route['name'].'.deletesub');
 
-                Route::post('selectpromotion', $route['controller'] . '@selectPromotion')->name('admin.' . $route['name'] . '.selectpromotion');
+                Route::post('selectpromotion', $route['controller'].'@selectPromotion')->name('admin.'.$route['name'].'.selectpromotion');
 
-                Route::post('deselectpromotion', $route['controller'] . '@deselectPromotion')->name('admin.' . $route['name'] . '.deselectpromotion');
+                Route::post('deselectpromotion', $route['controller'].'@deselectPromotion')->name('admin.'.$route['name'].'.deselectpromotion');
 
-                Route::post('loadpromotion', $route['controller'] . '@loadPromotion')->name('admin.' . $route['name'] . '.loadpromotion');
+                Route::post('loadpromotion', $route['controller'].'@loadPromotion')->name('admin.'.$route['name'].'.loadpromotion');
 
-                Route::post('applyretro', $route['controller'] . '@applyRetro')->name('admin.' . $route['name'] . '.applyretro');
+                Route::post('applyretro', $route['controller'].'@applyRetro')->name('admin.'.$route['name'].'.applyretro');
 
             });
 
             $route = ['name' => 'pro_content', 'controller' => 'PromotionContentController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadpro', $route['controller'] . '@loadPro')->name('admin.' . $route['name'] . '.loadpro');
+                Route::post('loadpro', $route['controller'].'@loadPro')->name('admin.'.$route['name'].'.loadpro');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'reward', 'controller' => 'RewardController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadgame', $route['controller'] . '@loadGame')->name('admin.' . $route['name'] . '.loadgame');
+                Route::post('loadgame', $route['controller'].'@loadGame')->name('admin.'.$route['name'].'.loadgame');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'rp_reward_point', 'controller' => 'RewardPointController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'payment', 'controller' => 'PaymentController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
             $route = ['name' => 'slide', 'controller' => 'SlideController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadpro', $route['controller'] . '@loadPro')->name('admin.' . $route['name'] . '.loadpro');
+                Route::post('loadpro', $route['controller'].'@loadPro')->name('admin.'.$route['name'].'.loadpro');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
             });
 
-
             $route = ['name' => 'withdraw_new', 'controller' => 'WithdrawNewController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('refill', $route['controller'] . '@refill')->name('admin.' . $route['name'] . '.refill');
+                Route::post('refill', $route['controller'].'@refill')->name('admin.'.$route['name'].'.refill');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('loadbank', $route['controller'] . '@loadBank')->name('admin.' . $route['name'] . '.loadbank');
+                Route::post('loadbank', $route['controller'].'@loadBank')->name('admin.'.$route['name'].'.loadbank');
 
-                Route::post('loadbanks', $route['controller'] . '@loadBanks')->name('admin.' . $route['name'] . '.loadbanks');
+                Route::post('loadbanks', $route['controller'].'@loadBanks')->name('admin.'.$route['name'].'.loadbanks');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('clear', $route['controller'] . '@clear')->name('admin.' . $route['name'] . '.clear');
+                Route::post('clear', $route['controller'].'@clear')->name('admin.'.$route['name'].'.clear');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('fix', $route['controller'] . '@fixSubmit')->name('admin.' . $route['name'] . '.fix');
+                Route::post('fix', $route['controller'].'@fixSubmit')->name('admin.'.$route['name'].'.fix');
 
             });
 
             $route = ['name' => 'coupon', 'controller' => 'CouponController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
-                Route::get('/', $route['controller'] . '@index')->defaults('_config', [
-                    'view' => 'admin::module.' . $route['name'] . '.index',
-                ])->name('admin.' . $route['name'] . '.index');
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
 
-                Route::post('create', $route['controller'] . '@create')->name('admin.' . $route['name'] . '.create');
+                Route::post('create', $route['controller'].'@create')->name('admin.'.$route['name'].'.create');
 
-                Route::post('loaddata', $route['controller'] . '@loadData')->name('admin.' . $route['name'] . '.loaddata');
+                Route::post('loaddata', $route['controller'].'@loadData')->name('admin.'.$route['name'].'.loaddata');
 
-                Route::post('edit', $route['controller'] . '@edit')->name('admin.' . $route['name'] . '.edit');
+                Route::post('edit', $route['controller'].'@edit')->name('admin.'.$route['name'].'.edit');
 
-                Route::post('update/{id?}', $route['controller'] . '@update')->name('admin.' . $route['name'] . '.update');
+                Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
-                Route::post('delete', $route['controller'] . '@destroy')->name('admin.' . $route['name'] . '.delete');
+                Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
 
-                Route::post('gen', $route['controller'] . '@gen')->name('admin.' . $route['name'] . '.gen');
+                Route::post('gen', $route['controller'].'@gen')->name('admin.'.$route['name'].'.gen');
 
-                Route::get('couponlist', $route['controller'] . '@couponlist')->name('admin.' . $route['name'] . '.couponlist');
-
+                Route::get('couponlist', $route['controller'].'@couponlist')->name('admin.'.$route['name'].'.couponlist');
 
             });
 
-
         });
-
 
     });
 
-//    });
+    //    });
 
 });
