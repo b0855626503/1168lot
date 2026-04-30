@@ -137,7 +137,7 @@ class Kernel extends ConsoleKernel
 
         // Yeekee round bootstrap from existing yeekee lotto draws (idempotent, rerun-safe).
         $schedule->command('lotto:generate-yeekee-rounds')
-            ->hourly()
+            ->everyFiveMinutes()
             ->withoutOverlapping()
             ->runInBackground();
 
