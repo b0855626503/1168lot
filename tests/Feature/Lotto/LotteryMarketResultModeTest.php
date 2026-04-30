@@ -230,6 +230,62 @@ class LotteryMarketResultModeTest extends TestCase
         $this->assertSame('count_unique_members', (string) ($refundConfig['count_mode'] ?? ''));
     }
 
+    public function test_load_data_returns_yeekee_reward_positions(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Main',
+            'code' => 'main',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 30,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee_market_3',
+            'result_mode' => 'yeekee',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 30,
+            'round_config' => json_encode(['round_duration_minutes' => 15]),
+            'formula_config' => json_encode(['default_preset' => 'SHOOTS_SUM_MINUS_POSITION', 'subtract_position' => 16]),
+            'reward_config' => json_encode([
+                'reward_enabled' => true,
+                'reward_positions' => [
+                    ['position' => 1, 'credit_amount' => 20],
+                    ['position' => 16, 'credit_amount' => 50],
+                ],
+                'min_bet_amount' => 100,
+            ]),
+            'refund_config' => json_encode(['refund_if_bet_entries_below_min' => false]),
+            'reward_enabled' => 1,
+            'refund_if_bet_entries_below_min' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/admin/lotto/markets/loaddata', 'POST', [
+            'id' => 30,
+        ]);
+
+        $response = $this->createTestResponse(
+            app(LotteryMarketController::class)->loadData($request)
+        );
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.yeekee_settings.reward_positions.0.position', 1);
+        $response->assertJsonPath('data.yeekee_settings.reward_positions.0.credit_amount', 20);
+        $response->assertJsonPath('data.yeekee_settings.reward_positions.1.position', 16);
+        $response->assertJsonPath('data.yeekee_settings.reward_positions.1.credit_amount', 50);
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('lotto_groups', function (Blueprint $table): void {

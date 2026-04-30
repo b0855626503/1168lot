@@ -108,23 +108,58 @@
                 <b-col cols="12" md="6">
                     <b-form-group>
                         <b-form-checkbox v-model="formaddedit.yeekee_settings.reward_enabled" :value="true" :unchecked-value="false">เปิดรางวัลยิงเลข</b-form-checkbox>
+                        <small class="text-muted d-block">กำหนดลำดับยิงที่ได้รางวัล และจำนวนเครดิตต่ออันดับ</small>
                     </b-form-group>
                 </b-col>
                 <b-col cols="12" md="6">
                     <b-form-group>
                         <b-form-checkbox v-model="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" :value="true" :unchecked-value="false">เปิดเงื่อนไขงดออกผลและคืนโพย</b-form-checkbox>
+                        <small class="text-muted d-block">ใช้จำนวนรายการแทงจริงเป็นเกณฑ์ ไม่ใช่จำนวนยิงเลข</small>
                     </b-form-group>
                 </b-col>
             </b-row>
-            <b-row v-if="formaddedit.yeekee_settings.reward_enabled">
-                <b-col cols="12" md="6">
+            <b-row v-if="formaddedit.yeekee_settings.reward_enabled" class="pt-2 border-top">
+                <b-col cols="12" md="5">
                     <b-form-group label="ยอดเดิมพันขั้นต่ำในรอบเดียวกัน">
                         <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_amount" type="number" min="0" step="0.01" size="sm"></b-form-input>
                         <small class="text-muted d-block">สมาชิกต้องมียอดแทงขั้นต่ำในรอบเดียวกัน จึงจะได้รางวัลยิงเลข</small>
                     </b-form-group>
                 </b-col>
+                <b-col cols="12" md="7">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="mb-0 font-weight-bold">ลำดับที่ได้รางวัล</label>
+                        <b-button size="sm" variant="outline-primary" @click="addRewardPosition">เพิ่มลำดับรางวัล</b-button>
+                    </div>
+                    <div class="table-responsive border rounded bg-white">
+                        <table class="table table-sm mb-0">
+                            <thead class="thead-light">
+                            <tr>
+                                <th style="width: 32%;">ลำดับยิง</th>
+                                <th style="width: 48%;">เครดิตรางวัล</th>
+                                <th class="text-center" style="width: 20%;">ลบ</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr v-for="(item, index) in formaddedit.yeekee_settings.reward_positions" :key="`reward-pos-${index}`">
+                                <td>
+                                    <b-form-input v-model.number="item.position" type="number" min="1" step="1" size="sm"></b-form-input>
+                                </td>
+                                <td>
+                                    <b-form-input v-model.number="item.credit_amount" type="number" min="0.01" step="0.01" size="sm"></b-form-input>
+                                </td>
+                                <td class="text-center">
+                                    <b-button size="sm" variant="outline-danger" @click="removeRewardPosition(index)">ลบ</b-button>
+                                </td>
+                            </tr>
+                            <tr v-if="formaddedit.yeekee_settings.reward_positions.length === 0">
+                                <td colspan="3" class="text-center text-muted py-2">ยังไม่ได้เพิ่มลำดับรางวัล</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </b-col>
             </b-row>
-            <b-row v-if="formaddedit.yeekee_settings.refund_if_bet_entries_below_min">
+            <b-row v-if="formaddedit.yeekee_settings.refund_if_bet_entries_below_min" class="pt-2 border-top mt-2">
                 <b-col cols="12" md="4">
                     <b-form-group label="จำนวนรายการแทงขั้นต่ำ">
                         <b-form-input v-model.number="formaddedit.yeekee_settings.min_bet_entries_required" type="number" min="0" step="1" size="sm"></b-form-input>
@@ -668,6 +703,7 @@
                             reward_enabled: false,
                             refund_if_bet_entries_below_min: false,
                             min_bet_amount: 0,
+                            reward_positions: [],
                             min_bet_entries_required: 0,
                             refund_count_mode: 'count_bet_entries',
                             refund_action: 'VOID_AND_REFUND',
@@ -706,7 +742,7 @@
                         ],
                         yeekeeRefundCountModes: [
                             { value: 'count_bet_entries', text: 'นับทุกรายการแทง' },
-                            { value: 'count_distinct_members', text: 'นับสมาชิกไม่ซ้ำ' },
+                            { value: 'count_unique_members', text: 'นับสมาชิกไม่ซ้ำ' },
                         ],
                         yeekeeRefundActions: [
                             { value: 'VOID_AND_REFUND', text: 'งดออกผลและคืนโพย' },
@@ -1446,7 +1482,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1458,7 +1494,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1856,6 +1892,12 @@
                             reward_enabled: Boolean((d.yeekee_settings || {}).reward_enabled || false),
                             refund_if_bet_entries_below_min: Boolean((d.yeekee_settings || {}).refund_if_bet_entries_below_min || false),
                             min_bet_amount: Number((d.yeekee_settings || {}).min_bet_amount || 0),
+                            reward_positions: Array.isArray((d.yeekee_settings || {}).reward_positions)
+                                ? (d.yeekee_settings || {}).reward_positions.map((item) => ({
+                                    position: Number((item || {}).position || 0),
+                                    credit_amount: Number((item || {}).credit_amount || 0),
+                                })).filter((item) => item.position > 0 && item.credit_amount > 0)
+                                : [],
                             min_bet_entries_required: Number((d.yeekee_settings || {}).min_bet_entries_required || 0),
                             refund_count_mode: String((d.yeekee_settings || {}).refund_count_mode || 'count_bet_entries'),
                             refund_action: String((d.yeekee_settings || {}).refund_action || 'VOID_AND_REFUND'),
@@ -1927,6 +1969,7 @@
                 },
                 addEditSubmit() {
                     this.normalizeScheduleFormData();
+                    this.normalizeYeekeeFormData();
                     const validationMessage = this.validateAutoDrawConfig();
                     if (validationMessage) {
                         this.$bvModal.msgBoxOk(validationMessage, {
@@ -1994,6 +2037,36 @@
                             window.LaravelDataTables['dataTableBuilder'].draw(false);
                         })
                         .catch(() => console.error('addEditSubmit error'));
+                },
+                normalizeYeekeeFormData() {
+                    const settings = this.formaddedit.yeekee_settings || {};
+                    if (!Array.isArray(settings.reward_positions)) {
+                        settings.reward_positions = [];
+                    }
+
+                    settings.reward_positions = settings.reward_positions
+                        .map((item) => ({
+                            position: Number((item || {}).position || 0),
+                            credit_amount: Number((item || {}).credit_amount || 0),
+                        }))
+                        .filter((item) => item.position > 0 && item.credit_amount > 0);
+                },
+                addRewardPosition() {
+                    if (!this.formaddedit.yeekee_settings || !Array.isArray(this.formaddedit.yeekee_settings.reward_positions)) {
+                        this.$set(this.formaddedit.yeekee_settings, 'reward_positions', []);
+                    }
+
+                    this.formaddedit.yeekee_settings.reward_positions.push({
+                        position: 1,
+                        credit_amount: 1,
+                    });
+                },
+                removeRewardPosition(index) {
+                    if (!this.formaddedit.yeekee_settings || !Array.isArray(this.formaddedit.yeekee_settings.reward_positions)) {
+                        return;
+                    }
+
+                    this.formaddedit.yeekee_settings.reward_positions.splice(index, 1);
                 },
                 validateAutoDrawConfig() {
                     const mode = this.formaddedit.draw_schedule_type || 'manual';

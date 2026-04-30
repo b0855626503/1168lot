@@ -50,6 +50,9 @@ class LotteryMarketController extends AppBaseController
             'subtract_position' => (int) ($data->yeekeeSetting->formula_config['subtract_position'] ?? 16),
             'reward_enabled' => (bool) ($data->yeekeeSetting->reward_enabled ?? false),
             'min_bet_amount' => (float) ($data->yeekeeSetting->reward_config['min_bet_amount'] ?? 0),
+            'reward_positions' => is_array($data->yeekeeSetting->reward_config['reward_positions'] ?? null)
+                ? array_values($data->yeekeeSetting->reward_config['reward_positions'])
+                : [],
             'refund_if_bet_entries_below_min' => (bool) ($data->yeekeeSetting->refund_if_bet_entries_below_min ?? false),
             'min_bet_entries_required' => (int) ($data->yeekeeSetting->refund_config['min_bet_entries_required'] ?? 0),
             'refund_count_mode' => (string) ($data->yeekeeSetting->refund_config['count_mode'] ?? 'count_bet_entries'),
