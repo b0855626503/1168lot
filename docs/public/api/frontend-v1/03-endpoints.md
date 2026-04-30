@@ -64,6 +64,11 @@
 - `GET /api/v1/lotto/tickets`
 - `GET /api/v1/lotto/tickets/{id}`
 - `POST /api/v1/lotto/tickets/{id}/cancel`
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 - `GET /api/v1/wheel/list`
 - `POST /api/v1/wheel/spin`
 - `GET /api/v1/wheel/history`
@@ -78,3 +83,53 @@
 - `POST /api/v1/auth/login` ออก active token ล่าสุดได้ครั้งละ 1 ตัวต่อ member; token เดิมของ member เดียวกันจะใช้ต่อไม่ได้หลัง login ใหม่
 - `POST /api/v1/deposit/loadbank` และ `/deposit/loadbank/random` ส่ง `qr_pic` เป็น `""` เมื่อบัญชีไม่มีรูป QR ที่อัปโหลดไว้
 - `deposit_min` ของ `/deposit/loadbank` และ `/deposit/loadbank/random` ใช้ `bank_account.deposit_min` ก่อน ถ้าเป็น `0` จึง fallback ไป `configs.deposit_min`; ถ้าทั้งคู่เป็น `0` ส่ง `0`
+
+## Yeekee API
+
+- `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
+- lifecycle: `betting open -> betting closed -> shoot window -> pending result -> resulted/voided`
+- Yeekee ไม่มี manual result
+- response เดิมของ lotto จะเพิ่ม field แบบไม่กระทบของเดิม เช่น `result_mode`, `market_type`, `is_yeekee`, `has_shoot`, `round_status`
+
+### Submit Shoot
+
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- auth: ต้องเป็น member ที่ login แล้ว
+- request:
+  - `number` (string) เลข 5 หลัก
+- response example:
+  - `success`
+  - `message`
+  - `data.round_id`
+  - `data.position`
+  - `data.number_text`
+  - `data.submitted_at`
+  - `data.round_status`
+- error ตัวอย่าง:
+  - `ยังไม่ถึงเวลายิงเลข`
+  - `หมดเวลายิงเลขแล้ว`
+  - `กรุณากรอกเลข 5 หลัก`
+  - `รายการหวยนี้ไม่รองรับการยิงเลข`
+
+### Current Round / Status
+
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- response หลัก:
+  - `market_id`, `draw_id`, `round_id`, `result_mode`
+  - `round_no`
+  - `bet_open_at`, `bet_close_at`
+  - `shoot_open_at`, `shoot_close_at`
+  - `result_compute_at`
+  - `status`
+  - `server_time`
+
+### Shoots / Reward / Proof
+
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+  - คืนลำดับยิงล่าสุด โดยมี limit เสมอ
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+  - คืนสถานะสิทธิ์/รายการรางวัลของสมาชิกในรอบ
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
+  - ก่อน reveal จะเห็นเฉพาะข้อมูลที่เปิดเผยได้ เช่น `precommit_signature`
+  - หลัง reveal จะเห็น `proof_signature`, `external_seed_reference`, `result_payload`
+  - จะไม่เปิด internal/private seed ก่อนเวลา reveal

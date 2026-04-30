@@ -13,6 +13,9 @@ use Gametech\Lotto\Models\LottoMarketBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\YeekeeRound;
+use Gametech\Lotto\Models\YeekeeShoot;
+use Gametech\Lotto\Models\YeekeeShootRewardLog;
 use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
@@ -85,6 +88,7 @@ class LottoController extends BaseController
                 'logo',
                 'icon',
                 'is_enabled',
+                'result_mode',
             ]);
 
             $latestNonDraftByMarket = LottoDraw::query()
@@ -143,6 +147,8 @@ class LottoController extends BaseController
                             $draw = $latestDrawMap->get((int) $market->id);
                             $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
                             $status = $draw ? $this->latestDrawStatus($draw) : 'draft';
+                            $resultMode = $this->marketResultMode($market);
+                            $yeekeeRound = $this->resolveYeekeeRoundForDraw((int) $market->id, $draw ? (int) $draw->id : 0);
 
                             return [
                                 'market_id' => (int) $market->id,
@@ -155,6 +161,9 @@ class LottoController extends BaseController
                                 'market_logo' => (string) ($market->logo ?? ''),
                                 'market_icon' => (string) ($market->icon ?? ''),
                                 'is_enabled' => (bool) $market->is_enabled,
+                                'result_mode' => $resultMode,
+                                'market_type' => $resultMode,
+                                'is_yeekee' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
                                 'latest_draw' => [
                                     'draw_id' => (int) ($draw?->id ?? 0),
                                     'draw_date' => $draw?->draw_date ? $draw->draw_date->format('Y-m-d') : null,
@@ -166,6 +175,12 @@ class LottoController extends BaseController
                                     'is_open_bet' => $status === 'open',
                                     'result_top_3' => (string) ($resultNumber['top_3'] ?? ''),
                                     'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
+                                    'has_shoot' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
+                                    'round_no' => $yeekeeRound ? (int) $yeekeeRound->round_no : null,
+                                    'bet_close_at' => $yeekeeRound?->bet_close_at,
+                                    'shoot_close_at' => $yeekeeRound?->shoot_close_at,
+                                    'result_compute_at' => $yeekeeRound?->result_compute_at,
+                                    'round_status' => $yeekeeRound ? (string) $yeekeeRound->status : null,
                                 ],
                             ];
                         })
@@ -221,21 +236,33 @@ class LottoController extends BaseController
                 ->all();
 
             $rows = LottoDraw::query()
-                ->with('market:id,name')
+                ->with('market:id,name,result_mode')
                 ->whereIn('id', $latestDrawIds)
                 ->orderByDesc('draw_date')
                 ->orderByDesc('id')
                 ->limit($limit)
                 ->get()
-                ->map(static function (LottoDraw $draw): array {
+                ->map(function (LottoDraw $draw): array {
+                    $resultMode = $this->marketResultMode($draw->market);
+                    $yeekeeRound = $this->resolveYeekeeRoundForDraw((int) $draw->market_id, (int) $draw->id);
+
                     return [
                         'id' => (int) $draw->id,
                         'market_id' => (int) $draw->market_id,
                         'market_name' => $draw->market?->name,
+                        'result_mode' => $resultMode,
+                        'market_type' => $resultMode,
+                        'is_yeekee' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
                         'draw_date' => optional($draw->draw_date)->toDateString(),
                         'open_at' => optional($draw->open_at)->toDateTimeString(),
                         'close_at' => optional($draw->close_at)->toDateTimeString(),
                         'status' => (string) $draw->status,
+                        'has_shoot' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
+                        'round_no' => $yeekeeRound ? (int) $yeekeeRound->round_no : null,
+                        'bet_close_at' => $yeekeeRound?->bet_close_at,
+                        'shoot_close_at' => $yeekeeRound?->shoot_close_at,
+                        'result_compute_at' => $yeekeeRound?->result_compute_at,
+                        'round_status' => $yeekeeRound ? (string) $yeekeeRound->status : null,
                     ];
                 })
                 ->values()
@@ -255,12 +282,15 @@ class LottoController extends BaseController
         try {
             $language = $this->requestLanguage($request);
             $draw = LottoDraw::query()
-                ->with(['market:id,name,group_id', 'betSettings'])
+                ->with(['market:id,name,group_id,result_mode', 'betSettings'])
                 ->find($id);
 
             if (! $draw) {
                 return $this->sendError('ไม่พบงวดที่ระบุ', 404);
             }
+
+            $resultMode = $this->marketResultMode($draw->market);
+            $yeekeeRound = $this->resolveYeekeeRoundForDraw((int) $draw->market_id, (int) $draw->id);
 
             $response = $this->sendResponse([
                 'id' => (int) $draw->id,
@@ -268,12 +298,21 @@ class LottoController extends BaseController
                     'id' => (int) $draw->market_id,
                     'name' => $draw->market?->name,
                     'group_id' => (int) ($draw->market?->group_id ?? 0),
+                    'result_mode' => $resultMode,
+                    'market_type' => $resultMode,
+                    'is_yeekee' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
                 ],
                 'draw_date' => optional($draw->draw_date)->toDateString(),
                 'open_at' => optional($draw->open_at)->toDateTimeString(),
                 'close_at' => optional($draw->close_at)->toDateTimeString(),
                 'status' => (string) $draw->status,
                 'result_number' => $draw->result_number,
+                'has_shoot' => $resultMode === LotteryMarket::RESULT_MODE_YEEKEE,
+                'round_no' => $yeekeeRound ? (int) $yeekeeRound->round_no : null,
+                'bet_close_at' => $yeekeeRound?->bet_close_at,
+                'shoot_close_at' => $yeekeeRound?->shoot_close_at,
+                'result_compute_at' => $yeekeeRound?->result_compute_at,
+                'round_status' => $yeekeeRound ? (string) $yeekeeRound->status : null,
                 'bet_settings' => $draw->betSettings->map(fn ($setting): array => [
                     'bet_type' => (string) $setting->bet_type,
                     'bet_type_label' => BetType::label((string) $setting->bet_type),
@@ -429,11 +468,14 @@ class LottoController extends BaseController
                 userAgent: (string) $request->userAgent()
             );
 
+            $round = YeekeeRound::query()->find((int) $shoot->yeekee_round_id);
+
             return $this->sendResponse([
                 'round_id' => (int) $shoot->yeekee_round_id,
                 'position' => (int) $shoot->position,
                 'number_text' => (string) $shoot->number_text,
                 'submitted_at' => (string) $shoot->submitted_at,
+                'round_status' => $round ? (string) $round->status : null,
             ], 'ยิงเลขสำเร็จ');
         } catch (\InvalidArgumentException $exception) {
             return $this->sendError($exception->getMessage(), 422);
@@ -925,6 +967,145 @@ class LottoController extends BaseController
             ], 'ดึงผลย้อนหลังสำเร็จ');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงผลย้อนหลังได้ในขณะนี้', 422);
+        }
+    }
+
+    public function yeekeeCurrentRound(Request $request, int $marketId): JsonResponse
+    {
+        try {
+            $market = LotteryMarket::query()->find($marketId);
+            if (! $market) {
+                return $this->sendError('ไม่พบหวยที่ระบุ', 404);
+            }
+
+            if ($this->marketResultMode($market) !== LotteryMarket::RESULT_MODE_YEEKEE) {
+                return $this->sendError('รายการหวยนี้ไม่รองรับการยิงเลข', 422);
+            }
+
+            $round = YeekeeRound::query()
+                ->where('market_id', $marketId)
+                ->whereIn('status', ['open_bet', 'closed_bet', 'shoot_open', 'result_pending'])
+                ->orderBy('id')
+                ->first();
+
+            if (! $round) {
+                return $this->sendError('ไม่พบรอบยี่กี่ที่เปิดอยู่', 404);
+            }
+
+            return $this->sendResponse($this->mapYeekeeRoundPayload($market, $round), 'ดึงรอบยี่กี่ปัจจุบันสำเร็จ');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถดึงรอบยี่กี่ปัจจุบันได้ในขณะนี้', 422);
+        }
+    }
+
+    public function yeekeeShoots(Request $request, int $roundId): JsonResponse
+    {
+        try {
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $round = YeekeeRound::query()->find($roundId);
+            if (! $round) {
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
+            }
+
+            $limit = max(1, min((int) $request->query('limit', 50), 100));
+            $rows = YeekeeShoot::query()
+                ->where('yeekee_round_id', $roundId)
+                ->orderByDesc('position')
+                ->limit($limit)
+                ->get(['position', 'number_text', 'submitted_at']);
+
+            return $this->sendResponse([
+                'round_id' => (int) $round->id,
+                'limit' => $limit,
+                'count' => $rows->count(),
+                'items' => $rows->map(static function (YeekeeShoot $shoot): array {
+                    return [
+                        'position' => (int) $shoot->position,
+                        'number_text' => (string) $shoot->number_text,
+                        'submitted_at' => (string) $shoot->submitted_at,
+                    ];
+                })->values()->all(),
+            ], 'ดึงรายการยิงเลขสำเร็จ');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถดึงรายการยิงเลขได้ในขณะนี้', 422);
+        }
+    }
+
+    public function yeekeeResultProof(Request $request, int $roundId): JsonResponse
+    {
+        try {
+            $round = YeekeeRound::query()->find($roundId);
+            if (! $round) {
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
+            }
+
+            $draw = LottoDraw::query()->find((int) $round->lotto_draw_id);
+            $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
+            $isRevealed = (string) ($round->status ?? '') === 'resulted' || (string) ($draw?->status ?? '') === 'resulted';
+
+            $publicProof = [
+                'formula_label' => (string) ($round->config_snapshot_json['formula_config']['preset'] ?? ''),
+                'precommit_signature' => (string) ($resultNumber['precommit_signature'] ?? ''),
+                'proof_signature' => $isRevealed ? (string) ($resultNumber['proof_signature'] ?? '') : '',
+                'external_seed_reference' => $isRevealed ? (string) ($resultNumber['external_seed_reference'] ?? '') : '',
+                'result_payload' => $isRevealed ? [
+                    'raw_result' => (string) ($resultNumber['raw_result'] ?? ''),
+                    'top_3' => (string) ($resultNumber['top_3'] ?? ''),
+                    'bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
+                ] : null,
+            ];
+
+            return $this->sendResponse([
+                'round_id' => (int) $round->id,
+                'draw_id' => (int) $round->lotto_draw_id,
+                'status' => (string) $round->status,
+                'is_revealed' => $isRevealed,
+                'proof' => $publicProof,
+                'server_time' => now()->format('Y-m-d H:i:s'),
+            ], 'ดึงข้อมูลผลและหลักฐานสำเร็จ');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถดึงข้อมูลผลและหลักฐานได้ในขณะนี้', 422);
+        }
+    }
+
+    public function yeekeeRewardStatus(Request $request, int $roundId): JsonResponse
+    {
+        try {
+            $member = $this->resolveCustomerMember($request);
+            if (! $member || ! isset($member->code)) {
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+            }
+
+            $round = YeekeeRound::query()->find($roundId);
+            if (! $round) {
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
+            }
+
+            $rewardLogs = YeekeeShootRewardLog::query()
+                ->where('yeekee_round_id', $roundId)
+                ->where('member_id', (int) $member->code)
+                ->orderBy('position')
+                ->get(['position', 'credit_amount']);
+
+            return $this->sendResponse([
+                'round_id' => (int) $round->id,
+                'member_id' => (int) $member->code,
+                'reward_enabled' => true,
+                'reward_count' => $rewardLogs->count(),
+                'rewarded' => $rewardLogs->isNotEmpty(),
+                'items' => $rewardLogs->map(static function (YeekeeShootRewardLog $log): array {
+                    return [
+                        'position' => (int) $log->position,
+                        'credit_amount' => (float) $log->credit_amount,
+                    ];
+                })->values()->all(),
+            ], 'ดึงสถานะรางวัลยิงเลขสำเร็จ');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถดึงสถานะรางวัลยิงเลขได้ในขณะนี้', 422);
         }
     }
 
@@ -1956,6 +2137,54 @@ class LottoController extends BaseController
             'result_bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
             'first_prize' => (string) ($resultNumber['first_prize'] ?? ''),
             'last_2_digits' => (string) ($resultNumber['last_2_digits'] ?? ''),
+        ];
+    }
+
+    private function marketResultMode(?LotteryMarket $market): string
+    {
+        if (! $market) {
+            return LotteryMarket::RESULT_MODE_NORMAL;
+        }
+
+        $resultMode = (string) ($market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL);
+
+        return in_array($resultMode, LotteryMarket::resultModes(), true) ? $resultMode : LotteryMarket::RESULT_MODE_NORMAL;
+    }
+
+    private function resolveYeekeeRoundForDraw(int $marketId, int $drawId): ?YeekeeRound
+    {
+        if ($drawId <= 0) {
+            return null;
+        }
+
+        return YeekeeRound::query()
+            ->where('market_id', $marketId)
+            ->where('lotto_draw_id', $drawId)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function mapYeekeeRoundPayload(LotteryMarket $market, YeekeeRound $round): array
+    {
+        $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
+
+        return [
+            'market_id' => (int) $market->id,
+            'draw_id' => (int) $round->lotto_draw_id,
+            'round_id' => (int) $round->id,
+            'result_mode' => LotteryMarket::RESULT_MODE_YEEKEE,
+            'round_no' => (int) $round->round_no,
+            'bet_open_at' => (string) $round->bet_open_at,
+            'bet_close_at' => (string) $round->bet_close_at,
+            'shoot_open_at' => (string) $round->shoot_open_at,
+            'shoot_close_at' => (string) $round->shoot_close_at,
+            'result_compute_at' => (string) $round->result_compute_at,
+            'status' => (string) $round->status,
+            'formula_label' => (string) ($snapshot['formula_config']['preset'] ?? ''),
+            'round_duration_minutes' => (int) ($snapshot['round_duration_minutes'] ?? 0),
+            'shoot_window_after_bet_close_seconds' => (int) ($snapshot['shoot_window_after_bet_close_seconds'] ?? 0),
+            'reward_enabled' => true,
+            'server_time' => now()->format('Y-m-d H:i:s'),
         ];
     }
 
