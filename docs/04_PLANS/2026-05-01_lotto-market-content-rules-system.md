@@ -1,6 +1,7 @@
 > สถานะ: ACTIVE
 > วันที่: 2026-05-01
 > โดเมน/เรื่อง: lotto / market-content
+> แทนแผนเก่า: -
 > อ้างอิง: BOA-187
 
 # Lotto Market Content / Rules System
