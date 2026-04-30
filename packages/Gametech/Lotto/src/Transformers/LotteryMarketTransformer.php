@@ -46,6 +46,10 @@ class LotteryMarketTransformer extends TransformerAbstract
         if ($scheduleType === 'weekly') {
             $labels = $this->drawDayLabels($drawDays);
             if (count($labels) > 0) {
+                if (count($labels) === 7) {
+                    return 'Auto: ทุกวัน';
+                }
+
                 return 'Auto: '.implode(', ', $labels);
             }
         }
@@ -63,7 +67,7 @@ class LotteryMarketTransformer extends TransformerAbstract
 
         $legacyMode = (string) ($model->draw_mode ?? 'manual');
         if ($legacyMode === 'daily') {
-            return 'Auto: จันทร์, อังคาร, พุธ, พฤหัสบดี, ศุกร์, เสาร์, อาทิตย์';
+            return 'Auto: ทุกวัน';
         }
 
         if ($legacyMode === 'weekdays') {
