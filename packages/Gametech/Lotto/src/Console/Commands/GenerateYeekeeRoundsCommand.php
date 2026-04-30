@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class GenerateYeekeeRoundsCommand extends Command
 {
-    protected $signature = 'lotto:generate-yeekee-rounds
-        {--date= : Draw date (Y-m-d), default=today}
+    protected $signature = 'lotto:generate-yeekee-draws
+        {--date= : Draw date (Y-m-d)}
+        {--window= : Top-up horizon เช่น +6h}
         {--market_id= : Generate only one market}
         {--dry-run : Preview only without insert}';
 
@@ -22,9 +23,11 @@ class GenerateYeekeeRoundsCommand extends Command
     public function handle(): int
     {
         $lotteryTimezone = (string) config('app.timezone', 'UTC');
-        $date = $this->resolveDate((string) $this->option('date'));
-        if (! $date) {
-            $this->error('Invalid --date format. Use Y-m-d');
+        $dateOption = trim((string) $this->option('date'));
+        $windowOption = trim((string) $this->option('window'));
+        $targetDates = $this->resolveTargetDates($dateOption, $windowOption, $lotteryTimezone);
+        if ($targetDates === null) {
+            $this->error('Invalid options: use --date=Y-m-d or --window=+6h');
 
             return self::FAILURE;
         }
@@ -44,8 +47,9 @@ class GenerateYeekeeRoundsCommand extends Command
         $markets = $marketQuery->orderBy('id')->get();
 
         $summary = [
-            'date' => $date->format('Y-m-d'),
+            'dates' => $targetDates,
             'dry_run' => $dryRun,
+            'window' => $windowOption !== '' ? $windowOption : null,
             'market_count' => $markets->count(),
             'rounds_expected' => 0,
             'draw_created' => 0,
@@ -53,160 +57,227 @@ class GenerateYeekeeRoundsCommand extends Command
             'round_created' => 0,
             'round_exists' => 0,
             'skipped_group_disabled' => 0,
+            'days' => [],
             'items' => [],
         ];
 
-        foreach ($markets as $market) {
-            if (! $market->group || ! (bool) $market->group->is_enabled) {
-                $summary['skipped_group_disabled']++;
+        foreach ($targetDates as $targetDate) {
+            $date = Carbon::createFromFormat('Y-m-d', $targetDate, $lotteryTimezone)->startOfDay();
+            $daySummary = [
+                'date' => $targetDate,
+                'rounds_expected' => 0,
+                'draw_created' => 0,
+                'draw_exists' => 0,
+                'round_created' => 0,
+                'round_exists' => 0,
+            ];
 
-                continue;
-            }
+            foreach ($markets as $market) {
+                if (! $market->group || ! (bool) $market->group->is_enabled) {
+                    $summary['skipped_group_disabled']++;
 
-            $setting = YeekeeMarketSetting::query()->where('market_id', (int) $market->id)->first();
-            $roundConfig = is_array($setting?->round_config) ? $setting->round_config : [];
+                    continue;
+                }
 
-            $durationMinutes = max(1, (int) ($roundConfig['round_duration_minutes'] ?? 15));
-            $shootWindowSeconds = max(0, (int) ($roundConfig['shoot_window_after_bet_close_seconds'] ?? 60));
-            $settlementDelaySeconds = max(0, (int) ($roundConfig['settlement_delay_after_shoot_close_seconds'] ?? 60));
-            $expectedPayoutSlaMinutes = max(0, (int) ($roundConfig['expected_payout_sla_minutes'] ?? 5));
+                $setting = YeekeeMarketSetting::query()->where('market_id', (int) $market->id)->first();
+                $roundConfig = is_array($setting?->round_config) ? $setting->round_config : [];
 
-            $roundCount = (int) floor((24 * 60) / $durationMinutes);
-            if ($roundCount <= 0) {
-                $roundCount = 1;
-            }
+                $durationMinutes = max(1, (int) ($roundConfig['round_duration_minutes'] ?? 15));
+                $shootWindowSeconds = max(0, (int) ($roundConfig['shoot_window_after_bet_close_seconds'] ?? 60));
+                $settlementDelaySeconds = max(0, (int) ($roundConfig['settlement_delay_after_shoot_close_seconds'] ?? 60));
+                $expectedPayoutSlaMinutes = max(0, (int) ($roundConfig['expected_payout_sla_minutes'] ?? 5));
 
-            $summary['rounds_expected'] += $roundCount;
+                $roundCount = (int) floor((24 * 60) / $durationMinutes);
+                if ($roundCount <= 0) {
+                    $roundCount = 1;
+                }
 
-            $dayStart = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d').' 00:00:00', $lotteryTimezone);
+                $summary['rounds_expected'] += $roundCount;
+                $daySummary['rounds_expected'] += $roundCount;
 
-            for ($index = 0; $index < $roundCount; $index++) {
-                $roundNo = $index + 1;
-                $betOpenAt = $dayStart->copy()->addMinutes($index * $durationMinutes);
-                $betCloseAt = $betOpenAt->copy()->addMinutes($durationMinutes);
-                $shootOpenAt = $betCloseAt->copy();
-                $shootCloseAt = $shootOpenAt->copy()->addSeconds($shootWindowSeconds);
-                $resultComputeAt = $shootCloseAt->copy()->addSeconds($settlementDelaySeconds);
-                $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes($expectedPayoutSlaMinutes);
+                $dayStart = Carbon::createFromFormat('Y-m-d H:i:s', $date->format('Y-m-d').' 00:00:00', $lotteryTimezone);
 
-                $drawLookup = [
-                    'market_id' => (int) $market->id,
-                    'draw_date' => $date->format('Y-m-d'),
-                    'close_at' => $betCloseAt->format('Y-m-d H:i:s'),
-                ];
+                for ($index = 0; $index < $roundCount; $index++) {
+                    $roundNo = $index + 1;
+                    $betOpenAt = $dayStart->copy()->addMinutes($index * $durationMinutes);
+                    $betCloseAt = $betOpenAt->copy()->addMinutes($durationMinutes);
+                    $shootOpenAt = $betCloseAt->copy();
+                    $shootCloseAt = $shootOpenAt->copy()->addSeconds($shootWindowSeconds);
+                    $resultComputeAt = $shootCloseAt->copy()->addSeconds($settlementDelaySeconds);
+                    $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes($expectedPayoutSlaMinutes);
 
-                $drawPayload = [
-                    'open_at' => $betOpenAt->format('Y-m-d H:i:s'),
-                    'result_at' => $resultComputeAt->format('Y-m-d H:i:s'),
-                    'status' => 'draft',
-                    'created_by' => null,
-                ];
+                    $drawLookup = [
+                        'market_id' => (int) $market->id,
+                        'draw_date' => $date->format('Y-m-d'),
+                        'close_at' => $betCloseAt->format('Y-m-d H:i:s'),
+                    ];
 
-                $existingRoundByNaturalKey = YeekeeRound::query()
-                    ->where('market_id', (int) $market->id)
-                    ->where('round_date', $date->format('Y-m-d'))
-                    ->where('round_no', $roundNo)
-                    ->first();
+                    $drawPayload = [
+                        'open_at' => $betOpenAt->format('Y-m-d H:i:s'),
+                        'result_at' => $resultComputeAt->format('Y-m-d H:i:s'),
+                        'status' => 'draft',
+                        'created_by' => null,
+                    ];
 
-                if ($existingRoundByNaturalKey instanceof YeekeeRound) {
-                    $summary['draw_exists']++;
-                    $summary['round_exists']++;
+                    $existingRoundByNaturalKey = YeekeeRound::query()
+                        ->where('market_id', (int) $market->id)
+                        ->where('round_date', $date->format('Y-m-d'))
+                        ->where('round_no', $roundNo)
+                        ->first();
+
+                    if ($existingRoundByNaturalKey instanceof YeekeeRound) {
+                        $summary['draw_exists']++;
+                        $summary['round_exists']++;
+                        $daySummary['draw_exists']++;
+                        $daySummary['round_exists']++;
+                        $summary['items'][] = [
+                            'date' => $targetDate,
+                            'market_id' => (int) $market->id,
+                            'round_no' => $roundNo,
+                            'draw_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
+                            'status' => 'exists_round',
+                        ];
+
+                        continue;
+                    }
+
+                    $draw = LottoDraw::query()->where($drawLookup)->first();
+                    if ($dryRun && ! $draw instanceof LottoDraw) {
+                        $summary['draw_created']++;
+                        $summary['round_created']++;
+                        $daySummary['draw_created']++;
+                        $daySummary['round_created']++;
+                        $summary['items'][] = [
+                            'date' => $targetDate,
+                            'market_id' => (int) $market->id,
+                            'round_no' => $roundNo,
+                            'status' => 'will_create_draw_and_round',
+                        ];
+
+                        continue;
+                    }
+
+                    $roundPayload = [
+                        'market_id' => (int) $market->id,
+                        'round_date' => $date->format('Y-m-d'),
+                        'round_no' => $roundNo,
+                        'bet_open_at' => $betOpenAt->format('Y-m-d H:i:s'),
+                        'bet_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
+                        'shoot_open_at' => $shootOpenAt->format('Y-m-d H:i:s'),
+                        'shoot_close_at' => $shootCloseAt->format('Y-m-d H:i:s'),
+                        'result_compute_at' => $resultComputeAt->format('Y-m-d H:i:s'),
+                        'expected_settlement_deadline_at' => $expectedSettlementDeadlineAt->format('Y-m-d H:i:s'),
+                        'status' => 'draft',
+                        'config_snapshot_json' => [
+                            'round_config' => [
+                                'round_duration_minutes' => $durationMinutes,
+                                'shoot_window_after_bet_close_seconds' => $shootWindowSeconds,
+                                'settlement_delay_after_shoot_close_seconds' => $settlementDelaySeconds,
+                                'expected_payout_sla_minutes' => $expectedPayoutSlaMinutes,
+                            ],
+                        ],
+                    ];
+
+                    if ($dryRun) {
+                        $summary['draw_exists']++;
+                        $daySummary['draw_exists']++;
+
+                        $roundLookup = ['lotto_draw_id' => (int) $draw->id];
+                        $existingRound = YeekeeRound::query()->where($roundLookup)->first();
+                        if (! $existingRound instanceof YeekeeRound) {
+                            $summary['round_created']++;
+                            $daySummary['round_created']++;
+                            $status = 'will_create_round';
+                        } else {
+                            $summary['round_exists']++;
+                            $daySummary['round_exists']++;
+                            $status = 'exists_round';
+                        }
+                    } else {
+                        $draw = null;
+                        $round = null;
+                        DB::transaction(function () use ($drawLookup, $drawPayload, $roundPayload, &$draw, &$round): void {
+                            $draw = LottoDraw::query()->firstOrCreate($drawLookup, $drawPayload);
+                            $round = YeekeeRound::query()->firstOrCreate(
+                                ['lotto_draw_id' => (int) $draw->id],
+                                $roundPayload
+                            );
+                        });
+
+                        if ($draw instanceof LottoDraw && $draw->wasRecentlyCreated) {
+                            $summary['draw_created']++;
+                            $daySummary['draw_created']++;
+                        } else {
+                            $summary['draw_exists']++;
+                            $daySummary['draw_exists']++;
+                        }
+
+                        if ($round instanceof YeekeeRound && $round->wasRecentlyCreated) {
+                            $summary['round_created']++;
+                            $daySummary['round_created']++;
+                        } else {
+                            $summary['round_exists']++;
+                            $daySummary['round_exists']++;
+                        }
+
+                        $status = $round instanceof YeekeeRound && $round->wasRecentlyCreated
+                            ? 'created_round'
+                            : 'exists_round';
+                    }
+
                     $summary['items'][] = [
+                        'date' => $targetDate,
                         'market_id' => (int) $market->id,
                         'round_no' => $roundNo,
                         'draw_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
-                        'status' => 'exists_round',
+                        'status' => $status,
                     ];
-
-                    continue;
                 }
-
-                $draw = LottoDraw::query()->where($drawLookup)->first();
-                if ($dryRun && ! $draw instanceof LottoDraw) {
-                    $summary['draw_created']++;
-                    $summary['round_created']++;
-                    $summary['items'][] = [
-                        'market_id' => (int) $market->id,
-                        'round_no' => $roundNo,
-                        'status' => 'will_create_draw_and_round',
-                    ];
-
-                    continue;
-                }
-
-                $roundPayload = [
-                    'market_id' => (int) $market->id,
-                    'round_date' => $date->format('Y-m-d'),
-                    'round_no' => $roundNo,
-                    'bet_open_at' => $betOpenAt->format('Y-m-d H:i:s'),
-                    'bet_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
-                    'shoot_open_at' => $shootOpenAt->format('Y-m-d H:i:s'),
-                    'shoot_close_at' => $shootCloseAt->format('Y-m-d H:i:s'),
-                    'result_compute_at' => $resultComputeAt->format('Y-m-d H:i:s'),
-                    'expected_settlement_deadline_at' => $expectedSettlementDeadlineAt->format('Y-m-d H:i:s'),
-                    'status' => 'draft',
-                    'config_snapshot_json' => [
-                        'round_config' => [
-                            'round_duration_minutes' => $durationMinutes,
-                            'shoot_window_after_bet_close_seconds' => $shootWindowSeconds,
-                            'settlement_delay_after_shoot_close_seconds' => $settlementDelaySeconds,
-                            'expected_payout_sla_minutes' => $expectedPayoutSlaMinutes,
-                        ],
-                    ],
-                ];
-
-                if ($dryRun) {
-                    $summary['draw_exists']++;
-
-                    $roundLookup = ['lotto_draw_id' => (int) $draw->id];
-                    $existingRound = YeekeeRound::query()->where($roundLookup)->first();
-                    if (! $existingRound instanceof YeekeeRound) {
-                        $summary['round_created']++;
-                        $status = 'will_create_round';
-                    } else {
-                        $summary['round_exists']++;
-                        $status = 'exists_round';
-                    }
-                } else {
-                    $draw = null;
-                    $round = null;
-                    DB::transaction(function () use ($drawLookup, $drawPayload, $roundPayload, &$draw, &$round): void {
-                        $draw = LottoDraw::query()->firstOrCreate($drawLookup, $drawPayload);
-                        $round = YeekeeRound::query()->firstOrCreate(
-                            ['lotto_draw_id' => (int) $draw->id],
-                            $roundPayload
-                        );
-                    });
-
-                    if ($draw instanceof LottoDraw && $draw->wasRecentlyCreated) {
-                        $summary['draw_created']++;
-                    } else {
-                        $summary['draw_exists']++;
-                    }
-
-                    if ($round instanceof YeekeeRound && $round->wasRecentlyCreated) {
-                        $summary['round_created']++;
-                    } else {
-                        $summary['round_exists']++;
-                    }
-
-                    $status = $round instanceof YeekeeRound && $round->wasRecentlyCreated
-                        ? 'created_round'
-                        : 'exists_round';
-                }
-
-                $summary['items'][] = [
-                    'market_id' => (int) $market->id,
-                    'round_no' => $roundNo,
-                    'draw_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
-                    'status' => $status,
-                ];
             }
+
+            $summary['days'][] = $daySummary;
         }
 
         $this->line(json_encode($summary, JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;
+    }
+
+    private function resolveTargetDates(string $dateOption, string $windowOption, string $timezone): ?array
+    {
+        if ($dateOption !== '' && $windowOption !== '') {
+            return null;
+        }
+
+        if ($windowOption !== '') {
+            if (! preg_match('/^\+?(\d+)h$/i', $windowOption, $matches)) {
+                return null;
+            }
+
+            $hours = max(1, (int) $matches[1]);
+            $from = now($timezone);
+            $to = $from->copy()->addHours($hours);
+            $dates = [];
+            $cursor = $from->copy()->startOfDay();
+            $endDay = $to->copy()->startOfDay();
+            while ($cursor->lte($endDay)) {
+                $dates[] = $cursor->format('Y-m-d');
+                $cursor->addDay();
+            }
+
+            return array_values(array_unique($dates));
+        }
+
+        if ($dateOption !== '') {
+            $date = $this->resolveDate($dateOption);
+            if (! $date) {
+                return null;
+            }
+
+            return [$date->format('Y-m-d')];
+        }
+
+        return [now($timezone)->startOfDay()->format('Y-m-d')];
     }
 
     private function resolveDate(string $date): ?Carbon

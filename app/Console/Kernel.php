@@ -135,9 +135,15 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Yeekee round bootstrap from existing yeekee lotto draws (idempotent, rerun-safe).
-        $schedule->command('lotto:generate-yeekee-rounds')
-            ->everyFiveMinutes()
+        // Yeekee daily generate: build tomorrow draws+rounds from config.
+        $schedule->command('lotto:generate-yeekee-draws --date=tomorrow')
+            ->dailyAt('00:05')
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Yeekee top-up: ensure forward inventory is always available.
+        $schedule->command('lotto:generate-yeekee-draws --window=+6h')
+            ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
 

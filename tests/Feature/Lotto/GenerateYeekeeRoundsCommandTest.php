@@ -3,6 +3,7 @@
 namespace Tests\Feature\Lotto;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -32,7 +33,7 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
     {
         $this->seedYeekeeMarket(11, 1, 60);
 
-        Artisan::call('lotto:generate-yeekee-rounds', [
+        Artisan::call('lotto:generate-yeekee-draws', [
             '--date' => '2026-05-01',
         ]);
 
@@ -44,10 +45,10 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
     {
         $this->seedYeekeeMarket(11, 1, 60);
 
-        Artisan::call('lotto:generate-yeekee-rounds', [
+        Artisan::call('lotto:generate-yeekee-draws', [
             '--date' => '2026-05-01',
         ]);
-        Artisan::call('lotto:generate-yeekee-rounds', [
+        Artisan::call('lotto:generate-yeekee-draws', [
             '--date' => '2026-05-01',
         ]);
 
@@ -71,7 +72,7 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             'is_enabled' => 1,
         ]);
 
-        Artisan::call('lotto:generate-yeekee-rounds', [
+        Artisan::call('lotto:generate-yeekee-draws', [
             '--date' => '2026-05-01',
             '--market_id' => 11,
         ]);
@@ -82,6 +83,21 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(0, DB::table('lotto_draws')->where('market_id', 12)->count());
         $this->assertSame(0, DB::table('yeekee_rounds')->where('market_id', 12)->count());
         $this->assertSame(0, DB::table('lotto_draws')->where('market_id', 13)->count());
+    }
+
+    public function test_generate_yeekee_rounds_supports_window_top_up_mode(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-01 20:00:00'));
+        $this->seedYeekeeMarket(11, 1, 60);
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--window' => '+6h',
+        ]);
+
+        $this->assertSame(48, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(48, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+
+        Carbon::setTestNow();
     }
 
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void
