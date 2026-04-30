@@ -2,9 +2,9 @@
 
 namespace Gametech\Lotto\DataTables;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Transformers\LottoMemberBetTypesReportTransformer;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -16,7 +16,7 @@ class LottoMemberBetTypesReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoMemberBetTypesReportTransformer());
+        return $dataTable->setTransformer(new LottoMemberBetTypesReportTransformer);
     }
 
     public function query(LottoTicketItem $model)
@@ -64,6 +64,8 @@ class LottoMemberBetTypesReportDataTable extends DataTable
 
         if ($marketId = (int) request('market_id')) {
             $query->where('lotto_draws.market_id', $marketId);
+        } else {
+            $query->where('lotto_markets.result_mode', $this->resolveMarketTypeFilter());
         }
 
         if ($betType = trim((string) request('bet_type'))) {
@@ -72,13 +74,23 @@ class LottoMemberBetTypesReportDataTable extends DataTable
 
         if ($memberKeyword = trim((string) request('member_keyword'))) {
             $query->where(function ($builder) use ($memberKeyword): void {
-                $builder->where('members.user_name', 'like', '%' . $memberKeyword . '%')
-                    ->orWhere('members.name', 'like', '%' . $memberKeyword . '%')
-                    ->orWhere('lotto_tickets.member_id', 'like', '%' . $memberKeyword . '%');
+                $builder->where('members.user_name', 'like', '%'.$memberKeyword.'%')
+                    ->orWhere('members.name', 'like', '%'.$memberKeyword.'%')
+                    ->orWhere('lotto_tickets.member_id', 'like', '%'.$memberKeyword.'%');
             });
         }
 
         return $query;
+    }
+
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', LotteryMarket::RESULT_MODE_NORMAL)));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
     }
 
     public function html(): Builder

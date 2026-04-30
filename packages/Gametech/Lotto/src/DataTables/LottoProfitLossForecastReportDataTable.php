@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\DataTables;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Transformers\LottoProfitLossForecastReportTransformer;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ class LottoProfitLossForecastReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoProfitLossForecastReportTransformer());
+        return $dataTable->setTransformer(new LottoProfitLossForecastReportTransformer);
     }
 
     public function query(LottoDrawBetSetting $model)
@@ -58,6 +59,8 @@ class LottoProfitLossForecastReportDataTable extends DataTable
 
         if ($marketId = (int) request('market_id')) {
             $query->where('lotto_markets.id', $marketId);
+        } else {
+            $query->where('lotto_markets.result_mode', $this->resolveMarketTypeFilter());
         }
 
         if ($betType = trim((string) request('bet_type'))) {
@@ -65,6 +68,16 @@ class LottoProfitLossForecastReportDataTable extends DataTable
         }
 
         return $query;
+    }
+
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', LotteryMarket::RESULT_MODE_NORMAL)));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
     }
 
     public function html(): Builder

@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\DataTables;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -140,6 +141,8 @@ class LottoTicketsCancelReportDataTable extends DataTable
 
         if ($marketId = (int) request('market_id')) {
             $query->where('lotto_draws.market_id', $marketId);
+        } else {
+            $query->where('lotto_markets.result_mode', $this->resolveMarketTypeFilter());
         }
 
         if ($status = trim((string) request('status'))) {
@@ -200,5 +203,15 @@ class LottoTicketsCancelReportDataTable extends DataTable
             ['data' => 'latest_updated_at', 'name' => 'lotto_tickets.updated_at', 'title' => 'เวลาอัปเดทล่าสุด', 'className' => 'text-center'],
             ['data' => 'actions', 'name' => 'id', 'title' => 'ดูโพย', 'className' => 'text-center', 'orderable' => false, 'searchable' => false],
         ];
+    }
+
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', LotteryMarket::RESULT_MODE_NORMAL)));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
     }
 }

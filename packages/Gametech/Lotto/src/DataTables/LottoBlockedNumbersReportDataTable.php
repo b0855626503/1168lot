@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\DataTables;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Transformers\LottoBlockedNumbersReportTransformer;
 use Yajra\DataTables\DataTableAbstract;
@@ -15,7 +16,7 @@ class LottoBlockedNumbersReportDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new LottoBlockedNumbersReportTransformer());
+        return $dataTable->setTransformer(new LottoBlockedNumbersReportTransformer);
     }
 
     public function query(LottoNumberBlock $model)
@@ -39,6 +40,8 @@ class LottoBlockedNumbersReportDataTable extends DataTable
 
         if ($marketId = (int) request('market_id')) {
             $query->where('lotto_draws.market_id', $marketId);
+        } else {
+            $query->where('lotto_markets.result_mode', $this->resolveMarketTypeFilter());
         }
 
         if ($betType = trim((string) request('bet_type'))) {
@@ -50,6 +53,16 @@ class LottoBlockedNumbersReportDataTable extends DataTable
         }
 
         return $query;
+    }
+
+    private function resolveMarketTypeFilter(): string
+    {
+        $marketType = strtolower(trim((string) request('market_type', LotteryMarket::RESULT_MODE_NORMAL)));
+        if (in_array($marketType, [LotteryMarket::RESULT_MODE_NORMAL, LotteryMarket::RESULT_MODE_YEEKEE], true)) {
+            return $marketType;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
     }
 
     public function html(): Builder

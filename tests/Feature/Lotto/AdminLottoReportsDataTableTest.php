@@ -4,7 +4,10 @@ namespace Tests\Feature\Lotto;
 
 use Gametech\Lotto\DataTables\LottoBlockedNumbersReportDataTable;
 use Gametech\Lotto\DataTables\LottoMemberBetTypesReportDataTable;
+use Gametech\Lotto\DataTables\LottoProfitLossForecastReportDataTable;
+use Gametech\Lotto\DataTables\LottoRevenueReportDataTable;
 use Gametech\Lotto\DataTables\LottoTicketsCancelReportDataTable;
+use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
@@ -12,6 +15,7 @@ use Gametech\Lotto\Models\LottoTicketItem;
 use Gametech\Lotto\Services\LottoProfitLossForecastReportService;
 use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -200,7 +204,7 @@ class AdminLottoReportsDataTableTest extends TestCase
         ]);
 
         $row = app(LottoMemberBetTypesReportDataTable::class)
-            ->query(new LottoTicketItem())
+            ->query(new LottoTicketItem)
             ->first();
 
         $this->assertNotNull($row);
@@ -267,7 +271,7 @@ class AdminLottoReportsDataTableTest extends TestCase
         ]);
 
         $row = app(LottoTicketsCancelReportDataTable::class)
-            ->query(new LottoTicket())
+            ->query(new LottoTicket)
             ->first();
 
         $this->assertNotNull($row);
@@ -280,7 +284,7 @@ class AdminLottoReportsDataTableTest extends TestCase
         $this->assertEquals(450.0, (float) $row->total_win_amount);
         $this->assertSame('ลด 17%', $row->items->pluck('package_name_at_time')->filter()->implode(', '));
 
-        $payload = (new LottoTicketsCancelReportTransformer())->transform($row);
+        $payload = (new LottoTicketsCancelReportTransformer)->transform($row);
         $this->assertSame($createdAt->format('d/m/Y H:i'), $payload['created_at']);
         $this->assertSame($cancelledAt->format('d/m/Y H:i'), $payload['latest_updated_at']);
     }
@@ -300,8 +304,20 @@ class AdminLottoReportsDataTableTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        DB::table('lotto_draw_bet_settings')->insert([
+            'id' => 1,
+            'draw_id' => 101,
+            'bet_type' => 'top_2',
+            'payout' => 90,
+            'discount_percent' => 0,
+            'is_enabled' => true,
+            'min_bet' => 1,
+            'max_bet' => 1000,
+            'max_per_number' => 500,
+        ]);
+
         $row = app(LottoBlockedNumbersReportDataTable::class)
-            ->query(new LottoNumberBlock())
+            ->query(new LottoNumberBlock)
             ->first();
 
         $this->assertNotNull($row);
@@ -309,6 +325,86 @@ class AdminLottoReportsDataTableTest extends TestCase
         $this->assertSame('top_2', $row->bet_type);
         $this->assertSame('46', $row->number);
         $this->assertSame('block', $row->mode);
+    }
+
+    public function test_reports_default_exclude_yeekee_and_allow_yeekee_when_market_type_selected(): void
+    {
+        DB::table('lotto_tickets')->insert([
+            'id' => 1005,
+            'member_id' => 52,
+            'draw_id' => 202,
+            'total_amount' => 90,
+            'total_bet_amount' => 90,
+            'total_discount_amount' => 0,
+            'total_net_amount' => 90,
+            'total_win_amount' => 0,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_ticket_items')->insert([
+            'id' => 5007,
+            'ticket_id' => 1005,
+            'bet_type' => 'top_2',
+            'number' => '99',
+            'amount' => 90,
+            'payout_at_time' => 90,
+            'result_status' => null,
+            'win_amount' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_number_blocks')->insert([
+            'id' => 7002,
+            'draw_id' => 202,
+            'bet_type' => 'top_2',
+            'number' => '99',
+            'mode' => 'block',
+            'reason' => 'yeekee block',
+            'blocked_by' => 9001,
+            'blocked_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET'));
+        $defaultRevenue = app(LottoRevenueReportDataTable::class)->query(new LottoDraw)->pluck('market_id')->all();
+        $this->assertContains(1, $defaultRevenue);
+        $this->assertContains(2, $defaultRevenue);
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET'));
+        $defaultForecastMarketIds = app(LottoProfitLossForecastReportDataTable::class)->query(new LottoDrawBetSetting)->pluck('market_id')->unique()->values()->all();
+        $this->assertNotContains(2, $defaultForecastMarketIds);
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET'));
+        $defaultMemberRows = app(LottoMemberBetTypesReportDataTable::class)->query(new LottoTicketItem)->get();
+        $this->assertTrue($defaultMemberRows->every(fn ($row): bool => (int) $row->market_id === 1));
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET'));
+        $defaultCancelRows = app(LottoTicketsCancelReportDataTable::class)->query(new LottoTicket)->get();
+        $this->assertTrue($defaultCancelRows->every(fn ($row): bool => (string) $row->market_name === 'หวยมาเลเซีย'));
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET'));
+        $defaultBlockedRows = app(LottoBlockedNumbersReportDataTable::class)->query(new LottoNumberBlock)->get();
+        $this->assertTrue($defaultBlockedRows->every(fn ($row): bool => (string) $row->market_name === 'หวยมาเลเซีย'));
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET', ['market_type' => 'yeekee']));
+        $yeekeeForecastMarketIds = app(LottoProfitLossForecastReportDataTable::class)->query(new LottoDrawBetSetting)->pluck('market_id')->unique()->values()->all();
+        $this->assertSame([2], $yeekeeForecastMarketIds);
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET', ['market_type' => 'yeekee']));
+        $yeekeeMemberRows = app(LottoMemberBetTypesReportDataTable::class)->query(new LottoTicketItem)->get();
+        $this->assertTrue($yeekeeMemberRows->every(fn ($row): bool => (int) $row->market_id === 2));
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET', ['market_type' => 'yeekee']));
+        $yeekeeCancelRows = app(LottoTicketsCancelReportDataTable::class)->query(new LottoTicket)->get();
+        $this->assertTrue($yeekeeCancelRows->every(fn ($row): bool => (string) $row->market_name === 'หวยยี่กี่'));
+
+        $this->app->instance('request', Request::create('/admin/lotto/reports', 'GET', ['market_type' => 'yeekee']));
+        $yeekeeBlockedRows = app(LottoBlockedNumbersReportDataTable::class)->query(new LottoNumberBlock)->get();
+        $this->assertTrue($yeekeeBlockedRows->every(fn ($row): bool => (string) $row->market_name === 'หวยยี่กี่'));
     }
 
     private function prepareSchema(): void
@@ -337,6 +433,7 @@ class AdminLottoReportsDataTableTest extends TestCase
             $table->string('name');
             $table->string('logo')->nullable();
             $table->string('icon')->nullable();
+            $table->string('result_mode', 32)->default('normal');
         });
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
@@ -484,6 +581,16 @@ class AdminLottoReportsDataTableTest extends TestCase
             'name' => 'หวยมาเลเซีย',
             'logo' => 'https://example.com/malaysia.png',
             'icon' => null,
+            'result_mode' => 'normal',
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 2,
+            'group_id' => 11,
+            'name' => 'หวยยี่กี่',
+            'logo' => null,
+            'icon' => null,
+            'result_mode' => 'yeekee',
         ]);
 
         DB::table('lotto_group_packages')->insert([
@@ -517,6 +624,30 @@ class AdminLottoReportsDataTableTest extends TestCase
             'result_at' => now()->addHours(2),
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            'id' => 202,
+            'market_id' => 2,
+            'draw_date' => '2026-04-05',
+            'status' => 'open',
+            'open_at' => now(),
+            'close_at' => now()->addHour(),
+            'result_at' => now()->addHours(2),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_draw_bet_settings')->insert([
+            'id' => 2,
+            'draw_id' => 202,
+            'bet_type' => 'top_2',
+            'payout' => 90,
+            'discount_percent' => 0,
+            'is_enabled' => true,
+            'min_bet' => 1,
+            'max_bet' => 1000,
+            'max_per_number' => 500,
         ]);
     }
 }
