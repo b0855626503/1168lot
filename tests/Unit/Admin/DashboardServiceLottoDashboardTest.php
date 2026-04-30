@@ -303,6 +303,22 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertCount(2, $allRows);
     }
 
+    public function test_normalize_filters_normalizes_lotto_market_type_to_supported_values(): void
+    {
+        $method = new ReflectionMethod(DashboardService::class, 'normalizeFilters');
+        $method->setAccessible(true);
+
+        $normalizedYeekee = $method->invoke($this->service, [
+            'lotto_market_type' => 'YEEKEE',
+        ]);
+        $normalizedUnknown = $method->invoke($this->service, [
+            'lotto_market_type' => 'unexpected',
+        ]);
+
+        $this->assertSame('yeekee', $normalizedYeekee['lotto_market_type']);
+        $this->assertSame('all', $normalizedUnknown['lotto_market_type']);
+    }
+
     public function test_summary_uses_deposit_minus_withdraw_only_for_net_balance(): void
     {
         $migration = require base_path('database/migrations/2026_03_09_120000_create_dashboard_summary_daily_table.php');
