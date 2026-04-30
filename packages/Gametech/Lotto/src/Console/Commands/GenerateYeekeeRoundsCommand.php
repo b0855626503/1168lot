@@ -8,6 +8,7 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Models\YeekeeRound;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class GenerateYeekeeRoundsCommand extends Command
 {
@@ -101,17 +102,29 @@ class GenerateYeekeeRoundsCommand extends Command
                     'created_by' => null,
                 ];
 
-                $draw = LottoDraw::query()->where($drawLookup)->first();
-                if (! $draw instanceof LottoDraw) {
-                    if (! $dryRun) {
-                        $draw = LottoDraw::query()->create(array_merge($drawLookup, $drawPayload));
-                    }
-                    $summary['draw_created']++;
-                } else {
+                $existingRoundByNaturalKey = YeekeeRound::query()
+                    ->where('market_id', (int) $market->id)
+                    ->where('round_date', $date->format('Y-m-d'))
+                    ->where('round_no', $roundNo)
+                    ->first();
+
+                if ($existingRoundByNaturalKey instanceof YeekeeRound) {
                     $summary['draw_exists']++;
+                    $summary['round_exists']++;
+                    $summary['items'][] = [
+                        'market_id' => (int) $market->id,
+                        'round_no' => $roundNo,
+                        'draw_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
+                        'status' => 'exists_round',
+                    ];
+
+                    continue;
                 }
 
-                if (! $draw instanceof LottoDraw) {
+                $draw = LottoDraw::query()->where($drawLookup)->first();
+                if ($dryRun && ! $draw instanceof LottoDraw) {
+                    $summary['draw_created']++;
+                    $summary['round_created']++;
                     $summary['items'][] = [
                         'market_id' => (int) $market->id,
                         'round_no' => $roundNo,
@@ -121,7 +134,6 @@ class GenerateYeekeeRoundsCommand extends Command
                     continue;
                 }
 
-                $roundLookup = ['lotto_draw_id' => (int) $draw->id];
                 $roundPayload = [
                     'market_id' => (int) $market->id,
                     'round_date' => $date->format('Y-m-d'),
@@ -143,16 +155,44 @@ class GenerateYeekeeRoundsCommand extends Command
                     ],
                 ];
 
-                $existingRound = YeekeeRound::query()->where($roundLookup)->first();
-                if (! $existingRound instanceof YeekeeRound) {
-                    if (! $dryRun) {
-                        YeekeeRound::query()->create(array_merge($roundLookup, $roundPayload));
+                if ($dryRun) {
+                    $summary['draw_exists']++;
+
+                    $roundLookup = ['lotto_draw_id' => (int) $draw->id];
+                    $existingRound = YeekeeRound::query()->where($roundLookup)->first();
+                    if (! $existingRound instanceof YeekeeRound) {
+                        $summary['round_created']++;
+                        $status = 'will_create_round';
+                    } else {
+                        $summary['round_exists']++;
+                        $status = 'exists_round';
                     }
-                    $summary['round_created']++;
-                    $status = $dryRun ? 'will_create_round' : 'created_round';
                 } else {
-                    $summary['round_exists']++;
-                    $status = 'exists_round';
+                    $draw = null;
+                    $round = null;
+                    DB::transaction(function () use ($drawLookup, $drawPayload, $roundPayload, &$draw, &$round): void {
+                        $draw = LottoDraw::query()->firstOrCreate($drawLookup, $drawPayload);
+                        $round = YeekeeRound::query()->firstOrCreate(
+                            ['lotto_draw_id' => (int) $draw->id],
+                            $roundPayload
+                        );
+                    });
+
+                    if ($draw instanceof LottoDraw && $draw->wasRecentlyCreated) {
+                        $summary['draw_created']++;
+                    } else {
+                        $summary['draw_exists']++;
+                    }
+
+                    if ($round instanceof YeekeeRound && $round->wasRecentlyCreated) {
+                        $summary['round_created']++;
+                    } else {
+                        $summary['round_exists']++;
+                    }
+
+                    $status = $round instanceof YeekeeRound && $round->wasRecentlyCreated
+                        ? 'created_round'
+                        : 'exists_round';
                 }
 
                 $summary['items'][] = [
