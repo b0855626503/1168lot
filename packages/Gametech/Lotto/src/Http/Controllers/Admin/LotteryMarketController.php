@@ -6,10 +6,12 @@ use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LotteryMarketDataTable;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Support\ToggleFieldGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class LotteryMarketController extends AppBaseController
@@ -31,7 +33,7 @@ class LotteryMarketController extends AppBaseController
 
     public function loadData(Request $request): JsonResponse
     {
-        $id   = $request->input('id');
+        $id = $request->input('id');
         $data = LotteryMarket::query()->find((int) $id);
 
         if (! $data) {
@@ -46,16 +48,17 @@ class LotteryMarketController extends AppBaseController
         $data = (array) $request->input('data', []);
 
         $validated = validator($data, [
-            'group_id'   => ['required', 'integer', 'exists:lotto_groups,id'],
-            'name'       => ['required', 'string', 'max:191'],
-            'name_en'    => ['nullable', 'string', 'max:191'],
-            'name_kh'    => ['nullable', 'string', 'max:191'],
-            'name_laos'  => ['nullable', 'string', 'max:191'],
-            'logo'       => ['nullable', 'string', 'max:255'],
-            'icon'       => ['nullable', 'string', 'max:255'],
-            'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code'],
-            'draw_mode' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawModes())],
-            'draw_schedule_type' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawScheduleTypes())],
+            'group_id' => ['required', 'integer', 'exists:lotto_groups,id'],
+            'name' => ['required', 'string', 'max:191'],
+            'name_en' => ['nullable', 'string', 'max:191'],
+            'name_kh' => ['nullable', 'string', 'max:191'],
+            'name_laos' => ['nullable', 'string', 'max:191'],
+            'logo' => ['nullable', 'string', 'max:255'],
+            'icon' => ['nullable', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code'],
+            'result_mode' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::resultModes())],
+            'draw_mode' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::drawModes())],
+            'draw_schedule_type' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::drawScheduleTypes())],
             'draw_days' => ['nullable', 'array'],
             'draw_dates' => ['nullable', 'array'],
             'auto_open_time' => ['nullable', 'date_format:H:i'],
@@ -77,15 +80,16 @@ class LotteryMarketController extends AppBaseController
         ]);
 
         $payload = [
-            'group_id'   => (int) $validated['group_id'],
-            'name'       => $validated['name'],
-            'name_en'    => $this->nullableString($validated['name_en'] ?? null),
-            'name_kh'    => $this->nullableString($validated['name_kh'] ?? null),
-            'name_laos'  => $this->nullableString($validated['name_laos'] ?? null),
-            'logo'       => $this->nullableString($validated['logo'] ?? null),
-            'icon'       => $this->nullableString($validated['icon'] ?? null),
-            'code'       => strtolower($validated['code']),
-            'draw_mode'  => $schedulePayload['legacy_draw_mode'],
+            'group_id' => (int) $validated['group_id'],
+            'name' => $validated['name'],
+            'name_en' => $this->nullableString($validated['name_en'] ?? null),
+            'name_kh' => $this->nullableString($validated['name_kh'] ?? null),
+            'name_laos' => $this->nullableString($validated['name_laos'] ?? null),
+            'logo' => $this->nullableString($validated['logo'] ?? null),
+            'icon' => $this->nullableString($validated['icon'] ?? null),
+            'code' => strtolower($validated['code']),
+            'result_mode' => $this->resolveResultMode($validated['result_mode'] ?? null),
+            'draw_mode' => $schedulePayload['legacy_draw_mode'],
             'draw_schedule_type' => $schedulePayload['draw_schedule_type'],
             'draw_days' => $schedulePayload['draw_days'],
             'draw_dates' => $schedulePayload['draw_dates'],
@@ -102,14 +106,15 @@ class LotteryMarketController extends AppBaseController
 
         $payload = $this->attachUploadedMedia($request, $payload);
 
-        LotteryMarket::query()->create($payload);
+        $market = LotteryMarket::query()->create($payload);
+        $this->upsertYeekeeSettingForMarket($market);
 
         return $this->sendSuccess('สร้างรายการหวยเรียบร้อยแล้ว');
     }
 
     public function edit(Request $request): JsonResponse
     {
-        $id     = (int) $request->input('id');
+        $id = (int) $request->input('id');
 
         try {
             $status = ToggleFieldGuard::resolveBoolean($request->input('status'));
@@ -132,7 +137,7 @@ class LotteryMarketController extends AppBaseController
 
     public function update(Request $request): JsonResponse
     {
-        $id   = (int) $request->input('id');
+        $id = (int) $request->input('id');
         $data = (array) $request->input('data', []);
 
         $market = LotteryMarket::query()->find($id);
@@ -142,16 +147,17 @@ class LotteryMarketController extends AppBaseController
         }
 
         $validated = validator($data, [
-            'group_id'   => ['required', 'integer', 'exists:lotto_groups,id'],
-            'name'       => ['required', 'string', 'max:191'],
-            'name_en'    => ['nullable', 'string', 'max:191'],
-            'name_kh'    => ['nullable', 'string', 'max:191'],
-            'name_laos'  => ['nullable', 'string', 'max:191'],
-            'logo'       => ['nullable', 'string', 'max:255'],
-            'icon'       => ['nullable', 'string', 'max:255'],
-            'code'       => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code,' . $market->id],
-            'draw_mode' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawModes())],
-            'draw_schedule_type' => ['nullable', 'string', 'in:' . implode(',', LotteryMarket::drawScheduleTypes())],
+            'group_id' => ['required', 'integer', 'exists:lotto_groups,id'],
+            'name' => ['required', 'string', 'max:191'],
+            'name_en' => ['nullable', 'string', 'max:191'],
+            'name_kh' => ['nullable', 'string', 'max:191'],
+            'name_laos' => ['nullable', 'string', 'max:191'],
+            'logo' => ['nullable', 'string', 'max:255'],
+            'icon' => ['nullable', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:100', 'alpha_dash', 'unique:lotto_markets,code,'.$market->id],
+            'result_mode' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::resultModes())],
+            'draw_mode' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::drawModes())],
+            'draw_schedule_type' => ['nullable', 'string', 'in:'.implode(',', LotteryMarket::drawScheduleTypes())],
             'draw_days' => ['nullable', 'array'],
             'draw_dates' => ['nullable', 'array'],
             'auto_open_time' => ['nullable', 'date_format:H:i'],
@@ -172,16 +178,20 @@ class LotteryMarketController extends AppBaseController
             'icon_file' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:5120'],
         ]);
 
+        $nextResultMode = $this->resolveResultMode($validated['result_mode'] ?? null);
+        $this->ensureMarketTypeCanBeChanged($market, $nextResultMode);
+
         $payload = [
-            'group_id'   => (int) $validated['group_id'],
-            'name'       => $validated['name'],
-            'name_en'    => $this->nullableString($validated['name_en'] ?? null),
-            'name_kh'    => $this->nullableString($validated['name_kh'] ?? null),
-            'name_laos'  => $this->nullableString($validated['name_laos'] ?? null),
-            'logo'       => $this->nullableString($validated['logo'] ?? null),
-            'icon'       => $this->nullableString($validated['icon'] ?? null),
-            'code'       => strtolower($validated['code']),
-            'draw_mode'  => $schedulePayload['legacy_draw_mode'],
+            'group_id' => (int) $validated['group_id'],
+            'name' => $validated['name'],
+            'name_en' => $this->nullableString($validated['name_en'] ?? null),
+            'name_kh' => $this->nullableString($validated['name_kh'] ?? null),
+            'name_laos' => $this->nullableString($validated['name_laos'] ?? null),
+            'logo' => $this->nullableString($validated['logo'] ?? null),
+            'icon' => $this->nullableString($validated['icon'] ?? null),
+            'code' => strtolower($validated['code']),
+            'result_mode' => $nextResultMode,
+            'draw_mode' => $schedulePayload['legacy_draw_mode'],
             'draw_schedule_type' => $schedulePayload['draw_schedule_type'],
             'draw_days' => $schedulePayload['draw_days'],
             'draw_dates' => $schedulePayload['draw_dates'],
@@ -201,6 +211,7 @@ class LotteryMarketController extends AppBaseController
         ]);
 
         $market->update($payload);
+        $this->upsertYeekeeSettingForMarket($market->fresh());
 
         return $this->sendSuccess('อัปเดตรายการหวยเรียบร้อยแล้ว');
     }
@@ -223,7 +234,7 @@ class LotteryMarketController extends AppBaseController
             }
 
             $path = $file->store('lotto/media', 'public');
-            $payload[$column] = '/storage/' . $path;
+            $payload[$column] = '/storage/'.$path;
 
             $this->deleteOldPublicFile($oldMedia[$column] ?? null);
         }
@@ -266,11 +277,74 @@ class LotteryMarketController extends AppBaseController
 
         $trimmed = trim($value);
 
-        return $trimmed === '' ? null : $trimmed . ':00';
+        return $trimmed === '' ? null : $trimmed.':00';
+    }
+
+    private function resolveResultMode($value): string
+    {
+        $mode = is_string($value) ? trim(strtolower($value)) : '';
+
+        if ($mode === LotteryMarket::RESULT_MODE_YEEKEE) {
+            return LotteryMarket::RESULT_MODE_YEEKEE;
+        }
+
+        return LotteryMarket::RESULT_MODE_NORMAL;
+    }
+
+    private function ensureMarketTypeCanBeChanged(LotteryMarket $market, string $nextResultMode): void
+    {
+        $currentResultMode = $this->resolveResultMode($market->result_mode ?? null);
+        if ($currentResultMode === $nextResultMode) {
+            return;
+        }
+
+        $hasDrawOrTicket = $market->draws()
+            ->leftJoin('lotto_tickets', 'lotto_tickets.draw_id', '=', 'lotto_draws.id')
+            ->where('lotto_draws.market_id', (int) $market->id)
+            ->selectRaw('COUNT(*) as aggregate')
+            ->value('aggregate');
+
+        if ((int) $hasDrawOrTicket > 0) {
+            throw ValidationException::withMessages([
+                'result_mode' => 'ไม่สามารถเปลี่ยนประเภทตลาดได้หลังมีงวดหรือโพยแล้ว',
+            ]);
+        }
+    }
+
+    private function upsertYeekeeSettingForMarket(LotteryMarket $market): void
+    {
+        $mode = $this->resolveResultMode($market->result_mode ?? null);
+        if ($mode !== LotteryMarket::RESULT_MODE_YEEKEE) {
+            return;
+        }
+
+        YeekeeMarketSetting::query()->firstOrCreate(
+            ['market_id' => (int) $market->id],
+            [
+                'round_config' => [
+                    'round_duration_minutes' => 15,
+                    'shoot_window_after_bet_close_seconds' => 60,
+                    'settlement_delay_after_shoot_close_seconds' => 60,
+                    'expected_payout_sla_minutes' => 5,
+                ],
+                'formula_config' => [
+                    'default_preset' => 'SHOOTS_SUM_MINUS_POSITION',
+                ],
+                'reward_config' => [
+                    'reward_enabled' => false,
+                ],
+                'refund_config' => [
+                    'refund_if_bet_entries_below_min' => false,
+                ],
+                'ui_config' => null,
+                'reward_enabled' => false,
+                'refund_if_bet_entries_below_min' => false,
+            ]
+        );
     }
 
     /**
-     * @param array{draw_schedule_type:string,draw_days:array<int,int>,draw_dates:array<int,int>} $schedulePayload
+     * @param  array{draw_schedule_type:string,draw_days:array<int,int>,draw_dates:array<int,int>}  $schedulePayload
      */
     private function validateAutoDrawConfiguration(array $validated, array $schedulePayload): void
     {
@@ -375,7 +449,7 @@ class LotteryMarketController extends AppBaseController
     }
 
     /**
-     * @param array<int,int> $drawDays
+     * @param  array<int,int>  $drawDays
      */
     private function mapScheduleToLegacyDrawMode(string $scheduleType, array $drawDays): string
     {
@@ -397,5 +471,4 @@ class LotteryMarketController extends AppBaseController
 
         return LotteryMarket::DRAW_MODE_MANUAL;
     }
-
 }
