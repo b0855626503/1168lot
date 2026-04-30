@@ -284,34 +284,43 @@
                 <div class="border rounded p-2 mb-3 bg-light">
                     <b-tabs content-class="pt-3" small>
                         <b-tab v-for="locale in ['th', 'en', 'lo', 'km']" :key="`content-${locale}`" :title="locale.toUpperCase()">
-                            <b-form-group label="Title">
+                            <b-form-group label="หัวข้อเนื้อหา">
                                 <b-form-input v-model="formaddedit.contents[locale].title" type="text" size="sm"></b-form-input>
+                                <small class="text-muted d-block">กรอกหัวข้อหลักสั้น ๆ ของตลาดนี้ในภาษาที่เลือก เช่น “กติกาหวยออมสิน”</small>
                             </b-form-group>
-                            <b-form-group label="Summary">
+                            <b-form-group label="สรุปย่อ">
                                 <b-form-textarea v-model="formaddedit.contents[locale].summary" rows="2" max-rows="4"></b-form-textarea>
+                                <small class="text-muted d-block">สรุปภาพรวมแบบย่อ 1-3 ประโยค สำหรับแสดงก่อนรายละเอียดเต็ม</small>
                             </b-form-group>
-                            <b-form-group label="Rules Content">
+                            <b-form-group label="เนื้อหากติกา">
                                 <b-form-textarea v-model="formaddedit.contents[locale].rules_content" rows="3" max-rows="6"></b-form-textarea>
+                                <small class="text-muted d-block">ใส่กติกาการเล่น เงื่อนไขการแทง และข้อกำหนดสำคัญของตลาดนี้</small>
                             </b-form-group>
-                            <b-form-group label="Schedule Content">
+                            <b-form-group label="เนื้อหาตารางเวลา">
                                 <b-form-textarea v-model="formaddedit.contents[locale].schedule_content" rows="3" max-rows="6"></b-form-textarea>
+                                <small class="text-muted d-block">ระบุวัน/รอบเวลาเปิดรับ ปิดรับ และเวลาออกผลที่ผู้เล่นควรรู้</small>
                             </b-form-group>
-                            <b-form-group label="Prize Content">
+                            <b-form-group label="เนื้อหาการจ่ายรางวัล">
                                 <b-form-textarea v-model="formaddedit.contents[locale].prize_content" rows="3" max-rows="6"></b-form-textarea>
+                                <small class="text-muted d-block">อธิบายการจ่ายรางวัลหรือแนวทางคำนวณผลตอบแทนในภาษาที่อ่านง่าย</small>
                             </b-form-group>
-                            <b-form-group label="Formula Content">
+                            <b-form-group label="เนื้อหาสูตร/วิธีคำนวณ">
                                 <b-form-textarea v-model="formaddedit.contents[locale].formula_content" rows="3" max-rows="6"></b-form-textarea>
+                                <small class="text-muted d-block">ใช้กรณีต้องอธิบายสูตร วิธีคิด หรือเงื่อนไขพิเศษเพิ่มเติม</small>
                             </b-form-group>
-                            <b-form-group label="SEO Title">
+                            <b-form-group label="SEO Title (หัวข้อสำหรับค้นหา)">
                                 <b-form-input v-model="formaddedit.contents[locale].seo_title" type="text" size="sm"></b-form-input>
+                                <small class="text-muted d-block">หัวข้อสำหรับหน้าเว็บ/การค้นหา แนะนำให้กระชับและมีคำสำคัญหลัก</small>
                             </b-form-group>
-                            <b-form-group label="SEO Description">
+                            <b-form-group label="SEO Description (คำอธิบายสำหรับค้นหา)">
                                 <b-form-textarea v-model="formaddedit.contents[locale].seo_description" rows="2" max-rows="4"></b-form-textarea>
+                                <small class="text-muted d-block">คำอธิบายสั้นสำหรับผลการค้นหา โดยสรุปจุดเด่นของตลาดนี้</small>
                             </b-form-group>
                             <b-form-group>
                                 <b-form-checkbox v-model="formaddedit.contents[locale].is_enabled" :value="1" :unchecked-value="0">
-                                    เปิดใช้งาน locale นี้
+                                    เปิดใช้งานเนื้อหาภาษานี้
                                 </b-form-checkbox>
+                                <small class="text-muted d-block">เปิดเมื่อพร้อมให้ frontend ดึงข้อมูลภาษานี้; ปิดเพื่อซ่อนชั่วคราว</small>
                             </b-form-group>
                         </b-tab>
                     </b-tabs>
