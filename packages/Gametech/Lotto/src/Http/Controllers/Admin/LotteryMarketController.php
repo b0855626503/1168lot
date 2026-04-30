@@ -7,9 +7,11 @@ use Gametech\Lotto\DataTables\LotteryMarketDataTable;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\YeekeeMarketSetting;
+use Gametech\Lotto\Services\LottoMarketContentService;
 use Gametech\Lotto\Support\ToggleFieldGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -58,6 +60,8 @@ class LotteryMarketController extends AppBaseController
             'refund_count_mode' => (string) ($data->yeekeeSetting->refund_config['count_mode'] ?? 'count_bet_entries'),
             'refund_action' => (string) ($data->yeekeeSetting->refund_config['action'] ?? 'VOID_AND_REFUND'),
         ];
+        $payload['contents'] = app(LottoMarketContentService::class)
+            ->contentsMapForAdmin((int) $data->id);
 
         return $this->sendResponse($payload, 'ดำเนินการเสร็จสิ้น');
     }
@@ -89,6 +93,7 @@ class LotteryMarketController extends AppBaseController
             'notify_result_telegram' => ['nullable'],
             'is_enabled' => ['nullable'],
             'yeekee_settings' => ['nullable', 'array'],
+            'contents' => ['nullable', 'array'],
         ])->validate();
 
         $schedulePayload = $this->resolveSchedulePayloadForSave($validated);
@@ -126,8 +131,17 @@ class LotteryMarketController extends AppBaseController
 
         $payload = $this->attachUploadedMedia($request, $payload);
 
-        $market = LotteryMarket::query()->create($payload);
-        $this->upsertYeekeeSettingForMarket($market, (array) ($validated['yeekee_settings'] ?? []));
+        $contentService = app(LottoMarketContentService::class);
+
+        DB::transaction(function () use ($payload, $validated, $contentService): void {
+            $market = LotteryMarket::query()->create($payload);
+            $this->upsertYeekeeSettingForMarket($market, (array) ($validated['yeekee_settings'] ?? []));
+            $contentService->upsertContentsForMarket((int) $market->id, (array) ($validated['contents'] ?? []));
+
+            DB::afterCommit(function () use ($contentService, $market): void {
+                $contentService->invalidateMarketCache((int) $market->id);
+            });
+        });
 
         return $this->sendSuccess('สร้างรายการหวยเรียบร้อยแล้ว');
     }
@@ -189,6 +203,7 @@ class LotteryMarketController extends AppBaseController
             'notify_result_telegram' => ['nullable'],
             'is_enabled' => ['nullable'],
             'yeekee_settings' => ['nullable', 'array'],
+            'contents' => ['nullable', 'array'],
         ])->validate();
 
         $schedulePayload = $this->resolveSchedulePayloadForSave($validated);
@@ -231,8 +246,22 @@ class LotteryMarketController extends AppBaseController
             'icon' => (string) ($market->icon ?? ''),
         ]);
 
-        $market->update($payload);
-        $this->upsertYeekeeSettingForMarket($market->fresh(), (array) ($validated['yeekee_settings'] ?? []));
+        $contentService = app(LottoMarketContentService::class);
+
+        DB::transaction(function () use ($market, $payload, $validated, $contentService): void {
+            $market->update($payload);
+            $freshMarket = $market->fresh();
+            if (! $freshMarket instanceof LotteryMarket) {
+                return;
+            }
+
+            $this->upsertYeekeeSettingForMarket($freshMarket, (array) ($validated['yeekee_settings'] ?? []));
+            $contentService->upsertContentsForMarket((int) $freshMarket->id, (array) ($validated['contents'] ?? []));
+
+            DB::afterCommit(function () use ($contentService, $freshMarket): void {
+                $contentService->invalidateMarketCache((int) $freshMarket->id);
+            });
+        });
 
         return $this->sendSuccess('อัปเดตรายการหวยเรียบร้อยแล้ว');
     }

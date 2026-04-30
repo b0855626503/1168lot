@@ -63,6 +63,42 @@
                 </b-form-group>
             </b-col>
         </b-row>
+        <div class="border rounded p-2 mb-3 bg-light">
+            <h6 class="mb-2">กติกา/รายละเอียดหลายภาษา</h6>
+            <b-tabs content-class="pt-3" small>
+                <b-tab v-for="locale in ['th', 'en', 'lo', 'km']" :key="`content-${locale}`" :title="locale.toUpperCase()">
+                    <b-form-group label="Title">
+                        <b-form-input v-model="formaddedit.contents[locale].title" type="text" size="sm"></b-form-input>
+                    </b-form-group>
+                    <b-form-group label="Summary">
+                        <b-form-textarea v-model="formaddedit.contents[locale].summary" rows="2" max-rows="4"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="Rules Content">
+                        <b-form-textarea v-model="formaddedit.contents[locale].rules_content" rows="3" max-rows="6"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="Schedule Content">
+                        <b-form-textarea v-model="formaddedit.contents[locale].schedule_content" rows="3" max-rows="6"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="Prize Content">
+                        <b-form-textarea v-model="formaddedit.contents[locale].prize_content" rows="3" max-rows="6"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="Formula Content">
+                        <b-form-textarea v-model="formaddedit.contents[locale].formula_content" rows="3" max-rows="6"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group label="SEO Title">
+                        <b-form-input v-model="formaddedit.contents[locale].seo_title" type="text" size="sm"></b-form-input>
+                    </b-form-group>
+                    <b-form-group label="SEO Description">
+                        <b-form-textarea v-model="formaddedit.contents[locale].seo_description" rows="2" max-rows="4"></b-form-textarea>
+                    </b-form-group>
+                    <b-form-group>
+                        <b-form-checkbox v-model="formaddedit.contents[locale].is_enabled" :value="1" :unchecked-value="0">
+                            เปิดใช้งาน locale นี้
+                        </b-form-checkbox>
+                    </b-form-group>
+                </b-tab>
+            </b-tabs>
+        </div>
         <b-form-group label="ประเภทตลาด:" label-for="result_mode" description="หวยปกติจะไม่แสดงค่าตั้งต้นของยี่กี่ และหวยยี่กี่จะไม่ใช้ Auto Source แบบหวยปกติ">
             <b-form-select id="result_mode" v-model="formaddedit.result_mode" :options="option.resultModes" size="sm"></b-form-select>
         </b-form-group>
@@ -737,6 +773,12 @@
                         auto_refund_on_no_result: 0,
                         notify_result_telegram: 1,
                         is_enabled: 1,
+                        contents: {
+                            th: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                            en: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                            lo: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                            km: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                        },
                     },
                     option: {
                         groups: [
@@ -1500,7 +1542,7 @@
                 },
                 editModal(id) {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1, contents: this.defaultContentsByLocale() };
                     this.formmethod = 'edit';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1512,7 +1554,7 @@
                 },
                 addModal() {
                     this.code = null;
-                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1 };
+                    this.formaddedit = { group_id: '', name: '', name_en: '', name_kh: '', name_laos: '', logo: '', icon: '', logo_file: null, icon_file: null, code: '', result_mode: 'normal', yeekee_settings: { round_duration_minutes: 15, shoot_window_after_bet_close_seconds: 60, settlement_delay_after_shoot_close_seconds: 60, expected_payout_sla_minutes: 5, formula_preset: 'SHOOTS_SUM_MINUS_POSITION', subtract_position: 16, reward_enabled: false, refund_if_bet_entries_below_min: false, min_bet_amount: 0, reward_positions: [], min_bet_entries_required: 0, refund_count_mode: 'count_bet_entries', refund_action: 'VOID_AND_REFUND' }, draw_schedule_type: 'manual', draw_days: [], draw_dates: [], auto_open_time: '', auto_close_time: '', auto_result_time: '', result_url: '', auto_settle_on_result: 1, auto_refund_on_no_result: 0, notify_result_telegram: 1, is_enabled: 1, contents: this.defaultContentsByLocale() };
                     this.formmethod = 'add';
                     this.show = false;
                     this.$nextTick(() => {
@@ -1883,6 +1925,35 @@
                         centered: true,
                     });
                 },
+                defaultContentsByLocale() {
+                    return {
+                        th: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                        en: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                        lo: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                        km: { title: '', summary: '', rules_content: '', schedule_content: '', prize_content: '', formula_content: '', seo_title: '', seo_description: '', is_enabled: 1 },
+                    };
+                },
+                normalizeContentsByLocale(rawContents) {
+                    const defaults = this.defaultContentsByLocale();
+                    ['th', 'en', 'lo', 'km'].forEach((locale) => {
+                        const raw = (rawContents && typeof rawContents === 'object' && rawContents[locale] && typeof rawContents[locale] === 'object')
+                            ? rawContents[locale]
+                            : {};
+                        defaults[locale] = {
+                            title: raw.title || '',
+                            summary: raw.summary || '',
+                            rules_content: raw.rules_content || '',
+                            schedule_content: raw.schedule_content || '',
+                            prize_content: raw.prize_content || '',
+                            formula_content: raw.formula_content || '',
+                            seo_title: raw.seo_title || '',
+                            seo_description: raw.seo_description || '',
+                            is_enabled: raw.is_enabled === undefined || raw.is_enabled === null ? 1 : (raw.is_enabled ? 1 : 0),
+                        };
+                    });
+
+                    return defaults;
+                },
                 async loadData() {
                     const response = await axios.post("{{ route('admin.lotto.markets.loaddata') }}", { id: this.code });
                     const d = response.data.data;
@@ -1931,6 +2002,7 @@
                         auto_refund_on_no_result: d.auto_refund_on_no_result ? 1 : 0,
                         notify_result_telegram: d.notify_result_telegram === undefined || d.notify_result_telegram === null ? 1 : (d.notify_result_telegram ? 1 : 0),
                         is_enabled: d.is_enabled ? 1 : 0,
+                        contents: this.normalizeContentsByLocale(d.contents),
                     };
 
                     if (!d.draw_schedule_type) {

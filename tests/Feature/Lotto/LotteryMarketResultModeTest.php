@@ -23,6 +23,7 @@ class LotteryMarketResultModeTest extends TestCase
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('yeekee_market_settings');
+        Schema::dropIfExists('lotto_market_contents');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
         Schema::dropIfExists('logs');
@@ -286,6 +287,65 @@ class LotteryMarketResultModeTest extends TestCase
         $response->assertJsonPath('data.yeekee_settings.reward_positions.1.credit_amount', 50);
     }
 
+    public function test_create_market_with_contents_stores_normalized_locale_and_sanitized_html(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 9,
+            'name' => 'Main',
+            'code' => 'main9',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        $request = Request::create('/admin/lotto/markets/create', 'POST', [
+            'data' => [
+                'group_id' => 9,
+                'name' => 'Content Market',
+                'code' => 'content_market',
+                'result_mode' => 'normal',
+                'draw_mode' => 'manual',
+                'draw_schedule_type' => 'manual',
+                'is_enabled' => 1,
+                'contents' => [
+                    'laos' => [
+                        'title' => 'Lao title',
+                        'rules_content' => '<script>alert(1)</script><p onclick="alert(2)">safe</p>',
+                        'is_enabled' => 1,
+                    ],
+                    'khmer' => [
+                        'title' => 'Khmer title',
+                        'summary' => 'summary',
+                        'is_enabled' => 1,
+                    ],
+                ],
+            ],
+        ]);
+
+        $response = $this->createTestResponse(app(LotteryMarketController::class)->create($request));
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+
+        $marketId = (int) DB::table('lotto_markets')->where('code', 'content_market')->value('id');
+        $this->assertGreaterThan(0, $marketId);
+
+        $this->assertSame(1, DB::table('lotto_market_contents')->where('market_id', $marketId)->where('locale', 'lo')->count());
+        $this->assertSame(1, DB::table('lotto_market_contents')->where('market_id', $marketId)->where('locale', 'km')->count());
+
+        $loRules = (string) DB::table('lotto_market_contents')->where('market_id', $marketId)->where('locale', 'lo')->value('rules_content');
+        $this->assertStringNotContainsString('<script', $loRules);
+        $this->assertStringNotContainsString('onclick', $loRules);
+
+        $loadResponse = $this->createTestResponse(
+            app(LotteryMarketController::class)->loadData(Request::create('/admin/lotto/markets/loaddata', 'POST', ['id' => $marketId]))
+        );
+
+        $loadResponse->assertStatus(200);
+        $loadResponse->assertJsonPath('success', true);
+        $loadResponse->assertJsonPath('data.contents.lo.title', 'Lao title');
+        $loadResponse->assertJsonPath('data.contents.km.title', 'Khmer title');
+    }
+
     private function prepareSchema(): void
     {
         Schema::create('lotto_groups', function (Blueprint $table): void {
@@ -343,6 +403,23 @@ class LotteryMarketResultModeTest extends TestCase
             $table->decimal('total_amount', 12, 2);
             $table->enum('status', ['active', 'cancelled', 'resulted'])->default('active');
             $table->timestamps();
+        });
+
+        Schema::create('lotto_market_contents', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('market_id');
+            $table->string('locale', 10);
+            $table->string('title')->nullable();
+            $table->text('summary')->nullable();
+            $table->longText('rules_content')->nullable();
+            $table->longText('schedule_content')->nullable();
+            $table->longText('prize_content')->nullable();
+            $table->longText('formula_content')->nullable();
+            $table->string('seo_title')->nullable();
+            $table->text('seo_description')->nullable();
+            $table->boolean('is_enabled')->default(true);
+            $table->timestamps();
+            $table->unique(['market_id', 'locale']);
         });
 
         Schema::create('yeekee_market_settings', function (Blueprint $table): void {

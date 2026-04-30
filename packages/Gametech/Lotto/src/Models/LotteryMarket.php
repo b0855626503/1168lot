@@ -120,4 +120,15 @@ class LotteryMarket extends Model implements LotteryMarketContract
     {
         return $this->hasOne(YeekeeMarketSetting::class, 'market_id');
     }
+
+    public function contents()
+    {
+        return $this->hasMany(LottoMarketContent::class, 'market_id');
+    }
+
+    public function enabledContents()
+    {
+        return $this->hasMany(LottoMarketContent::class, 'market_id')
+            ->where('is_enabled', true);
+    }
 }

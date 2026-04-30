@@ -66,6 +66,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.draw');
             Route::get('lotto/markets/latest', [LottoController::class, 'marketsLatestByGroup'])
                 ->name('frontend.api.v1.lotto.markets.latest');
+            Route::get('lotto/markets/{marketId}/content', [LottoController::class, 'marketContent'])
+                ->name('frontend.api.v1.lotto.market_content');
             Route::get('lotto/markets/{marketId}/betting-context', [LottoController::class, 'bettingContext'])
                 ->name('frontend.api.v1.lotto.betting_context');
             Route::get('lotto/markets/{marketId}/results', [LottoController::class, 'marketResults'])

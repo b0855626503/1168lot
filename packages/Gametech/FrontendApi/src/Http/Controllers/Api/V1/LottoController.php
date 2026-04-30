@@ -17,6 +17,7 @@ use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Models\YeekeeShootRewardLog;
 use Gametech\Lotto\Services\BetService;
+use Gametech\Lotto\Services\LottoMarketContentService;
 use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
 use Gametech\Lotto\Services\YeekeeShootService;
@@ -274,6 +275,35 @@ class LottoController extends BaseController
             );
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงรายการงวดได้ในขณะนี้', 422);
+        }
+    }
+
+    public function marketContent(Request $request, int $marketId): JsonResponse
+    {
+        try {
+            $market = LotteryMarket::query()
+                ->where('id', $marketId)
+                ->where('is_enabled', true)
+                ->first();
+
+            if (! $market instanceof LotteryMarket) {
+                return $this->sendError('ไม่พบรายการหวยที่ระบุ', 404);
+            }
+
+            $contentService = app(LottoMarketContentService::class);
+            $resolved = $contentService->resolveForFrontend(
+                (int) $market->id,
+                $this->requestContentLocale($request)
+            );
+
+            return $this->sendResponse([
+                'market_id' => (int) $market->id,
+                'locale' => (string) $resolved['locale'],
+                'fallback_locale' => $resolved['fallback_locale'],
+                'content' => $resolved['content'],
+            ], 'ดึงข้อมูลกติกาและรายละเอียดหวยสำเร็จ');
+        } catch (\Throwable $e) {
+            return $this->sendError('ไม่สามารถดึงข้อมูลกติกาและรายละเอียดหวยได้ในขณะนี้', 422);
         }
     }
 
@@ -2076,6 +2106,18 @@ class LottoController extends BaseController
         }
 
         return '';
+    }
+
+    private function requestContentLocale(Request $request): string
+    {
+        $candidate = $request->input('language')
+            ?? $request->input('lang')
+            ?? $request->input('locale')
+            ?? $request->header('X-Language')
+            ?? explode(',', (string) $request->header('Accept-Language', ''))[0]
+            ?? $this->requestLanguage($request);
+
+        return app(LottoMarketContentService::class)->normalizeLocale((string) $candidate);
     }
 
     private function drawStatusLabel(string $status): string
