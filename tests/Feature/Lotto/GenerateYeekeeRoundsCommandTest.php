@@ -37,8 +37,8 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             '--date' => '2026-05-01',
         ]);
 
-        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
-        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('yeekee_rounds')->where('market_id', 11)->count());
     }
 
     public function test_generate_yeekee_rounds_is_idempotent_on_rerun(): void
@@ -52,8 +52,8 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             '--date' => '2026-05-01',
         ]);
 
-        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
-        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('yeekee_rounds')->where('market_id', 11)->count());
     }
 
     public function test_generate_yeekee_rounds_respects_market_filter_and_ignores_non_yeekee_market(): void
@@ -77,8 +77,8 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             '--market_id' => 11,
         ]);
 
-        $this->assertSame(24, DB::table('lotto_draws')->where('market_id', 11)->count());
-        $this->assertSame(24, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(23, DB::table('yeekee_rounds')->where('market_id', 11)->count());
 
         $this->assertSame(0, DB::table('lotto_draws')->where('market_id', 12)->count());
         $this->assertSame(0, DB::table('yeekee_rounds')->where('market_id', 12)->count());
@@ -94,10 +94,34 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             '--window' => '+6h',
         ]);
 
-        $this->assertSame(48, DB::table('lotto_draws')->where('market_id', 11)->count());
-        $this->assertSame(48, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+        $this->assertSame(46, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(46, DB::table('yeekee_rounds')->where('market_id', 11)->count());
 
         Carbon::setTestNow();
+    }
+
+    public function test_generate_yeekee_rounds_skips_cross_day_boundary_rows(): void
+    {
+        $this->seedYeekeeMarket(11, 1, 15);
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--date' => '2026-05-01',
+        ]);
+
+        $this->assertSame(95, DB::table('lotto_draws')->where('market_id', 11)->count());
+        $this->assertSame(95, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+
+        $crossDayCloseAtRows = DB::table('lotto_draws')
+            ->where('market_id', 11)
+            ->whereRaw('date(close_at) <> date(draw_date)')
+            ->count();
+        $crossDayResultAtRows = DB::table('lotto_draws')
+            ->where('market_id', 11)
+            ->whereRaw('date(result_at) <> date(draw_date)')
+            ->count();
+
+        $this->assertSame(0, $crossDayCloseAtRows);
+        $this->assertSame(0, $crossDayResultAtRows);
     }
 
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void

@@ -57,6 +57,7 @@ class GenerateYeekeeRoundsCommand extends Command
             'round_created' => 0,
             'round_exists' => 0,
             'skipped_group_disabled' => 0,
+            'skipped_cross_day' => 0,
             'days' => [],
             'items' => [],
         ];
@@ -70,6 +71,7 @@ class GenerateYeekeeRoundsCommand extends Command
                 'draw_exists' => 0,
                 'round_created' => 0,
                 'round_exists' => 0,
+                'skipped_cross_day' => 0,
             ];
 
             foreach ($markets as $market) {
@@ -105,6 +107,24 @@ class GenerateYeekeeRoundsCommand extends Command
                     $shootCloseAt = $shootOpenAt->copy()->addSeconds($shootWindowSeconds);
                     $resultComputeAt = $shootCloseAt->copy()->addSeconds($settlementDelaySeconds);
                     $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes($expectedPayoutSlaMinutes);
+
+                    if (
+                        $betOpenAt->toDateString() !== $date->toDateString()
+                        || $betCloseAt->toDateString() !== $date->toDateString()
+                        || $resultComputeAt->toDateString() !== $date->toDateString()
+                    ) {
+                        $summary['skipped_cross_day']++;
+                        $daySummary['skipped_cross_day']++;
+                        $summary['items'][] = [
+                            'date' => $targetDate,
+                            'market_id' => (int) $market->id,
+                            'round_no' => $roundNo,
+                            'draw_close_at' => $betCloseAt->format('Y-m-d H:i:s'),
+                            'status' => 'skipped_cross_day',
+                        ];
+
+                        continue;
+                    }
 
                     $drawLookup = [
                         'market_id' => (int) $market->id,
