@@ -808,6 +808,7 @@
                         ],
                         yeekeeFormulaPresets: [
                             { value: 'SHOOTS_SUM_MINUS_POSITION', text: 'หาผลรวมเลขยิงแล้วลบลำดับที่กำหนด' },
+                            { value: 'SHOOTS_SUM_ONLY', text: 'หาผลรวมเลขยิงทั้งหมด (ไม่ลบตำแหน่ง)' },
                         ],
                         yeekeeRefundCountModes: [
                             { value: 'count_bet_entries', text: 'นับทุกรายการแทง' },
