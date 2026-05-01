@@ -9,13 +9,19 @@ use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\YeekeeResultEngineService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SettleYeekeeRoundsCommand extends Command
 {
+    private const RESULT_FETCH_STATUS_VOID_REFUND_FORMULA_INPUT_INSUFFICIENT = 'VOID_REFUND_FORMULA_INPUT_INSUFFICIENT';
+
+    private const RESULT_FETCH_STATUS_NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT = 'NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT';
+
     protected $signature = 'lotto:settle-yeekee-rounds
         {--market_id= : Process only one yeekee market}
         {--draw_id= : Process only one draw}
@@ -112,13 +118,74 @@ class SettleYeekeeRoundsCommand extends Command
 
                     if ($shootCount > 0) {
                         if (! $dryRun) {
-                            $result = $yeekeeResultEngineService->computeFromRound((int) $round->id);
-                            $settlementService->settleDraw($draw, [
-                                'top_3' => (string) ($result['top_3'] ?? ''),
-                                'bottom_2' => (string) ($result['bottom_2'] ?? ''),
-                            ], 'settlement');
-                            $round->status = 'resulted';
-                            $round->save();
+                            try {
+                                $result = $yeekeeResultEngineService->computeFromRound((int) $round->id);
+                                $settlementService->settleDraw($draw, [
+                                    'top_3' => (string) ($result['top_3'] ?? ''),
+                                    'bottom_2' => (string) ($result['bottom_2'] ?? ''),
+                                ], 'settlement');
+                                $round->status = 'resulted';
+                                $round->save();
+                            } catch (YeekeeFormulaInputException $exception) {
+                                $formulaPreset = $this->resolveFormulaPresetFromRound($round);
+                                if ($activeBetCount > 0) {
+                                    $drawCancelAllRefundService->cancelAllActiveTickets(
+                                        $draw,
+                                        reason: 'Yeekee formula input insufficient: void and refund',
+                                        createdByType: 'system',
+                                        createdById: null,
+                                        groupCode: 'YEEKEE_FORMULA_INPUT_VOID_REFUND_'.$draw->id.'_'.now()->format('YmdHis')
+                                    );
+
+                                    $draw->forceFill([
+                                        'status' => 'resulted',
+                                        'result_number' => null,
+                                        'result_at' => $draw->result_at ?? now(),
+                                        'result_fetch_status' => self::RESULT_FETCH_STATUS_VOID_REFUND_FORMULA_INPUT_INSUFFICIENT,
+                                        'result_applied_at' => now(),
+                                    ])->save();
+
+                                    $round->status = 'voided';
+                                    $round->save();
+
+                                    Log::warning('yeekee.formula_failure_policy.recoverable', [
+                                        'yeekee_round_id' => (int) $round->id,
+                                        'lotto_draw_id' => (int) $draw->id,
+                                        'formula_preset' => $formulaPreset,
+                                        'failure_code' => $exception->failureCode(),
+                                        'result_fetch_status' => self::RESULT_FETCH_STATUS_VOID_REFUND_FORMULA_INPUT_INSUFFICIENT,
+                                        'ticket_count' => (int) $activeBetCount,
+                                        'shoot_count' => (int) $shootCount,
+                                        'message' => $exception->getMessage(),
+                                    ]);
+
+                                    return 'void_refund';
+                                }
+
+                                $draw->forceFill([
+                                    'status' => 'resulted',
+                                    'result_number' => null,
+                                    'result_at' => $draw->result_at ?? now(),
+                                    'result_fetch_status' => self::RESULT_FETCH_STATUS_NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT,
+                                    'result_applied_at' => now(),
+                                ])->save();
+
+                                $round->status = 'voided';
+                                $round->save();
+
+                                Log::warning('yeekee.formula_failure_policy.recoverable', [
+                                    'yeekee_round_id' => (int) $round->id,
+                                    'lotto_draw_id' => (int) $draw->id,
+                                    'formula_preset' => $formulaPreset,
+                                    'failure_code' => $exception->failureCode(),
+                                    'result_fetch_status' => self::RESULT_FETCH_STATUS_NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT,
+                                    'ticket_count' => (int) $activeBetCount,
+                                    'shoot_count' => (int) $shootCount,
+                                    'message' => $exception->getMessage(),
+                                ]);
+
+                                return 'void_no_activity';
+                            }
                         }
 
                         return 'computed_settled';
@@ -179,5 +246,13 @@ class SettleYeekeeRoundsCommand extends Command
         $this->line(json_encode($summary, JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;
+    }
+
+    private function resolveFormulaPresetFromRound(YeekeeRound $round): string
+    {
+        $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
+        $formulaConfig = is_array($snapshot['formula_config'] ?? null) ? $snapshot['formula_config'] : [];
+
+        return trim((string) ($formulaConfig['preset'] ?? 'SHOOTS_SUM_MINUS_POSITION'));
     }
 }

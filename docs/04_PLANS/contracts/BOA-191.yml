@@ -1,0 +1,50 @@
+issue: BOA-191
+summary: Add Yeekee Formula Failure Policy
+
+allowed_files:
+  - packages/Gametech/Lotto/src/Console/Commands/SettleYeekeeRoundsCommand.php
+  - packages/Gametech/Lotto/src/Services/YeekeeResultEngineService.php
+  - packages/Gametech/Lotto/src/Services/Yeekee/Formulas/Presets/ShootsSumMinusPositionFormula.php
+  - packages/Gametech/Lotto/src/Services/Yeekee/Exceptions/YeekeeFormulaInputException.php
+  - packages/Gametech/Lotto/src/Database/Migrations/2026_05_01_000100_expand_result_fetch_status_for_yeekee_formula_failure_policy.php
+  - packages/Gametech/Lotto/src/Exceptions/**
+  - tests/Feature/Lotto/**
+
+forbidden_files:
+  - packages/Gametech/Wallet/**
+  - packages/Gametech/FrontendApi/**
+  - packages/Gametech/Lotto/src/Services/BetService.php
+
+required_terms:
+  - YeekeeFormulaInputException
+  - FORMULA_INPUT_INSUFFICIENT
+  - VOID_REFUND_FORMULA_INPUT_INSUFFICIENT
+  - NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT
+
+forbidden_terms:
+  - PRECOMMITTED_BASE64_MD5
+  - SHOOTS_SUM_ONLY
+  - SHOOTS_SUM_PLUS_POSITION
+
+required_tests:
+  - tests/Feature/Lotto/SettleYeekeeRoundsCommandTest.php
+  - tests/Feature/Lotto/YeekeeResultEngineServiceTest.php
+
+required_test_commands:
+  - php artisan test --compact tests/Feature/Lotto/SettleYeekeeRoundsCommandTest.php
+  - php artisan test --compact tests/Feature/Lotto/YeekeeResultEngineServiceTest.php
+
+handoff_required_sections:
+  - Summary
+  - Files changed
+  - Tests run
+  - Risks
+  - Normal lotto regression safe
+
+outside_allowed_runtime_status: fail
+outside_allowed_docs_status: warn
+forbidden_terms_docs_tests_status: warn
+require_test_changes: false
+require_test_output: false
+require_handoff: false
+strict_forbidden_terms: false

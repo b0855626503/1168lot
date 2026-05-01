@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Lotto;
 
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\YeekeeResultEngineService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -188,6 +189,75 @@ class YeekeeResultEngineServiceTest extends TestCase
                     && (string) ($context['reason'] ?? '') === 'missing formula_config';
             })
         );
+    }
+
+    public function test_compute_throws_recoverable_exception_when_required_shoot_position_is_missing(): void
+    {
+        DB::table('yeekee_rounds')->insert([
+            'id' => 5,
+            'market_id' => 11,
+            'lotto_draw_id' => 105,
+            'round_date' => '2026-04-30',
+            'round_no' => 1,
+            'bet_open_at' => now(),
+            'bet_close_at' => now(),
+            'shoot_open_at' => now(),
+            'shoot_close_at' => now(),
+            'result_compute_at' => now(),
+            'expected_settlement_deadline_at' => now(),
+            'status' => 'pending_result',
+            'config_snapshot_json' => json_encode([
+                'formula_config' => [
+                    'preset' => 'SHOOTS_SUM_MINUS_POSITION',
+                    'subtract_position' => 16,
+                ],
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->insertBasicShoots(5, 105, 11, 2);
+
+        $this->expectException(YeekeeFormulaInputException::class);
+        $this->expectExceptionMessage('ไม่พบเลขยิงในตำแหน่งที่ใช้ลบ');
+
+        try {
+            app(YeekeeResultEngineService::class)->computeFromRound(5);
+        } catch (YeekeeFormulaInputException $exception) {
+            $this->assertSame('FORMULA_INPUT_INSUFFICIENT', $exception->failureCode());
+            throw $exception;
+        }
+    }
+
+    public function test_compute_throws_hard_error_for_invalid_formula_config(): void
+    {
+        DB::table('yeekee_rounds')->insert([
+            'id' => 6,
+            'market_id' => 11,
+            'lotto_draw_id' => 106,
+            'round_date' => '2026-04-30',
+            'round_no' => 1,
+            'bet_open_at' => now(),
+            'bet_close_at' => now(),
+            'shoot_open_at' => now(),
+            'shoot_close_at' => now(),
+            'result_compute_at' => now(),
+            'expected_settlement_deadline_at' => now(),
+            'status' => 'pending_result',
+            'config_snapshot_json' => json_encode([
+                'formula_config' => [
+                    'preset' => 'SHOOTS_SUM_MINUS_POSITION',
+                    'subtract_position' => 0,
+                ],
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->insertBasicShoots(6, 106, 11, 2);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('FORMULA_CONFIG_INVALID');
+
+        app(YeekeeResultEngineService::class)->computeFromRound(6);
     }
 
     private function insertBasicShoots(int $roundId, int $drawId, int $marketId, int $count = 2): void
