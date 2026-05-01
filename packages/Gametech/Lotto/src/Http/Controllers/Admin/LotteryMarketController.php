@@ -408,7 +408,7 @@ class LotteryMarketController extends AppBaseController
             throw ValidationException::withMessages(['yeekee_settings.expected_payout_sla_minutes' => 'ระยะเวลาคาดหวังในการจ่ายรางวัลต้องอยู่ระหว่าง 1-60 นาที']);
         }
 
-        if (! in_array($formulaPreset, ['SHOOTS_SUM_MINUS_POSITION', 'PRECOMMITTED_BASE64_MD5'], true)) {
+        if (! in_array($formulaPreset, ['SHOOTS_SUM_MINUS_POSITION'], true)) {
             throw ValidationException::withMessages(['yeekee_settings.formula_preset' => 'สูตรคำนวณผลไม่ถูกต้อง']);
         }
 

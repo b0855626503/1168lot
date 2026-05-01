@@ -107,11 +107,6 @@
                                 <b-form-input v-model.number="formaddedit.yeekee_settings.subtract_position" type="number" min="1" size="sm"></b-form-input>
                             </b-form-group>
                         </b-col>
-                        <b-col cols="12" md="6" v-else>
-                            <b-form-group label="การตั้งค่าสูตร PRECOMMITTED_BASE64_MD5">
-                                <small class="text-muted d-block pt-2">สูตรนี้ไม่ใช้ลำดับเลขยิงที่ใช้ลบ ระบบจะใช้ Signature/Payload ตาม preset โดยตรง</small>
-                            </b-form-group>
-                        </b-col>
                     </b-row>
                     <b-row>
                         <b-col cols="12" md="6">
@@ -813,7 +808,6 @@
                         ],
                         yeekeeFormulaPresets: [
                             { value: 'SHOOTS_SUM_MINUS_POSITION', text: 'หาผลรวมเลขยิงแล้วลบลำดับที่กำหนด' },
-                            { value: 'PRECOMMITTED_BASE64_MD5', text: 'ตรวจสอบผลด้วย Signature + Payload' },
                         ],
                         yeekeeRefundCountModes: [
                             { value: 'count_bet_entries', text: 'นับทุกรายการแทง' },

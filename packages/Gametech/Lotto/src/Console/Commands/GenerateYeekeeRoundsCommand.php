@@ -188,14 +188,13 @@ class GenerateYeekeeRoundsCommand extends Command
                         'result_compute_at' => $resultComputeAt->format('Y-m-d H:i:s'),
                         'expected_settlement_deadline_at' => $expectedSettlementDeadlineAt->format('Y-m-d H:i:s'),
                         'status' => 'open',
-                        'config_snapshot_json' => [
-                            'round_config' => [
-                                'round_duration_minutes' => $durationMinutes,
-                                'shoot_window_after_bet_close_seconds' => $shootWindowSeconds,
-                                'settlement_delay_after_shoot_close_seconds' => $settlementDelaySeconds,
-                                'expected_payout_sla_minutes' => $expectedPayoutSlaMinutes,
-                            ],
-                        ],
+                        'config_snapshot_json' => $this->buildRoundConfigSnapshot(
+                            $setting,
+                            $durationMinutes,
+                            $shootWindowSeconds,
+                            $settlementDelaySeconds,
+                            $expectedPayoutSlaMinutes
+                        ),
                     ];
 
                     if ($dryRun) {
@@ -261,6 +260,42 @@ class GenerateYeekeeRoundsCommand extends Command
         $this->line(json_encode($summary, JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;
+    }
+
+    private function buildRoundConfigSnapshot(
+        ?YeekeeMarketSetting $setting,
+        int $durationMinutes,
+        int $shootWindowSeconds,
+        int $settlementDelaySeconds,
+        int $expectedPayoutSlaMinutes
+    ): array {
+        $formulaConfig = is_array($setting?->formula_config) ? $setting->formula_config : [];
+        $formulaPreset = strtoupper(trim((string) ($formulaConfig['default_preset'] ?? 'SHOOTS_SUM_MINUS_POSITION')));
+        if ($formulaPreset !== 'SHOOTS_SUM_MINUS_POSITION') {
+            $formulaPreset = 'SHOOTS_SUM_MINUS_POSITION';
+        }
+
+        $normalizedFormulaConfig = [
+            'preset' => $formulaPreset,
+            'version' => (int) ($formulaConfig['version'] ?? 1),
+        ];
+
+        if ($formulaPreset === 'SHOOTS_SUM_MINUS_POSITION') {
+            $normalizedFormulaConfig['subtract_position'] = (int) ($formulaConfig['subtract_position'] ?? 16);
+        }
+
+        return [
+            'round_config' => [
+                'round_duration_minutes' => $durationMinutes,
+                'shoot_window_after_bet_close_seconds' => $shootWindowSeconds,
+                'settlement_delay_after_shoot_close_seconds' => $settlementDelaySeconds,
+                'expected_payout_sla_minutes' => $expectedPayoutSlaMinutes,
+            ],
+            'formula_config' => $normalizedFormulaConfig,
+            'reward_config' => is_array($setting?->reward_config) ? $setting->reward_config : [],
+            'refund_config' => is_array($setting?->refund_config) ? $setting->refund_config : [],
+            'external_seed_config' => [],
+        ];
     }
 
     private function resolveTargetDates(string $dateOption, string $windowOption, string $timezone): ?array

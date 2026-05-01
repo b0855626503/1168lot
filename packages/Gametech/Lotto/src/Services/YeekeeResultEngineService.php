@@ -6,6 +6,7 @@ use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Services\Yeekee\Formulas\FormulaRegistry;
 use Gametech\Lotto\Services\Yeekee\Seed\ExternalSeedResolverService;
+use Illuminate\Support\Facades\Log;
 
 class YeekeeResultEngineService
 {
@@ -22,7 +23,16 @@ class YeekeeResultEngineService
         $round = YeekeeRound::query()->findOrFail($roundId);
         $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
         $formulaConfig = is_array($snapshot['formula_config'] ?? null) ? $snapshot['formula_config'] : [];
-        $formulaKey = (string) ($formulaConfig['preset'] ?? 'SHOOTS_SUM_MINUS_POSITION');
+        $formulaKey = trim((string) ($formulaConfig['preset'] ?? ''));
+        if ($formulaKey === '') {
+            $formulaKey = 'SHOOTS_SUM_MINUS_POSITION';
+            Log::warning('yeekee.result_engine.legacy_formula_fallback', [
+                'yeekee_round_id' => (int) $round->id,
+                'lotto_draw_id' => (int) $round->lotto_draw_id,
+                'fallback_preset' => $formulaKey,
+                'reason' => 'missing formula_config',
+            ]);
+        }
 
         $shoots = YeekeeShoot::query()
             ->where('yeekee_round_id', $roundId)

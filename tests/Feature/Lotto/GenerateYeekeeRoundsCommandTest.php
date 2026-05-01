@@ -39,6 +39,22 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
 
         $this->assertSame(23, DB::table('lotto_draws')->where('market_id', 11)->count());
         $this->assertSame(23, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+
+        $snapshot = DB::table('yeekee_rounds')
+            ->where('market_id', 11)
+            ->orderBy('id')
+            ->value('config_snapshot_json');
+        $decoded = is_string($snapshot) ? json_decode($snapshot, true) : [];
+
+        $this->assertIsArray($decoded);
+        $this->assertSame('SHOOTS_SUM_MINUS_POSITION', (string) ($decoded['formula_config']['preset'] ?? ''));
+        $this->assertSame(1, (int) ($decoded['formula_config']['version'] ?? 0));
+        $this->assertSame(16, (int) ($decoded['formula_config']['subtract_position'] ?? 0));
+        $this->assertArrayNotHasKey('default_preset', (array) ($decoded['formula_config'] ?? []));
+        $this->assertSame(60, (int) ($decoded['round_config']['round_duration_minutes'] ?? 0));
+        $this->assertIsArray($decoded['reward_config'] ?? null);
+        $this->assertIsArray($decoded['refund_config'] ?? null);
+        $this->assertIsArray($decoded['external_seed_config'] ?? null);
     }
 
     public function test_generate_yeekee_rounds_is_idempotent_on_rerun(): void
