@@ -15,7 +15,7 @@ It does not rely on chat history.
 
 Create one file per issue:
 
-- `docs/04_PLANS/contracts/{ISSUE}.yml`
+- `docs/04_PLANS/contracts/BOA-191.yml` (copy then rename per issue)
 
 Use `docs/04_PLANS/contracts/BOA-191.yml` as reference.
 
