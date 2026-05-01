@@ -1988,8 +1988,8 @@
                             expected_payout_sla_minutes: Number((d.yeekee_settings || {}).expected_payout_sla_minutes || 5),
                             formula_preset: String((d.yeekee_settings || {}).formula_preset || 'SHOOTS_SUM_MINUS_POSITION'),
                             subtract_position: Number((d.yeekee_settings || {}).subtract_position || 16),
-                            reward_enabled: Boolean((d.yeekee_settings || {}).reward_enabled || false),
-                            refund_if_bet_entries_below_min: Boolean((d.yeekee_settings || {}).refund_if_bet_entries_below_min || false),
+                            reward_enabled: this.normalizeBooleanFlag((d.yeekee_settings || {}).reward_enabled),
+                            refund_if_bet_entries_below_min: this.normalizeBooleanFlag((d.yeekee_settings || {}).refund_if_bet_entries_below_min),
                             min_bet_amount: Number((d.yeekee_settings || {}).min_bet_amount || 0),
                             reward_positions: Array.isArray((d.yeekee_settings || {}).reward_positions)
                                 ? (d.yeekee_settings || {}).reward_positions.map((item) => ({
@@ -2140,6 +2140,8 @@
                 },
                 normalizeYeekeeFormData() {
                     const settings = this.formaddedit.yeekee_settings || {};
+                    settings.reward_enabled = this.normalizeBooleanFlag(settings.reward_enabled);
+                    settings.refund_if_bet_entries_below_min = this.normalizeBooleanFlag(settings.refund_if_bet_entries_below_min);
                     if (!Array.isArray(settings.reward_positions)) {
                         settings.reward_positions = [];
                     }
@@ -2150,6 +2152,13 @@
                             credit_amount: Number((item || {}).credit_amount || 0),
                         }))
                         .filter((item) => item.position > 0 && item.credit_amount > 0);
+                },
+                normalizeBooleanFlag(value) {
+                    if (value === true || value === 1 || value === '1') {
+                        return true;
+                    }
+
+                    return false;
                 },
                 addRewardPosition() {
                     if (!this.formaddedit.yeekee_settings || !Array.isArray(this.formaddedit.yeekee_settings.reward_positions)) {
