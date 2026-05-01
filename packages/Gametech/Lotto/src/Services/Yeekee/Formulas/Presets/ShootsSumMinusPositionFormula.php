@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\Services\Yeekee\Formulas\Presets;
 
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\Yeekee\Formulas\Contracts\YeekeeFormula;
 use InvalidArgumentException;
 
@@ -16,7 +17,7 @@ class ShootsSumMinusPositionFormula implements YeekeeFormula
     {
         $subtractPosition = (int) ($config['subtract_position'] ?? 16);
         if ($subtractPosition <= 0) {
-            throw new InvalidArgumentException('subtract_position ต้องมากกว่า 0');
+            throw new InvalidArgumentException('FORMULA_CONFIG_INVALID: subtract_position ต้องมากกว่า 0');
         }
 
         $sumAll = 0;
@@ -31,7 +32,10 @@ class ShootsSumMinusPositionFormula implements YeekeeFormula
         }
 
         if ($subtractValue === null) {
-            throw new InvalidArgumentException('ไม่พบเลขยิงในตำแหน่งที่ใช้ลบ');
+            throw new YeekeeFormulaInputException(
+                'FORMULA_INPUT_INSUFFICIENT',
+                'ไม่พบเลขยิงในตำแหน่งที่ใช้ลบ'
+            );
         }
 
         $baseResult = abs($sumAll - $subtractValue);
