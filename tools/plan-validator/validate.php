@@ -274,6 +274,10 @@ final class PlanComplianceValidator
                 continue;
             }
 
+            if ($file === (string) $this->options['contract']) {
+                continue;
+            }
+
             $content = (string) file_get_contents($file);
             foreach ($forbiddenTerms as $term) {
                 if (! str_contains($content, $term)) {

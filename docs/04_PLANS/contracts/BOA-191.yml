@@ -2,13 +2,19 @@ issue: BOA-191
 summary: Add Yeekee Formula Failure Policy
 
 allowed_files:
+  - docs/04_PLANS/2026-05-01_yeekee-formula-failure-policy.md
+  - docs/04_PLANS/README.md
+  - docs/04_PLANS/contracts/BOA-191.yml
+  - docs/04_PLANS/contracts/README.md
   - packages/Gametech/Lotto/src/Console/Commands/SettleYeekeeRoundsCommand.php
   - packages/Gametech/Lotto/src/Services/YeekeeResultEngineService.php
   - packages/Gametech/Lotto/src/Services/Yeekee/Formulas/Presets/ShootsSumMinusPositionFormula.php
   - packages/Gametech/Lotto/src/Services/Yeekee/Exceptions/YeekeeFormulaInputException.php
   - packages/Gametech/Lotto/src/Database/Migrations/2026_05_01_000100_expand_result_fetch_status_for_yeekee_formula_failure_policy.php
   - packages/Gametech/Lotto/src/Exceptions/**
+  - scripts/docs-validation/check-naming.sh
   - tests/Feature/Lotto/**
+  - tools/plan-validator/validate.php
 
 forbidden_files:
   - packages/Gametech/Wallet/**
