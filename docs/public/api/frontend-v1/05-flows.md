@@ -36,8 +36,9 @@
 
 ## Yeekee Flow
 
-1. `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round` ดึงรอบปัจจุบัน
-2. `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot` ยิงเลข 5 หลัก
-3. `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots` ดูลำดับยิงล่าสุด
-4. `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status` ตรวจสิทธิ์รางวัล
-5. `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof` ตรวจ proof ก่อน/หลัง reveal
+1. `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds?draw_date=YYYY-MM-DD` ดึงรอบทั้งหมดของวัน เพื่อให้สมาชิกเลือกรอบที่ต้องการ
+2. `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round` ดึงรอบปัจจุบันสำหรับ state หน้า live
+3. `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot` ยิงเลข 5 หลัก
+4. `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots` ดูลำดับยิงล่าสุด
+5. `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status` ตรวจสิทธิ์รางวัล
+6. `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof` ตรวจ proof ก่อน/หลัง reveal

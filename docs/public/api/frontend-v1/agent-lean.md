@@ -1,6 +1,6 @@
 # Frontend API V1 - Agent Lean Reference
 
-อัปเดตล่าสุด: 2026-04-30
+อัปเดตล่าสุด: 2026-05-01
 
 วัตถุประสงค์: เอกสารสั้นสำหรับ agent/internal เพื่อลด token cost
 
@@ -29,5 +29,5 @@
 - Wallet/Coupon: withdraw/claim/transactions/coupon
 - Payment: deposit channels + smkpay + deeppay
 - Lotto: draws/markets/betting/tickets/bet/cancel
-- Yeekee: shoot/current-round/shoots/reward-status/result-proof
+- Yeekee: shoot/current-round/market-rounds/shoots/reward-status/result-proof
 - Wheel/Reward: list/spin/history/redeem

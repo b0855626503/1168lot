@@ -82,6 +82,7 @@
 | GET | `/api/v1/reward/history` | Bearer token | ดึงประวัติการแลก reward และสรุปเป็นเส้นเวลา (timeline) แยกตามวัน | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1rewardhistory) |
 | POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Bearer token | ส่งเลข 5 หลักเพื่อชิงลำดับยิงในรอบยี่กี่ | [Open](/docs/api/frontend-v1/07-route-reference#post-apiv1lottoyeekeeroundsroundidshoot) |
 | GET | `/api/v1/lotto/yeekee/markets/{marketId}/current-round` | Bearer token | ดึงรอบยี่กี่ปัจจุบันของ market | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeemarketsmarketidcurrent-round) |
+| GET | `/api/v1/lotto/yeekee/markets/{marketId}/rounds` | Bearer token | ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุใน market | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeemarketsmarketidrounds) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Bearer token | ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน) | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidshoots) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/reward-status` | Bearer token | ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidreward-status) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/result-proof` | Bearer token | ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidresult-proof) |

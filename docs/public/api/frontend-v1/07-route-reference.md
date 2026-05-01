@@ -1639,6 +1639,67 @@ GET /api/v1/reward/history?page=1&per_page=20
   - `รายการหวยนี้ไม่รองรับการยิงเลข`
   - `ไม่พบรอบยี่กี่ที่เปิดอยู่`
 
+<a id="get-apiv1lottoyeekeemarketsmarketidrounds"></a>
+### `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds`
+- คำอธิบาย: ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุใน market
+- ใช้เมื่อ: หน้า frontend ต้องแสดง "ทุกรอบของวัน" ให้ลูกค้าเลือกเข้าร่วมเล่นตามรอบที่ต้องการ
+- Auth: ต้องใช้ token
+- Path params:
+  - `marketId` = id ของตลาดหวย
+- Query params:
+  - `draw_date` (optional, format `YYYY-MM-DD`, default = วันนี้ของ server)
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุสำเร็จ",
+  "data": {
+    "market_id": 9,
+    "draw_date": "2026-04-29",
+    "count": 2,
+    "items": [
+      {
+        "market_id": 9,
+        "draw_id": 202,
+        "round_id": 601,
+        "result_mode": "yeekee",
+        "round_no": 1,
+        "status": "open_bet",
+        "bet_open_at": "2026-04-29 10:00:00",
+        "bet_close_at": "2026-04-29 10:15:00",
+        "shoot_open_at": "2026-04-29 10:15:00",
+        "shoot_close_at": "2026-04-29 10:16:00",
+        "result_compute_at": "2026-04-29 10:17:00",
+        "server_time": "2026-04-29 10:05:00",
+        "is_open_for_play": true,
+        "is_final": false
+      },
+      {
+        "market_id": 9,
+        "draw_id": 202,
+        "round_id": 602,
+        "result_mode": "yeekee",
+        "round_no": 2,
+        "status": "open_bet",
+        "bet_open_at": "2026-04-29 10:15:00",
+        "bet_close_at": "2026-04-29 10:30:00",
+        "shoot_open_at": "2026-04-29 10:30:00",
+        "shoot_close_at": "2026-04-29 10:31:00",
+        "result_compute_at": "2026-04-29 10:32:00",
+        "server_time": "2026-04-29 10:05:00",
+        "is_open_for_play": false,
+        "is_final": false
+      }
+    ],
+    "server_time": "2026-04-29 10:05:00"
+  }
+}
+```
+- Error example:
+  - `ไม่พบหวยที่ระบุ`
+  - `รายการหวยนี้ไม่รองรับการยิงเลข`
+  - `กรุณาระบุ draw_date รูปแบบ YYYY-MM-DD`
+
 <a id="get-apiv1lottoyeekeeroundsroundidshoots"></a>
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
 - คำอธิบาย: ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน)

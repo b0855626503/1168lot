@@ -90,6 +90,7 @@
 - `GET /api/v1/reward/history`
 - `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
 - `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
@@ -174,6 +175,50 @@
   - `ไม่พบหวยที่ระบุ`
   - `รายการหวยนี้ไม่รองรับการยิงเลข`
   - `ไม่พบรอบยี่กี่ที่เปิดอยู่`
+
+### `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds`
+- คำอธิบาย: ดึงรอบยี่กี่ทั้งหมดของ market ตามวันที่ระบุ เพื่อใช้แสดงรายการรอบให้สมาชิกเลือกเล่น
+- ใช้เมื่อ: frontend ต้องแสดงรอบทั้งวันของตลาดยี่กี่ และสถานะว่าแต่ละรอบยังเปิดรับเล่นอยู่หรือไม่
+- Auth: ต้องใช้ token
+- Path params:
+  - `marketId` = id ของตลาดหวย
+- Query params:
+  - `draw_date` (optional, format `YYYY-MM-DD`, default = วันนี้ของ server)
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุสำเร็จ",
+  "data": {
+    "market_id": 9,
+    "draw_date": "2026-04-29",
+    "count": 2,
+    "items": [
+      {
+        "market_id": 9,
+        "draw_id": 202,
+        "round_id": 601,
+        "result_mode": "yeekee",
+        "round_no": 1,
+        "status": "open_bet",
+        "bet_open_at": "2026-04-29 10:00:00",
+        "bet_close_at": "2026-04-29 10:15:00",
+        "shoot_open_at": "2026-04-29 10:15:00",
+        "shoot_close_at": "2026-04-29 10:16:00",
+        "result_compute_at": "2026-04-29 10:17:00",
+        "server_time": "2026-04-29 10:05:00",
+        "is_open_for_play": true,
+        "is_final": false
+      }
+    ],
+    "server_time": "2026-04-29 10:05:00"
+  }
+}
+```
+- Error example:
+  - `ไม่พบหวยที่ระบุ`
+  - `รายการหวยนี้ไม่รองรับการยิงเลข`
+  - `กรุณาระบุ draw_date รูปแบบ YYYY-MM-DD`
 
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
 - คำอธิบาย: ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน)
