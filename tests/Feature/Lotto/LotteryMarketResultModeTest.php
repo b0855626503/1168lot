@@ -271,6 +271,77 @@ class LotteryMarketResultModeTest extends TestCase
         app(LotteryMarketController::class)->update($request);
     }
 
+    public function test_update_yeekee_market_persists_false_toggle_flags_from_form_data_strings(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Main',
+            'code' => 'main',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 31,
+            'group_id' => 1,
+            'name' => 'Yeekee Toggle Market',
+            'code' => 'yeekee_toggle_market',
+            'result_mode' => 'yeekee',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 31,
+            'round_config' => json_encode(['round_duration_minutes' => 15]),
+            'formula_config' => json_encode(['default_preset' => 'SHOOTS_SUM_MINUS_POSITION', 'subtract_position' => 16]),
+            'reward_config' => json_encode(['reward_enabled' => true]),
+            'refund_config' => json_encode(['refund_if_bet_entries_below_min' => true]),
+            'reward_enabled' => 1,
+            'refund_if_bet_entries_below_min' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/admin/lotto/markets/update', 'POST', [
+            'id' => 31,
+            'data' => [
+                'group_id' => 1,
+                'name' => 'Yeekee Toggle Market',
+                'code' => 'yeekee_toggle_market',
+                'result_mode' => 'yeekee',
+                'draw_mode' => 'manual',
+                'draw_schedule_type' => 'manual',
+                'is_enabled' => 1,
+                'yeekee_settings' => [
+                    'round_duration_minutes' => 15,
+                    'shoot_window_after_bet_close_seconds' => 60,
+                    'settlement_delay_after_shoot_close_seconds' => 60,
+                    'expected_payout_sla_minutes' => 5,
+                    'formula_preset' => 'SHOOTS_SUM_ONLY',
+                    'modulo' => 100000,
+                    'reward_enabled' => 'false',
+                    'refund_if_bet_entries_below_min' => '0',
+                    'refund_count_mode' => 'count_bet_entries',
+                    'refund_action' => 'VOID_AND_REFUND',
+                ],
+            ],
+        ]);
+
+        $response = $this->createTestResponse(
+            app(LotteryMarketController::class)->update($request)
+        );
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+
+        $setting = DB::table('yeekee_market_settings')->where('market_id', 31)->first();
+        $this->assertNotNull($setting);
+        $this->assertSame(0, (int) $setting->reward_enabled);
+        $this->assertSame(0, (int) $setting->refund_if_bet_entries_below_min);
+    }
+
     public function test_load_data_returns_yeekee_reward_positions(): void
     {
         DB::table('lotto_groups')->insert([

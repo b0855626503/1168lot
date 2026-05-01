@@ -384,10 +384,10 @@ class LotteryMarketController extends AppBaseController
         $expectedPayoutSlaMinutes = (int) ($settings['expected_payout_sla_minutes'] ?? 5);
         $formulaPreset = strtoupper(trim((string) ($settings['formula_preset'] ?? 'SHOOTS_SUM_MINUS_POSITION')));
         $subtractPosition = (int) ($settings['subtract_position'] ?? 16);
-        $rewardEnabled = (bool) ($settings['reward_enabled'] ?? false);
+        $rewardEnabled = $this->toBooleanFlag($settings['reward_enabled'] ?? false);
         $rewardPositions = is_array($settings['reward_positions'] ?? null) ? $settings['reward_positions'] : [];
         $minBetAmount = (float) ($settings['min_bet_amount'] ?? 0);
-        $refundEnabled = (bool) ($settings['refund_if_bet_entries_below_min'] ?? false);
+        $refundEnabled = $this->toBooleanFlag($settings['refund_if_bet_entries_below_min'] ?? false);
         $minBetEntries = (int) ($settings['min_bet_entries_required'] ?? 0);
         $refundCountMode = (string) ($settings['refund_count_mode'] ?? 'count_bet_entries');
         $refundAction = (string) ($settings['refund_action'] ?? 'VOID_AND_REFUND');
@@ -625,5 +625,29 @@ class LotteryMarketController extends AppBaseController
         }
 
         return LotteryMarket::DRAW_MODE_MANUAL;
+    }
+
+    /**
+     * Normalize mixed boolean-like input from multipart/form-data safely.
+     *
+     * @param  mixed  $value
+     */
+    private function toBooleanFlag($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return false;
     }
 }
