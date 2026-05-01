@@ -271,7 +271,7 @@ class GenerateYeekeeRoundsCommand extends Command
     ): array {
         $formulaConfig = is_array($setting?->formula_config) ? $setting->formula_config : [];
         $formulaPreset = strtoupper(trim((string) ($formulaConfig['default_preset'] ?? 'SHOOTS_SUM_MINUS_POSITION')));
-        if ($formulaPreset !== 'SHOOTS_SUM_MINUS_POSITION') {
+        if (! in_array($formulaPreset, ['SHOOTS_SUM_MINUS_POSITION', 'SHOOTS_SUM_ONLY'], true)) {
             $formulaPreset = 'SHOOTS_SUM_MINUS_POSITION';
         }
 
@@ -282,6 +282,14 @@ class GenerateYeekeeRoundsCommand extends Command
 
         if ($formulaPreset === 'SHOOTS_SUM_MINUS_POSITION') {
             $normalizedFormulaConfig['subtract_position'] = (int) ($formulaConfig['subtract_position'] ?? 16);
+        }
+
+        if ($formulaPreset === 'SHOOTS_SUM_ONLY') {
+            $normalizedFormulaConfig['modulo'] = (int) ($formulaConfig['modulo'] ?? 100000);
+            $configuredInputRules = is_array($formulaConfig['input_rules'] ?? null) ? $formulaConfig['input_rules'] : [];
+            $normalizedFormulaConfig['input_rules'] = [
+                'cutoff_seconds_before_close' => max(0, (int) ($configuredInputRules['cutoff_seconds_before_close'] ?? 0)),
+            ];
         }
 
         return [

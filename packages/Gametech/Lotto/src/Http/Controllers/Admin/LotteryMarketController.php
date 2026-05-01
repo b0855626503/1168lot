@@ -408,12 +408,29 @@ class LotteryMarketController extends AppBaseController
             throw ValidationException::withMessages(['yeekee_settings.expected_payout_sla_minutes' => 'ระยะเวลาคาดหวังในการจ่ายรางวัลต้องอยู่ระหว่าง 1-60 นาที']);
         }
 
-        if (! in_array($formulaPreset, ['SHOOTS_SUM_MINUS_POSITION'], true)) {
+        if (! in_array($formulaPreset, ['SHOOTS_SUM_MINUS_POSITION', 'SHOOTS_SUM_ONLY'], true)) {
             throw ValidationException::withMessages(['yeekee_settings.formula_preset' => 'สูตรคำนวณผลไม่ถูกต้อง']);
         }
 
         if ($formulaPreset === 'SHOOTS_SUM_MINUS_POSITION' && $subtractPosition <= 0) {
             throw ValidationException::withMessages(['yeekee_settings.subtract_position' => 'ลำดับเลขยิงที่ใช้ลบต้องมากกว่า 0']);
+        }
+
+        $modulo = (int) ($settings['modulo'] ?? 100000);
+        if ($formulaPreset === 'SHOOTS_SUM_ONLY' && $modulo <= 0) {
+            throw ValidationException::withMessages(['yeekee_settings.modulo' => 'modulo ต้องมากกว่า 0']);
+        }
+
+        $inputRules = is_array($settings['input_rules'] ?? null) ? $settings['input_rules'] : [];
+        if ($formulaPreset === 'SHOOTS_SUM_ONLY') {
+            if (array_key_exists('include_status', $inputRules) || array_key_exists('exclude_cancelled', $inputRules)) {
+                throw ValidationException::withMessages(['yeekee_settings.input_rules' => 'สูตรนี้ยังไม่รองรับ include_status/exclude_cancelled']);
+            }
+
+            $cutoffSecondsBeforeClose = (int) ($inputRules['cutoff_seconds_before_close'] ?? 0);
+            if ($cutoffSecondsBeforeClose < 0) {
+                throw ValidationException::withMessages(['yeekee_settings.input_rules.cutoff_seconds_before_close' => 'cutoff_seconds_before_close ต้องไม่ติดลบ']);
+            }
         }
 
         if ($minBetAmount < 0) {
@@ -459,6 +476,10 @@ class LotteryMarketController extends AppBaseController
             'formula_config' => [
                 'default_preset' => $formulaPreset,
                 'subtract_position' => $formulaPreset === 'SHOOTS_SUM_MINUS_POSITION' ? $subtractPosition : null,
+                'modulo' => $formulaPreset === 'SHOOTS_SUM_ONLY' ? $modulo : null,
+                'input_rules' => $formulaPreset === 'SHOOTS_SUM_ONLY'
+                    ? ['cutoff_seconds_before_close' => (int) ($inputRules['cutoff_seconds_before_close'] ?? 0)]
+                    : null,
             ],
             'reward_config' => [
                 'reward_enabled' => $rewardEnabled,

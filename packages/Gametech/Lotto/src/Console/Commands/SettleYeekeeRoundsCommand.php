@@ -124,6 +124,7 @@ class SettleYeekeeRoundsCommand extends Command
                                     'top_3' => (string) ($result['top_3'] ?? ''),
                                     'bottom_2' => (string) ($result['bottom_2'] ?? ''),
                                 ], 'settlement');
+                                $this->attachFormulaAuditToDrawResult($draw->id, $result);
                                 $round->status = 'resulted';
                                 $round->save();
                             } catch (YeekeeFormulaInputException $exception) {
@@ -254,5 +255,27 @@ class SettleYeekeeRoundsCommand extends Command
         $formulaConfig = is_array($snapshot['formula_config'] ?? null) ? $snapshot['formula_config'] : [];
 
         return trim((string) ($formulaConfig['preset'] ?? 'SHOOTS_SUM_MINUS_POSITION'));
+    }
+
+    /**
+     * @param  array<string,mixed>  $result
+     */
+    private function attachFormulaAuditToDrawResult(int $drawId, array $result): void
+    {
+        $formulaAudit = is_array($result['formula_audit'] ?? null) ? $result['formula_audit'] : null;
+        if ($formulaAudit === null) {
+            return;
+        }
+
+        $draw = LottoDraw::query()->find($drawId);
+        if (! $draw instanceof LottoDraw) {
+            return;
+        }
+
+        $existingResultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+        $existingResultNumber['formula_audit'] = $formulaAudit;
+        $draw->forceFill([
+            'result_number' => $existingResultNumber,
+        ])->save();
     }
 }

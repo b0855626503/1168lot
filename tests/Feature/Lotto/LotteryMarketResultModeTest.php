@@ -214,6 +214,63 @@ class LotteryMarketResultModeTest extends TestCase
         app(LotteryMarketController::class)->update($request);
     }
 
+    public function test_update_shoots_sum_only_rejects_include_status_rule_in_v1(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Main',
+            'code' => 'main',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 21,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee_market_21',
+            'result_mode' => 'yeekee',
+            'draw_mode' => 'manual',
+            'draw_schedule_type' => 'manual',
+            'is_enabled' => 1,
+        ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 21,
+            'round_config' => json_encode(['round_duration_minutes' => 15]),
+            'formula_config' => json_encode(['default_preset' => 'SHOOTS_SUM_ONLY', 'modulo' => 100000]),
+            'reward_config' => json_encode(['reward_enabled' => false]),
+            'refund_config' => json_encode(['refund_if_bet_entries_below_min' => false]),
+            'reward_enabled' => 0,
+            'refund_if_bet_entries_below_min' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/admin/lotto/markets/update', 'POST', [
+            'id' => 21,
+            'data' => [
+                'group_id' => 1,
+                'name' => 'Yeekee Market',
+                'code' => 'yeekee_market_21',
+                'result_mode' => 'yeekee',
+                'draw_mode' => 'manual',
+                'draw_schedule_type' => 'manual',
+                'is_enabled' => 1,
+                'yeekee_settings' => [
+                    'formula_preset' => 'SHOOTS_SUM_ONLY',
+                    'modulo' => 100000,
+                    'input_rules' => [
+                        'include_status' => ['accepted'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->expectException(ValidationException::class);
+        app(LotteryMarketController::class)->update($request);
+    }
+
     public function test_load_data_returns_yeekee_reward_positions(): void
     {
         DB::table('lotto_groups')->insert([
