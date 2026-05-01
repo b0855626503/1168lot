@@ -56,6 +56,12 @@ for f in "${md_files[@]}"; do
   done
 
   if [[ "$f" != docs/* && "$is_allowlisted_root" != "true" ]]; then
+    if [[ "$f" == plugins/*/skills/*/SKILL.md ]]; then
+      log_warn "$f" "plugin skill markdown is allowlisted"
+      warnings=$((warnings + 1))
+      continue
+    fi
+
     if [[ "$f" == .github/* ]]; then
       log_warn "$f" "markdown under .github is temporarily allowlisted"
       warnings=$((warnings + 1))
