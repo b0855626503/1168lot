@@ -152,7 +152,7 @@ class LotteryMarketResultModeTest extends TestCase
         $this->assertSame(0, DB::table('yeekee_market_settings')->where('market_id', $marketId)->count());
     }
 
-    public function test_update_yeekee_market_updates_yeekee_setting_record(): void
+    public function test_update_yeekee_market_rejects_unsupported_formula_preset(): void
     {
         DB::table('lotto_groups')->insert([
             'id' => 1,
@@ -210,25 +210,8 @@ class LotteryMarketResultModeTest extends TestCase
             ],
         ]);
 
-        $response = $this->createTestResponse(
-            app(LotteryMarketController::class)->update($request)
-        );
-
-        $response->assertStatus(200);
-        $response->assertJsonPath('success', true);
-
-        $setting = DB::table('yeekee_market_settings')->where('market_id', 20)->first();
-        $this->assertNotNull($setting);
-        $this->assertSame(1, (int) $setting->reward_enabled);
-        $this->assertSame(1, (int) $setting->refund_if_bet_entries_below_min);
-
-        $roundConfig = json_decode((string) $setting->round_config, true);
-        $formulaConfig = json_decode((string) $setting->formula_config, true);
-        $refundConfig = json_decode((string) $setting->refund_config, true);
-        $this->assertSame(10, (int) ($roundConfig['round_duration_minutes'] ?? 0));
-        $this->assertSame('PRECOMMITTED_BASE64_MD5', (string) ($formulaConfig['default_preset'] ?? ''));
-        $this->assertNull($formulaConfig['subtract_position'] ?? null);
-        $this->assertSame('count_unique_members', (string) ($refundConfig['count_mode'] ?? ''));
+        $this->expectException(ValidationException::class);
+        app(LotteryMarketController::class)->update($request);
     }
 
     public function test_load_data_returns_yeekee_reward_positions(): void

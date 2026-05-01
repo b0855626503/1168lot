@@ -23,7 +23,7 @@ class FormulaRegistry
     {
         $normalized = trim($key);
         if ($normalized === '' || ! isset($this->formulas[$normalized])) {
-            throw new InvalidArgumentException('ไม่รองรับสูตรที่ระบุ');
+            throw new InvalidArgumentException('Unsupported yeekee formula preset: '.$normalized);
         }
 
         return $this->formulas[$normalized];
