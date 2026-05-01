@@ -1028,6 +1028,56 @@ class LottoController extends BaseController
         }
     }
 
+    public function yeekeeMarketRounds(Request $request, int $marketId): JsonResponse
+    {
+        try {
+            $market = LotteryMarket::query()->find($marketId);
+            if (! $market) {
+                return $this->sendError('ไม่พบหวยที่ระบุ', 404);
+            }
+
+            if ($this->marketResultMode($market) !== LotteryMarket::RESULT_MODE_YEEKEE) {
+                return $this->sendError('รายการหวยนี้ไม่รองรับการยิงเลข', 422);
+            }
+
+            $drawDate = trim((string) $request->query('draw_date', now()->toDateString()));
+            if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate)) {
+                return $this->sendError('กรุณาระบุ draw_date รูปแบบ YYYY-MM-DD', 422);
+            }
+
+            $rows = YeekeeRound::query()
+                ->where('market_id', $marketId)
+                ->whereDate('round_date', $drawDate)
+                ->orderBy('round_no')
+                ->orderBy('id')
+                ->get();
+
+            $serverNow = now();
+            $items = $rows->map(function (YeekeeRound $round) use ($market, $serverNow): array {
+                $payload = $this->mapYeekeeRoundPayload($market, $round);
+                $betOpenAt = Carbon::parse((string) $round->bet_open_at);
+                $betCloseAt = Carbon::parse((string) $round->bet_close_at);
+                $status = (string) $round->status;
+                $isFinal = in_array($status, ['voided', 'resulted', 'settled'], true);
+
+                $payload['is_open_for_play'] = ! $isFinal && $serverNow->between($betOpenAt, $betCloseAt);
+                $payload['is_final'] = $isFinal;
+
+                return $payload;
+            })->values()->all();
+
+            return $this->sendResponse([
+                'market_id' => (int) $market->id,
+                'draw_date' => $drawDate,
+                'count' => count($items),
+                'items' => $items,
+                'server_time' => $serverNow->format('Y-m-d H:i:s'),
+            ], 'ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุสำเร็จ');
+        } catch (\Throwable $exception) {
+            return $this->sendError('ไม่สามารถดึงรอบยี่กี่ทั้งหมดได้ในขณะนี้', 422);
+        }
+    }
+
     public function yeekeeShoots(Request $request, int $roundId): JsonResponse
     {
         try {

@@ -587,4 +587,95 @@ class LottoDrawsControllerTest extends TestCase
         $revealedResponse->assertJsonPath('data.proof.proof_signature', 'proof-signature');
         $revealedResponse->assertJsonPath('data.proof.result_payload.raw_result', '12345');
     }
+
+    public function test_yeekee_market_rounds_returns_all_rounds_for_given_date(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-29 10:05:00'));
+
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 9,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee-market',
+            'is_enabled' => 1,
+            'result_mode' => 'yeekee',
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            [
+                'id' => 601,
+                'market_id' => 9,
+                'lotto_draw_id' => 201,
+                'round_date' => '2026-04-29',
+                'round_no' => 1,
+                'bet_open_at' => '2026-04-29 10:00:00',
+                'bet_close_at' => '2026-04-29 10:15:00',
+                'shoot_open_at' => '2026-04-29 10:15:00',
+                'shoot_close_at' => '2026-04-29 10:16:00',
+                'result_compute_at' => '2026-04-29 10:17:00',
+                'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+                'status' => 'open_bet',
+                'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 602,
+                'market_id' => 9,
+                'lotto_draw_id' => 202,
+                'round_date' => '2026-04-29',
+                'round_no' => 2,
+                'bet_open_at' => '2026-04-29 10:15:00',
+                'bet_close_at' => '2026-04-29 10:30:00',
+                'shoot_open_at' => '2026-04-29 10:30:00',
+                'shoot_close_at' => '2026-04-29 10:31:00',
+                'result_compute_at' => '2026-04-29 10:32:00',
+                'expected_settlement_deadline_at' => '2026-04-29 10:37:00',
+                'status' => 'open_bet',
+                'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 603,
+                'market_id' => 9,
+                'lotto_draw_id' => 203,
+                'round_date' => '2026-04-30',
+                'round_no' => 1,
+                'bet_open_at' => '2026-04-30 10:00:00',
+                'bet_close_at' => '2026-04-30 10:15:00',
+                'shoot_open_at' => '2026-04-30 10:15:00',
+                'shoot_close_at' => '2026-04-30 10:16:00',
+                'result_compute_at' => '2026-04-30 10:17:00',
+                'expected_settlement_deadline_at' => '2026-04-30 10:22:00',
+                'status' => 'open_bet',
+                'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/markets/9/rounds', 'GET', [
+            'draw_date' => '2026-04-29',
+        ]);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeMarketRounds($request, 9));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.draw_date', '2026-04-29');
+        $response->assertJsonPath('data.count', 2);
+        $response->assertJsonPath('data.items.0.round_id', 601);
+        $response->assertJsonPath('data.items.1.round_id', 602);
+        $response->assertJsonPath('data.items.0.is_open_for_play', true);
+        $response->assertJsonPath('data.items.1.is_open_for_play', false);
+
+        Carbon::setTestNow();
+    }
 }
