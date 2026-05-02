@@ -22,7 +22,7 @@ class YeekeeShootService
     ): YeekeeShoot {
         $normalizedNumberText = $this->normalizeNumberText($numberText);
 
-        return DB::transaction(function () use ($memberId, $roundId, $normalizedNumberText, $ipAddress, $userAgent) {
+        $shoot = DB::transaction(function () use ($memberId, $roundId, $normalizedNumberText, $ipAddress, $userAgent) {
             $legacyShootEnabled = (bool) config('yeekee.shoot_enabled', false);
             $hardeningShootEnabled = (bool) config('yeekee.shooting_enabled', true);
             if (! $legacyShootEnabled || ! $hardeningShootEnabled) {
@@ -191,17 +191,18 @@ class YeekeeShootService
                 'metadata_json' => null,
             ]);
 
-            Log::info('yeekee.shoot.accepted', [
-                'yeekee_round_id' => (int) $round->id,
-                'lotto_draw_id' => (int) $round->lotto_draw_id,
-                'market_id' => (int) $round->market_id,
-                'member_id' => $memberId,
-                'position' => $nextPosition,
-                'shoot_count' => (int) $round->shoot_count,
-            ]);
-
             return $shoot;
         });
+
+        Log::info('yeekee.shoot.accepted', [
+            'yeekee_round_id' => (int) $shoot->yeekee_round_id,
+            'lotto_draw_id' => (int) $shoot->lotto_draw_id,
+            'market_id' => (int) $shoot->market_id,
+            'member_id' => (int) $shoot->member_id,
+            'position' => (int) $shoot->position,
+        ]);
+
+        return $shoot;
     }
 
     private function normalizeNumberText(string $numberText): string
