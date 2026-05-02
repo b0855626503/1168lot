@@ -87,6 +87,17 @@ class AdminCampaignDashboardSummaryTest extends TestCase
         $this->assertSame(42, $data['campaign_id']);
         $this->assertArrayHasKey('financial', $data);
         $this->assertArrayHasKey('bonus_amount', $data['financial']);
+        foreach ([
+            'lotto_cash',
+            'lotto_product',
+            'register',
+            'clicks',
+            'recent_lotto_bets',
+            'latest_registers',
+            'recent_clicks',
+        ] as $section) {
+            $this->assertArrayHasKey($section, $data);
+        }
     }
 
     public function test_dashboard_summary_defaults_to_today_when_no_dates_given(): void
@@ -115,6 +126,35 @@ class AdminCampaignDashboardSummaryTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         $this->assertTrue($data['success']);
+    }
+
+    public function test_dashboard_summary_returns_422_for_invalid_date_range(): void
+    {
+        $fakeCampaign = (object) ['id' => 7, 'name' => 'Campaign 7'];
+
+        $campaignRepo = Mockery::mock(MarketingCampaignRepository::class);
+        $campaignRepo->shouldReceive('find')->with(7)->andReturn($fakeCampaign);
+
+        $dashboardService = Mockery::mock(CampaignDashboardService::class);
+        $dashboardService->shouldNotReceive('getDashboard');
+
+        $controller = new MarketingCampaignController(
+            $campaignRepo,
+            Mockery::mock(MarketingTeamRepository::class),
+            Mockery::mock(RegistrationLinkRepository::class),
+            $dashboardService,
+        );
+
+        $request = Request::create('/marketing_campaign/7/dashboard/summary', 'GET', [
+            'date_start' => 'not-a-date',
+            'date_end' => '2026-05-02',
+        ]);
+
+        $response = $controller->dashboardSummary($request, 7);
+
+        $this->assertSame(422, $response->status());
+        $data = json_decode((string) $response->getContent(), true);
+        $this->assertFalse($data['success']);
     }
 
     protected function tearDown(): void

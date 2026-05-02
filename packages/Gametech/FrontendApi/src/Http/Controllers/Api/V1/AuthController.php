@@ -225,7 +225,7 @@ class AuthController extends BaseController
 
         $clickId = $request->input('click_id');
         $visitorId = $request->input('visitor_id');
-        $registerType = $useSeparatedUsernameFlow ? 'username' : 'phone';
+        $registerType = $useSeparatedUsernameFlow ? 'username' : 'default';
 
         $data = $this->normalizeRegisterPayload((array) $request->all(), $useSeparatedUsernameFlow);
 

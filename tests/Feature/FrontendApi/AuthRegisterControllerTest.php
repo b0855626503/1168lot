@@ -196,7 +196,7 @@ class AuthRegisterControllerTest extends TestCase
         $trackingService = Mockery::mock(MarketingClickTrackingService::class);
         $trackingService->shouldReceive('markConverted')
             ->once()
-            ->with(11, '9876', 'phone', 'visitor-123')
+            ->with(11, '9876', 'default', 'visitor-123')
             ->andReturnTrue();
 
         $response = $this->register(array_merge($this->validPayload(), [
@@ -253,6 +253,52 @@ class AuthRegisterControllerTest extends TestCase
         $trackingService->shouldNotReceive('markConverted');
 
         $response = $this->register($this->validPayload(), $trackingService);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+    }
+
+    public function test_register_with_username_without_click_id_does_not_attempt_conversion(): void
+    {
+        $this->mockCoreConfig('N');
+        $this->mockNonSeamlessGameLookup();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 6666]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $trackingService = Mockery::mock(MarketingClickTrackingService::class);
+        $trackingService->shouldNotReceive('markConverted');
+
+        $response = $this->registerWithUsername($this->validPayloadWithUsername(), $trackingService);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+    }
+
+    public function test_register_with_username_marks_conversion_with_username_register_type(): void
+    {
+        $this->mockCoreConfig('N');
+        $this->mockNonSeamlessGameLookup();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 7777]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $trackingService = Mockery::mock(MarketingClickTrackingService::class);
+        $trackingService->shouldReceive('markConverted')
+            ->once()
+            ->with(22, '7777', 'username', 'visitor-usr')
+            ->andReturnTrue();
+
+        $response = $this->registerWithUsername(array_merge($this->validPayloadWithUsername(), [
+            'click_id' => 22,
+            'visitor_id' => 'visitor-usr',
+        ]), $trackingService);
 
         $response->assertOk();
         $response->assertJsonPath('success', true);

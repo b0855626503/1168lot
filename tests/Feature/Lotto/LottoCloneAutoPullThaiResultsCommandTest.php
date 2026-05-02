@@ -187,6 +187,133 @@ class LottoCloneAutoPullThaiResultsCommandTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_skips_draw_when_result_at_not_due_yet(): void
+    {
+        $relay = Mockery::mock(LotteryRelayRuntime::class);
+        $relay->allows('isClone')->andReturn(true);
+        $this->app->instance(LotteryRelayRuntime::class, $relay);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->allows('processDraw')->never();
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        config()->set('lotto_auto_result.clone_auto_pull.enabled', true);
+        config()->set('lotto_auto_result.clone_auto_pull.group_ids', [1]);
+        config()->set('lotto_auto_result.clone_auto_pull.delay_minutes', 10);
+
+        DB::table('lotto_markets')->insert(['id' => 10, 'group_id' => 1]);
+        DB::table('lotto_draws')->insert([
+            'id' => 10,
+            'market_id' => 10,
+            'result_at' => now()->subMinutes(1)->toDateTimeString(),
+            'status' => 'closed',
+            'result_number' => null,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        $this->artisan('lotto:clone-auto-pull-thai-results')
+            ->expectsOutput('No eligible draws found.')
+            ->assertExitCode(0);
+    }
+
+    public function test_processes_only_configured_group_ids(): void
+    {
+        $relay = Mockery::mock(LotteryRelayRuntime::class);
+        $relay->allows('isClone')->andReturn(true);
+        $this->app->instance(LotteryRelayRuntime::class, $relay);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('processDraw')
+            ->once()
+            ->withArgs(fn ($draw, bool $dryRun): bool => (int) $draw->id === 21 && $dryRun === false)
+            ->andReturn(['status' => 'APPLIED']);
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        config()->set('lotto_auto_result.clone_auto_pull.enabled', true);
+        config()->set('lotto_auto_result.clone_auto_pull.group_ids', [100]);
+        config()->set('lotto_auto_result.clone_auto_pull.delay_minutes', 0);
+
+        DB::table('lotto_markets')->insert([
+            ['id' => 21, 'group_id' => 100],
+            ['id' => 22, 'group_id' => 200],
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            [
+                'id' => 21,
+                'market_id' => 21,
+                'result_at' => now()->subMinutes(5)->toDateTimeString(),
+                'status' => 'closed',
+                'result_number' => null,
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+            ],
+            [
+                'id' => 22,
+                'market_id' => 22,
+                'result_at' => now()->subMinutes(5)->toDateTimeString(),
+                'status' => 'closed',
+                'result_number' => null,
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+            ],
+        ]);
+
+        $this->artisan('lotto:clone-auto-pull-thai-results')
+            ->expectsOutputToContain('Draw 21: APPLIED')
+            ->assertExitCode(0);
+    }
+
+    public function test_skips_processing_when_lock_is_not_acquired(): void
+    {
+        $relay = Mockery::mock(LotteryRelayRuntime::class);
+        $relay->allows('isClone')->andReturn(true);
+        $this->app->instance(LotteryRelayRuntime::class, $relay);
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldNotReceive('processDraw');
+        $this->app->instance(AutoResultPipelineService::class, $pipeline);
+
+        config()->set('lotto_auto_result.clone_auto_pull.enabled', true);
+        config()->set('lotto_auto_result.clone_auto_pull.group_ids', [1]);
+        config()->set('lotto_auto_result.clone_auto_pull.delay_minutes', 0);
+
+        DB::table('lotto_markets')->insert(['id' => 31, 'group_id' => 1]);
+        DB::table('lotto_draws')->insert([
+            'id' => 31,
+            'market_id' => 31,
+            'result_at' => now()->subMinutes(5)->toDateTimeString(),
+            'status' => 'closed',
+            'result_number' => null,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        $lock = cache()->lock('lotto:clone-auto-pull:31', 300);
+        $acquired = $lock->get();
+
+        $this->assertTrue($acquired);
+
+        try {
+            $this->artisan('lotto:clone-auto-pull-thai-results')
+                ->expectsOutputToContain('Done. processed=0 skipped=1')
+                ->assertExitCode(0);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function test_command_does_not_directly_update_draw_result_or_wallet_settlement(): void
+    {
+        $source = file_get_contents(base_path('packages/Gametech/Lotto/src/Console/Commands/LottoCloneAutoPullThaiResultsCommand.php'));
+
+        $this->assertIsString($source);
+        $this->assertStringNotContainsString("DB::table('lotto_draws')->update", $source);
+        $this->assertStringNotContainsString("DB::table('wallet_transactions')->update", $source);
+        $this->assertStringContainsString('processDraw($fresh, $dryRun)', $source);
+    }
+
     public function test_command_is_registered_in_schedule(): void
     {
         $schedule = app(Schedule::class);

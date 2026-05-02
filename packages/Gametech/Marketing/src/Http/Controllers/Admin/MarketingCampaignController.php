@@ -16,6 +16,7 @@ use Gametech\Payment\Models\WithdrawSeamlessProxy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class MarketingCampaignController extends AppBaseController
@@ -510,6 +511,15 @@ class MarketingCampaignController extends AppBaseController
         $campaignModel = $this->repository->find($campaign);
         if (! $campaignModel) {
             return $this->sendError('ไม่พบข้อมูล campaign ดังกล่าว', 200);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'date_start' => ['nullable', 'date_format:Y-m-d'],
+            'date_end' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_start'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('ข้อมูลช่วงวันที่ไม่ถูกต้อง', 422);
         }
 
         $today = now()->toDateString();

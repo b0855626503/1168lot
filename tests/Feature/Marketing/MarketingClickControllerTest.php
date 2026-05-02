@@ -62,6 +62,10 @@ class MarketingClickControllerTest extends TestCase
             'registration_link_id' => $linkId,
             'visitor_id' => 'v-abc-001',
         ]);
+
+        $click = RegistrationLinkClick::find((int) $response->json('click_id'));
+        $this->assertNotNull($click);
+        $this->assertContains((string) $click->classification_type, ['human', 'bot', 'preview_bot', 'suspicious', 'unknown']);
     }
 
     public function test_track_ignores_client_provided_ip_and_user_agent_fields(): void
@@ -109,6 +113,29 @@ class MarketingClickControllerTest extends TestCase
         $clickId2 = $response2->json('click_id');
 
         $this->assertSame($clickId1, $clickId2);
+    }
+
+    public function test_track_repeated_calls_do_not_create_duplicate_rows_or_fail(): void
+    {
+        $this->createRegistrationLink('RATELIMITSAFE');
+
+        $first = $this->apiPost('/marketing/clicks', [
+            'registration_code' => 'RATELIMITSAFE',
+            'visitor_id' => 'safe-visitor',
+        ]);
+        $first->assertOk();
+        $clickId = (int) $first->json('click_id');
+
+        for ($i = 0; $i < 10; $i++) {
+            $response = $this->apiPost('/marketing/clicks', [
+                'registration_code' => 'RATELIMITSAFE',
+                'visitor_id' => 'safe-visitor',
+            ]);
+            $response->assertOk();
+            $this->assertSame($clickId, (int) $response->json('click_id'));
+        }
+
+        $this->assertSame(1, RegistrationLinkClick::query()->count());
     }
 
     public function test_confirm_returns_200_for_existing_click(): void
