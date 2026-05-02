@@ -9,9 +9,11 @@ use Gametech\Marketing\DataTables\MarketingMemberDataTable;
 use Gametech\Marketing\Repositories\MarketingCampaignRepository;
 use Gametech\Marketing\Repositories\MarketingTeamRepository;
 use Gametech\Marketing\Repositories\RegistrationLinkRepository;
+use Gametech\Marketing\Services\CampaignDashboardService;
 use Gametech\Payment\Models\BankPaymentProxy;
 use Gametech\Payment\Models\WithdrawProxy;
 use Gametech\Payment\Models\WithdrawSeamlessProxy;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,10 +28,13 @@ class MarketingCampaignController extends AppBaseController
 
     protected $registrationLinkRepository;
 
+    protected CampaignDashboardService $campaignDashboardService;
+
     public function __construct(
         MarketingCampaignRepository $repository,
         MarketingTeamRepository $marketingTeamRepository,
-        RegistrationLinkRepository $registrationLinkRepository
+        RegistrationLinkRepository $registrationLinkRepository,
+        CampaignDashboardService $campaignDashboardService
     ) {
         $this->_config = request('_config');
 
@@ -41,6 +46,7 @@ class MarketingCampaignController extends AppBaseController
 
         $this->registrationLinkRepository = $registrationLinkRepository;
 
+        $this->campaignDashboardService = $campaignDashboardService;
     }
 
     public function index(MarketingCampaignDataTable $marketingCampaignDataTable)
@@ -497,6 +503,24 @@ class MarketingCampaignController extends AppBaseController
         }
 
         return $this->sendResponseNew($result, 'ดำเนินการเสร็จสิ้น');
+    }
+
+    public function dashboardSummary(Request $request, int $campaign): JsonResponse
+    {
+        $campaignModel = $this->repository->find($campaign);
+        if (! $campaignModel) {
+            return $this->sendError('ไม่พบข้อมูล campaign ดังกล่าว', 200);
+        }
+
+        $today = now()->toDateString();
+        $dateStart = (string) ($request->input('date_start') ?? $today);
+        $dateEnd = (string) ($request->input('date_end') ?? $today);
+
+        [$dateStart, $dateEnd] = $this->normalizeDateRange($dateStart, $dateEnd);
+
+        $data = $this->campaignDashboardService->getDashboard($campaign, $dateStart, $dateEnd);
+
+        return $this->sendResponseNew($data, 'ดำเนินการเสร็จสิ้น');
     }
 
     /**

@@ -7,6 +7,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoNavbarConfigController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\MarketingClickController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\PromotionController;
@@ -78,6 +79,18 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.results_by_date');
             Route::get('lotto/navbar-config', [LottoNavbarConfigController::class, 'show'])
                 ->name('frontend.api.v1.lotto.navbar_config');
+
+            Route::post('marketing/clicks', [MarketingClickController::class, 'track'])
+                ->middleware('throttle:60,1')
+                ->name('frontend.api.v1.marketing.clicks.track');
+            Route::post('marketing/clicks/{click_id}/confirm', [MarketingClickController::class, 'confirm'])
+                ->middleware('throttle:60,1')
+                ->whereNumber('click_id')
+                ->name('frontend.api.v1.marketing.clicks.confirm');
+            Route::post('marketing/clicks/{click_id}/submitted', [MarketingClickController::class, 'submitted'])
+                ->middleware('throttle:60,1')
+                ->whereNumber('click_id')
+                ->name('frontend.api.v1.marketing.clicks.submitted');
         });
 
         Route::middleware(['api', ResolveFrontendLanguage::class, AuthenticateFrontendToken::class])->group(function () {

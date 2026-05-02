@@ -6,6 +6,8 @@ use Gametech\Core\Core;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\AuthController;
 use Gametech\FrontendApi\Services\FrontendTokenService;
 use Gametech\FrontendApi\Services\RegisterBankAccountNameService;
+use Gametech\Game\Repositories\GameRepository;
+use Gametech\Marketing\Services\MarketingClickTrackingService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -23,6 +25,7 @@ class AuthRegisterControllerTest extends TestCase
 
         Schema::dropIfExists('banks_account');
         Schema::dropIfExists('members');
+        Schema::dropIfExists('registration_link_clicks');
 
         Schema::create('banks_account', function (Blueprint $table): void {
             $table->bigIncrements('id');
@@ -39,6 +42,13 @@ class AuthRegisterControllerTest extends TestCase
             $table->string('referral_code')->nullable();
         });
 
+        Schema::create('registration_link_clicks', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->string('converted_member_id')->nullable();
+            $table->timestamp('converted_at')->nullable();
+            $table->string('register_type')->nullable();
+        });
+
         Event::fake();
     }
 
@@ -46,6 +56,7 @@ class AuthRegisterControllerTest extends TestCase
     {
         Schema::dropIfExists('banks_account');
         Schema::dropIfExists('members');
+        Schema::dropIfExists('registration_link_clicks');
 
         Mockery::close();
 
@@ -171,17 +182,94 @@ class AuthRegisterControllerTest extends TestCase
         Log::shouldNotHaveReceived('error', ['frontend_api_register.seamless_add_game_user_result', Mockery::type('array')]);
     }
 
+    public function test_register_marks_conversion_when_click_id_is_valid(): void
+    {
+        $this->mockCoreConfig('N');
+        $this->mockNonSeamlessGameLookup();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 9876]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $trackingService = Mockery::mock(MarketingClickTrackingService::class);
+        $trackingService->shouldReceive('markConverted')
+            ->once()
+            ->with(11, '9876', 'phone', 'visitor-123')
+            ->andReturnTrue();
+
+        $response = $this->register(array_merge($this->validPayload(), [
+            'click_id' => 11,
+            'visitor_id' => 'visitor-123',
+            'registration_code' => 'CODE-OPTIONAL',
+        ]), $trackingService);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+    }
+
+    public function test_register_success_when_click_id_is_invalid(): void
+    {
+        $this->mockCoreConfig('N');
+        $this->mockNonSeamlessGameLookup();
+        Log::spy();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 1234]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $trackingService = Mockery::mock(MarketingClickTrackingService::class);
+        $trackingService->shouldReceive('markConverted')
+            ->once()
+            ->andThrow(new \RuntimeException('invalid click'));
+
+        $response = $this->register(array_merge($this->validPayload(), [
+            'click_id' => 'bad-id',
+            'visitor_id' => 'visitor-xyz',
+        ]), $trackingService);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        Log::shouldHaveReceived('warning')
+            ->with('frontend_api_register.click_conversion_failed', Mockery::type('array'))
+            ->once();
+    }
+
+    public function test_register_without_click_id_does_not_attempt_conversion(): void
+    {
+        $this->mockCoreConfig('N');
+        $this->mockNonSeamlessGameLookup();
+
+        $memberRepo = Mockery::mock();
+        $memberRepo->shouldReceive('create')
+            ->once()
+            ->andReturn((object) ['code' => 5555]);
+        $this->app->instance('Gametech\Member\Repositories\MemberRepository', $memberRepo);
+
+        $trackingService = Mockery::mock(MarketingClickTrackingService::class);
+        $trackingService->shouldNotReceive('markConverted');
+
+        $response = $this->register($this->validPayload(), $trackingService);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function register(array $payload): TestResponse
+    private function register(array $payload, ?MarketingClickTrackingService $clickTrackingService = null): TestResponse
     {
         $request = Request::create('/api/v1/auth/register', 'POST', $payload);
 
         return TestResponse::fromBaseResponse(
             (new AuthController(
                 Mockery::mock(FrontendTokenService::class),
-                Mockery::mock(RegisterBankAccountNameService::class)
+                Mockery::mock(RegisterBankAccountNameService::class),
+                $clickTrackingService
             ))->register($request)
         );
     }
@@ -189,14 +277,15 @@ class AuthRegisterControllerTest extends TestCase
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function registerWithUsername(array $payload): TestResponse
+    private function registerWithUsername(array $payload, ?MarketingClickTrackingService $clickTrackingService = null): TestResponse
     {
         $request = Request::create('/api/v1/auth/register-with-username', 'POST', $payload);
 
         return TestResponse::fromBaseResponse(
             (new AuthController(
                 Mockery::mock(FrontendTokenService::class),
-                Mockery::mock(RegisterBankAccountNameService::class)
+                Mockery::mock(RegisterBankAccountNameService::class),
+                $clickTrackingService
             ))->registerWithUsername($request)
         );
     }
@@ -212,6 +301,19 @@ class AuthRegisterControllerTest extends TestCase
             ]);
 
         $this->app->instance(Core::class, $core);
+    }
+
+    private function mockNonSeamlessGameLookup(): void
+    {
+        $gameRepo = Mockery::mock(GameRepository::class);
+        $gameRepo->shouldReceive('findOneWhere')
+            ->once()
+            ->with([
+                'enable' => 'Y',
+                'status_open' => 'Y',
+            ])
+            ->andReturn(null);
+        $this->app->instance(GameRepository::class, $gameRepo);
     }
 
     /**

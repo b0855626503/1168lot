@@ -6,6 +6,7 @@ use Gametech\FrontendApi\Exceptions\RegisterFailureException;
 use Gametech\FrontendApi\Http\Requests\ResolveRegisterBankAccountRequest;
 use Gametech\FrontendApi\Services\FrontendTokenService;
 use Gametech\FrontendApi\Services\RegisterBankAccountNameService;
+use Gametech\Marketing\Services\MarketingClickTrackingService;
 use Gametech\Member\Models\MemberProxy;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Http\JsonResponse;
@@ -22,13 +23,16 @@ class AuthController extends BaseController
 {
     private FrontendTokenService $tokenService;
     private RegisterBankAccountNameService $registerBankAccountNameService;
+    private ?MarketingClickTrackingService $clickTrackingService;
 
     public function __construct(
         FrontendTokenService $tokenService,
-        RegisterBankAccountNameService $registerBankAccountNameService
+        RegisterBankAccountNameService $registerBankAccountNameService,
+        ?MarketingClickTrackingService $clickTrackingService = null
     ) {
         $this->tokenService = $tokenService;
         $this->registerBankAccountNameService = $registerBankAccountNameService;
+        $this->clickTrackingService = $clickTrackingService;
     }
 
     public function register(Request $request)
@@ -218,6 +222,10 @@ class AuthController extends BaseController
             'has_marketing' => $request->filled('marketing'),
             'all' => $request->all(),
         ]);
+
+        $clickId = $request->input('click_id');
+        $visitorId = $request->input('visitor_id');
+        $registerType = $useSeparatedUsernameFlow ? 'username' : 'phone';
 
         $data = $this->normalizeRegisterPayload((array) $request->all(), $useSeparatedUsernameFlow);
 
@@ -429,6 +437,23 @@ class AuthController extends BaseController
                 Event::dispatch('member.created.after', [$member]);
             } catch (\Throwable $e) {
                 report($e);
+            }
+
+            if ($clickId !== null && $member !== null && isset($member->code)) {
+                try {
+                    $this->resolveClickTrackingService()->markConverted(
+                        (int) $clickId,
+                        (string) $member->code,
+                        $registerType,
+                        $visitorId
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('frontend_api_register.click_conversion_failed', [
+                        'click_id' => $clickId,
+                        'member_code' => $member->code ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         } catch (RegisterFailureException $e) {
             Log::error('frontend_api_register.failure', [
@@ -884,6 +909,15 @@ class AuthController extends BaseController
         }
 
         throw new \RuntimeException('ไม่สามารถสร้างรหัสแนะนำได้');
+    }
+
+    private function resolveClickTrackingService(): MarketingClickTrackingService
+    {
+        if ($this->clickTrackingService === null) {
+            $this->clickTrackingService = app(MarketingClickTrackingService::class);
+        }
+
+        return $this->clickTrackingService;
     }
 
     /**

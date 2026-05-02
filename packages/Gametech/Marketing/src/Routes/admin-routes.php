@@ -48,6 +48,8 @@ Route::domain(config('app.admin_url').'.'.(is_null(config('app.admin_domain_url'
             Route::post('update/{id?}', $route['controller'].'@update')->name('admin.'.$route['name'].'.update');
 
             Route::post('delete', $route['controller'].'@destroy')->name('admin.'.$route['name'].'.delete');
+
+            Route::get('{campaign}/dashboard/summary', $route['controller'].'@dashboardSummary')->name('admin.'.$route['name'].'.dashboard.summary');
         });
 
         Route::get('marketing_member', 'MarketingMemberController@index')->defaults('_config', [
