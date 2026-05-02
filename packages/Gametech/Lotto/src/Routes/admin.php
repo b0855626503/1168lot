@@ -372,15 +372,10 @@ Route::domain(
             Route::get('winning-report/export', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@export')
                 ->name('admin.lotto.winning_report.export');
 
-            Route::get('yeekee-audit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@index')->defaults('_config', [
-                'view' => 'admin::module.lotto.yeekee_audit.index',
-            ])->name('admin.lotto.yeekee_audit.index');
-            Route::get('yeekee-audit/rounds', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@loadRounds')
+            Route::get('yeekee/audit/rounds', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@loadRounds')
                 ->name('admin.lotto.yeekee_audit.rounds');
-            Route::get('yeekee-audit/rounds/{roundId}/shoots', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@loadShoots')
-                ->name('admin.lotto.yeekee_audit.shoots');
-            Route::get('yeekee-audit/rounds/{roundId}/snapshot', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@showSnapshot')
-                ->name('admin.lotto.yeekee_audit.snapshot');
+            Route::get('yeekee/rounds/{roundId}/audit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@show')
+                ->name('admin.lotto.yeekee.audit.show');
         });
     });
 });

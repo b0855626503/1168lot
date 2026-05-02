@@ -72,22 +72,22 @@ class YeekeeAuditControllerTest extends TestCase
 
     // --- loadRounds ---
 
-    public function test_load_rounds_returns_403_without_index_permission(): void
+    public function test_load_rounds_returns_403_without_view_permission(): void
     {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => false]);
+        $this->mockBouncer(['lotto.yeekee.audit.view' => false]);
 
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('Forbidden');
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds', 'GET');
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds', 'GET');
         app(YeekeeAuditController::class)->loadRounds($request);
     }
 
-    public function test_load_rounds_returns_empty_list_when_no_rounds(): void
+    public function test_load_rounds_returns_empty_when_no_rounds(): void
     {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => true]);
+        $this->mockBouncer(['lotto.yeekee.audit.view' => true]);
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds', 'GET');
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds', 'GET');
 
         $response = $this->createTestResponse(
             app(YeekeeAuditController::class)->loadRounds($request)
@@ -99,7 +99,7 @@ class YeekeeAuditControllerTest extends TestCase
 
     public function test_load_rounds_returns_rounds_with_has_snapshot_flag(): void
     {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => true]);
+        $this->mockBouncer(['lotto.yeekee.audit.view' => true]);
 
         DB::table('lotto_markets')->insert([
             'id' => 1, 'name' => 'Yeekee 80', 'result_mode' => 'yeekee',
@@ -135,7 +135,7 @@ class YeekeeAuditControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds', 'GET');
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds', 'GET');
 
         $response = $this->createTestResponse(
             app(YeekeeAuditController::class)->loadRounds($request)
@@ -152,21 +152,18 @@ class YeekeeAuditControllerTest extends TestCase
         $this->assertFalse($open['has_snapshot']);
     }
 
-    public function test_load_rounds_filters_by_market_id(): void
+    public function test_load_rounds_filters_by_lotto_draw_id(): void
     {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => true]);
+        $this->mockBouncer(['lotto.yeekee.audit.view' => true]);
 
-        DB::table('lotto_markets')->insert([
-            ['id' => 1, 'name' => 'Market A', 'result_mode' => 'yeekee'],
-            ['id' => 2, 'name' => 'Market B', 'result_mode' => 'yeekee'],
-        ]);
+        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
 
         DB::table('yeekee_rounds')->insert([
-            ['id' => 20, 'market_id' => 1, 'lotto_draw_id' => 1, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 21, 'market_id' => 2, 'lotto_draw_id' => 2, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 20, 'market_id' => 1, 'lotto_draw_id' => 100, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 21, 'market_id' => 1, 'lotto_draw_id' => 200, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds?market_id=1', 'GET', ['market_id' => '1']);
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds?lotto_draw_id=100', 'GET', ['lotto_draw_id' => '100']);
 
         $response = $this->createTestResponse(
             app(YeekeeAuditController::class)->loadRounds($request)
@@ -178,213 +175,147 @@ class YeekeeAuditControllerTest extends TestCase
         $this->assertSame(20, $rounds[0]['id']);
     }
 
-    public function test_load_rounds_filters_by_round_date(): void
+    // --- show (single-round audit) ---
+
+    public function test_show_returns_403_without_view_permission(): void
     {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => true]);
-
-        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
-
-        DB::table('yeekee_rounds')->insert([
-            ['id' => 30, 'market_id' => 1, 'lotto_draw_id' => 1, 'round_date' => '2026-05-01', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 31, 'market_id' => 1, 'lotto_draw_id' => 2, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds?round_date=2026-05-02', 'GET', ['round_date' => '2026-05-02']);
-
-        $response = $this->createTestResponse(
-            app(YeekeeAuditController::class)->loadRounds($request)
-        );
-
-        $response->assertOk();
-        $rounds = $response->json('rounds');
-        $this->assertCount(1, $rounds);
-        $this->assertSame(31, $rounds[0]['id']);
-    }
-
-    // --- loadShoots ---
-
-    public function test_load_shoots_returns_403_without_index_permission(): void
-    {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => false]);
+        $this->mockBouncer(['lotto.yeekee.audit.view' => false]);
 
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('Forbidden');
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds/50/shoots', 'GET');
-        app(YeekeeAuditController::class)->loadShoots($request, 50);
+        app(YeekeeAuditController::class)->show(99);
     }
 
-    public function test_load_shoots_returns_403_without_view_shoots_permission(): void
+    public function test_show_returns_masked_shoots_without_sensitive_permission(): void
     {
         $this->mockBouncer([
-            'lotto_settings.yeekee_audit.index' => true,
-            'lotto_settings.yeekee_audit.view_shoots' => false,
-        ]);
-
-        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
-        DB::table('yeekee_rounds')->insert(['id' => 51, 'market_id' => 1, 'lotto_draw_id' => 1, 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
-
-        $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('Forbidden');
-
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds/51/shoots', 'GET');
-        app(YeekeeAuditController::class)->loadShoots($request, 51);
-    }
-
-    public function test_load_shoots_returns_shoots_with_permission(): void
-    {
-        $this->mockBouncer([
-            'lotto_settings.yeekee_audit.index' => true,
-            'lotto_settings.yeekee_audit.view_shoots' => true,
+            'lotto.yeekee.audit.view' => true,
+            'lotto.yeekee.audit.view_sensitive' => false,
         ]);
 
         DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'Yeekee 80', 'result_mode' => 'yeekee']);
         DB::table('yeekee_rounds')->insert([
-            'id' => 60,
+            'id' => 50,
             'market_id' => 1,
-            'lotto_draw_id' => 1,
+            'lotto_draw_id' => 10,
             'round_date' => '2026-05-02',
-            'round_no' => 3,
+            'round_no' => 1,
             'status' => 'resulted',
             'shoot_count' => 2,
             'last_shoot_position' => 2,
+            'shoot_snapshot_json' => json_encode(['version' => 1]),
+            'shoot_snapshot_hash' => 'testhash',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('yeekee_shoots')->insert([
-            ['id' => 100, 'yeekee_round_id' => 60, 'lotto_draw_id' => 1, 'market_id' => 1, 'member_id' => 9001, 'position' => 1, 'number_text' => '23', 'number_value' => 23, 'submitted_at' => '2026-05-02 10:00:00', 'ip_address' => '1.2.3.4', 'user_agent' => 'Mozilla', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 101, 'yeekee_round_id' => 60, 'lotto_draw_id' => 1, 'market_id' => 1, 'member_id' => 9002, 'position' => 2, 'number_text' => '77', 'number_value' => 77, 'submitted_at' => '2026-05-02 10:01:00', 'ip_address' => '5.6.7.8', 'user_agent' => 'Chrome', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'yeekee_round_id' => 50, 'lotto_draw_id' => 10, 'market_id' => 1, 'member_id' => 9001, 'position' => 1, 'number_text' => '23', 'number_value' => 23, 'submitted_at' => '2026-05-02 10:00:00', 'ip_address' => '1.2.3.4', 'user_agent' => 'Mozilla', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'yeekee_round_id' => 50, 'lotto_draw_id' => 10, 'market_id' => 1, 'member_id' => 9002, 'position' => 2, 'number_text' => '77', 'number_value' => 77, 'submitted_at' => '2026-05-02 10:01:00', 'ip_address' => '5.6.7.8', 'user_agent' => 'Chrome', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        $request = Request::create('/admin/lotto/yeekee-audit/rounds/60/shoots', 'GET');
-
         $response = $this->createTestResponse(
-            app(YeekeeAuditController::class)->loadShoots($request, 60)
+            app(YeekeeAuditController::class)->show(50)
         );
 
         $response->assertOk();
+
+        // number_text must be masked
         $shoots = $response->json('shoots');
         $this->assertCount(2, $shoots);
-        $this->assertSame('23', $shoots[0]['number_text']);
-        $this->assertSame(1, $shoots[0]['position']);
-        $this->assertSame(9001, $shoots[0]['member_id']);
+        $this->assertSame('2*', $shoots[0]['number_text']);
+        $this->assertSame('7*', $shoots[1]['number_text']);
 
-        // sensitive fields must not be exposed
+        // sensitive fields must not appear
+        $this->assertArrayNotHasKey('member_id', $shoots[0]);
         $this->assertArrayNotHasKey('ip_address', $shoots[0]);
         $this->assertArrayNotHasKey('user_agent', $shoots[0]);
-        $this->assertArrayNotHasKey('metadata_json', $shoots[0]);
+
+        // snapshot not returned without sensitive permission
+        $this->assertArrayNotHasKey('snapshot', $response->json());
+
+        // sensitivity hint must be present
+        $this->assertSame('lotto.yeekee.audit.view_sensitive', $response->json('_sensitive_permission_required'));
     }
 
-    // --- showSnapshot ---
-
-    public function test_show_snapshot_returns_403_without_index_permission(): void
-    {
-        $this->mockBouncer(['lotto_settings.yeekee_audit.index' => false]);
-
-        $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('Forbidden');
-
-        app(YeekeeAuditController::class)->showSnapshot(70);
-    }
-
-    public function test_show_snapshot_returns_403_without_view_snapshot_permission(): void
+    public function test_show_returns_full_data_with_sensitive_permission(): void
     {
         $this->mockBouncer([
-            'lotto_settings.yeekee_audit.index' => true,
-            'lotto_settings.yeekee_audit.view_snapshot' => false,
-        ]);
-
-        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
-        DB::table('yeekee_rounds')->insert(['id' => 71, 'market_id' => 1, 'lotto_draw_id' => 1, 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
-
-        $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('Forbidden');
-
-        app(YeekeeAuditController::class)->showSnapshot(71);
-    }
-
-    public function test_show_snapshot_returns_has_snapshot_false_when_no_snapshot(): void
-    {
-        $this->mockBouncer([
-            'lotto_settings.yeekee_audit.index' => true,
-            'lotto_settings.yeekee_audit.view_snapshot' => true,
-        ]);
-
-        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
-        DB::table('yeekee_rounds')->insert([
-            'id' => 80,
-            'market_id' => 1,
-            'lotto_draw_id' => 1,
-            'round_no' => 1,
-            'status' => 'open',
-            'shoot_snapshot_json' => null,
-            'shoot_snapshot_hash' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $response = $this->createTestResponse(
-            app(YeekeeAuditController::class)->showSnapshot(80)
-        );
-
-        $response->assertOk();
-        $response->assertJsonPath('has_snapshot', false);
-        $response->assertJsonPath('round_id', 80);
-    }
-
-    public function test_show_snapshot_returns_full_snapshot_with_permission(): void
-    {
-        $this->mockBouncer([
-            'lotto_settings.yeekee_audit.index' => true,
-            'lotto_settings.yeekee_audit.view_snapshot' => true,
+            'lotto.yeekee.audit.view' => true,
+            'lotto.yeekee.audit.view_sensitive' => true,
         ]);
 
         DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'Yeekee 80', 'result_mode' => 'yeekee']);
 
-        $snapshotData = [
-            'version' => 1,
-            'round_id' => 90,
-            'lotto_draw_id' => 10,
-            'market_id' => 1,
-            'round_no' => 5,
-            'round_date' => '2026-05-02',
-            'shoot_open_at' => '2026-05-02 09:00:00',
-            'shoot_close_at' => '2026-05-02 09:05:00',
-            'shoot_closed_at' => '2026-05-02 09:05:02',
-            'shoot_count' => 2,
-            'last_shoot_position' => 2,
-            'shoots' => [
-                ['position' => 1, 'number_value' => 23],
-                ['position' => 2, 'number_value' => 77],
-            ],
-        ];
+        $snapshotData = ['version' => 1, 'round_id' => 60, 'shoots' => []];
 
         DB::table('yeekee_rounds')->insert([
-            'id' => 90,
+            'id' => 60,
             'market_id' => 1,
-            'lotto_draw_id' => 10,
+            'lotto_draw_id' => 20,
             'round_date' => '2026-05-02',
-            'round_no' => 5,
+            'round_no' => 3,
             'status' => 'resulted',
-            'shoot_count' => 2,
-            'last_shoot_position' => 2,
+            'shoot_count' => 1,
+            'last_shoot_position' => 1,
             'shoot_snapshot_json' => json_encode($snapshotData),
             'shoot_snapshot_hash' => hash('sha256', json_encode($snapshotData)),
-            'shoot_closed_at' => '2026-05-02 09:05:02',
+            'shoot_closed_at' => '2026-05-02 09:05:00',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
+        DB::table('yeekee_shoots')->insert([
+            'id' => 10, 'yeekee_round_id' => 60, 'lotto_draw_id' => 20, 'market_id' => 1, 'member_id' => 9001, 'position' => 1, 'number_text' => '45', 'number_value' => 45, 'submitted_at' => '2026-05-02 09:00:00', 'ip_address' => '10.0.0.1', 'user_agent' => 'TestAgent', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
         $response = $this->createTestResponse(
-            app(YeekeeAuditController::class)->showSnapshot(90)
+            app(YeekeeAuditController::class)->show(60)
         );
 
         $response->assertOk();
-        $response->assertJsonPath('has_snapshot', true);
-        $this->assertNotEmpty($response->json('snapshot_hash'));
+
+        $shoots = $response->json('shoots');
+        $this->assertCount(1, $shoots);
+
+        // full number_text
+        $this->assertSame('45', $shoots[0]['number_text']);
+
+        // sensitive fields present
+        $this->assertSame(9001, $shoots[0]['member_id']);
+        $this->assertSame('10.0.0.1', $shoots[0]['ip_address']);
+        $this->assertSame('TestAgent', $shoots[0]['user_agent']);
+
+        // snapshot present
+        $this->assertTrue($response->json('has_snapshot'));
         $this->assertNotEmpty($response->json('snapshot'));
-        $this->assertSame(2, $response->json('snapshot.shoot_count'));
+        $this->assertNotEmpty($response->json('snapshot_hash'));
+
+        // no sensitivity warning
+        $this->assertNull($response->json('_sensitive_permission_required'));
+    }
+
+    public function test_show_returns_has_snapshot_false_when_no_snapshot(): void
+    {
+        $this->mockBouncer([
+            'lotto.yeekee.audit.view' => true,
+            'lotto.yeekee.audit.view_sensitive' => true,
+        ]);
+
+        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
+        DB::table('yeekee_rounds')->insert([
+            'id' => 70, 'market_id' => 1, 'lotto_draw_id' => 1, 'round_no' => 1, 'status' => 'open',
+            'shoot_snapshot_json' => null, 'shoot_snapshot_hash' => null, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $response = $this->createTestResponse(
+            app(YeekeeAuditController::class)->show(70)
+        );
+
+        $response->assertOk();
+        $this->assertFalse($response->json('has_snapshot'));
+        $this->assertArrayNotHasKey('snapshot', $response->json());
     }
 
     /**

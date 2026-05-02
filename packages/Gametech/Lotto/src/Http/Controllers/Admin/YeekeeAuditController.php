@@ -4,7 +4,6 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Carbon\Carbon;
 use Gametech\Admin\Http\Controllers\AppBaseController;
-use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Illuminate\Http\JsonResponse;
@@ -20,34 +19,13 @@ class YeekeeAuditController extends AppBaseController
         $this->_config = (array) request('_config', []);
     }
 
-    public function index(): mixed
-    {
-        $this->assertCanView();
-
-        $markets = LotteryMarket::query()
-            ->where('result_mode', 'yeekee')
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(static fn (LotteryMarket $m): array => [
-                'value' => (int) $m->id,
-                'text' => (string) $m->name,
-            ])
-            ->values()
-            ->all();
-
-        return view($this->_config['view'], [
-            'markets' => $markets,
-            'canViewShoots' => bouncer()->hasPermission('lotto_settings.yeekee_audit.view_shoots'),
-            'canViewSnapshot' => bouncer()->hasPermission('lotto_settings.yeekee_audit.view_snapshot'),
-        ]);
-    }
-
     public function loadRounds(Request $request): JsonResponse
     {
         $this->assertCanView();
 
         $marketId = $request->query('market_id') ? (int) $request->query('market_id') : null;
         $roundDate = $this->resolveDate($request->query('round_date'));
+        $lottoDrewId = $request->query('lotto_draw_id') ? (int) $request->query('lotto_draw_id') : null;
 
         $query = YeekeeRound::query()
             ->select([
@@ -76,7 +54,11 @@ class YeekeeAuditController extends AppBaseController
             $query->whereDate('round_date', $roundDate);
         }
 
-        $rounds = $query->limit(100)->get()->map(static fn (YeekeeRound $r): array => [
+        if ($lottoDrewId !== null) {
+            $query->where('lotto_draw_id', $lottoDrewId);
+        }
+
+        $rounds = $query->limit(200)->get()->map(static fn (YeekeeRound $r): array => [
             'id' => (int) $r->id,
             'market_id' => (int) $r->market_id,
             'market_name' => (string) (optional($r->market)->name ?? ''),
@@ -98,49 +80,11 @@ class YeekeeAuditController extends AppBaseController
         ]);
     }
 
-    public function loadShoots(Request $request, int $roundId): JsonResponse
+    public function show(int $roundId): JsonResponse
     {
         $this->assertCanView();
-        $this->assertCanViewShoots();
 
-        $round = YeekeeRound::query()
-            ->select(['id', 'market_id', 'round_date', 'round_no', 'shoot_count', 'last_shoot_position', 'status'])
-            ->with('market:id,name')
-            ->findOrFail($roundId);
-
-        $shoots = YeekeeShoot::query()
-            ->select(['id', 'yeekee_round_id', 'position', 'number_text', 'submitted_at', 'member_id'])
-            ->where('yeekee_round_id', $roundId)
-            ->orderBy('position')
-            ->get()
-            ->map(static fn (YeekeeShoot $s): array => [
-                'id' => (int) $s->id,
-                'position' => (int) $s->position,
-                'number_text' => (string) $s->number_text,
-                'member_id' => (int) $s->member_id,
-                'submitted_at' => optional($s->submitted_at)->format('Y-m-d H:i:s'),
-            ])
-            ->all();
-
-        return response()->json([
-            'round' => [
-                'id' => (int) $round->id,
-                'market_name' => (string) (optional($round->market)->name ?? ''),
-                'round_date' => (string) ($round->round_date ?? ''),
-                'round_no' => (int) $round->round_no,
-                'shoot_count' => (int) $round->shoot_count,
-                'last_shoot_position' => (int) $round->last_shoot_position,
-                'status' => (string) $round->status,
-            ],
-            'shoots' => $shoots,
-            'serverTime' => Carbon::now()->format('Y-m-d H:i:s'),
-        ]);
-    }
-
-    public function showSnapshot(int $roundId): JsonResponse
-    {
-        $this->assertCanView();
-        $this->assertCanViewSnapshot();
+        $isSensitive = bouncer()->hasPermission('lotto.yeekee.audit.view_sensitive');
 
         $round = YeekeeRound::query()
             ->select([
@@ -152,56 +96,87 @@ class YeekeeAuditController extends AppBaseController
                 'status',
                 'shoot_count',
                 'last_shoot_position',
+                'shoot_open_at',
+                'shoot_close_at',
+                'shoot_closed_at',
                 'shoot_snapshot_json',
                 'shoot_snapshot_hash',
-                'shoot_closed_at',
             ])
             ->with('market:id,name')
             ->findOrFail($roundId);
 
-        if ($round->shoot_snapshot_json === null) {
-            return response()->json([
-                'has_snapshot' => false,
-                'round_id' => $roundId,
-                'serverTime' => Carbon::now()->format('Y-m-d H:i:s'),
-            ]);
-        }
+        $shootColumns = $isSensitive
+            ? ['id', 'yeekee_round_id', 'position', 'number_text', 'member_id', 'submitted_at', 'ip_address', 'user_agent']
+            : ['id', 'yeekee_round_id', 'position', 'number_text', 'submitted_at'];
 
-        return response()->json([
-            'has_snapshot' => true,
+        $shoots = YeekeeShoot::query()
+            ->select($shootColumns)
+            ->where('yeekee_round_id', $roundId)
+            ->orderBy('position')
+            ->get()
+            ->map(function (YeekeeShoot $s) use ($isSensitive): array {
+                $masked = $this->maskNumberText((string) $s->number_text);
+
+                $entry = [
+                    'id' => (int) $s->id,
+                    'position' => (int) $s->position,
+                    'number_text' => $isSensitive ? (string) $s->number_text : $masked,
+                    'submitted_at' => optional($s->submitted_at)->format('Y-m-d H:i:s'),
+                ];
+
+                if ($isSensitive) {
+                    $entry['member_id'] = (int) $s->member_id;
+                    $entry['ip_address'] = (string) ($s->ip_address ?? '');
+                    $entry['user_agent'] = (string) ($s->user_agent ?? '');
+                }
+
+                return $entry;
+            })
+            ->all();
+
+        $payload = [
             'round' => [
                 'id' => (int) $round->id,
+                'lotto_draw_id' => (int) $round->lotto_draw_id,
+                'market_id' => (int) $round->market_id,
                 'market_name' => (string) (optional($round->market)->name ?? ''),
-                'round_date' => (string) ($round->round_date ?? ''),
                 'round_no' => (int) $round->round_no,
+                'round_date' => (string) ($round->round_date ?? ''),
                 'status' => (string) $round->status,
                 'shoot_closed_at' => optional($round->shoot_closed_at)->format('Y-m-d H:i:s'),
+                'shoot_snapshot_hash' => (string) ($round->shoot_snapshot_hash ?? ''),
+                'shoot_count' => (int) $round->shoot_count,
+                'last_shoot_position' => (int) $round->last_shoot_position,
             ],
-            'snapshot' => $round->shoot_snapshot_json,
-            'snapshot_hash' => (string) ($round->shoot_snapshot_hash ?? ''),
+            'shoots' => $shoots,
+            'has_snapshot' => $round->shoot_snapshot_json !== null,
+            '_sensitive_permission_required' => $isSensitive ? null : 'lotto.yeekee.audit.view_sensitive',
             'serverTime' => Carbon::now()->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if ($isSensitive && $round->shoot_snapshot_json !== null) {
+            $payload['snapshot'] = $round->shoot_snapshot_json;
+            $payload['snapshot_hash'] = (string) ($round->shoot_snapshot_hash ?? '');
+        }
+
+        return response()->json($payload);
     }
 
     private function assertCanView(): void
     {
-        if (! bouncer()->hasPermission('lotto_settings.yeekee_audit.index')) {
+        if (! bouncer()->hasPermission('lotto.yeekee.audit.view')) {
             abort(403, 'Forbidden');
         }
     }
 
-    private function assertCanViewShoots(): void
+    private function maskNumberText(string $text): string
     {
-        if (! bouncer()->hasPermission('lotto_settings.yeekee_audit.view_shoots')) {
-            abort(403, 'Forbidden');
+        $len = mb_strlen($text);
+        if ($len <= 1) {
+            return str_repeat('*', max(1, $len));
         }
-    }
 
-    private function assertCanViewSnapshot(): void
-    {
-        if (! bouncer()->hasPermission('lotto_settings.yeekee_audit.view_snapshot')) {
-            abort(403, 'Forbidden');
-        }
+        return mb_substr($text, 0, 1).str_repeat('*', $len - 1);
     }
 
     private function resolveDate(mixed $value): ?string
