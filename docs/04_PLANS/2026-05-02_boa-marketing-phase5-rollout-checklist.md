@@ -1,3 +1,9 @@
+> สถานะ: DONE
+> วันที่: 2026-05-02
+> โดเมน/เรื่อง: marketing / frontend-api / lotto
+> แทนแผนเก่า: -
+> อ้างอิง: BOA-211
+
 # BOA Marketing Phase 5 Rollout Checklist
 
 วันที่อัปเดต: 2026-05-02
@@ -34,4 +40,3 @@
 - [ ] ตรวจ log `marketing/clicks`, `confirm`, `submitted` ไม่มี 500 ใหม่
 - [ ] ตรวจ dashboard campaign ไม่แสดง fallback bonus เป็น 0 ตลอดเมื่อมีข้อมูลจริง
 - [ ] ตรวจ alert/error rate ของ auto pull command หลังเปิดใช้งาน
-
