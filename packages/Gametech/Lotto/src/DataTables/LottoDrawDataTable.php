@@ -4,6 +4,7 @@ namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Transformers\LottoDrawTransformer;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
@@ -44,6 +45,13 @@ class LottoDrawDataTable extends DataTable
     {
         $query = $model->newQuery()
             ->select('lotto_draws.*')
+            ->selectSub(
+                YeekeeRound::query()
+                    ->select('round_no')
+                    ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                    ->limit(1),
+                'yeekee_round_no'
+            )
             ->with('market')
             ->withCount([
                 'blockedNumbers as blocked_numbers_count',

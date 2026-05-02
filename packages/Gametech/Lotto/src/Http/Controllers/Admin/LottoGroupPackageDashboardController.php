@@ -4,9 +4,9 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\Enums\BetType;
-use Gametech\Lotto\Models\LottoGroupPackage;
 use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoGroupPackage;
 
 class LottoGroupPackageDashboardController extends AppBaseController
 {
@@ -46,7 +46,6 @@ class LottoGroupPackageDashboardController extends AppBaseController
                 $query->orderBy('bet_type');
             }])
             ->whereIn('group_id', $groupIds)
-            ->where('is_active', true)
             ->orderBy('id')
             ->get()
             ->groupBy('group_id');
