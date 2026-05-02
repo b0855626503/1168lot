@@ -16,7 +16,7 @@ class BackfillYeekeeRoundShootingWindowCommand extends Command
         {--round-id= : Backfill only one round}
         {--chunk= : Chunk size for scan}';
 
-    protected $description = 'Backfill yeekee round shooting window contract and counters';
+    protected $description = 'Backfill yeekee round shooting window contract';
 
     public function handle(): int
     {
@@ -41,8 +41,6 @@ class BackfillYeekeeRoundShootingWindowCommand extends Command
                 'r.shoot_closed_at',
                 'r.shoot_snapshot_json',
                 'r.shoot_snapshot_hash',
-                'r.shoot_count',
-                'r.last_shoot_position',
                 'ys.round_config',
             ]);
 
@@ -80,18 +78,6 @@ class BackfillYeekeeRoundShootingWindowCommand extends Command
         $baseQuery
             ->orderBy('r.id')
             ->chunkById($chunkSize, function ($rows) use (&$summary, $apply): void {
-                $roundIds = collect($rows)->pluck('id')->map(static fn ($id): int => (int) $id)->all();
-                if (empty($roundIds)) {
-                    return;
-                }
-
-                $shootAgg = DB::table('yeekee_shoots')
-                    ->whereIn('yeekee_round_id', $roundIds)
-                    ->selectRaw('yeekee_round_id, COUNT(*) AS shoot_count, MAX(position) AS max_position')
-                    ->groupBy('yeekee_round_id')
-                    ->get()
-                    ->keyBy('yeekee_round_id');
-
                 foreach ($rows as $row) {
                     $summary['scanned']++;
 
@@ -122,19 +108,14 @@ class BackfillYeekeeRoundShootingWindowCommand extends Command
 
                     $summary['updatable']++;
 
-                    $aggregate = $shootAgg->get((int) $row->id);
-                    $targetShootCount = (int) ($aggregate->shoot_count ?? 0);
-                    $targetLastPosition = (int) ($aggregate->max_position ?? 0);
                     $shootWindowSeconds = $this->resolveShootWindowSeconds($row->round_config ?? null);
                     $targetShootOpenAt = (string) $row->bet_open_at;
                     $targetShootCloseAt = Carbon::parse((string) $row->bet_close_at)->addSeconds($shootWindowSeconds)->format('Y-m-d H:i:s');
 
                     $needsWindowFix = (string) $row->shoot_open_at !== $targetShootOpenAt
                         || (string) $row->shoot_close_at !== $targetShootCloseAt;
-                    $needsCounterFix = (int) ($row->shoot_count ?? 0) !== $targetShootCount
-                        || (int) ($row->last_shoot_position ?? 0) !== $targetLastPosition;
 
-                    if (! $needsWindowFix && ! $needsCounterFix) {
+                    if (! $needsWindowFix) {
                         $summary['skipped']['already_aligned']++;
 
                         continue;
@@ -151,8 +132,6 @@ class BackfillYeekeeRoundShootingWindowCommand extends Command
                         ->update([
                             'shoot_open_at' => $targetShootOpenAt,
                             'shoot_close_at' => $targetShootCloseAt,
-                            'shoot_count' => $targetShootCount,
-                            'last_shoot_position' => $targetLastPosition,
                             'updated_at' => now(),
                         ]);
 

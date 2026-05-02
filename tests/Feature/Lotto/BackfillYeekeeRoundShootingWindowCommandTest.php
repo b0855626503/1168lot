@@ -18,7 +18,6 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
 
     protected function tearDown(): void
     {
-        Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('yeekee_market_settings');
         Schema::dropIfExists('lotto_markets');
@@ -41,11 +40,6 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
             'shoot_close_at' => '2026-05-02 10:16:00',
         ]);
 
-        DB::table('yeekee_shoots')->insert([
-            ['yeekee_round_id' => 1001, 'position' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['yeekee_round_id' => 1001, 'position' => 2, 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
         $before = DB::table('yeekee_rounds')->where('id', 1001)->first();
         $exit = Artisan::call('lotto:yeekee:backfill-shooting-window');
         $after = DB::table('yeekee_rounds')->where('id', 1001)->first();
@@ -53,11 +47,9 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
         $this->assertSame(0, $exit);
         $this->assertSame((string) $before->shoot_open_at, (string) $after->shoot_open_at);
         $this->assertSame((string) $before->shoot_close_at, (string) $after->shoot_close_at);
-        $this->assertSame((int) $before->shoot_count, (int) $after->shoot_count);
-        $this->assertSame((int) $before->last_shoot_position, (int) $after->last_shoot_position);
     }
 
-    public function test_apply_updates_shoot_open_at_and_counters(): void
+    public function test_apply_updates_shooting_window_only(): void
     {
         $this->seedMarket(11, 'yeekee');
         $this->seedMarketSetting(11, 45);
@@ -72,19 +64,15 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
             'shoot_close_at' => '2026-05-02 11:16:00',
         ]);
 
-        DB::table('yeekee_shoots')->insert([
-            ['yeekee_round_id' => 1002, 'position' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['yeekee_round_id' => 1002, 'position' => 4, 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
+        $before = DB::table('yeekee_rounds')->where('id', 1002)->first();
         $exit = Artisan::call('lotto:yeekee:backfill-shooting-window', ['--apply' => true]);
         $round = DB::table('yeekee_rounds')->where('id', 1002)->first();
 
         $this->assertSame(0, $exit);
         $this->assertSame((string) $round->bet_open_at, (string) $round->shoot_open_at);
         $this->assertSame('2026-05-02 11:15:45', (string) $round->shoot_close_at);
-        $this->assertSame(2, (int) $round->shoot_count);
-        $this->assertSame(4, (int) $round->last_shoot_position);
+        $this->assertSame((int) $before->shoot_count, (int) $round->shoot_count);
+        $this->assertSame((int) $before->last_shoot_position, (int) $round->last_shoot_position);
     }
 
     public function test_apply_skips_frozen_final_and_snapshot_rounds(): void
@@ -134,10 +122,6 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
             'shoot_close_at' => '2026-05-02 13:16:00',
         ]);
 
-        DB::table('yeekee_shoots')->insert([
-            ['yeekee_round_id' => 1006, 'position' => 5, 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
         $firstExit = Artisan::call('lotto:yeekee:backfill-shooting-window', ['--apply' => true]);
         $first = DB::table('yeekee_rounds')->where('id', 1006)->first();
 
@@ -148,8 +132,6 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
         $this->assertSame(0, $secondExit);
         $this->assertSame((string) $first->shoot_open_at, (string) $second->shoot_open_at);
         $this->assertSame((string) $first->shoot_close_at, (string) $second->shoot_close_at);
-        $this->assertSame((int) $first->shoot_count, (int) $second->shoot_count);
-        $this->assertSame((int) $first->last_shoot_position, (int) $second->last_shoot_position);
     }
 
     public function test_apply_uses_zero_when_setting_is_null_or_missing(): void
@@ -254,11 +236,5 @@ class BackfillYeekeeRoundShootingWindowCommandTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('yeekee_shoots', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('yeekee_round_id');
-            $table->unsignedInteger('position');
-            $table->timestamps();
-        });
     }
 }
