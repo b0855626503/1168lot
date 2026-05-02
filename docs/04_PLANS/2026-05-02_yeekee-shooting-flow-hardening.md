@@ -84,7 +84,7 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 
 **ทำ:**
 - Admin controller `YeekeeAuditController` (read-only, ไม่แตะ service logic)
-- ACL permission ใหม่ 4 รายการ (ดูหัวข้อ Permission Contract)
+- ACL permission ใหม่ 2 รายการ (ดูหัวข้อ Permission Contract)
 - Admin routes (GET only)
 - Blade view สำหรับ audit UI
 - Feature tests ครอบ permission enforcement และ JSON endpoints

@@ -65,13 +65,17 @@
                 + '<th>รอบที่</th><th>สถานะ</th><th>ยิงแล้ว</th><th>ปิดยิงเมื่อ</th><th>Snapshot</th><th></th>'
                 + '</tr></thead><tbody>';
             rounds.forEach(function (r) {
+                var safeRoundId = toRoundId(r.id);
+                if (safeRoundId <= 0) {
+                    return;
+                }
                 html += '<tr>'
                     + '<td>' + escapeHtml(r.round_no) + '</td>'
                     + '<td>' + escapeHtml(r.status) + '</td>'
                     + '<td>' + escapeHtml(r.shoot_count) + '</td>'
                     + '<td>' + escapeHtml(r.shoot_closed_at || '-') + '</td>'
                     + '<td>' + (r.has_snapshot ? '<span class="badge badge-success">มี</span>' : '<span class="badge badge-secondary">ไม่มี</span>') + '</td>'
-                    + '<td><button class="btn btn-xs btn-info js-load-yeekee-audit-detail" data-round-id="' + escapeHtml(r.id) + '" type="button">ดู Audit</button></td>'
+                    + '<td><button class="btn btn-xs btn-info js-load-yeekee-audit-detail" data-round-id="' + safeRoundId + '" type="button">ดู Audit</button></td>'
                     + '</tr>';
             });
             html += '</tbody></table>';
