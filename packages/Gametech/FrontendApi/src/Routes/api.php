@@ -169,6 +169,10 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.cancel');
             Route::post('lotto/yeekee/rounds/{roundId}/shoot', [LottoController::class, 'submitShoot'])
                 ->name('frontend.api.v1.lotto.yeekee.shoot');
+            Route::get('lotto/yeekee/rounds', [LottoController::class, 'yeekeeRounds'])
+                ->name('frontend.api.v1.lotto.yeekee.rounds.list');
+            Route::get('lotto/yeekee/rounds/{roundId}', [LottoController::class, 'yeekeeRound'])
+                ->name('frontend.api.v1.lotto.yeekee.round.detail');
             Route::get('lotto/yeekee/markets/{marketId}/current-round', [LottoController::class, 'yeekeeCurrentRound'])
                 ->name('frontend.api.v1.lotto.yeekee.current_round');
             Route::get('lotto/yeekee/markets/{marketId}/rounds', [LottoController::class, 'yeekeeMarketRounds'])

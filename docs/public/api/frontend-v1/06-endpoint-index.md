@@ -81,26 +81,26 @@
 | POST | `/api/v1/reward/redeem` | Bearer token | แลกแต้มกับ reward ที่เลือก โดยระบบตรวจแต้ม, เวลาใช้งาน, สต๊อก, limit และบันทึก redemption | [Open](/docs/api/frontend-v1/07-route-reference#post-apiv1rewardredeem) |
 | GET | `/api/v1/reward/history` | Bearer token | ดึงประวัติการแลก reward และสรุปเป็นเส้นเวลา (timeline) แยกตามวัน | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1rewardhistory) |
 | POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Bearer token | ส่งเลข 5 หลักเพื่อชิงลำดับยิงในรอบยี่กี่ | [Open](/docs/api/frontend-v1/07-route-reference#post-apiv1lottoyeekeeroundsroundidshoot) |
+| GET | `/api/v1/lotto/yeekee/rounds` | Bearer token | ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุ (รองรับกรอง market_id) | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeerounds) |
+| GET | `/api/v1/lotto/yeekee/rounds/{roundId}` | Bearer token | ดึงรายละเอียดรอบยี่กี่รายรอบ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundid) |
 | GET | `/api/v1/lotto/yeekee/markets/{marketId}/current-round` | Bearer token | ดึงรอบยี่กี่ปัจจุบันของ market | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeemarketsmarketidcurrent-round) |
 | GET | `/api/v1/lotto/yeekee/markets/{marketId}/rounds` | Bearer token | ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุใน market | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeemarketsmarketidrounds) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Bearer token | ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน) | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidshoots) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/reward-status` | Bearer token | ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidreward-status) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/result-proof` | Bearer token | ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidresult-proof) |
 
-## Yeekee Hardening Target Contract (Planned)
+## Yeekee Hardening Contract (Current Runtime)
 
-Status: `Target Contract / Planned`  
-Implemented in: `PR-04`  
-Do not treat as active runtime endpoint until `PR-04` is merged.
+Status: `Current Runtime Contract`  
+Implemented in: `PR-04`
 
 หมายเหตุ:
-- ส่วนนี้เป็น target contract สำหรับงาน hardening เท่านั้น
-- ห้ามลบหรือเขียนทับ endpoint เดิมที่อยู่ใน current runtime routes ด้านบน
-- PR-01 เป็น docs-only ไม่มี runtime behavior change
+- `POST /shoot` ตอบ `429` พร้อม cooldown metadata เมื่อชน cooldown
+- `GET /shoots` ตอบหมายเลขแบบ masked ตาม hardening contract
 
 | Method | Endpoint | Status | Implemented in | Note |
 |---|---|---|---|---|
-| GET | `/api/v1/lotto/yeekee/rounds` | Target Contract / Planned | PR-04 | new endpoint |
-| GET | `/api/v1/lotto/yeekee/rounds/{round}` | Target Contract / Planned | PR-04 | new endpoint |
-| POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Target Contract / Planned | PR-03/PR-04 | existing endpoint to be hardened |
-| GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Target Contract / Planned | PR-03/PR-04 | existing endpoint to be hardened |
+| GET | `/api/v1/lotto/yeekee/rounds` | Current Runtime Contract | PR-04 | new endpoint (active) |
+| GET | `/api/v1/lotto/yeekee/rounds/{roundId}` | Current Runtime Contract | PR-04 | new endpoint (active) |
+| POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Current Runtime Contract | PR-03/PR-04 | hardened: cooldown 429 contract |
+| GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Current Runtime Contract | PR-03/PR-04 | hardened: masked number_text |

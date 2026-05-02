@@ -3,6 +3,9 @@
 namespace Tests\Feature\FrontendApi;
 
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
+use Gametech\Lotto\Models\YeekeeShoot;
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
+use Gametech\Lotto\Services\YeekeeShootService;
 use Gametech\Member\Models\Member;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -677,5 +680,240 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.1.is_open_for_play', false);
 
         Carbon::setTestNow();
+    }
+
+    public function test_yeekee_rounds_returns_all_markets_for_given_date(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-29 10:05:00'));
+
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            ['id' => 9, 'group_id' => 1, 'name' => 'Yeekee 1', 'code' => 'yeekee-1', 'is_enabled' => 1, 'result_mode' => 'yeekee'],
+            ['id' => 10, 'group_id' => 1, 'name' => 'Yeekee 2', 'code' => 'yeekee-2', 'is_enabled' => 1, 'result_mode' => 'yeekee'],
+            ['id' => 11, 'group_id' => 1, 'name' => 'Normal', 'code' => 'normal-1', 'is_enabled' => 1, 'result_mode' => 'normal'],
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            [
+                'id' => 701,
+                'market_id' => 9,
+                'lotto_draw_id' => 301,
+                'round_date' => '2026-04-29',
+                'round_no' => 1,
+                'bet_open_at' => '2026-04-29 10:00:00',
+                'bet_close_at' => '2026-04-29 10:15:00',
+                'shoot_open_at' => '2026-04-29 10:15:00',
+                'shoot_close_at' => '2026-04-29 10:16:00',
+                'result_compute_at' => '2026-04-29 10:17:00',
+                'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+                'status' => 'open_bet',
+                'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 702,
+                'market_id' => 10,
+                'lotto_draw_id' => 302,
+                'round_date' => '2026-04-29',
+                'round_no' => 2,
+                'bet_open_at' => '2026-04-29 10:20:00',
+                'bet_close_at' => '2026-04-29 10:35:00',
+                'shoot_open_at' => '2026-04-29 10:35:00',
+                'shoot_close_at' => '2026-04-29 10:36:00',
+                'result_compute_at' => '2026-04-29 10:37:00',
+                'expected_settlement_deadline_at' => '2026-04-29 10:42:00',
+                'status' => 'open_bet',
+                'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds', 'GET', ['draw_date' => '2026-04-29']);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeRounds($request));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.count', 2);
+        $response->assertJsonPath('data.items.0.round_id', 701);
+        $response->assertJsonPath('data.items.1.round_id', 702);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_yeekee_round_returns_detail_by_round_id(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-29 10:05:00'));
+
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 9,
+            'group_id' => 1,
+            'name' => 'Yeekee 1',
+            'code' => 'yeekee-1',
+            'is_enabled' => 1,
+            'result_mode' => 'yeekee',
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 711,
+            'market_id' => 9,
+            'lotto_draw_id' => 311,
+            'round_date' => '2026-04-29',
+            'round_no' => 11,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'open_bet',
+            'config_snapshot_json' => json_encode(['formula_config' => ['preset' => 'SHOOTS_SUM_ONLY']]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/711', 'GET');
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeRound($request, 711));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.round_id', 711);
+        $response->assertJsonPath('data.market_id', 9);
+        $response->assertJsonPath('data.is_open_for_play', true);
+        $response->assertJsonPath('data.is_final', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_yeekee_shoots_masks_number_text_and_respects_config_limit(): void
+    {
+        config()->set('yeekee.shoot_list_default_limit', 1);
+        config()->set('yeekee.shoot_list_max_limit', 2);
+
+        $member = new Member;
+        $member->code = 7788;
+
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            'id' => 9,
+            'group_id' => 1,
+            'name' => 'Yeekee Market',
+            'code' => 'yeekee-market',
+            'is_enabled' => 1,
+            'result_mode' => 'yeekee',
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 720,
+            'market_id' => 9,
+            'lotto_draw_id' => 320,
+            'round_date' => '2026-04-29',
+            'round_no' => 20,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'shoot_open',
+            'config_snapshot_json' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_shoots')->insert([
+            [
+                'yeekee_round_id' => 720,
+                'lotto_draw_id' => 320,
+                'market_id' => 9,
+                'member_id' => 1,
+                'position' => 1,
+                'number_text' => '12345',
+                'number_value' => 12345,
+                'submitted_at' => now()->subSeconds(30)->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'yeekee_round_id' => 720,
+                'lotto_draw_id' => 320,
+                'market_id' => 9,
+                'member_id' => 2,
+                'position' => 2,
+                'number_text' => '99999',
+                'number_value' => 99999,
+                'submitted_at' => now()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/720/shoots', 'GET', ['limit' => 999]);
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 720));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.limit', 2);
+        $response->assertJsonPath('data.count', 2);
+        $response->assertJsonPath('data.items.0.number_text', '***99');
+        $response->assertJsonPath('data.items.1.number_text', '***45');
+    }
+
+    public function test_submit_shoot_returns_http_429_on_cooldown_exception(): void
+    {
+        $member = new Member;
+        $member->code = 1001;
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/500/shoot', 'POST', [
+            'number' => '12345',
+        ]);
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+
+        $service = new class extends YeekeeShootService
+        {
+            public function submitShoot(
+                int $memberId,
+                int $roundId,
+                string $numberText,
+                ?string $ipAddress = null,
+                ?string $userAgent = null
+            ): YeekeeShoot {
+                throw new YeekeeShootCooldownException(
+                    cooldownSeconds: 6,
+                    remainingCooldownSeconds: 4,
+                    nextAllowedAt: '2026-05-02 12:00:06'
+                );
+            }
+        };
+
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->submitShoot($request, 500, $service));
+
+        $response->assertStatus(429);
+        $response->assertJsonPath('success', false);
+        $response->assertJsonPath('error_code', 'YEEKEE_SHOOT_COOLDOWN');
+        $response->assertJsonPath('cooldown_seconds', 6);
+        $response->assertJsonPath('remaining_cooldown_seconds', 4);
+        $response->assertJsonPath('next_allowed_at', '2026-05-02 12:00:06');
     }
 }
