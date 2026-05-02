@@ -240,6 +240,20 @@ class YeekeeResultEngineService
             ->all();
 
         $shootClosedAt = ($round->shoot_closed_at ?? now())->format('Y-m-d H:i:s');
+        $snapshotShootCount = count($shootsSnapshot);
+        $snapshotLastPosition = (int) ($shootsSnapshot[count($shootsSnapshot) - 1]['position'] ?? 0);
+        if ((int) $round->shoot_count !== $snapshotShootCount || (int) $round->last_shoot_position !== $snapshotLastPosition) {
+            Log::warning('yeekee.snapshot.counter_mismatch', [
+                'round_id' => (int) $round->id,
+                'lotto_draw_id' => (int) $round->lotto_draw_id,
+                'market_id' => (int) $round->market_id,
+                'round_shoot_count' => (int) $round->shoot_count,
+                'snapshot_shoot_count' => $snapshotShootCount,
+                'round_last_shoot_position' => (int) $round->last_shoot_position,
+                'snapshot_last_shoot_position' => $snapshotLastPosition,
+            ]);
+        }
+
         $payload = [
             'version' => 1,
             'round_id' => (int) $round->id,

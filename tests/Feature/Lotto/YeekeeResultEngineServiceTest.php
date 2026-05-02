@@ -180,15 +180,15 @@ class YeekeeResultEngineServiceTest extends TestCase
         $result = app(YeekeeResultEngineService::class)->computeFromRound(4);
 
         $this->assertNotSame('', $result['raw_result']);
-        Log::shouldHaveReceived('warning')->once()->with(
-            'yeekee.result_engine.legacy_formula_fallback',
-            \Mockery::on(static function (array $context): bool {
-                return (int) ($context['yeekee_round_id'] ?? 0) === 4
+        Log::shouldHaveReceived('warning')
+            ->withArgs(static function (string $event, array $context): bool {
+                return $event === 'yeekee.result_engine.legacy_formula_fallback'
+                    && (int) ($context['yeekee_round_id'] ?? 0) === 4
                     && (int) ($context['lotto_draw_id'] ?? 0) === 104
                     && (string) ($context['fallback_preset'] ?? '') === 'SHOOTS_SUM_MINUS_POSITION'
                     && (string) ($context['reason'] ?? '') === 'missing formula_config';
             })
-        );
+            ->once();
     }
 
     public function test_compute_throws_recoverable_exception_when_required_shoot_position_is_missing(): void
