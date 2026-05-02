@@ -7,8 +7,10 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Models\YeekeeRound;
+use Gametech\Lotto\Services\DrawService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class GenerateYeekeeRoundsCommand extends Command
 {
@@ -19,6 +21,11 @@ class GenerateYeekeeRoundsCommand extends Command
         {--dry-run : Preview only without insert}';
 
     protected $description = 'Generate yeekee draws and rounds from yeekee market configuration';
+
+    public function __construct(private DrawService $drawService)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -146,6 +153,13 @@ class GenerateYeekeeRoundsCommand extends Command
                         ->first();
 
                     if ($existingRoundByNaturalKey instanceof YeekeeRound) {
+                        if (! $dryRun) {
+                            $drawForExistingRound = LottoDraw::query()->find((int) $existingRoundByNaturalKey->lotto_draw_id);
+                            if ($drawForExistingRound instanceof LottoDraw) {
+                                $this->ensureDrawBetSnapshot($drawForExistingRound);
+                            }
+                        }
+
                         $summary['draw_exists']++;
                         $summary['round_exists']++;
                         $daySummary['draw_exists']++;
@@ -217,6 +231,8 @@ class GenerateYeekeeRoundsCommand extends Command
                         $round = null;
                         DB::transaction(function () use ($drawLookup, $drawPayload, $roundPayload, &$draw, &$round): void {
                             $draw = LottoDraw::query()->firstOrCreate($drawLookup, $drawPayload);
+                            $this->ensureDrawBetSnapshot($draw);
+
                             $round = YeekeeRound::query()->firstOrCreate(
                                 ['lotto_draw_id' => (int) $draw->id],
                                 $roundPayload
@@ -381,5 +397,16 @@ class GenerateYeekeeRoundsCommand extends Command
         }
 
         return 'open';
+    }
+
+    private function ensureDrawBetSnapshot(LottoDraw $draw): void
+    {
+        if (! Schema::hasTable('lotto_draw_bet_settings')) {
+            return;
+        }
+
+        if (! $draw->betSettings()->exists()) {
+            $this->drawService->snapshotBetSettings($draw);
+        }
     }
 }
