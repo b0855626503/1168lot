@@ -85,7 +85,7 @@ class GenerateYeekeeRoundsCommand extends Command
                 $roundConfig = is_array($setting?->round_config) ? $setting->round_config : [];
 
                 $durationMinutes = max(1, (int) ($roundConfig['round_duration_minutes'] ?? 15));
-                $shootWindowSeconds = max(0, (int) ($roundConfig['shoot_window_after_bet_close_seconds'] ?? 60));
+                $shootWindowSeconds = max(0, (int) ($roundConfig['shoot_window_after_bet_close_seconds'] ?? 0));
                 $settlementDelaySeconds = max(0, (int) ($roundConfig['settlement_delay_after_shoot_close_seconds'] ?? 60));
                 $expectedPayoutSlaMinutes = max(0, (int) ($roundConfig['expected_payout_sla_minutes'] ?? 5));
 
@@ -103,8 +103,8 @@ class GenerateYeekeeRoundsCommand extends Command
                     $roundNo = $index + 1;
                     $betOpenAt = $dayStart->copy();
                     $betCloseAt = $dayStart->copy()->addMinutes($roundNo * $durationMinutes);
-                    $shootOpenAt = $betCloseAt->copy();
-                    $shootCloseAt = $shootOpenAt->copy()->addSeconds($shootWindowSeconds);
+                    $shootOpenAt = $betOpenAt->copy();
+                    $shootCloseAt = $betCloseAt->copy()->addSeconds($shootWindowSeconds);
                     $resultComputeAt = $shootCloseAt->copy()->addSeconds($settlementDelaySeconds);
                     $expectedSettlementDeadlineAt = $resultComputeAt->copy()->addMinutes($expectedPayoutSlaMinutes);
 

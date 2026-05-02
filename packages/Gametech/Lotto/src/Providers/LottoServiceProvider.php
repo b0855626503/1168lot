@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Providers;
 
 use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\BackfillYeekeeRoundCountersCommand;
+use Gametech\Lotto\Console\Commands\BackfillYeekeeRoundShootingWindowCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMissingResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
@@ -141,6 +142,7 @@ class LottoServiceProvider extends ServiceProvider
             BootstrapMissingResultSourcesCommand::class,
             BackfillLottoPayoutCommand::class,
             BackfillYeekeeRoundCountersCommand::class,
+            BackfillYeekeeRoundShootingWindowCommand::class,
             CleanupBrowserRuntimeArtifactsCommand::class,
             GenerateAutoLottoDrawsCommand::class,
             GenerateYeekeeRoundsCommand::class,
