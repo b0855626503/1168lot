@@ -325,4 +325,28 @@ return [
         'route' => 'admin.lotto.winning_report.export',
         'sort' => 8,
     ],
+    [
+        'key' => 'lotto_settings.yeekee_audit',
+        'name' => 'Yeekee Audit',
+        'route' => 'admin.lotto.yeekee_audit.index',
+        'sort' => 90,
+    ],
+    [
+        'key' => 'lotto_settings.yeekee_audit.index',
+        'name' => 'เห็นเมนู Yeekee Audit',
+        'route' => 'admin.lotto.yeekee_audit.index',
+        'sort' => 1,
+    ],
+    [
+        'key' => 'lotto_settings.yeekee_audit.view_shoots',
+        'name' => 'สิทธิ์ ดูรายการยิงเลข Yeekee',
+        'route' => 'admin.lotto.yeekee_audit.shoots',
+        'sort' => 2,
+    ],
+    [
+        'key' => 'lotto_settings.yeekee_audit.view_snapshot',
+        'name' => 'สิทธิ์ ดู Snapshot Yeekee (Sensitive)',
+        'route' => 'admin.lotto.yeekee_audit.snapshot',
+        'sort' => 3,
+    ],
 ];

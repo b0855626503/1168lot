@@ -65,8 +65,107 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 - PR-03 Atomic Shoot Service + Cooldown
 - PR-04 Frontend API
 - PR-05 Snapshot Freeze + Result Integration
-- PR-06 Admin Audit + Sensitive Permission
+- PR-06 Admin Audit + Sensitive Permission ← **กำลังทำ**
 - PR-07 Hardening + Regression Gate
+
+---
+
+## PR-06 Admin Audit + Permission Contract
+
+> Status: IN PROGRESS — BOA-199
+> Branch: `codex/boa-199-pr-06-admin-audit-permission`
+
+### Objective
+
+เพิ่ม admin view สำหรับตรวจสอบ Yeekee shoots และ snapshot ย้อนหลัง
+พร้อม permission แยกสำหรับ sensitive data
+
+### Scope
+
+**ทำ:**
+- Admin controller `YeekeeAuditController` (read-only, ไม่แตะ service logic)
+- ACL permission ใหม่ 4 รายการ (ดูหัวข้อ Permission Contract)
+- Admin routes (GET only)
+- Blade view สำหรับ audit UI
+- Feature tests ครอบ permission enforcement และ JSON endpoints
+
+**ห้ามทำ:**
+- ห้ามแก้ `YeekeeShootService`
+- ห้ามแก้ `YeekeeResultEngineService` (เว้นแต่ read-only helper)
+- ห้ามเพิ่ม migration
+- ห้ามเปลี่ยน frontend API contract
+- ห้ามทำ PR-07 regression gate ใน PR นี้
+
+### Permission Contract
+
+| ACL Key | ชื่อ | หมายเหตุ |
+|---|---|---|
+| `lotto_settings.yeekee_audit` | Yeekee Audit (parent) | เห็นใน role menu |
+| `lotto_settings.yeekee_audit.index` | เห็นเมนู Yeekee Audit | ต้องมีจึงเข้าหน้าได้ |
+| `lotto_settings.yeekee_audit.view_shoots` | ดูรายการยิงเลข | ดู yeekee_shoots ดิบ (member_id, number_text, position) |
+| `lotto_settings.yeekee_audit.view_snapshot` | ดู Snapshot (Sensitive) | ดู shoot_snapshot_json + hash ทั้งก้อน |
+
+- ขาด `index` permission → 403 ทุก endpoint
+- ขาด `view_shoots` → 403 เฉพาะ `GET .../rounds/{id}/shoots`
+- ขาด `view_snapshot` → 403 เฉพาะ `GET .../rounds/{id}/snapshot`
+- `view_snapshot` จัดเป็น sensitive เพราะเปิดเผย canonical seed payload
+
+### Admin Endpoint Contract (read-only)
+
+| Route Name | Path | Permission Required |
+|---|---|---|
+| `admin.lotto.yeekee_audit.index` | `GET /lotto/yeekee-audit` | `yeekee_audit.index` |
+| `admin.lotto.yeekee_audit.rounds` | `GET /lotto/yeekee-audit/rounds` | `yeekee_audit.index` |
+| `admin.lotto.yeekee_audit.shoots` | `GET /lotto/yeekee-audit/rounds/{id}/shoots` | `yeekee_audit.index` + `view_shoots` |
+| `admin.lotto.yeekee_audit.snapshot` | `GET /lotto/yeekee-audit/rounds/{id}/snapshot` | `yeekee_audit.index` + `view_snapshot` |
+
+### Snapshot Data Contract
+
+`showSnapshot` ส่ง `shoot_snapshot_json` ดิบจาก `yeekee_rounds.shoot_snapshot_json`
+โดย canonical structure คือ (ตาม PR-05):
+
+```json
+{
+  "version": 1,
+  "round_id": ...,
+  "lotto_draw_id": ...,
+  "market_id": ...,
+  "round_no": ...,
+  "round_date": "...",
+  "shoot_open_at": "...",
+  "shoot_close_at": "...",
+  "shoot_closed_at": "...",
+  "shoot_count": ...,
+  "last_shoot_position": ...,
+  "shoots": [...]
+}
+```
+
+`snapshot_hash` = sha256 ของ payload ข้างบน (ตาม PR-05)
+
+### Data Exposed per Endpoint
+
+**loadRounds**: ไม่รวม `shoot_snapshot_json` ดิบ — แสดงแค่ `has_snapshot: bool`
+
+**loadShoots** (`view_shoots` permission):
+- `id`, `position`, `number_text`, `member_id`, `submitted_at`
+- ไม่เปิด `ip_address`, `user_agent`, `metadata_json`
+
+**showSnapshot** (`view_snapshot` permission):
+- `shoot_snapshot_json` ทั้งก้อน
+- `shoot_snapshot_hash`
+
+### Files Changed
+
+| ไฟล์ | ประเภท |
+|---|---|
+| `packages/Gametech/Lotto/src/Http/Controllers/Admin/YeekeeAuditController.php` | ใหม่ |
+| `packages/Gametech/Lotto/src/Config/acl.php` | แก้ไข (เพิ่ม ACL) |
+| `packages/Gametech/Lotto/src/Routes/admin.php` | แก้ไข (เพิ่ม routes) |
+| `packages/Gametech/Lotto/src/Models/YeekeeRound.php` | แก้ไข (เพิ่ม `market()` relationship) |
+| `packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/yeekee_audit/index.blade.php` | ใหม่ |
+| `tests/Feature/Lotto/YeekeeAuditControllerTest.php` | ใหม่ |
+| `docs/04_PLANS/2026-05-02_yeekee-shooting-flow-hardening.md` | แก้ไข (เพิ่ม PR-06 contract) |
 
 ## Acceptance Criteria
 - มีเอกสารแผนนี้ใน `docs/04_PLANS`
