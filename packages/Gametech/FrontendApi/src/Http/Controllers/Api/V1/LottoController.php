@@ -616,6 +616,7 @@ class LottoController extends BaseController
             $payload = $this->mapYeekeeRoundPayload($market, $round);
             $payload['is_open_for_play'] = ! $isFinal && $serverNow->between($betOpenAt, $betCloseAt);
             $payload['is_final'] = $isFinal;
+            $payload['server_time'] = $serverNow->format('Y-m-d H:i:s');
 
             return $this->sendResponse($payload, 'ดึงรอบยี่กี่สำเร็จ');
         } catch (\Throwable $exception) {

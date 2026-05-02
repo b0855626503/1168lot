@@ -795,6 +795,7 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.market_id', 9);
         $response->assertJsonPath('data.is_open_for_play', true);
         $response->assertJsonPath('data.is_final', false);
+        $response->assertJsonPath('data.server_time', now()->format('Y-m-d H:i:s'));
 
         Carbon::setTestNow();
     }
