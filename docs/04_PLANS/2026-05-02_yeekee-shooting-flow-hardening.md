@@ -1,4 +1,4 @@
-> สถานะ: PENDING
+> สถานะ: ACTIVE
 > วันที่: 2026-05-02
 > โดเมน/เรื่อง: lotto / yeekee
 > แทนแผนเก่า: -
@@ -16,7 +16,7 @@
 - ห้ามเปลี่ยน result formula behavior
 
 ## Current Runtime Contract
-สัญญานี้คือ endpoint ที่มีอยู่จริงและใช้งานได้ในระบบปัจจุบัน
+อ้างอิงจากเอกสาร/contract ปัจจุบันใน repo ก่อน PR-01; PR-01 ไม่ยืนยันหรือเปลี่ยน runtime behavior
 
 - `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
 - `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
@@ -28,10 +28,13 @@
 ## Target Contract (Planned)
 สัญญานี้เป็นเป้าหมายของ Yeekee hardening เท่านั้น และยังไม่ใช่ active runtime ใน PR-01
 
+New target endpoints in PR-04:
 - `GET /api/v1/lotto/yeekee/rounds`
 - `GET /api/v1/lotto/yeekee/rounds/{round}`
-- `POST /api/v1/lotto/yeekee/rounds/{round}/shoot`
-- `GET /api/v1/lotto/yeekee/rounds/{round}/shoots`
+
+Existing endpoints to be hardened by PR-03/PR-04:
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
 
 Status: `Target Contract / Planned`  
 Implemented in: `PR-04`  

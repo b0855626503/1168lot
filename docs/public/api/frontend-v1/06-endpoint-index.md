@@ -1,6 +1,6 @@
 # Frontend API V1 - Endpoint Index
 
-อัปเดตล่าสุด: 2026-04-30
+อัปเดตล่าสุด: 2026-05-02
 
 ตารางสรุป endpoint และลิงก์เข้า detail ใน `07-route-reference.md`
 
@@ -100,7 +100,7 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 
 | Method | Endpoint | Status | Implemented in | Note |
 |---|---|---|---|---|
-| GET | `/api/v1/lotto/yeekee/rounds` | Target Contract / Planned | PR-04 | planned only |
-| GET | `/api/v1/lotto/yeekee/rounds/{round}` | Target Contract / Planned | PR-04 | planned only |
-| POST | `/api/v1/lotto/yeekee/rounds/{round}/shoot` | Target Contract / Planned | PR-04 | planned only |
-| GET | `/api/v1/lotto/yeekee/rounds/{round}/shoots` | Target Contract / Planned | PR-04 | planned only |
+| GET | `/api/v1/lotto/yeekee/rounds` | Target Contract / Planned | PR-04 | new endpoint |
+| GET | `/api/v1/lotto/yeekee/rounds/{round}` | Target Contract / Planned | PR-04 | new endpoint |
+| POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Target Contract / Planned | PR-03/PR-04 | existing endpoint to be hardened |
+| GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Target Contract / Planned | PR-03/PR-04 | existing endpoint to be hardened |
