@@ -185,9 +185,9 @@
             markets: @json($markets),
             canViewShoots: @json($canViewShoots),
             canViewSnapshot: @json($canViewSnapshot),
-            loadRoundsUrl: @json(route('admin.lotto.yeekee_audit.rounds')),
-            loadShootsBaseUrl: @json(route('admin.lotto.yeekee_audit.rounds', [])),
-            snapshotBaseUrl: @json(route('admin.lotto.yeekee_audit.rounds', [])),
+            loadRoundsUrl: @json(route('admin.lotto.yeekee.audit.rounds')),
+            loadShootsBaseUrl: @json(route('admin.lotto.yeekee.audit.rounds', [])),
+            snapshotBaseUrl: @json(route('admin.lotto.yeekee.audit.rounds', [])),
         };
 
         Vue.component('yeekee-audit-app', {

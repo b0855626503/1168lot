@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 
 use Carbon\Carbon;
 use Gametech\Admin\Http\Controllers\AppBaseController;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,7 @@ class YeekeeAuditController extends AppBaseController
 
         $marketId = $request->query('market_id') ? (int) $request->query('market_id') : null;
         $roundDate = $this->resolveDate($request->query('round_date'));
-        $lottoDrewId = $request->query('lotto_draw_id') ? (int) $request->query('lotto_draw_id') : null;
+        $lottoDrawId = $request->query('lotto_draw_id') ? (int) $request->query('lotto_draw_id') : null;
 
         $query = YeekeeRound::query()
             ->select([
@@ -42,7 +43,10 @@ class YeekeeAuditController extends AppBaseController
                 'shoot_closed_at',
                 'shoot_snapshot_hash',
             ])
-            ->with('market:id,name')
+            ->with('market:id,name,result_mode')
+            ->whereHas('market', static function ($query): void {
+                $query->where('result_mode', LotteryMarket::RESULT_MODE_YEEKEE);
+            })
             ->orderByDesc('round_date')
             ->orderByDesc('round_no');
 
@@ -54,8 +58,8 @@ class YeekeeAuditController extends AppBaseController
             $query->whereDate('round_date', $roundDate);
         }
 
-        if ($lottoDrewId !== null) {
-            $query->where('lotto_draw_id', $lottoDrewId);
+        if ($lottoDrawId !== null) {
+            $query->where('lotto_draw_id', $lottoDrawId);
         }
 
         $rounds = $query->limit(200)->get()->map(static fn (YeekeeRound $r): array => [
@@ -102,8 +106,12 @@ class YeekeeAuditController extends AppBaseController
                 'shoot_snapshot_json',
                 'shoot_snapshot_hash',
             ])
-            ->with('market:id,name')
+            ->with('market:id,name,result_mode')
             ->findOrFail($roundId);
+
+        if (! $round->market || (string) ($round->market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL) !== LotteryMarket::RESULT_MODE_YEEKEE) {
+            abort(404, 'Yeekee round not found');
+        }
 
         $shootColumns = $isSensitive
             ? ['id', 'yeekee_round_id', 'position', 'number_text', 'member_id', 'submitted_at', 'ip_address', 'user_agent']
@@ -171,12 +179,11 @@ class YeekeeAuditController extends AppBaseController
 
     private function maskNumberText(string $text): string
     {
-        $len = mb_strlen($text);
-        if ($len <= 1) {
-            return str_repeat('*', max(1, $len));
+        if (preg_match('/^\d{5}$/', $text) !== 1) {
+            return '*****';
         }
 
-        return mb_substr($text, 0, 1).str_repeat('*', $len - 1);
+        return substr($text, 0, 3).'**';
     }
 
     private function resolveDate(mixed $value): ?string

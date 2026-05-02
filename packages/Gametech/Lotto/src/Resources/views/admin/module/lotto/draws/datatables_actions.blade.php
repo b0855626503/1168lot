@@ -29,7 +29,7 @@
 
     @if($canYeekeeAudit)
         <button type="button" class="btn btn-secondary btn-block btn-xs mr-1 mb-1" onclick="openYeekeeAuditModal({{ $id }})">
-            <i class="fas fa-search"></i> ตรวจสอบยีกี่
+            <i class="fas fa-search"></i> ตรวจสอบยี่กี่
         </button>
     @endif
 </div>

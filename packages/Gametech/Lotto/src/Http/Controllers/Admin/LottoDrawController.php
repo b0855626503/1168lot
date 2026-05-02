@@ -1029,8 +1029,6 @@ class LottoDrawController extends AppBaseController
 
         $permissions = [
             'lotto.yeekee.audit.view_sensitive',
-            'lotto_settings.draws.audit',
-            'lotto_draws.audit',
         ];
 
         foreach ($permissions as $permission) {
@@ -1053,6 +1051,7 @@ class LottoDrawController extends AppBaseController
             'top_2',
             'bottom_2',
             'last_2_digits',
+            'formula_label',
             'no_result',
             'status',
             'label',

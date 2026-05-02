@@ -100,24 +100,18 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 
 | ACL Key | ชื่อ | หมายเหตุ |
 |---|---|---|
-| `lotto_settings.yeekee_audit` | Yeekee Audit (parent) | เห็นใน role menu |
-| `lotto_settings.yeekee_audit.index` | เห็นเมนู Yeekee Audit | ต้องมีจึงเข้าหน้าได้ |
-| `lotto_settings.yeekee_audit.view_shoots` | ดูรายการยิงเลข | ดู yeekee_shoots ดิบ (member_id, number_text, position) |
-| `lotto_settings.yeekee_audit.view_snapshot` | ดู Snapshot (Sensitive) | ดู shoot_snapshot_json + hash ทั้งก้อน |
+| `lotto.yeekee.audit.view` | ดู Yeekee Audit (masked) | เข้าถึง endpoint audit ได้ |
+| `lotto.yeekee.audit.view_sensitive` | ดู Yeekee Audit แบบ Sensitive | เห็นเลขเต็ม, snapshot, proof/raw fields |
 
-- ขาด `index` permission → 403 ทุก endpoint
-- ขาด `view_shoots` → 403 เฉพาะ `GET .../rounds/{id}/shoots`
-- ขาด `view_snapshot` → 403 เฉพาะ `GET .../rounds/{id}/snapshot`
-- `view_snapshot` จัดเป็น sensitive เพราะเปิดเผย canonical seed payload
+- ขาด `lotto.yeekee.audit.view` → 403
+- มี `lotto.yeekee.audit.view` แต่ไม่มี `lotto.yeekee.audit.view_sensitive` → ได้ข้อมูล masked + redacted
 
 ### Admin Endpoint Contract (read-only)
 
 | Route Name | Path | Permission Required |
 |---|---|---|
-| `admin.lotto.yeekee_audit.index` | `GET /lotto/yeekee-audit` | `yeekee_audit.index` |
-| `admin.lotto.yeekee_audit.rounds` | `GET /lotto/yeekee-audit/rounds` | `yeekee_audit.index` |
-| `admin.lotto.yeekee_audit.shoots` | `GET /lotto/yeekee-audit/rounds/{id}/shoots` | `yeekee_audit.index` + `view_shoots` |
-| `admin.lotto.yeekee_audit.snapshot` | `GET /lotto/yeekee-audit/rounds/{id}/snapshot` | `yeekee_audit.index` + `view_snapshot` |
+| `admin.lotto.yeekee.audit.rounds` | `GET /lotto/yeekee/audit/rounds` | `lotto.yeekee.audit.view` |
+| `admin.lotto.yeekee.audit.show` | `GET /lotto/yeekee/rounds/{roundId}/audit` | `lotto.yeekee.audit.view` (+ `view_sensitive` for full payload) |
 
 ### Snapshot Data Contract
 

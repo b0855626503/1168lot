@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header py-2">
-                <h5 class="modal-title mb-0">ตรวจสอบยีกี่ (Yeekee Audit)</h5>
+                <h5 class="modal-title mb-0">ตรวจสอบยี่กี่ (Yeekee Audit)</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -18,9 +18,17 @@
 
 <script>
 (function () {
-    var _loadRoundsUrl = @json(route('admin.lotto.yeekee_audit.rounds'));
-    var _showBaseUrl = @json(route('admin.lotto.yeekee.audit.show', ['roundId' => 0])).replace('/0/', '/');
-    var _isSensitive = @json(bouncer()->hasPermission('lotto.yeekee.audit.view_sensitive'));
+    var _loadRoundsUrl = @json(route('admin.lotto.yeekee.audit.rounds'));
+    var _showBaseUrl = @json(route('admin.lotto.yeekee.audit.show', ['roundId' => 0])).replace(/\/0\/audit$/, '');
+
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     function requestJson(url) {
         var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
@@ -53,12 +61,12 @@
                 + '</tr></thead><tbody>';
             rounds.forEach(function (r) {
                 html += '<tr>'
-                    + '<td>' + r.round_no + '</td>'
-                    + '<td>' + r.status + '</td>'
-                    + '<td>' + r.shoot_count + '</td>'
-                    + '<td>' + (r.shoot_closed_at || '-') + '</td>'
+                    + '<td>' + escapeHtml(r.round_no) + '</td>'
+                    + '<td>' + escapeHtml(r.status) + '</td>'
+                    + '<td>' + escapeHtml(r.shoot_count) + '</td>'
+                    + '<td>' + escapeHtml(r.shoot_closed_at || '-') + '</td>'
                     + '<td>' + (r.has_snapshot ? '<span class="badge badge-success">มี</span>' : '<span class="badge badge-secondary">ไม่มี</span>') + '</td>'
-                    + '<td><button class="btn btn-xs btn-info" onclick="loadYeekeeAuditDetail(' + r.id + ')">ดู Audit</button></td>'
+                    + '<td><button class="btn btn-xs btn-info" onclick="loadYeekeeAuditDetail(' + escapeHtml(r.id) + ')">ดู Audit</button></td>'
                     + '</tr>';
             });
             html += '</tbody></table>';
@@ -73,44 +81,45 @@
         detailDiv.style.display = 'block';
         detailDiv.innerHTML = '<p class="text-muted p-2">กำลังโหลด Audit...</p>';
 
-        var url = _showBaseUrl + roundId + '/audit';
+        var url = _showBaseUrl + '/' + roundId + '/audit';
         requestJson(url).then(function (data) {
             var round = data.round || {};
             var shoots = Array.isArray(data.shoots) ? data.shoots : [];
+            var isSensitiveResponse = !data._sensitive_permission_required;
             var sensitiveNote = data._sensitive_permission_required
-                ? '<div class="alert alert-warning py-1 mb-2 text-sm">ข้อมูล masked — ต้องใช้ permission <code>' + data._sensitive_permission_required + '</code> เพื่อดูข้อมูลจริง</div>'
+                ? '<div class="alert alert-warning py-1 mb-2 text-sm">ข้อมูล masked — ต้องใช้ permission <code>' + escapeHtml(data._sensitive_permission_required) + '</code> เพื่อดูข้อมูลจริง</div>'
                 : '';
 
-            var shootHeaders = _isSensitive
+            var shootHeaders = isSensitiveResponse
                 ? '<th>#</th><th>Position</th><th>เลข</th><th>Member ID</th><th>IP</th><th>User Agent</th><th>เวลา</th>'
                 : '<th>#</th><th>Position</th><th>เลข (masked)</th><th>เวลา</th>';
 
             var shootRows = '';
             shoots.forEach(function (s, idx) {
-                if (_isSensitive) {
-                    shootRows += '<tr><td>' + (idx + 1) + '</td><td>' + s.position + '</td><td><strong>' + s.number_text + '</strong></td>'
-                        + '<td>' + (s.member_id || '-') + '</td><td>' + (s.ip_address || '-') + '</td><td>' + (s.user_agent || '-') + '</td>'
-                        + '<td>' + (s.submitted_at || '-') + '</td></tr>';
+                if (isSensitiveResponse) {
+                    shootRows += '<tr><td>' + escapeHtml(idx + 1) + '</td><td>' + escapeHtml(s.position) + '</td><td><strong>' + escapeHtml(s.number_text) + '</strong></td>'
+                        + '<td>' + escapeHtml(s.member_id || '-') + '</td><td>' + escapeHtml(s.ip_address || '-') + '</td><td>' + escapeHtml(s.user_agent || '-') + '</td>'
+                        + '<td>' + escapeHtml(s.submitted_at || '-') + '</td></tr>';
                 } else {
-                    shootRows += '<tr><td>' + (idx + 1) + '</td><td>' + s.position + '</td><td><strong>' + s.number_text + '</strong></td>'
-                        + '<td>' + (s.submitted_at || '-') + '</td></tr>';
+                    shootRows += '<tr><td>' + escapeHtml(idx + 1) + '</td><td>' + escapeHtml(s.position) + '</td><td><strong>' + escapeHtml(s.number_text) + '</strong></td>'
+                        + '<td>' + escapeHtml(s.submitted_at || '-') + '</td></tr>';
                 }
             });
 
             var snapshotHtml = '';
             if (data.has_snapshot && data.snapshot) {
-                snapshotHtml = '<div class="mt-2"><strong>Snapshot Hash:</strong> <code class="text-break">' + (data.snapshot_hash || '') + '</code></div>'
+                snapshotHtml = '<div class="mt-2"><strong>Snapshot Hash:</strong> <code class="text-break">' + escapeHtml(data.snapshot_hash || '') + '</code></div>'
                     + '<pre class="bg-light border rounded p-2 mt-1" style="max-height:300px;overflow:auto;font-size:11px;white-space:pre-wrap;">'
-                    + JSON.stringify(data.snapshot, null, 2) + '</pre>';
+                    + escapeHtml(JSON.stringify(data.snapshot, null, 2)) + '</pre>';
             }
 
             detailDiv.innerHTML = sensitiveNote
-                + '<div class="card card-outline card-info"><div class="card-header py-2"><h6 class="mb-0">รอบที่ ' + round.round_no + ' — ' + round.market_name + ' (วันที่ ' + round.round_date + ')</h6></div>'
+                + '<div class="card card-outline card-info"><div class="card-header py-2"><h6 class="mb-0">รอบที่ ' + escapeHtml(round.round_no) + ' — ' + escapeHtml(round.market_name) + ' (วันที่ ' + escapeHtml(round.round_date) + ')</h6></div>'
                 + '<div class="card-body p-2">'
-                + '<p class="mb-1 text-muted">ยิง: ' + round.shoot_count + ' | last_position: ' + round.last_shoot_position + ' | hash: <code>' + (round.shoot_snapshot_hash || '-') + '</code></p>'
+                + '<p class="mb-1 text-muted">ยิง: ' + escapeHtml(round.shoot_count) + ' | last_position: ' + escapeHtml(round.last_shoot_position) + ' | hash: <code>' + escapeHtml(round.shoot_snapshot_hash || '-') + '</code></p>'
                 + '<div class="table-responsive" style="max-height:350px;overflow-y:auto;">'
                 + '<table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr>' + shootHeaders + '</tr></thead>'
-                + '<tbody>' + (shootRows || '<tr><td colspan="7" class="text-center text-muted">ไม่มีข้อมูลการยิง</td></tr>') + '</tbody></table>'
+                + '<tbody>' + (shootRows || '<tr><td colspan="' + (isSensitiveResponse ? '7' : '4') + '" class="text-center text-muted">ไม่มีข้อมูลการยิง</td></tr>') + '</tbody></table>'
                 + '</div>'
                 + snapshotHtml
                 + '</div></div>';
