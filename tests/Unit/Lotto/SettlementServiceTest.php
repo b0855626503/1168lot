@@ -10,7 +10,7 @@ class SettlementServiceTest extends TestCase
 {
     public function test_normalize_result_number_requires_valid_lengths(): void
     {
-        $service = new SettlementService();
+        $service = new SettlementService;
 
         $result = $service->normalizeResultNumber([
             'first_prize' => '123456',
@@ -28,7 +28,7 @@ class SettlementServiceTest extends TestCase
 
     public function test_normalize_result_number_accepts_five_digit_first_prize(): void
     {
-        $service = new SettlementService();
+        $service = new SettlementService;
 
         $result = $service->normalizeResultNumber([
             'first_prize' => '12345',
@@ -46,7 +46,7 @@ class SettlementServiceTest extends TestCase
 
     public function test_normalize_result_number_accepts_four_digit_first_prize(): void
     {
-        $service = new SettlementService();
+        $service = new SettlementService;
 
         $result = $service->normalizeResultNumber([
             'first_prize' => '2575',
@@ -62,9 +62,27 @@ class SettlementServiceTest extends TestCase
         ], $result);
     }
 
+    public function test_normalize_result_number_accepts_seven_digit_first_prize(): void
+    {
+        $service = new SettlementService;
+
+        $result = $service->normalizeResultNumber([
+            'first_prize' => '0860959',
+            'last_2_digits' => '81',
+        ]);
+
+        $this->assertSame([
+            'first_prize' => '0860959',
+            'last_2_digits' => '81',
+            'top_3' => '959',
+            'top_2' => '59',
+            'bottom_2' => '81',
+        ], $result);
+    }
+
     public function test_is_winning_bet_matches_all_supported_bet_types(): void
     {
-        $service = new SettlementService();
+        $service = new SettlementService;
         $result = [
             'top_3' => '123',
             'top_2' => '12',
@@ -88,7 +106,7 @@ class SettlementServiceTest extends TestCase
 
     public function test_describe_result_number_returns_human_readable_text(): void
     {
-        $service = new SettlementService();
+        $service = new SettlementService;
 
         $this->assertSame(
             'รางวัลที่ 1 123456 / เลขท้าย 2 ตัว 89 / 3 ตัวบน 456 / 2 ตัวบน 56',
