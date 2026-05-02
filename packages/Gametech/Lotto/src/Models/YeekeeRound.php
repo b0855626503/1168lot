@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class YeekeeRound extends Model
 {
@@ -35,4 +36,9 @@ class YeekeeRound extends Model
         'config_snapshot_json' => 'array',
         'shoot_snapshot_json' => 'array',
     ];
+
+    public function market(): BelongsTo
+    {
+        return $this->belongsTo(LotteryMarket::class, 'market_id');
+    }
 }

@@ -371,6 +371,11 @@ Route::domain(
                 ->name('admin.lotto.winning_report.bets');
             Route::get('winning-report/export', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@export')
                 ->name('admin.lotto.winning_report.export');
+
+            Route::get('yeekee/audit/rounds', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@loadRounds')
+                ->name('admin.lotto.yeekee.audit.rounds');
+            Route::get('yeekee/rounds/{roundId}/audit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@show')
+                ->name('admin.lotto.yeekee.audit.show');
         });
     });
 });

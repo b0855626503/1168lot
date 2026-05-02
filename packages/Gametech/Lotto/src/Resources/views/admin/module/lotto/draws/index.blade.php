@@ -61,6 +61,8 @@
                 @includeIf('admin::module.lotto.draws.addedit')
             </div>
         </div>
+
+        @include('admin::module.lotto.draws.yeekee_audit_modal')
     </section>
 @endsection
 

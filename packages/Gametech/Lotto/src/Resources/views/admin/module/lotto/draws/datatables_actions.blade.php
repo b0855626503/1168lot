@@ -5,6 +5,7 @@
     $canCancelAllRefund = bouncer()->hasPermission('lotto_settings.draws.cancel_all_refund')
         || bouncer()->hasPermission('lotto_settings.draws.settle')
         || bouncer()->hasPermission('lotto_draws.settle');
+    $canYeekeeAudit = !empty($is_yeekee) && bouncer()->hasPermission('lotto.yeekee.audit.view');
 @endphp
 
 <div class="d-flex flex-wrap justify-content-center">
@@ -23,6 +24,12 @@
     @if(!empty($can_cancel_all_refund) && $canCancelAllRefund)
         <button type="button" class="btn btn-danger btn-block btn-xs mr-1 mb-1" onclick="cancelAllTicketsAndRefund({{ $id }})">
             <i class="fas fa-undo-alt"></i> คืนเงิน
+        </button>
+    @endif
+
+    @if($canYeekeeAudit)
+        <button type="button" class="btn btn-secondary btn-block btn-xs mr-1 mb-1" onclick="openYeekeeAuditModal({{ $id }})">
+            <i class="fas fa-search"></i> ตรวจสอบยี่กี่
         </button>
     @endif
 </div>

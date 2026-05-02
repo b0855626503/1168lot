@@ -98,6 +98,12 @@ class LottoDrawController extends AppBaseController
             return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
         }
 
+        $resultNumber = is_array($data->result_number) ? $data->result_number : [];
+        $isYeekee = (string) ($data->market->result_mode ?? '') === LotteryMarket::RESULT_MODE_YEEKEE;
+        if ($isYeekee && ! $this->canViewSensitiveYeekeeAudit()) {
+            $resultNumber = $this->redactYeekeeSensitiveResultNumber($resultNumber);
+        }
+
         return $this->sendResponse([
             'id' => (int) $data->id,
             'market_id' => (int) $data->market_id,
@@ -110,7 +116,7 @@ class LottoDrawController extends AppBaseController
             'close_at' => $this->formatDateTimeForForm($data->close_at),
             'result_at' => $this->formatDateTimeForForm($data->result_at),
             'status' => (string) $data->status,
-            'result_number' => is_array($data->result_number) ? $data->result_number : [],
+            'result_number' => $resultNumber,
         ], 'ดำเนินการเสร็จสิ้น');
     }
 
@@ -1006,5 +1012,63 @@ class LottoDrawController extends AppBaseController
         }
 
         return (bool) ($market->auto_refund_on_no_result ?? false);
+    }
+
+    private function canViewSensitiveYeekeeAudit(): bool
+    {
+        $checker = null;
+        if (app()->bound('bouncer')) {
+            $checker = app('bouncer');
+        } elseif (function_exists('bouncer')) {
+            $checker = bouncer();
+        }
+
+        if (! $checker || ! method_exists($checker, 'hasPermission')) {
+            return false;
+        }
+
+        $permissions = [
+            'lotto.yeekee.audit.view_sensitive',
+        ];
+
+        foreach ($permissions as $permission) {
+            if ($checker->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string,mixed>  $resultNumber
+     * @return array<string,mixed>
+     */
+    private function redactYeekeeSensitiveResultNumber(array $resultNumber): array
+    {
+        $safeKeys = [
+            'top_3',
+            'top_2',
+            'bottom_2',
+            'last_2_digits',
+            'formula_label',
+            'no_result',
+            'status',
+            'label',
+            'no_result_reason',
+            'manual_marked_no_result',
+            'manual_cancelled_all_tickets',
+        ];
+
+        $safe = [];
+        foreach ($safeKeys as $key) {
+            if (array_key_exists($key, $resultNumber)) {
+                $safe[$key] = $resultNumber[$key];
+            }
+        }
+
+        $safe['_sensitive_redacted'] = true;
+
+        return $safe;
     }
 }

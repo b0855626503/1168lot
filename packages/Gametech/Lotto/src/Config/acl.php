@@ -325,4 +325,16 @@ return [
         'route' => 'admin.lotto.winning_report.export',
         'sort' => 8,
     ],
+    [
+        'key' => 'lotto.yeekee.audit.view',
+        'name' => 'สิทธิ์ ดู Yeekee Audit (ข้อมูล masked)',
+        'route' => 'admin.lotto.yeekee.audit.rounds',
+        'sort' => 90,
+    ],
+    [
+        'key' => 'lotto.yeekee.audit.view_sensitive',
+        'name' => 'สิทธิ์ ดู Yeekee Audit ข้อมูล Sensitive (Snapshot / IP / Raw)',
+        'route' => 'admin.lotto.yeekee.audit.rounds',
+        'sort' => 91,
+    ],
 ];
