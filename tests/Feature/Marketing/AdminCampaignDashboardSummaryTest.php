@@ -85,6 +85,8 @@ class AdminCampaignDashboardSummaryTest extends TestCase
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('campaign_id', $data);
         $this->assertSame(42, $data['campaign_id']);
+        $this->assertArrayHasKey('financial', $data);
+        $this->assertArrayHasKey('bonus_amount', $data['financial']);
     }
 
     public function test_dashboard_summary_defaults_to_today_when_no_dates_given(): void
