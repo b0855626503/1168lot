@@ -23,6 +23,7 @@ use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointComma
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
 use Gametech\Lotto\Console\Commands\MigrateRelayResultSourcesCommand;
+use Gametech\Lotto\Console\Commands\RolloutMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\SettleYeekeeRoundsCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
@@ -140,6 +141,7 @@ class LottoServiceProvider extends ServiceProvider
 
         $this->commands([
             BootstrapMemberMarketPoliciesCommand::class,
+            RolloutMemberMarketPoliciesCommand::class,
             BootstrapMissingResultSourcesCommand::class,
             BackfillLottoPayoutCommand::class,
             BackfillYeekeeRoundCountersCommand::class,

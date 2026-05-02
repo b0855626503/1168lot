@@ -9,7 +9,7 @@ class MemberMarketPolicyServiceTest extends TestCase
 {
     public function test_is_valid_rollout_mode_accepts_supported_values(): void
     {
-        $service = new MemberMarketPolicyService();
+        $service = new MemberMarketPolicyService;
 
         $this->assertTrue($service->isValidRolloutMode(MemberMarketPolicyService::ROLLOUT_NEW_ONLY));
         $this->assertTrue($service->isValidRolloutMode(MemberMarketPolicyService::ROLLOUT_ALL));
@@ -18,9 +18,23 @@ class MemberMarketPolicyServiceTest extends TestCase
 
     public function test_is_valid_rollout_mode_rejects_unknown_value(): void
     {
-        $service = new MemberMarketPolicyService();
+        $service = new MemberMarketPolicyService;
 
         $this->assertFalse($service->isValidRolloutMode('legacy_allow_all'));
     }
-}
 
+    public function test_is_valid_policy_rollout_mode_accepts_supported_values(): void
+    {
+        $service = new MemberMarketPolicyService;
+
+        $this->assertTrue($service->isValidPolicyRolloutMode(MemberMarketPolicyService::ROLLOUT_MODE_MISSING_ONLY));
+        $this->assertTrue($service->isValidPolicyRolloutMode(MemberMarketPolicyService::ROLLOUT_MODE_RESYNC));
+    }
+
+    public function test_is_valid_policy_rollout_mode_rejects_unknown_value(): void
+    {
+        $service = new MemberMarketPolicyService;
+
+        $this->assertFalse($service->isValidPolicyRolloutMode('full-rebuild'));
+    }
+}
