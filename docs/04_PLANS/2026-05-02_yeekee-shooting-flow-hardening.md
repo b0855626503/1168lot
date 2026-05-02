@@ -115,7 +115,7 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 
 ### Snapshot Data Contract
 
-`showSnapshot` ส่ง `shoot_snapshot_json` ดิบจาก `yeekee_rounds.shoot_snapshot_json`
+`admin.lotto.yeekee.audit.show` ส่ง `shoot_snapshot_json` ดิบจาก `yeekee_rounds.shoot_snapshot_json` เมื่อมีสิทธิ์ `lotto.yeekee.audit.view_sensitive`
 โดย canonical structure คือ (ตาม PR-05):
 
 ```json
@@ -139,15 +139,13 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 
 ### Data Exposed per Endpoint
 
-**loadRounds**: ไม่รวม `shoot_snapshot_json` ดิบ — แสดงแค่ `has_snapshot: bool`
+**admin.lotto.yeekee.audit.rounds**:
+- ไม่รวม `shoot_snapshot_json` ดิบ
+- แสดง `has_snapshot: bool` และ metadata รอบที่จำเป็น
 
-**loadShoots** (`view_shoots` permission):
-- `id`, `position`, `number_text`, `member_id`, `submitted_at`
-- ไม่เปิด `ip_address`, `user_agent`, `metadata_json`
-
-**showSnapshot** (`view_snapshot` permission):
-- `shoot_snapshot_json` ทั้งก้อน
-- `shoot_snapshot_hash`
+**admin.lotto.yeekee.audit.show**:
+- ผู้มี `lotto.yeekee.audit.view`: ได้ข้อมูลยิงแบบ masked + round summary
+- ผู้มี `lotto.yeekee.audit.view_sensitive`: ได้ข้อมูล sensitive เพิ่ม (เลขเต็ม, snapshot, proof/raw fields)
 
 ### Files Changed
 
@@ -157,7 +155,7 @@ Do not treat as active runtime endpoint until `PR-04` is merged.
 | `packages/Gametech/Lotto/src/Config/acl.php` | แก้ไข (เพิ่ม ACL) |
 | `packages/Gametech/Lotto/src/Routes/admin.php` | แก้ไข (เพิ่ม routes) |
 | `packages/Gametech/Lotto/src/Models/YeekeeRound.php` | แก้ไข (เพิ่ม `market()` relationship) |
-| `packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/yeekee_audit/index.blade.php` | ใหม่ |
+| `packages/Gametech/Lotto/src/Resources/views/admin/module/lotto/draws/yeekee_audit_modal.blade.php` | ใหม่ |
 | `tests/Feature/Lotto/YeekeeAuditControllerTest.php` | ใหม่ |
 | `docs/04_PLANS/2026-05-02_yeekee-shooting-flow-hardening.md` | แก้ไข (เพิ่ม PR-06 contract) |
 

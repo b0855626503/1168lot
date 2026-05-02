@@ -19,7 +19,7 @@
 <script>
 (function () {
     var _loadRoundsUrl = @json(route('admin.lotto.yeekee.audit.rounds'));
-    var _showBaseUrl = @json(route('admin.lotto.yeekee.audit.show', ['roundId' => 0])).replace(/\/0\/audit$/, '');
+    var _showUrlTemplate = @json(route('admin.lotto.yeekee.audit.show', ['roundId' => '__ROUND_ID__']));
 
     function escapeHtml(value) {
         return String(value === null || value === undefined ? '' : value)
@@ -39,6 +39,11 @@
             if (!r.ok) { throw new Error('HTTP ' + r.status); }
             return r.json();
         });
+    }
+
+    function toRoundId(value) {
+        var roundId = parseInt(String(value || ''), 10);
+        return Number.isFinite(roundId) && roundId > 0 ? roundId : 0;
     }
 
     window.openYeekeeAuditModal = function (drawId) {
@@ -66,7 +71,7 @@
                     + '<td>' + escapeHtml(r.shoot_count) + '</td>'
                     + '<td>' + escapeHtml(r.shoot_closed_at || '-') + '</td>'
                     + '<td>' + (r.has_snapshot ? '<span class="badge badge-success">มี</span>' : '<span class="badge badge-secondary">ไม่มี</span>') + '</td>'
-                    + '<td><button class="btn btn-xs btn-info" onclick="loadYeekeeAuditDetail(' + escapeHtml(r.id) + ')">ดู Audit</button></td>'
+                    + '<td><button class="btn btn-xs btn-info js-load-yeekee-audit-detail" data-round-id="' + escapeHtml(r.id) + '" type="button">ดู Audit</button></td>'
                     + '</tr>';
             });
             html += '</tbody></table>';
@@ -76,12 +81,17 @@
         });
     };
 
-    window.loadYeekeeAuditDetail = function (roundId) {
+    function loadYeekeeAuditDetail(roundId) {
+        var safeRoundId = toRoundId(roundId);
+        if (safeRoundId <= 0) {
+            return;
+        }
+
         var detailDiv = document.getElementById('yeekeeAuditDetail');
         detailDiv.style.display = 'block';
         detailDiv.innerHTML = '<p class="text-muted p-2">กำลังโหลด Audit...</p>';
 
-        var url = _showBaseUrl + '/' + roundId + '/audit';
+        var url = _showUrlTemplate.replace('__ROUND_ID__', String(safeRoundId));
         requestJson(url).then(function (data) {
             var round = data.round || {};
             var shoots = Array.isArray(data.shoots) ? data.shoots : [];
@@ -126,7 +136,25 @@
         }).catch(function () {
             detailDiv.innerHTML = '<p class="text-danger p-2">โหลด Audit ล้มเหลว</p>';
         });
-    };
+    }
+
+    var roundsContainer = document.getElementById('yeekeeAuditRounds');
+    if (roundsContainer) {
+        roundsContainer.addEventListener('click', function (event) {
+            var target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            var button = target.closest('.js-load-yeekee-audit-detail');
+            if (!button) {
+                return;
+            }
+
+            var roundId = button.getAttribute('data-round-id');
+            loadYeekeeAuditDetail(roundId);
+        });
+    }
 }());
 </script>
 @endif
