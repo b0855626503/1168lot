@@ -23,6 +23,7 @@ class LottoDrawDataTableFilterTest extends TestCase
     {
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('lotto_number_blocks');
+        Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
@@ -137,6 +138,13 @@ class LottoDrawDataTableFilterTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('draw_id');
             $table->string('status', 32)->default('active');
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_rounds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->unsignedInteger('round_no')->default(1);
             $table->timestamps();
         });
     }

@@ -11,10 +11,10 @@ class ExampleTest extends TestCase
      *
      * @return void
      */
-    public function test_root_entrypoint_redirects()
+    public function test_root_entrypoint_returns_not_found()
     {
         $response = $this->get('/');
 
-        $response->assertRedirect();
+        $response->assertNotFound();
     }
 }

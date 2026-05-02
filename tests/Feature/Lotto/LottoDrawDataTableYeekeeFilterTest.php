@@ -43,12 +43,20 @@ class LottoDrawDataTableYeekeeFilterTest extends TestCase
             $table->string('status')->default('active');
             $table->timestamps();
         });
+
+        Schema::create('yeekee_rounds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->unsignedInteger('round_no')->default(1);
+            $table->timestamps();
+        });
     }
 
     protected function tearDown(): void
     {
         Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('lotto_number_blocks');
+        Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
         parent::tearDown();
