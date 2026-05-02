@@ -7,6 +7,7 @@
 - `2026-04-06_laravel-8-to-9-upgrade.md` (`Laravel 8 to 10` practical target)
 
 ## PENDING
+- `2026-05-02_yeekee-shooting-flow-hardening.md` (`Yeekee shooting hardening docs contract lock`)
 - `2026-03-21_frontend-api-v1.md`
 - `2026-03-31_lotto-group-package-system-readiness.md`
 - `2026-03-21_lotto-concord-proxy-cleanup.md`

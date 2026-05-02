@@ -86,3 +86,21 @@
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Bearer token | ดึงรายการยิงเลขล่าสุดในรอบ (เรียง position ล่าสุดก่อน) | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidshoots) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/reward-status` | Bearer token | ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidreward-status) |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/result-proof` | Bearer token | ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottoyeekeeroundsroundidresult-proof) |
+
+## Yeekee Hardening Target Contract (Planned)
+
+Status: `Target Contract / Planned`  
+Implemented in: `PR-04`  
+Do not treat as active runtime endpoint until `PR-04` is merged.
+
+หมายเหตุ:
+- ส่วนนี้เป็น target contract สำหรับงาน hardening เท่านั้น
+- ห้ามลบหรือเขียนทับ endpoint เดิมที่อยู่ใน current runtime routes ด้านบน
+- PR-01 เป็น docs-only ไม่มี runtime behavior change
+
+| Method | Endpoint | Status | Implemented in | Note |
+|---|---|---|---|---|
+| GET | `/api/v1/lotto/yeekee/rounds` | Target Contract / Planned | PR-04 | planned only |
+| GET | `/api/v1/lotto/yeekee/rounds/{round}` | Target Contract / Planned | PR-04 | planned only |
+| POST | `/api/v1/lotto/yeekee/rounds/{round}/shoot` | Target Contract / Planned | PR-04 | planned only |
+| GET | `/api/v1/lotto/yeekee/rounds/{round}/shoots` | Target Contract / Planned | PR-04 | planned only |

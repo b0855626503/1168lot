@@ -105,6 +105,9 @@
 
 ## Yeekee API
 
+### Current Runtime Contract
+ส่วนนี้คือ endpoint ที่ active อยู่จริงในระบบปัจจุบัน
+
 - `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
 - lifecycle: `betting open -> betting closed -> shoot window -> pending result -> resulted/voided`
 - Yeekee ไม่มี manual result
@@ -332,3 +335,24 @@
   }
 }
 ```
+
+- หมายเหตุด้านสัญญา:
+  - `formula_label` ต้องสะท้อน runtime preset จริงจากระบบปัจจุบัน
+  - ห้ามใช้ `PRECOMMITTED_BASE64_MD5` เป็น canonical label ถ้า runtime ไม่ได้ใช้
+  - ข้อนี้เป็น doc correction only ใน PR-01 และจะ lock รายละเอียด result-proof อีกครั้งใน PR-05
+
+### Target Contract (Planned)
+ส่วนนี้เป็น target contract สำหรับ Yeekee hardening เท่านั้น
+
+Status: `Target Contract / Planned`  
+Implemented in: `PR-04`  
+Do not treat as active runtime endpoint until `PR-04` is merged.
+
+- `GET /api/v1/lotto/yeekee/rounds`
+- `GET /api/v1/lotto/yeekee/rounds/{round}`
+- `POST /api/v1/lotto/yeekee/rounds/{round}/shoot`
+- `GET /api/v1/lotto/yeekee/rounds/{round}/shoots`
+
+หมายเหตุ:
+- ห้ามลบหรือเขียนทับ endpoint เดิมใน current runtime contract
+- PR-01 เป็น docs-only ไม่มี runtime behavior change
