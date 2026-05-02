@@ -108,7 +108,7 @@ class LottoDrawTransformer extends TransformerAbstract
 
     private function renderMarketName(LottoDraw $model): string
     {
-        $name = (string) ($model->market->name ?? '-');
+        $name = $this->renderMarketLabel($model);
         $logo = (string) ($model->market->logo ?? '');
         $icon = (string) ($model->market->icon ?? '');
         $src = trim($logo) !== '' ? $logo : $icon;
@@ -121,6 +121,18 @@ class LottoDrawTransformer extends TransformerAbstract
             .'<img src="'.e($src).'" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
             .'<span>'.e($name).'</span>'
             .'</span>';
+    }
+
+    private function renderMarketLabel(LottoDraw $model): string
+    {
+        $name = (string) ($model->market->name ?? '-');
+        $roundNo = (int) ($model->yeekee_round_no ?? 0);
+
+        if ((string) ($model->market->result_mode ?? 'normal') !== 'yeekee' || $roundNo <= 0) {
+            return $name;
+        }
+
+        return $name.' ('.$roundNo.')';
     }
 
     /**

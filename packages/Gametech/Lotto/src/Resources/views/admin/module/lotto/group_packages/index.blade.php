@@ -107,13 +107,17 @@
                                    :class="{ active: getActivePackageIndex(activeGroup.id) === index }"
                                    @click.prevent="setActivePackage(activeGroup.id, index)">
                                     @{{ pkg.name }}
+                                    <span v-if="!pkg.is_active" class="badge badge-secondary ml-1">ปิด</span>
                                 </a>
                             </li>
                         </ul>
 
                         <div class="card card-outline card-info" v-if="activePackage">
                             <div class="card-header py-2">
-                                <h3 class="card-title text-sm mb-0">รายละเอียดแพกเกจ: @{{ activePackage.name }}</h3>
+                                <h3 class="card-title text-sm mb-0">
+                                    รายละเอียดแพกเกจ: @{{ activePackage.name }}
+                                    <span v-if="!activePackage.is_active" class="badge badge-secondary ml-1">ปิดใช้งาน</span>
+                                </h3>
                                 <div class="card-tools">
                                     <button type="button" class="btn btn-info btn-xs" @click="openEditPackageModal">
                                         <i class="fa-solid fa-pen-to-square mr-1"></i>
@@ -553,6 +557,7 @@
                 async reloadGroupPackages(groupId, preferredPackageId = null) {
                     const response = await axios.post("{{ route('admin.lotto.group_packages.list') }}", {
                         group_id: groupId,
+                        include_inactive: true,
                     });
 
                     const rows = Array.isArray(response?.data?.data) ? response.data.data : [];

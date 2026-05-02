@@ -30,4 +30,26 @@ class LottoDrawTransformerYeekeeActionTest extends TestCase
 
         $this->assertStringNotContainsString('ออกผล', $actionHtml);
     }
+
+    public function test_yeekee_market_name_includes_round_number_when_available(): void
+    {
+        $market = new LotteryMarket;
+        $market->id = 10;
+        $market->name = 'ยี่กี่แสนรัก';
+        $market->result_mode = 'yeekee';
+        $market->exists = true;
+
+        $draw = new LottoDraw;
+        $draw->id = 100;
+        $draw->status = 'open';
+        $draw->yeekee_round_no = 21;
+        $draw->setRelation('market', $market);
+        $draw->result_number = [];
+        $draw->blocked_numbers_count = 0;
+        $draw->tickets_count = 0;
+
+        $payload = (new LottoDrawTransformer)->transform($draw);
+
+        $this->assertStringContainsString('ยี่กี่แสนรัก (21)', (string) $payload['market_name']);
+    }
 }
