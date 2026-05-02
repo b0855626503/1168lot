@@ -1,6 +1,6 @@
 # Frontend API V1 - Endpoints
 
-อัปเดตล่าสุด: 2026-04-30
+อัปเดตล่าสุด: 2026-05-02
 
 ## การยืนยันตัวตน (Auth)
 
@@ -105,6 +105,9 @@
 
 ## Yeekee API
 
+### Current Runtime Contract
+ส่วนนี้คือ endpoint ที่ active อยู่จริงในระบบปัจจุบัน
+
 - `shoot` คือการส่งเลข 5 หลักเพื่อชิงลำดับ (position) ในรอบยี่กี่ ไม่ใช่การแทงโพย
 - lifecycle: `betting open -> betting closed -> shoot window -> pending result -> resulted/voided`
 - Yeekee ไม่มี manual result
@@ -136,6 +139,9 @@
   }
 }
 ```
+- หมายเหตุ:
+  - Current runtime ตาม docs เดิมอาจแสดง `number_text` แบบเต็ม
+  - Target hardening (PR-03/PR-04) จะบังคับ masking สำหรับ public list/output ตาม contract ใหม่
 - Error example (จากโค้ดจริง):
   - `ยังไม่ถึงเวลายิงเลข`
   - `หมดเวลายิงเลขแล้ว`
@@ -297,7 +303,7 @@
     "status": "result_pending",
     "is_revealed": false,
     "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
       "proof_signature": "",
       "external_seed_reference": "",
@@ -318,7 +324,7 @@
     "status": "resulted",
     "is_revealed": true,
     "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
       "proof_signature": "a9bc...",
       "external_seed_reference": "NTP:2026-04-30T12:12:00Z",
@@ -332,3 +338,27 @@
   }
 }
 ```
+
+- หมายเหตุด้านสัญญา:
+  - `formula_label` ต้องสะท้อน runtime preset จริงจากระบบปัจจุบัน
+  - ห้ามใช้ `PRECOMMITTED_BASE64_MD5` เป็น canonical label ถ้า runtime ไม่ได้ใช้
+  - ข้อนี้เป็น doc correction only ใน PR-01 และจะ lock รายละเอียด result-proof อีกครั้งใน PR-05
+
+### Target Contract (Planned)
+ส่วนนี้เป็น target contract สำหรับ Yeekee hardening เท่านั้น
+
+Status: `Target Contract / Planned`  
+Implemented in: `PR-04`  
+Do not treat as active runtime endpoint until `PR-04` is merged.
+
+New target endpoints in PR-04:
+- `GET /api/v1/lotto/yeekee/rounds`
+- `GET /api/v1/lotto/yeekee/rounds/{round}`
+
+Existing endpoints to be hardened by PR-03/PR-04:
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+
+หมายเหตุ:
+- ห้ามลบหรือเขียนทับ endpoint เดิมใน current runtime contract
+- PR-01 เป็น docs-only ไม่มี runtime behavior change
