@@ -295,7 +295,19 @@ class YeekeeResultEngineServiceTest extends TestCase
         $this->assertNotNull($roundAfterFirst->shoot_snapshot_hash);
         $snapshotAfterFirst = json_decode((string) $roundAfterFirst->shoot_snapshot_json, true);
         $this->assertIsArray($snapshotAfterFirst);
-        $this->assertCount(2, $snapshotAfterFirst);
+        $this->assertArrayHasKey('metadata', $snapshotAfterFirst);
+        $this->assertArrayHasKey('shoots', $snapshotAfterFirst);
+        $this->assertCount(2, $snapshotAfterFirst['shoots']);
+        $this->assertSame(7, (int) ($snapshotAfterFirst['metadata']['round_id'] ?? 0));
+        $this->assertSame(107, (int) ($snapshotAfterFirst['metadata']['lotto_draw_id'] ?? 0));
+        $this->assertSame(11, (int) ($snapshotAfterFirst['metadata']['market_id'] ?? 0));
+        $this->assertSame(2, (int) ($snapshotAfterFirst['metadata']['shoot_count'] ?? 0));
+        $this->assertSame(2, (int) ($snapshotAfterFirst['metadata']['last_shoot_position'] ?? 0));
+        $expectedHashAfterFirst = hash(
+            'sha256',
+            json_encode($snapshotAfterFirst, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+        );
+        $this->assertSame($expectedHashAfterFirst, (string) $roundAfterFirst->shoot_snapshot_hash);
 
         DB::table('yeekee_shoots')->insert([
             'yeekee_round_id' => 7,
@@ -319,7 +331,8 @@ class YeekeeResultEngineServiceTest extends TestCase
         $this->assertSame($first['bottom_2'], $second['bottom_2']);
         $this->assertSame((string) $roundAfterFirst->shoot_snapshot_hash, (string) $roundAfterSecond->shoot_snapshot_hash);
         $this->assertIsArray($snapshotAfterSecond);
-        $this->assertCount(2, $snapshotAfterSecond);
+        $this->assertArrayHasKey('shoots', $snapshotAfterSecond);
+        $this->assertCount(2, $snapshotAfterSecond['shoots']);
     }
 
     private function insertBasicShoots(int $roundId, int $drawId, int $marketId, int $count = 2): void

@@ -39,7 +39,7 @@ class YeekeeResultEngineService
                 ]);
             }
 
-            $shootsSnapshot = $this->freezeShootSnapshotIfNeeded($round);
+            $shootSnapshotPayload = $this->freezeShootSnapshotIfNeeded($round);
 
             return [
                 'round_id' => (int) $round->id,
@@ -47,13 +47,14 @@ class YeekeeResultEngineService
                 'formula_key' => $formulaKey,
                 'formula_config' => $formulaConfig,
                 'round_snapshot' => $snapshot,
-                'shoots_snapshot' => $shootsSnapshot,
+                'shoot_snapshot_payload' => $shootSnapshotPayload,
             ];
         });
 
         $formulaKey = (string) $context['formula_key'];
         $formulaConfig = is_array($context['formula_config']) ? $context['formula_config'] : [];
-        $shoots = is_array($context['shoots_snapshot']) ? $context['shoots_snapshot'] : [];
+        $shootSnapshotPayload = is_array($context['shoot_snapshot_payload']) ? $context['shoot_snapshot_payload'] : [];
+        $shoots = is_array($shootSnapshotPayload['shoots'] ?? null) ? $shootSnapshotPayload['shoots'] : [];
 
         if ($formulaKey === 'SHOOTS_SUM_ONLY') {
             return $this->computeShootsSumOnly(
@@ -212,13 +213,13 @@ class YeekeeResultEngineService
     }
 
     /**
-     * @return array<int,array<string,mixed>>
+     * @return array<string,mixed>
      */
     private function freezeShootSnapshotIfNeeded(YeekeeRound $round): array
     {
         $existingSnapshot = is_array($round->shoot_snapshot_json) ? $round->shoot_snapshot_json : null;
         if ($round->shoot_closed_at !== null && is_array($existingSnapshot)) {
-            return $this->normalizeShootSnapshot($existingSnapshot);
+            return $this->normalizeShootSnapshotPayload($existingSnapshot);
         }
 
         $shootsSnapshot = YeekeeShoot::query()
@@ -238,25 +239,45 @@ class YeekeeResultEngineService
             ->values()
             ->all();
 
+        $shootClosedAt = ($round->shoot_closed_at ?? now())->format('Y-m-d H:i:s');
+        $payload = [
+            'metadata' => [
+                'round_id' => (int) $round->id,
+                'lotto_draw_id' => (int) $round->lotto_draw_id,
+                'market_id' => (int) $round->market_id,
+                'round_no' => (int) $round->round_no,
+                'round_date' => (string) $round->round_date,
+                'shoot_open_at' => (string) $round->shoot_open_at,
+                'shoot_close_at' => (string) $round->shoot_close_at,
+                'shoot_closed_at' => $shootClosedAt,
+                'shoot_count' => count($shootsSnapshot),
+                'last_shoot_position' => (int) ($shootsSnapshot[count($shootsSnapshot) - 1]['position'] ?? 0),
+            ],
+            'shoots' => $shootsSnapshot,
+        ];
+
         $round->forceFill([
-            'shoot_snapshot_json' => $shootsSnapshot,
+            'shoot_snapshot_json' => $payload,
             'shoot_snapshot_hash' => hash(
                 'sha256',
-                json_encode($shootsSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+                json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
             ),
-            'shoot_closed_at' => $round->shoot_closed_at ?? now(),
+            'shoot_closed_at' => $shootClosedAt,
+            'shoot_count' => (int) $payload['metadata']['shoot_count'],
+            'last_shoot_position' => (int) $payload['metadata']['last_shoot_position'],
         ])->save();
 
-        return $shootsSnapshot;
+        return $payload;
     }
 
     /**
-     * @param  array<int,mixed>  $snapshot
-     * @return array<int,array<string,mixed>>
+     * @param  array<string,mixed>|array<int,mixed>  $snapshot
+     * @return array<string,mixed>
      */
-    private function normalizeShootSnapshot(array $snapshot): array
+    private function normalizeShootSnapshotPayload(array $snapshot): array
     {
-        return collect($snapshot)
+        $shootsSource = is_array($snapshot['shoots'] ?? null) ? $snapshot['shoots'] : $snapshot;
+        $shoots = collect($shootsSource)
             ->filter(static fn ($row): bool => is_array($row))
             ->map(static function (array $row): array {
                 return [
@@ -269,5 +290,24 @@ class YeekeeResultEngineService
             })
             ->values()
             ->all();
+
+        $metadataSource = is_array($snapshot['metadata'] ?? null) ? $snapshot['metadata'] : [];
+        $metadata = [
+            'round_id' => (int) ($metadataSource['round_id'] ?? 0),
+            'lotto_draw_id' => (int) ($metadataSource['lotto_draw_id'] ?? 0),
+            'market_id' => (int) ($metadataSource['market_id'] ?? 0),
+            'round_no' => (int) ($metadataSource['round_no'] ?? 0),
+            'round_date' => (string) ($metadataSource['round_date'] ?? ''),
+            'shoot_open_at' => (string) ($metadataSource['shoot_open_at'] ?? ''),
+            'shoot_close_at' => (string) ($metadataSource['shoot_close_at'] ?? ''),
+            'shoot_closed_at' => (string) ($metadataSource['shoot_closed_at'] ?? ''),
+            'shoot_count' => (int) ($metadataSource['shoot_count'] ?? count($shoots)),
+            'last_shoot_position' => (int) ($metadataSource['last_shoot_position'] ?? ($shoots[count($shoots) - 1]['position'] ?? 0)),
+        ];
+
+        return [
+            'metadata' => $metadata,
+            'shoots' => $shoots,
+        ];
     }
 }
