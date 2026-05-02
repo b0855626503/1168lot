@@ -6,6 +6,7 @@ use App\Services\Dashboard\LottoDashboardMetricConfig;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CampaignDashboardService
 {
@@ -63,6 +64,7 @@ class CampaignDashboardService
             ->whereNotNull('member_topup')
             ->distinct('member_topup')
             ->count('member_topup');
+        $bonusAmount = $this->bonusAmount($memberCodes, $startAt, $endAt);
 
         $firstDepositMembers = (int) DB::table('bank_payment')
             ->whereIn('member_topup', $memberCodes)
@@ -85,6 +87,7 @@ class CampaignDashboardService
             'deposit_amount' => $depositAmount,
             'deposit_count' => $depositCount,
             'deposit_members' => $depositMembers,
+            'bonus_amount' => $bonusAmount,
             'withdraw_amount' => $withdrawAmount,
             'net_amount' => round($depositAmount - $withdrawAmount, 2),
             'first_deposit_members' => $firstDepositMembers,
@@ -388,10 +391,97 @@ class CampaignDashboardService
             'deposit_amount' => 0.0,
             'deposit_count' => 0,
             'deposit_members' => 0,
+            'bonus_amount' => 0.0,
             'withdraw_amount' => 0.0,
             'net_amount' => 0.0,
             'first_deposit_members' => 0,
         ];
+    }
+
+    /**
+     * @param  string[]  $memberCodes
+     */
+    private function bonusAmount(array $memberCodes, string $startAt, string $endAt): float
+    {
+        if ($memberCodes === []) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+
+        if (Schema::hasTable('payments_promotion')) {
+            $depositBonus = DB::table('payments_promotion')
+                ->where('enable', 'Y')
+                ->where('date_create', '>=', $startAt)
+                ->where('date_create', '<=', $endAt);
+
+            if (Schema::hasColumn('payments_promotion', 'credit_bonus')) {
+                $depositBonus->where('credit_bonus', '>', 0);
+            }
+
+            if (Schema::hasColumn('payments_promotion', 'pro_code')) {
+                $depositBonus->where('pro_code', 6);
+            }
+
+            $this->applyMemberScope($depositBonus, 'payments_promotion', $memberCodes);
+            $total += (float) (clone $depositBonus)->sum('credit_bonus');
+        }
+
+        if (Schema::hasTable('bills')) {
+            $billBase = DB::table('bills')
+                ->where('enable', 'Y')
+                ->where('date_create', '>=', $startAt)
+                ->where('date_create', '<=', $endAt);
+
+            if (Schema::hasColumn('bills', 'credit_bonus')) {
+                $billBase->where('credit_bonus', '>', 0);
+            }
+
+            if (Schema::hasColumn('bills', 'pro_code')) {
+                $billBase->where('pro_code', '>', 0);
+            }
+
+            $this->applyMemberScope($billBase, 'bills', $memberCodes);
+
+            $activity = (clone $billBase);
+            if (Schema::hasColumn('bills', 'transfer_type')) {
+                $activity->where('transfer_type', 1);
+            }
+
+            $manual = (clone $billBase);
+            if (Schema::hasColumn('bills', 'transfer_type')) {
+                $manual->where(function ($query): void {
+                    $query->whereNull('transfer_type')->orWhere('transfer_type', '<>', 1);
+                });
+            }
+
+            $total += (float) (clone $activity)->sum('credit_bonus');
+            $total += (float) (clone $manual)->sum('credit_bonus');
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * @param  string[]  $memberCodes
+     */
+    private function applyMemberScope($query, string $table, array $memberCodes): void
+    {
+        if (Schema::hasColumn($table, 'member_code')) {
+            $query->whereIn("{$table}.member_code", $memberCodes);
+
+            return;
+        }
+
+        if (Schema::hasColumn($table, 'member_topup')) {
+            $query->whereIn("{$table}.member_topup", $memberCodes);
+
+            return;
+        }
+
+        if (Schema::hasColumn($table, 'member_id')) {
+            $query->whereIn("{$table}.member_id", $memberCodes);
+        }
     }
 
     /** @return array<string, mixed> */

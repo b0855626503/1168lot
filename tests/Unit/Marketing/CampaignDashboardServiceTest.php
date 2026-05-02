@@ -23,6 +23,7 @@ class CampaignDashboardServiceTest extends TestCase
         $this->assertSame(0, $result['deposit_count']);
         $this->assertSame(0, $result['deposit_members']);
         $this->assertSame(0.0, $result['withdraw_amount']);
+        $this->assertSame(0.0, $result['bonus_amount']);
         $this->assertSame(0.0, $result['net_amount']);
         $this->assertSame(0, $result['first_deposit_members']);
     }
@@ -55,7 +56,7 @@ class CampaignDashboardServiceTest extends TestCase
         $service = new CampaignDashboardService;
         $result = $service->getFinancialSummary([], '2026-05-01', '2026-05-02');
 
-        foreach (['deposit_amount', 'deposit_count', 'deposit_members', 'withdraw_amount', 'net_amount', 'first_deposit_members'] as $key) {
+        foreach (['deposit_amount', 'deposit_count', 'deposit_members', 'bonus_amount', 'withdraw_amount', 'net_amount', 'first_deposit_members'] as $key) {
             $this->assertArrayHasKey($key, $result, "Key [{$key}] missing from financial summary");
         }
     }

@@ -21,6 +21,160 @@
                 </div>
             </div>
         </div>
+
+        <div class="card card-primary card-outline" id="marketing-campaign-dashboard-phase4">
+            <div class="card-header p-0">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="phase4-dashboard-tab" data-toggle="tab" href="#phase4-dashboard-pane" role="tab" aria-controls="phase4-dashboard-pane" aria-selected="true">
+                            Dashboard (Phase 4)
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body tab-content">
+                <div class="tab-pane fade show active" id="phase4-dashboard-pane" role="tabpanel" aria-labelledby="phase4-dashboard-tab">
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                </div>
+                                <input type="text" class="form-control" id="phase4_search_date" readonly>
+                            </div>
+                            <input type="hidden" id="phase4_start_date" value="{{ now()->toDateString() }}">
+                            <input type="hidden" id="phase4_end_date" value="{{ now()->toDateString() }}">
+                        </div>
+                        <div class="col-md-6 text-md-right mt-2 mt-md-0">
+                            <button type="button" class="btn btn-primary btn-sm" id="phase4_refresh_btn">
+                                <i class="fas fa-sync-alt"></i> รีเฟรช
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-danger d-none" id="phase4_dashboard_error"></div>
+                    <div class="small text-muted mb-2" id="phase4_dashboard_meta">ยังไม่มีข้อมูล</div>
+
+                    <div class="card card-outline card-info phase4-section" data-section="financial">
+                        <div class="card-header"><h3 class="card-title mb-0">Financial KPI</h3></div>
+                        <div class="card-body">
+                            <div class="phase4-loading text-muted d-none">กำลังโหลด...</div>
+                            <div class="row">
+                                <div class="col-md-3 col-6 mb-2"><strong>ยอดฝาก:</strong> <span data-kpi="financial.deposit_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ยอดถอน:</strong> <span data-kpi="financial.withdraw_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ยอดโบนัส:</strong> <span data-kpi="financial.bonus_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>คงเหลือ / Net:</strong> <span data-kpi="financial.net_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>สมัครทั้งหมด:</strong> <span data-kpi="register.registered_total">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ฝากครั้งแรก:</strong> <span data-kpi="financial.first_deposit_members">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card card-outline card-warning phase4-section" data-section="lotto">
+                        <div class="card-header"><h3 class="card-title mb-0">Lotto KPI</h3></div>
+                        <div class="card-body">
+                            <div class="phase4-loading text-muted d-none">กำลังโหลด...</div>
+                            <div class="row">
+                                <div class="col-md-3 col-6 mb-2"><strong>Lotto Cash:</strong> <span data-kpi="lotto_cash.net_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>Lotto Product:</strong> <span data-kpi="lotto_product.profit_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ยอดเล่นหวย:</strong> <span data-kpi="lotto_product.sales_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ยอดถูก:</strong> <span data-kpi="lotto_product.win_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>กำไรหวย:</strong> <span data-kpi="lotto_product.profit_amount">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>จำนวนโพย:</strong> <span data-kpi="lotto_product.ticket_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>จำนวนผู้เล่น:</strong> <span data-kpi="lotto_product.player_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>โพยถูกรางวัล:</strong> <span data-kpi="lotto_product.win_ticket_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>โพยไม่ถูกรางวัล:</strong> <span data-kpi="lotto_product.lose_ticket_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>โพยรอผล:</strong> <span data-kpi="lotto_product.pending_ticket_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>โพยออกผลแล้ว:</strong> <span data-kpi="lotto_product.settled_ticket_count">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card card-outline card-success phase4-section" data-section="clicks">
+                        <div class="card-header"><h3 class="card-title mb-0">Click Analytics</h3></div>
+                        <div class="card-body">
+                            <div class="phase4-loading text-muted d-none">กำลังโหลด...</div>
+                            <div class="row">
+                                <div class="col-md-3 col-6 mb-2"><strong>คลิ๊กทั้งหมด:</strong> <span data-kpi="clicks.click_total">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>คนจริง:</strong> <span data-kpi="clicks.click_human">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>บอท:</strong> <span data-kpi="clicks.click_bot">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>Preview Bot:</strong> <span data-kpi="clicks.click_preview_bot">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>น่าสงสัย:</strong> <span data-kpi="clicks.click_suspicious">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>ไม่ทราบ:</strong> <span data-kpi="clicks.click_unknown">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>Unique Visitor:</strong> <span data-kpi="clicks.unique_visitors">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>สมัครสำเร็จ:</strong> <span data-kpi="clicks.converted_count">0</span></div>
+                                <div class="col-md-3 col-6 mb-2"><strong>Conversion Rate:</strong> <span data-kpi="clicks.conversion_rate">0%</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card card-outline card-secondary phase4-section" data-section="recent_lotto_bets">
+                        <div class="card-header"><h3 class="card-title mb-0">Recent Lotto Bets</h3></div>
+                        <div class="card-body table-responsive p-0">
+                            <div class="phase4-loading text-muted p-3 d-none">กำลังโหลด...</div>
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                <tr>
+                                    <th>เวลา</th>
+                                    <th>สมาชิก</th>
+                                    <th>ตลาด</th>
+                                    <th>ยอดเล่น</th>
+                                    <th>ยอดถูก</th>
+                                    <th>สถานะ</th>
+                                </tr>
+                                </thead>
+                                <tbody id="phase4_recent_lotto_bets_tbody">
+                                <tr><td colspan="6" class="text-center text-muted">ยังไม่มีข้อมูล</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card card-outline card-secondary phase4-section" data-section="latest_registers">
+                        <div class="card-header"><h3 class="card-title mb-0">Latest Registers</h3></div>
+                        <div class="card-body table-responsive p-0">
+                            <div class="phase4-loading text-muted p-3 d-none">กำลังโหลด...</div>
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                <tr>
+                                    <th>วันสมัคร</th>
+                                    <th>รหัสสมาชิก</th>
+                                    <th>Username</th>
+                                    <th>Phone</th>
+                                </tr>
+                                </thead>
+                                <tbody id="phase4_latest_registers_tbody">
+                                <tr><td colspan="4" class="text-center text-muted">ยังไม่มีข้อมูล</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card card-outline card-secondary phase4-section" data-section="recent_clicks">
+                        <div class="card-header"><h3 class="card-title mb-0">Recent Clicks</h3></div>
+                        <div class="card-body table-responsive p-0">
+                            <div class="phase4-loading text-muted p-3 d-none">กำลังโหลด...</div>
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                <tr>
+                                    <th>เวลา</th>
+                                    <th>ประเภท</th>
+                                    <th>เหตุผล</th>
+                                    <th>Risk</th>
+                                    <th>Referrer</th>
+                                    <th>Converted</th>
+                                </tr>
+                                </thead>
+                                <tbody id="phase4_recent_clicks_tbody">
+                                <tr><td colspan="6" class="text-center text-muted">ยังไม่มีข้อมูล</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             @php
                 $prem = bouncer()->hasPermission('marketing.marketing_campaign.dashboard.regis_all');
@@ -1437,5 +1591,251 @@
 
 
     </script>
-@endpush
+    <script>
+        (function () {
+            const campaignId = '{{ $id }}';
+            const endpoint = '{{ route('admin.marketing_campaign.dashboard.summary', ['campaign' => $id]) }}';
+            const pollingMs = 45000;
+            let pollingTimer = null;
+            let inFlight = false;
 
+            function numberFormat(value, digits = 2) {
+                const num = Number(value ?? 0);
+                return num.toLocaleString('th-TH', {
+                    minimumFractionDigits: digits,
+                    maximumFractionDigits: digits,
+                });
+            }
+
+            function integerFormat(value) {
+                const num = Number(value ?? 0);
+                return num.toLocaleString('th-TH', {maximumFractionDigits: 0});
+            }
+
+            function setLoading(sectionName, loading) {
+                const $section = $('.phase4-section[data-section="' + sectionName + '"]');
+                $section.find('.phase4-loading').toggleClass('d-none', !loading);
+            }
+
+            function setAllLoading(loading) {
+                $('.phase4-section').each(function () {
+                    $(this).find('.phase4-loading').toggleClass('d-none', !loading);
+                });
+            }
+
+            function readByPath(source, path, fallback = 0) {
+                const parts = path.split('.');
+                let current = source;
+                for (let i = 0; i < parts.length; i++) {
+                    const key = parts[i];
+                    if (current == null || typeof current !== 'object' || !(key in current)) {
+                        return fallback;
+                    }
+                    current = current[key];
+                }
+                return current;
+            }
+
+            function renderRows($tbody, rows, columns, emptyColSpan) {
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    $tbody.html('<tr><td colspan="' + emptyColSpan + '" class="text-center text-muted">ยังไม่มีข้อมูล</td></tr>');
+                    return;
+                }
+
+                const html = rows.map(function (row) {
+                    const cells = columns.map(function (col) {
+                        const value = typeof col.render === 'function' ? col.render(row) : (row[col.key] ?? '-');
+                        return '<td>' + value + '</td>';
+                    }).join('');
+                    return '<tr>' + cells + '</tr>';
+                }).join('');
+
+                $tbody.html(html);
+            }
+
+            function renderDashboard(data) {
+                const financialBonus = readByPath(data, 'financial.bonus_amount', 0);
+                $('[data-kpi="financial.deposit_amount"]').text(numberFormat(readByPath(data, 'financial.deposit_amount', 0)));
+                $('[data-kpi="financial.withdraw_amount"]').text(numberFormat(readByPath(data, 'financial.withdraw_amount', 0)));
+                $('[data-kpi="financial.bonus_amount"]').text(numberFormat(financialBonus));
+                $('[data-kpi="financial.net_amount"]').text(numberFormat(readByPath(data, 'financial.net_amount', 0)));
+                $('[data-kpi="register.registered_total"]').text(integerFormat(readByPath(data, 'register.registered_total', 0)));
+                $('[data-kpi="financial.first_deposit_members"]').text(integerFormat(readByPath(data, 'financial.first_deposit_members', 0)));
+
+                $('[data-kpi="lotto_cash.net_amount"]').text(numberFormat(readByPath(data, 'lotto_cash.net_amount', 0)));
+                $('[data-kpi="lotto_product.profit_amount"]').text(numberFormat(readByPath(data, 'lotto_product.profit_amount', 0)));
+                $('[data-kpi="lotto_product.sales_amount"]').text(numberFormat(readByPath(data, 'lotto_product.sales_amount', 0)));
+                $('[data-kpi="lotto_product.win_amount"]').text(numberFormat(readByPath(data, 'lotto_product.win_amount', 0)));
+                $('[data-kpi="lotto_product.ticket_count"]').text(integerFormat(readByPath(data, 'lotto_product.ticket_count', 0)));
+                $('[data-kpi="lotto_product.player_count"]').text(integerFormat(readByPath(data, 'lotto_product.player_count', 0)));
+                $('[data-kpi="lotto_product.win_ticket_count"]').text(integerFormat(readByPath(data, 'lotto_product.win_ticket_count', 0)));
+                $('[data-kpi="lotto_product.lose_ticket_count"]').text(integerFormat(readByPath(data, 'lotto_product.lose_ticket_count', 0)));
+                $('[data-kpi="lotto_product.pending_ticket_count"]').text(integerFormat(readByPath(data, 'lotto_product.pending_ticket_count', 0)));
+                $('[data-kpi="lotto_product.settled_ticket_count"]').text(integerFormat(readByPath(data, 'lotto_product.settled_ticket_count', 0)));
+
+                $('[data-kpi="clicks.click_total"]').text(integerFormat(readByPath(data, 'clicks.click_total', 0)));
+                $('[data-kpi="clicks.click_human"]').text(integerFormat(readByPath(data, 'clicks.click_human', 0)));
+                $('[data-kpi="clicks.click_bot"]').text(integerFormat(readByPath(data, 'clicks.click_bot', 0)));
+                $('[data-kpi="clicks.click_preview_bot"]').text(integerFormat(readByPath(data, 'clicks.click_preview_bot', 0)));
+                $('[data-kpi="clicks.click_suspicious"]').text(integerFormat(readByPath(data, 'clicks.click_suspicious', 0)));
+                $('[data-kpi="clicks.click_unknown"]').text(integerFormat(readByPath(data, 'clicks.click_unknown', 0)));
+                $('[data-kpi="clicks.unique_visitors"]').text(integerFormat(readByPath(data, 'clicks.unique_visitors', 0)));
+                $('[data-kpi="clicks.converted_count"]').text(integerFormat(readByPath(data, 'clicks.converted_count', 0)));
+                $('[data-kpi="clicks.conversion_rate"]').text(numberFormat(readByPath(data, 'clicks.conversion_rate', 0)) + '%');
+
+                renderRows(
+                    $('#phase4_recent_lotto_bets_tbody'),
+                    data.recent_lotto_bets,
+                    [
+                        {key: 'created_at'},
+                        {key: 'member_code'},
+                        {key: 'market_name'},
+                        {render: row => numberFormat(row.bet_amount)},
+                        {render: row => numberFormat(row.win_amount)},
+                        {key: 'status'},
+                    ],
+                    6
+                );
+
+                renderRows(
+                    $('#phase4_latest_registers_tbody'),
+                    data.latest_registers,
+                    [
+                        {key: 'date_regis'},
+                        {key: 'member_code'},
+                        {key: 'username'},
+                        {key: 'phone_masked'},
+                    ],
+                    4
+                );
+
+                renderRows(
+                    $('#phase4_recent_clicks_tbody'),
+                    data.recent_clicks,
+                    [
+                        {key: 'created_at'},
+                        {key: 'classification_type'},
+                        {key: 'classification_reason'},
+                        {key: 'risk_score'},
+                        {key: 'referrer_domain'},
+                        {render: row => row.converted ? 'Yes' : 'No'},
+                    ],
+                    6
+                );
+            }
+
+            function updateMeta(data) {
+                const generatedAt = data.generated_at || '-';
+                const cacheTtl = data.cache_ttl || '-';
+                $('#phase4_dashboard_meta').text('Campaign: ' + campaignId + ' | generated_at: ' + generatedAt + ' | cache_ttl: ' + cacheTtl + 's');
+            }
+
+            function showError(message) {
+                $('#phase4_dashboard_error')
+                    .removeClass('d-none')
+                    .text(message || 'ไม่สามารถโหลดข้อมูล Dashboard ได้');
+            }
+
+            function hideError() {
+                $('#phase4_dashboard_error').addClass('d-none').text('');
+            }
+
+            async function fetchDashboard() {
+                if (inFlight) {
+                    return;
+                }
+
+                inFlight = true;
+                setAllLoading(true);
+                hideError();
+
+                const dateStart = $('#phase4_start_date').val();
+                const dateEnd = $('#phase4_end_date').val();
+
+                try {
+                    const response = await axios.get(endpoint, {
+                        params: {
+                            date_start: dateStart,
+                            date_end: dateEnd,
+                        },
+                    });
+
+                    const payload = response?.data ?? {};
+                    if (payload.success !== true) {
+                        showError(payload.message || 'โหลดข้อมูลไม่สำเร็จ');
+                        return;
+                    }
+
+                    renderDashboard(payload);
+                    updateMeta(payload);
+                } catch (error) {
+                    const message = error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดระหว่างโหลดข้อมูล';
+                    showError(message);
+                } finally {
+                    setAllLoading(false);
+                    inFlight = false;
+                }
+            }
+
+            function initDateRangePicker() {
+                const start = moment().startOf('day');
+                const end = moment().endOf('day');
+                $('#phase4_start_date').val(start.format('YYYY-MM-DD'));
+                $('#phase4_end_date').val(end.format('YYYY-MM-DD'));
+                $('#phase4_search_date').val(start.format('YYYY-MM-DD') + ' ถึง ' + end.format('YYYY-MM-DD'));
+
+                $('#phase4_search_date').daterangepicker({
+                    startDate: start,
+                    endDate: end,
+                    autoUpdateInput: false,
+                    locale: {
+                        format: 'YYYY-MM-DD',
+                        cancelLabel: 'ล้าง',
+                        applyLabel: 'เลือก',
+                        customRangeLabel: 'กำหนดเอง',
+                        daysOfWeek: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+                        monthNames: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
+                        firstDay: 0
+                    },
+                    ranges: {
+                        'วันนี้': [moment().startOf('day'), moment().endOf('day')],
+                        'เมื่อวาน': [moment().subtract(1, 'day').startOf('day'), moment().subtract(1, 'day').endOf('day')],
+                        '7 วันล่าสุด': [moment().subtract(6, 'day').startOf('day'), moment().endOf('day')],
+                        'เดือนนี้': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                        'กำหนดเอง': [moment().startOf('day'), moment().endOf('day')],
+                    }
+                });
+
+                $('#phase4_search_date').on('apply.daterangepicker', function (ev, picker) {
+                    const startDate = picker.startDate.format('YYYY-MM-DD');
+                    const endDate = picker.endDate.format('YYYY-MM-DD');
+                    $('#phase4_start_date').val(startDate);
+                    $('#phase4_end_date').val(endDate);
+                    $(this).val(startDate + ' ถึง ' + endDate);
+                    fetchDashboard();
+                });
+
+                $('#phase4_search_date').on('cancel.daterangepicker', function () {
+                    $(this).val('');
+                    $('#phase4_start_date').val('');
+                    $('#phase4_end_date').val('');
+                    fetchDashboard();
+                });
+            }
+
+            function startPolling() {
+                if (pollingTimer !== null) {
+                    clearInterval(pollingTimer);
+                }
+                pollingTimer = setInterval(fetchDashboard, pollingMs);
+            }
+
+            $(document).ready(function () {
+                initDateRangePicker();
+                $('#phase4_refresh_btn').on('click', fetchDashboard);
+                fetchDashboard();
+                startPolling();
+            });
+        })();
+    </script>
+@endpush

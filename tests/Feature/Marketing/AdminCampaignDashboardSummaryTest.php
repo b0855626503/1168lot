@@ -45,7 +45,7 @@ class AdminCampaignDashboardSummaryTest extends TestCase
             'date_end' => '2026-05-02',
             'generated_at' => now()->toIso8601String(),
             'cache_ttl' => 40,
-            'financial' => ['deposit_amount' => 0.0],
+            'financial' => ['deposit_amount' => 0.0, 'bonus_amount' => 0.0],
             'lotto_cash' => ['sales_amount' => 0.0],
             'lotto_product' => ['ticket_count' => 0],
             'register' => ['registered_in_range' => 0],
