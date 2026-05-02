@@ -20,10 +20,19 @@ class YeekeeRound extends Model
         'result_compute_at',
         'expected_settlement_deadline_at',
         'status',
+        'last_shoot_position',
+        'shoot_count',
         'config_snapshot_json',
+        'shoot_snapshot_json',
+        'shoot_snapshot_hash',
+        'shoot_closed_at',
     ];
 
     protected $casts = [
+        'last_shoot_position' => 'integer',
+        'shoot_count' => 'integer',
+        'shoot_closed_at' => 'datetime',
         'config_snapshot_json' => 'array',
+        'shoot_snapshot_json' => 'array',
     ];
 }
