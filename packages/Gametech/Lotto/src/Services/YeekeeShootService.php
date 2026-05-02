@@ -8,6 +8,7 @@ use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class YeekeeShootService
@@ -25,16 +26,32 @@ class YeekeeShootService
             $legacyShootEnabled = (bool) config('yeekee.shoot_enabled', false);
             $hardeningShootEnabled = (bool) config('yeekee.shooting_enabled', true);
             if (! $legacyShootEnabled || ! $hardeningShootEnabled) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'SHOOTING_DISABLED',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => $roundId,
+                ]);
                 throw new InvalidArgumentException('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
             }
 
             $round = YeekeeRound::query()->lockForUpdate()->find($roundId);
             if (! $round) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'ROUND_NOT_FOUND',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => $roundId,
+                ]);
                 throw new InvalidArgumentException('ไม่พบรอบยี่กี่ที่ระบุ');
             }
 
             $market = LotteryMarket::query()->find((int) $round->market_id);
             if (! $market || (string) ($market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL) !== LotteryMarket::RESULT_MODE_YEEKEE) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'MARKET_NOT_YEEKEE',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'market_id' => (int) $round->market_id,
+                ]);
                 throw new InvalidArgumentException('รายการหวยนี้ไม่รองรับการยิงเลข');
             }
 
@@ -43,18 +60,42 @@ class YeekeeShootService
             $shootCloseAt = Carbon::parse((string) $round->shoot_close_at);
 
             if ($now->lt($shootOpenAt)) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'BEFORE_SHOOT_OPEN',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'shoot_open_at' => $shootOpenAt->format('Y-m-d H:i:s'),
+                ]);
                 throw new InvalidArgumentException('ยังไม่ถึงเวลายิงเลข');
             }
 
             if (! $now->lt($shootCloseAt)) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'AFTER_SHOOT_CLOSE',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'shoot_close_at' => $shootCloseAt->format('Y-m-d H:i:s'),
+                ]);
                 throw new InvalidArgumentException('หมดเวลายิงเลขแล้ว');
             }
 
             if ($round->shoot_closed_at !== null) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'ROUND_ALREADY_FROZEN',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'shoot_closed_at' => (string) $round->shoot_closed_at,
+                ]);
                 throw new InvalidArgumentException('รอบนี้ปิดรับยิงเลขแล้ว');
             }
 
             if (in_array((string) $round->status, ['voided', 'resulted', 'settled'], true)) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'ROUND_STATUS_FINAL',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'round_status' => (string) $round->status,
+                ]);
                 throw new InvalidArgumentException('รอบนี้ไม่สามารถยิงเลขได้');
             }
 
@@ -65,6 +106,13 @@ class YeekeeShootService
                 ->count();
 
             if ($memberShootCount >= $maxShootPerMemberPerRound) {
+                Log::warning('yeekee.shoot.rejected', [
+                    'reason' => 'MEMBER_ROUND_LIMIT_EXCEEDED',
+                    'member_id' => $memberId,
+                    'yeekee_round_id' => (int) $round->id,
+                    'member_shoot_count' => $memberShootCount,
+                    'max_shoots_per_member_per_round' => $maxShootPerMemberPerRound,
+                ]);
                 throw new InvalidArgumentException('เกินจำนวนการยิงเลขสูงสุดต่อรอบ');
             }
 
@@ -82,6 +130,14 @@ class YeekeeShootService
                     $nextAllowedAt = $memberLastSubmittedAt->copy()->addSeconds($cooldownSeconds);
                     if ($nextAllowedAt->gt($now)) {
                         $remainingCooldownSeconds = max((int) $now->diffInSeconds($nextAllowedAt, false), 1);
+                        Log::warning('yeekee.shoot.rejected', [
+                            'reason' => 'COOLDOWN_ACTIVE',
+                            'member_id' => $memberId,
+                            'yeekee_round_id' => (int) $round->id,
+                            'cooldown_seconds' => $cooldownSeconds,
+                            'remaining_cooldown_seconds' => $remainingCooldownSeconds,
+                            'next_allowed_at' => $nextAllowedAt->format('Y-m-d H:i:s'),
+                        ]);
 
                         throw new YeekeeShootCooldownException(
                             cooldownSeconds: $cooldownSeconds,
@@ -103,6 +159,14 @@ class YeekeeShootService
                     ->count();
 
                 if ($ipShootCount >= $maxShootsPerIpPerMinute) {
+                    Log::warning('yeekee.shoot.rejected', [
+                        'reason' => 'IP_RATE_LIMIT_EXCEEDED',
+                        'member_id' => $memberId,
+                        'yeekee_round_id' => (int) $round->id,
+                        'ip_address' => $ipAddress,
+                        'ip_shoot_count' => $ipShootCount,
+                        'max_shoots_per_ip_per_minute' => $maxShootsPerIpPerMinute,
+                    ]);
                     throw new InvalidArgumentException('เกินจำนวนการยิงเลขสูงสุดจาก IP เดียวกัน');
                 }
             }
@@ -125,6 +189,15 @@ class YeekeeShootService
                 'ip_address' => $ipAddress,
                 'user_agent' => $userAgent ? mb_substr($userAgent, 0, 255) : null,
                 'metadata_json' => null,
+            ]);
+
+            Log::info('yeekee.shoot.accepted', [
+                'yeekee_round_id' => (int) $round->id,
+                'lotto_draw_id' => (int) $round->lotto_draw_id,
+                'market_id' => (int) $round->market_id,
+                'member_id' => $memberId,
+                'position' => $nextPosition,
+                'shoot_count' => (int) $round->shoot_count,
             ]);
 
             return $shoot;
