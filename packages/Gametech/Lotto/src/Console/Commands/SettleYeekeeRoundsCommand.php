@@ -18,6 +18,15 @@ use Illuminate\Support\Facades\Log;
 
 class SettleYeekeeRoundsCommand extends Command
 {
+    private const PROCESSABLE_ROUND_STATUSES = [
+        'draft',
+        'open',
+        'open_bet',
+        'closed_bet',
+        'shoot_open',
+        'result_pending',
+    ];
+
     private const RESULT_FETCH_STATUS_VOID_REFUND_FORMULA_INPUT_INSUFFICIENT = 'VOID_REFUND_FORMULA_INPUT_INSUFFICIENT';
 
     private const RESULT_FETCH_STATUS_NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT = 'NO_ACTIVITY_FORMULA_INPUT_INSUFFICIENT';
@@ -44,7 +53,7 @@ class SettleYeekeeRoundsCommand extends Command
         $drawId = $this->option('draw_id');
 
         $query = YeekeeRound::query()
-            ->whereIn('status', ['draft', 'open'])
+            ->whereIn('status', self::PROCESSABLE_ROUND_STATUSES)
             ->orderBy('result_compute_at')
             ->orderBy('id')
             ->limit($limit);
@@ -85,7 +94,7 @@ class SettleYeekeeRoundsCommand extends Command
                         return 'skipped_already_final';
                     }
 
-                    if (! in_array((string) $round->status, ['draft', 'open'], true)) {
+                    if (! in_array((string) $round->status, self::PROCESSABLE_ROUND_STATUSES, true)) {
                         return 'skipped_already_final';
                     }
 

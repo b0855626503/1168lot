@@ -150,6 +150,57 @@ class SettleYeekeeRoundsCommandTest extends TestCase
         );
     }
 
+    public function test_settle_yeekee_rounds_processes_legacy_active_round_statuses(): void
+    {
+        Queue::fake();
+        $this->mock(AutoResultHardeningService::class)
+            ->shouldReceive('handleExhaustedTransition')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+        $this->mock(LotteryRelayPublisher::class)
+            ->shouldReceive('publishIfReady')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+
+        $drawService = $this->mock(DrawService::class);
+        $drawService->shouldReceive('syncScheduledStatuses')->once();
+
+        $this->mock(YeekeeResultEngineService::class)
+            ->shouldReceive('computeFromRound')
+            ->never();
+
+        $this->mock(SettlementService::class)
+            ->shouldReceive('settleDraw')
+            ->never();
+
+        $this->mock(DrawCancelAllRefundService::class)
+            ->shouldReceive('cancelAllActiveTickets')
+            ->never();
+
+        DB::table('yeekee_rounds')->whereIn('id', [1, 2, 3, 4])->delete();
+        DB::table('lotto_draws')->whereIn('id', [3001, 3002, 3003, 3004])->update(['status' => 'closed']);
+        DB::table('lotto_tickets')->whereIn('draw_id', [3001, 3002, 3003, 3004])->delete();
+        DB::table('yeekee_shoots')->whereIn('yeekee_round_id', [1, 2, 3, 4])->delete();
+
+        DB::table('yeekee_rounds')->insert([
+            $this->legacyRoundPayload(1, 3001, 'open_bet'),
+            $this->legacyRoundPayload(2, 3002, 'closed_bet'),
+            $this->legacyRoundPayload(3, 3003, 'shoot_open'),
+            $this->legacyRoundPayload(4, 3004, 'result_pending'),
+        ]);
+
+        Artisan::call('lotto:settle-yeekee-rounds', ['--limit' => 4]);
+
+        foreach ([1, 2, 3, 4] as $roundId) {
+            $this->assertSame('voided', (string) DB::table('yeekee_rounds')->where('id', $roundId)->value('status'));
+        }
+
+        foreach ([3001, 3002, 3003, 3004] as $drawId) {
+            $this->assertSame('resulted', (string) DB::table('lotto_draws')->where('id', $drawId)->value('status'));
+            $this->assertSame('NO_ACTIVITY', (string) DB::table('lotto_draws')->where('id', $drawId)->value('result_fetch_status'));
+        }
+    }
+
     private function seedData(): void
     {
         DB::table('lotto_markets')->insert([
@@ -459,6 +510,27 @@ class SettleYeekeeRoundsCommandTest extends TestCase
                 'updated_at' => now(),
             ],
         ]);
+    }
+
+    private function legacyRoundPayload(int $id, int $drawId, string $status): array
+    {
+        return [
+            'id' => $id,
+            'market_id' => 106,
+            'lotto_draw_id' => $drawId,
+            'round_date' => '2026-05-01',
+            'round_no' => $id,
+            'bet_open_at' => '2026-05-01 00:00:00',
+            'bet_close_at' => '2026-05-01 00:15:00',
+            'shoot_open_at' => '2026-05-01 00:00:00',
+            'shoot_close_at' => '2026-05-01 00:16:00',
+            'result_compute_at' => '2026-05-01 00:17:00',
+            'expected_settlement_deadline_at' => '2026-05-01 00:22:00',
+            'status' => $status,
+            'config_snapshot_json' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
     }
 
     private function prepareSchema(): void
