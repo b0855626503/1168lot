@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Services;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -78,8 +79,15 @@ class YeekeeShootService
 
                 if ($memberLastShoot && $memberLastShoot->submitted_at) {
                     $memberLastSubmittedAt = Carbon::parse((string) $memberLastShoot->submitted_at);
-                    if ($memberLastSubmittedAt->addSeconds($cooldownSeconds)->gt($now)) {
-                        throw new InvalidArgumentException('กรุณารอก่อนยิงเลขครั้งถัดไป');
+                    $nextAllowedAt = $memberLastSubmittedAt->copy()->addSeconds($cooldownSeconds);
+                    if ($nextAllowedAt->gt($now)) {
+                        $remainingCooldownSeconds = max((int) $now->diffInSeconds($nextAllowedAt, false), 1);
+
+                        throw new YeekeeShootCooldownException(
+                            cooldownSeconds: $cooldownSeconds,
+                            remainingCooldownSeconds: $remainingCooldownSeconds,
+                            nextAllowedAt: $nextAllowedAt->format('Y-m-d H:i:s')
+                        );
                     }
                 }
             }
@@ -100,6 +108,10 @@ class YeekeeShootService
             }
 
             $nextPosition = (int) $round->last_shoot_position + 1;
+            $round->forceFill([
+                'last_shoot_position' => $nextPosition,
+                'shoot_count' => (int) $round->shoot_count + 1,
+            ])->save();
 
             $shoot = YeekeeShoot::query()->create([
                 'yeekee_round_id' => (int) $round->id,
@@ -114,11 +126,6 @@ class YeekeeShootService
                 'user_agent' => $userAgent ? mb_substr($userAgent, 0, 255) : null,
                 'metadata_json' => null,
             ]);
-
-            $round->forceFill([
-                'last_shoot_position' => $nextPosition,
-                'shoot_count' => (int) $round->shoot_count + 1,
-            ])->save();
 
             return $shoot;
         });

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Lotto;
 
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
 use Gametech\Lotto\Services\YeekeeShootService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -71,9 +72,14 @@ class YeekeeShootServiceTest extends TestCase
 
         $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('กรุณารอก่อนยิงเลขครั้งถัดไป');
-        $service->submitShoot(1001, 201, '54321', '127.0.0.1', 'test');
+        try {
+            $service->submitShoot(1001, 201, '54321', '127.0.0.1', 'test');
+            $this->fail('Expected cooldown exception was not thrown.');
+        } catch (YeekeeShootCooldownException $exception) {
+            $this->assertSame(6, $exception->cooldownSeconds());
+            $this->assertGreaterThanOrEqual(1, $exception->remainingCooldownSeconds());
+            $this->assertNotSame('', $exception->nextAllowedAt());
+        }
     }
 
     public function test_submit_shoot_rejects_when_round_shoot_closed(): void
@@ -115,35 +121,99 @@ class YeekeeShootServiceTest extends TestCase
         $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
     }
 
+    public function test_submit_shoot_rejects_when_ip_rate_limit_is_reached(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 0);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 1);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('เกินจำนวนการยิงเลขสูงสุดจาก IP เดียวกัน');
+        try {
+            $service->submitShoot(1002, 201, '54321', '127.0.0.1', 'test');
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
+        }
+    }
+
+    public function test_submit_shoot_allows_different_member_in_same_round_even_with_cooldown(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 60);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 0);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $shootA = $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $shootB = $service->submitShoot(1002, 201, '54321', '127.0.0.1', 'test');
+
+        $this->assertSame(1, (int) $shootA->position);
+        $this->assertSame(2, (int) $shootB->position);
+    }
+
+    public function test_submit_shoot_allows_same_member_in_different_round_even_with_cooldown(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 60);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 0);
+        $this->seedBasicYeekeeRound();
+        $this->seedBasicYeekeeRound([
+            'id' => 202,
+            'round_no' => 2,
+        ]);
+        $service = app(YeekeeShootService::class);
+
+        $shootA = $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $shootB = $service->submitShoot(1001, 202, '54321', '127.0.0.1', 'test');
+
+        $this->assertSame(1, (int) $shootA->position);
+        $this->assertSame(1, (int) $shootB->position);
+    }
+
     private function seedBasicYeekeeRound(array $overrides = []): void
     {
-        DB::table('lotto_groups')->insert([
-            'id' => 1,
-            'name' => 'Main',
-            'code' => 'main',
-            'is_enabled' => 1,
-            'sort' => 1,
-        ]);
+        DB::table('lotto_groups')->updateOrInsert(
+            ['id' => 1],
+            [
+                'name' => 'Main',
+                'code' => 'main',
+                'is_enabled' => 1,
+                'sort' => 1,
+            ]
+        );
 
-        DB::table('lotto_markets')->insert([
-            'id' => 11,
-            'group_id' => 1,
-            'name' => 'Yeekee Market',
-            'code' => 'yeekee_market',
-            'result_mode' => 'yeekee',
-            'is_enabled' => 1,
-        ]);
+        DB::table('lotto_markets')->updateOrInsert(
+            ['id' => 11],
+            [
+                'group_id' => 1,
+                'name' => 'Yeekee Market',
+                'code' => 'yeekee_market',
+                'result_mode' => 'yeekee',
+                'is_enabled' => 1,
+            ]
+        );
 
-        DB::table('lotto_draws')->insert([
-            'id' => 101,
-            'market_id' => 11,
-            'draw_date' => now()->toDateString(),
-            'open_at' => now()->subMinutes(10)->format('Y-m-d H:i:s'),
-            'close_at' => now()->subMinutes(5)->format('Y-m-d H:i:s'),
-            'status' => 'open',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::table('lotto_draws')->updateOrInsert(
+            ['id' => 101],
+            [
+                'market_id' => 11,
+                'draw_date' => now()->toDateString(),
+                'open_at' => now()->subMinutes(10)->format('Y-m-d H:i:s'),
+                'close_at' => now()->subMinutes(5)->format('Y-m-d H:i:s'),
+                'status' => 'open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
 
         $roundPayload = array_merge([
             'id' => 201,

@@ -20,6 +20,7 @@ use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\LottoMarketContentService;
 use Gametech\Lotto\Services\LottoPackageSelectionService;
 use Gametech\Lotto\Services\WalletTransactionService;
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
 use Gametech\Lotto\Services\YeekeeShootService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -507,6 +508,13 @@ class LottoController extends BaseController
                 'submitted_at' => (string) $shoot->submitted_at,
                 'round_status' => $round ? (string) $round->status : null,
             ], 'ยิงเลขสำเร็จ');
+        } catch (YeekeeShootCooldownException $exception) {
+            return $this->sendResponseFail([
+                'error_code' => 'YEEKEE_SHOOT_COOLDOWN',
+                'cooldown_seconds' => $exception->cooldownSeconds(),
+                'remaining_cooldown_seconds' => $exception->remainingCooldownSeconds(),
+                'next_allowed_at' => $exception->nextAllowedAt(),
+            ], $exception->getMessage(), 429);
         } catch (\InvalidArgumentException $exception) {
             return $this->sendError($exception->getMessage(), 422);
         } catch (\Throwable $exception) {
