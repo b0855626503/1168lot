@@ -12,6 +12,7 @@ use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\GenerateYeekeeRoundsCommand;
 use Gametech\Lotto\Console\Commands\InsertInternalResultSourceMappingsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
+use Gametech\Lotto\Console\Commands\LottoCloneAutoPullThaiResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoFetchAutoResultsCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayConsumeStreamCommand;
 use Gametech\Lotto\Console\Commands\LottoRelayHealthCommand;
@@ -160,6 +161,7 @@ class LottoServiceProvider extends ServiceProvider
             SyncLottoDrawStatusesCommand::class,
             LottoWinningReportBackfillCommand::class,
             LottoWinningReportReconcileCommand::class,
+            LottoCloneAutoPullThaiResultsCommand::class,
         ]);
     }
 

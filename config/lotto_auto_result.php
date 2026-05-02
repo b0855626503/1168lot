@@ -73,6 +73,15 @@ return [
         ],
     ],
 
+    'clone_auto_pull' => [
+        'enabled' => (bool) env('LOTTERY_RESULT_CLONE_AUTO_PULL_ENABLED', false),
+        'group_ids' => array_values(array_filter(array_map(
+            static fn (string $id): int => (int) trim($id),
+            explode(',', (string) env('LOTTERY_RESULT_CLONE_AUTO_PULL_GROUP_IDS', ''))
+        ), static fn (int $id): bool => $id > 0)),
+        'delay_minutes' => max(0, (int) env('LOTTERY_RESULT_CLONE_AUTO_PULL_DELAY_MINUTES', 1)),
+    ],
+
     'internal_result_sources' => [
         'timeout_seconds' => max(1, (int) env('LOTTO_INTERNAL_RESULT_TIMEOUT_SECONDS', 15)),
         'shared_key' => (string) env('LOTTO_INTERNAL_RESULT_SHARED_KEY', ''),

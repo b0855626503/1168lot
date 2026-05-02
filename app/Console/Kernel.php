@@ -166,6 +166,13 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        // Clone-mode fallback: pull Thai lottery results when primary has no relay to offer.
+        $schedule->command('lotto:clone-auto-pull-thai-results')
+            ->everyMinute()
+            ->when(static fn (): bool => $relayRuntime->isClone())
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Non hot-path retention cleanup for browser-runtime artifacts.
         $schedule->command('lotto:cleanup-browser-runtime-artifacts')
             ->dailyAt('03:55')
