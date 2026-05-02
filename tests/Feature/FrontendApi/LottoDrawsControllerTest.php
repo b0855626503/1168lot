@@ -876,8 +876,14 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('data.limit', 2);
         $response->assertJsonPath('data.count', 2);
-        $response->assertJsonPath('data.items.0.number_text', '***99');
-        $response->assertJsonPath('data.items.1.number_text', '***45');
+        $response->assertJsonPath('data.items.0.number_text', '999**');
+        $response->assertJsonPath('data.items.1.number_text', '123**');
+        $response->assertJsonPath('data.items.0.number_text_masked', '999**');
+        $response->assertJsonPath('data.items.1.number_text_masked', '123**');
+        $response->assertJsonMissingPath('data.items.0.number_text_raw');
+        $response->assertJsonMissingPath('data.items.1.number_text_raw');
+        $this->assertStringNotContainsString('12345', $response->getContent());
+        $this->assertStringNotContainsString('99999', $response->getContent());
     }
 
     public function test_submit_shoot_returns_http_429_on_cooldown_exception(): void

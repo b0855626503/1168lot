@@ -1780,18 +1780,23 @@ GET /api/v1/reward/history?page=1&per_page=20
     "items": [
       {
         "position": 128,
-        "number_text": "***45",
+        "number_text": "123**",
+        "number_text_masked": "123**",
         "submitted_at": "2026-04-30 12:10:01"
       },
       {
         "position": 127,
-        "number_text": "***21",
+        "number_text": "543**",
+        "number_text_masked": "543**",
         "submitted_at": "2026-04-30 12:09:58"
       }
     ]
   }
 }
 ```
+- หมายเหตุ:
+  - `number_text` ใน endpoint นี้เป็นค่า masked (ไม่ใช่เลขเต็ม)
+  - field มาตรฐานใหม่คือ `number_text_masked` และยังคงส่ง `number_text` แบบ masked เพื่อ compatibility
 
 <a id="get-apiv1lottoyeekeeroundsroundidreward-status"></a>
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`

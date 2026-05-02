@@ -1214,9 +1214,12 @@ class LottoController extends BaseController
                 'limit' => $limit,
                 'count' => $rows->count(),
                 'items' => $rows->map(static function (YeekeeShoot $shoot): array {
+                    $maskedNumberText = self::maskYeekeeNumberText((string) $shoot->number_text);
+
                     return [
                         'position' => (int) $shoot->position,
-                        'number_text' => self::maskYeekeeNumberText((string) $shoot->number_text),
+                        'number_text' => $maskedNumberText,
+                        'number_text_masked' => $maskedNumberText,
                         'submitted_at' => (string) $shoot->submitted_at,
                     ];
                 })->values()->all(),
@@ -2397,7 +2400,7 @@ class LottoController extends BaseController
             return '*****';
         }
 
-        return '***'.substr($numberText, -2);
+        return substr($numberText, 0, 3).'**';
     }
 
     /**
