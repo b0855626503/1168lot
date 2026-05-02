@@ -71,6 +71,7 @@ class YeekeeShootServiceTest extends TestCase
         $service = app(YeekeeShootService::class);
 
         $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
 
         try {
             $service->submitShoot(1001, 201, '54321', '127.0.0.1', 'test');
@@ -79,6 +80,9 @@ class YeekeeShootServiceTest extends TestCase
             $this->assertSame(6, $exception->cooldownSeconds());
             $this->assertGreaterThanOrEqual(1, $exception->remainingCooldownSeconds());
             $this->assertNotSame('', $exception->nextAllowedAt());
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
         }
     }
 
@@ -91,10 +95,16 @@ class YeekeeShootServiceTest extends TestCase
             'shoot_closed_at' => now()->subSecond()->format('Y-m-d H:i:s'),
         ]);
         $service = app(YeekeeShootService::class);
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('รอบนี้ปิดรับยิงเลขแล้ว');
-        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        try {
+            $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
+        }
     }
 
     public function test_submit_shoot_rejects_when_legacy_flag_is_disabled(): void
