@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Lotto;
 
+use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeShootCooldownException;
 use Gametech\Lotto\Services\YeekeeShootService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,9 @@ class YeekeeShootServiceTest extends TestCase
 
     public function test_submit_shoot_creates_position_sequence(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 0);
         $this->seedBasicYeekeeRound();
         $service = app(YeekeeShootService::class);
 
@@ -41,10 +45,16 @@ class YeekeeShootServiceTest extends TestCase
         $this->assertSame('00001', (string) $shootA->number_text);
         $this->assertSame(1, (int) $shootA->number_value);
         $this->assertSame(2, DB::table('yeekee_shoots')->count());
+        $round = DB::table('yeekee_rounds')->where('id', 201)->first();
+        $this->assertSame(2, (int) $round->last_shoot_position);
+        $this->assertSame(2, (int) $round->shoot_count);
     }
 
     public function test_submit_shoot_rejects_invalid_number(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 0);
         $this->seedBasicYeekeeRound();
         $service = app(YeekeeShootService::class);
 
@@ -52,37 +62,170 @@ class YeekeeShootServiceTest extends TestCase
         $service->submitShoot(1001, 201, '1234');
     }
 
-    private function seedBasicYeekeeRound(): void
+    public function test_submit_shoot_rejects_member_cooldown(): void
     {
-        DB::table('lotto_groups')->insert([
-            'id' => 1,
-            'name' => 'Main',
-            'code' => 'main',
-            'is_enabled' => 1,
-            'sort' => 1,
-        ]);
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 6);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
 
-        DB::table('lotto_markets')->insert([
-            'id' => 11,
-            'group_id' => 1,
-            'name' => 'Yeekee Market',
-            'code' => 'yeekee_market',
-            'result_mode' => 'yeekee',
-            'is_enabled' => 1,
-        ]);
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
 
-        DB::table('lotto_draws')->insert([
-            'id' => 101,
-            'market_id' => 11,
-            'draw_date' => now()->toDateString(),
-            'open_at' => now()->subMinutes(10)->format('Y-m-d H:i:s'),
-            'close_at' => now()->subMinutes(5)->format('Y-m-d H:i:s'),
-            'status' => 'open',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        try {
+            $service->submitShoot(1001, 201, '54321', '127.0.0.1', 'test');
+            $this->fail('Expected cooldown exception was not thrown.');
+        } catch (YeekeeShootCooldownException $exception) {
+            $this->assertSame(6, $exception->cooldownSeconds());
+            $this->assertGreaterThanOrEqual(1, $exception->remainingCooldownSeconds());
+            $this->assertNotSame('', $exception->nextAllowedAt());
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
+        }
+    }
 
-        DB::table('yeekee_rounds')->insert([
+    public function test_submit_shoot_rejects_when_round_shoot_closed(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 0);
+        $this->seedBasicYeekeeRound([
+            'shoot_closed_at' => now()->subSecond()->format('Y-m-d H:i:s'),
+        ]);
+        $service = app(YeekeeShootService::class);
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('รอบนี้ปิดรับยิงเลขแล้ว');
+        try {
+            $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
+        }
+    }
+
+    public function test_submit_shoot_rejects_when_legacy_flag_is_disabled(): void
+    {
+        config()->set('yeekee.shoot_enabled', false);
+        config()->set('yeekee.shooting_enabled', true);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+    }
+
+    public function test_submit_shoot_rejects_when_hardening_flag_is_disabled(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', false);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+    }
+
+    public function test_submit_shoot_rejects_when_ip_rate_limit_is_reached(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 0);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 1);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $roundBeforeReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('เกินจำนวนการยิงเลขสูงสุดจาก IP เดียวกัน');
+        try {
+            $service->submitShoot(1002, 201, '54321', '127.0.0.1', 'test');
+        } finally {
+            $roundAfterReject = DB::table('yeekee_rounds')->where('id', 201)->first();
+            $this->assertSame((int) $roundBeforeReject->shoot_count, (int) $roundAfterReject->shoot_count);
+        }
+    }
+
+    public function test_submit_shoot_allows_different_member_in_same_round_even_with_cooldown(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 60);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 0);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $shootA = $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $shootB = $service->submitShoot(1002, 201, '54321', '127.0.0.1', 'test');
+
+        $this->assertSame(1, (int) $shootA->position);
+        $this->assertSame(2, (int) $shootB->position);
+    }
+
+    public function test_submit_shoot_allows_same_member_in_different_round_even_with_cooldown(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', true);
+        config()->set('yeekee.shoot_cooldown_seconds', 60);
+        config()->set('yeekee.max_shoots_per_ip_per_minute', 0);
+        $this->seedBasicYeekeeRound();
+        $this->seedBasicYeekeeRound([
+            'id' => 202,
+            'round_no' => 2,
+        ]);
+        $service = app(YeekeeShootService::class);
+
+        $shootA = $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+        $shootB = $service->submitShoot(1001, 202, '54321', '127.0.0.1', 'test');
+
+        $this->assertSame(1, (int) $shootA->position);
+        $this->assertSame(1, (int) $shootB->position);
+    }
+
+    private function seedBasicYeekeeRound(array $overrides = []): void
+    {
+        DB::table('lotto_groups')->updateOrInsert(
+            ['id' => 1],
+            [
+                'name' => 'Main',
+                'code' => 'main',
+                'is_enabled' => 1,
+                'sort' => 1,
+            ]
+        );
+
+        DB::table('lotto_markets')->updateOrInsert(
+            ['id' => 11],
+            [
+                'group_id' => 1,
+                'name' => 'Yeekee Market',
+                'code' => 'yeekee_market',
+                'result_mode' => 'yeekee',
+                'is_enabled' => 1,
+            ]
+        );
+
+        DB::table('lotto_draws')->updateOrInsert(
+            ['id' => 101],
+            [
+                'market_id' => 11,
+                'draw_date' => now()->toDateString(),
+                'open_at' => now()->subMinutes(10)->format('Y-m-d H:i:s'),
+                'close_at' => now()->subMinutes(5)->format('Y-m-d H:i:s'),
+                'status' => 'open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        $roundPayload = array_merge([
             'id' => 201,
             'market_id' => 11,
             'lotto_draw_id' => 101,
@@ -95,10 +238,17 @@ class YeekeeShootServiceTest extends TestCase
             'result_compute_at' => now()->addMinutes(3)->format('Y-m-d H:i:s'),
             'expected_settlement_deadline_at' => now()->addMinutes(8)->format('Y-m-d H:i:s'),
             'status' => 'open',
+            'last_shoot_position' => 0,
+            'shoot_count' => 0,
             'config_snapshot_json' => null,
+            'shoot_snapshot_json' => null,
+            'shoot_snapshot_hash' => null,
+            'shoot_closed_at' => null,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], $overrides);
+
+        DB::table('yeekee_rounds')->insert($roundPayload);
     }
 
     private function prepareSchema(): void
@@ -150,7 +300,12 @@ class YeekeeShootServiceTest extends TestCase
             $table->dateTime('result_compute_at');
             $table->dateTime('expected_settlement_deadline_at');
             $table->string('status', 32)->default('draft');
+            $table->unsignedInteger('last_shoot_position')->default(0);
+            $table->unsignedInteger('shoot_count')->default(0);
             $table->json('config_snapshot_json')->nullable();
+            $table->json('shoot_snapshot_json')->nullable();
+            $table->string('shoot_snapshot_hash', 128)->nullable();
+            $table->dateTime('shoot_closed_at')->nullable();
             $table->timestamps();
         });
 
