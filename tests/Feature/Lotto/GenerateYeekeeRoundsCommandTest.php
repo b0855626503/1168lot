@@ -39,6 +39,13 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
 
         $this->assertSame(23, DB::table('lotto_draws')->where('market_id', 11)->count());
         $this->assertSame(23, DB::table('yeekee_rounds')->where('market_id', 11)->count());
+        $firstRound = DB::table('yeekee_rounds')->where('market_id', 11)->orderBy('id')->first();
+        $this->assertNotNull($firstRound);
+        $this->assertSame((string) $firstRound->bet_open_at, (string) $firstRound->shoot_open_at);
+        $this->assertSame(
+            Carbon::parse((string) $firstRound->bet_close_at)->addSeconds(60)->format('Y-m-d H:i:s'),
+            (string) $firstRound->shoot_close_at
+        );
 
         $snapshot = DB::table('yeekee_rounds')
             ->where('market_id', 11)
@@ -189,7 +196,37 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         Carbon::setTestNow();
     }
 
-    private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes): void
+    public function test_generate_yeekee_rounds_uses_zero_seconds_when_shoot_window_setting_is_zero(): void
+    {
+        $this->seedYeekeeMarket(14, 1, 60, 0);
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--date' => '2026-05-01',
+            '--market_id' => 14,
+        ]);
+
+        $firstRound = DB::table('yeekee_rounds')->where('market_id', 14)->orderBy('id')->first();
+        $this->assertNotNull($firstRound);
+        $this->assertSame((string) $firstRound->bet_open_at, (string) $firstRound->shoot_open_at);
+        $this->assertSame((string) $firstRound->bet_close_at, (string) $firstRound->shoot_close_at);
+    }
+
+    public function test_generate_yeekee_rounds_uses_zero_seconds_when_shoot_window_setting_is_null(): void
+    {
+        $this->seedYeekeeMarket(15, 1, 60, null);
+
+        Artisan::call('lotto:generate-yeekee-draws', [
+            '--date' => '2026-05-01',
+            '--market_id' => 15,
+        ]);
+
+        $firstRound = DB::table('yeekee_rounds')->where('market_id', 15)->orderBy('id')->first();
+        $this->assertNotNull($firstRound);
+        $this->assertSame((string) $firstRound->bet_open_at, (string) $firstRound->shoot_open_at);
+        $this->assertSame((string) $firstRound->bet_close_at, (string) $firstRound->shoot_close_at);
+    }
+
+    private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes, ?int $shootWindowSeconds = 60): void
     {
         if (! DB::table('lotto_groups')->where('id', $groupId)->exists()) {
             DB::table('lotto_groups')->insert([
@@ -216,7 +253,7 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             'market_id' => $marketId,
             'round_config' => json_encode([
                 'round_duration_minutes' => $durationMinutes,
-                'shoot_window_after_bet_close_seconds' => 60,
+                'shoot_window_after_bet_close_seconds' => $shootWindowSeconds,
                 'settlement_delay_after_shoot_close_seconds' => 60,
                 'expected_payout_sla_minutes' => 5,
             ]),
