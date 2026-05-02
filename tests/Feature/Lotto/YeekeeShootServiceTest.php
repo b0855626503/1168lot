@@ -30,6 +30,7 @@ class YeekeeShootServiceTest extends TestCase
 
     public function test_submit_shoot_creates_position_sequence(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
         config()->set('yeekee.shooting_enabled', true);
         config()->set('yeekee.shoot_cooldown_seconds', 0);
         $this->seedBasicYeekeeRound();
@@ -50,6 +51,7 @@ class YeekeeShootServiceTest extends TestCase
 
     public function test_submit_shoot_rejects_invalid_number(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
         config()->set('yeekee.shooting_enabled', true);
         config()->set('yeekee.shoot_cooldown_seconds', 0);
         $this->seedBasicYeekeeRound();
@@ -61,6 +63,7 @@ class YeekeeShootServiceTest extends TestCase
 
     public function test_submit_shoot_rejects_member_cooldown(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
         config()->set('yeekee.shooting_enabled', true);
         config()->set('yeekee.shoot_cooldown_seconds', 6);
         $this->seedBasicYeekeeRound();
@@ -75,6 +78,7 @@ class YeekeeShootServiceTest extends TestCase
 
     public function test_submit_shoot_rejects_when_round_shoot_closed(): void
     {
+        config()->set('yeekee.shoot_enabled', true);
         config()->set('yeekee.shooting_enabled', true);
         config()->set('yeekee.shoot_cooldown_seconds', 0);
         $this->seedBasicYeekeeRound([
@@ -84,6 +88,30 @@ class YeekeeShootServiceTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('รอบนี้ปิดรับยิงเลขแล้ว');
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+    }
+
+    public function test_submit_shoot_rejects_when_legacy_flag_is_disabled(): void
+    {
+        config()->set('yeekee.shoot_enabled', false);
+        config()->set('yeekee.shooting_enabled', true);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
+        $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
+    }
+
+    public function test_submit_shoot_rejects_when_hardening_flag_is_disabled(): void
+    {
+        config()->set('yeekee.shoot_enabled', true);
+        config()->set('yeekee.shooting_enabled', false);
+        $this->seedBasicYeekeeRound();
+        $service = app(YeekeeShootService::class);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
         $service->submitShoot(1001, 201, '12345', '127.0.0.1', 'test');
     }
 

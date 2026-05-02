@@ -21,7 +21,9 @@ class YeekeeShootService
         $normalizedNumberText = $this->normalizeNumberText($numberText);
 
         return DB::transaction(function () use ($memberId, $roundId, $normalizedNumberText, $ipAddress, $userAgent) {
-            if (! (bool) config('yeekee.shooting_enabled', true)) {
+            $legacyShootEnabled = (bool) config('yeekee.shoot_enabled', false);
+            $hardeningShootEnabled = (bool) config('yeekee.shooting_enabled', true);
+            if (! $legacyShootEnabled || ! $hardeningShootEnabled) {
                 throw new InvalidArgumentException('ระบบยิงเลขถูกปิดใช้งานชั่วคราว');
             }
 
