@@ -89,6 +89,8 @@
 - `POST /api/v1/reward/redeem`
 - `GET /api/v1/reward/history`
 - `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/rounds`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}`
 - `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
 - `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
@@ -344,21 +346,17 @@
   - ห้ามใช้ `PRECOMMITTED_BASE64_MD5` เป็น canonical label ถ้า runtime ไม่ได้ใช้
   - ข้อนี้เป็น doc correction only ใน PR-01 และจะ lock รายละเอียด result-proof อีกครั้งใน PR-05
 
-### Target Contract (Planned)
-ส่วนนี้เป็น target contract สำหรับ Yeekee hardening เท่านั้น
+### Yeekee Hardening Contract (Current Runtime)
+ส่วนนี้เปิดใช้งานแล้วหลัง PR-04
 
-Status: `Target Contract / Planned`  
-Implemented in: `PR-04`  
-Do not treat as active runtime endpoint until `PR-04` is merged.
+Status: `Current Runtime Contract`  
+Implemented in: `PR-04`
 
-New target endpoints in PR-04:
 - `GET /api/v1/lotto/yeekee/rounds`
-- `GET /api/v1/lotto/yeekee/rounds/{round}`
-
-Existing endpoints to be hardened by PR-03/PR-04:
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}`
 - `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
 - `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
 
 หมายเหตุ:
-- ห้ามลบหรือเขียนทับ endpoint เดิมใน current runtime contract
-- PR-01 เป็น docs-only ไม่มี runtime behavior change
+- `POST /shoot` เมื่อชน cooldown จะตอบ `429` พร้อม metadata สำหรับ frontend
+- `GET /shoots` เป็น public list แบบ masked (`number_text`) ตาม hardening contract

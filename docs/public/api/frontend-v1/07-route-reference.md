@@ -1605,6 +1605,65 @@ GET /api/v1/reward/history?page=1&per_page=20
   - `รายการหวยนี้ไม่รองรับการยิงเลข`
   - `รอบนี้ไม่สามารถยิงเลขได้`
   - `เกินจำนวนการยิงเลขสูงสุดต่อรอบ`
+  - `HTTP 429` + `error_code=YEEKEE_SHOOT_COOLDOWN` พร้อม fields:
+    - `cooldown_seconds`
+    - `remaining_cooldown_seconds`
+    - `next_allowed_at`
+
+<a id="get-apiv1lottoyeekeerounds"></a>
+### `GET /api/v1/lotto/yeekee/rounds`
+- คำอธิบาย: ดึงรอบยี่กี่ทั้งหมดของวันที่ระบุ (ข้ามตลาดได้ หรือเจาะตลาดเดียวผ่าน query)
+- Auth: ต้องใช้ token
+- Query params:
+  - `draw_date` (optional, format `YYYY-MM-DD`, default = วันนี้ของ server)
+  - `market_id` (optional, ถ้าระบุจะกรองเฉพาะ market นั้น)
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรอบยี่กี่ทั้งหมดสำเร็จ",
+  "data": {
+    "draw_date": "2026-04-29",
+    "market_id": null,
+    "count": 2,
+    "items": [
+      {
+        "market_id": 9,
+        "draw_id": 301,
+        "round_id": 701,
+        "round_no": 1,
+        "status": "open_bet",
+        "is_open_for_play": true,
+        "is_final": false
+      }
+    ],
+    "server_time": "2026-04-29 10:05:00"
+  }
+}
+```
+
+<a id="get-apiv1lottoyeekeeroundsroundid"></a>
+### `GET /api/v1/lotto/yeekee/rounds/{roundId}`
+- คำอธิบาย: ดึงรายละเอียดรอบยี่กี่รายรอบ
+- Auth: ต้องใช้ token
+- Path params:
+  - `roundId` = id ของรอบยี่กี่
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึงรอบยี่กี่สำเร็จ",
+  "data": {
+    "market_id": 9,
+    "draw_id": 311,
+    "round_id": 711,
+    "round_no": 11,
+    "status": "open_bet",
+    "is_open_for_play": true,
+    "is_final": false
+  }
+}
+```
 
 <a id="get-apiv1lottoyeekeemarketsmarketidcurrent-round"></a>
 ### `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
@@ -1708,7 +1767,7 @@ GET /api/v1/reward/history?page=1&per_page=20
 - Path params:
   - `roundId` = id ของรอบยี่กี่
 - Query params:
-  - `limit` (optional, default `50`, max `100`)
+  - `limit` (optional, default จาก config `shoot_list_default_limit`, max จาก `shoot_list_max_limit`)
 - Response example:
 ```json
 {
@@ -1721,18 +1780,23 @@ GET /api/v1/reward/history?page=1&per_page=20
     "items": [
       {
         "position": 128,
-        "number_text": "12345",
+        "number_text": "123**",
+        "number_text_masked": "123**",
         "submitted_at": "2026-04-30 12:10:01"
       },
       {
         "position": 127,
-        "number_text": "54321",
+        "number_text": "543**",
+        "number_text_masked": "543**",
         "submitted_at": "2026-04-30 12:09:58"
       }
     ]
   }
 }
 ```
+- หมายเหตุ:
+  - `number_text` ใน endpoint นี้เป็นค่า masked (ไม่ใช่เลขเต็ม)
+  - field มาตรฐานใหม่คือ `number_text_masked` และยังคงส่ง `number_text` แบบ masked เพื่อ compatibility
 
 <a id="get-apiv1lottoyeekeeroundsroundidreward-status"></a>
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
@@ -1780,7 +1844,7 @@ GET /api/v1/reward/history?page=1&per_page=20
     "status": "result_pending",
     "is_revealed": false,
     "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
       "proof_signature": "",
       "external_seed_reference": "",
@@ -1801,7 +1865,7 @@ GET /api/v1/reward/history?page=1&per_page=20
     "status": "resulted",
     "is_revealed": true,
     "proof": {
-      "formula_label": "PRECOMMITTED_BASE64_MD5",
+      "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
       "proof_signature": "a9bc...",
       "external_seed_reference": "NTP:2026-04-30T12:12:00Z",
