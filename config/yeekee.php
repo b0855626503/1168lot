@@ -8,6 +8,12 @@ return [
     'reward_enabled' => (bool) env('YEEKEE_REWARD_ENABLED', false),
     'settlement_enabled' => (bool) env('YEEKEE_SETTLEMENT_ENABLED', false),
     'max_shoots_per_member_per_round' => (int) env('YEEKEE_MAX_SHOOTS_PER_MEMBER_PER_ROUND', 100),
+    'shoot_cooldown_seconds' => (int) env('YEEKEE_SHOOT_COOLDOWN_SECONDS', 6),
+    'round_backfill_chunk_size' => (int) env('YEEKEE_ROUND_BACKFILL_CHUNK_SIZE', 500),
+    'snapshot' => [
+        'sample_limit' => (int) env('YEEKEE_SNAPSHOT_SAMPLE_LIMIT', 100),
+        'store_hash' => (bool) env('YEEKEE_SNAPSHOT_STORE_HASH', true),
+    ],
     'external_seed' => [
         'enabled' => (bool) env('YEEKEE_EXTERNAL_SEED_ENABLED', false),
         'providers' => [
