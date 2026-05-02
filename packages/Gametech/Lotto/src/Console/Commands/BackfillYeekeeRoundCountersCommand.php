@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class BackfillYeekeeRoundCountersCommand extends Command
 {
-    protected $signature = 'lotto:yeekee:backfill-round-counters
+    protected $signature = 'lotto:yeekee:backfill-shoot-counters
         {--market_id= : Backfill only rounds in one market}
         {--round_id= : Backfill only one round}
         {--chunk= : Chunk size for round scan}';

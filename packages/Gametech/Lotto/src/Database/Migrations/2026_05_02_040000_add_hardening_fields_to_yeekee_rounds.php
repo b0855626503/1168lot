@@ -21,16 +21,16 @@ return new class extends Migration
                 $table->unsignedInteger('shoot_count')->default(0)->after('last_shoot_position');
             }
 
-            if (! Schema::hasColumn('yeekee_rounds', 'shoots_snapshot_json')) {
-                $table->json('shoots_snapshot_json')->nullable()->after('config_snapshot_json');
+            if (! Schema::hasColumn('yeekee_rounds', 'shoot_snapshot_json')) {
+                $table->json('shoot_snapshot_json')->nullable()->after('config_snapshot_json');
             }
 
-            if (! Schema::hasColumn('yeekee_rounds', 'shoots_snapshot_hash')) {
-                $table->string('shoots_snapshot_hash', 64)->nullable()->after('shoots_snapshot_json');
+            if (! Schema::hasColumn('yeekee_rounds', 'shoot_snapshot_hash')) {
+                $table->string('shoot_snapshot_hash', 64)->nullable()->after('shoot_snapshot_json');
             }
 
-            if (! Schema::hasColumn('yeekee_rounds', 'shoots_frozen_at')) {
-                $table->dateTime('shoots_frozen_at')->nullable()->after('shoots_snapshot_hash');
+            if (! Schema::hasColumn('yeekee_rounds', 'shoot_closed_at')) {
+                $table->dateTime('shoot_closed_at')->nullable()->after('shoot_snapshot_hash');
             }
         });
     }
@@ -42,16 +42,16 @@ return new class extends Migration
         }
 
         Schema::table('yeekee_rounds', function (Blueprint $table): void {
-            if (Schema::hasColumn('yeekee_rounds', 'shoots_frozen_at')) {
-                $table->dropColumn('shoots_frozen_at');
+            if (Schema::hasColumn('yeekee_rounds', 'shoot_closed_at')) {
+                $table->dropColumn('shoot_closed_at');
             }
 
-            if (Schema::hasColumn('yeekee_rounds', 'shoots_snapshot_hash')) {
-                $table->dropColumn('shoots_snapshot_hash');
+            if (Schema::hasColumn('yeekee_rounds', 'shoot_snapshot_hash')) {
+                $table->dropColumn('shoot_snapshot_hash');
             }
 
-            if (Schema::hasColumn('yeekee_rounds', 'shoots_snapshot_json')) {
-                $table->dropColumn('shoots_snapshot_json');
+            if (Schema::hasColumn('yeekee_rounds', 'shoot_snapshot_json')) {
+                $table->dropColumn('shoot_snapshot_json');
             }
 
             if (Schema::hasColumn('yeekee_rounds', 'shoot_count')) {

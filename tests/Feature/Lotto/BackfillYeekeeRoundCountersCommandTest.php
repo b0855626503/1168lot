@@ -39,7 +39,7 @@ class BackfillYeekeeRoundCountersCommandTest extends TestCase
             ['yeekee_round_id' => 13, 'position' => 3, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        $exit = Artisan::call('lotto:yeekee:backfill-round-counters');
+        $exit = Artisan::call('lotto:yeekee:backfill-shoot-counters');
         $this->assertSame(0, $exit);
 
         $round11 = DB::table('yeekee_rounds')->where('id', 11)->first();
@@ -70,10 +70,10 @@ class BackfillYeekeeRoundCountersCommandTest extends TestCase
             ['yeekee_round_id' => 21, 'position' => 4, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        $firstExit = Artisan::call('lotto:yeekee:backfill-round-counters', ['--market_id' => 5]);
+        $firstExit = Artisan::call('lotto:yeekee:backfill-shoot-counters', ['--market_id' => 5]);
         $firstAfter = DB::table('yeekee_rounds')->where('id', 21)->first();
 
-        $secondExit = Artisan::call('lotto:yeekee:backfill-round-counters', ['--market_id' => 5]);
+        $secondExit = Artisan::call('lotto:yeekee:backfill-shoot-counters', ['--market_id' => 5]);
         $secondAfter = DB::table('yeekee_rounds')->where('id', 21)->first();
 
         $this->assertSame(0, $firstExit);
