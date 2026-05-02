@@ -335,7 +335,12 @@ class YeekeeSumOnlyFormulaTest extends TestCase
             $table->dateTime('result_compute_at');
             $table->dateTime('expected_settlement_deadline_at');
             $table->string('status', 32)->default('draft');
+            $table->unsignedInteger('last_shoot_position')->default(0);
+            $table->unsignedInteger('shoot_count')->default(0);
             $table->json('config_snapshot_json')->nullable();
+            $table->json('shoot_snapshot_json')->nullable();
+            $table->string('shoot_snapshot_hash', 128)->nullable();
+            $table->dateTime('shoot_closed_at')->nullable();
             $table->timestamps();
         });
 

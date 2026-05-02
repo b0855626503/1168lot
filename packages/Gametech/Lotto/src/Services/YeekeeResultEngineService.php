@@ -8,6 +8,7 @@ use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\Yeekee\Formulas\FormulaRegistry;
 use Gametech\Lotto\Services\Yeekee\Seed\ExternalSeedResolverService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -23,42 +24,52 @@ class YeekeeResultEngineService
      */
     public function computeFromRound(int $roundId): array
     {
-        $round = YeekeeRound::query()->findOrFail($roundId);
-        $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
-        $formulaConfig = is_array($snapshot['formula_config'] ?? null) ? $snapshot['formula_config'] : [];
-        $formulaKey = trim((string) ($formulaConfig['preset'] ?? ''));
-        if ($formulaKey === '') {
-            $formulaKey = 'SHOOTS_SUM_MINUS_POSITION';
-            Log::warning('yeekee.result_engine.legacy_formula_fallback', [
-                'yeekee_round_id' => (int) $round->id,
-                'lotto_draw_id' => (int) $round->lotto_draw_id,
-                'fallback_preset' => $formulaKey,
-                'reason' => 'missing formula_config',
-            ]);
-        }
+        $context = DB::transaction(function () use ($roundId): array {
+            $round = YeekeeRound::query()->lockForUpdate()->findOrFail($roundId);
+            $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
+            $formulaConfig = is_array($snapshot['formula_config'] ?? null) ? $snapshot['formula_config'] : [];
+            $formulaKey = trim((string) ($formulaConfig['preset'] ?? ''));
+            if ($formulaKey === '') {
+                $formulaKey = 'SHOOTS_SUM_MINUS_POSITION';
+                Log::warning('yeekee.result_engine.legacy_formula_fallback', [
+                    'yeekee_round_id' => (int) $round->id,
+                    'lotto_draw_id' => (int) $round->lotto_draw_id,
+                    'fallback_preset' => $formulaKey,
+                    'reason' => 'missing formula_config',
+                ]);
+            }
+
+            $shootsSnapshot = $this->freezeShootSnapshotIfNeeded($round);
+
+            return [
+                'round_id' => (int) $round->id,
+                'shoot_close_at' => (string) $round->shoot_close_at,
+                'formula_key' => $formulaKey,
+                'formula_config' => $formulaConfig,
+                'round_snapshot' => $snapshot,
+                'shoots_snapshot' => $shootsSnapshot,
+            ];
+        });
+
+        $formulaKey = (string) $context['formula_key'];
+        $formulaConfig = is_array($context['formula_config']) ? $context['formula_config'] : [];
+        $shoots = is_array($context['shoots_snapshot']) ? $context['shoots_snapshot'] : [];
 
         if ($formulaKey === 'SHOOTS_SUM_ONLY') {
-            return $this->computeShootsSumOnly($round, $formulaConfig);
+            return $this->computeShootsSumOnly(
+                roundId: (int) $context['round_id'],
+                shootCloseAt: (string) $context['shoot_close_at'],
+                shootsSnapshot: $shoots,
+                formulaConfig: $formulaConfig
+            );
         }
-
-        $shoots = YeekeeShoot::query()
-            ->where('yeekee_round_id', $roundId)
-            ->orderBy('position')
-            ->get(['position', 'number_text', 'number_value'])
-            ->map(static function ($row): array {
-                return [
-                    'position' => (int) $row->position,
-                    'number_text' => (string) $row->number_text,
-                    'number_value' => (int) $row->number_value,
-                ];
-            })
-            ->all();
 
         $formula = $this->formulaRegistry->resolve($formulaKey);
 
         if (str_starts_with($formulaKey, 'PROVABLY_FAIR_')) {
-            $seedConfig = is_array($snapshot['external_seed_config'] ?? null) ? $snapshot['external_seed_config'] : [];
-            $this->seedResolver->resolveForRound($roundId, $seedConfig);
+            $roundSnapshot = is_array($context['round_snapshot']) ? $context['round_snapshot'] : [];
+            $seedConfig = is_array($roundSnapshot['external_seed_config'] ?? null) ? $roundSnapshot['external_seed_config'] : [];
+            $this->seedResolver->resolveForRound((int) $context['round_id'], $seedConfig);
         }
 
         return $formula->compute($shoots, $formulaConfig);
@@ -68,8 +79,12 @@ class YeekeeResultEngineService
      * @param  array<string,mixed>  $formulaConfig
      * @return array<string,mixed>
      */
-    private function computeShootsSumOnly(YeekeeRound $round, array $formulaConfig): array
-    {
+    private function computeShootsSumOnly(
+        int $roundId,
+        string $shootCloseAt,
+        array $shootsSnapshot,
+        array $formulaConfig
+    ): array {
         $inputRules = is_array($formulaConfig['input_rules'] ?? null) ? $formulaConfig['input_rules'] : [];
         if (array_key_exists('include_status', $inputRules) || array_key_exists('exclude_cancelled', $inputRules)) {
             throw new InvalidArgumentException('FORMULA_CONFIG_INVALID: include_status/exclude_cancelled not supported');
@@ -86,14 +101,8 @@ class YeekeeResultEngineService
             throw new InvalidArgumentException('FORMULA_CONFIG_INVALID: cutoff_seconds_before_close ต้องไม่ติดลบ');
         }
 
-        $shootCloseAt = Carbon::parse((string) $round->shoot_close_at);
-        $cutoffAt = $shootCloseAt->copy()->subSeconds($cutoffSecondsBeforeClose);
+        $cutoffAt = Carbon::parse($shootCloseAt)->subSeconds($cutoffSecondsBeforeClose);
         $cutoffAtString = $cutoffAt->format('Y-m-d H:i:s');
-
-        $query = YeekeeShoot::query()
-            ->where('yeekee_round_id', (int) $round->id)
-            ->where('submitted_at', '<=', $cutoffAtString)
-            ->orderBy('id');
 
         $totalSum = 0;
         $includedCount = 0;
@@ -101,36 +110,45 @@ class YeekeeResultEngineService
         $sampleLimit = 20;
         $sample = [];
 
-        $query->chunkById(500, function ($rows) use (&$totalSum, &$includedCount, &$skippedInvalidCount, &$sample, $sampleLimit): void {
-            foreach ($rows as $row) {
-                $numberText = (string) ($row->number_text ?? '');
-                if (! preg_match('/^\d+$/', $numberText)) {
-                    $skippedInvalidCount++;
+        foreach ($shootsSnapshot as $row) {
+            if (! is_array($row)) {
+                $skippedInvalidCount++;
 
-                    continue;
-                }
-
-                $numberValue = (int) ($row->number_value ?? -1);
-                if ($numberValue < 0) {
-                    $skippedInvalidCount++;
-
-                    continue;
-                }
-
-                $totalSum += $numberValue;
-                $includedCount++;
-
-                if (count($sample) < $sampleLimit) {
-                    $sample[] = [
-                        'id' => (int) $row->id,
-                        'position' => (int) $row->position,
-                        'number_text' => $numberText,
-                        'number_value' => $numberValue,
-                        'submitted_at' => (string) $row->submitted_at,
-                    ];
-                }
+                continue;
             }
-        });
+
+            $submittedAt = trim((string) ($row['submitted_at'] ?? ''));
+            if ($submittedAt === '' || $submittedAt > $cutoffAtString) {
+                continue;
+            }
+
+            $numberText = (string) ($row['number_text'] ?? '');
+            if (! preg_match('/^\d+$/', $numberText)) {
+                $skippedInvalidCount++;
+
+                continue;
+            }
+
+            $numberValue = (int) ($row['number_value'] ?? -1);
+            if ($numberValue < 0) {
+                $skippedInvalidCount++;
+
+                continue;
+            }
+
+            $totalSum += $numberValue;
+            $includedCount++;
+
+            if (count($sample) < $sampleLimit) {
+                $sample[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'position' => (int) ($row['position'] ?? 0),
+                    'number_text' => $numberText,
+                    'number_value' => $numberValue,
+                    'submitted_at' => $submittedAt,
+                ];
+            }
+        }
 
         if ($includedCount === 0) {
             throw new YeekeeFormulaInputException(
@@ -141,7 +159,7 @@ class YeekeeResultEngineService
 
         if ($skippedInvalidCount > 0) {
             Log::warning('yeekee.shoots_sum_only.invalid_rows_skipped', [
-                'yeekee_round_id' => (int) $round->id,
+                'yeekee_round_id' => $roundId,
                 'skipped_invalid_count' => $skippedInvalidCount,
             ]);
         }
@@ -170,7 +188,7 @@ class YeekeeResultEngineService
                 'sha256',
                 json_encode(
                     [
-                        'yeekee_round_id' => (int) $round->id,
+                        'yeekee_round_id' => $roundId,
                         'cutoff_at' => $cutoffAtString,
                         'sample' => $sample,
                         'included_count' => $includedCount,
@@ -191,5 +209,65 @@ class YeekeeResultEngineService
             'bottom_2' => substr($rawResult, 0, 2),
             'formula_audit' => $audit,
         ];
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function freezeShootSnapshotIfNeeded(YeekeeRound $round): array
+    {
+        $existingSnapshot = is_array($round->shoot_snapshot_json) ? $round->shoot_snapshot_json : null;
+        if ($round->shoot_closed_at !== null && is_array($existingSnapshot)) {
+            return $this->normalizeShootSnapshot($existingSnapshot);
+        }
+
+        $shootsSnapshot = YeekeeShoot::query()
+            ->where('yeekee_round_id', (int) $round->id)
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['id', 'position', 'number_text', 'number_value', 'submitted_at'])
+            ->map(static function (YeekeeShoot $row): array {
+                return [
+                    'id' => (int) $row->id,
+                    'position' => (int) $row->position,
+                    'number_text' => (string) $row->number_text,
+                    'number_value' => (int) $row->number_value,
+                    'submitted_at' => (string) $row->submitted_at,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $round->forceFill([
+            'shoot_snapshot_json' => $shootsSnapshot,
+            'shoot_snapshot_hash' => hash(
+                'sha256',
+                json_encode($shootsSnapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+            ),
+            'shoot_closed_at' => $round->shoot_closed_at ?? now(),
+        ])->save();
+
+        return $shootsSnapshot;
+    }
+
+    /**
+     * @param  array<int,mixed>  $snapshot
+     * @return array<int,array<string,mixed>>
+     */
+    private function normalizeShootSnapshot(array $snapshot): array
+    {
+        return collect($snapshot)
+            ->filter(static fn ($row): bool => is_array($row))
+            ->map(static function (array $row): array {
+                return [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'position' => (int) ($row['position'] ?? 0),
+                    'number_text' => (string) ($row['number_text'] ?? ''),
+                    'number_value' => (int) ($row['number_value'] ?? 0),
+                    'submitted_at' => (string) ($row['submitted_at'] ?? ''),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

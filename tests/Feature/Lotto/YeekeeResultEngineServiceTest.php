@@ -260,6 +260,68 @@ class YeekeeResultEngineServiceTest extends TestCase
         app(YeekeeResultEngineService::class)->computeFromRound(6);
     }
 
+    public function test_compute_freezes_snapshot_and_reuses_it_idempotently(): void
+    {
+        DB::table('yeekee_rounds')->insert([
+            'id' => 7,
+            'market_id' => 11,
+            'lotto_draw_id' => 107,
+            'round_date' => '2026-04-30',
+            'round_no' => 1,
+            'bet_open_at' => now(),
+            'bet_close_at' => now(),
+            'shoot_open_at' => now(),
+            'shoot_close_at' => now(),
+            'result_compute_at' => now(),
+            'expected_settlement_deadline_at' => now(),
+            'status' => 'pending_result',
+            'config_snapshot_json' => json_encode([
+                'formula_config' => [
+                    'preset' => 'SHOOTS_SUM_MINUS_POSITION',
+                    'subtract_position' => 2,
+                ],
+            ]),
+            'shoot_snapshot_json' => null,
+            'shoot_snapshot_hash' => null,
+            'shoot_closed_at' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->insertBasicShoots(7, 107, 11, 2);
+
+        $first = app(YeekeeResultEngineService::class)->computeFromRound(7);
+        $roundAfterFirst = DB::table('yeekee_rounds')->where('id', 7)->first();
+        $this->assertNotNull($roundAfterFirst->shoot_closed_at);
+        $this->assertNotNull($roundAfterFirst->shoot_snapshot_hash);
+        $snapshotAfterFirst = json_decode((string) $roundAfterFirst->shoot_snapshot_json, true);
+        $this->assertIsArray($snapshotAfterFirst);
+        $this->assertCount(2, $snapshotAfterFirst);
+
+        DB::table('yeekee_shoots')->insert([
+            'yeekee_round_id' => 7,
+            'lotto_draw_id' => 107,
+            'market_id' => 11,
+            'member_id' => 99,
+            'position' => 3,
+            'number_text' => '99999',
+            'number_value' => 99999,
+            'submitted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $second = app(YeekeeResultEngineService::class)->computeFromRound(7);
+        $roundAfterSecond = DB::table('yeekee_rounds')->where('id', 7)->first();
+        $snapshotAfterSecond = json_decode((string) $roundAfterSecond->shoot_snapshot_json, true);
+
+        $this->assertSame($first['raw_result'], $second['raw_result']);
+        $this->assertSame($first['top_3'], $second['top_3']);
+        $this->assertSame($first['bottom_2'], $second['bottom_2']);
+        $this->assertSame((string) $roundAfterFirst->shoot_snapshot_hash, (string) $roundAfterSecond->shoot_snapshot_hash);
+        $this->assertIsArray($snapshotAfterSecond);
+        $this->assertCount(2, $snapshotAfterSecond);
+    }
+
     private function insertBasicShoots(int $roundId, int $drawId, int $marketId, int $count = 2): void
     {
         $rows = [];
@@ -304,7 +366,12 @@ class YeekeeResultEngineServiceTest extends TestCase
             $table->dateTime('result_compute_at');
             $table->dateTime('expected_settlement_deadline_at');
             $table->string('status', 32)->default('draft');
+            $table->unsignedInteger('last_shoot_position')->default(0);
+            $table->unsignedInteger('shoot_count')->default(0);
             $table->json('config_snapshot_json')->nullable();
+            $table->json('shoot_snapshot_json')->nullable();
+            $table->string('shoot_snapshot_hash', 128)->nullable();
+            $table->dateTime('shoot_closed_at')->nullable();
             $table->timestamps();
         });
 
