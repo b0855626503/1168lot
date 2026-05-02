@@ -281,6 +281,8 @@ class YeekeeResultEngineServiceTest extends TestCase
                     'subtract_position' => 2,
                 ],
             ]),
+            'last_shoot_position' => 2,
+            'shoot_count' => 2,
             'shoot_snapshot_json' => null,
             'shoot_snapshot_hash' => null,
             'shoot_closed_at' => null,
@@ -295,14 +297,27 @@ class YeekeeResultEngineServiceTest extends TestCase
         $this->assertNotNull($roundAfterFirst->shoot_snapshot_hash);
         $snapshotAfterFirst = json_decode((string) $roundAfterFirst->shoot_snapshot_json, true);
         $this->assertIsArray($snapshotAfterFirst);
-        $this->assertArrayHasKey('metadata', $snapshotAfterFirst);
+        $this->assertArrayHasKey('version', $snapshotAfterFirst);
+        $this->assertArrayHasKey('round_id', $snapshotAfterFirst);
+        $this->assertArrayHasKey('lotto_draw_id', $snapshotAfterFirst);
+        $this->assertArrayHasKey('market_id', $snapshotAfterFirst);
+        $this->assertArrayHasKey('round_no', $snapshotAfterFirst);
+        $this->assertArrayHasKey('round_date', $snapshotAfterFirst);
+        $this->assertArrayHasKey('shoot_open_at', $snapshotAfterFirst);
+        $this->assertArrayHasKey('shoot_close_at', $snapshotAfterFirst);
+        $this->assertArrayHasKey('shoot_closed_at', $snapshotAfterFirst);
+        $this->assertArrayHasKey('shoot_count', $snapshotAfterFirst);
+        $this->assertArrayHasKey('last_shoot_position', $snapshotAfterFirst);
         $this->assertArrayHasKey('shoots', $snapshotAfterFirst);
         $this->assertCount(2, $snapshotAfterFirst['shoots']);
-        $this->assertSame(7, (int) ($snapshotAfterFirst['metadata']['round_id'] ?? 0));
-        $this->assertSame(107, (int) ($snapshotAfterFirst['metadata']['lotto_draw_id'] ?? 0));
-        $this->assertSame(11, (int) ($snapshotAfterFirst['metadata']['market_id'] ?? 0));
-        $this->assertSame(2, (int) ($snapshotAfterFirst['metadata']['shoot_count'] ?? 0));
-        $this->assertSame(2, (int) ($snapshotAfterFirst['metadata']['last_shoot_position'] ?? 0));
+        $this->assertSame(1, (int) ($snapshotAfterFirst['version'] ?? 0));
+        $this->assertSame(7, (int) ($snapshotAfterFirst['round_id'] ?? 0));
+        $this->assertSame(107, (int) ($snapshotAfterFirst['lotto_draw_id'] ?? 0));
+        $this->assertSame(11, (int) ($snapshotAfterFirst['market_id'] ?? 0));
+        $this->assertSame(2, (int) ($snapshotAfterFirst['shoot_count'] ?? 0));
+        $this->assertSame(2, (int) ($snapshotAfterFirst['last_shoot_position'] ?? -1));
+        $this->assertSame(2, (int) $roundAfterFirst->shoot_count);
+        $this->assertSame(2, (int) $roundAfterFirst->last_shoot_position);
         $expectedHashAfterFirst = hash(
             'sha256',
             json_encode($snapshotAfterFirst, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''

@@ -241,18 +241,17 @@ class YeekeeResultEngineService
 
         $shootClosedAt = ($round->shoot_closed_at ?? now())->format('Y-m-d H:i:s');
         $payload = [
-            'metadata' => [
-                'round_id' => (int) $round->id,
-                'lotto_draw_id' => (int) $round->lotto_draw_id,
-                'market_id' => (int) $round->market_id,
-                'round_no' => (int) $round->round_no,
-                'round_date' => (string) $round->round_date,
-                'shoot_open_at' => (string) $round->shoot_open_at,
-                'shoot_close_at' => (string) $round->shoot_close_at,
-                'shoot_closed_at' => $shootClosedAt,
-                'shoot_count' => count($shootsSnapshot),
-                'last_shoot_position' => (int) ($shootsSnapshot[count($shootsSnapshot) - 1]['position'] ?? 0),
-            ],
+            'version' => 1,
+            'round_id' => (int) $round->id,
+            'lotto_draw_id' => (int) $round->lotto_draw_id,
+            'market_id' => (int) $round->market_id,
+            'round_no' => (int) $round->round_no,
+            'round_date' => (string) $round->round_date,
+            'shoot_open_at' => (string) $round->shoot_open_at,
+            'shoot_close_at' => (string) $round->shoot_close_at,
+            'shoot_closed_at' => $shootClosedAt,
+            'shoot_count' => (int) $round->shoot_count,
+            'last_shoot_position' => (int) $round->last_shoot_position,
             'shoots' => $shootsSnapshot,
         ];
 
@@ -263,8 +262,6 @@ class YeekeeResultEngineService
                 json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
             ),
             'shoot_closed_at' => $shootClosedAt,
-            'shoot_count' => (int) $payload['metadata']['shoot_count'],
-            'last_shoot_position' => (int) $payload['metadata']['last_shoot_position'],
         ])->save();
 
         return $payload;
@@ -292,21 +289,19 @@ class YeekeeResultEngineService
             ->all();
 
         $metadataSource = is_array($snapshot['metadata'] ?? null) ? $snapshot['metadata'] : [];
-        $metadata = [
-            'round_id' => (int) ($metadataSource['round_id'] ?? 0),
-            'lotto_draw_id' => (int) ($metadataSource['lotto_draw_id'] ?? 0),
-            'market_id' => (int) ($metadataSource['market_id'] ?? 0),
-            'round_no' => (int) ($metadataSource['round_no'] ?? 0),
-            'round_date' => (string) ($metadataSource['round_date'] ?? ''),
-            'shoot_open_at' => (string) ($metadataSource['shoot_open_at'] ?? ''),
-            'shoot_close_at' => (string) ($metadataSource['shoot_close_at'] ?? ''),
-            'shoot_closed_at' => (string) ($metadataSource['shoot_closed_at'] ?? ''),
-            'shoot_count' => (int) ($metadataSource['shoot_count'] ?? count($shoots)),
-            'last_shoot_position' => (int) ($metadataSource['last_shoot_position'] ?? ($shoots[count($shoots) - 1]['position'] ?? 0)),
-        ];
 
         return [
-            'metadata' => $metadata,
+            'version' => (int) ($snapshot['version'] ?? 1),
+            'round_id' => (int) ($snapshot['round_id'] ?? $metadataSource['round_id'] ?? 0),
+            'lotto_draw_id' => (int) ($snapshot['lotto_draw_id'] ?? $metadataSource['lotto_draw_id'] ?? 0),
+            'market_id' => (int) ($snapshot['market_id'] ?? $metadataSource['market_id'] ?? 0),
+            'round_no' => (int) ($snapshot['round_no'] ?? $metadataSource['round_no'] ?? 0),
+            'round_date' => (string) ($snapshot['round_date'] ?? $metadataSource['round_date'] ?? ''),
+            'shoot_open_at' => (string) ($snapshot['shoot_open_at'] ?? $metadataSource['shoot_open_at'] ?? ''),
+            'shoot_close_at' => (string) ($snapshot['shoot_close_at'] ?? $metadataSource['shoot_close_at'] ?? ''),
+            'shoot_closed_at' => (string) ($snapshot['shoot_closed_at'] ?? $metadataSource['shoot_closed_at'] ?? ''),
+            'shoot_count' => (int) ($snapshot['shoot_count'] ?? $metadataSource['shoot_count'] ?? count($shoots)),
+            'last_shoot_position' => (int) ($snapshot['last_shoot_position'] ?? $metadataSource['last_shoot_position'] ?? ($shoots[count($shoots) - 1]['position'] ?? 0)),
             'shoots' => $shoots,
         ];
     }
