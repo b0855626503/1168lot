@@ -104,3 +104,11 @@ Implemented in: `PR-04`
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}` | Current Runtime Contract | PR-04 | new endpoint (active) |
 | POST | `/api/v1/lotto/yeekee/rounds/{roundId}/shoot` | Current Runtime Contract | PR-03/PR-04 | hardened: cooldown 429 contract |
 | GET | `/api/v1/lotto/yeekee/rounds/{roundId}/shoots` | Current Runtime Contract | PR-03/PR-04 | hardened: masked number_text |
+
+### Yeekee Contract Update (2026-05-03)
+
+- /api/v1/lotto/yeekee/rounds/{roundId}/shoots supports display modes live_masked and result_revealed
+- Keeps number_text for backward compatibility; frontend should prioritize number_text_masked and number_text_revealed
+- Adds shoot summary and pagination metadata
+- Public response excludes sensitive fields (member_id, member_code, customer_id, ip_address, user_agent)
+- /api/v1/lotto/yeekee/rounds/{roundId}/result-proof includes shoot_summary and winner-only summary (first, sixteenth) without full shoots list
