@@ -75,7 +75,7 @@
 2. `docs/internal/01_SYSTEM/system_map.md`
 3. domain note ที่เกี่ยวข้อง (ดู `docs/internal/03_DOMAINS/`)
 4. สำหรับ High Risk เท่านั้น: `docs/internal/01_SYSTEM/system-current-state/index.md` + `docs/internal/02_DECISIONS/decision-log/index.md`
-5. แผนงาน active ที่เกี่ยวข้อง: `docs/04_PLANS/current_work.md`
+5. แผนงาน active ที่เกี่ยวข้อง: `docs/04_PLANS/_current_work.md`
 
 ถ้าเอกสารกับ code ไม่ตรงกัน ต้องรายงาน mismatch ก่อน implement
 

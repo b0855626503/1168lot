@@ -118,18 +118,19 @@ for f in "${md_files[@]}"; do
 
   # Plan-specific naming checks.
   if [[ "$f" == "$plans_dir"/* ]]; then
-    if [[ "$bn" == "README.md" || "$bn" == "current_work.md" ]]; then
+    # README.md = index file; _*.md = system/tracker files (e.g. _current_work.md). Both exempt.
+    if [[ "$bn" == "README.md" || "$bn" == _*.md ]]; then
       continue
     fi
 
     if [[ "$plan_style" == "underscore" ]]; then
       if [[ ! "$bn" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z0-9-]+\.md$ ]]; then
-        log_error "$f" "plan filename must match YYYY-MM-DD_topic-name.md"
+        log_error "$f" "plan filename must match YYYY-MM-DD_topic-name.md (or prefix with _ for system files)"
         errors=$((errors + 1))
       fi
     else
       if [[ ! "$bn" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\.md$ ]]; then
-        log_error "$f" "plan filename must match YYYY-MM-DD-topic-name.md"
+        log_error "$f" "plan filename must match YYYY-MM-DD-topic-name.md (or prefix with _ for system files)"
         errors=$((errors + 1))
       fi
     fi

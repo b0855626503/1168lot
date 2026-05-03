@@ -20,7 +20,7 @@
 
 ## Plan Context
 
-- งาน active/pending แยก domain: `docs/04_PLANS/current_work.md`
+- งาน active/pending แยก domain: `docs/04_PLANS/_current_work.md`
 - Full plan index + history: `docs/04_PLANS/README.md`
 
 ## Policies & Rules

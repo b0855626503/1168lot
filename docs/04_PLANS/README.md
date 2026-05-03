@@ -3,7 +3,7 @@
 รูปแบบชื่อไฟล์มาตรฐาน: `YYYY-MM-DD_topic-name.md`
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
-ดูแผนงาน active/pending แยก domain ได้ที่: `docs/04_PLANS/current_work.md`
+ดูแผนงาน active/pending แยก domain ได้ที่: `docs/04_PLANS/_current_work.md`
 
 ## ACTIVE
 - `2026-04-06_laravel-8-to-9-upgrade.md` (`Laravel 8 to 10` practical target)
