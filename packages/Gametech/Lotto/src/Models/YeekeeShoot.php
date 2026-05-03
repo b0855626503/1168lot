@@ -24,5 +24,6 @@ class YeekeeShoot extends Model
 
     protected $casts = [
         'metadata_json' => 'array',
+        'submitted_at' => 'datetime',
     ];
 }

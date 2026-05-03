@@ -342,6 +342,9 @@ class YeekeeAuditControllerTest extends TestCase
         $this->assertSame('10.0.0.1', $shoots[0]['ip_address']);
         $this->assertSame('TestAgent', $shoots[0]['user_agent']);
 
+        // submitted_at must be a formatted timestamp, not null (regression: missing datetime cast)
+        $this->assertSame('2026-05-02 09:00:00', $shoots[0]['submitted_at']);
+
         // snapshot present
         $this->assertTrue($response->json('has_snapshot'));
         $this->assertNotEmpty($response->json('snapshot'));
