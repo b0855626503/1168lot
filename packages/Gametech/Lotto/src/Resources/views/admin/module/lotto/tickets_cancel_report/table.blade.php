@@ -1,6 +1,7 @@
 @section('css')
     @include('admin::layouts.datatables_css')
     <style>
+        /* === Tickets Cancel Detail Modal — all rules scoped under #ticketsCancelDetailModal === */
         #ticketsCancelDetailModal .modal-dialog {
             max-width: 1050px;
         }
@@ -8,36 +9,36 @@
             padding: 14px;
             background: #f4f6f9;
         }
-        .tcd-header {
+        #ticketsCancelDetailModal .tcd-header {
             background: #fff;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 12px 16px;
             margin-bottom: 10px;
         }
-        .tcd-header-id {
+        #ticketsCancelDetailModal .tcd-header-id {
             font-size: 15px;
             font-weight: 700;
             color: #253247;
             margin-right: 8px;
         }
-        .tcd-header-meta {
+        #ticketsCancelDetailModal .tcd-header-meta {
             font-size: 12px;
             color: #6c757d;
             line-height: 1.8;
         }
-        .tcd-header-meta .sep {
+        #ticketsCancelDetailModal .tcd-header-meta .sep {
             margin: 0 6px;
             color: #ced4da;
         }
-        .tcd-section {
+        #ticketsCancelDetailModal .tcd-section {
             background: #fff;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 10px 12px;
             margin-bottom: 10px;
         }
-        .tcd-section-title {
+        #ticketsCancelDetailModal .tcd-section-title {
             font-size: 10px;
             font-weight: 700;
             color: #8a94a6;
@@ -47,20 +48,20 @@
             margin-bottom: 8px;
             border-bottom: 1px solid #f0f2f5;
         }
-        .tcd-info-grid {
+        #ticketsCancelDetailModal .tcd-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px 8px;
         }
-        .tcd-info-grid .full { grid-column: 1 / -1; }
-        .tcd-info-label {
+        #ticketsCancelDetailModal .tcd-info-grid .full { grid-column: 1 / -1; }
+        #ticketsCancelDetailModal .tcd-info-label {
             display: block;
             font-size: 10px;
             color: #8a94a6;
             line-height: 1.2;
             margin-bottom: 1px;
         }
-        .tcd-info-value {
+        #ticketsCancelDetailModal .tcd-info-value {
             display: block;
             font-size: 12px;
             font-weight: 600;
@@ -68,31 +69,31 @@
             line-height: 1.4;
             word-break: break-word;
         }
-        .tcd-amount-card {
+        #ticketsCancelDetailModal .tcd-amount-card {
             border: 1px solid #e9ecef;
             border-radius: 6px;
             padding: 8px 10px;
             text-align: right;
             background: #f8f9fa;
         }
-        .tcd-amount-card.is-win {
+        #ticketsCancelDetailModal .tcd-amount-card.is-win {
             background: #fff5f5;
             border-color: #f5c6cb;
         }
-        .tcd-amount-label {
+        #ticketsCancelDetailModal .tcd-amount-label {
             display: block;
             font-size: 10px;
             color: #8a94a6;
             margin-bottom: 2px;
         }
-        .tcd-amount-value {
+        #ticketsCancelDetailModal .tcd-amount-value {
             display: block;
             font-size: 16px;
             font-weight: 700;
             color: #253247;
         }
-        .tcd-amount-value.is-danger { color: #dc3545; }
-        .tcd-reason-text {
+        #ticketsCancelDetailModal .tcd-amount-value.is-danger { color: #dc3545; }
+        #ticketsCancelDetailModal .tcd-reason-text {
             font-size: 12px;
             color: #495057;
             background: #f8f9fa;
@@ -101,9 +102,17 @@
             padding: 6px 10px;
             min-height: 34px;
         }
-        .tcd-reason-text.is-empty {
+        #ticketsCancelDetailModal .tcd-reason-text.is-empty {
             color: #adb5bd;
             font-style: italic;
+        }
+        #ticketsCancelDetailModal .tcd-round-badge {
+            font-size: 10px;
+            vertical-align: middle;
+            line-height: 1.2;
+        }
+        #ticketsCancelDetailModal .tcd-count-badge {
+            font-weight: 600;
         }
         #ticketsCancelDetailTableWrapper {
             max-height: 280px;
@@ -138,10 +147,10 @@
                 max-width: 100%;
                 margin: 8px;
             }
-            .tcd-info-grid {
+            #ticketsCancelDetailModal .tcd-info-grid {
                 grid-template-columns: 1fr;
             }
-            .tcd-info-grid .full { grid-column: auto; }
+            #ticketsCancelDetailModal .tcd-info-grid .full { grid-column: auto; }
         }
     </style>
 @endsection
@@ -281,24 +290,31 @@
                 return '<span class="badge ' + cls + '">' + escapeHtml(label || status || '-') + '</span>';
             };
 
+            /**
+             * Build market display HTML with optional yeekee round badge.
+             *
+             * TODO: The round number should ideally come from a dedicated `round_no` field
+             * in the ticket payload (e.g. ticket.draw_round_no) so this display is resilient
+             * to format changes. Currently it falls back to parsing the plain-text market_name
+             * produced by LottoMarketDisplayFormatter::formatPlain(), which returns the format
+             * "{name} (รอบ {N})" for yeekee draws. Update the controller to expose the field
+             * and remove the regex fallback once the backend change is made.
+             */
             const marketDisplayHtml = function (rawName) {
                 const m = String(rawName || '').match(/^(.*?)\s*\(รอบ\s*(\d+)\)\s*$/);
                 if (m) {
                     return escapeHtml(m[1].trim()) +
-                        ' <span class="badge badge-info ml-1" style="font-size:10px;vertical-align:middle;line-height:1.2;">รอบ ' +
+                        ' <span class="badge badge-info ml-1 tcd-round-badge">รอบ ' +
                         escapeHtml(m[2]) + '</span>';
                 }
 
                 return escapeHtml(rawName || '-');
             };
 
-            const buildDetailHtml = function (ticket, items) {
-                const winClass = isPositive(ticket.total_win_amount) ? 'tcd-amount-value is-danger' : 'tcd-amount-value';
-                const reasonEmpty = !ticket.reason || ticket.reason === '-';
-                const reasonClass = reasonEmpty ? 'tcd-reason-text is-empty' : 'tcd-reason-text';
+            /* ── Section builders ── */
 
-                const headerHtml =
-                    '<div class="tcd-header">' +
+            const buildHeaderHtml = function (ticket) {
+                return '<div class="tcd-header">' +
                     '<div class="d-flex flex-wrap align-items-start">' +
                     '<div class="mr-2">' +
                     '<span class="tcd-header-id">#' + escapeHtml(ticket.id || '-') + '</span>' +
@@ -313,9 +329,10 @@
                     '</div>' +
                     '</div>' +
                     '</div>';
+            };
 
-                const infoHtml =
-                    '<div class="tcd-section">' +
+            const buildInfoHtml = function (ticket) {
+                return '<div class="tcd-section">' +
                     '<div class="tcd-section-title">ข้อมูลโพย / สมาชิก</div>' +
                     '<div class="tcd-info-grid">' +
                     '<div><span class="tcd-info-label">เลขโพย</span><span class="tcd-info-value">#' + escapeHtml(ticket.id || '-') + '</span></div>' +
@@ -329,24 +346,33 @@
                     '<div class="full"><span class="tcd-info-label">แพกเกจ</span><span class="tcd-info-value">' + escapeHtml(ticket.packages || '-') + '</span></div>' +
                     '</div>' +
                     '</div>';
+            };
 
-                const amountsHtml =
-                    '<div class="tcd-section">' +
+            const buildAmountsHtml = function (ticket) {
+                const winValueClass = isPositive(ticket.total_win_amount) ? 'tcd-amount-value is-danger' : 'tcd-amount-value';
+
+                return '<div class="tcd-section">' +
                     '<div class="tcd-section-title">ยอดเงิน</div>' +
                     '<div class="row mx-n1">' +
                     '<div class="col-6 col-md-3 px-1 mb-2"><div class="tcd-amount-card"><span class="tcd-amount-label">ยอดแทง</span><span class="tcd-amount-value">' + formatMoney(ticket.total_bet_amount) + '</span></div></div>' +
                     '<div class="col-6 col-md-3 px-1 mb-2"><div class="tcd-amount-card"><span class="tcd-amount-label">ส่วนลด</span><span class="tcd-amount-value">' + formatMoney(ticket.total_discount_amount) + '</span></div></div>' +
                     '<div class="col-6 col-md-3 px-1 mb-2"><div class="tcd-amount-card"><span class="tcd-amount-label">ยอดรับ</span><span class="tcd-amount-value">' + formatMoney(ticket.total_net_amount) + '</span></div></div>' +
-                    '<div class="col-6 col-md-3 px-1 mb-2"><div class="tcd-amount-card is-win"><span class="tcd-amount-label">ยอดถูก</span><span class="' + winClass + '">' + formatMoney(ticket.total_win_amount) + '</span></div></div>' +
+                    '<div class="col-6 col-md-3 px-1 mb-2"><div class="tcd-amount-card is-win"><span class="tcd-amount-label">ยอดถูก</span><span class="' + winValueClass + '">' + formatMoney(ticket.total_win_amount) + '</span></div></div>' +
                     '</div>' +
                     '</div>';
+            };
 
-                const reasonHtml =
-                    '<div class="tcd-section">' +
+            const buildReasonHtml = function (ticket) {
+                const empty = !ticket.reason || ticket.reason === '-';
+                const cls = empty ? 'tcd-reason-text is-empty' : 'tcd-reason-text';
+
+                return '<div class="tcd-section">' +
                     '<div class="tcd-section-title">หมายเหตุ / สาเหตุยกเลิก</div>' +
-                    '<div class="' + reasonClass + '">' + escapeHtml(reasonEmpty ? '-' : ticket.reason) + '</div>' +
+                    '<div class="' + cls + '">' + escapeHtml(empty ? '-' : ticket.reason) + '</div>' +
                     '</div>';
+            };
 
+            const buildItemsTableHtml = function (items) {
                 let tbodyHtml;
                 if (items.length === 0) {
                     tbodyHtml = '<tr><td colspan="7" class="text-center text-muted py-3">ไม่พบรายการย่อยในโพย</td></tr>';
@@ -369,11 +395,10 @@
                 }
 
                 const countBadge = items.length > 0
-                    ? ' <span class="badge badge-light" style="font-weight:600;">' + items.length + ' รายการ</span>'
+                    ? ' <span class="badge badge-light tcd-count-badge">' + items.length + ' รายการ</span>'
                     : '';
 
-                const tableHtml =
-                    '<div class="tcd-section">' +
+                return '<div class="tcd-section">' +
                     '<div class="tcd-section-title">รายละเอียดเลขแทง' + countBadge + '</div>' +
                     '<div id="ticketsCancelDetailTableWrapper">' +
                     '<table class="table table-bordered table-sm mb-0">' +
@@ -390,13 +415,15 @@
                     '</table>' +
                     '</div>' +
                     '</div>';
+            };
 
-                return headerHtml +
+            const buildDetailHtml = function (ticket, items) {
+                return buildHeaderHtml(ticket) +
                     '<div class="row">' +
-                    '<div class="col-lg-5">' + infoHtml + '</div>' +
-                    '<div class="col-lg-7">' + amountsHtml + reasonHtml + '</div>' +
+                    '<div class="col-lg-5">' + buildInfoHtml(ticket) + '</div>' +
+                    '<div class="col-lg-7">' + buildAmountsHtml(ticket) + buildReasonHtml(ticket) + '</div>' +
                     '</div>' +
-                    tableHtml;
+                    buildItemsTableHtml(items);
             };
 
             $(document).off('preXhr.dt.ticketsCancelFilter', '#dataTableBuilder').on('preXhr.dt.ticketsCancelFilter', '#dataTableBuilder', function (_e, _settings, data) {
