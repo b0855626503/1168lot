@@ -1193,12 +1193,12 @@ class LottoController extends BaseController
         try {
             $member = $this->resolveCustomerMember($request);
             if (! $member || ! isset($member->code)) {
-                return $this->sendError('?????????????????', 401);
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('?????????????????????', 404);
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
             }
 
             $defaultLimit = 20;
@@ -1235,9 +1235,9 @@ class LottoController extends BaseController
                     'total' => $total,
                     'has_more' => ($offset + count($items)) < $total,
                 ],
-            ], '?????????????????????');
+            ], 'ดึงรายการยิงเลขสำเร็จ');
         } catch (\Throwable $exception) {
-            return $this->sendError('???????????????????????????????????', 422);
+            return $this->sendError('ไม่สามารถดึงรายการยิงเลขได้ในขณะนี้', 422);
         }
     }
 
@@ -1246,7 +1246,7 @@ class LottoController extends BaseController
         try {
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('?????????????????????', 404);
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
             }
 
             $draw = LottoDraw::query()->find((int) $round->lotto_draw_id);
@@ -1285,9 +1285,9 @@ class LottoController extends BaseController
                 ],
                 'proof' => $publicProof,
                 'server_time' => now()->format('Y-m-d H:i:s'),
-            ], '???????????????????????????');
+            ], 'ดึงข้อมูลผลและหลักฐานสำเร็จ');
         } catch (\Throwable $exception) {
-            return $this->sendError('?????????????????????????????????????????', 422);
+            return $this->sendError('ไม่สามารถดึงข้อมูลผลและหลักฐานได้ในขณะนี้', 422);
         }
     }
 
@@ -2490,14 +2490,9 @@ class LottoController extends BaseController
             ->get(['member_id', 'position', 'number_text', 'number_value', 'submitted_at']);
 
         $memberIds = $rows->pluck('member_id')->map(static fn ($id): int => (int) $id)->filter()->values()->all();
-        $namesByCode = [];
-        if ($memberIds !== []) {
-            try {
-                $namesByCode = DB::table('members')->whereIn('code', $memberIds)->pluck('user_name', 'code')->all();
-            } catch (\Throwable) {
-                $namesByCode = [];
-            }
-        }
+        $namesByCode = $memberIds === []
+            ? []
+            : DB::table('members')->whereIn('code', $memberIds)->pluck('user_name', 'code')->all();
 
         return [
             'shoot_source' => 'live',
