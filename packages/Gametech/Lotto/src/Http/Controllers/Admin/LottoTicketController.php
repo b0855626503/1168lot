@@ -13,7 +13,6 @@ use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class LottoTicketController extends AppBaseController
 {
@@ -72,14 +71,8 @@ class LottoTicketController extends AppBaseController
 
     public function loadData(Request $request): JsonResponse
     {
-        $hasYeekeeTable = Schema::hasTable('yeekee_rounds');
-        $withRelations = ['member', 'draw.market', 'items'];
-        if ($hasYeekeeTable) {
-            $withRelations[] = 'draw.yeekeeRound';
-        }
-
         $ticket = LottoTicket::query()
-            ->with($withRelations)
+            ->with(['member', 'draw.market', 'draw.yeekeeRound', 'items'])
             ->find((int) $request->input('id'));
 
         if (! $ticket) {
@@ -89,7 +82,7 @@ class LottoTicketController extends AppBaseController
         $cancellationInfo = $this->resolveCancellationInfo($ticket);
 
         $isYeekee = (string) ($ticket->draw?->market?->result_mode ?? '') === LotteryMarket::RESULT_MODE_YEEKEE;
-        $roundNo = ($hasYeekeeTable && $ticket->draw?->yeekeeRound)
+        $roundNo = $ticket->draw?->yeekeeRound
             ? (int) $ticket->draw->yeekeeRound->round_no
             : null;
 

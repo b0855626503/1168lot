@@ -21,13 +21,6 @@
                     <span class="sep">|</span>
                     <span>สมาชิก: @{{ memberDisplay }}</span>
                     <span class="sep">|</span>
-                    {{--
-                        TODO: หวยยี่กี่ควรแสดง badge รอบ แต่ loadData() ปัจจุบันส่ง draw.market
-                        เป็นชื่อตลาดธรรมดา ไม่ผ่าน LottoMarketDisplayFormatter::formatPlain()
-                        จึงไม่มี "(รอบ N)" ใน string — ควรเพิ่ม draw.yeekee_round_no ใน
-                        LottoTicketController::loadData() แล้ว bind badge จาก field นั้นแทน
-                        computed marketRoundNo ตอนนี้ทำ fallback parse ไว้รองรับอนาคต
-                    --}}
                     <span>ตลาด: @{{ marketDisplayName
                         }}<template v-if="hasMarketRound"
                         > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template
@@ -262,9 +255,8 @@
                 },
                 /**
                  * True when the draw belongs to a yeekee market.
-                 * Primary source: draw.is_yeekee (boolean) from loadData() response.
-                 * Fallback: detect a "(รอบ N)" suffix in the market name string for
-                 * any older cached or partial responses that pre-date the backend change.
+                 * Primary source: draw.is_yeekee from loadData().
+                 * Fallback: detect legacy "(รอบ N)" suffix in the market name string.
                  */
                 isYeekee() {
                     if (this.ticket?.draw?.is_yeekee != null) {
@@ -275,8 +267,8 @@
                 },
                 /**
                  * Round number for yeekee draws.
-                 * Primary source: draw.round_no (int|null) from loadData() response.
-                 * Fallback: parse "(รอบ N)" from the market name string.
+                 * Primary source: draw.round_no from loadData().
+                 * Fallback: parse legacy "(รอบ N)" from the market name string.
                  */
                 marketRoundNo() {
                     const backendRound = this.ticket?.draw?.round_no;
