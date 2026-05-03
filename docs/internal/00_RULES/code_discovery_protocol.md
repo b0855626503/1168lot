@@ -1,7 +1,10 @@
 # Code Discovery Protocol
 
 ## Purpose
-ใช้สำหรับบังคับ agent ค้นหาไฟล์และ call flow ที่เกี่ยวข้องก่อนเริ่มแก้โค้ดทุกครั้ง เพื่อป้องกันการเดาไฟล์ผิด, แก้ผิด layer, หรือพลาด side effects
+Full reference สำหรับงาน **High Risk** เท่านั้น
+งาน Light / Standard ใช้ `code_discovery_quick.md` แทน — เร็วกว่า ลด token
+
+บังคับ agent ค้นหาไฟล์และ call flow ก่อนแก้โค้ด เพื่อป้องกันการเดาไฟล์ผิด, แก้ผิด layer, หรือพลาด side effects
 
 ## Risk Levels
 
@@ -254,83 +257,72 @@ Flow:
 - ระบุ scenario ที่ต้องครอบคลุม
 
 ### Step 9: Produce Discovery Report
-ก่อน implement ต้องส่งรายงานรูปแบบนี้:
 
+Report format ขึ้นกับ risk level — ห้ามเริ่ม implement จนกว่าจะมี report ตาม level
+
+#### Light — Mini Report (1 บรรทัด)
+
+```
+Light: แก้ [ชื่อไฟล์] — [สิ่งที่แก้] — ไม่กระทบ behavior
+```
+
+#### Standard — Compact Report (3–5 บรรทัด)
+
+```
+Standard: [สรุปงาน]
+Entrypoint: [controller/command/route]
+Tables: [read] → [write]
+Side effects: [ถ้ามี] หรือ none
+Tests: [test file หรือ none found]
+```
+
+#### High Risk — Full Report
+
+```markdown
 ## Discovery Report
 
 ### Task Summary
 สรุปงาน 2-4 บรรทัด
 
 ### Source of Truth Read
-- [ ] `docs/START_HERE.md`
-- [ ] `agent_rules.md`
-- [ ] `system_current_state.md`
-- [ ] `decision_log.md`
+- [ ] docs/START_HERE.md
+- [ ] system_map.md
+- [ ] domain discovery/note
+- [ ] system_current_state.md
+- [ ] decision_log.md
 - [ ] current plan
 
 ### Keywords Used
-Business:
-- ...
-
-Technical:
-- ...
-
-Tables:
-- ...
-
-Synonyms:
-- ...
+Business: ...  Technical: ...  Tables: ...
 
 ### Files Found
-Active code:
-- `path/to/file.php` — เหตุผลที่เกี่ยวข้อง
-
-Possible related:
-- `path/to/file.php` — เหตุผล
-
-Ignored:
-- `path/to/archive.php` — เหตุผลที่ไม่แตะ
+Active: path/to/file.php — เหตุผล
+Ignored: path/to/archive.php — เหตุผล
 
 ### Entrypoints
-- route/controller/command/job
+- route / controller / command / job
 
 ### Call Flow
-1. ...
-2. ...
-3. ...
+1. Controller/Command รับ input
+2. Service validate → write DB
+3. Table ที่ถูกแตะ
+4. Event/Observer/Queue ตามมา
 
 ### Tables / Side Effects
-Reads:
-- ...
-
-Writes:
-- ...
-
-Side effects:
-- ...
+Reads: ...  Writes: ...  Side effects: ...
 
 ### Contracts To Preserve
-- ...
+- public method signature / request payload / response format / schema / enum
 
 ### Tests Found / Needed
-Existing:
-- ...
-
-New/Updated:
-- ...
+Existing: ...  New/Updated: ...
 
 ### Risk Assessment
-Low/Medium/High:
-เหตุผล
+High — เหตุผล
 
 ### Proposed Change Scope
-จะแก้ไฟล์:
-- ...
-
-จะไม่แตะ:
-- ...
-
-ห้ามเริ่ม implement จนกว่าจะมี Discovery Report นี้ครบ
+แก้: ...  ไม่แตะ: ...
+```
 
 ## Search Patterns By Domain
 

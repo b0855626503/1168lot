@@ -10,6 +10,9 @@
 ไฟล์นี้เป็นดัชนีเร็วสำหรับ agent — ดูแผนงาน active/pending แยกตาม domain
 แหล่งข้อมูลหลักและ authoritative: `docs/04_PLANS/README.md`
 
+> **ข้อบังคับ:** ไฟล์นี้คือ index เท่านั้น — ห้ามใส่รายละเอียด plan / implementation notes
+> แต่ละ row ไม่เกิน 1 บรรทัด ถ้าต้องการรายละเอียดให้เปิด plan file โดยตรง
+
 ---
 
 ## Active Plans

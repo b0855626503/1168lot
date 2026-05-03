@@ -8,7 +8,7 @@
 2. `.codebase-memory/SUMMARY.md` — ถ้ามี
 3. `docs/internal/01_SYSTEM/system_map.md` — แผนที่ domain/package/entrypoint สั้น
 4. domain discovery/note ที่เกี่ยวข้องกับงาน 1 ไฟล์ (ดู `docs/internal/03_DOMAINS/`)
-5. ทำ Code Discovery ด้วย rg/git grep/IDE/Octocode — ดู `docs/internal/00_RULES/code_discovery_protocol.md`
+5. ทำ Code Discovery — Light/Standard: `docs/internal/00_RULES/code_discovery_quick.md` | High Risk: `docs/internal/00_RULES/code_discovery_protocol.md`
 
 ## Escalate เมื่อ Risk สูง
 
