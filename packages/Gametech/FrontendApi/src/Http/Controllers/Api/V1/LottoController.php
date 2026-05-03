@@ -27,7 +27,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
@@ -1194,12 +1193,12 @@ class LottoController extends BaseController
         try {
             $member = $this->resolveCustomerMember($request);
             if (! $member || ! isset($member->code)) {
-                return $this->sendError('???????????????????????????????????????????????????', 401);
+                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('???????????????????????????????????????????????????????????????', 404);
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
             }
 
             $defaultLimit = 20;
@@ -1236,9 +1235,9 @@ class LottoController extends BaseController
                     'total' => $total,
                     'has_more' => ($offset + count($items)) < $total,
                 ],
-            ], '???????????????????????????????????????????????????????????????');
+            ], 'ดึงรายการยิงเลขสำเร็จ');
         } catch (\Throwable $exception) {
-            return $this->sendError('?????????????????????????????????????????????????????????????????????????????????????????????????????????', 422);
+            return $this->sendError('ไม่สามารถดึงรายการยิงเลขได้ในขณะนี้', 422);
         }
     }
 
@@ -1247,7 +1246,7 @@ class LottoController extends BaseController
         try {
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('???????????????????????????????????????????????????????????????', 404);
+                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
             }
 
             $draw = LottoDraw::query()->find((int) $round->lotto_draw_id);
@@ -1286,9 +1285,9 @@ class LottoController extends BaseController
                 ],
                 'proof' => $publicProof,
                 'server_time' => now()->format('Y-m-d H:i:s'),
-            ], '?????????????????????????????????????????????????????????????????????????????????');
+            ], 'ดึงข้อมูลผลและหลักฐานสำเร็จ');
         } catch (\Throwable $exception) {
-            return $this->sendError('???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????', 422);
+            return $this->sendError('ไม่สามารถดึงข้อมูลผลและหลักฐานได้ในขณะนี้', 422);
         }
     }
 
@@ -2446,10 +2445,9 @@ class LottoController extends BaseController
      */
     private function resolvePublicYeekeeShootsSource(YeekeeRound $round): array
     {
-        $hasSnapshot = is_array($round->shoot_snapshot_json) || ! empty($round->shoot_snapshot_hash);
-        if ($hasSnapshot) {
-            $snapshot = is_array($round->shoot_snapshot_json) ? $round->shoot_snapshot_json : [];
-            $snapshotShoots = is_array($snapshot['shoots'] ?? null) ? $snapshot['shoots'] : (is_array($snapshot) ? $snapshot : []);
+        $snapshot = is_array($round->shoot_snapshot_json) ? $round->shoot_snapshot_json : null;
+        if (is_array($snapshot) && is_array($snapshot['shoots'] ?? null)) {
+            $snapshotShoots = $snapshot['shoots'];
             $rows = collect($snapshotShoots)->filter(static fn ($row): bool => is_array($row))->map(function (array $shoot): array {
                 return [
                     'position' => (int) ($shoot['position'] ?? 0),
@@ -2474,11 +2472,17 @@ class LottoController extends BaseController
         $memberIds = $rows->pluck('member_id')->map(static fn ($id): int => (int) $id)->filter()->values()->all();
         $namesByCode = [];
         if ($memberIds !== []) {
-            if (Schema::hasTable('members') && Schema::hasColumn('members', 'code') && Schema::hasColumn('members', 'user_name')) {
+            try {
                 $namesByCode = DB::table('members')->whereIn('code', $memberIds)->pluck('user_name', 'code')->all();
+            } catch (\Throwable) {
+                $namesByCode = [];
             }
-            if ($namesByCode === [] && Schema::hasTable('members') && Schema::hasColumn('members', 'id') && Schema::hasColumn('members', 'user_name')) {
-                $namesByCode = DB::table('members')->whereIn('id', $memberIds)->pluck('user_name', 'id')->all();
+            if ($namesByCode === []) {
+                try {
+                    $namesByCode = DB::table('members')->whereIn('id', $memberIds)->pluck('user_name', 'id')->all();
+                } catch (\Throwable) {
+                    $namesByCode = [];
+                }
             }
         }
 
@@ -2527,15 +2531,16 @@ class LottoController extends BaseController
     private function mapPublicYeekeeShoot(array $shoot, bool $isRevealed): array
     {
         $fullNumber = (string) ($shoot['number_text'] ?? '');
+        $isValidFullNumber = preg_match('/^\d{5}$/', $fullNumber) === 1;
         $maskedNumber = self::maskYeekeeNumberText($fullNumber);
         $memberName = (string) ($shoot['member_name'] ?? '');
 
         return [
             'position' => (int) ($shoot['position'] ?? 0),
-            'number_text' => $isRevealed ? $fullNumber : $maskedNumber,
+            'number_text' => ($isRevealed && $isValidFullNumber) ? $fullNumber : $maskedNumber,
             'number_text_masked' => $maskedNumber,
-            'number_text_revealed' => $isRevealed ? $fullNumber : null,
-            'is_number_revealed' => $isRevealed,
+            'number_text_revealed' => ($isRevealed && $isValidFullNumber) ? $fullNumber : null,
+            'is_number_revealed' => $isRevealed && $isValidFullNumber,
             'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
             'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
             'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
