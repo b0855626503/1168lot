@@ -6,6 +6,7 @@ use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
 use Gametech\Lotto\Transformers\LottoProfitLossForecastReportTransformer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -22,6 +23,17 @@ class LottoProfitLossForecastReportDataTable extends DataTable
 
     public function query(LottoDrawBetSetting $model)
     {
+        $yeekeeRoundSelect = Schema::hasTable('yeekee_rounds')
+            ? ',
+                (
+                    select yeekee_rounds.round_no
+                    from yeekee_rounds
+                    where yeekee_rounds.lotto_draw_id = lotto_draws.id
+                    order by yeekee_rounds.id desc
+                    limit 1
+                ) as yeekee_round_no'
+            : '';
+
         $totalBetSubquery = DB::table('lotto_ticket_items')
             ->join('lotto_tickets', 'lotto_tickets.id', '=', 'lotto_ticket_items.ticket_id')
             ->selectRaw('COALESCE(SUM(lotto_ticket_items.amount), 0)')
@@ -44,7 +56,8 @@ class LottoProfitLossForecastReportDataTable extends DataTable
                 lotto_markets.id as market_id,
                 lotto_markets.name as market_name,
                 lotto_markets.logo as market_logo,
-                lotto_markets.icon as market_icon
+                lotto_markets.icon as market_icon,
+                lotto_markets.result_mode as market_result_mode'.$yeekeeRoundSelect.'
             ')
             ->selectSub($totalBetSubquery, 'total_bet_amount')
             ->selectSub($riskSubquery, 'max_risk_amount')

@@ -2,19 +2,25 @@
 
 namespace Gametech\Lotto\Http\Controllers\Admin;
 
-use Gametech\Admin\Http\Controllers\AppBaseController;
-use Gametech\Lotto\Models\LottoDraw;
 use Carbon\Carbon;
+use Gametech\Admin\Http\Controllers\AppBaseController;
+use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\YeekeeRound;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class LottoResultsByDateReportController extends AppBaseController
 {
     protected array $_config;
+    private LottoMarketDisplayFormatter $marketDisplayFormatter;
 
     public function __construct()
     {
         $this->middleware('admin');
         $this->_config = (array) request('_config', []);
+        $this->marketDisplayFormatter = new LottoMarketDisplayFormatter;
     }
 
     public function index(Request $request)
@@ -35,7 +41,7 @@ class LottoResultsByDateReportController extends AppBaseController
     {
         $drawDate = $this->resolveDrawDate($request);
 
-        $rows = LottoDraw::query()
+        $rowsQuery = LottoDraw::query()
             ->with([
                 'market:id,group_id,name,logo,icon,is_enabled',
                 'market.group:id,code,name,is_enabled,sort',
@@ -44,8 +50,20 @@ class LottoResultsByDateReportController extends AppBaseController
             ->whereDate('draw_date', $drawDate)
             ->where('status', 'resulted')
             ->orderBy('market_id')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+
+        if (Schema::hasTable('yeekee_rounds')) {
+            $rowsQuery->selectSub(
+                YeekeeRound::query()
+                    ->select('round_no')
+                    ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                    ->orderByDesc('yeekee_rounds.id')
+                    ->limit(1),
+                'yeekee_round_no'
+            );
+        }
+
+        $rows = $rowsQuery->get();
 
         $latestByMarket = $rows
             ->groupBy('market_id')
@@ -72,7 +90,11 @@ class LottoResultsByDateReportController extends AppBaseController
 
                             return [
                                 'market_id' => (int) $draw->market->id,
-                                'market_name' => (string) ($draw->market->name ?? ''),
+                                'market_name' => $this->marketDisplayFormatter->formatPlain(
+                                    (string) ($draw->market->name ?? ''),
+                                    (string) ($draw->market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL),
+                                    isset($draw->yeekee_round_no) ? (int) $draw->yeekee_round_no : null
+                                ),
                                 'market_logo' => (string) ($draw->market->logo ?? ''),
                                 'draw_id' => (int) $draw->id,
                                 'draw_date' => optional($draw->draw_date)->format('Y-m-d'),

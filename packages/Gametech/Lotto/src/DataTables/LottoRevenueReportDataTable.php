@@ -6,7 +6,9 @@ use Gametech\Lotto\Contracts\LottoDraw;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Transformers\LottoRevenueReportTransformer;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -46,7 +48,7 @@ class LottoRevenueReportDataTable extends DataTable
             ->where('lotto_tickets.status', '!=', 'cancelled')
             ->where('lotto_ticket_items.result_status', 'win');
 
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->select('lotto_draws.*')
             ->with('market')
             ->selectSub($ticketQuery, 'total_bet_amount')
@@ -60,6 +62,19 @@ class LottoRevenueReportDataTable extends DataTable
             })
             ->orderByDesc('draw_date')
             ->orderByDesc('id');
+
+        if (Schema::hasTable('yeekee_rounds')) {
+            $query->selectSub(
+                YeekeeRound::query()
+                    ->select('round_no')
+                    ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                    ->orderByDesc('yeekee_rounds.id')
+                    ->limit(1),
+                'yeekee_round_no'
+            );
+        }
+
+        return $query;
     }
 
     public function html(): Builder

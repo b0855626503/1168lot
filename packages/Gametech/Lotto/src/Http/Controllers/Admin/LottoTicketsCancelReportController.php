@@ -7,17 +7,22 @@ use Gametech\Lotto\DataTables\LottoTicketsCancelReportDataTable;
 use Gametech\Lotto\Enums\BetType;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\YeekeeRound;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LottoTicketsCancelReportController extends AppBaseController
 {
     protected array $_config;
+    private LottoMarketDisplayFormatter $marketDisplayFormatter;
 
     public function __construct()
     {
         $this->middleware('admin');
         $this->_config = (array) request('_config', []);
+        $this->marketDisplayFormatter = new LottoMarketDisplayFormatter;
     }
 
     public function index(LottoTicketsCancelReportDataTable $dataTable)
@@ -64,14 +69,27 @@ class LottoTicketsCancelReportController extends AppBaseController
             return response()->json(['message' => 'ไม่พบข้อมูลโพยที่ระบุ'], 422);
         }
 
-        $ticket = LottoTicket::query()
+        $ticketQuery = LottoTicket::query()
             ->with([
                 'member:code,user_name,name',
-                'draw:id,market_id,draw_date',
-                'draw.market:id,name',
+                'draw' => function ($drawQuery): void {
+                    $drawQuery->select(['id', 'market_id', 'draw_date']);
+                    if (Schema::hasTable('yeekee_rounds')) {
+                        $drawQuery->selectSub(
+                            YeekeeRound::query()
+                                ->select('round_no')
+                                ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                                ->orderByDesc('yeekee_rounds.id')
+                                ->limit(1),
+                            'yeekee_round_no'
+                        );
+                    }
+                },
+                'draw.market:id,name,result_mode',
                 'items:id,ticket_id,bet_type,number,amount,package_name_at_time,payout_at_time,discount_percent_at_time,discount_amount_at_time,payable_amount_at_time,win_amount,result_status',
-            ])
-            ->find($id);
+            ]);
+
+        $ticket = $ticketQuery->find($id);
 
         if (! $ticket) {
             return response()->json(['message' => 'ไม่พบโพยที่เลือก'], 404);
@@ -136,7 +154,11 @@ class LottoTicketsCancelReportController extends AppBaseController
             'ticket' => [
                 'id' => (int) $ticket->id,
                 'member_display' => $memberDisplay,
-                'market_name' => (string) ($ticket->draw?->market?->name ?? '-'),
+                'market_name' => $this->marketDisplayFormatter->formatPlain(
+                    (string) ($ticket->draw?->market?->name ?? '-'),
+                    (string) ($ticket->draw?->market?->result_mode ?? ''),
+                    $ticket->draw && isset($ticket->draw->yeekee_round_no) ? (int) $ticket->draw->yeekee_round_no : null
+                ),
                 'draw_date' => $ticket->draw?->draw_date ? $ticket->draw->draw_date->format('d/m/Y') : '-',
                 'status' => (string) $ticket->status,
                 'status_label' => $this->statusLabel((string) $ticket->status),

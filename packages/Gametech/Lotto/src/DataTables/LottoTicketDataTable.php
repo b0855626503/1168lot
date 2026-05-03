@@ -3,7 +3,9 @@
 namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoTicket;
+use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Transformers\LottoTicketTransformer;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -22,26 +24,41 @@ class LottoTicketDataTable extends DataTable
             }
 
             $query->where(function ($builder) use ($keyword): void {
-                $builder->where('lotto_tickets.id', 'like', '%' . $keyword . '%')
-                    ->orWhere('lotto_tickets.member_id', 'like', '%' . $keyword . '%')
+                $builder->where('lotto_tickets.id', 'like', '%'.$keyword.'%')
+                    ->orWhere('lotto_tickets.member_id', 'like', '%'.$keyword.'%')
                     ->orWhereHas('member', function ($memberQuery) use ($keyword): void {
-                        $memberQuery->where('user_name', 'like', '%' . $keyword . '%')
-                            ->orWhere('name', 'like', '%' . $keyword . '%');
+                        $memberQuery->where('user_name', 'like', '%'.$keyword.'%')
+                            ->orWhere('name', 'like', '%'.$keyword.'%');
                     });
             });
         }, true);
 
-        return $dataTable->setTransformer(new LottoTicketTransformer());
+        return $dataTable->setTransformer(new LottoTicketTransformer);
     }
 
     public function query(LottoTicket $model)
     {
+        $includeYeekeeRound = Schema::hasTable('yeekee_rounds');
+
         $query = $model->newQuery()
             ->select('lotto_tickets.*')
             ->where('lotto_tickets.status', 'active')
             ->with([
                 'member',
-                'draw.market',
+                'draw' => function ($drawQuery) use ($includeYeekeeRound): void {
+                    $drawQuery->select(['id', 'market_id', 'draw_date']);
+                    if ($includeYeekeeRound) {
+                        $drawQuery->selectSub(
+                            YeekeeRound::query()
+                                ->select('round_no')
+                                ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                                ->orderByDesc('yeekee_rounds.id')
+                                ->limit(1),
+                            'yeekee_round_no'
+                        );
+                    }
+                },
+                'draw.market:id,name,logo,icon,result_mode',
                 'items:id,ticket_id,package_name_at_time',
             ])
             ->withCount([
@@ -70,21 +87,21 @@ class LottoTicketDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'dom'         => 'Bfrtip',
-                'processing'  => true,
-                'serverSide'  => true,
-                'responsive'  => false,
-                'stateSave'   => true,
-                'scrollX'     => true,
-                'paging'      => true,
-                'searching'   => true,
+                'dom' => 'Bfrtip',
+                'processing' => true,
+                'serverSide' => true,
+                'responsive' => false,
+                'stateSave' => true,
+                'scrollX' => true,
+                'paging' => true,
+                'searching' => true,
                 'searchDelay' => 350,
                 'deferRender' => true,
-                'retrieve'    => true,
-                'ordering'    => true,
-                'order'       => [[0, 'desc']],
-                'buttons'     => ['pageLength'],
-                'columnDefs'  => [
+                'retrieve' => true,
+                'ordering' => true,
+                'order' => [[0, 'desc']],
+                'buttons' => ['pageLength'],
+                'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
                 ],
             ]);

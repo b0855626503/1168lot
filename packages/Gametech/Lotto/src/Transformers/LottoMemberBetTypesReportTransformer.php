@@ -3,15 +3,24 @@
 namespace Gametech\Lotto\Transformers;
 
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use League\Fractal\TransformerAbstract;
 
 class LottoMemberBetTypesReportTransformer extends TransformerAbstract
 {
+    public function __construct(private readonly LottoMarketDisplayFormatter $marketDisplayFormatter = new LottoMarketDisplayFormatter) {}
+
     public function transform($row): array
     {
         return [
             'member_display' => $this->memberDisplay($row),
-            'market_name' => $this->formatMarket((string) ($row->market_name ?? '-'), (string) ($row->market_logo ?? ''), (string) ($row->market_icon ?? '')),
+            'market_name' => $this->marketDisplayFormatter->formatHtml(
+                (string) ($row->market_name ?? '-'),
+                (string) ($row->market_logo ?? ''),
+                (string) ($row->market_icon ?? ''),
+                (string) ($row->market_result_mode ?? ''),
+                isset($row->yeekee_round_no) ? (int) $row->yeekee_round_no : null
+            ),
             'bet_type' => BetType::label((string) ($row->bet_type ?? '')),
             'ticket_count' => (int) ($row->ticket_count ?? 0),
             'total_bet_amount' => number_format((float) ($row->total_bet_amount ?? 0), 2),
@@ -25,25 +34,10 @@ class LottoMemberBetTypesReportTransformer extends TransformerAbstract
         $memberId = (int) ($row->member_id ?? 0);
 
         if ($name === '') {
-            $name = 'MEM-' . $memberId;
+            $name = 'MEM-'.$memberId;
         }
 
-        return e($name . ($memberId > 0 ? ' (' . $memberId . ')' : ''));
-    }
-
-    private function formatMarket(string $marketName, string $logo, string $icon): string
-    {
-        $safeName = e(trim($marketName) !== '' ? $marketName : '-');
-        $image = trim($logo) !== '' ? $logo : $icon;
-
-        if ($image === '') {
-            return $safeName;
-        }
-
-        return '<span class="d-inline-flex align-items-center">'
-            . '<img src="' . e($image) . '" alt="" style="width:18px;height:18px;object-fit:contain;margin-right:6px;" />'
-            . '<span>' . $safeName . '</span>'
-            . '</span>';
+        return e($name.($memberId > 0 ? ' ('.$memberId.')' : ''));
     }
 
     private function signedMoney(float $value): string
@@ -51,11 +45,11 @@ class LottoMemberBetTypesReportTransformer extends TransformerAbstract
         $formatted = number_format(abs($value), 2);
 
         if ($value > 0) {
-            return '<span class="text-success">+' . $formatted . '</span>';
+            return '<span class="text-success">+'.$formatted.'</span>';
         }
 
         if ($value < 0) {
-            return '<span class="text-danger">-' . $formatted . '</span>';
+            return '<span class="text-danger">-'.$formatted.'</span>';
         }
 
         return number_format(0, 2);

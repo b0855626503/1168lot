@@ -12,28 +12,33 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class LottoDrawController extends AppBaseController
 {
     protected array $_config;
+    private LottoMarketDisplayFormatter $marketDisplayFormatter;
 
     public function __construct()
     {
         $this->middleware('admin');
         $this->_config = (array) request('_config', []);
+        $this->marketDisplayFormatter = new LottoMarketDisplayFormatter;
     }
 
     public function index(LottoDrawDataTable $dataTable, DrawService $drawService)
@@ -139,7 +144,11 @@ class LottoDrawController extends AppBaseController
         return $this->sendResponse([
             'draw' => [
                 'id' => (int) $draw->id,
-                'market_name' => (string) ($draw->market->name ?? '-'),
+                'market_name' => $this->marketDisplayFormatter->formatPlain(
+                    (string) ($draw->market->name ?? '-'),
+                    (string) ($draw->market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL),
+                    $this->resolveYeekeeRoundNo((int) $draw->id)
+                ),
                 'draw_date' => $draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-',
             ],
             'count' => $rows->count(),
@@ -179,7 +188,11 @@ class LottoDrawController extends AppBaseController
         return $this->sendResponse([
             'draw' => [
                 'id' => (int) $draw->id,
-                'market_name' => (string) ($draw->market->name ?? '-'),
+                'market_name' => $this->marketDisplayFormatter->formatPlain(
+                    (string) ($draw->market->name ?? '-'),
+                    (string) ($draw->market->result_mode ?? LotteryMarket::RESULT_MODE_NORMAL),
+                    $this->resolveYeekeeRoundNo((int) $draw->id)
+                ),
                 'draw_date' => $draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-',
             ],
             'count' => $rows->count(),
@@ -1012,6 +1025,20 @@ class LottoDrawController extends AppBaseController
         }
 
         return (bool) ($market->auto_refund_on_no_result ?? false);
+    }
+
+    private function resolveYeekeeRoundNo(int $drawId): ?int
+    {
+        if (! Schema::hasTable('yeekee_rounds')) {
+            return null;
+        }
+
+        $roundNo = YeekeeRound::query()
+            ->where('lotto_draw_id', $drawId)
+            ->orderByDesc('id')
+            ->value('round_no');
+
+        return $roundNo !== null ? (int) $roundNo : null;
     }
 
     private function canViewSensitiveYeekeeAudit(): bool

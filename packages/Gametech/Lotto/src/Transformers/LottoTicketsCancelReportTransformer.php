@@ -2,10 +2,13 @@
 
 namespace Gametech\Lotto\Transformers;
 
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use League\Fractal\TransformerAbstract;
 
 class LottoTicketsCancelReportTransformer extends TransformerAbstract
 {
+    public function __construct(private readonly LottoMarketDisplayFormatter $marketDisplayFormatter = new LottoMarketDisplayFormatter) {}
+
     public function transform($row): array
     {
         $createdAt = $row->created_at;
@@ -28,7 +31,13 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
             'created_at' => $createdAt ? date('d/m/Y H:i', strtotime((string) $createdAt)) : '-',
             'id' => (int) ($row->id ?? 0),
             'member_display' => e(($memberName !== '' ? $memberName : ('MEM-'.(int) ($row->member_id ?? 0))).' ('.(int) ($row->member_id ?? 0).')'),
-            'market_name' => $this->formatMarket((string) ($row->market_name ?? '-'), (string) ($row->market_logo ?? ''), (string) ($row->market_icon ?? '')),
+            'market_name' => $this->marketDisplayFormatter->formatHtml(
+                (string) ($row->market_name ?? '-'),
+                (string) ($row->market_logo ?? ''),
+                (string) ($row->market_icon ?? ''),
+                (string) ($row->market_result_mode ?? ''),
+                isset($row->yeekee_round_no) ? (int) $row->yeekee_round_no : null
+            ),
             'draw_date' => $drawDate,
             'package_name' => $packageNames->isNotEmpty() ? e($packageNames->implode(', ')) : '-',
             'total_bet_amount' => number_format((float) ($row->total_bet_amount ?? $row->total_amount ?? 0), 2),
@@ -76,21 +85,6 @@ class LottoTicketsCancelReportTransformer extends TransformerAbstract
         $metaReason = is_array($decoded) ? trim((string) ($decoded['reason'] ?? '')) : '';
 
         return $metaReason !== '' ? $metaReason : '-';
-    }
-
-    private function formatMarket(string $marketName, string $logo, string $icon): string
-    {
-        $safeName = e(trim($marketName) !== '' ? $marketName : '-');
-        $image = trim($logo) !== '' ? $logo : $icon;
-
-        if ($image === '') {
-            return $safeName;
-        }
-
-        return '<span class="d-inline-flex align-items-center">'
-            .'<img src="'.e($image).'" alt="" style="width:18px;height:18px;object-fit:contain;margin-right:6px;" />'
-            .'<span>'.$safeName.'</span>'
-            .'</span>';
     }
 
     private function statusBadge(string $status, float $totalWinAmount): string

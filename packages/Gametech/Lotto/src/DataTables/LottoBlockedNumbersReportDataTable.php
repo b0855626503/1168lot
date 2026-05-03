@@ -5,6 +5,7 @@ namespace Gametech\Lotto\DataTables;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Transformers\LottoBlockedNumbersReportTransformer;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -21,13 +22,25 @@ class LottoBlockedNumbersReportDataTable extends DataTable
 
     public function query(LottoNumberBlock $model)
     {
+        $yeekeeRoundSelect = Schema::hasTable('yeekee_rounds')
+            ? ',
+                (
+                    select yeekee_rounds.round_no
+                    from yeekee_rounds
+                    where yeekee_rounds.lotto_draw_id = lotto_draws.id
+                    order by yeekee_rounds.id desc
+                    limit 1
+                ) as yeekee_round_no'
+            : '';
+
         $query = $model->newQuery()
             ->selectRaw('
                 lotto_number_blocks.*,
                 lotto_draws.draw_date as draw_date,
                 lotto_markets.name as market_name,
                 lotto_markets.logo as market_logo,
-                lotto_markets.icon as market_icon
+                lotto_markets.icon as market_icon,
+                lotto_markets.result_mode as market_result_mode'.$yeekeeRoundSelect.'
             ')
             ->join('lotto_draws', 'lotto_draws.id', '=', 'lotto_number_blocks.draw_id')
             ->join('lotto_markets', 'lotto_markets.id', '=', 'lotto_draws.market_id')

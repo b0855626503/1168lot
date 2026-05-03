@@ -3,10 +3,13 @@
 namespace Gametech\Lotto\Transformers;
 
 use Gametech\Lotto\Contracts\LottoDraw;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use League\Fractal\TransformerAbstract;
 
 class LottoDrawTransformer extends TransformerAbstract
 {
+    public function __construct(private readonly LottoMarketDisplayFormatter $marketDisplayFormatter = new LottoMarketDisplayFormatter) {}
+
     public function transform(LottoDraw $model): array
     {
         $statusBadge = $this->getStatusBadge((string) $model->status, (int) $model->id);
@@ -108,31 +111,13 @@ class LottoDrawTransformer extends TransformerAbstract
 
     private function renderMarketName(LottoDraw $model): string
     {
-        $name = $this->renderMarketLabel($model);
-        $logo = (string) ($model->market->logo ?? '');
-        $icon = (string) ($model->market->icon ?? '');
-        $src = trim($logo) !== '' ? $logo : $icon;
-
-        if (trim($src) === '') {
-            return e($name);
-        }
-
-        return '<span style="display:inline-flex;align-items:center;gap:8px;">'
-            .'<img src="'.e($src).'" alt="" style="width:20px;height:20px;object-fit:cover;border-radius:50%;border:1px solid #e5e7eb;">'
-            .'<span>'.e($name).'</span>'
-            .'</span>';
-    }
-
-    private function renderMarketLabel(LottoDraw $model): string
-    {
-        $name = (string) ($model->market->name ?? '-');
-        $roundNo = (int) ($model->yeekee_round_no ?? 0);
-
-        if ((string) ($model->market->result_mode ?? 'normal') !== 'yeekee' || $roundNo <= 0) {
-            return $name;
-        }
-
-        return $name.' ('.$roundNo.')';
+        return $this->marketDisplayFormatter->formatHtml(
+            (string) ($model->market->name ?? '-'),
+            (string) ($model->market->logo ?? ''),
+            (string) ($model->market->icon ?? ''),
+            (string) ($model->market->result_mode ?? ''),
+            isset($model->yeekee_round_no) ? (int) $model->yeekee_round_no : null
+        );
     }
 
     /**

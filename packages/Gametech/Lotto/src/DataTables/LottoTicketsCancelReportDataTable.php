@@ -8,6 +8,7 @@ use Gametech\Lotto\Transformers\LottoTicketsCancelReportTransformer;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -41,6 +42,18 @@ class LottoTicketsCancelReportDataTable extends DataTable
 
     public function query(LottoTicket $model)
     {
+        $yeekeeRoundSelect = '';
+        if (Schema::hasTable('yeekee_rounds')) {
+            $yeekeeRoundSelect = ',
+                (
+                    select yeekee_rounds.round_no
+                    from yeekee_rounds
+                    where yeekee_rounds.lotto_draw_id = lotto_draws.id
+                    order by yeekee_rounds.id desc
+                    limit 1
+                ) as yeekee_round_no';
+        }
+
         $latestCancelTransactionQuery = DB::table('wallet_transactions')
             ->selectRaw('MAX(id) as latest_id, ref_id')
             ->where('ref_type', 'LOTTO_CANCEL')
@@ -55,6 +68,7 @@ class LottoTicketsCancelReportDataTable extends DataTable
                 lotto_markets.name as market_name,
                 lotto_markets.logo as market_logo,
                 lotto_markets.icon as market_icon,
+                lotto_markets.result_mode as market_result_mode'.$yeekeeRoundSelect.',
                 cancel_tx.created_by_type as cancel_tx_created_by_type,
                 cancel_tx.created_by_id as cancel_tx_created_by_id,
                 cancel_tx.meta as cancel_tx_meta,

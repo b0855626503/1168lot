@@ -4,7 +4,9 @@ namespace Gametech\Lotto\DataTables;
 
 use Gametech\Lotto\Contracts\LottoNumberExposure;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Transformers\LottoExposureReportTransformer;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\DataTableAbstract;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder;
@@ -21,9 +23,26 @@ class LottoExposureReportDataTable extends DataTable
 
     public function query(LottoNumberExposure $model)
     {
+        $includeYeekeeRound = Schema::hasTable('yeekee_rounds');
+
         $query = $model->newQuery()
             ->select('lotto_number_exposures.*')
-            ->with(['draw.market'])
+            ->with([
+                'draw' => function ($drawQuery) use ($includeYeekeeRound): void {
+                    $drawQuery->select(['id', 'market_id', 'draw_date']);
+                    if ($includeYeekeeRound) {
+                        $drawQuery->selectSub(
+                            YeekeeRound::query()
+                                ->select('round_no')
+                                ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                                ->orderByDesc('yeekee_rounds.id')
+                                ->limit(1),
+                            'yeekee_round_no'
+                        );
+                    }
+                },
+                'draw.market:id,name,logo,icon,result_mode',
+            ])
             ->orderByDesc('sold_amount')
             ->orderByDesc('id');
 
