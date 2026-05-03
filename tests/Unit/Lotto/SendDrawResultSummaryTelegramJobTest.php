@@ -85,7 +85,8 @@ class SendDrawResultSummaryTelegramJobTest extends TestCase
             'net_amount' => 0.0,
         ]);
 
-        $this->assertStringContainsString('หวยยี่กี่ รอบที่ 55', $message);
+        $this->assertStringContainsString('หวยยี่กี่ รอบที่ 55 งวดวันที่ 4', $message);
+        $this->assertStringNotContainsString('หวยหวย', $message);
     }
 
     public function test_format_message_normal_draw_has_no_round_label(): void
@@ -121,5 +122,6 @@ class SendDrawResultSummaryTelegramJobTest extends TestCase
 
         $this->assertStringContainsString('หวยออมสิน', $message);
         $this->assertStringNotContainsString('รอบที่', $message);
+        $this->assertStringNotContainsString('หวยหวย', $message);
     }
 }

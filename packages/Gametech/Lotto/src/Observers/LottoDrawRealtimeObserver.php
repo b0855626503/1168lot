@@ -9,7 +9,6 @@ use Gametech\Lotto\Jobs\SendDrawResultSummaryTelegramJob;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
-use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -273,9 +272,8 @@ class LottoDrawRealtimeObserver
             return null;
         }
 
-        $roundNo = (int) YeekeeRound::query()
-            ->where('lotto_draw_id', (int) $draw->id)
-            ->value('round_no');
+        $draw->loadMissing('yeekeeRound:id,lotto_draw_id,round_no');
+        $roundNo = (int) ($draw->yeekeeRound->round_no ?? 0);
 
         if ($roundNo <= 0) {
             Log::warning('yeekee draw missing round_no', ['draw_id' => (int) $draw->id]);
