@@ -118,7 +118,7 @@ for f in "${md_files[@]}"; do
 
   # Plan-specific naming checks.
   if [[ "$f" == "$plans_dir"/* ]]; then
-    if [[ "$bn" == "README.md" ]]; then
+    if [[ "$bn" == "README.md" || "$bn" == "current_work.md" ]]; then
       continue
     fi
 
