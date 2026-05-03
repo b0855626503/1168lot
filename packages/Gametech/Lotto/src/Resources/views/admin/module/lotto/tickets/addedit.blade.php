@@ -30,7 +30,9 @@
                     --}}
                     <span>ตลาด: @{{ marketDisplayName
                         }}<template v-if="hasMarketRound"
-                        > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template></span>
+                        > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template
+                        ><template v-if="marketRoundMissing"
+                        > <b-badge variant="warning" class="tcd-round-badge">ไม่พบรอบ</b-badge></template></span>
                 </div>
             </div>
         </div>
@@ -68,7 +70,9 @@
                             <span class="tcd-info-value">
                                 @{{ marketDisplayName
                                 }}<template v-if="hasMarketRound"
-                                > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template>
+                                > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template
+                                ><template v-if="marketRoundMissing"
+                                > <b-badge variant="warning" class="tcd-round-badge">ไม่พบรอบ</b-badge></template>
                             </span>
                         </div>
                         <template v-if="ticket.cancelled_by_name || ticket.cancelled_at">
@@ -244,16 +248,6 @@
                     const id = this.ticket?.draw?.id;
                     return id != null ? id : '-';
                 },
-                /**
-                 * Raw market name string from the API response.
-                 * loadData() currently returns draw.market as a plain name (no round suffix),
-                 * because LottoTicketController::loadData() does not use
-                 * LottoMarketDisplayFormatter::formatPlain(). The computed below parses
-                 * "(รอบ N)" defensively so it works automatically once the backend is updated.
-                 *
-                 * TODO: add draw.yeekee_round_no (int|null) to LottoTicketController::loadData()
-                 * and bind the badge from that field instead of relying on string parsing.
-                 */
                 marketRawText() {
                     return String(this.ticket?.draw?.market || '').trim();
                 },
@@ -262,19 +256,48 @@
                         return '-';
                     }
 
+                    // Strip any legacy "(รอบ N)" suffix that may appear from older responses.
                     const m = this.marketRawText.match(/^(.*?)\s*\(รอบ\s*\d+\)\s*$/);
                     return m ? m[1].trim() || '-' : this.marketRawText;
                 },
+                /**
+                 * True when the draw belongs to a yeekee market.
+                 * Primary source: draw.is_yeekee (boolean) from loadData() response.
+                 * Fallback: detect a "(รอบ N)" suffix in the market name string for
+                 * any older cached or partial responses that pre-date the backend change.
+                 */
+                isYeekee() {
+                    if (this.ticket?.draw?.is_yeekee != null) {
+                        return Boolean(this.ticket.draw.is_yeekee);
+                    }
+
+                    return /\(รอบ\s*\d+\)/.test(this.marketRawText);
+                },
+                /**
+                 * Round number for yeekee draws.
+                 * Primary source: draw.round_no (int|null) from loadData() response.
+                 * Fallback: parse "(รอบ N)" from the market name string.
+                 */
                 marketRoundNo() {
+                    const backendRound = this.ticket?.draw?.round_no;
+                    if (backendRound != null) {
+                        const n = parseInt(backendRound, 10);
+                        return (!isNaN(n) && n > 0) ? n : null;
+                    }
+
                     if (!this.marketRawText) {
                         return null;
                     }
 
                     const m = this.marketRawText.match(/\(รอบ\s*(\d+)\)\s*$/);
-                    return m ? m[1] : null;
+                    return m ? parseInt(m[1], 10) : null;
                 },
                 hasMarketRound() {
                     return this.marketRoundNo !== null;
+                },
+                /** True when market is yeekee but round number is unavailable — signals a data problem. */
+                marketRoundMissing() {
+                    return this.isYeekee && !this.hasMarketRound;
                 },
                 hasWin() {
                     return Number(this.ticket?.total_win_amount || 0) > 0;
