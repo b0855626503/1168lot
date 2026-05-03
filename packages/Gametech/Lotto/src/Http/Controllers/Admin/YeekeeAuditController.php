@@ -26,7 +26,14 @@ class YeekeeAuditController extends AppBaseController
 
         $marketId = $request->query('market_id') ? (int) $request->query('market_id') : null;
         $roundDate = $this->resolveDate($request->query('round_date'));
-        $lottoDrawId = $request->query('lotto_draw_id') ? (int) $request->query('lotto_draw_id') : null;
+
+        $lottoDrawId = null;
+        if ($request->has('lotto_draw_id')) {
+            $lottoDrawId = (int) $request->query('lotto_draw_id');
+            if ($lottoDrawId <= 0) {
+                return response()->json(['rounds' => [], 'serverTime' => Carbon::now()->format('Y-m-d H:i:s')]);
+            }
+        }
 
         $query = YeekeeRound::query()
             ->select([

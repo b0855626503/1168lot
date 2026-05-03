@@ -197,6 +197,39 @@ class YeekeeAuditControllerTest extends TestCase
         $this->assertSame(20, $rounds[0]['id']);
     }
 
+    public function test_load_rounds_returns_empty_for_zero_draw_id(): void
+    {
+        $this->mockBouncer(['lotto.yeekee.audit.view' => true]);
+
+        DB::table('lotto_markets')->insert(['id' => 1, 'name' => 'M', 'result_mode' => 'yeekee']);
+        DB::table('yeekee_rounds')->insert([
+            'id' => 40, 'market_id' => 1, 'lotto_draw_id' => 0, 'round_date' => '2026-05-02', 'round_no' => 1, 'status' => 'open', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds?lotto_draw_id=0', 'GET', ['lotto_draw_id' => '0']);
+
+        $response = $this->createTestResponse(
+            app(YeekeeAuditController::class)->loadRounds($request)
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath('rounds', []);
+    }
+
+    public function test_load_rounds_returns_empty_for_negative_draw_id(): void
+    {
+        $this->mockBouncer(['lotto.yeekee.audit.view' => true]);
+
+        $request = Request::create('/admin/lotto/yeekee/audit/rounds?lotto_draw_id=-5', 'GET', ['lotto_draw_id' => '-5']);
+
+        $response = $this->createTestResponse(
+            app(YeekeeAuditController::class)->loadRounds($request)
+        );
+
+        $response->assertOk();
+        $response->assertJsonPath('rounds', []);
+    }
+
     // --- show (single-round audit) ---
 
     public function test_show_returns_403_without_view_permission(): void
