@@ -1005,14 +1005,14 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.0.position', 1);
     }
 
-    public function test_yeekee_shoots_hash_without_snapshot_json_falls_back_to_live_source(): void
+    public function test_yeekee_shoots_hash_without_snapshot_json_does_not_fallback_to_live_after_reveal(): void
     {
         $member = new Member;
         $member->code = 7788;
 
         DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
         DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
-        DB::table('lotto_draws')->insert(['id' => 324, 'market_id' => 9, 'draw_date' => '2026-04-29', 'status' => 'shoot_open', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('lotto_draws')->insert(['id' => 324, 'market_id' => 9, 'draw_date' => '2026-04-29', 'status' => 'resulted', 'created_at' => now(), 'updated_at' => now()]);
 
         DB::table('yeekee_rounds')->insert([
             'id' => 724,
@@ -1026,7 +1026,7 @@ class LottoDrawsControllerTest extends TestCase
             'shoot_close_at' => '2026-04-29 10:16:00',
             'result_compute_at' => '2026-04-29 10:17:00',
             'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
-            'status' => 'shoot_open',
+            'status' => 'resulted',
             'shoot_snapshot_json' => null,
             'shoot_snapshot_hash' => 'hash-only',
             'created_at' => now(),
@@ -1051,9 +1051,9 @@ class LottoDrawsControllerTest extends TestCase
         $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 724));
 
         $response->assertOk();
-        $response->assertJsonPath('data.shoot_source', 'live');
-        $response->assertJsonPath('data.shoot_count', 1);
-        $response->assertJsonPath('data.items.0.number_text', '123**');
+        $response->assertJsonPath('data.shoot_source', 'snapshot');
+        $response->assertJsonPath('data.shoot_count', 0);
+        $response->assertJsonCount(0, 'data.items');
     }
 
     public function test_yeekee_result_proof_contains_shoot_summary_and_winners_without_full_list(): void
@@ -1102,6 +1102,9 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.winning_shoots.first.number_text_revealed', null);
         $response->assertJsonPath('data.winning_shoots.first.is_number_revealed', false);
         $response->assertJsonPath('data.proof.result_payload', null);
+        $response->assertJsonMissingPath('data.proof.result_payload.shoot_sum');
+        $response->assertJsonMissingPath('data.proof.result_payload.shoot_count');
+        $response->assertJsonMissingPath('data.proof.result_payload.shoot_source');
         $response->assertJsonMissingPath('data.shoots');
         $response->assertJsonMissingPath('data.winning_shoots.first.member_id');
         $response->assertJsonMissingPath('data.winning_shoots.first.ip_address');
