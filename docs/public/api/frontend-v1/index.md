@@ -5,24 +5,23 @@
 เอกสารนี้เป็น entrypoint หลักของ `/docs/api/frontend-v1` สำหรับทีมที่นำ API ไปใช้งานจริง
 
 ## Start Here
-
 ## Quick Jump
 
-- Login -> [POST /api/v1/auth/login](/docs/api/frontend-v1/07-route-reference#post-apiv1authlogin)
-- Balance -> [GET /api/v1/member/balance](/docs/api/frontend-v1/07-route-reference#get-apiv1memberbalance)
-- Deposit -> [POST /api/v1/smkpay/deposit/create](/docs/api/frontend-v1/07-route-reference#post-apiv1smkpaydepositcreate)
-- Bet -> [POST /api/v1/lotto/bet](/docs/api/frontend-v1/07-route-reference#post-apiv1lottobet)
+- Login -> [POST /api/v1/auth/login](./07-route-reference.md#post-apiv1authlogin)
+- Balance -> [GET /api/v1/member/balance](./07-route-reference.md#get-apiv1memberbalance)
+- Deposit -> [POST /api/v1/smkpay/deposit/create](./07-route-reference.md#post-apiv1smkpaydepositcreate)
+- Bet -> [POST /api/v1/lotto/bet](./07-route-reference.md#post-apiv1lottobet)
 
 
-1. [01-quick-start.md](/docs/api/frontend-v1/01-quick-start)
-2. [02-auth-language.md](/docs/api/frontend-v1/02-auth-language)
-3. [03-common-contract.md](/docs/api/frontend-v1/03-common-contract)
-4. [04-error-handling.md](/docs/api/frontend-v1/04-error-handling)
-5. [05-flows.md](/docs/api/frontend-v1/05-flows)
-6. [06-endpoint-index.md](/docs/api/frontend-v1/06-endpoint-index)
-7. [07-route-reference.md](/docs/api/frontend-v1/07-route-reference)
-8. [08-edge-cases.md](/docs/api/frontend-v1/08-edge-cases)
-9. [09-legacy-contract.md](/docs/api/frontend-v1/09-legacy-contract)
+1. [01-quick-start.md](./01-quick-start.md)
+2. [02-auth-language.md](./02-auth-language.md)
+3. [03-common-contract.md](./03-common-contract.md)
+4. [04-error-handling.md](./04-error-handling.md)
+5. [05-flows.md](./05-flows.md)
+6. [06-endpoint-index.md](./06-endpoint-index.md)
+7. [07-route-reference.md](./07-route-reference.md)
+8. [08-edge-cases.md](./08-edge-cases.md)
+9. [09-legacy-contract.md](./09-legacy-contract.md)
 
 ## Scope Rules
 
@@ -37,4 +36,4 @@
 
 ## Full API
 
-- [ดู API ทั้งหมด](/docs/api/frontend-v1/07-route-reference)
+- [ดู API ทั้งหมด](./07-route-reference.md)

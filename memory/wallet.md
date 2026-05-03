@@ -10,10 +10,14 @@
 
 - `GET /api/v1/member/profile`
 - `GET /api/v1/member/balance`
+- `GET /api/v1/member/loadbalance`
 - `GET /api/v1/member/history`
 - `GET /api/v1/member/history/{type}`
 - `POST /api/v1/member/change-password`
 - `POST /api/v1/member/wallet-address`
+- `GET /api/v1/member/contributor`
+- `GET /api/v1/member/realtime-context`
+- `POST /api/v1/member/heartbeat`
 - `GET /api/v1/wallet/transactions`
 - `POST /api/v1/wallet/claim`
 - `POST /api/v1/wallet/withdraw`

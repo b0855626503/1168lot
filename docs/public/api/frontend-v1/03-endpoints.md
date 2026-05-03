@@ -1,3 +1,6 @@
+> **DEPRECATED/ARCHIVED:** Do not use for active agent retrieval.
+> Active route reference: [07-route-reference.md](./07-route-reference.md)
+
 # Frontend API V1 - Endpoints
 
 อัปเดตล่าสุด: 2026-05-02

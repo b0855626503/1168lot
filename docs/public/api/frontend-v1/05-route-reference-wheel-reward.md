@@ -1,4 +1,4 @@
-# Frontend API V1 - Route Reference (Wheel, Reward, Errors)
+# Frontend API V1 - Route Reference (Wheel, Reward, Errors) — DEPRECATED: ใช้ [07-route-reference.md](./07-route-reference.md) แทน
 
 อัปเดตล่าสุด: 2026-04-19
 

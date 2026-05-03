@@ -31,6 +31,7 @@
 
 - Wallet package: `packages/Gametech/Wallet/src/`
 - Frontend controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WalletController.php`
+- Reward controller: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/RewardController.php`
 - Withdraw controller: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WithdrawController.php`
 - Ledger tables/migrations: `database/migrations/`
 

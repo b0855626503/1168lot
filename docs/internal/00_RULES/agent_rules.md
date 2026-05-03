@@ -9,29 +9,29 @@
 - เอกสารเผยแพร่ภายนอกอยู่ภายใต้ `docs/public`
 - ห้ามย้ายเอกสาร internal ไปไว้ `docs/public`
 - ทุกการเปลี่ยนแปลงที่กระทบ lifecycle/validation/ACL/route/cron/schema ต้องอัปเดต:
-  - `docs/internal/01_SYSTEM/system_current_state.md`
-  - `docs/internal/02_DECISIONS/decision_log.md`
+  - `docs/internal/01_SYSTEM/system-current-state/index.md`
+  - `docs/internal/02_DECISIONS/decision-log/index.md`
+  - `docs/internal/01_SYSTEM/system_current_state.md` (entrypoint/compat)
+  - `docs/internal/02_DECISIONS/decision_log.md` (entrypoint/compat)
   - เอกสาร domain/plan ที่เกี่ยวข้อง
 
-## Startup Core (ต้องอ่านทุกครั้ง)
+## Startup Path
 
-1. `docs/internal/01_SYSTEM/startup_digest.md`
-2. `docs/internal/02_DECISIONS/adr_baseline.md`
-3. `docs/internal/02_DECISIONS/adr_index_by_domain.md`
-4. `docs/04_PLANS/README.md`
+→ ดู `docs/START_HERE.md` สำหรับ startup path ที่กำหนดไว้
 
-## ลำดับการอ่านต่อแบบ on-demand
+สรุปย่อ:
+1. `docs/START_HERE.md`
+2. `.codebase-memory/SUMMARY.md` (ถ้ามี)
+3. `docs/internal/01_SYSTEM/system_map.md`
+4. domain note ที่เกี่ยวข้อง 1 ไฟล์
+5. Code Discovery — `docs/internal/00_RULES/code_discovery_protocol.md`
 
-1. อ่าน domain note ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/`
-2. ถ้างานจะเปลี่ยน behavior, แตะ high-risk flow, หรือ domain note ไม่พอ:
-   - เปิด `docs/internal/01_SYSTEM/system_current_state.md`
-   - เปิด `docs/internal/02_DECISIONS/decision_log.md`
-3. ถ้าโค้ดจริงไม่ตรงเอกสาร ให้รายงาน mismatch ก่อนลงมือแก้
+เปิด `system-current-state/index.md` และ `decision-log/index.md` เฉพาะเมื่อ high-risk หรือ mismatch
 
 ## หลักการลด token โดยไม่ลดคุณภาพ
 
 - ห้ามอ่านไฟล์ใหญ่ทั้งก้อนทุกครั้งโดยไม่มีเหตุจำเป็น
-- ใช้ `startup_digest + ADR + domain note` เป็น default path
+- ใช้ `system_map + domain note` เป็น default path
 - ใช้ `system_current_state` และ `decision_log` เป็น escalation path ตาม risk
 - งานเล็กไม่ควรต้องแบก startup cost เท่างานใหญ่
 
@@ -56,14 +56,25 @@
   - `bash scripts/docs-validation/check-octocode-index-sync.sh`
   - `bash scripts/docs-validation/check-unified-sync.sh`
 
+**Synchronization Contract:**
+การเปลี่ยนแปลงต่อไปนี้ต้องอัปเดต doc ด้วยเสมอ:
+- เปลี่ยน route หรือ entrypoint → อัปเดต `docs/internal/01_SYSTEM/system_map.md`
+- เปลี่ยน service / flow → อัปเดต `*_discovery.md` ที่เกี่ยวข้อง พร้อม Last Verified ใหม่
+- เปลี่ยน table / schema → อัปเดต domain note + discovery map
+
 ## Retrieval Order Policy (Memory First)
 
 - ห้ามเปิด doc ใหญ่เป็น default entry point
-- ต้องอ่าน memory layer ก่อนเสมอ:
+- ใช้ memory layer เป็น fast path เบื้องต้น:
   - `.codebase-memory/SUMMARY.md`
   - `memory/<domain>.md`
 - ค่อยเปิด docs เฉพาะ section ที่จำเป็นเมื่อ memory ยังไม่พอ
 - ถ้าต้องตรวจหลักฐาน retrieval consistency ให้เปิด `docs/internal/01_SYSTEM/retrieval_system_status.md`
+
+**Memory boundary:**
+- memory = keyword lookup + context เบื้องต้น
+- ห้ามใช้ memory เป็นหลักฐานเพียงอย่างเดียวสำหรับตัดสินใจ architecture หรือ flow
+- ถ้า memory stale → ให้ verify ด้วย code (`rg`, `git log`) เสมอ
 
 ### ลำดับการค้นหาโค้ด (ต้องทำตามลำดับนี้)
 

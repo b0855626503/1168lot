@@ -15,12 +15,22 @@
 - `POST /api/v1/smkpay/deposit/expire/{txid}`
 - `POST /api/v1/smkpay/deposit/create`
 - `GET /api/v1/smkpay/qrcode/{id}`
+- `POST /api/v1/deeppay/deposit/expire/{txid}`
+- `POST /api/v1/deeppay/deposit/create`
+- `GET /api/v1/deeppay/qrcode/{id}`
+- `GET /api/v1/promotion/list`
+- `POST /api/v1/promotion/select`
+- `POST /api/v1/promotion/deselect`
+- `POST /api/v1/coupon/redeem`
+- `GET /api/v1/coupon/my`
+- `POST /api/v1/coupon/my/{code}/claim`
 
 ## Module Map
 
 - `packages/Gametech/FrontendApi/src/Routes/api.php`
 - `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/DepositController.php`
 - `packages/Gametech/Payment/src/`
+- `packages/Gametech/Payment/src/Http/Controllers/`
 
 ## Main Services / Actions
 

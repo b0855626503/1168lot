@@ -3,6 +3,8 @@
 รูปแบบชื่อไฟล์มาตรฐาน: `YYYY-MM-DD_topic-name.md`
 กติกาสถานะ: `ACTIVE` ต้องมีได้ไม่เกิน 1 ไฟล์ต่อ 1 domain
 
+ดูแผนงาน active/pending แยก domain ได้ที่: `docs/04_PLANS/_current_work.md`
+
 ## ACTIVE
 - `2026-04-06_laravel-8-to-9-upgrade.md` (`Laravel 8 to 10` practical target)
 - `2026-05-02_yeekee-shooting-flow-hardening.md` (`Yeekee shooting hardening docs contract lock`)
@@ -20,6 +22,7 @@
 - `2026-03-27_lotto-auto-result-execution-tracker.md` (implementation memory only; merged plan is source of truth)
 
 ## DONE
+- `2026-05-01_lotto-market-content-rules-system.md`
 - `2026-05-02_boa-marketing-phase5-rollout-checklist.md`
 - `2026-05-01_yeekee-formula-failure-policy.md`
 - `2026-04-27_payment-provider-mcp-generator.md`

@@ -13,6 +13,37 @@
 - `GET /api/v1/games/{type}/{provider}`
 - `POST /api/v1/games/login`
 - `GET /api/v1/games/login/{game}/{code}`
+- `GET /api/v1/slides`
+- `GET /api/v1/meta/online-members`
+- `GET /api/v1/meta/contact-channels`
+- `GET /api/v1/meta/site`
+- `GET /api/v1/realtime/config`
+- `GET /api/v1/wheel/list`
+- `POST /api/v1/wheel/spin`
+- `GET /api/v1/wheel/history`
+- `GET /api/v1/lotto/draws`
+- `GET /api/v1/lotto/draws/{id}`
+- `GET /api/v1/lotto/markets/latest`
+- `GET /api/v1/lotto/markets/{marketId}/betting-context`
+- `GET /api/v1/lotto/markets/{marketId}/results`
+- `GET /api/v1/lotto/markets/{marketId}/draws/{drawId}/result`
+- `GET /api/v1/lotto/results/by-date`
+- `GET /api/v1/lotto/navbar-config`
+- `POST /api/v1/lotto/bet`
+- `GET /api/v1/lotto/groups/{groupId}/packages`
+- `POST /api/v1/lotto/groups/{groupId}/select-package`
+- `GET /api/v1/lotto/groups/{groupId}/selected-package`
+- `GET /api/v1/lotto/tickets`
+- `GET /api/v1/lotto/tickets/{id}`
+- `POST /api/v1/lotto/tickets/{id}/cancel`
+- `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot`
+- `GET /api/v1/lotto/yeekee/rounds`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/current-round`
+- `GET /api/v1/lotto/yeekee/markets/{marketId}/rounds`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
+- `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
 
 ## Module Map
 

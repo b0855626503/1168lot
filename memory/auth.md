@@ -11,6 +11,7 @@
 - `POST /api/v1/auth/register`
 - `GET /api/v1/auth/register/banks`
 - `POST /api/v1/auth/register/bank-account-name`
+- `POST /api/v1/auth/register-with-username`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `POST /api/v1/realtime/auth` (repeated active usage: channel auth handshake)
@@ -18,7 +19,9 @@
 ## Module Map
 
 - `packages/Gametech/FrontendApi/src/Routes/api.php`
+- `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
 - `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/AuthController.php`
+- `packages/Gametech/FrontendApi/src/Http/Middleware/`
 - `packages/Gametech/FrontendApi/src/Http/Middleware/AuthenticateFrontendToken.php`
 - `config/auth.php`
 
