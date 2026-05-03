@@ -1,204 +1,339 @@
-<b-modal ref="addedit" id="addedit" centered size="lg" title="รายละเอียดโพย" :no-stacking="true"
-		 :no-close-on-backdrop="true"
-		 ok-only
-		 ok-title="ปิด">
-	<div v-if="ticket">
-		<div class="mb-3">
-			<div><strong>สมาชิก:</strong> @{{ ticket.member_name }} (@{{ ticket.member_id }})</div>
-			<div><strong>งวด:</strong> @{{ ticket.draw.date }} <span v-if="ticket.draw.market">(@{{ ticket.draw.market }})</span></div>
-			<div><strong>สถานะ:</strong> @{{ ticket.status }}</div>
-			<div><strong>ยอดแทง:</strong> @{{ formatMoney(ticket.total_bet_amount) }}</div>
-			<div><strong>ส่วนลด:</strong> @{{ formatMoney(ticket.total_discount_amount) }}</div>
-			<div><strong>สุทธิ:</strong> @{{ formatMoney(ticket.total_net_amount) }}</div>
-			<div><strong>ยอดถูก:</strong> @{{ formatMoney(ticket.total_win_amount) }}</div>
-			<div v-if="ticket.reason"><strong>สาเหตุ:</strong> @{{ ticket.reason }}</div>
-			<div v-if="ticket.cancelled_by_name"><strong>ผู้ยกเลิก:</strong> @{{ ticket.cancelled_by_name }}</div>
-			<div v-if="ticket.cancelled_at"><strong>เวลายกเลิก:</strong> @{{ ticket.cancelled_at }}</div>
-		</div>
+<b-modal ref="addedit" id="addedit" centered size="xl" title="รายละเอียดโพย" :no-stacking="true"
+         :no-close-on-backdrop="true"
+         ok-only
+         ok-title="ปิด">
+    <div v-if="ticket">
+        {{-- Summary header bar --}}
+        <div class="tcd-header">
+            <div class="d-flex flex-wrap align-items-start">
+                <div class="mr-2">
+                    <span class="tcd-header-id">#@{{ ticket.id }}</span>
+                    <b-badge :variant="statusBadgeVariant">@{{ statusLabel }}</b-badge>
+                </div>
+                <div class="tcd-header-meta flex-grow-1 mt-1 mt-sm-0">
+                    <span>วันงวด: @{{ ticket.draw.date || '-' }}</span>
+                    <span class="sep">|</span>
+                    <span>สมาชิก: @{{ memberDisplay }}</span>
+                    <span class="sep">|</span>
+                    {{--
+                        TODO: หวยยี่กี่ควรแสดง badge รอบ แต่ payload ปัจจุบัน (loadData) ไม่ส่ง round_no
+                        ควรเพิ่ม draw.yeekee_round_no หรือ draw.round_no ใน LottoTicketController::loadData()
+                        แล้ว bind ที่นี่ — ดู LottoMarketDisplayFormatter::formatPlain() เป็น reference
+                    --}}
+                    <span>ตลาด: @{{ ticket.draw.market || '-' }}</span>
+                </div>
+            </div>
+        </div>
 
-		<div class="table-responsive">
-			<table class="table table-striped table-sm">
-				<thead>
-				<tr>
-					<th>ประเภทเดิมพัน</th>
-					<th class="text-center">เลข</th>
-					<th class="text-right">ยอดแทง</th>
-					<th class="text-right">อัตราจ่าย</th>
-					<th class="text-right">ส่วนลด(%)</th>
-					<th class="text-right">ส่วนลด(บาท)</th>
-					<th class="text-right">จ่ายจริง</th>
-					<th class="text-right">ยอดถูกรางวัล(อ้างอิง)</th>
-					<th class="text-center">ผล</th>
-					<th class="text-right">ยอดถูก</th>
-				</tr>
-				</thead>
-				<tbody>
-				<tr v-for="(item, index) in ticket.items" :key="index">
-					<td>@{{ item.bet_type }} = @{{ item.bet_type_label }}</td>
-					<td class="text-center">@{{ item.number }}</td>
-					<td class="text-right">@{{ formatMoney(item.amount) }}</td>
-					<td class="text-right">@{{ formatMoney(item.payout_at_time) }}</td>
-					<td class="text-right">@{{ formatMoney(item.discount_percent_at_time) }}</td>
-					<td class="text-right">@{{ formatMoney(item.discount_amount_at_time) }}</td>
-					<td class="text-right">@{{ formatMoney(item.payable_amount_at_time) }}</td>
-					<td class="text-right">@{{ formatMoney(item.potential_win_amount_at_time) }}</td>
-					<td class="text-center">@{{ item.result_status || '-' }}</td>
-					<td class="text-right">@{{ formatMoney(item.win_amount) }}</td>
-				</tr>
-				<tr v-if="!ticket.items || ticket.items.length === 0">
-					<td colspan="10" class="text-center text-muted">ไม่พบรายการย่อย</td>
-				</tr>
-				</tbody>
-			</table>
-		</div>
-	</div>
+        {{-- Info + Amounts layout --}}
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="tcd-section">
+                    <div class="tcd-section-title">ข้อมูลโพย / สมาชิก</div>
+                    <div class="tcd-info-grid">
+                        <div>
+                            <span class="tcd-info-label">เลขโพย</span>
+                            <span class="tcd-info-value">#@{{ ticket.id }}</span>
+                        </div>
+                        <div>
+                            <span class="tcd-info-label">สถานะ</span>
+                            <span class="tcd-info-value">
+                                <b-badge :variant="statusBadgeVariant">@{{ statusLabel }}</b-badge>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="tcd-info-label">วันงวด</span>
+                            <span class="tcd-info-value">@{{ ticket.draw.date || '-' }}</span>
+                        </div>
+                        <div>
+                            <span class="tcd-info-label">งวด #</span>
+                            <span class="tcd-info-value">@{{ ticket.draw.id || '-' }}</span>
+                        </div>
+                        <div class="full">
+                            <span class="tcd-info-label">สมาชิก</span>
+                            <span class="tcd-info-value">@{{ memberDisplay }}</span>
+                        </div>
+                        <div class="full">
+                            <span class="tcd-info-label">ตลาด / หวย</span>
+                            <span class="tcd-info-value">@{{ ticket.draw.market || '-' }}</span>
+                        </div>
+                        <template v-if="ticket.cancelled_by_name || ticket.cancelled_at">
+                            <div v-if="ticket.cancelled_by_name">
+                                <span class="tcd-info-label">ผู้ยกเลิก</span>
+                                <span class="tcd-info-value">@{{ ticket.cancelled_by_name }}</span>
+                            </div>
+                            <div v-if="ticket.cancelled_at">
+                                <span class="tcd-info-label">วันที่ยกเลิก</span>
+                                <span class="tcd-info-value">@{{ ticket.cancelled_at }}</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                {{-- Amount summary cards --}}
+                <div class="tcd-section">
+                    <div class="tcd-section-title">ยอดเงิน</div>
+                    <div class="row mx-n1">
+                        <div class="col-6 col-md-3 px-1 mb-2">
+                            <div class="tcd-amount-card">
+                                <span class="tcd-amount-label">ยอดแทง</span>
+                                <span class="tcd-amount-value">@{{ formatMoney(ticket.total_bet_amount) }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 px-1 mb-2">
+                            <div class="tcd-amount-card">
+                                <span class="tcd-amount-label">ส่วนลด</span>
+                                <span class="tcd-amount-value">@{{ formatMoney(ticket.total_discount_amount) }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 px-1 mb-2">
+                            <div class="tcd-amount-card">
+                                <span class="tcd-amount-label">ยอดรับ</span>
+                                <span class="tcd-amount-value">@{{ formatMoney(ticket.total_net_amount) }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 px-1 mb-2">
+                            <div class="tcd-amount-card" :class="hasWin ? 'is-win' : ''">
+                                <span class="tcd-amount-label">ยอดถูก</span>
+                                <span class="tcd-amount-value" :class="hasWin ? 'is-danger' : ''">@{{ formatMoney(ticket.total_win_amount) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{-- Reason / notes --}}
+                <div class="tcd-section">
+                    <div class="tcd-section-title">หมายเหตุ / สาเหตุ</div>
+                    <div class="tcd-reason-text" :class="reasonEmpty ? 'is-empty' : ''">@{{ reasonText }}</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Items table --}}
+        <div class="tcd-section">
+            <div class="tcd-section-title">
+                รายละเอียดเลขแทง
+                <span v-if="ticket.items && ticket.items.length > 0" class="badge badge-light tcd-count-badge">
+                    @{{ ticket.items.length }} รายการ
+                </span>
+            </div>
+            <div class="tcd-table-wrapper">
+                <table class="table table-bordered table-sm mb-0">
+                    <thead class="thead-light">
+                    <tr>
+                        <th>ประเภท</th>
+                        <th class="text-center">เลข</th>
+                        <th class="text-right">ยอดแทง</th>
+                        <th class="text-right">อัตราจ่าย</th>
+                        <th class="text-right">ส่วนลด(%)</th>
+                        <th class="text-right">ส่วนลด(฿)</th>
+                        <th class="text-right">ยอดรับ</th>
+                        <th class="text-right">ถูก(อ้างอิง)</th>
+                        <th class="text-center">ผล</th>
+                        <th class="text-right">ยอดถูก</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(item, index) in ticket.items" :key="index"
+                        :class="{ 'win-row': Number(item.win_amount || 0) > 0 }">
+                        <td>@{{ item.bet_type_label || item.bet_type }}</td>
+                        <td class="text-center col-number">@{{ item.number }}</td>
+                        <td class="text-right">@{{ formatMoney(item.amount) }}</td>
+                        <td class="text-right">@{{ formatMoney(item.payout_at_time) }}</td>
+                        <td class="text-right">@{{ formatMoney(item.discount_percent_at_time) }}</td>
+                        <td class="text-right">@{{ formatMoney(item.discount_amount_at_time) }}</td>
+                        <td class="text-right">@{{ formatMoney(item.payable_amount_at_time) }}</td>
+                        <td class="text-right">@{{ formatMoney(item.potential_win_amount_at_time) }}</td>
+                        <td class="text-center">@{{ item.result_status || '-' }}</td>
+                        <td :class="Number(item.win_amount || 0) > 0 ? 'text-right text-danger font-weight-bold' : 'text-right'">
+                            @{{ formatMoney(item.win_amount) }}
+                        </td>
+                    </tr>
+                    <tr v-if="!ticket.items || ticket.items.length === 0">
+                        <td colspan="10" class="text-center text-muted py-3">ไม่พบรายการย่อยในโพย</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </b-modal>
 <b-modal ref="cancelTicketModal" id="cancelTicketModal" centered size="md" title="ยกเลิกโพย"
-		 :no-stacking="true"
-		 :no-close-on-backdrop="true"
-		 :ok-disabled="cancelSubmitting || !cancelForm.reason.trim()"
-		 :busy="cancelSubmitting"
-		 ok-title="ยืนยันยกเลิก"
-		 cancel-title="ปิด"
-		 @ok.prevent="submitCancelTicket">
-	<div>
-		<div class="mb-3" v-if="cancelForm.id">
-			<div><strong>เลขโพย:</strong> #@{{ cancelForm.id }}</div>
-			<div><strong>สมาชิก:</strong> @{{ cancelForm.member_name }}</div>
-			<div><strong>งวด:</strong> @{{ cancelForm.draw_label }}</div>
-			<div><strong>ยอดคืน:</strong> @{{ formatMoney(cancelForm.total_net_amount) }}</div>
-		</div>
-		<b-form-group label="สาเหตุการยกเลิก" label-for="cancel-ticket-reason">
-			<b-form-textarea
-				id="cancel-ticket-reason"
-				v-model="cancelForm.reason"
-				rows="3"
-				max-rows="6"
-				placeholder="ระบุสาเหตุที่ต้องยกเลิกโพย"
-			></b-form-textarea>
-			<small class="text-muted">บังคับกรอก และจะถูกเก็บไว้ในรายการโพยที่ถูกยกเลิก</small>
-		</b-form-group>
-	</div>
+         :no-stacking="true"
+         :no-close-on-backdrop="true"
+         :ok-disabled="cancelSubmitting || !cancelForm.reason.trim()"
+         :busy="cancelSubmitting"
+         ok-title="ยืนยันยกเลิก"
+         cancel-title="ปิด"
+         @ok.prevent="submitCancelTicket">
+    <div>
+        <div class="mb-3" v-if="cancelForm.id">
+            <div><strong>เลขโพย:</strong> #@{{ cancelForm.id }}</div>
+            <div><strong>สมาชิก:</strong> @{{ cancelForm.member_name }}</div>
+            <div><strong>งวด:</strong> @{{ cancelForm.draw_label }}</div>
+            <div><strong>ยอดคืน:</strong> @{{ formatMoney(cancelForm.total_net_amount) }}</div>
+        </div>
+        <b-form-group label="สาเหตุการยกเลิก" label-for="cancel-ticket-reason">
+            <b-form-textarea
+                id="cancel-ticket-reason"
+                v-model="cancelForm.reason"
+                rows="3"
+                max-rows="6"
+                placeholder="ระบุสาเหตุที่ต้องยกเลิกโพย"
+            ></b-form-textarea>
+            <small class="text-muted">บังคับกรอก และจะถูกเก็บไว้ในรายการโพยที่ถูกยกเลิก</small>
+        </b-form-group>
+    </div>
 </b-modal>
 @push('scripts')
-	<script type="module">
-		const loadDataRoute = @json(route($loadDataRouteName ?? 'admin.lotto.tickets.loaddata'));
-		const cancelRouteTemplate = @json(route('admin.lotto.tickets.cancel', ['id' => '__ID__']));
+    <script type="module">
+        const loadDataRoute = @json(route($loadDataRouteName ?? 'admin.lotto.tickets.loaddata'));
+        const cancelRouteTemplate = @json(route('admin.lotto.tickets.cancel', ['id' => '__ID__']));
 
-		window.app = new Vue({
-			el: '#app',
-			data() {
-				return {
-					ticket: null,
-					cancelSubmitting: false,
-					cancelForm: {
-						id: null,
-						reason: '',
-						member_name: '',
-						draw_label: '',
-						total_net_amount: 0,
-					},
-				};
-			},
-			methods: {
-				async editModal(id) {
-					const response = await axios.post(loadDataRoute, { id });
-					this.ticket = response.data.data;
-					this.$refs.addedit.show();
-				},
-				async openCancelTicketModal(id) {
-					try {
-						const response = await axios.post(loadDataRoute, { id });
-						const data = response?.data?.data || null;
+        window.app = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    ticket: null,
+                    cancelSubmitting: false,
+                    cancelForm: {
+                        id: null,
+                        reason: '',
+                        member_name: '',
+                        draw_label: '',
+                        total_net_amount: 0,
+                    },
+                };
+            },
+            computed: {
+                statusLabel() {
+                    const map = { active: 'รอผล', cancelled: 'ยกเลิก', resulted: 'ตัดสินแล้ว', won: 'ถูกรางวัล' };
+                    return map[this.ticket?.status] || this.ticket?.status || '-';
+                },
+                statusBadgeVariant() {
+                    const map = { active: 'warning', cancelled: 'secondary', resulted: 'primary', won: 'success' };
+                    return map[this.ticket?.status] || 'light';
+                },
+                memberDisplay() {
+                    const name = String(this.ticket?.member_name || '').trim();
+                    const id = this.ticket?.member_id;
+                    if (name && id) {
+                        return `${name} (${id})`;
+                    }
 
-						if (!data) {
-							await this.showSubmitErrorModal(null, 'ไม่พบข้อมูลโพยดังกล่าว');
-							return;
-						}
+                    return name || (id ? `MEM-${id}` : '-');
+                },
+                hasWin() {
+                    return Number(this.ticket?.total_win_amount || 0) > 0;
+                },
+                reasonEmpty() {
+                    const r = String(this.ticket?.reason || '').trim();
+                    return r === '' || r === '-';
+                },
+                reasonText() {
+                    const r = String(this.ticket?.reason || '').trim();
+                    return r !== '' && r !== '-' ? r : '-';
+                },
+            },
+            methods: {
+                async editModal(id) {
+                    const response = await axios.post(loadDataRoute, { id });
+                    this.ticket = response.data.data;
+                    this.$refs.addedit.show();
+                },
+                async openCancelTicketModal(id) {
+                    try {
+                        const response = await axios.post(loadDataRoute, { id });
+                        const data = response?.data?.data || null;
 
-						if (!data.can_cancel) {
-							await this.showSubmitErrorModal(null, 'โพยนี้ไม่สามารถยกเลิกได้');
-							return;
-						}
+                        if (!data) {
+                            await this.showSubmitErrorModal(null, 'ไม่พบข้อมูลโพยดังกล่าว');
+                            return;
+                        }
 
-						this.cancelForm = {
-							id: Number(data.id || 0),
-							reason: '',
-							member_name: String(data.member_name || '-'),
-							draw_label: [String(data.draw?.market || '').trim(), String(data.draw?.date || '').trim()].filter(Boolean).join(' / '),
-							total_net_amount: Number(data.total_net_amount || 0),
-						};
-						this.$refs.cancelTicketModal.show();
-					} catch (error) {
-						await this.showSubmitErrorModal(error, 'โหลดข้อมูลโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-					}
-				},
-				resolveCancelRoute(id) {
-					return cancelRouteTemplate.replace('__ID__', String(id));
-				},
-				redrawTicketTable() {
-					const dataTable = window.LaravelDataTables?.lottoTicketsTable;
-					if (dataTable) {
-						dataTable.draw(false);
-					}
-				},
-				resolveApiErrorMessage(error, fallbackMessage) {
-					const backendMessage = error?.response?.data?.message;
-					if (typeof backendMessage === 'string' && backendMessage.trim() !== '') {
-						return backendMessage;
-					}
+                        if (!data.can_cancel) {
+                            await this.showSubmitErrorModal(null, 'โพยนี้ไม่สามารถยกเลิกได้');
+                            return;
+                        }
 
-					return fallbackMessage;
-				},
-				async showSubmitErrorModal(error, fallbackMessage = 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') {
-					const message = this.resolveApiErrorMessage(error, fallbackMessage);
-					await this.$bvModal.msgBoxOk(message, {
-						title: 'เกิดข้อผิดพลาด',
-						size: 'sm',
-						buttonSize: 'sm',
-						okVariant: 'danger',
-						centered: true,
-					});
-				},
-				async submitCancelTicket() {
-					const reason = String(this.cancelForm.reason || '').trim();
-					if (reason === '') {
-						await this.showSubmitErrorModal(null, 'กรุณาระบุสาเหตุการยกเลิกโพย');
-						return;
-					}
+                        this.cancelForm = {
+                            id: Number(data.id || 0),
+                            reason: '',
+                            member_name: String(data.member_name || '-'),
+                            draw_label: [String(data.draw?.market || '').trim(), String(data.draw?.date || '').trim()].filter(Boolean).join(' / '),
+                            total_net_amount: Number(data.total_net_amount || 0),
+                        };
+                        this.$refs.cancelTicketModal.show();
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'โหลดข้อมูลโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
+                },
+                resolveCancelRoute(id) {
+                    return cancelRouteTemplate.replace('__ID__', String(id));
+                },
+                redrawTicketTable() {
+                    const dataTable = window.LaravelDataTables?.lottoTicketsTable;
+                    if (dataTable) {
+                        dataTable.draw(false);
+                    }
+                },
+                resolveApiErrorMessage(error, fallbackMessage) {
+                    const backendMessage = error?.response?.data?.message;
+                    if (typeof backendMessage === 'string' && backendMessage.trim() !== '') {
+                        return backendMessage;
+                    }
 
-					this.cancelSubmitting = true;
-					try {
-						await axios.post(this.resolveCancelRoute(this.cancelForm.id), { reason });
-						this.$refs.cancelTicketModal.hide();
-						if (this.ticket && Number(this.ticket.id || 0) === Number(this.cancelForm.id || 0)) {
-							this.ticket = null;
-							this.$refs.addedit.hide();
-						}
-						this.redrawTicketTable();
-						await this.$bvModal.msgBoxOk('ยกเลิกโพยสำเร็จ', {
-							title: 'สำเร็จ',
-							size: 'sm',
-							buttonSize: 'sm',
-							okVariant: 'success',
-							centered: true,
-						});
-					} catch (error) {
-						await this.showSubmitErrorModal(error, 'ยกเลิกโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-					} finally {
-						this.cancelSubmitting = false;
-					}
-				},
-				formatMoney(value) {
-					return Number(value || 0).toLocaleString('th-TH', {
-						minimumFractionDigits: 2,
-						maximumFractionDigits: 2,
-					});
-				},
-			},
-		});
+                    return fallbackMessage;
+                },
+                async showSubmitErrorModal(error, fallbackMessage = 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') {
+                    const message = this.resolveApiErrorMessage(error, fallbackMessage);
+                    await this.$bvModal.msgBoxOk(message, {
+                        title: 'เกิดข้อผิดพลาด',
+                        size: 'sm',
+                        buttonSize: 'sm',
+                        okVariant: 'danger',
+                        centered: true,
+                    });
+                },
+                async submitCancelTicket() {
+                    const reason = String(this.cancelForm.reason || '').trim();
+                    if (reason === '') {
+                        await this.showSubmitErrorModal(null, 'กรุณาระบุสาเหตุการยกเลิกโพย');
+                        return;
+                    }
 
-		window.editModal = function (id) { window.app.editModal(id); };
-		window.cancelTicketModal = function (id) { window.app.openCancelTicketModal(id); };
-	</script>
+                    this.cancelSubmitting = true;
+                    try {
+                        await axios.post(this.resolveCancelRoute(this.cancelForm.id), { reason });
+                        this.$refs.cancelTicketModal.hide();
+                        if (this.ticket && Number(this.ticket.id || 0) === Number(this.cancelForm.id || 0)) {
+                            this.ticket = null;
+                            this.$refs.addedit.hide();
+                        }
+                        this.redrawTicketTable();
+                        await this.$bvModal.msgBoxOk('ยกเลิกโพยสำเร็จ', {
+                            title: 'สำเร็จ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'ยกเลิกโพยไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    } finally {
+                        this.cancelSubmitting = false;
+                    }
+                },
+                formatMoney(value) {
+                    return Number(value || 0).toLocaleString('th-TH', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    });
+                },
+            },
+        });
+
+        window.editModal = function (id) { window.app.editModal(id); };
+        window.cancelTicketModal = function (id) { window.app.openCancelTicketModal(id); };
+    </script>
 @endpush
