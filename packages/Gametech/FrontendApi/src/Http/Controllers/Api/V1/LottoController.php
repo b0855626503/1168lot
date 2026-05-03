@@ -1201,8 +1201,8 @@ class LottoController extends BaseController
                 return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
             }
 
-            $defaultLimit = 20;
-            $maxLimit = 100;
+            $defaultLimit = max((int) config('yeekee.shoot_list_default_limit', 20), 1);
+            $maxLimit = max((int) config('yeekee.shoot_list_max_limit', 100), $defaultLimit);
             $limit = max(1, min((int) $request->query('limit', $defaultLimit), $maxLimit));
             $page = max(1, (int) $request->query('page', 1));
             $isRevealed = $this->isYeekeeResultRevealed($round);

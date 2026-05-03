@@ -17,12 +17,13 @@ use Tests\TestCase;
 
 class LottoDrawsControllerTest extends TestCase
 {
+    private bool $createdMembersTable = false;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Schema::dropIfExists('lotto_draws');
-        Schema::dropIfExists('members');
         Schema::dropIfExists('yeekee_shoot_reward_logs');
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
@@ -69,10 +70,13 @@ class LottoDrawsControllerTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('members', function (Blueprint $table): void {
-            $table->unsignedBigInteger('code')->primary();
-            $table->string('user_name')->nullable();
-        });
+        if (! Schema::hasTable('members')) {
+            Schema::create('members', function (Blueprint $table): void {
+                $table->unsignedBigInteger('code')->primary();
+                $table->string('user_name')->nullable();
+            });
+            $this->createdMembersTable = true;
+        }
 
         Schema::create('yeekee_rounds', function (Blueprint $table): void {
             $table->bigIncrements('id');
@@ -126,7 +130,9 @@ class LottoDrawsControllerTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('lotto_draws');
-        Schema::dropIfExists('members');
+        if ($this->createdMembersTable) {
+            Schema::dropIfExists('members');
+        }
         Schema::dropIfExists('yeekee_shoot_reward_logs');
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
