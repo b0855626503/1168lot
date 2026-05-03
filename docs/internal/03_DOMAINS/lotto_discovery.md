@@ -1,6 +1,6 @@
 # Lotto Discovery Map
 
-> **Last Verified:** 2026-05-03 | **Source:** manual | **Confidence:** medium | **Stability:** volatile
+> **Last Verified:** 2026-05-03 | **Source:** rg-verified | **Confidence:** high | **Stability:** volatile
 > ไฟล์นี้เป็น derived snapshot — อาจ drift ได้ถ้า code เปลี่ยนโดยไม่อัปเดต
 > **ให้ verify entrypoint ด้วย `rg` เสมอก่อนตัดสินใจ**
 
@@ -43,10 +43,19 @@
 - Fields: `rollout_mode`, `policy_version`, `is_allowed`
 - Search keywords: `MemberMarketPolicyService`, `member_lotto_market_policies`, `rollout_mode`, `applyMarketRollout`, `applyGroupRollout`
 
-## Yeekee
+## Yeekee / Yiki
 
-- Package: `packages/Gametech/Lotto/src/` — verify with `rg "Yeekee" packages/Gametech/Lotto/`
-- Search keywords: `yeekee`, `yiki`, `YeekeeService`, `yeekee-shooting`
+- Shooting entrypoint: `POST /api/v1/lotto/yeekee/rounds/{roundId}/shoot` → `LottoController::submitShoot()` → `YeekeeShootService::submitShoot()`
+- Betting entrypoint: `POST /api/v1/lotto/bet` → `LottoController::bet()` → `BetService` (shared with regular lotto)
+- Result engine: `YeekeeResultEngineService::computeFromRound()` — formula via `FormulaRegistry` (`YeekeeSumOnlyFormula`, `ShootsSumMinusPositionFormula`)
+- Reward: `YeekeeRewardService::rewardRound()` → writes `yeekee_shoot_reward_logs`
+- Void/refund: `YeekeeVoidRefundPolicyService` → `DrawCancelAllRefundService` → wallet refund
+- Commands: `lotto:generate-yeekee-draws` (daily 00:05 + every 15min top-up), `lotto:settle-yeekee-rounds` (every 1min, --limit=200)
+- Tables read: `yeekee_rounds`, `yeekee_shoots`, `yeekee_market_settings`, `lotto_draws`, `lotto_markets`, `lotto_tickets`
+- Tables write: `yeekee_shoots`, `yeekee_rounds`, `yeekee_shoot_reward_logs`, `lotto_draws` (result_number/status)
+- Wallet side effect: via settlement/refund path → `wallet_transactions`
+- Config: `config/yeekee.php`
+- Search keywords: `YeekeeShootService`, `YeekeeResultEngineService`, `YeekeeRewardService`, `YeekeeVoidRefundPolicyService`, `YeekeeRound`, `YeekeeShoot`, `GenerateYeekeeRoundsCommand`, `SettleYeekeeRoundsCommand`, `submitShoot`, `computeFromRound`, `RESULT_MODE_YEEKEE`, `yeekee_rounds`, `yeekee_shoots`
 
 ## Dashboard / Risk
 
