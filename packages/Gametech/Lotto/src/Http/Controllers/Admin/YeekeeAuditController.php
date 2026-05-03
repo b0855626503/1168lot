@@ -136,10 +136,7 @@ class YeekeeAuditController extends AppBaseController
         if ($isSensitive) {
             $memberIds = $rawShoots->pluck('member_id')->filter()->unique()->values()->all();
             if (! empty($memberIds) && Schema::hasTable('members')) {
-                $userNames = DB::table('members')
-                    ->whereIn('id', $memberIds)
-                    ->pluck('user_name', 'id')
-                    ->all();
+                $userNames = $this->resolveMemberUserNames($memberIds);
             }
         }
 
@@ -218,5 +215,38 @@ class YeekeeAuditController extends AppBaseController
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<int, int|string>  $memberIds
+     * @return array<int|string, string>
+     */
+    private function resolveMemberUserNames(array $memberIds): array
+    {
+        $memberIds = array_values(array_unique($memberIds));
+        if ($memberIds === []) {
+            return [];
+        }
+
+        // Production uses members.code as PK, but some tests/seeds still reference members.id.
+        if (Schema::hasColumn('members', 'code')) {
+            $namesByCode = DB::table('members')
+                ->whereIn('code', $memberIds)
+                ->pluck('user_name', 'code')
+                ->all();
+
+            if ($namesByCode !== []) {
+                return $namesByCode;
+            }
+        }
+
+        if (Schema::hasColumn('members', 'id')) {
+            return DB::table('members')
+                ->whereIn('id', $memberIds)
+                ->pluck('user_name', 'id')
+                ->all();
+        }
+
+        return [];
     }
 }

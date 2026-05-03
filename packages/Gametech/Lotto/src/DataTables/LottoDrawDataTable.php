@@ -113,6 +113,7 @@ class LottoDrawDataTable extends DataTable
                 'retrieve' => true,
                 'ordering' => true,
                 'order' => [[4, 'asc']],
+                'lengthMenu' => [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, 'ทั้งหมด']],
                 'buttons' => ['pageLength'],
                 'columnDefs' => [
                     ['targets' => '_all', 'className' => 'text-nowrap'],
