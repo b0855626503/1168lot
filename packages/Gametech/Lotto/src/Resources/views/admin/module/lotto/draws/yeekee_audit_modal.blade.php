@@ -79,7 +79,7 @@
     window.openYeekeeAuditModal = function (drawId) {
         var modalEl = document.getElementById('yeekeeAuditModal');
         if (!modalEl) {
-            console.error('[YeekeeAudit] #yeekeeAuditModal not found — modal not rendered for this user');
+            console.error('[YeekeeAudit] #yeekeeAuditModal not found');
             return;
         }
 
@@ -117,7 +117,7 @@
                     + '<td>' + escapeHtml(r.shoot_count) + '</td>'
                     + '<td>' + escapeHtml(r.shoot_closed_at || '-') + '</td>'
                     + '<td>' + (r.has_snapshot ? '<span class="badge badge-success">มี</span>' : '<span class="badge badge-secondary">ไม่มี</span>') + '</td>'
-                    + '<td><button class="btn btn-xs btn-info js-load-yeekee-audit-detail" data-round-id="' + safeRoundId + '" type="button">ดู Audit</button></td>'
+                    + '<td><button id="yeekee-audit-btn-' + safeRoundId + '" class="btn btn-xs btn-info" type="button" onclick="window.loadYeekeeAuditDetail(' + safeRoundId + ')">ดู Audit</button></td>'
                     + '</tr>';
             });
             html += '</tbody></table>';
@@ -128,14 +128,14 @@
         });
     };
 
-    function loadYeekeeAuditDetail(roundId) {
+    window.loadYeekeeAuditDetail = function (roundId) {
         var safeRoundId = toRoundId(roundId);
         if (safeRoundId <= 0) { return; }
 
         var detailDiv = document.getElementById('yeekeeAuditDetail');
         if (!detailDiv) { return; }
 
-        var btn = document.querySelector('.js-load-yeekee-audit-detail[data-round-id="' + safeRoundId + '"]');
+        var btn = document.getElementById('yeekee-audit-btn-' + safeRoundId);
         if (btn) { btn.disabled = true; }
 
         detailDiv.style.display = 'block';
@@ -196,18 +196,7 @@
             detailDiv.innerHTML = '<p class="text-danger p-2"><i class="fas fa-exclamation-circle mr-1"></i>' + escapeHtml(msg) + '</p>';
             if (btn) { btn.disabled = false; }
         });
-    }
-
-    var roundsContainer = document.getElementById('yeekeeAuditRounds');
-    if (roundsContainer) {
-        roundsContainer.addEventListener('click', function (event) {
-            var target = event.target;
-            if (!(target instanceof Element)) { return; }
-            var button = target.closest('.js-load-yeekee-audit-detail');
-            if (!button) { return; }
-            loadYeekeeAuditDetail(button.getAttribute('data-round-id'));
-        });
-    }
+    };
 }());
 </script>
 @endpush
