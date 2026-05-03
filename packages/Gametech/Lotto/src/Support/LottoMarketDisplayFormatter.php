@@ -28,11 +28,7 @@ class LottoMarketDisplayFormatter
         $label = e($rawName);
         $image = trim((string) $logo) !== '' ? trim((string) $logo) : trim((string) $icon);
         $roundBadge = $this->buildRoundBadge($resultMode, $roundNo);
-        $labelWithRound = $label;
-        if ($this->shouldShowRoundBadge($resultMode, $roundNo)) {
-            $labelWithRound .= ' ('.(int) $roundNo.')';
-        }
-        $nameWithRound = '<span>'.$labelWithRound.'</span>'.$roundBadge;
+        $nameWithRound = '<span>'.$label.'</span>'.$roundBadge;
 
         if ($image === '') {
             return $nameWithRound;

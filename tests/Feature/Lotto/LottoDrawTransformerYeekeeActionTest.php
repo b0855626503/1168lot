@@ -50,6 +50,8 @@ class LottoDrawTransformerYeekeeActionTest extends TestCase
 
         $payload = (new LottoDrawTransformer)->transform($draw);
 
-        $this->assertStringContainsString('ยี่กี่แสนรัก (21)', (string) $payload['market_name']);
+        $this->assertStringContainsString('ยี่กี่แสนรัก', (string) $payload['market_name']);
+        $this->assertStringContainsString('รอบ 21', (string) $payload['market_name']);
+        $this->assertStringNotContainsString('(21)', (string) $payload['market_name']);
     }
 }
