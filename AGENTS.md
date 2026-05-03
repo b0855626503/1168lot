@@ -15,6 +15,14 @@ Go to:
 
 - `docs/START_HERE.md`
 
+Before implementing any task that touches code, read and follow:
+
+- `docs/internal/00_RULES/code_discovery_protocol.md`
+
+Agent must produce a Discovery Report before editing code.
+If the task already names exact files, still verify call flow and side effects at least briefly.
+Do not use memory, Octocode, or semantic index as the only source; verify with code search or IDE index.
+
 ### B. Workspace assistant / memory / user preference / personal workflow
 Go to:
 

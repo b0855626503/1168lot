@@ -1,24 +1,16 @@
 # Startup Digest
 
-อัปเดตล่าสุด: 2026-04-13
+> **Optional digest. Not a startup source of truth.**
+> Use only after `docs/START_HERE.md` routes you here, or when you need the extended context below.
+> Startup path authority: `docs/START_HERE.md`
 
-ไฟล์นี้คือ startup core สำหรับ agent
-เป้าหมาย: เริ่มงานเร็ว ใช้ token ต่ำ และไม่เสีย source-of-truth
+อัปเดตล่าสุด: 2026-05-03
 
-## Core Startup Set
+---
 
-ให้อ่านไฟล์เหล่านี้ทุกครั้งก่อนเริ่มงาน:
+## Memory Layer (fast path, optional)
 
-1. `docs/internal/00_RULES/agent_rules.md`
-2. `docs/internal/01_SYSTEM/startup_digest.md`
-3. `docs/internal/02_DECISIONS/adr_baseline.md`
-4. `docs/internal/02_DECISIONS/adr_index_by_domain.md`
-5. `docs/04_PLANS/README.md`
-6. `docs/internal/01_SYSTEM/mcp_operating_guide.md` (เปิดเมื่อมีงาน MCP, knowledge graph, ADR memory)
-
-## Memory First (บังคับ)
-
-ให้อ่าน memory layer ก่อนเสมอ:
+ถ้าต้องการ context เร็วก่อนเปิด docs:
 
 - `.codebase-memory/SUMMARY.md`
 - `memory/auth.md`, `memory/payment.md`, `memory/wallet.md`, `memory/game.md` (เลือกเฉพาะ domain ที่เกี่ยวข้อง)
@@ -30,27 +22,19 @@
 
 ## Domain On-Demand
 
-- `FrontendApi` -> `docs/internal/03_DOMAINS/frontend_api.md`
-- `Wallet` -> `docs/internal/03_DOMAINS/wallet.md`
-- `Lotto` -> `docs/internal/03_DOMAINS/lotto.md`
-- `Admin Lotto` -> `docs/internal/03_DOMAINS/admin_lotto.md`
-- `Realtime` -> `docs/internal/03_DOMAINS/realtime.md`
+- `FrontendApi` → `docs/internal/03_DOMAINS/frontend_api.md` + `docs/internal/03_DOMAINS/frontend_api_discovery.md`
+- `Wallet` → `docs/internal/03_DOMAINS/wallet.md` + `docs/internal/03_DOMAINS/wallet_discovery.md`
+- `Lotto` → `docs/internal/03_DOMAINS/lotto.md` + `docs/internal/03_DOMAINS/lotto_discovery.md`
+- `Admin Lotto` → `docs/internal/03_DOMAINS/admin_lotto.md`
+- `Realtime` → `docs/internal/03_DOMAINS/realtime.md`
 
 ## Escalation (เฉพาะจำเป็น)
 
 เปิด `system-current-state/index.md` หรือ `decision-log/index.md` เมื่อ:
 
 - งานเปลี่ยน behavior จริง
-- งานแตะ flow เสี่ยง: financial/auth/retry/queue/cron/schema
+- งานแตะ flow เสี่ยง: financial / auth / retry / queue / cron / schema
 - domain note ไม่พอ หรือ code อาจไม่ตรง doc
-
-## ลำดับ escalation ที่แนะนำ
-
-1. อ่าน core startup
-2. อ่าน memory ของ domain
-3. อ่าน plan ที่ active ของ domain นั้น
-4. อ่าน domain note ที่เกี่ยวข้อง
-5. ค่อยเปิดไฟล์ใหญ่เฉพาะ section ที่จำเป็น
 
 ## Targeted Lookup Playbook
 

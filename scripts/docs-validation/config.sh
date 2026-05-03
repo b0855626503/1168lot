@@ -27,3 +27,10 @@ INDEX_ARTIFACT_PATH="${INDEX_ARTIFACT_PATH:-.ai/mcp/index-build.json}"
 # Retrieval metrics artifacts.
 RETRIEVAL_METRICS_REPORT_JSON="${RETRIEVAL_METRICS_REPORT_JSON:-.ai/mcp/retrieval-metrics-report.json}"
 RETRIEVAL_METRICS_REPORT_MD="${RETRIEVAL_METRICS_REPORT_MD:-.ai/mcp/retrieval-metrics-report.md}"
+
+# Discovery doc freshness thresholds (days).
+FRESHNESS_WARN_DAYS="${FRESHNESS_WARN_DAYS:-14}"
+FRESHNESS_ERROR_DAYS="${FRESHNESS_ERROR_DAYS:-30}"
+
+# Maximum line count for *_discovery.md files.
+DISCOVERY_MAX_LINES="${DISCOVERY_MAX_LINES:-150}"
