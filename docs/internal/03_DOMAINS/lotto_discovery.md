@@ -4,7 +4,7 @@
 > ไฟล์นี้เป็น derived snapshot — อาจ drift ได้ถ้า code เปลี่ยนโดยไม่อัปเดต
 > **ให้ verify entrypoint ด้วย `rg` เสมอก่อนตัดสินใจ**
 
-แผนที่สำหรับค้น code path — ใช้คู่กับ `lotto.md` และ `docs/internal/00_RULES/code_discovery_protocol.md`
+แผนที่สำหรับค้น code path — ใช้คู่กับ `lotto.md` และ `code_discovery_quick.md`; งาน High Risk ค่อยใช้ `code_discovery_protocol.md`
 
 ---
 
