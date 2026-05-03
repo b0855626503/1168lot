@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
@@ -1193,40 +1194,51 @@ class LottoController extends BaseController
         try {
             $member = $this->resolveCustomerMember($request);
             if (! $member || ! isset($member->code)) {
-                return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
+                return $this->sendError('???????????????????????????????????????????????????', 401);
             }
 
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
+                return $this->sendError('???????????????????????????????????????????????????????????????', 404);
             }
 
-            $defaultLimit = max((int) config('yeekee.shoot_list_default_limit', 50), 1);
-            $maxLimit = max((int) config('yeekee.shoot_list_max_limit', 100), $defaultLimit);
+            $defaultLimit = 20;
+            $maxLimit = 100;
             $limit = max(1, min((int) $request->query('limit', $defaultLimit), $maxLimit));
-            $rows = YeekeeShoot::query()
-                ->where('yeekee_round_id', $roundId)
-                ->orderByDesc('position')
-                ->limit($limit)
-                ->get(['position', 'number_text', 'submitted_at']);
+            $page = max(1, (int) $request->query('page', 1));
+            $isRevealed = $this->isYeekeeResultRevealed($round);
+            $sourceData = $this->resolvePublicYeekeeShootsSource($round);
+            $allShoots = $sourceData['shoots'];
+            $summary = $this->buildPublicYeekeeShootSummary($allShoots, $sourceData['shoot_source']);
+
+            $total = $allShoots->count();
+            $offset = ($page - 1) * $limit;
+            $pagedShoots = $allShoots->sortByDesc('position')->slice($offset, $limit)->values();
+            $items = $pagedShoots
+                ->map(fn (array $shoot): array => $this->mapPublicYeekeeShoot($shoot, $isRevealed))
+                ->values()
+                ->all();
 
             return $this->sendResponse([
                 'round_id' => (int) $round->id,
+                'display_mode' => $isRevealed ? 'result_revealed' : 'live_masked',
+                'is_number_revealed' => $isRevealed,
+                'shoot_sum' => $summary['shoot_sum'],
+                'shoot_count' => $summary['shoot_count'],
+                'shoot_source' => $summary['shoot_source'],
                 'limit' => $limit,
-                'count' => $rows->count(),
-                'items' => $rows->map(static function (YeekeeShoot $shoot): array {
-                    $maskedNumberText = self::maskYeekeeNumberText((string) $shoot->number_text);
-
-                    return [
-                        'position' => (int) $shoot->position,
-                        'number_text' => $maskedNumberText,
-                        'number_text_masked' => $maskedNumberText,
-                        'submitted_at' => (string) $shoot->submitted_at,
-                    ];
-                })->values()->all(),
-            ], 'ดึงรายการยิงเลขสำเร็จ');
+                'count' => count($items),
+                'items' => $items,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'count' => count($items),
+                    'total' => $total,
+                    'has_more' => ($offset + count($items)) < $total,
+                ],
+            ], '???????????????????????????????????????????????????????????????');
         } catch (\Throwable $exception) {
-            return $this->sendError('ไม่สามารถดึงรายการยิงเลขได้ในขณะนี้', 422);
+            return $this->sendError('?????????????????????????????????????????????????????????????????????????????????????????????????????????', 422);
         }
     }
 
@@ -1235,12 +1247,17 @@ class LottoController extends BaseController
         try {
             $round = YeekeeRound::query()->find($roundId);
             if (! $round) {
-                return $this->sendError('ไม่พบรอบยี่กี่ที่ระบุ', 404);
+                return $this->sendError('???????????????????????????????????????????????????????????????', 404);
             }
 
             $draw = LottoDraw::query()->find((int) $round->lotto_draw_id);
             $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
-            $isRevealed = (string) ($round->status ?? '') === 'resulted' || (string) ($draw?->status ?? '') === 'resulted';
+            $isRevealed = $this->isYeekeeResultRevealed($round, $draw);
+            $sourceData = $this->resolvePublicYeekeeShootsSource($round);
+            $summary = $this->buildPublicYeekeeShootSummary($sourceData['shoots'], $sourceData['shoot_source']);
+            $winningShoots = $sourceData['shoots']
+                ->whereIn('position', [1, 16])
+                ->keyBy(static fn (array $shoot): int => (int) ($shoot['position'] ?? 0));
 
             $publicProof = [
                 'formula_label' => (string) ($round->config_snapshot_json['formula_config']['preset'] ?? ''),
@@ -1249,6 +1266,9 @@ class LottoController extends BaseController
                 'external_seed_reference' => $isRevealed ? (string) ($resultNumber['external_seed_reference'] ?? '') : '',
                 'result_payload' => $isRevealed ? [
                     'raw_result' => (string) ($resultNumber['raw_result'] ?? ''),
+                    'shoot_sum' => $summary['shoot_sum'],
+                    'shoot_count' => $summary['shoot_count'],
+                    'shoot_source' => $summary['shoot_source'],
                     'top_3' => (string) ($resultNumber['top_3'] ?? ''),
                     'bottom_2' => (string) ($resultNumber['bottom_2'] ?? ($resultNumber['last_2_digits'] ?? '')),
                 ] : null,
@@ -1259,11 +1279,16 @@ class LottoController extends BaseController
                 'draw_id' => (int) $round->lotto_draw_id,
                 'status' => (string) $round->status,
                 'is_revealed' => $isRevealed,
+                'shoot_summary' => $summary,
+                'winning_shoots' => [
+                    'first' => $winningShoots->has(1) ? $this->mapPublicYeekeeShoot((array) $winningShoots->get(1), $isRevealed) : null,
+                    'sixteenth' => $winningShoots->has(16) ? $this->mapPublicYeekeeShoot((array) $winningShoots->get(16), $isRevealed) : null,
+                ],
                 'proof' => $publicProof,
                 'server_time' => now()->format('Y-m-d H:i:s'),
-            ], 'ดึงข้อมูลผลและหลักฐานสำเร็จ');
+            ], '?????????????????????????????????????????????????????????????????????????????????');
         } catch (\Throwable $exception) {
-            return $this->sendError('ไม่สามารถดึงข้อมูลผลและหลักฐานได้ในขณะนี้', 422);
+            return $this->sendError('???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????', 422);
         }
     }
 
@@ -2402,6 +2427,153 @@ class LottoController extends BaseController
         }
 
         return substr($numberText, 0, 3).'**';
+    }
+
+    private function isYeekeeResultRevealed(YeekeeRound $round, ?LottoDraw $draw = null): bool
+    {
+        if (! $draw) {
+            $draw = LottoDraw::query()->find((int) $round->lotto_draw_id);
+        }
+
+        $roundStatus = (string) ($round->status ?? '');
+        $drawStatus = (string) ($draw?->status ?? '');
+
+        return in_array($roundStatus, ['resulted', 'settled'], true) || in_array($drawStatus, ['resulted', 'settled'], true);
+    }
+
+    /**
+     * @return array{shoot_source:string,shoots:Collection<int,array<string,mixed>>}
+     */
+    private function resolvePublicYeekeeShootsSource(YeekeeRound $round): array
+    {
+        $hasSnapshot = is_array($round->shoot_snapshot_json) || ! empty($round->shoot_snapshot_hash);
+        if ($hasSnapshot) {
+            $snapshot = is_array($round->shoot_snapshot_json) ? $round->shoot_snapshot_json : [];
+            $snapshotShoots = is_array($snapshot['shoots'] ?? null) ? $snapshot['shoots'] : (is_array($snapshot) ? $snapshot : []);
+            $rows = collect($snapshotShoots)->filter(static fn ($row): bool => is_array($row))->map(function (array $shoot): array {
+                return [
+                    'position' => (int) ($shoot['position'] ?? 0),
+                    'number_text' => (string) ($shoot['number_text'] ?? ''),
+                    'number_value' => (int) ($shoot['number_value'] ?? 0),
+                    'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
+                    'member_name' => (string) ($shoot['member_name'] ?? ''),
+                ];
+            })->values();
+
+            return [
+                'shoot_source' => 'snapshot',
+                'shoots' => $rows,
+            ];
+        }
+
+        $rows = YeekeeShoot::query()
+            ->where('yeekee_round_id', (int) $round->id)
+            ->orderBy('position')
+            ->get(['member_id', 'position', 'number_text', 'number_value', 'submitted_at']);
+
+        $memberIds = $rows->pluck('member_id')->map(static fn ($id): int => (int) $id)->filter()->values()->all();
+        $namesByCode = [];
+        if ($memberIds !== []) {
+            if (Schema::hasTable('members') && Schema::hasColumn('members', 'code') && Schema::hasColumn('members', 'user_name')) {
+                $namesByCode = DB::table('members')->whereIn('code', $memberIds)->pluck('user_name', 'code')->all();
+            }
+            if ($namesByCode === [] && Schema::hasTable('members') && Schema::hasColumn('members', 'id') && Schema::hasColumn('members', 'user_name')) {
+                $namesByCode = DB::table('members')->whereIn('id', $memberIds)->pluck('user_name', 'id')->all();
+            }
+        }
+
+        return [
+            'shoot_source' => 'live',
+            'shoots' => $rows->map(static function (YeekeeShoot $shoot) use ($namesByCode): array {
+                $memberId = (int) ($shoot->member_id ?? 0);
+
+                return [
+                    'position' => (int) $shoot->position,
+                    'number_text' => (string) $shoot->number_text,
+                    'number_value' => (int) $shoot->number_value,
+                    'submitted_at' => (string) $shoot->submitted_at,
+                    'member_name' => (string) ($namesByCode[$memberId] ?? ''),
+                ];
+            })->values(),
+        ];
+    }
+
+    /**
+     * @param  Collection<int,array<string,mixed>>  $shoots
+     * @return array{shoot_sum:string,shoot_count:int,shoot_source:string}
+     */
+    private function buildPublicYeekeeShootSummary(Collection $shoots, string $source): array
+    {
+        $sum = $shoots->reduce(static function (int $carry, array $shoot): int {
+            $numberValue = (int) ($shoot['number_value'] ?? 0);
+            if ($numberValue <= 0 && preg_match('/^\d+$/', (string) ($shoot['number_text'] ?? '')) === 1) {
+                $numberValue = (int) ($shoot['number_text'] ?? 0);
+            }
+
+            return $carry + $numberValue;
+        }, 0);
+
+        return [
+            'shoot_sum' => (string) max(0, $sum),
+            'shoot_count' => $shoots->count(),
+            'shoot_source' => $source === 'snapshot' ? 'snapshot' : 'live',
+        ];
+    }
+
+    /**
+     * @param  array<string,mixed>  $shoot
+     * @return array<string,mixed>
+     */
+    private function mapPublicYeekeeShoot(array $shoot, bool $isRevealed): array
+    {
+        $fullNumber = (string) ($shoot['number_text'] ?? '');
+        $maskedNumber = self::maskYeekeeNumberText($fullNumber);
+        $memberName = (string) ($shoot['member_name'] ?? '');
+
+        return [
+            'position' => (int) ($shoot['position'] ?? 0),
+            'number_text' => $isRevealed ? $fullNumber : $maskedNumber,
+            'number_text_masked' => $maskedNumber,
+            'number_text_revealed' => $isRevealed ? $fullNumber : null,
+            'is_number_revealed' => $isRevealed,
+            'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
+            'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
+            'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
+        ];
+    }
+
+    private function maskYeekeeMemberNamePrefix(?string $name): string
+    {
+        $value = trim((string) ($name ?? ''));
+        $length = mb_strlen($value);
+        if ($length <= 0) {
+            return '';
+        }
+        if ($length === 1) {
+            return '*';
+        }
+        if ($length === 2) {
+            return $value;
+        }
+
+        return mb_substr($value, 0, 2).str_repeat('*', $length - 2);
+    }
+
+    private function maskYeekeeMemberNameTail(?string $name): string
+    {
+        $value = trim((string) ($name ?? ''));
+        $length = mb_strlen($value);
+        if ($length <= 0) {
+            return '';
+        }
+        if ($length === 1) {
+            return '*';
+        }
+        if ($length === 2) {
+            return '**';
+        }
+
+        return '**'.mb_substr($value, 2);
     }
 
     /**

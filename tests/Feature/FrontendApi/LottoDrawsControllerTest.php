@@ -82,6 +82,11 @@ class LottoDrawsControllerTest extends TestCase
             $table->dateTime('expected_settlement_deadline_at');
             $table->string('status')->default('open_bet');
             $table->json('config_snapshot_json')->nullable();
+            $table->unsignedInteger('shoot_count')->default(0);
+            $table->unsignedInteger('last_shoot_position')->default(0);
+            $table->json('shoot_snapshot_json')->nullable();
+            $table->string('shoot_snapshot_hash', 128)->nullable();
+            $table->dateTime('shoot_closed_at')->nullable();
             $table->timestamps();
         });
 
@@ -800,11 +805,8 @@ class LottoDrawsControllerTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_yeekee_shoots_masks_number_text_and_respects_config_limit(): void
+    public function test_yeekee_shoots_before_reveal_masks_numbers_and_uses_pagination_contract(): void
     {
-        config()->set('yeekee.shoot_list_default_limit', 1);
-        config()->set('yeekee.shoot_list_max_limit', 2);
-
         $member = new Member;
         $member->code = 7788;
 
@@ -870,21 +872,189 @@ class LottoDrawsControllerTest extends TestCase
             ],
         ]);
 
-        $request = Request::create('/api/v1/lotto/yeekee/rounds/720/shoots', 'GET', ['limit' => 999]);
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/720/shoots', 'GET', ['limit' => 1, 'page' => 1]);
         $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
         $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 720));
 
         $response->assertOk();
-        $response->assertJsonPath('data.limit', 2);
-        $response->assertJsonPath('data.count', 2);
+        $response->assertJsonPath('data.display_mode', 'live_masked');
+        $response->assertJsonPath('data.is_number_revealed', false);
+        $response->assertJsonPath('data.limit', 1);
+        $response->assertJsonPath('data.count', 1);
+        $response->assertJsonPath('data.shoot_count', 2);
+        $response->assertJsonPath('data.shoot_sum', '112344');
+        $response->assertJsonPath('data.shoot_source', 'live');
         $response->assertJsonPath('data.items.0.number_text', '999**');
-        $response->assertJsonPath('data.items.1.number_text', '123**');
         $response->assertJsonPath('data.items.0.number_text_masked', '999**');
-        $response->assertJsonPath('data.items.1.number_text_masked', '123**');
-        $response->assertJsonMissingPath('data.items.0.number_text_raw');
-        $response->assertJsonMissingPath('data.items.1.number_text_raw');
+        $response->assertJsonPath('data.items.0.number_text_revealed', null);
+        $response->assertJsonPath('data.items.0.is_number_revealed', false);
+        $response->assertJsonPath('data.pagination.page', 1);
+        $response->assertJsonPath('data.pagination.limit', 1);
+        $response->assertJsonPath('data.pagination.total', 2);
+        $response->assertJsonPath('data.pagination.has_more', true);
         $this->assertStringNotContainsString('12345', $response->getContent());
         $this->assertStringNotContainsString('99999', $response->getContent());
+    }
+
+    public function test_yeekee_shoots_after_reveal_uses_snapshot_and_can_reveal_number(): void
+    {
+        $member = new Member;
+        $member->code = 7788;
+
+        DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
+        DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
+        DB::table('lotto_draws')->insert(['id' => 321, 'market_id' => 9, 'draw_date' => '2026-04-29', 'status' => 'resulted', 'result_number' => json_encode(['raw_result' => '00123']), 'created_at' => now(), 'updated_at' => now()]);
+
+        $snapshot = [
+            'shoots' => [
+                ['position' => 16, 'number_text' => '55555', 'number_value' => 55555, 'submitted_at' => now()->subSeconds(3)->format('Y-m-d H:i:s'), 'member_name' => 'boat123'],
+                ['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->subSeconds(5)->format('Y-m-d H:i:s'), 'member_name' => 'ab'],
+            ],
+        ];
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 721,
+            'market_id' => 9,
+            'lotto_draw_id' => 321,
+            'round_date' => '2026-04-29',
+            'round_no' => 21,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'resulted',
+            'shoot_snapshot_json' => json_encode($snapshot),
+            'shoot_snapshot_hash' => 'snap-721',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/721/shoots', 'GET', ['limit' => 20, 'page' => 1]);
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 721));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.display_mode', 'result_revealed');
+        $response->assertJsonPath('data.is_number_revealed', true);
+        $response->assertJsonPath('data.shoot_source', 'snapshot');
+        $response->assertJsonPath('data.items.0.number_text', '55555');
+        $response->assertJsonPath('data.items.0.number_text_masked', '555**');
+        $response->assertJsonPath('data.items.0.number_text_revealed', '55555');
+        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'bo*****');
+        $response->assertJsonPath('data.items.0.member_name_masked', '**at123');
+        $response->assertJsonMissingPath('data.items.0.member_id');
+        $response->assertJsonMissingPath('data.items.0.ip_address');
+    }
+
+    public function test_yeekee_shoots_snapshot_source_remains_stable_when_live_changes(): void
+    {
+        $member = new Member;
+        $member->code = 7788;
+
+        DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
+        DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
+        DB::table('lotto_draws')->insert(['id' => 322, 'market_id' => 9, 'draw_date' => '2026-04-29', 'status' => 'resulted', 'created_at' => now(), 'updated_at' => now()]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 722,
+            'market_id' => 9,
+            'lotto_draw_id' => 322,
+            'round_date' => '2026-04-29',
+            'round_no' => 22,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'resulted',
+            'shoot_snapshot_json' => json_encode(['shoots' => [['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')]]]),
+            'shoot_snapshot_hash' => 'snap-722',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_shoots')->insert([
+            'yeekee_round_id' => 722,
+            'lotto_draw_id' => 322,
+            'market_id' => 9,
+            'member_id' => 1,
+            'position' => 99,
+            'number_text' => '99999',
+            'number_value' => 99999,
+            'submitted_at' => now()->format('Y-m-d H:i:s'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/722/shoots', 'GET');
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 722));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.shoot_source', 'snapshot');
+        $response->assertJsonPath('data.shoot_count', 1);
+        $response->assertJsonPath('data.shoot_sum', '12345');
+        $response->assertJsonPath('data.items.0.position', 1);
+    }
+
+    public function test_yeekee_result_proof_contains_shoot_summary_and_winners_without_full_list(): void
+    {
+        DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
+        DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
+        DB::table('lotto_draws')->insert([
+            'id' => 323,
+            'market_id' => 9,
+            'draw_date' => '2026-04-29',
+            'status' => 'closed',
+            'result_number' => json_encode(['raw_result' => '45678', 'top_3' => '678', 'bottom_2' => '78']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 723,
+            'market_id' => 9,
+            'lotto_draw_id' => 323,
+            'round_date' => '2026-04-29',
+            'round_no' => 23,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'shoot_open',
+            'shoot_snapshot_json' => json_encode(['shoots' => [
+                ['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['position' => 16, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+            ]]),
+            'shoot_snapshot_hash' => 'snap-723',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/723/result-proof', 'GET');
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeResultProof($request, 723));
+        $response->assertOk();
+        $response->assertJsonPath('data.is_revealed', false);
+        $response->assertJsonPath('data.shoot_summary.shoot_source', 'snapshot');
+        $response->assertJsonPath('data.winning_shoots.first.position', 1);
+        $response->assertJsonPath('data.winning_shoots.first.number_text', '123**');
+        $response->assertJsonPath('data.winning_shoots.first.number_text_revealed', null);
+        $response->assertJsonMissingPath('data.shoots');
+        $this->assertStringNotContainsString('12345', $response->getContent());
+        $this->assertStringNotContainsString('54321', $response->getContent());
+
+        DB::table('lotto_draws')->where('id', 323)->update(['status' => 'resulted']);
+        DB::table('yeekee_rounds')->where('id', 723)->update(['status' => 'resulted']);
+        $revealed = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeResultProof($request, 723));
+        $revealed->assertOk();
+        $revealed->assertJsonPath('data.is_revealed', true);
+        $revealed->assertJsonPath('data.winning_shoots.first.number_text_revealed', '12345');
+        $revealed->assertJsonPath('data.proof.result_payload.shoot_sum', '66666');
     }
 
     public function test_submit_shoot_returns_http_429_on_cooldown_exception(): void

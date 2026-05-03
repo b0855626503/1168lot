@@ -1904,3 +1904,22 @@ GET /api/v1/reward/history?page=1&per_page=20
   "message": "token ไม่ถูกต้องหรือหมดอายุ"
 }
 ```
+
+## Yeekee Display Mode Addendum (2026-05-03)
+
+For GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots:
+- display_mode: live_masked | result_revealed
+- is_number_revealed: boolean
+- number_text is compatibility display field: masked before reveal, full after reveal
+- New frontend should use number_text_masked and number_text_revealed as primary fields
+- number_text_revealed is null before reveal and full after reveal
+- Response includes shoot_sum, shoot_count, shoot_source, and pagination
+- Response includes member_name_prefix_masked and member_name_masked
+- Sensitive fields are never exposed: member_id, member_code, customer_id, ip_address, user_agent
+
+For GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof:
+- Includes shoot_summary even before reveal
+- Includes winner summary only: winning_shoots.first and winning_shoots.sixteenth
+- Does not return full shoots list
+- Before reveal, winner numbers remain masked and number_text_revealed = null
+- If proof.result_payload is hidden by reveal rule, shoot_* fields must not appear in result_payload
