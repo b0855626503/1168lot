@@ -59,10 +59,16 @@ class YeekeeAuditControllerTest extends TestCase
             $table->json('metadata_json')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('members', function (Blueprint $table): void {
+            $table->id();
+            $table->string('user_name')->nullable();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('members');
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_markets');
@@ -284,6 +290,7 @@ class YeekeeAuditControllerTest extends TestCase
 
         // sensitive fields must not appear
         $this->assertArrayNotHasKey('member_id', $shoots[0]);
+        $this->assertArrayNotHasKey('user_name', $shoots[0]);
         $this->assertArrayNotHasKey('ip_address', $shoots[0]);
         $this->assertArrayNotHasKey('user_agent', $shoots[0]);
 
@@ -321,6 +328,8 @@ class YeekeeAuditControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        DB::table('members')->insert(['id' => 9001, 'user_name' => 'testuser01']);
+
         DB::table('yeekee_shoots')->insert([
             'id' => 10, 'yeekee_round_id' => 60, 'lotto_draw_id' => 20, 'market_id' => 1, 'member_id' => 9001, 'position' => 1, 'number_text' => '45', 'number_value' => 45, 'submitted_at' => '2026-05-02 09:00:00', 'ip_address' => '10.0.0.1', 'user_agent' => 'TestAgent', 'created_at' => now(), 'updated_at' => now(),
         ]);
@@ -339,6 +348,7 @@ class YeekeeAuditControllerTest extends TestCase
 
         // sensitive fields present
         $this->assertSame(9001, $shoots[0]['member_id']);
+        $this->assertSame('testuser01', $shoots[0]['user_name']);
         $this->assertSame('10.0.0.1', $shoots[0]['ip_address']);
         $this->assertSame('TestAgent', $shoots[0]['user_agent']);
 

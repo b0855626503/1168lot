@@ -9,6 +9,8 @@ use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class YeekeeAuditController extends AppBaseController
 {
@@ -124,12 +126,25 @@ class YeekeeAuditController extends AppBaseController
             ? ['id', 'yeekee_round_id', 'position', 'number_text', 'member_id', 'submitted_at', 'ip_address', 'user_agent']
             : ['id', 'yeekee_round_id', 'position', 'number_text', 'submitted_at'];
 
-        $shoots = YeekeeShoot::query()
+        $rawShoots = YeekeeShoot::query()
             ->select($shootColumns)
             ->where('yeekee_round_id', $roundId)
             ->orderBy('position')
-            ->get()
-            ->map(function (YeekeeShoot $s) use ($isSensitive): array {
+            ->get();
+
+        $userNames = [];
+        if ($isSensitive) {
+            $memberIds = $rawShoots->pluck('member_id')->filter()->unique()->values()->all();
+            if (! empty($memberIds) && Schema::hasTable('members')) {
+                $userNames = DB::table('members')
+                    ->whereIn('id', $memberIds)
+                    ->pluck('user_name', 'id')
+                    ->all();
+            }
+        }
+
+        $shoots = $rawShoots
+            ->map(function (YeekeeShoot $s) use ($isSensitive, $userNames): array {
                 $masked = $this->maskNumberText((string) $s->number_text);
 
                 $entry = [
@@ -140,7 +155,9 @@ class YeekeeAuditController extends AppBaseController
                 ];
 
                 if ($isSensitive) {
-                    $entry['member_id'] = (int) $s->member_id;
+                    $memberId = (int) $s->member_id;
+                    $entry['member_id'] = $memberId;
+                    $entry['user_name'] = (string) ($userNames[$memberId] ?? '');
                     $entry['ip_address'] = (string) ($s->ip_address ?? '');
                     $entry['user_agent'] = (string) ($s->user_agent ?? '');
                 }
