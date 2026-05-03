@@ -2,7 +2,13 @@
          :no-close-on-backdrop="true"
          ok-only
          ok-title="ปิด">
-    <div v-if="ticket">
+    {{--
+        Wrapper class "lotto-ticket-detail-modal" is required for CSS double-scoping.
+        All .tcd-* styles in table.blade.php are scoped as:
+          #addedit .lotto-ticket-detail-modal .tcd-*
+        so they cannot leak to other elements or modals.
+    --}}
+    <div v-if="ticket" class="lotto-ticket-detail-modal">
         {{-- Summary header bar --}}
         <div class="tcd-header">
             <div class="d-flex flex-wrap align-items-start">
@@ -11,16 +17,20 @@
                     <b-badge :variant="statusBadgeVariant">@{{ statusLabel }}</b-badge>
                 </div>
                 <div class="tcd-header-meta flex-grow-1 mt-1 mt-sm-0">
-                    <span>วันงวด: @{{ ticket.draw.date || '-' }}</span>
+                    <span>วันงวด: @{{ drawDate }}</span>
                     <span class="sep">|</span>
                     <span>สมาชิก: @{{ memberDisplay }}</span>
                     <span class="sep">|</span>
                     {{--
-                        TODO: หวยยี่กี่ควรแสดง badge รอบ แต่ payload ปัจจุบัน (loadData) ไม่ส่ง round_no
-                        ควรเพิ่ม draw.yeekee_round_no หรือ draw.round_no ใน LottoTicketController::loadData()
-                        แล้ว bind ที่นี่ — ดู LottoMarketDisplayFormatter::formatPlain() เป็น reference
+                        TODO: หวยยี่กี่ควรแสดง badge รอบ แต่ loadData() ปัจจุบันส่ง draw.market
+                        เป็นชื่อตลาดธรรมดา ไม่ผ่าน LottoMarketDisplayFormatter::formatPlain()
+                        จึงไม่มี "(รอบ N)" ใน string — ควรเพิ่ม draw.yeekee_round_no ใน
+                        LottoTicketController::loadData() แล้ว bind badge จาก field นั้นแทน
+                        computed marketRoundNo ตอนนี้ทำ fallback parse ไว้รองรับอนาคต
                     --}}
-                    <span>ตลาด: @{{ ticket.draw.market || '-' }}</span>
+                    <span>ตลาด: @{{ marketDisplayName
+                        }}<template v-if="hasMarketRound"
+                        > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template></span>
                 </div>
             </div>
         </div>
@@ -43,11 +53,11 @@
                         </div>
                         <div>
                             <span class="tcd-info-label">วันงวด</span>
-                            <span class="tcd-info-value">@{{ ticket.draw.date || '-' }}</span>
+                            <span class="tcd-info-value">@{{ drawDate }}</span>
                         </div>
                         <div>
                             <span class="tcd-info-label">งวด #</span>
-                            <span class="tcd-info-value">@{{ ticket.draw.id || '-' }}</span>
+                            <span class="tcd-info-value">@{{ drawId }}</span>
                         </div>
                         <div class="full">
                             <span class="tcd-info-label">สมาชิก</span>
@@ -55,7 +65,11 @@
                         </div>
                         <div class="full">
                             <span class="tcd-info-label">ตลาด / หวย</span>
-                            <span class="tcd-info-value">@{{ ticket.draw.market || '-' }}</span>
+                            <span class="tcd-info-value">
+                                @{{ marketDisplayName
+                                }}<template v-if="hasMarketRound"
+                                > <b-badge variant="info" class="tcd-round-badge">รอบ @{{ marketRoundNo }}</b-badge></template>
+                            </span>
                         </div>
                         <template v-if="ticket.cancelled_by_name || ticket.cancelled_at">
                             <div v-if="ticket.cancelled_by_name">
@@ -109,7 +123,7 @@
             </div>
         </div>
 
-        {{-- Items table --}}
+        {{-- Items table — 10 columns preserved from original --}}
         <div class="tcd-section">
             <div class="tcd-section-title">
                 รายละเอียดเลขแทง
@@ -127,7 +141,7 @@
                         <th class="text-right">อัตราจ่าย</th>
                         <th class="text-right">ส่วนลด(%)</th>
                         <th class="text-right">ส่วนลด(฿)</th>
-                        <th class="text-right">ยอดรับ</th>
+                        <th class="text-right">จ่ายจริง</th>
                         <th class="text-right">ถูก(อ้างอิง)</th>
                         <th class="text-center">ผล</th>
                         <th class="text-right">ยอดถูก</th>
@@ -222,6 +236,45 @@
                     }
 
                     return name || (id ? `MEM-${id}` : '-');
+                },
+                drawDate() {
+                    return String(this.ticket?.draw?.date || '').trim() || '-';
+                },
+                drawId() {
+                    const id = this.ticket?.draw?.id;
+                    return id != null ? id : '-';
+                },
+                /**
+                 * Raw market name string from the API response.
+                 * loadData() currently returns draw.market as a plain name (no round suffix),
+                 * because LottoTicketController::loadData() does not use
+                 * LottoMarketDisplayFormatter::formatPlain(). The computed below parses
+                 * "(รอบ N)" defensively so it works automatically once the backend is updated.
+                 *
+                 * TODO: add draw.yeekee_round_no (int|null) to LottoTicketController::loadData()
+                 * and bind the badge from that field instead of relying on string parsing.
+                 */
+                marketRawText() {
+                    return String(this.ticket?.draw?.market || '').trim();
+                },
+                marketDisplayName() {
+                    if (!this.marketRawText) {
+                        return '-';
+                    }
+
+                    const m = this.marketRawText.match(/^(.*?)\s*\(รอบ\s*\d+\)\s*$/);
+                    return m ? m[1].trim() || '-' : this.marketRawText;
+                },
+                marketRoundNo() {
+                    if (!this.marketRawText) {
+                        return null;
+                    }
+
+                    const m = this.marketRawText.match(/\(รอบ\s*(\d+)\)\s*$/);
+                    return m ? m[1] : null;
+                },
+                hasMarketRound() {
+                    return this.marketRoundNo !== null;
                 },
                 hasWin() {
                     return Number(this.ticket?.total_win_amount || 0) > 0;

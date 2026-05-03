@@ -1,7 +1,13 @@
 @section('css')
     @include('admin::layouts.datatables_css')
     <style>
-        /* === Ticket Detail Modal (#addedit) — all rules scoped === */
+        /*
+         * === Ticket Detail Modal (#addedit) ===
+         * Outer shell rules stay on #addedit (dialog size, body background).
+         * Inner content rules are double-scoped:
+         *   #addedit .lotto-ticket-detail-modal .tcd-*
+         * so they cannot leak to other modals or pages.
+         */
         #addedit .modal-dialog {
             max-width: 1050px;
         }
@@ -9,36 +15,36 @@
             padding: 14px;
             background: #f4f6f9;
         }
-        #addedit .tcd-header {
+        #addedit .lotto-ticket-detail-modal .tcd-header {
             background: #fff;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 12px 16px;
             margin-bottom: 10px;
         }
-        #addedit .tcd-header-id {
+        #addedit .lotto-ticket-detail-modal .tcd-header-id {
             font-size: 15px;
             font-weight: 700;
             color: #253247;
             margin-right: 8px;
         }
-        #addedit .tcd-header-meta {
+        #addedit .lotto-ticket-detail-modal .tcd-header-meta {
             font-size: 12px;
             color: #6c757d;
             line-height: 1.8;
         }
-        #addedit .tcd-header-meta .sep {
+        #addedit .lotto-ticket-detail-modal .tcd-header-meta .sep {
             margin: 0 6px;
             color: #ced4da;
         }
-        #addedit .tcd-section {
+        #addedit .lotto-ticket-detail-modal .tcd-section {
             background: #fff;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 10px 12px;
             margin-bottom: 10px;
         }
-        #addedit .tcd-section-title {
+        #addedit .lotto-ticket-detail-modal .tcd-section-title {
             font-size: 10px;
             font-weight: 700;
             color: #8a94a6;
@@ -48,20 +54,20 @@
             margin-bottom: 8px;
             border-bottom: 1px solid #f0f2f5;
         }
-        #addedit .tcd-info-grid {
+        #addedit .lotto-ticket-detail-modal .tcd-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px 8px;
         }
-        #addedit .tcd-info-grid .full { grid-column: 1 / -1; }
-        #addedit .tcd-info-label {
+        #addedit .lotto-ticket-detail-modal .tcd-info-grid .full { grid-column: 1 / -1; }
+        #addedit .lotto-ticket-detail-modal .tcd-info-label {
             display: block;
             font-size: 10px;
             color: #8a94a6;
             line-height: 1.2;
             margin-bottom: 1px;
         }
-        #addedit .tcd-info-value {
+        #addedit .lotto-ticket-detail-modal .tcd-info-value {
             display: block;
             font-size: 12px;
             font-weight: 600;
@@ -69,31 +75,31 @@
             line-height: 1.4;
             word-break: break-word;
         }
-        #addedit .tcd-amount-card {
+        #addedit .lotto-ticket-detail-modal .tcd-amount-card {
             border: 1px solid #e9ecef;
             border-radius: 6px;
             padding: 8px 10px;
             text-align: right;
             background: #f8f9fa;
         }
-        #addedit .tcd-amount-card.is-win {
+        #addedit .lotto-ticket-detail-modal .tcd-amount-card.is-win {
             background: #fff5f5;
             border-color: #f5c6cb;
         }
-        #addedit .tcd-amount-label {
+        #addedit .lotto-ticket-detail-modal .tcd-amount-label {
             display: block;
             font-size: 10px;
             color: #8a94a6;
             margin-bottom: 2px;
         }
-        #addedit .tcd-amount-value {
+        #addedit .lotto-ticket-detail-modal .tcd-amount-value {
             display: block;
             font-size: 16px;
             font-weight: 700;
             color: #253247;
         }
-        #addedit .tcd-amount-value.is-danger { color: #dc3545; }
-        #addedit .tcd-reason-text {
+        #addedit .lotto-ticket-detail-modal .tcd-amount-value.is-danger { color: #dc3545; }
+        #addedit .lotto-ticket-detail-modal .tcd-reason-text {
             font-size: 12px;
             color: #495057;
             background: #f8f9fa;
@@ -102,20 +108,25 @@
             padding: 6px 10px;
             min-height: 34px;
         }
-        #addedit .tcd-reason-text.is-empty {
+        #addedit .lotto-ticket-detail-modal .tcd-reason-text.is-empty {
             color: #adb5bd;
             font-style: italic;
         }
-        #addedit .tcd-count-badge {
+        #addedit .lotto-ticket-detail-modal .tcd-round-badge {
+            font-size: 10px;
+            vertical-align: middle;
+            line-height: 1.2;
+        }
+        #addedit .lotto-ticket-detail-modal .tcd-count-badge {
             font-weight: 600;
         }
-        #addedit .tcd-table-wrapper {
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper {
             max-height: 280px;
             overflow: auto;
             border-radius: 6px;
             border: 1px solid #dee2e6;
         }
-        #addedit .tcd-table-wrapper thead th {
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper thead th {
             position: sticky;
             top: 0;
             background: #f8f9fa;
@@ -123,18 +134,18 @@
             font-size: 11px;
             border-bottom: 2px solid #dee2e6;
         }
-        #addedit .tcd-table-wrapper .table td,
-        #addedit .tcd-table-wrapper .table th {
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper .table td,
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper .table th {
             padding: 0.3rem 0.45rem;
             font-size: 12px;
         }
-        #addedit .tcd-table-wrapper td.col-number {
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper td.col-number {
             font-weight: 700;
             font-size: 13px;
             color: #253247;
             letter-spacing: 0.03em;
         }
-        #addedit .tcd-table-wrapper tr.win-row td {
+        #addedit .lotto-ticket-detail-modal .tcd-table-wrapper tr.win-row td {
             background: #fff3cd !important;
         }
         @media (max-width: 767px) {
@@ -142,10 +153,10 @@
                 max-width: 100%;
                 margin: 8px;
             }
-            #addedit .tcd-info-grid {
+            #addedit .lotto-ticket-detail-modal .tcd-info-grid {
                 grid-template-columns: 1fr;
             }
-            #addedit .tcd-info-grid .full { grid-column: auto; }
+            #addedit .lotto-ticket-detail-modal .tcd-info-grid .full { grid-column: auto; }
         }
     </style>
 @endsection
