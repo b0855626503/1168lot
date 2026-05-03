@@ -72,7 +72,7 @@ class LottoTicketController extends AppBaseController
     public function loadData(Request $request): JsonResponse
     {
         $ticket = LottoTicket::query()
-            ->with(['member', 'draw.market', 'items'])
+            ->with(['member', 'draw.market', 'draw.yeekeeRound', 'items'])
             ->find((int) $request->input('id'));
 
         if (! $ticket) {
@@ -80,6 +80,11 @@ class LottoTicketController extends AppBaseController
         }
 
         $cancellationInfo = $this->resolveCancellationInfo($ticket);
+
+        $isYeekee = (string) ($ticket->draw?->market?->result_mode ?? '') === LotteryMarket::RESULT_MODE_YEEKEE;
+        $roundNo = $ticket->draw?->yeekeeRound
+            ? (int) $ticket->draw->yeekeeRound->round_no
+            : null;
 
         $payload = [
             'id' => (int) $ticket->id,
@@ -89,6 +94,8 @@ class LottoTicketController extends AppBaseController
                 'id' => (int) $ticket->draw_id,
                 'date' => optional($ticket->draw?->draw_date)->format('d/m/Y'),
                 'market' => $ticket->draw?->market?->name,
+                'is_yeekee' => $isYeekee,
+                'round_no' => $roundNo,
             ],
             'status' => (string) $ticket->status,
             'can_cancel' => (string) $ticket->status === 'active' && (string) ($ticket->draw->status ?? '') === 'open',
