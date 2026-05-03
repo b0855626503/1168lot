@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Models;
 
 use Gametech\Lotto\Contracts\LottoDraw as LottoDrawContract;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * LottoDraw - งวดหวย
@@ -122,5 +123,9 @@ class LottoDraw extends Model implements LottoDrawContract
     {
         return $this->belongsTo(LottoResultSource::class, 'result_source_id');
     }
-}
 
+    public function yeekeeRound(): HasOne
+    {
+        return $this->hasOne(YeekeeRound::class, 'lotto_draw_id');
+    }
+}
