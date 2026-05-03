@@ -3,9 +3,44 @@
 namespace Gametech\Lotto\Support;
 
 use Gametech\Lotto\Models\LotteryMarket;
+use Illuminate\Support\Carbon;
 
 class LottoMarketDisplayFormatter
 {
+    /**
+     * Build a full status message, injecting "รอบที่ X" for yeekee draws.
+     * Non-yeekee format: "{name} งวดวันที่ {date} {suffix}"
+     * Yeekee format:     "{name} รอบที่ {roundNo} งวดวันที่ {date} {suffix}"
+     */
+    public function formatStatusMessage(
+        string $marketName,
+        string $drawDate,
+        string $eventSuffix,
+        ?string $resultMode = null,
+        ?int $roundNo = null
+    ): string {
+        return $this->formatDrawSubject($marketName, $drawDate, $resultMode, $roundNo).' '.$eventSuffix;
+    }
+
+    /**
+     * Build the subject portion "{name} [รอบที่ X] งวดวันที่ {date}" without a status suffix.
+     */
+    public function formatDrawSubject(
+        string $marketName,
+        string $drawDate,
+        ?string $resultMode = null,
+        ?int $roundNo = null
+    ): string {
+        $name = trim($marketName) !== '' ? trim($marketName) : '-';
+        $dateLabel = $this->formatDrawDate($drawDate);
+
+        if ($this->shouldShowRoundBadge($resultMode, $roundNo)) {
+            return "{$name} รอบที่ {$roundNo} งวดวันที่ {$dateLabel}";
+        }
+
+        return "{$name} งวดวันที่ {$dateLabel}";
+    }
+
     public function formatPlain(string $marketName, ?string $resultMode = null, ?int $roundNo = null): string
     {
         $name = trim($marketName) !== '' ? trim($marketName) : '-';
@@ -47,6 +82,19 @@ class LottoMarketDisplayFormatter
         }
 
         return '<span class="badge badge-info ml-1" style="font-size:10px;line-height:1.1;">รอบ '.(int) $roundNo.'</span>';
+    }
+
+    private function formatDrawDate(string $drawDate): string
+    {
+        if ($drawDate === '' || $drawDate === '-') {
+            return '-';
+        }
+
+        try {
+            return (string) (int) Carbon::parse($drawDate)->format('d');
+        } catch (\Throwable) {
+            return $drawDate;
+        }
     }
 
     private function shouldShowRoundBadge(?string $resultMode, ?int $roundNo): bool

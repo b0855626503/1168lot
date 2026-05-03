@@ -6,11 +6,14 @@ use App\Events\LottoDrawStatusChanged;
 use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Jobs\SendDrawResultSummaryTelegramJob;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LottoDrawRealtimeObserver
 {
@@ -31,15 +34,17 @@ class LottoDrawRealtimeObserver
             return;
         }
 
-        $draw->loadMissing('market:id,name,notify_result_telegram');
+        $draw->loadMissing('market:id,name,result_mode,notify_result_telegram');
 
         $marketName = (string) ($draw->market->name ?? '-');
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
+        $resultMode = (string) ($draw->market->result_mode ?? '');
+        $roundNo = $this->resolveYeekeeRoundNo($draw, $resultMode);
         $statusLabel = $this->statusLabel($toStatus);
         $actor = $this->resolveActor();
         $changedAt = $this->resolveChangedAt($draw);
 
-        $this->afterCommit(function () use ($draw, $marketName, $drawDate, $toStatus, $statusLabel, $actor, $changedAt): void {
+        $this->afterCommit(function () use ($draw, $marketName, $drawDate, $resultMode, $roundNo, $toStatus, $statusLabel, $actor, $changedAt): void {
             $this->broadcastDrawStatusChanged(
                 (int) $draw->id,
                 $marketName,
@@ -64,6 +69,8 @@ class LottoDrawRealtimeObserver
                     'draw_id' => (int) $draw->id,
                     'market_name' => $marketName,
                     'draw_date' => $drawDate,
+                    'result_mode' => $resultMode,
+                    'round_no' => $roundNo,
                     'status' => $toStatus,
                     'status_label' => $statusLabel,
                     'actor' => $actor,
@@ -72,7 +79,7 @@ class LottoDrawRealtimeObserver
             );
 
             if ($toStatus === 'resulted') {
-                $this->broadcastResultedTicketListChanged($draw, $marketName, $drawDate);
+                $this->broadcastResultedTicketListChanged($draw, $marketName, $drawDate, $resultMode, $roundNo);
                 $this->dispatchResultSummaryTelegram((int) $draw->id);
             }
         });
@@ -166,14 +173,21 @@ class LottoDrawRealtimeObserver
         $message = $this->buildDrawActivityMessage(
             $event,
             (string) ($data['market_name'] ?? '-'),
-            (string) ($data['draw_date'] ?? '-')
+            (string) ($data['draw_date'] ?? '-'),
+            (string) ($data['result_mode'] ?? ''),
+            isset($data['round_no']) ? (int) $data['round_no'] : null,
         );
 
         broadcast(new RealtimePublicActivityUpdated($method, $event, $data, $message));
     }
 
-    protected function broadcastResultedTicketListChanged(LottoDraw $draw, string $marketName, string $drawDate): void
-    {
+    protected function broadcastResultedTicketListChanged(
+        LottoDraw $draw,
+        string $marketName,
+        string $drawDate,
+        string $resultMode = '',
+        ?int $roundNo = null
+    ): void {
         $total = $this->resolveTotalTickets();
 
         broadcast(new LottoTicketListChanged('resulted', $total, $marketName, $drawDate));
@@ -185,22 +199,35 @@ class LottoDrawRealtimeObserver
                 'total' => $total,
                 'market_name' => $marketName,
                 'draw_date' => $drawDate,
+                'result_mode' => $resultMode,
+                'round_no' => $roundNo,
                 'actor_id' => null,
                 'amount' => null,
             ],
-            $this->buildTicketListActivityMessage('resulted', $marketName, $drawDate, null, null)
+            $this->buildTicketListActivityMessage('resulted', $marketName, $drawDate, null, null, $resultMode, $roundNo)
         ));
     }
 
-    private function buildDrawActivityMessage(string $event, string $marketName, string $drawDate): string
-    {
-        $drawLabel = $this->formatDrawDateMessage($drawDate);
-
-        return match ($event) {
-            'lotto.draw_closed' => "{$marketName} งวดวันที่ {$drawLabel} ปิดรับแล้ว",
-            'lotto.draw_resulted' => "{$marketName} งวดวันที่ {$drawLabel} ออกผลแล้ว",
-            default => "{$marketName} งวดวันที่ {$drawLabel} เปิดรับแล้ว",
+    private function buildDrawActivityMessage(
+        string $event,
+        string $marketName,
+        string $drawDate,
+        string $resultMode = '',
+        ?int $roundNo = null
+    ): string {
+        $suffix = match ($event) {
+            'lotto.draw_closed' => 'ปิดรับแล้ว',
+            'lotto.draw_resulted' => 'ออกผลแล้ว',
+            default => 'เปิดรับแล้ว',
         };
+
+        return (new LottoMarketDisplayFormatter)->formatStatusMessage(
+            $marketName,
+            $drawDate,
+            $suffix,
+            $resultMode !== '' ? $resultMode : null,
+            $roundNo,
+        );
     }
 
     private function buildTicketListActivityMessage(
@@ -208,16 +235,20 @@ class LottoDrawRealtimeObserver
         string $marketName,
         string $drawDate,
         ?string $actorId,
-        ?float $amount
+        ?float $amount,
+        string $resultMode = '',
+        ?int $roundNo = null
     ): string {
-        $drawLabel = $this->formatDrawDateMessage($drawDate);
+        $formatter = new LottoMarketDisplayFormatter;
+        $rm = $resultMode !== '' ? $resultMode : null;
 
         if ($action === 'resulted') {
-            return "{$marketName} งวดวันที่ {$drawLabel} อัปเดตรายการโพยหลังออกผลแล้ว";
+            return $formatter->formatStatusMessage($marketName, $drawDate, 'อัปเดตรายการโพยหลังออกผลแล้ว', $rm, $roundNo);
         }
 
         if ($action === 'created') {
-            $message = "มีรายการโพยหวยใหม่: {$marketName} งวดวันที่ {$drawLabel}";
+            $subject = $formatter->formatDrawSubject($marketName, $drawDate, $rm, $roundNo);
+            $message = "มีรายการโพยหวยใหม่: {$subject}";
 
             if ($actorId !== null && $actorId !== '') {
                 $message .= " โดย {$actorId}";
@@ -230,20 +261,27 @@ class LottoDrawRealtimeObserver
             return $message;
         }
 
-        return "มีการอัปเดตรายการโพยหวย: {$marketName} งวดวันที่ {$drawLabel}";
+        $subject = $formatter->formatDrawSubject($marketName, $drawDate, $rm, $roundNo);
+
+        return "มีการอัปเดตรายการโพยหวย: {$subject}";
     }
 
-    private function formatDrawDateMessage(string $drawDate): string
+    private function resolveYeekeeRoundNo(LottoDraw $draw, string $resultMode): ?int
     {
-        if ($drawDate === '' || $drawDate === '-') {
-            return '-';
+        if ($resultMode !== LotteryMarket::RESULT_MODE_YEEKEE) {
+            return null;
         }
 
-        try {
-            return (string) (int) Carbon::parse($drawDate)->format('d');
-        } catch (\Throwable) {
-            return $drawDate;
+        $draw->loadMissing('yeekeeRound:id,lotto_draw_id,round_no');
+        $roundNo = (int) ($draw->yeekeeRound->round_no ?? 0);
+
+        if ($roundNo <= 0) {
+            Log::warning('yeekee draw missing round_no', ['draw_id' => (int) $draw->id]);
+
+            return null;
         }
+
+        return $roundNo;
     }
 
     protected function dispatchResultSummaryTelegram(int $drawId): void

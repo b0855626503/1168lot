@@ -3,10 +3,12 @@
 namespace Gametech\Lotto\Jobs;
 
 use App\Jobs\SendTelegramBot;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
-use Illuminate\Container\Container;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Bus\Queueable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -27,13 +29,15 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
 
     public function __construct(
         public int $drawId
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {
         $draw = LottoDraw::query()
-            ->with('market:id,name,notify_result_telegram,auto_result_time')
+            ->with([
+                'market:id,name,notify_result_telegram,auto_result_time,result_mode',
+                'yeekeeRound:id,lotto_draw_id,round_no',
+            ])
             ->find($this->drawId);
 
         if (! $draw instanceof LottoDraw) {
@@ -94,8 +98,22 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
 
     private function formatMessage(LottoDraw $draw, array $summary): string
     {
-        $marketName = (string) ($draw->market->name ?? ('Market #' . (int) $draw->market_id));
+        $marketName = (string) ($draw->market->name ?? ('Market #'.(int) $draw->market_id));
         $drawDate = $draw->draw_date ? $draw->draw_date->format('Y-m-d') : '-';
+        $resultMode = (string) ($draw->market->result_mode ?? '');
+        $roundNo = $resultMode === LotteryMarket::RESULT_MODE_YEEKEE
+            ? (int) ($draw->yeekeeRound->round_no ?? 0)
+            : 0;
+
+        $formatter = new LottoMarketDisplayFormatter;
+        $nameWithPrefix = str_starts_with($marketName, 'หวย') ? $marketName : "หวย{$marketName}";
+        $drawHeaderLabel = $formatter->formatDrawSubject(
+            $nameWithPrefix,
+            $drawDate,
+            $resultMode !== '' ? $resultMode : null,
+            $roundNo > 0 ? $roundNo : null,
+        );
+
         $scheduledResultTime = $this->resolveScheduledResultTime($draw);
         [$announceOriginLabel, $announceTime] = $this->resolveAnnounceOriginAndTime($draw);
         $result = is_array($draw->result_number) ? $draw->result_number : [];
@@ -117,20 +135,19 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         $netPrefix = $netAmount >= 0 ? '+' : '-';
 
         return sprintf(
-            '🚨 ออกผลแล้ว! หวย%s' . PHP_EOL .
-            'งวดวันที่ %s เวลาออกผล %s' . PHP_EOL . PHP_EOL .
-            '🕒 ออกผลโดย%s เวลา %s' . PHP_EOL . PHP_EOL .
-            '🎯 %s: %s' . PHP_EOL .
-            '🎯 %s: %s' . PHP_EOL . PHP_EOL .
-            '━━━━━━━━━━━━━━━' . PHP_EOL .
-            '📊 สรุปทันที' . PHP_EOL . PHP_EOL .
-            '• บิลทั้งหมด: %s' . PHP_EOL .
-            '• ชนะ: %s | 💰 %s บาท' . PHP_EOL .
-            '• แพ้: %s | 💸 %s บาท' . PHP_EOL . PHP_EOL .
-            '━━━━━━━━━━━━━━━' . PHP_EOL .
+            '🚨 ออกผลแล้ว! %s'.PHP_EOL.
+            'เวลาออกผล %s'.PHP_EOL.PHP_EOL.
+            '🕒 ออกผลโดย%s เวลา %s'.PHP_EOL.PHP_EOL.
+            '🎯 %s: %s'.PHP_EOL.
+            '🎯 %s: %s'.PHP_EOL.PHP_EOL.
+            '━━━━━━━━━━━━━━━'.PHP_EOL.
+            '📊 สรุปทันที'.PHP_EOL.PHP_EOL.
+            '• บิลทั้งหมด: %s'.PHP_EOL.
+            '• ชนะ: %s | 💰 %s บาท'.PHP_EOL.
+            '• แพ้: %s | 💸 %s บาท'.PHP_EOL.PHP_EOL.
+            '━━━━━━━━━━━━━━━'.PHP_EOL.
             '💵 กำไร/ขาดทุนสุทธิ: %s %s%s บาท',
-            $marketName,
-            $drawDate,
+            $drawHeaderLabel,
             $scheduledResultTime,
             $announceOriginLabel,
             $announceTime,
