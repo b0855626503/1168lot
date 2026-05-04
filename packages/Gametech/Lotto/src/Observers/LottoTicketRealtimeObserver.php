@@ -5,6 +5,8 @@ namespace Gametech\Lotto\Observers;
 use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\LotteryMarket;
+use Illuminate\Support\Facades\Log;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -164,15 +166,15 @@ class LottoTicketRealtimeObserver
         $drawDate = $ticket->draw?->draw_date?->format('Y-m-d');
         $resultMode = (string) data_get($ticket, 'draw.market.result_mode', '');
 
-        if ($resultMode === \Gametech\Lotto\Models\LotteryMarket::RESULT_MODE_YEEKEE) {
+        if ($resultMode === LotteryMarket::RESULT_MODE_YEEKEE) {
             $ticket->loadMissing(['draw.yeekeeRound']);
         }
 
         $roundNo = null;
-        if ($resultMode === \Gametech\Lotto\Models\LotteryMarket::RESULT_MODE_YEEKEE) {
+        if ($resultMode === LotteryMarket::RESULT_MODE_YEEKEE) {
             $roundNo = (int) data_get($ticket, 'draw.yeekeeRound.round_no', 0);
             if ($roundNo <= 0) {
-                \Illuminate\Support\Facades\Log::warning('yeekee draw missing round_no in ticket broadcast', [
+                Log::warning('yeekee draw missing round_no in ticket broadcast', [
                     'ticket_id' => (int) $ticket->id,
                     'draw_id' => (int) $ticket->lotto_draw_id
                 ]);
