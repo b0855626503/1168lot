@@ -112,6 +112,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
             $drawDate,
             $resultMode !== '' ? $resultMode : null,
             $roundNo > 0 ? $roundNo : null,
+            true,
         );
 
         $scheduledResultTime = $this->resolveScheduledResultTime($draw);
