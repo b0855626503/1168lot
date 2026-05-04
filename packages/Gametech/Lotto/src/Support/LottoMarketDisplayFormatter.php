@@ -8,34 +8,36 @@ use Illuminate\Support\Carbon;
 class LottoMarketDisplayFormatter
 {
     /**
-     * Build a full status message, injecting "รอบที่ X" for yeekee draws.
+     * Build a full status message, injecting "รอบ X" for yeekee draws.
      * Non-yeekee format: "{name} งวดวันที่ {date} {suffix}"
-     * Yeekee format:     "{name} รอบที่ {roundNo} งวดวันที่ {date} {suffix}"
+     * Yeekee format:     "{name} รอบ {roundNo} งวดวันที่ {date} {suffix}"
      */
     public function formatStatusMessage(
         string $marketName,
         string $drawDate,
         string $eventSuffix,
         ?string $resultMode = null,
-        ?int $roundNo = null
+        ?int $roundNo = null,
+        bool $fullDate = false
     ): string {
-        return $this->formatDrawSubject($marketName, $drawDate, $resultMode, $roundNo).' '.$eventSuffix;
+        return $this->formatDrawSubject($marketName, $drawDate, $resultMode, $roundNo, $fullDate).' '.$eventSuffix;
     }
 
     /**
-     * Build the subject portion "{name} [รอบที่ X] งวดวันที่ {date}" without a status suffix.
+     * Build the subject portion "{name} [รอบ X] งวดวันที่ {date}" without a status suffix.
      */
     public function formatDrawSubject(
         string $marketName,
         string $drawDate,
         ?string $resultMode = null,
-        ?int $roundNo = null
+        ?int $roundNo = null,
+        bool $fullDate = false
     ): string {
         $name = trim($marketName) !== '' ? trim($marketName) : '-';
-        $dateLabel = $this->formatDrawDate($drawDate);
+        $dateLabel = $fullDate ? $drawDate : $this->formatDrawDate($drawDate);
 
         if ($this->shouldShowRoundBadge($resultMode, $roundNo)) {
-            return "{$name} รอบที่ {$roundNo} งวดวันที่ {$dateLabel}";
+            return "{$name} รอบ {$roundNo} งวดวันที่ {$dateLabel}";
         }
 
         return "{$name} งวดวันที่ {$dateLabel}";

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -21,6 +22,9 @@ class LottoTicketListChanged implements ShouldBroadcast
     public ?string $actorId;
     public ?string $amount;
 
+    public ?string $resultMode;
+    public ?int $roundNo;
+
     public function __construct(
         string $action,
         int $total,
@@ -28,7 +32,9 @@ class LottoTicketListChanged implements ShouldBroadcast
         ?string $drawDate = null,
         ?string $ownerId = null,
         ?string $actorId = null,
-        $amount = null
+        $amount = null,
+        ?string $resultMode = null,
+        ?int $roundNo = null
     )
     {
         $this->action = $action;
@@ -38,6 +44,8 @@ class LottoTicketListChanged implements ShouldBroadcast
         $this->ownerId = $this->normalizeNullableText($ownerId);
         $this->actorId = $this->normalizeNullableText($actorId);
         $this->amount = $this->normalizeAmount($amount);
+        $this->resultMode = $resultMode;
+        $this->roundNo = $roundNo;
 
         $baseMessage = match ($action) {
             'cancelled' => 'มีการคืนโพยหวย',
@@ -78,21 +86,14 @@ class LottoTicketListChanged implements ShouldBroadcast
 
     private function buildMessage(string $baseMessage): string
     {
-        $segments = [];
+        $formatter = new LottoMarketDisplayFormatter;
+        $subject = $formatter->formatDrawSubject((string) $this->marketName, (string) $this->drawDate, $this->resultMode, $this->roundNo, true);
 
-        if ($this->marketName !== null) {
-            $segments[] = $this->marketName;
-        }
-
-        if ($this->drawDate !== null) {
-            $segments[] = 'งวดวันที่ ' . $this->drawDate;
-        }
-
-        if ($segments === []) {
+        if ($subject === '-' || $subject === '- งวดวันที่ -' || $subject === '- งวดวันที่ ') {
             return $baseMessage;
         }
 
-        $message = $baseMessage . ': ' . implode(' ', $segments);
+        $message = $baseMessage . ': ' . $subject;
 
         if ($this->action === 'cancelled') {
             if ($this->ownerId !== null) {

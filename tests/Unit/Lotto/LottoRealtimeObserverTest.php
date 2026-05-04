@@ -41,7 +41,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->ticketListBroadcasts++;
             }
@@ -53,7 +55,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->publicActivityBroadcasts++;
             }
@@ -99,7 +103,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
@@ -111,7 +117,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
@@ -200,7 +208,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->ticketEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
@@ -212,7 +222,9 @@ class LottoRealtimeObserverTest extends TestCase
                 ?string $drawDate,
                 ?string $ownerId,
                 ?string $actorId,
-                ?float $amount
+                ?float $amount,
+                ?string $resultMode = null,
+                ?int $roundNo = null
             ): void {
                 $this->publicEvents[] = compact('action', 'total', 'marketName', 'drawDate', 'ownerId', 'actorId', 'amount');
             }
