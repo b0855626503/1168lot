@@ -2092,8 +2092,8 @@
 
                     const appendPayload = (key, value) => {
                         if (Array.isArray(value)) {
-                            value.forEach((item) => {
-                                appendPayload(`${key}[]`, item);
+                            value.forEach((item, index) => {
+                                appendPayload(`${key}[${index}]`, item);
                             });
                             return;
                         }
