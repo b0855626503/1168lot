@@ -29,6 +29,7 @@ class LottoWinningSettlementMaterializationTest extends TestCase
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
         Schema::dropIfExists('members');
+        Schema::dropIfExists('yeekee_rounds');
 
         parent::tearDown();
     }
@@ -79,6 +80,12 @@ class LottoWinningSettlementMaterializationTest extends TestCase
             $table->string('user_create')->nullable();
             $table->dateTime('date_create')->nullable();
             $table->dateTime('date_update')->nullable();
+        });
+
+        Schema::create('yeekee_rounds', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->integer('round_no');
         });
 
         Schema::create('members', function (Blueprint $table): void {

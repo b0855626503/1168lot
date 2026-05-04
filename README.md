@@ -1,4 +1,4 @@
-# 1168lot
+# 1168lot-test
 
 Laravel + Vue SPA + Lotto + Wallet + Payment + Admin
 

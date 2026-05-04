@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Observers;
 use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -114,8 +115,8 @@ class LottoTicketRealtimeObserver
         ?string $resultMode = null,
         ?int $roundNo = null
     ): string {
-        $formatter = new \Gametech\Lotto\Support\LottoMarketDisplayFormatter;
-        $subject = $formatter->formatDrawSubject((string) $marketName, (string) $drawDate, $resultMode, $roundNo);
+        $formatter = new LottoMarketDisplayFormatter;
+        $subject = $formatter->formatDrawSubject((string) $marketName, (string) $drawDate, $resultMode, $roundNo, true);
 
         if ($action === 'created') {
             $message = "มีรายการโพยหวยใหม่: {$subject}";
@@ -146,7 +147,7 @@ class LottoTicketRealtimeObserver
         }
 
         if ($action === 'resulted') {
-            return $formatter->formatStatusMessage((string) $marketName, (string) $drawDate, 'อัปเดตรายการโพยหลังออกผลแล้ว', $resultMode, $roundNo);
+            return $formatter->formatStatusMessage((string) $marketName, (string) $drawDate, 'อัปเดตรายการโพยหลังออกผลแล้ว', $resultMode, $roundNo, true);
         }
 
         return "มีการอัปเดตรายการโพยหวย: {$subject}";
@@ -157,15 +158,15 @@ class LottoTicketRealtimeObserver
      */
     private function resolveDrawContext(LottoTicket $ticket): array
     {
-        if (\Illuminate\Support\Facades\Schema::hasTable('yeekee_rounds')) {
-            $ticket->loadMissing(['draw.market', 'draw.yeekeeRound']);
-        } else {
-            $ticket->loadMissing(['draw.market']);
-        }
+        $ticket->loadMissing(['draw.market']);
 
         $marketName = trim((string) data_get($ticket, 'draw.market.name', ''));
         $drawDate = $ticket->draw?->draw_date?->format('Y-m-d');
         $resultMode = (string) data_get($ticket, 'draw.market.result_mode', '');
+
+        if ($resultMode === \Gametech\Lotto\Models\LotteryMarket::RESULT_MODE_YEEKEE) {
+            $ticket->loadMissing(['draw.yeekeeRound']);
+        }
 
         $roundNo = null;
         if ($resultMode === \Gametech\Lotto\Models\LotteryMarket::RESULT_MODE_YEEKEE) {

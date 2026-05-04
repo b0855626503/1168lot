@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -85,10 +86,10 @@ class LottoTicketListChanged implements ShouldBroadcast
 
     private function buildMessage(string $baseMessage): string
     {
-        $formatter = new \Gametech\Lotto\Support\LottoMarketDisplayFormatter;
-        $subject = $formatter->formatDrawSubject((string) $this->marketName, (string) $this->drawDate, $this->resultMode, $this->roundNo);
+        $formatter = new LottoMarketDisplayFormatter;
+        $subject = $formatter->formatDrawSubject((string) $this->marketName, (string) $this->drawDate, $this->resultMode, $this->roundNo, true);
 
-        if ($subject === '-' || $subject === '- งวดวันที่ -') {
+        if ($subject === '-' || $subject === '- งวดวันที่ -' || $subject === '- งวดวันที่ ') {
             return $baseMessage;
         }
 

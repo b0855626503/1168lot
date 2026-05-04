@@ -17,9 +17,10 @@ class LottoMarketDisplayFormatter
         string $drawDate,
         string $eventSuffix,
         ?string $resultMode = null,
-        ?int $roundNo = null
+        ?int $roundNo = null,
+        bool $fullDate = false
     ): string {
-        return $this->formatDrawSubject($marketName, $drawDate, $resultMode, $roundNo).' '.$eventSuffix;
+        return $this->formatDrawSubject($marketName, $drawDate, $resultMode, $roundNo, $fullDate).' '.$eventSuffix;
     }
 
     /**
@@ -29,10 +30,11 @@ class LottoMarketDisplayFormatter
         string $marketName,
         string $drawDate,
         ?string $resultMode = null,
-        ?int $roundNo = null
+        ?int $roundNo = null,
+        bool $fullDate = false
     ): string {
         $name = trim($marketName) !== '' ? trim($marketName) : '-';
-        $dateLabel = $this->formatDrawDate($drawDate);
+        $dateLabel = $fullDate ? $drawDate : $this->formatDrawDate($drawDate);
 
         if ($this->shouldShowRoundBadge($resultMode, $roundNo)) {
             return "{$name} รอบที่ {$roundNo} งวดวันที่ {$dateLabel}";
