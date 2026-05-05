@@ -62,6 +62,51 @@ class ArchiveLottoRiskSnapshotsCommandTest extends TestCase
         $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
+    public function test_delete_source_only_deletes_ids_confirmed_in_archive(): void
+    {
+        $this->seedSnapshotRows();
+
+        DB::table('lotto_dashboard_risk_snapshot_archive')->insert([
+            'id' => 1,
+            'web_code' => 'web1',
+            'market_id' => 10,
+            'round_id' => 100,
+            'bet_type' => 'straight',
+            'number' => '12',
+            'snapshot_at' => now()->subDays(10)->toDateTimeString(),
+            'stake_total' => 999,
+            'payout_if_hit' => 999,
+            'liability' => 999,
+            'archived_at' => now()->subDays(9)->toDateTimeString(),
+            'created_at' => now()->subDays(10)->toDateTimeString(),
+            'updated_at' => now()->subDays(10)->toDateTimeString(),
+        ]);
+
+        DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->update([
+            'snapshot_at' => now()->subDays(10)->toDateTimeString(),
+        ]);
+
+        DB::table('lotto_dashboard_risk_snapshot')->where('id', 2)->update([
+            'snapshot_at' => now()->subDays(10)->toDateTimeString(),
+        ]);
+
+        DB::table('lotto_dashboard_risk_snapshot_archive')->where('id', 2)->delete();
+
+        $this->artisan('dashboard:lotto-risk-archive --days=7 --chunk=1 --delete-source')
+            ->expectsOutputToContain('batch=')
+            ->assertExitCode(0);
+
+        $this->assertNull(
+            DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->first(),
+            'source row id=1 should be deleted because archive row exists'
+        );
+        $this->assertNull(
+            DB::table('lotto_dashboard_risk_snapshot')->where('id', 2)->first(),
+            'source row id=2 should be deleted only after archive row confirmed in subsequent batch'
+        );
+        $this->assertSame(2, DB::table('lotto_dashboard_risk_snapshot_archive')->count());
+    }
+
     public function test_invalid_days_option_is_rejected(): void
     {
         $this->artisan('dashboard:lotto-risk-archive --dry-run --days=0')

@@ -162,10 +162,21 @@ class ArchiveLottoRiskSnapshotsCommand extends Command
             $archivedThisBatch = (int) DB::table('lotto_dashboard_risk_snapshot_archive')->insertOrIgnore($archiveRows);
 
             $deletedThisBatch = 0;
+            $skippedDeleteThisBatch = 0;
             if ($deleteSource) {
-                $deletedThisBatch = (int) DB::table('lotto_dashboard_risk_snapshot')
+                $confirmedArchivedIds = DB::table('lotto_dashboard_risk_snapshot_archive')
                     ->whereIn('id', $ids)
-                    ->delete();
+                    ->pluck('id')
+                    ->map(static fn ($id): int => (int) $id)
+                    ->all();
+
+                if (! empty($confirmedArchivedIds)) {
+                    $deletedThisBatch = (int) DB::table('lotto_dashboard_risk_snapshot')
+                        ->whereIn('id', $confirmedArchivedIds)
+                        ->delete();
+                }
+
+                $skippedDeleteThisBatch = count($ids) - count($confirmedArchivedIds);
             }
 
             $totalArchived += $archivedThisBatch;
@@ -173,10 +184,11 @@ class ArchiveLottoRiskSnapshotsCommand extends Command
             $batchNumber++;
 
             $this->line(sprintf(
-                'batch=%d archived=%d deleted_source=%d cutoff=%s',
+                'batch=%d archived=%d deleted_source=%d skipped_delete=%d cutoff=%s',
                 $batchNumber,
                 $archivedThisBatch,
                 $deletedThisBatch,
+                $skippedDeleteThisBatch,
                 $cutoffText
             ));
 
