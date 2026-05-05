@@ -56,6 +56,12 @@ class LottoDashboardMetricConfig
 
     public static function riskSnapshotRetentionDays(): int
     {
-        return 90;
+        $days = (int) config('dashboard.lotto.risk_snapshot_retention_days', 7);
+
+        if ($days < 1 || $days > 90) {
+            return 7;
+        }
+
+        return $days;
     }
 }
