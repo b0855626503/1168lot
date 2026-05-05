@@ -511,7 +511,6 @@ class DashboardSummarySyncService
             }
         }
 
-        $currentRows = $this->filterRiskCurrentRowsBySemantics($currentRows);
         $currentRows = $this->deduplicateRiskCurrentRows($currentRows);
         if (empty($currentRows)) {
             return;
@@ -529,69 +528,6 @@ class DashboardSummarySyncService
                 $updateColumns
             );
         }
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function filterRiskCurrentRowsBySemantics(array $rows): array
-    {
-        if (empty($rows) || ! Schema::hasTable('lotto_draws')) {
-            return [];
-        }
-
-        $roundIds = collect($rows)
-            ->pluck('round_id')
-            ->map(static fn ($id): int => (int) $id)
-            ->filter(static fn (int $id): bool => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        if (empty($roundIds)) {
-            return [];
-        }
-
-        $drawQuery = DB::table('lotto_draws')
-            ->whereIn('id', $roundIds);
-        if (Schema::hasColumn('lotto_draws', 'result_at')) {
-            $drawQuery->whereNull('result_at');
-        }
-        if (Schema::hasColumn('lotto_draws', 'status')) {
-            $drawQuery->where('status', '<>', 'resulted');
-        }
-
-        $allowedRoundIds = $drawQuery
-            ->pluck('id')
-            ->map(static fn ($id): int => (int) $id)
-            ->unique()
-            ->all();
-
-        if (empty($allowedRoundIds)) {
-            return [];
-        }
-
-        $allowedRoundMap = array_fill_keys(array_map(static fn (int $id): string => (string) $id, $allowedRoundIds), true);
-        $filteredRows = [];
-
-        foreach ($rows as $row) {
-            $roundId = (int) ($row['round_id'] ?? 0);
-            if ($roundId <= 0 || ! isset($allowedRoundMap[(string) $roundId])) {
-                continue;
-            }
-
-            $stakeTotal = (float) ($row['stake_total'] ?? 0);
-            $payoutIfHit = (float) ($row['payout_if_hit'] ?? 0);
-            $liability = (float) ($row['liability'] ?? 0);
-            if ($stakeTotal <= 0 && $payoutIfHit <= 0 && $liability <= 0) {
-                continue;
-            }
-
-            $filteredRows[] = $row;
-        }
-
-        return $filteredRows;
     }
 
     /**
