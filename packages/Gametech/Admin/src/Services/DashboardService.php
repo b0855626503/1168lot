@@ -2916,6 +2916,10 @@ class DashboardService
             'last_snapshot_at' => '',
         ];
 
+        if ($this->shouldReadLottoRiskFromCurrent()) {
+            return $this->lottoRiskSummaryFromCurrent($startDate, $endDate, $marketType, $defaults);
+        }
+
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return $defaults;
         }
@@ -3212,6 +3216,10 @@ class DashboardService
      */
     private function lottoTopRiskyNumbersSummary(string $startDate, string $endDate, int $limit = 10, ?string $marketType = null): array
     {
+        if ($this->shouldReadLottoRiskFromCurrent()) {
+            return $this->lottoTopRiskyNumbersFromCurrent($startDate, $endDate, $limit, $marketType, 'range');
+        }
+
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return [];
         }
@@ -3321,6 +3329,10 @@ class DashboardService
      */
     private function lottoHighestRiskNumbersSummary(string $startDate, string $endDate, int $limit = 10, ?string $marketType = null): array
     {
+        if ($this->shouldReadLottoRiskFromCurrent()) {
+            return $this->lottoTopRiskyNumbersFromCurrent($startDate, $endDate, $limit, $marketType, 'peak');
+        }
+
         if (! $this->hasTable('lotto_dashboard_risk_aggregates')) {
             return [];
         }
@@ -3444,7 +3456,7 @@ class DashboardService
      * @param  Collection<int, array<string, mixed>>  $topRows
      * @return array<int, array<string, mixed>>
      */
-    private function hydrateLottoTopRiskyRows(Collection $topRows, string $mode): array
+    private function hydrateLottoTopRiskyRows(Collection $topRows, string $mode, bool $allowSnapshotLookup = true): array
     {
         $topKeys = $topRows
             ->map(static fn (array $row): string => (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? ''))
@@ -3529,7 +3541,8 @@ class DashboardService
         $marketRiskByKey = [];
         $roundRiskByKey = [];
         if (
-            $topKeys->isNotEmpty()
+            $allowSnapshotLookup
+            && $topKeys->isNotEmpty()
             && $roundIds->isNotEmpty()
             && $this->hasTable('lotto_dashboard_risk_snapshot')
             && $this->hasColumn('lotto_dashboard_risk_snapshot', 'round_id')
@@ -4996,6 +5009,226 @@ class DashboardService
         }
 
         return '0';
+    }
+
+    private function shouldReadLottoRiskFromCurrent(): bool
+    {
+        $source = strtolower(trim((string) config('dashboard.lotto_risk.read_source', 'current')));
+
+        return $source === 'current';
+    }
+
+    private function lottoRiskSummaryFromCurrent(string $startDate, string $endDate, ?string $marketType, array $defaults): array
+    {
+        $query = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($query === null) {
+            return $defaults;
+        }
+
+        $rows = $query->get([
+            'rc.number',
+            'rc.market_id',
+            'rc.round_id',
+            'rc.liability',
+            'rc.payout_if_hit',
+            'rc.snapshot_at',
+        ]);
+
+        if ($rows->isEmpty()) {
+            return $defaults;
+        }
+
+        $marketIds = [];
+        $roundIds = [];
+        $exposureTotal = 0.0;
+        $liabilityTotal = 0.0;
+        $liabilityMax = 0.0;
+        $lastSnapshotAt = '';
+        $riskByNumber = [];
+        $numberIds = [];
+
+        foreach ($rows as $row) {
+            $number = trim((string) ($row->number ?? ''));
+            if ($number === '') {
+                continue;
+            }
+
+            $marketIds[(string) ((int) ($row->market_id ?? 0))] = true;
+            $roundIds[(string) ((int) ($row->round_id ?? 0))] = true;
+            $numberIds[$number] = true;
+
+            $totalRisk = (float) ($row->liability ?? $row->payout_if_hit ?? 0);
+            $liabilityTotal += $totalRisk;
+            $exposureTotal += $totalRisk;
+            if ($totalRisk > $liabilityMax) {
+                $liabilityMax = $totalRisk;
+            }
+
+            $riskByNumber[$number] = round((float) ($riskByNumber[$number] ?? 0) + $totalRisk, 2);
+
+            $snapshotAt = (string) ($row->snapshot_at ?? '');
+            if ($snapshotAt !== '' && ($lastSnapshotAt === '' || $snapshotAt > $lastSnapshotAt)) {
+                $lastSnapshotAt = $snapshotAt;
+            }
+        }
+
+        $maxRiskNumber = '';
+        $maxRiskPerNumber = 0.0;
+        foreach ($riskByNumber as $number => $riskValue) {
+            if ($riskValue > $maxRiskPerNumber || ($riskValue === $maxRiskPerNumber && ($maxRiskNumber === '' || strcmp($number, $maxRiskNumber) < 0))) {
+                $maxRiskPerNumber = $riskValue;
+                $maxRiskNumber = (string) $number;
+            }
+        }
+
+        $roundedExposureTotal = round($exposureTotal, 2);
+        $roundedLiabilityTotal = round($liabilityTotal, 2);
+
+        return [
+            'markets' => count($marketIds),
+            'rounds' => count($roundIds),
+            'numbers' => count($numberIds),
+            'exposure_total' => $roundedExposureTotal,
+            'liability_total' => $roundedLiabilityTotal,
+            'liability_max' => round($liabilityMax, 2),
+            'max_risk_per_number' => round($maxRiskPerNumber, 2),
+            'max_risk_number' => $maxRiskNumber,
+            'liability_total_deprecated' => true,
+            'liability_total_same_as_exposure' => abs($roundedExposureTotal - $roundedLiabilityTotal) < 0.00001,
+            'deprecated_fields' => ['liability_total'],
+            'last_snapshot_at' => $lastSnapshotAt,
+        ];
+    }
+
+    private function lottoTopRiskyNumbersFromCurrent(
+        string $startDate,
+        string $endDate,
+        int $limit,
+        ?string $marketType,
+        string $summaryMode
+    ): array {
+        $query = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($query === null) {
+            return [];
+        }
+
+        $limit = max(1, min(100, $limit));
+        $rows = $query->get([
+            'rc.number',
+            'rc.bet_type',
+            'rc.market_id',
+            'rc.round_id',
+            'rc.stake_total',
+            'rc.payout_if_hit',
+            'rc.liability',
+            'rc.snapshot_at',
+        ]);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $number = trim((string) ($row->number ?? ''));
+            $betType = trim((string) ($row->bet_type ?? ''));
+            if ($number === '' || $betType === '') {
+                continue;
+            }
+
+            $key = $betType.'|'.$number;
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'number' => $number,
+                    'bet_type' => $betType,
+                    'summary_mode' => $summaryMode,
+                    'source_summary_date' => '',
+                    'source_date_start' => $startDate,
+                    'source_date_end' => $endDate,
+                    'snapshot_at' => '',
+                    'stake_total_raw' => 0.0,
+                    'exposure_total_raw' => 0.0,
+                    'liability_total_raw' => 0.0,
+                    'market_ids' => [],
+                    'round_ids' => [],
+                ];
+            }
+
+            $stakeTotal = (float) ($row->stake_total ?? 0);
+            $totalRisk = (float) ($row->liability ?? $row->payout_if_hit ?? 0);
+            $snapshotAt = (string) ($row->snapshot_at ?? '');
+
+            $grouped[$key]['stake_total_raw'] = round((float) $grouped[$key]['stake_total_raw'] + $stakeTotal, 2);
+            $grouped[$key]['exposure_total_raw'] = round((float) $grouped[$key]['exposure_total_raw'] + $totalRisk, 2);
+            $grouped[$key]['liability_total_raw'] = round((float) $grouped[$key]['liability_total_raw'] + $totalRisk, 2);
+            $grouped[$key]['market_ids'][(string) ((int) ($row->market_id ?? 0))] = true;
+            $grouped[$key]['round_ids'][(string) ((int) ($row->round_id ?? 0))] = true;
+
+            if ($snapshotAt !== '' && ($grouped[$key]['snapshot_at'] === '' || $snapshotAt > (string) $grouped[$key]['snapshot_at'])) {
+                $grouped[$key]['snapshot_at'] = $snapshotAt;
+            }
+        }
+
+        $topRows = collect(array_values($grouped))
+            ->sortBy([
+                ['exposure_total_raw', 'desc'],
+                ['stake_total_raw', 'desc'],
+                ['number', 'asc'],
+                ['bet_type', 'asc'],
+            ])
+            ->take($limit)
+            ->values();
+
+        if ($topRows->isEmpty()) {
+            return [];
+        }
+
+        return $this->hydrateLottoTopRiskyRows($topRows, $summaryMode, false);
+    }
+
+    private function lottoRiskCurrentBaseQuery(?string $marketType)
+    {
+        if (
+            ! $this->hasTable('lotto_dashboard_risk_current')
+            || ! $this->hasTable('lotto_draws')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'web_code')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'market_id')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'round_id')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'bet_type')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'number')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'stake_total')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'payout_if_hit')
+            || ! $this->hasColumn('lotto_dashboard_risk_current', 'liability')
+        ) {
+            return null;
+        }
+
+        $query = DB::table('lotto_dashboard_risk_current as rc')
+            ->join('lotto_draws as d', 'd.id', '=', 'rc.round_id')
+            ->where('rc.web_code', $this->dashboardWebCode())
+            ->where(function ($row): void {
+                $row->where('rc.stake_total', '>', 0)
+                    ->orWhere('rc.payout_if_hit', '>', 0)
+                    ->orWhere('rc.liability', '>', 0);
+            });
+
+        if ($this->hasColumn('lotto_draws', 'result_at')) {
+            $query->whereNull('d.result_at');
+        }
+        if ($this->hasColumn('lotto_draws', 'status')) {
+            $query->where('d.status', '<>', 'resulted');
+        }
+
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
+        if ($allowedMarketIds !== null) {
+            $allowedMarketIdList = array_keys($allowedMarketIds);
+            if (empty($allowedMarketIdList)) {
+                return null;
+            }
+            $query->whereIn('rc.market_id', $allowedMarketIdList);
+        }
+
+        return $query;
     }
 
     private function hasTable(string $table): bool

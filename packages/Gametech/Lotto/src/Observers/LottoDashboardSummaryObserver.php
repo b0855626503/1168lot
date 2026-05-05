@@ -70,7 +70,7 @@ class LottoDashboardSummaryObserver
                 LottoDashboardMetricConfig::SECTION_BET_TYPE_INSIGHTS,
             ];
         } elseif ($model instanceof LottoNumberExposure) {
-            if ($action === 'updated' && !$model->wasChanged('sold_amount')) {
+            if ($action === 'updated' && ! $model->wasChanged('sold_amount')) {
                 return;
             }
 
@@ -80,7 +80,7 @@ class LottoDashboardSummaryObserver
             ]);
             $sections = [LottoDashboardMetricConfig::SECTION_RISK];
         } elseif ($model instanceof LottoDraw) {
-            if ($action === 'updated' && !$model->wasChanged(['status', 'result_at', 'result_number'])) {
+            if ($action === 'updated' && ! $model->wasChanged(['status', 'result_at', 'result_number'])) {
                 return;
             }
 
@@ -99,12 +99,38 @@ class LottoDashboardSummaryObserver
                 LottoDashboardMetricConfig::SECTION_PRODUCT,
                 LottoDashboardMetricConfig::SECTION_RISK,
             ];
+
+            $drawSourceType = $this->resolveDrawSourceType($model);
+            if ($drawSourceType !== null) {
+                $payload['source_type_override'] = $drawSourceType;
+            }
         } else {
             return;
         }
 
-        DB::afterCommit(function () use ($payload, $sections): void {
-            app(DashboardSummarySyncService::class)->dispatchForModelChange('lotto', $payload, $sections);
+        $sourceTypeOverride = $payload['source_type_override'] ?? null;
+        unset($payload['source_type_override']);
+
+        DB::afterCommit(function () use ($payload, $sections, $sourceTypeOverride): void {
+            app(DashboardSummarySyncService::class)->dispatchForModelChange('lotto', $payload, $sections, $sourceTypeOverride);
         });
+    }
+
+    private function resolveDrawSourceType(LottoDraw $draw): ?string
+    {
+        $status = strtolower((string) $draw->status);
+        $originalStatus = strtolower((string) $draw->getOriginal('status'));
+        $resultAt = $draw->result_at;
+        $originalResultAt = $draw->getOriginal('result_at');
+
+        if (($status === 'resulted' && $originalStatus !== 'resulted') || (! empty($resultAt) && empty($originalResultAt))) {
+            return 'draw_resulted';
+        }
+
+        if ($status === 'closed' && $originalStatus !== 'closed' && empty($resultAt)) {
+            return 'draw_closed';
+        }
+
+        return null;
     }
 }
