@@ -20,6 +20,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         parent::setUp();
 
         config()->set('cache.default', 'array');
+        config()->set('dashboard.lotto_risk.read_source', 'snapshot');
         Cache::flush();
 
         Schema::create('configs', function (Blueprint $table): void {
@@ -54,6 +55,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->dropTableIfExists('lotto_dashboard_bet_type_summary_daily');
         $this->dropTableIfExists('lotto_dashboard_risk_aggregates');
         $this->dropTableIfExists('lotto_dashboard_risk_snapshot');
+        $this->dropTableIfExists('lotto_dashboard_risk_current');
         $this->dropTableIfExists('lotto_dashboard_summary_daily');
         $this->dropTableIfExists('lotto_number_exposures');
         $this->dropTableIfExists('lotto_draw_bet_settings');
@@ -559,6 +561,124 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $normalSummary = $method->invoke($this->service, '2026-04-10', '2026-04-10', 'normal');
         $this->assertSame(1042000.0, (float) $normalSummary['exposure_total']);
         $this->assertSame(2, $normalSummary['numbers']);
+    }
+
+    public function test_lotto_risk_summary_reads_from_current_table_and_filters_non_meaningful_or_resulted_rows(): void
+    {
+        config()->set('dashboard.lotto_risk.read_source', 'current');
+
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id');
+            $table->string('status')->nullable();
+            $table->timestamp('result_at')->nullable();
+        });
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'Yeekee Market', 'result_mode' => 'yeekee'],
+        ]);
+        DB::table('lotto_draws')->insert([
+            ['id' => 10, 'market_id' => 1, 'status' => 'open', 'result_at' => null],
+            ['id' => 11, 'market_id' => 2, 'status' => 'closed', 'result_at' => null],
+            ['id' => 12, 'market_id' => 1, 'status' => 'resulted', 'result_at' => '2026-04-10 10:00:00'],
+        ]);
+        DB::table('lotto_dashboard_risk_current')->insert([
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'top_3', 'number' => '587', 'stake_total' => 100, 'payout_if_hit' => 300000, 'liability' => 300000, 'snapshot_at' => '2026-04-10 10:00:00'],
+            ['web_code' => $webCode, 'market_id' => 2, 'round_id' => 11, 'bet_type' => 'top_3', 'number' => '587', 'stake_total' => 50, 'payout_if_hit' => 120000, 'liability' => 120000, 'snapshot_at' => '2026-04-10 10:05:00'],
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 12, 'bet_type' => 'top_3', 'number' => '111', 'stake_total' => 90, 'payout_if_hit' => 200000, 'liability' => 200000, 'snapshot_at' => '2026-04-10 10:10:00'],
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'top_2', 'number' => '222', 'stake_total' => 0, 'payout_if_hit' => 0, 'liability' => 0, 'snapshot_at' => '2026-04-10 10:10:00'],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoRiskSummaryMetrics');
+        $method->setAccessible(true);
+        $summary = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $this->assertSame(1, $summary['numbers']);
+        $this->assertSame(2, $summary['markets']);
+        $this->assertSame(2, $summary['rounds']);
+        $this->assertSame(420000.0, (float) $summary['exposure_total']);
+        $this->assertSame(420000.0, (float) $summary['liability_total']);
+        $this->assertSame(420000.0, (float) $summary['max_risk_per_number']);
+        $this->assertSame('587', $summary['max_risk_number']);
+        $this->assertSame('2026-04-10 10:05:00', $summary['last_snapshot_at']);
+    }
+
+    public function test_lotto_top_risky_numbers_current_mode_works_without_snapshot_table(): void
+    {
+        config()->set('dashboard.lotto_risk.read_source', 'current');
+
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id');
+            $table->date('draw_date')->nullable();
+            $table->string('status')->nullable();
+            $table->timestamp('result_at')->nullable();
+            $table->text('result_number')->nullable();
+            $table->timestamp('result_applied_at')->nullable();
+            $table->timestamp('close_at')->nullable();
+            $table->timestamp('open_at')->nullable();
+        });
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+            ['id' => 2, 'name' => 'Yeekee Market', 'result_mode' => 'yeekee'],
+        ]);
+        DB::table('lotto_draws')->insert([
+            ['id' => 101, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'closed', 'result_at' => null, 'result_number' => null, 'result_applied_at' => null, 'close_at' => '2026-04-10 11:00:00', 'open_at' => '2026-04-10 08:00:00'],
+            ['id' => 102, 'market_id' => 2, 'draw_date' => '2026-04-10', 'status' => 'open', 'result_at' => null, 'result_number' => null, 'result_applied_at' => null, 'close_at' => '2026-04-10 12:00:00', 'open_at' => '2026-04-10 09:00:00'],
+        ]);
+        DB::table('lotto_dashboard_risk_current')->insert([
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 101, 'bet_type' => 'top_3', 'number' => '587', 'stake_total' => 100, 'payout_if_hit' => 300000, 'liability' => 300000, 'snapshot_at' => '2026-04-10 10:00:00'],
+            ['web_code' => $webCode, 'market_id' => 2, 'round_id' => 102, 'bet_type' => 'top_2', 'number' => '11', 'stake_total' => 20, 'payout_if_hit' => 50000, 'liability' => 50000, 'snapshot_at' => '2026-04-10 10:02:00'],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoTopRiskyNumbersSummary');
+        $method->setAccessible(true);
+        $rows = $method->invoke($this->service, '2026-04-10', '2026-04-10', 10);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame('587', $rows[0]['number']);
+        $this->assertSame('range', $rows[0]['summary_mode']);
+        $this->assertSame(300000.0, (float) $rows[0]['exposure_total_raw']);
+        $this->assertCount(1, $rows[0]['rounds']);
+        $this->assertSame('closed', $rows[0]['rounds'][0]['status']);
     }
 
     public function test_lotto_top_risky_numbers_sorted_by_exposure_and_validates_587_case(): void

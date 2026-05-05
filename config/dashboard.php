@@ -3,5 +3,6 @@
 return [
     'lotto_risk' => [
         'threshold' => (float) env('DASHBOARD_LOTTO_RISK_THRESHOLD', 1000000),
+        'read_source' => env('LOTTO_DASHBOARD_RISK_READ_SOURCE', 'current'),
     ],
 ];
