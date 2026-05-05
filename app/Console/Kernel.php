@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Console\Commands\BackfillLottoBetConfirmedAtCommand;
+use App\Console\Commands\BackfillLottoRiskCurrentCommand;
 use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
 use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
@@ -37,11 +38,6 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
-    /**
-     * The Artisan commands provided by your application.
-     *
-     * @var array
-     */
     protected $commands = [
         CheckPayment::class,
         TopupPayment::class,
@@ -71,89 +67,50 @@ class Kernel extends ConsoleKernel
         NewICV2::class,
         RebuildLottoDashboardSummaryCommand::class,
         BackfillLottoBetConfirmedAtCommand::class,
+        BackfillLottoRiskCurrentCommand::class,
         CleanupLottoRiskSnapshotsCommand::class,
     ];
 
-    /**
-     * Define the application's command schedule.
-     *
-     * @return void
-     */
     protected function schedule(Schedule $schedule)
     {
         $relayRuntime = $this->app->make(LotteryRelayRuntime::class);
         $yesterday = now()->subDays(1)->toDateString();
 
-        //        $schedule->command('cashback:start')
-        //            ->weeklyOn(1, '0:05')
-        //            ->runInBackground();
-        //
-        //        $schedule->command('clear:cashback')
-        //            ->weeklyOn(2, '0:00')
-        //            ->runInBackground();
-
-        //        $schedule->command('newcashback2:list')->dailyAt('00:05');
-
-        //        $schedule->command('newic2:list')->dailyAt('12:00');
-
         $schedule->command('cleanup:inactive-users')->everyFiveMinutes();
-
-        //        $schedule->command('cleardb:start')->dailyAt('13:00')->runInBackground();
-
         $schedule->command('dailystat:check '.$yesterday)->dailyAt('00:05')->runInBackground();
-
         $schedule->command('lada-cache:flush')->dailyAt('12:30');
         $schedule->command('lada-cache:flush')->dailyAt('00:18');
         $schedule->command('optimize:clear')->dailyAt('12:30');
         $schedule->command('queue:restart')->everyFourHours();
         $schedule->command('migrate --force')->dailyAt('23:28');
-        //        $schedule->command('postupdate:work')->everyFiveMinutes();
 
         $schedule->command('payment:get kbank')->everyMinute();
-        //            ->after(function () {
-        // //                $this->call('payment:get scb');
-        // //                $this->call('payment:get gsb');
-        // //                $this->call('payment:get ktb');
-        //                $this->call('payment:check tw 10');
-        // //                $this->call('payment:check bay 10');
-        //                $this->call('payment:check scb 10');
-        //                $this->call('payment:check kbank 10');
-        // //                $this->call('payment:check ttb 10');
-        //            });
 
-        //        $schedule->command('payment:emp-topup 50')->everyMinute();
-
-        // Keep draw status in sync even when nobody opens admin draw page.
         $schedule->command('lotto:sync-draw-statuses')
             ->everyMinute()
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Lotto auto draw bootstrap from market schedule (manual-safe, idempotent).
         $schedule->command('lotto:generate-auto-draws --days=1')
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Yeekee daily generate: build tomorrow draws+rounds from config.
         $schedule->command('lotto:generate-yeekee-draws --date=tomorrow')
             ->dailyAt('00:05')
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Yeekee top-up: ensure forward inventory is always available.
         $schedule->command('lotto:generate-yeekee-draws --window=+6h')
             ->everyFifteenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Yeekee result orchestrator: compute or void/refund by round activity policy.
         $schedule->command('lotto:settle-yeekee-rounds --limit=200')
             ->everyMinute()
             ->withoutOverlapping()
             ->runInBackground();
 
-        // End-to-end auto-result pipeline runner (resolve->build->fetch->parse->map->validate->apply).
         $schedule->command('lotto:fetch-auto-results --limit=100')
             ->everyMinute()
             ->when(static fn (): bool => $relayRuntime->shouldRunLegacyAutoResultSweep())
@@ -166,32 +123,23 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Clone-mode fallback: pull Thai lottery results when primary has no relay to offer.
         $schedule->command('lotto:clone-auto-pull-thai-results')
             ->everyMinute()
             ->when(static fn (): bool => $relayRuntime->isClone())
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Non hot-path retention cleanup for browser-runtime artifacts.
         $schedule->command('lotto:cleanup-browser-runtime-artifacts')
             ->dailyAt('03:55')
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Non hot-path retention cleanup for detailed lotto risk snapshots.
         $schedule->command('dashboard:lotto-risk-retention --days=90')
             ->dailyAt('03:40')
             ->withoutOverlapping()
             ->runInBackground();
-
     }
 
-    /**
-     * Register the commands for the application.
-     *
-     * @return void
-     */
     protected function commands()
     {
         $this->load(__DIR__.'/Commands');
