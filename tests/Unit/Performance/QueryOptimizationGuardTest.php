@@ -170,8 +170,6 @@ class QueryOptimizationGuardTest extends TestCase
         $this->assertStringContainsString('idx_lotto_dash_risk_snap_snapshot_id', $contents);
         $this->assertStringContainsString("['round_id', 'snapshot_at', 'web_code', 'market_id', 'bet_type', 'number']", $contents);
         $this->assertStringContainsString('idx_lotto_dash_risk_snap_round_snapshot_key', $contents);
-        $this->assertStringContainsString("dropIndex('idx_lotto_dashboard_risk_current_web_market_round')", $contents);
-        $this->assertStringContainsString("dropIndex('idx_lotto_dashboard_risk_current_web_market_round_type')", $contents);
         $this->assertStringContainsString("['web_code', 'round_id', 'market_id']", $contents);
         $this->assertStringContainsString('idx_lotto_dash_risk_cur_web_round_market', $contents);
     }

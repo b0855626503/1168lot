@@ -31,18 +31,6 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('lotto_dashboard_risk_current')) {
-            if ($this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dashboard_risk_current_web_market_round')) {
-                Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
-                    $table->dropIndex('idx_lotto_dashboard_risk_current_web_market_round');
-                });
-            }
-
-            if ($this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dashboard_risk_current_web_market_round_type')) {
-                Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
-                    $table->dropIndex('idx_lotto_dashboard_risk_current_web_market_round_type');
-                });
-            }
-
             if (! $this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dash_risk_cur_web_round_market')) {
                 Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
                     $table->index(['web_code', 'round_id', 'market_id'], 'idx_lotto_dash_risk_cur_web_round_market');
@@ -75,18 +63,6 @@ return new class extends Migration
             if ($this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dash_risk_cur_web_round_market')) {
                 Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
                     $table->dropIndex('idx_lotto_dash_risk_cur_web_round_market');
-                });
-            }
-
-            if (! $this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dashboard_risk_current_web_market_round')) {
-                Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
-                    $table->index(['web_code', 'market_id', 'round_id'], 'idx_lotto_dashboard_risk_current_web_market_round');
-                });
-            }
-
-            if (! $this->indexExists('lotto_dashboard_risk_current', 'idx_lotto_dashboard_risk_current_web_market_round_type')) {
-                Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
-                    $table->index(['web_code', 'market_id', 'round_id', 'bet_type'], 'idx_lotto_dashboard_risk_current_web_market_round_type');
                 });
             }
         }
