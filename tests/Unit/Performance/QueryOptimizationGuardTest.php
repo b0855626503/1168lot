@@ -161,6 +161,19 @@ class QueryOptimizationGuardTest extends TestCase
         $this->assertStringContainsString('idx_bp_tx_hash_account_code', $contents);
     }
 
+    public function test_lotto_risk_index_strategy_covers_cleanup_backfill_and_read_path(): void
+    {
+        $contents = file_get_contents($this->rootPath.'/database/migrations/2026_05_06_051921_optimize_lotto_dashboard_risk_indexes_for_cleanup_and_read.php');
+
+        $this->assertNotFalse($contents);
+        $this->assertStringContainsString("['snapshot_at', 'id']", $contents);
+        $this->assertStringContainsString('idx_lotto_dash_risk_snap_snapshot_id', $contents);
+        $this->assertStringContainsString("['round_id', 'snapshot_at', 'web_code', 'market_id', 'bet_type', 'number']", $contents);
+        $this->assertStringContainsString('idx_lotto_dash_risk_snap_round_snapshot_key', $contents);
+        $this->assertStringContainsString("['web_code', 'round_id', 'market_id']", $contents);
+        $this->assertStringContainsString('idx_lotto_dash_risk_cur_web_round_market', $contents);
+    }
+
     public function test_member_balance_uses_lightweight_withdraw_aggregation(): void
     {
         $repositoryContents = file_get_contents($this->rootPath.'/packages/Gametech/Member/src/Repositories/MemberRepository.php');

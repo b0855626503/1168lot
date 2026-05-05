@@ -104,6 +104,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         if ($isDryRun) {
             $sampleIds = DB::table('lotto_dashboard_risk_snapshot')
                 ->where('snapshot_at', '<', $cutoffText)
+                ->orderBy('snapshot_at')
                 ->orderBy('id')
                 ->limit($chunkSize)
                 ->pluck('id');
@@ -137,6 +138,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
 
             $ids = DB::table('lotto_dashboard_risk_snapshot')
                 ->where('snapshot_at', '<', $cutoffText)
+                ->orderBy('snapshot_at')
                 ->orderBy('id')
                 ->limit($chunkSize)
                 ->pluck('id');
