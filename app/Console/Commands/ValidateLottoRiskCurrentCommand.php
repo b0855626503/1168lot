@@ -3,116 +3,78 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class ValidateLottoRiskCurrentCommand extends Command
 {
     protected $signature = 'dashboard:lotto-risk-current-validate
-        {--web-code= : Limit validation by web code}
-        {--market-id= : Limit validation by market ID}
-        {--round-id= : Limit validation by round ID}
-        {--limit=100 : Max mismatch rows to display}
-        {--tolerance=0.01 : Decimal comparison tolerance}';
+        {--web-code= : Filter by web code}
+        {--market-id= : Filter by market ID}
+        {--round-id= : Filter by round ID}
+        {--limit=100 : Max sample rows to display per check}
+        {--compare-snapshot : Opt-in scoped snapshot comparison (requires --web-code, --market-id, or --round-id)}
+        {--tolerance=0.01 : Decimal tolerance for snapshot amount comparison}';
 
-    protected $description = 'Validate lotto dashboard current risk rows against latest detailed risk snapshots';
+    protected $description = 'Current Exposure Validation Gate — validates lotto_dashboard_risk_current directly';
 
     public function handle(): int
     {
-        if (! Schema::hasTable('lotto_dashboard_risk_snapshot')) {
-            $this->warn('table lotto_dashboard_risk_snapshot not found');
+        if (! Schema::hasTable('lotto_dashboard_risk_current')) {
+            $this->error('table lotto_dashboard_risk_current not found');
 
             return 1;
         }
 
-        if (! Schema::hasTable('lotto_dashboard_risk_current')) {
-            $this->warn('table lotto_dashboard_risk_current not found');
+        if ($this->option('compare-snapshot') && ! $this->hasScopeFilter()) {
+            $this->error('--compare-snapshot requires at least one scope filter: --web-code, --market-id, or --round-id');
 
             return 1;
         }
 
         $limit = max(1, (int) $this->option('limit'));
-        $tolerance = max(0.0, (float) $this->option('tolerance'));
+        $failed = false;
 
-        $snapshotKeys = DB::table('lotto_dashboard_risk_snapshot as rs')
-            ->select([
-                'rs.web_code',
-                'rs.market_id',
-                'rs.round_id',
-                'rs.bet_type',
-                'rs.number',
-            ])
-            ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number')
-            ->orderBy('rs.web_code')
-            ->orderBy('rs.market_id')
-            ->orderBy('rs.round_id')
-            ->orderBy('rs.bet_type')
-            ->orderBy('rs.number');
-        $this->applyFilters($snapshotKeys, 'rs');
+        // 1. Duplicate dimension keys
+        $duplicates = $this->countDuplicateCurrentRows();
+        $this->line("duplicate_current_keys = {$duplicates}");
 
-        $checked = 0;
-        $missingCurrent = 0;
-        $mismatch = 0;
-        $samples = [];
-
-        foreach ($snapshotKeys->cursor() as $key) {
-            $latest = DB::table('lotto_dashboard_risk_snapshot')
-                ->where('web_code', $key->web_code)
-                ->where('market_id', $key->market_id)
-                ->where('round_id', $key->round_id)
-                ->where('bet_type', $key->bet_type)
-                ->where('number', $key->number)
-                ->orderByDesc('snapshot_at')
-                ->orderByDesc('id')
-                ->first();
-
-            if ($latest === null) {
-                continue;
-            }
-
-            $current = DB::table('lotto_dashboard_risk_current')
-                ->where('web_code', $key->web_code)
-                ->where('market_id', $key->market_id)
-                ->where('round_id', $key->round_id)
-                ->where('bet_type', $key->bet_type)
-                ->where('number', $key->number)
-                ->first();
-
-            $checked++;
-
-            if ($current === null) {
-                $missingCurrent++;
-                $this->pushSample($samples, $limit, 'missing_current', $latest, null);
-                continue;
-            }
-
-            $diffs = $this->diffRows($latest, $current, $tolerance);
-            if ($diffs !== []) {
-                $mismatch++;
-                $this->pushSample($samples, $limit, implode(',', $diffs), $latest, $current);
-            }
+        if ($duplicates > 0) {
+            $failed = true;
+            $this->warn('Sample duplicate current keys:');
+            $this->displayDuplicateSamples($limit);
         }
 
-        $duplicateCurrent = $this->countDuplicateCurrentRows();
+        // 2. Invalid draw rows (missing draw, resulted draw, result_at set)
+        $invalidDrawRows = Schema::hasTable('lotto_draws') ? $this->countInvalidDrawRows() : 0;
+        $this->line("invalid_draw_rows = {$invalidDrawRows}");
 
-        $this->table(
-            ['metric', 'value'],
-            [
-                ['checked_latest_snapshot_keys', $checked],
-                ['missing_current', $missingCurrent],
-                ['value_mismatch', $mismatch],
-                ['duplicate_current_keys', $duplicateCurrent],
-            ]
-        );
-
-        if ($samples !== []) {
-            $this->table(
-                ['type', 'web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                $samples
-            );
+        if ($invalidDrawRows > 0) {
+            $failed = true;
+            $this->warn('Sample invalid draw rows:');
+            $this->displayInvalidDrawSamples($limit);
         }
 
-        if ($missingCurrent > 0 || $mismatch > 0 || $duplicateCurrent > 0) {
+        // 3. Zero-risk rows
+        $zeroRiskRows = $this->countZeroRiskRows();
+        $this->line("zero_risk_rows = {$zeroRiskRows}");
+
+        if ($zeroRiskRows > 0) {
+            $failed = true;
+            $this->warn('Sample zero-risk rows:');
+            $this->displayZeroRiskSamples($limit);
+        }
+
+        // 4. Optional scoped snapshot comparison
+        $snapshotChecked = $this->runSnapshotComparison($limit, $failed);
+        $this->line("snapshot_compare_checked = {$snapshotChecked}");
+
+        // Summary
+        $result = $failed ? 'failed' : 'passed';
+        $this->line("validation_result = {$result}");
+
+        if ($failed) {
             $this->error('lotto risk current validation failed');
 
             return 1;
@@ -123,78 +85,200 @@ class ValidateLottoRiskCurrentCommand extends Command
         return 0;
     }
 
-    private function applyFilters($query, string $alias): void
+    private function hasScopeFilter(): bool
     {
-        $webCode = trim((string) ($this->option('web-code') ?? ''));
-        if ($webCode !== '') {
-            $query->where("{$alias}.web_code", $webCode);
-        }
-
-        $marketId = trim((string) ($this->option('market-id') ?? ''));
-        if ($marketId !== '') {
-            $query->where("{$alias}.market_id", (int) $marketId);
-        }
-
-        $roundId = trim((string) ($this->option('round-id') ?? ''));
-        if ($roundId !== '') {
-            $query->where("{$alias}.round_id", (int) $roundId);
-        }
-    }
-
-    private function diffRows(object $latest, object $current, float $tolerance): array
-    {
-        $diffs = [];
-
-        foreach (['stake_total', 'payout_if_hit', 'liability'] as $field) {
-            if (abs((float) $latest->{$field} - (float) $current->{$field}) > $tolerance) {
-                $diffs[] = $field;
-            }
-        }
-
-        if ((string) $latest->snapshot_at !== (string) $current->snapshot_at) {
-            $diffs[] = 'snapshot_at';
-        }
-
-        return $diffs;
-    }
-
-    /**
-     * @param  array<int, array<int, string|int|null>>  $samples
-     */
-    private function pushSample(array &$samples, int $limit, string $type, object $latest, ?object $current): void
-    {
-        if (count($samples) >= $limit) {
-            return;
-        }
-
-        $samples[] = [
-            $type,
-            (string) $latest->web_code,
-            (int) $latest->market_id,
-            (int) $latest->round_id,
-            (string) $latest->bet_type,
-            (string) $latest->number,
-            $current?->snapshot_at ?? $latest->snapshot_at,
-        ];
+        return $this->option('web-code') !== null
+            || $this->option('market-id') !== null
+            || $this->option('round-id') !== null;
     }
 
     private function countDuplicateCurrentRows(): int
     {
-        return (int) DB::query()
-            ->fromSub(
-                DB::table('lotto_dashboard_risk_current')
-                    ->select([
-                        'web_code',
-                        'market_id',
-                        'round_id',
-                        'bet_type',
-                        'number',
-                        DB::raw('COUNT(*) as row_count'),
-                    ])
-                    ->groupBy('web_code', 'market_id', 'round_id', 'bet_type', 'number')
-                    ->havingRaw('COUNT(*) > 1'),
-                'duplicates'
-            )
+        $sub = DB::table('lotto_dashboard_risk_current')
+            ->selectRaw('COUNT(*) as c')
+            ->groupBy('web_code', 'market_id', 'round_id', 'bet_type', 'number')
+            ->havingRaw('COUNT(*) > 1');
+
+        return (int) DB::table(DB::raw("({$sub->toSql()}) as dup"))
+            ->mergeBindings($sub)
             ->count();
+    }
+
+    private function countInvalidDrawRows(): int
+    {
+        return $this->invalidDrawQuery()->count();
+    }
+
+    private function countZeroRiskRows(): int
+    {
+        return $this->zeroRiskQuery()->count();
+    }
+
+    private function invalidDrawQuery(): Builder
+    {
+        $query = DB::table('lotto_dashboard_risk_current as c')
+            ->leftJoin('lotto_draws as d', 'd.id', '=', 'c.round_id')
+            ->where(function ($q): void {
+                $q->whereNull('d.id')
+                    ->orWhereNotNull('d.result_at')
+                    ->orWhere('d.status', 'resulted');
+            });
+
+        $this->applyFilters($query, 'c');
+
+        return $query;
+    }
+
+    private function zeroRiskQuery(): Builder
+    {
+        $query = DB::table('lotto_dashboard_risk_current')
+            ->whereRaw('COALESCE(stake_total, 0) = 0')
+            ->whereRaw('COALESCE(payout_if_hit, 0) = 0')
+            ->whereRaw('COALESCE(liability, 0) = 0');
+
+        $this->applyFilters($query, null);
+
+        return $query;
+    }
+
+    /**
+     * Run optional scoped snapshot comparison. Returns string label for output line.
+     */
+    private function runSnapshotComparison(int $limit, bool &$failed): string
+    {
+        if (! $this->option('compare-snapshot')) {
+            return 'skipped';
+        }
+
+        if (! Schema::hasTable('lotto_dashboard_risk_snapshot')) {
+            $this->warn('--compare-snapshot requested but lotto_dashboard_risk_snapshot table not found; skipping');
+
+            return 'skipped';
+        }
+
+        $tolerance = max(0.0, (float) $this->option('tolerance'));
+
+        // Set-based: find latest snapshot per key without N+1 loop
+        $latestSnap = DB::table('lotto_dashboard_risk_snapshot as s1')
+            ->select('s1.web_code', 's1.market_id', 's1.round_id', 's1.bet_type', 's1.number',
+                's1.stake_total', 's1.payout_if_hit', 's1.liability')
+            ->whereNotExists(function ($q): void {
+                $q->select(DB::raw(1))
+                    ->from('lotto_dashboard_risk_snapshot as s2')
+                    ->whereColumn('s2.web_code', 's1.web_code')
+                    ->whereColumn('s2.market_id', 's1.market_id')
+                    ->whereColumn('s2.round_id', 's1.round_id')
+                    ->whereColumn('s2.bet_type', 's1.bet_type')
+                    ->whereColumn('s2.number', 's1.number')
+                    ->whereColumn('s2.snapshot_at', '>', 's1.snapshot_at');
+            });
+
+        $this->applyFilters($latestSnap, 's1');
+
+        $mismatches = DB::table(DB::raw("({$latestSnap->toSql()}) as snap"))
+            ->mergeBindings($latestSnap)
+            ->leftJoin('lotto_dashboard_risk_current as c', function ($join): void {
+                $join->on('c.web_code', '=', 'snap.web_code')
+                    ->on('c.market_id', '=', 'snap.market_id')
+                    ->on('c.round_id', '=', 'snap.round_id')
+                    ->on('c.bet_type', '=', 'snap.bet_type')
+                    ->on('c.number', '=', 'snap.number');
+            })
+            ->where(function ($q) use ($tolerance): void {
+                $q->whereNull('c.round_id')
+                    ->orWhereRaw("ABS(COALESCE(snap.stake_total, 0) - COALESCE(c.stake_total, 0)) > {$tolerance}")
+                    ->orWhereRaw("ABS(COALESCE(snap.payout_if_hit, 0) - COALESCE(c.payout_if_hit, 0)) > {$tolerance}")
+                    ->orWhereRaw("ABS(COALESCE(snap.liability, 0) - COALESCE(c.liability, 0)) > {$tolerance}");
+            });
+
+        $count = $mismatches->count();
+
+        if ($count > 0) {
+            $failed = true;
+            $this->warn("Snapshot comparison found {$count} mismatch(es). Sample:");
+            $samples = $mismatches
+                ->select('snap.web_code', 'snap.market_id', 'snap.round_id', 'snap.bet_type', 'snap.number',
+                    'snap.stake_total as snap_stake', 'c.stake_total as cur_stake')
+                ->limit($limit)
+                ->get();
+
+            $this->table(
+                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snap_stake', 'cur_stake'],
+                $samples->map(fn ($r) => [
+                    $r->web_code, $r->market_id, $r->round_id, $r->bet_type, $r->number,
+                    $r->snap_stake ?? 'NULL', $r->cur_stake ?? 'NULL',
+                ])->toArray()
+            );
+        }
+
+        return (string) $count;
+    }
+
+    /**
+     * @param  Builder  $query
+     */
+    private function applyFilters($query, ?string $alias): void
+    {
+        $prefix = $alias ? "{$alias}." : '';
+
+        if ($webCode = $this->option('web-code')) {
+            $query->where("{$prefix}web_code", $webCode);
+        }
+
+        if ($marketId = $this->option('market-id')) {
+            $query->where("{$prefix}market_id", $marketId);
+        }
+
+        if ($roundId = $this->option('round-id')) {
+            $query->where("{$prefix}round_id", $roundId);
+        }
+    }
+
+    private function displayDuplicateSamples(int $limit): void
+    {
+        $rows = DB::table('lotto_dashboard_risk_current')
+            ->select('web_code', 'market_id', 'round_id', 'bet_type', 'number', DB::raw('COUNT(*) as c'))
+            ->groupBy('web_code', 'market_id', 'round_id', 'bet_type', 'number')
+            ->havingRaw('COUNT(*) > 1')
+            ->limit($limit)
+            ->get();
+
+        $this->table(
+            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'count'],
+            $rows->map(fn ($r) => [
+                (string) $r->web_code, $r->market_id, $r->round_id, $r->bet_type, $r->number, $r->c,
+            ])->toArray()
+        );
+    }
+
+    private function displayInvalidDrawSamples(int $limit): void
+    {
+        $rows = $this->invalidDrawQuery()
+            ->select('c.web_code', 'c.market_id', 'c.round_id', 'c.bet_type', 'c.number', 'd.status', 'd.result_at')
+            ->limit($limit)
+            ->get();
+
+        $this->table(
+            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'draw_status', 'result_at'],
+            $rows->map(fn ($r) => [
+                $r->web_code, $r->market_id, $r->round_id, $r->bet_type, $r->number,
+                $r->status ?? 'NULL', $r->result_at ?? 'NULL',
+            ])->toArray()
+        );
+    }
+
+    private function displayZeroRiskSamples(int $limit): void
+    {
+        $rows = $this->zeroRiskQuery()
+            ->select('web_code', 'market_id', 'round_id', 'bet_type', 'number')
+            ->limit($limit)
+            ->get();
+
+        $this->table(
+            ['web_code', 'market_id', 'round_id', 'bet_type', 'number'],
+            $rows->map(fn ($r) => [
+                $r->web_code, $r->market_id, $r->round_id, $r->bet_type, $r->number,
+            ])->toArray()
+        );
     }
 }
