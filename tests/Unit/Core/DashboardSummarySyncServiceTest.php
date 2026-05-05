@@ -7,6 +7,7 @@ use App\Services\Dashboard\DashboardSummaryBroadcastNotifier;
 use App\Services\Dashboard\DashboardSummaryProjector;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use App\Services\Dashboard\DashboardWebCodeResolver;
+use App\Services\Dashboard\LottoRiskSnapshotWritePolicy;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Tests\TestCase;
@@ -84,6 +85,10 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertStringContainsString('array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE)', $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_snapshot')->upsert", $content);
         $this->assertStringContainsString("DB::table('lotto_dashboard_risk_aggregates')->upsert", $content);
+        $this->assertStringContainsString('lottoRiskSnapshotWritePolicy->evaluate(', $content);
+        $this->assertStringContainsString("Log::info('lotto_risk_snapshot_write_skipped'", $content);
+        $this->assertStringContainsString("Log::info('lotto_risk_snapshot_write_allowed'", $content);
+        $this->assertStringContainsString('$this->upsertRiskCurrentRows($riskRows);', $content);
     }
 
     public function test_rebuild_command_chunks_risk_snapshot_upserts(): void
@@ -105,6 +110,7 @@ class DashboardSummarySyncServiceTest extends TestCase
             new DashboardWebCodeResolver,
             Mockery::mock(DashboardSummaryProjector::class),
             Mockery::mock(DashboardSummaryBroadcastNotifier::class),
+            new LottoRiskSnapshotWritePolicy,
         );
     }
 }

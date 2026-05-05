@@ -19,6 +19,7 @@ class DashboardSummarySyncService
     private DashboardWebCodeResolver $webCodeResolver;
     private DashboardSummaryProjector $projector;
     private DashboardSummaryBroadcastNotifier $notifier;
+    private LottoRiskSnapshotWritePolicy $lottoRiskSnapshotWritePolicy;
     private array $columnListingCache = [];
 
     public function __construct(
@@ -26,11 +27,13 @@ class DashboardSummarySyncService
         DashboardWebCodeResolver $webCodeResolver,
         DashboardSummaryProjector $projector,
         DashboardSummaryBroadcastNotifier $notifier,
+        LottoRiskSnapshotWritePolicy $lottoRiskSnapshotWritePolicy,
     ) {
         $this->bucketResolver = $bucketResolver;
         $this->webCodeResolver = $webCodeResolver;
         $this->projector = $projector;
         $this->notifier = $notifier;
+        $this->lottoRiskSnapshotWritePolicy = $lottoRiskSnapshotWritePolicy;
     }
 
     public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
@@ -239,27 +242,52 @@ class DashboardSummarySyncService
             $this->upsertRiskCurrentRows($riskRows);
 
             if (Schema::hasTable('lotto_dashboard_risk_snapshot')) {
-                $rows = [];
-                foreach ($riskRows as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_risk_snapshot',
-                        (array) $row,
-                        ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
-                    }
-                }
-                $rows = $this->deduplicateRiskSnapshotRows($rows);
+                $snapshotWriteDecision = $this->lottoRiskSnapshotWritePolicy->evaluate(
+                    $riskRows,
+                    [
+                        'source' => (string) ($sourceType ?? 'scheduled'),
+                        'web_code' => $webCode,
+                    ]
+                );
 
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
-                    foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
-                        DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                            $chunk,
-                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                            $updateColumns
+                $riskRowContext = $this->extractRiskRowContext($riskRows);
+                $logContext = [
+                    'source' => $snapshotWriteDecision['source'],
+                    'web_code' => (string) ($riskRowContext['web_code'] ?? $webCode),
+                    'market_id' => $riskRowContext['market_id'] ?? null,
+                    'round_id' => $riskRowContext['round_id'] ?? null,
+                    'risk_rows_count' => count($riskRows),
+                    'has_meaningful_risk' => $snapshotWriteDecision['has_meaningful_risk'],
+                    'reason' => $snapshotWriteDecision['reason'],
+                ];
+
+                if (! $snapshotWriteDecision['allowed']) {
+                    Log::info('lotto_risk_snapshot_write_skipped', $logContext);
+                } else {
+                    Log::info('lotto_risk_snapshot_write_allowed', $logContext);
+
+                    $rows = [];
+                    foreach ($riskRows as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_risk_snapshot',
+                            (array) $row,
+                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
                         );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
+                    $rows = $this->deduplicateRiskSnapshotRows($rows);
+
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
+                        foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+                            DB::table('lotto_dashboard_risk_snapshot')->upsert(
+                                $chunk,
+                                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
+                                $updateColumns
+                            );
+                        }
                     }
                 }
             }
@@ -551,5 +579,23 @@ class DashboardSummarySyncService
         }
 
         return array_values($deduplicated);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $riskRows
+     * @return array{web_code?:string,market_id?:int,round_id?:int}
+     */
+    private function extractRiskRowContext(array $riskRows): array
+    {
+        $firstRow = $riskRows[0] ?? null;
+        if (! is_array($firstRow)) {
+            return [];
+        }
+
+        return [
+            'web_code' => isset($firstRow['web_code']) ? (string) $firstRow['web_code'] : null,
+            'market_id' => isset($firstRow['market_id']) ? (int) $firstRow['market_id'] : null,
+            'round_id' => isset($firstRow['round_id']) ? (int) $firstRow['round_id'] : null,
+        ];
     }
 }
