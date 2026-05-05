@@ -227,9 +227,20 @@ class DashboardSummarySyncService
                 }
             }
 
+            $riskRows = [];
+            foreach ((array) ($lottoPayload['risk'] ?? []) as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $riskRows[] = $row;
+            }
+
+            $this->upsertRiskCurrentRows($riskRows);
+
             if (Schema::hasTable('lotto_dashboard_risk_snapshot')) {
                 $rows = [];
-                foreach ((array) ($lottoPayload['risk'] ?? []) as $row) {
+                foreach ($riskRows as $row) {
                     $filtered = $this->filterPayloadByExistingColumns(
                         'lotto_dashboard_risk_snapshot',
                         (array) $row,
@@ -470,6 +481,70 @@ class DashboardSummarySyncService
                 (string) ($row['bet_type'] ?? ''),
                 (string) ($row['number'] ?? ''),
                 (string) ($row['snapshot_at'] ?? ''),
+            ]);
+
+            $deduplicated[$key] = $row;
+        }
+
+        return array_values($deduplicated);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function upsertRiskCurrentRows(array $rows): void
+    {
+        if (! Schema::hasTable('lotto_dashboard_risk_current')) {
+            return;
+        }
+
+        $currentRows = [];
+        foreach ($rows as $row) {
+            $filtered = $this->filterPayloadByExistingColumns(
+                'lotto_dashboard_risk_current',
+                $row,
+                ['web_code', 'market_id', 'round_id', 'bet_type', 'number']
+            );
+
+            if (! empty($filtered)) {
+                $currentRows[] = $filtered;
+            }
+        }
+
+        $currentRows = $this->deduplicateRiskCurrentRows($currentRows);
+        if (empty($currentRows)) {
+            return;
+        }
+
+        $updateColumns = array_values(array_filter(
+            array_keys($currentRows[0]),
+            fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number'], true)
+        ));
+
+        foreach (array_chunk($currentRows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+            DB::table('lotto_dashboard_risk_current')->upsert(
+                $chunk,
+                ['web_code', 'market_id', 'round_id', 'bet_type', 'number'],
+                $updateColumns
+            );
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicateRiskCurrentRows(array $rows): array
+    {
+        $deduplicated = [];
+
+        foreach ($rows as $row) {
+            $key = implode('|', [
+                (string) ($row['web_code'] ?? ''),
+                (string) ($row['market_id'] ?? ''),
+                (string) ($row['round_id'] ?? ''),
+                (string) ($row['bet_type'] ?? ''),
+                (string) ($row['number'] ?? ''),
             ]);
 
             $deduplicated[$key] = $row;
