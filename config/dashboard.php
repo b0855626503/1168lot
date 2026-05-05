@@ -7,5 +7,6 @@ return [
     ],
     'lotto' => [
         'risk_snapshot_retention_days' => (int) env('LOTTO_RISK_SNAPSHOT_RETENTION_DAYS', 7),
+        'legacy_snapshot_write_enabled' => (bool) env('LOTTO_RISK_SNAPSHOT_LEGACY_WRITE_ENABLED', false),
     ],
 ];
