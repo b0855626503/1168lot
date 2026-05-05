@@ -34,9 +34,19 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         }
 
         $daysOption = $this->option('days');
-        $days = $daysOption === null
-            ? LottoDashboardMetricConfig::riskSnapshotRetentionDays()
-            : (int) $daysOption;
+        $days = LottoDashboardMetricConfig::riskSnapshotRetentionDays();
+        if ($daysOption !== null) {
+            $normalizedDaysOption = trim((string) $daysOption);
+            if ($normalizedDaysOption !== '') {
+                if (! preg_match('/^-?\d+$/', $normalizedDaysOption)) {
+                    $this->error('--days must be an integer between 1 and 90');
+
+                    return 1;
+                }
+                $days = (int) $normalizedDaysOption;
+            }
+        }
+
         if ($days < self::MIN_RETENTION_DAYS || $days > self::MAX_RETENTION_DAYS) {
             $this->error(sprintf(
                 '--days must be between %d and %d',
@@ -81,7 +91,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             $this->line('retention_days='.$days);
             $this->line('cutoff='.$cutoffText);
             $this->line('dry_run=yes');
-            $this->line('would_delete='.$sampleCount);
+            $this->line('first_batch_would_delete='.$sampleCount);
             $this->line('chunk='.$chunkSize);
             $this->line('max_runtime='.$maxRuntime);
             $this->line('sleep_ms='.$sleepMs);
