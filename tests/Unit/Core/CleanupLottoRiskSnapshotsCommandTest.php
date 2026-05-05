@@ -60,7 +60,7 @@ class CleanupLottoRiskSnapshotsCommandTest extends TestCase
             ->expectsOutputToContain('retention_days=7')
             ->expectsOutputToContain('cutoff=')
             ->expectsOutputToContain('dry_run=yes')
-            ->expectsOutputToContain('first_batch_would_delete=')
+            ->expectsOutputToContain('first_batch_would_delete=1')
             ->assertExitCode(0);
     }
 
@@ -77,14 +77,14 @@ class CleanupLottoRiskSnapshotsCommandTest extends TestCase
     public function test_invalid_days_zero_is_rejected(): void
     {
         $this->artisan('dashboard:lotto-risk-retention --dry-run --days=0')
-            ->expectsOutputToContain('--days must be between 1 and 90')
+            ->expectsOutputToContain('--days must be an integer between 1 and 90')
             ->assertExitCode(1);
     }
 
     public function test_invalid_days_negative_is_rejected(): void
     {
         $this->artisan('dashboard:lotto-risk-retention --dry-run --days=-2')
-            ->expectsOutputToContain('--days must be between 1 and 90')
+            ->expectsOutputToContain('--days must be an integer between 1 and 90')
             ->assertExitCode(1);
     }
 

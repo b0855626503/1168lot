@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class CleanupLottoRiskSnapshotsCommand extends Command
 {
+    private const DAYS_RANGE_ERROR = '--days must be an integer between 1 and 90';
     private const MIN_RETENTION_DAYS = 1;
     private const MAX_RETENTION_DAYS = 90;
     private const DEFAULT_CHUNK_SIZE = 5000;
@@ -39,7 +40,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             $normalizedDaysOption = trim((string) $daysOption);
             if ($normalizedDaysOption !== '') {
                 if (! preg_match('/^-?\d+$/', $normalizedDaysOption)) {
-                    $this->error('--days must be an integer between 1 and 90');
+                    $this->error(self::DAYS_RANGE_ERROR);
 
                     return 1;
                 }
@@ -48,11 +49,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         }
 
         if ($days < self::MIN_RETENTION_DAYS || $days > self::MAX_RETENTION_DAYS) {
-            $this->error(sprintf(
-                '--days must be between %d and %d',
-                self::MIN_RETENTION_DAYS,
-                self::MAX_RETENTION_DAYS
-            ));
+            $this->error(self::DAYS_RANGE_ERROR);
 
             return 1;
         }
@@ -83,10 +80,12 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $isDryRun = (bool) $this->option('dry-run');
 
         if ($isDryRun) {
-            $sampleCount = (int) DB::table('lotto_dashboard_risk_snapshot')
+            $sampleIds = DB::table('lotto_dashboard_risk_snapshot')
                 ->where('snapshot_at', '<', $cutoffText)
+                ->orderBy('id')
                 ->limit($chunkSize)
-                ->count();
+                ->pluck('id');
+            $sampleCount = $sampleIds->count();
 
             $this->line('retention_days='.$days);
             $this->line('cutoff='.$cutoffText);
