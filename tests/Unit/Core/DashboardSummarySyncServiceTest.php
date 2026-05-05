@@ -68,6 +68,38 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(['lotto_cash', 'lotto_product', 'net'], $payload['updated_sections']);
         $this->assertSame('wallet', $payload['source_type']);
         $this->assertSame('200', $payload['source_id']);
+        $this->assertSame([], $payload['audit_context']);
+    }
+
+    public function test_consume_pending_bucket_payload_without_legacy_audit_context_falls_back_to_empty_array(): void
+    {
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        Cache::put('dashboard:summary:pending:main:2026-04-05', [
+            'summary_date' => '2026-04-05',
+            'web_code' => 'main',
+            'updated_sections' => ['lotto_risk'],
+            'source_type' => 'lotto',
+            'source_id' => 'legacy-1',
+            'revision' => 'legacy',
+        ], now()->addMinutes(10));
+
+        $payload = $service->consumePendingBucketPayload(
+            summaryDate: '2026-04-05',
+            webCode: 'main',
+            fallbackUpdatedSections: [],
+            fallbackSourceType: null,
+            fallbackSourceId: null,
+            fallbackAuditContext: []
+        );
+
+        $this->assertSame('lotto', $payload['source_type']);
+        $this->assertSame('legacy-1', $payload['source_id']);
+        $this->assertSame(['lotto_risk'], $payload['updated_sections']);
+        $this->assertSame([], $payload['audit_context']);
     }
 
     public function test_sync_bucket_zero_risk_scheduled_skips_snapshot_and_keeps_current(): void
