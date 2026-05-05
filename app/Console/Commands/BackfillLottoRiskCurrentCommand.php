@@ -3,12 +3,14 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class BackfillLottoRiskCurrentCommand extends Command
 {
     private const DEFAULT_CHUNK_SIZE = 1000;
+    private const DEFAULT_LIMIT_KEYS = 0;
 
     protected $signature = 'dashboard:lotto-risk-current-backfill
         {--web-code= : Limit backfill by web code}
@@ -16,6 +18,7 @@ class BackfillLottoRiskCurrentCommand extends Command
         {--round-id= : Limit backfill by round ID}
         {--since= : Only include snapshots from this datetime/date}
         {--chunk= : Upsert batch size}
+        {--limit-keys= : Limit number of distinct risk keys processed, 0 means no limit}
         {--dry-run : Preview only, do not write}';
 
     protected $description = 'Backfill lotto dashboard current risk rows from latest detailed risk snapshots';
@@ -41,42 +44,23 @@ class BackfillLottoRiskCurrentCommand extends Command
             return 1;
         }
 
-        $baseQuery = DB::table('lotto_dashboard_risk_snapshot as rs');
-        $this->applyFilters($baseQuery, 'rs');
+        $limitKeys = (int) ($this->option('limit-keys') ?: self::DEFAULT_LIMIT_KEYS);
+        if ($limitKeys < 0) {
+            $this->error('--limit-keys ต้องมากกว่าหรือเท่ากับ 0');
 
-        $distinctKeys = (clone $baseQuery)
-            ->select([
-                'rs.web_code',
-                'rs.market_id',
-                'rs.round_id',
-                'rs.bet_type',
-                'rs.number',
-            ])
-            ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number')
-            ->orderBy('rs.web_code')
-            ->orderBy('rs.market_id')
-            ->orderBy('rs.round_id')
-            ->orderBy('rs.bet_type')
-            ->orderBy('rs.number');
+            return 1;
+        }
+
+        $latestRowsQuery = $this->latestSnapshotRowsQuery();
+        if ($limitKeys > 0) {
+            $latestRowsQuery->limit($limitKeys);
+        }
 
         $totalProcessed = 0;
         $totalWritten = 0;
+        $rows = [];
 
-        foreach ($distinctKeys->cursor() as $key) {
-            $latest = DB::table('lotto_dashboard_risk_snapshot')
-                ->where('web_code', $key->web_code)
-                ->where('market_id', $key->market_id)
-                ->where('round_id', $key->round_id)
-                ->where('bet_type', $key->bet_type)
-                ->where('number', $key->number)
-                ->orderByDesc('snapshot_at')
-                ->orderByDesc('id')
-                ->first();
-
-            if ($latest === null) {
-                continue;
-            }
-
+        foreach ($latestRowsQuery->cursor() as $latest) {
             $rows[] = [
                 'web_code' => $latest->web_code,
                 'market_id' => $latest->market_id,
@@ -111,6 +95,75 @@ class BackfillLottoRiskCurrentCommand extends Command
         ));
 
         return 0;
+    }
+
+    private function latestSnapshotRowsQuery(): Builder
+    {
+        $latestIdSubquery = DB::query()
+            ->fromSub($this->latestSnapshotAtQuery(), 'latest_snapshot_at')
+            ->join('lotto_dashboard_risk_snapshot as rs2', function ($join): void {
+                $join->on('rs2.web_code', '=', 'latest_snapshot_at.web_code')
+                    ->on('rs2.market_id', '=', 'latest_snapshot_at.market_id')
+                    ->on('rs2.round_id', '=', 'latest_snapshot_at.round_id')
+                    ->on('rs2.bet_type', '=', 'latest_snapshot_at.bet_type')
+                    ->on('rs2.number', '=', 'latest_snapshot_at.number')
+                    ->on('rs2.snapshot_at', '=', 'latest_snapshot_at.latest_snapshot_at');
+            })
+            ->select([
+                'latest_snapshot_at.web_code',
+                'latest_snapshot_at.market_id',
+                'latest_snapshot_at.round_id',
+                'latest_snapshot_at.bet_type',
+                'latest_snapshot_at.number',
+                DB::raw('MAX(rs2.id) as latest_id'),
+            ])
+            ->groupBy(
+                'latest_snapshot_at.web_code',
+                'latest_snapshot_at.market_id',
+                'latest_snapshot_at.round_id',
+                'latest_snapshot_at.bet_type',
+                'latest_snapshot_at.number'
+            );
+
+        $query = DB::query()
+            ->fromSub($latestIdSubquery, 'latest_ids')
+            ->join('lotto_dashboard_risk_snapshot as rs', 'rs.id', '=', 'latest_ids.latest_id')
+            ->select([
+                'rs.web_code',
+                'rs.market_id',
+                'rs.round_id',
+                'rs.bet_type',
+                'rs.number',
+                'rs.snapshot_at',
+                'rs.stake_total',
+                'rs.payout_if_hit',
+                'rs.liability',
+            ])
+            ->orderBy('rs.web_code')
+            ->orderBy('rs.market_id')
+            ->orderBy('rs.round_id')
+            ->orderBy('rs.bet_type')
+            ->orderBy('rs.number');
+
+        return $query;
+    }
+
+    private function latestSnapshotAtQuery(): Builder
+    {
+        $query = DB::table('lotto_dashboard_risk_snapshot as rs')
+            ->select([
+                'rs.web_code',
+                'rs.market_id',
+                'rs.round_id',
+                'rs.bet_type',
+                'rs.number',
+                DB::raw('MAX(rs.snapshot_at) as latest_snapshot_at'),
+            ])
+            ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number');
+
+        $this->applyFilters($query, 'rs');
+
+        return $query;
     }
 
     private function applyFilters($query, string $alias): void
