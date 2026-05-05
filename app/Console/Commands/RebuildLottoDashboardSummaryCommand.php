@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\Schema;
 
 class RebuildLottoDashboardSummaryCommand extends Command
 {
-    private const RISK_SNAPSHOT_UPSERT_CHUNK_SIZE = 200;
-
     protected $signature = 'dashboard:lotto-rebuild
         {--date= : Single date (Y-m-d)}
         {--from= : Start date (Y-m-d)}
@@ -109,17 +107,13 @@ class RebuildLottoDashboardSummaryCommand extends Command
                         ->when($roundId !== null, fn ($c) => $c->where('round_id', $roundId))
                         ->values()
                         ->all();
-                    $rows = $this->deduplicateRiskSnapshotRows($rows);
-
-                    if (! empty($rows)) {
-                        foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
-                            DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                                $chunk,
-                                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                                ['stake_total', 'payout_if_hit', 'liability', 'updated_at']
-                            );
-                        }
-                    }
+                    $syncService->writeRiskSnapshot($rows, [
+                        'source' => 'rebuild_filtered',
+                        'web_code' => $webCode,
+                        'reason' => 'dashboard_rebuild_filtered',
+                        'class' => static::class,
+                        'file' => __FILE__,
+                    ]);
                 }
 
                 if (in_array($only, ['risk', 'all'], true) && Schema::hasTable('lotto_dashboard_risk_aggregates')) {
@@ -198,29 +192,5 @@ class RebuildLottoDashboardSummaryCommand extends Command
         }
 
         return $dates;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function deduplicateRiskSnapshotRows(array $rows): array
-    {
-        $deduplicated = [];
-
-        foreach ($rows as $row) {
-            $key = implode('|', [
-                (string) ($row['web_code'] ?? ''),
-                (string) ($row['market_id'] ?? ''),
-                (string) ($row['round_id'] ?? ''),
-                (string) ($row['bet_type'] ?? ''),
-                (string) ($row['number'] ?? ''),
-                (string) ($row['snapshot_at'] ?? ''),
-            ]);
-
-            $deduplicated[$key] = $row;
-        }
-
-        return array_values($deduplicated);
     }
 }

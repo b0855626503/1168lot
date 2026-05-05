@@ -175,6 +175,44 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
+    public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
+    {
+        config()->set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        $this->createTestTables();
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->writeRiskSnapshot($this->lottoPayloadMeaningfulRisk()['risk'], [
+            'source' => 'rebuild_filtered',
+            'reason' => 'test',
+            'class' => __CLASS__,
+            'file' => __FILE__,
+        ]);
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
+    }
+
+    public function test_legacy_snapshot_source_is_allowed_when_feature_flag_enabled(): void
+    {
+        config()->set('dashboard.lotto.legacy_snapshot_write_enabled', true);
+        $this->createTestTables();
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->writeRiskSnapshot($this->lottoPayloadMeaningfulRisk()['risk'], [
+            'source' => 'rebuild_filtered',
+            'reason' => 'test',
+            'class' => __CLASS__,
+            'file' => __FILE__,
+        ]);
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+    }
+
     private function makeService(
         DashboardSummaryProjector $projector,
         DashboardSummaryBroadcastNotifier $notifier,
