@@ -127,6 +127,16 @@ class BackfillLottoRiskCurrentCommandTest extends TestCase
         $this->assertNull($row, '--since-days must exclude snapshots older than the given window');
     }
 
+    public function test_max_runtime_stops_early_and_exits_cleanly(): void
+    {
+        $this->insertDraw(9, 'open', null);
+        $this->insertSnapshot(9, 'web1', 1, 9, '6', now()->toDateTimeString(), 600, 6000, 300);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-backfill', ['--max-runtime' => 3600]);
+
+        $this->assertSame(0, $exit);
+    }
+
     private function prepareSchema(): void
     {
         Schema::dropIfExists('lotto_dashboard_risk_current');

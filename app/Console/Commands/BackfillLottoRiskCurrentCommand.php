@@ -12,6 +12,7 @@ class BackfillLottoRiskCurrentCommand extends Command
 {
     private const DEFAULT_CHUNK_SIZE = 1000;
     private const DEFAULT_LIMIT_KEYS = 0;
+    private const DEFAULT_MAX_RUNTIME = 0;
 
     protected $signature = 'dashboard:lotto-risk-current-backfill
         {--web-code= : Limit backfill by web code}
@@ -22,6 +23,7 @@ class BackfillLottoRiskCurrentCommand extends Command
         {--until= : Only include snapshots up to this datetime/date, defaults to now}
         {--chunk= : Upsert batch size}
         {--limit-keys= : Limit number of distinct risk keys processed, 0 means no limit}
+        {--max-runtime= : Stop after this many seconds and let the next scheduler run resume, 0 means no limit}
         {--dry-run : Preview only, do not write}';
 
     protected $description = 'Backfill lotto dashboard current risk rows from latest detailed risk snapshots';
@@ -54,6 +56,14 @@ class BackfillLottoRiskCurrentCommand extends Command
             return 1;
         }
 
+        $maxRuntime = (int) ($this->option('max-runtime') ?: self::DEFAULT_MAX_RUNTIME);
+        if ($maxRuntime < 0) {
+            $this->error('--max-runtime ต้องมากกว่าหรือเท่ากับ 0');
+
+            return 1;
+        }
+
+        $startedAt = microtime(true);
         $until = $this->resolveUntil();
         $this->line(sprintf('snapshot_until=%s', $until));
 
@@ -64,6 +74,7 @@ class BackfillLottoRiskCurrentCommand extends Command
 
         $totalProcessed = 0;
         $totalWritten = 0;
+        $stoppedEarly = false;
         $rows = [];
 
         foreach ($latestRowsQuery->cursor() as $latest) {
@@ -86,6 +97,11 @@ class BackfillLottoRiskCurrentCommand extends Command
             if (count($rows) >= $chunkSize) {
                 $totalWritten += $this->flushRows($rows);
                 $rows = [];
+
+                if ($maxRuntime > 0 && (microtime(true) - $startedAt) >= $maxRuntime) {
+                    $stoppedEarly = true;
+                    break;
+                }
             }
         }
 
@@ -94,10 +110,11 @@ class BackfillLottoRiskCurrentCommand extends Command
         }
 
         $this->info(sprintf(
-            'processed=%d written=%d dry_run=%s',
+            'processed=%d written=%d dry_run=%s stopped_early=%s',
             $totalProcessed,
             $totalWritten,
-            (bool) $this->option('dry-run') ? 'yes' : 'no'
+            (bool) $this->option('dry-run') ? 'yes' : 'no',
+            $stoppedEarly ? 'yes' : 'no'
         ));
 
         return 0;
