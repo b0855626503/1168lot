@@ -12,8 +12,18 @@ class LottoRiskSnapshotWritePolicy
     public function evaluate(array $riskRows, array $context = []): array
     {
         $source = $this->normalizeSource((string) ($context['source'] ?? 'scheduled'));
+        $manualAuditReason = $this->normalizeReason($context['reason'] ?? null);
         $hasMeaningfulRisk = $this->hasMeaningfulRisk($riskRows);
         $isAuditEvent = in_array($source, ['draw_closed', 'draw_resulted', 'manual_audit'], true);
+
+        if ($source === 'manual_audit' && $manualAuditReason === null) {
+            return [
+                'allowed' => false,
+                'source' => $source,
+                'has_meaningful_risk' => $hasMeaningfulRisk,
+                'reason' => 'manual_audit_missing_reason',
+            ];
+        }
 
         if (! $hasMeaningfulRisk && ! $isAuditEvent) {
             return [
@@ -64,5 +74,16 @@ class LottoRiskSnapshotWritePolicy
         $normalized = strtolower(trim($source));
 
         return $normalized === '' ? 'scheduled' : $normalized;
+    }
+
+    private function normalizeReason(mixed $value): ?string
+    {
+        if (! is_scalar($value) || $value === null) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
     }
 }

@@ -70,6 +70,16 @@ class LottoRiskSnapshotWritePolicyTest extends TestCase
         $this->assertSame('audit_event', $decision['reason']);
     }
 
+    public function test_manual_audit_without_reason_is_blocked(): void
+    {
+        $decision = $this->policy->evaluate([
+            ['stake_total' => 0, 'payout_if_hit' => 0, 'liability' => 0],
+        ], ['source' => 'manual_audit']);
+
+        $this->assertFalse($decision['allowed']);
+        $this->assertSame('manual_audit_missing_reason', $decision['reason']);
+    }
+
     public function test_unknown_source_without_meaningful_risk_is_blocked(): void
     {
         $decision = $this->policy->evaluate([

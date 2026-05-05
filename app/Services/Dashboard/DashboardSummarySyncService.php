@@ -36,8 +36,12 @@ class DashboardSummarySyncService
         $this->lottoRiskSnapshotWritePolicy = $lottoRiskSnapshotWritePolicy;
     }
 
-    public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
-    {
+    public function dispatchForModelChange(
+        string $domain,
+        $model,
+        array $overrideSections = [],
+        ?string $sourceTypeOverride = null,
+    ): void {
         $buckets = $this->bucketResolver->resolve($domain, $model, $overrideSections);
 
         $sourceId = '';
@@ -49,7 +53,7 @@ class DashboardSummarySyncService
 
         $this->dispatchBuckets(
             buckets: $buckets,
-            sourceType: $domain,
+            sourceType: $sourceTypeOverride ?? $domain,
             sourceId: $sourceId,
         );
     }
@@ -192,7 +196,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode): void {
+        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode, $sourceType): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -245,7 +249,7 @@ class DashboardSummarySyncService
                 $snapshotWriteDecision = $this->lottoRiskSnapshotWritePolicy->evaluate(
                     $riskRows,
                     [
-                        'source' => (string) ($sourceType ?? 'scheduled'),
+                        'source' => $this->resolveRiskSnapshotSource($sourceType),
                         'web_code' => $webCode,
                     ]
                 );
@@ -491,6 +495,24 @@ class DashboardSummarySyncService
         $text = trim((string) $value);
 
         return $text === '' ? null : $text;
+    }
+
+    private function resolveRiskSnapshotSource(?string $sourceType): string
+    {
+        $normalized = strtolower(trim((string) $sourceType));
+        if ($normalized === '') {
+            return 'scheduled';
+        }
+
+        return match ($normalized) {
+            'draw_closed',
+            'lotto.draw_closed' => 'draw_closed',
+            'draw_resulted',
+            'lotto.draw_resulted' => 'draw_resulted',
+            'manual_audit',
+            'lotto.manual_audit' => 'manual_audit',
+            default => $normalized,
+        };
     }
 
     /**
