@@ -19,6 +19,7 @@ class DashboardSummarySyncService
     private DashboardWebCodeResolver $webCodeResolver;
     private DashboardSummaryProjector $projector;
     private DashboardSummaryBroadcastNotifier $notifier;
+    private LottoRiskSnapshotWritePolicy $lottoRiskSnapshotWritePolicy;
     private array $columnListingCache = [];
 
     public function __construct(
@@ -26,15 +27,22 @@ class DashboardSummarySyncService
         DashboardWebCodeResolver $webCodeResolver,
         DashboardSummaryProjector $projector,
         DashboardSummaryBroadcastNotifier $notifier,
+        LottoRiskSnapshotWritePolicy $lottoRiskSnapshotWritePolicy,
     ) {
         $this->bucketResolver = $bucketResolver;
         $this->webCodeResolver = $webCodeResolver;
         $this->projector = $projector;
         $this->notifier = $notifier;
+        $this->lottoRiskSnapshotWritePolicy = $lottoRiskSnapshotWritePolicy;
     }
 
-    public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
-    {
+    public function dispatchForModelChange(
+        string $domain,
+        $model,
+        array $overrideSections = [],
+        ?string $sourceTypeOverride = null,
+        array $auditContext = [],
+    ): void {
         $buckets = $this->bucketResolver->resolve($domain, $model, $overrideSections);
 
         $sourceId = '';
@@ -46,12 +54,13 @@ class DashboardSummarySyncService
 
         $this->dispatchBuckets(
             buckets: $buckets,
-            sourceType: $domain,
+            sourceType: $sourceTypeOverride ?? $domain,
             sourceId: $sourceId,
+            auditContext: $auditContext,
         );
     }
 
-    public function dispatchBuckets(array $buckets, string $sourceType, string $sourceId = ''): void
+    public function dispatchBuckets(array $buckets, string $sourceType, string $sourceId = '', array $auditContext = []): void
     {
         $defaultWebCode = $this->webCodeResolver->resolve();
 
@@ -71,6 +80,7 @@ class DashboardSummarySyncService
                 updatedSections: (array) ($bucket['updated_sections'] ?? []),
                 sourceType: $sourceType,
                 sourceId: $sourceId,
+                auditContext: $auditContext,
             );
 
             SyncDashboardSummaryBucket::dispatch(
@@ -79,12 +89,13 @@ class DashboardSummarySyncService
                 updatedSections: (array) ($pendingPayload['updated_sections'] ?? []),
                 sourceType: $pendingPayload['source_type'] ?? $sourceType,
                 sourceId: $pendingPayload['source_id'] ?? $sourceId,
+                auditContext: (array) ($pendingPayload['audit_context'] ?? []),
             );
         }
     }
 
     /**
-     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,revision:string}
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,audit_context:array<string,mixed>,revision:string}
      */
     public function mergePendingBucketPayload(
         string $summaryDate,
@@ -92,6 +103,7 @@ class DashboardSummarySyncService
         array $updatedSections,
         ?string $sourceType = null,
         ?string $sourceId = null,
+        array $auditContext = [],
     ): array {
         $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
         $existing = Cache::get($cacheKey, []);
@@ -101,6 +113,10 @@ class DashboardSummarySyncService
             ?? $this->normalizeNullableString($existing['source_type'] ?? null);
         $resolvedSourceId = $this->normalizeNullableString($sourceId)
             ?? $this->normalizeNullableString($existing['source_id'] ?? null);
+        $resolvedAuditContext = $this->mergeAuditContext(
+            (array) ($existing['audit_context'] ?? []),
+            $auditContext
+        );
 
         $payload = [
             'summary_date' => $summaryDate,
@@ -111,6 +127,7 @@ class DashboardSummarySyncService
             )),
             'source_type' => $resolvedSourceType,
             'source_id' => $resolvedSourceId,
+            'audit_context' => $resolvedAuditContext,
             'revision' => sprintf('%.6f', microtime(true)),
         ];
 
@@ -120,7 +137,7 @@ class DashboardSummarySyncService
     }
 
     /**
-     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string}
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,audit_context:array<string,mixed>}
      */
     public function consumePendingBucketPayload(
         string $summaryDate,
@@ -128,6 +145,7 @@ class DashboardSummarySyncService
         array $fallbackUpdatedSections = [],
         ?string $fallbackSourceType = null,
         ?string $fallbackSourceId = null,
+        array $fallbackAuditContext = [],
     ): array {
         $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
         $existing = Cache::pull($cacheKey, []);
@@ -144,6 +162,10 @@ class DashboardSummarySyncService
                 ?? $this->normalizeNullableString($fallbackSourceType),
             'source_id' => $this->normalizeNullableString($existing['source_id'] ?? null)
                 ?? $this->normalizeNullableString($fallbackSourceId),
+            'audit_context' => $this->mergeAuditContext(
+                $fallbackAuditContext,
+                (array) ($existing['audit_context'] ?? [])
+            ),
         ];
     }
 
@@ -153,6 +175,7 @@ class DashboardSummarySyncService
         array $updatedSections = [],
         ?string $sourceType = null,
         ?string $sourceId = null,
+        array $auditContext = [],
     ): array {
         $requestedWebCode = trim((string) $webCode);
         $webCode = $requestedWebCode !== ''
@@ -189,7 +212,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode): void {
+        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode, $sourceType, $auditContext): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -239,27 +262,54 @@ class DashboardSummarySyncService
             $this->upsertRiskCurrentRows($riskRows);
 
             if (Schema::hasTable('lotto_dashboard_risk_snapshot')) {
-                $rows = [];
-                foreach ($riskRows as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_risk_snapshot',
-                        (array) $row,
-                        ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
-                    }
-                }
-                $rows = $this->deduplicateRiskSnapshotRows($rows);
+                $snapshotWriteDecision = $this->lottoRiskSnapshotWritePolicy->evaluate(
+                    $riskRows,
+                    [
+                        'source' => $this->resolveRiskSnapshotSource($sourceType),
+                        'web_code' => $webCode,
+                        'reason' => $auditContext['reason'] ?? null,
+                        'actor_id' => $auditContext['actor_id'] ?? null,
+                    ]
+                );
 
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
-                    foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
-                        DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                            $chunk,
-                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                            $updateColumns
+                $riskRowContext = $this->extractRiskRowContext($riskRows);
+                $logContext = [
+                    'source' => $snapshotWriteDecision['source'],
+                    'web_code' => (string) ($riskRowContext['web_code'] ?? $webCode),
+                    'market_id' => $riskRowContext['market_id'] ?? null,
+                    'round_id' => $riskRowContext['round_id'] ?? null,
+                    'risk_rows_count' => count($riskRows),
+                    'has_meaningful_risk' => $snapshotWriteDecision['has_meaningful_risk'],
+                    'reason' => $snapshotWriteDecision['reason'],
+                ];
+
+                if (! $snapshotWriteDecision['allowed']) {
+                    Log::info('lotto_risk_snapshot_write_skipped', $logContext);
+                } else {
+                    Log::info('lotto_risk_snapshot_write_allowed', $logContext);
+
+                    $rows = [];
+                    foreach ($riskRows as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_risk_snapshot',
+                            (array) $row,
+                            ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
                         );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
+                    $rows = $this->deduplicateRiskSnapshotRows($rows);
+
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
+                        foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+                            DB::table('lotto_dashboard_risk_snapshot')->upsert(
+                                $chunk,
+                                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
+                                $updateColumns
+                            );
+                        }
                     }
                 }
             }
@@ -465,6 +515,47 @@ class DashboardSummarySyncService
         return $text === '' ? null : $text;
     }
 
+    private function resolveRiskSnapshotSource(?string $sourceType): string
+    {
+        $normalized = strtolower(trim((string) $sourceType));
+        if ($normalized === '') {
+            return 'scheduled';
+        }
+
+        return match ($normalized) {
+            'draw_closed',
+            'lotto.draw_closed' => 'draw_closed',
+            'draw_resulted',
+            'lotto.draw_resulted' => 'draw_resulted',
+            'manual_audit',
+            'lotto.manual_audit' => 'manual_audit',
+            default => $normalized,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $override
+     * @return array<string, mixed>
+     */
+    private function mergeAuditContext(array $base, array $override): array
+    {
+        $reason = $this->normalizeNullableString($override['reason'] ?? null)
+            ?? $this->normalizeNullableString($base['reason'] ?? null);
+        $actorIdRaw = $override['actor_id'] ?? $base['actor_id'] ?? null;
+        $actorId = is_numeric($actorIdRaw) ? (int) $actorIdRaw : null;
+
+        $context = [];
+        if ($reason !== null) {
+            $context['reason'] = $reason;
+        }
+        if ($actorId !== null && $actorId > 0) {
+            $context['actor_id'] = $actorId;
+        }
+
+        return $context;
+    }
+
     /**
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
@@ -551,5 +642,23 @@ class DashboardSummarySyncService
         }
 
         return array_values($deduplicated);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $riskRows
+     * @return array{web_code?:string,market_id?:int,round_id?:int}
+     */
+    private function extractRiskRowContext(array $riskRows): array
+    {
+        $firstRow = $riskRows[0] ?? null;
+        if (! is_array($firstRow)) {
+            return [];
+        }
+
+        return [
+            'web_code' => isset($firstRow['web_code']) ? (string) $firstRow['web_code'] : null,
+            'market_id' => isset($firstRow['market_id']) ? (int) $firstRow['market_id'] : null,
+            'round_id' => isset($firstRow['round_id']) ? (int) $firstRow['round_id'] : null,
+        ];
     }
 }

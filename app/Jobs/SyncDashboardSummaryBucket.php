@@ -13,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProcessing
+class SyncDashboardSummaryBucket implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -32,6 +32,7 @@ class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProc
         public array $updatedSections = [],
         public ?string $sourceType = null,
         public ?string $sourceId = null,
+        public array $auditContext = [],
     ) {}
 
     public function middleware(): array
@@ -47,8 +48,8 @@ class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProc
     {
         return [
             'dashboard-summary',
-            'dashboard-summary:' . $this->webCode,
-            'dashboard-summary:' . $this->summaryDate,
+            'dashboard-summary:'.$this->webCode,
+            'dashboard-summary:'.$this->summaryDate,
         ];
     }
 
@@ -60,6 +61,7 @@ class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProc
             fallbackUpdatedSections: $this->updatedSections,
             fallbackSourceType: $this->sourceType,
             fallbackSourceId: $this->sourceId,
+            fallbackAuditContext: $this->auditContext,
         );
 
         $syncService->syncBucket(
@@ -68,6 +70,7 @@ class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProc
             updatedSections: (array) ($payload['updated_sections'] ?? $this->updatedSections),
             sourceType: $payload['source_type'] ?? $this->sourceType,
             sourceId: $payload['source_id'] ?? $this->sourceId,
+            auditContext: (array) ($payload['audit_context'] ?? $this->auditContext),
         );
     }
 
@@ -79,6 +82,7 @@ class SyncDashboardSummaryBucket implements ShouldQueue, ShouldBeUniqueUntilProc
             'updated_sections' => $this->updatedSections,
             'source_type' => $this->sourceType,
             'source_id' => $this->sourceId,
+            'audit_context' => $this->auditContext,
             'error' => $e->getMessage(),
         ]);
     }
