@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -17,6 +18,7 @@ class BackfillLottoRiskCurrentCommand extends Command
         {--market-id= : Limit backfill by market ID}
         {--round-id= : Limit backfill by round ID}
         {--since= : Only include snapshots from this datetime/date}
+        {--until= : Only include snapshots up to this datetime/date, defaults to now}
         {--chunk= : Upsert batch size}
         {--limit-keys= : Limit number of distinct risk keys processed, 0 means no limit}
         {--dry-run : Preview only, do not write}';
@@ -51,7 +53,10 @@ class BackfillLottoRiskCurrentCommand extends Command
             return 1;
         }
 
-        $latestRowsQuery = $this->latestSnapshotRowsQuery();
+        $until = $this->resolveUntil();
+        $this->line(sprintf('snapshot_until=%s', $until));
+
+        $latestRowsQuery = $this->latestSnapshotRowsQuery($until);
         if ($limitKeys > 0) {
             $latestRowsQuery->limit($limitKeys);
         }
@@ -97,10 +102,10 @@ class BackfillLottoRiskCurrentCommand extends Command
         return 0;
     }
 
-    private function latestSnapshotRowsQuery(): Builder
+    private function latestSnapshotRowsQuery(string $until): Builder
     {
         $latestIdSubquery = DB::query()
-            ->fromSub($this->latestSnapshotAtQuery(), 'latest_snapshot_at')
+            ->fromSub($this->latestSnapshotAtQuery($until), 'latest_snapshot_at')
             ->join('lotto_dashboard_risk_snapshot as rs2', function ($join): void {
                 $join->on('rs2.web_code', '=', 'latest_snapshot_at.web_code')
                     ->on('rs2.market_id', '=', 'latest_snapshot_at.market_id')
@@ -125,7 +130,7 @@ class BackfillLottoRiskCurrentCommand extends Command
                 'latest_snapshot_at.number'
             );
 
-        $query = DB::query()
+        return DB::query()
             ->fromSub($latestIdSubquery, 'latest_ids')
             ->join('lotto_dashboard_risk_snapshot as rs', 'rs.id', '=', 'latest_ids.latest_id')
             ->select([
@@ -139,16 +144,15 @@ class BackfillLottoRiskCurrentCommand extends Command
                 'rs.payout_if_hit',
                 'rs.liability',
             ])
+            ->where('rs.snapshot_at', '<=', $until)
             ->orderBy('rs.web_code')
             ->orderBy('rs.market_id')
             ->orderBy('rs.round_id')
             ->orderBy('rs.bet_type')
             ->orderBy('rs.number');
-
-        return $query;
     }
 
-    private function latestSnapshotAtQuery(): Builder
+    private function latestSnapshotAtQuery(string $until): Builder
     {
         $query = DB::table('lotto_dashboard_risk_snapshot as rs')
             ->select([
@@ -159,6 +163,7 @@ class BackfillLottoRiskCurrentCommand extends Command
                 'rs.number',
                 DB::raw('MAX(rs.snapshot_at) as latest_snapshot_at'),
             ])
+            ->where('rs.snapshot_at', '<=', $until)
             ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number');
 
         $this->applyFilters($query, 'rs');
@@ -187,6 +192,17 @@ class BackfillLottoRiskCurrentCommand extends Command
         if ($since !== '') {
             $query->where("{$alias}.snapshot_at", '>=', $since);
         }
+    }
+
+    private function resolveUntil(): string
+    {
+        $until = trim((string) ($this->option('until') ?? ''));
+
+        if ($until === '') {
+            return now()->toDateTimeString();
+        }
+
+        return Carbon::parse($until)->toDateTimeString();
     }
 
     /**
