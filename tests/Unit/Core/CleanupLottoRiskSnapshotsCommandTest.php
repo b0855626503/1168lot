@@ -58,10 +58,14 @@ class CleanupLottoRiskSnapshotsCommandTest extends TestCase
         $this->seedSnapshotRows();
 
         $this->artisan('dashboard:lotto-risk-retention --dry-run')
+            ->expectsOutputToContain('message=lotto_risk_snapshot_cleanup_started')
             ->expectsOutputToContain('retention_days=7')
             ->expectsOutputToContain('cutoff=')
             ->expectsOutputToContain('dry_run=yes')
             ->expectsOutputToContain('first_batch_would_delete=1')
+            ->expectsOutputToContain('message=lotto_risk_snapshot_cleanup_finished')
+            ->expectsOutputToContain('deleted_rows=0')
+            ->expectsOutputToContain('stopped_by=dry_run')
             ->assertExitCode(0);
     }
 
@@ -117,6 +121,13 @@ class CleanupLottoRiskSnapshotsCommandTest extends TestCase
     {
         $this->artisan('dashboard:lotto-risk-retention --dry-run --max-runtime=0')
             ->expectsOutputToContain('--max-runtime')
+            ->assertExitCode(1);
+    }
+
+    public function test_invalid_sleep_ms_option_is_rejected(): void
+    {
+        $this->artisan('dashboard:lotto-risk-retention --dry-run --sleep-ms=abc')
+            ->expectsOutputToContain('--sleep-ms')
             ->assertExitCode(1);
     }
 

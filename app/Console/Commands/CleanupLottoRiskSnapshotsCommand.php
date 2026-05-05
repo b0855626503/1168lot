@@ -93,6 +93,13 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $cutoff = Carbon::now()->subDays($days)->startOfSecond();
         $cutoffText = $cutoff->toDateTimeString();
         $isDryRun = (bool) $this->option('dry-run');
+        $this->line('message=lotto_risk_snapshot_cleanup_started');
+        $this->line('retention_days='.$days);
+        $this->line('cutoff='.$cutoffText);
+        $this->line('chunk='.$chunkSize);
+        $this->line('max_runtime='.$maxRuntime);
+        $this->line('sleep_ms='.$sleepMs);
+        $this->line('dry_run='.($isDryRun ? 'yes' : 'no'));
 
         if ($isDryRun) {
             $sampleIds = DB::table('lotto_dashboard_risk_snapshot')
@@ -102,13 +109,11 @@ class CleanupLottoRiskSnapshotsCommand extends Command
                 ->pluck('id');
             $sampleCount = $sampleIds->count();
 
-            $this->line('retention_days='.$days);
-            $this->line('cutoff='.$cutoffText);
-            $this->line('dry_run=yes');
             $this->line('first_batch_would_delete='.$sampleCount);
-            $this->line('chunk='.$chunkSize);
-            $this->line('max_runtime='.$maxRuntime);
-            $this->line('sleep_ms='.$sleepMs);
+            $this->line('message=lotto_risk_snapshot_cleanup_finished');
+            $this->line('deleted_rows=0');
+            $this->line('elapsed_seconds=0');
+            $this->line('stopped_by=dry_run');
 
             return 0;
         }
@@ -116,6 +121,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $startedAt = microtime(true);
         $totalDeleted = 0;
         $batchNumber = 0;
+        $stoppedBy = 'complete';
 
         while (true) {
             if ((microtime(true) - $startedAt) >= $maxRuntime) {
@@ -124,6 +130,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
                     $totalDeleted,
                     $cutoffText
                 ));
+                $stoppedBy = 'max_runtime';
 
                 break;
             }
@@ -162,6 +169,11 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             }
         }
 
+        $elapsedSeconds = (int) round(microtime(true) - $startedAt);
+        $this->line('message=lotto_risk_snapshot_cleanup_finished');
+        $this->line('deleted_rows='.$totalDeleted);
+        $this->line('elapsed_seconds='.$elapsedSeconds);
+        $this->line('stopped_by='.$stoppedBy);
         $this->info(sprintf('deleted %d rows before %s', $totalDeleted, $cutoffText));
 
         return 0;
