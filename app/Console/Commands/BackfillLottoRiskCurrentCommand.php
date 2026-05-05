@@ -3,19 +3,27 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class BackfillLottoRiskCurrentCommand extends Command
 {
     private const DEFAULT_CHUNK_SIZE = 1000;
+    private const DEFAULT_LIMIT_KEYS = 0;
+    private const DEFAULT_MAX_RUNTIME = 0;
 
     protected $signature = 'dashboard:lotto-risk-current-backfill
         {--web-code= : Limit backfill by web code}
         {--market-id= : Limit backfill by market ID}
         {--round-id= : Limit backfill by round ID}
         {--since= : Only include snapshots from this datetime/date}
+        {--since-days= : Shorthand: include snapshots from this many days ago, 0 means no lower bound}
+        {--until= : Only include snapshots up to this datetime/date, defaults to now}
         {--chunk= : Upsert batch size}
+        {--limit-keys= : Limit number of distinct risk keys processed, 0 means no limit}
+        {--max-runtime= : Stop after this many seconds and let the next scheduler run resume, 0 means no limit}
         {--dry-run : Preview only, do not write}';
 
     protected $description = 'Backfill lotto dashboard current risk rows from latest detailed risk snapshots';
@@ -41,42 +49,35 @@ class BackfillLottoRiskCurrentCommand extends Command
             return 1;
         }
 
-        $baseQuery = DB::table('lotto_dashboard_risk_snapshot as rs');
-        $this->applyFilters($baseQuery, 'rs');
+        $limitKeys = (int) ($this->option('limit-keys') ?: self::DEFAULT_LIMIT_KEYS);
+        if ($limitKeys < 0) {
+            $this->error('--limit-keys ต้องมากกว่าหรือเท่ากับ 0');
 
-        $distinctKeys = (clone $baseQuery)
-            ->select([
-                'rs.web_code',
-                'rs.market_id',
-                'rs.round_id',
-                'rs.bet_type',
-                'rs.number',
-            ])
-            ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number')
-            ->orderBy('rs.web_code')
-            ->orderBy('rs.market_id')
-            ->orderBy('rs.round_id')
-            ->orderBy('rs.bet_type')
-            ->orderBy('rs.number');
+            return 1;
+        }
+
+        $maxRuntime = (int) ($this->option('max-runtime') ?: self::DEFAULT_MAX_RUNTIME);
+        if ($maxRuntime < 0) {
+            $this->error('--max-runtime ต้องมากกว่าหรือเท่ากับ 0');
+
+            return 1;
+        }
+
+        $startedAt = microtime(true);
+        $until = $this->resolveUntil();
+        $this->line(sprintf('snapshot_until=%s', $until));
+
+        $latestRowsQuery = $this->latestSnapshotRowsQuery($until);
+        if ($limitKeys > 0) {
+            $latestRowsQuery->limit($limitKeys);
+        }
 
         $totalProcessed = 0;
         $totalWritten = 0;
+        $stoppedEarly = false;
+        $rows = [];
 
-        foreach ($distinctKeys->cursor() as $key) {
-            $latest = DB::table('lotto_dashboard_risk_snapshot')
-                ->where('web_code', $key->web_code)
-                ->where('market_id', $key->market_id)
-                ->where('round_id', $key->round_id)
-                ->where('bet_type', $key->bet_type)
-                ->where('number', $key->number)
-                ->orderByDesc('snapshot_at')
-                ->orderByDesc('id')
-                ->first();
-
-            if ($latest === null) {
-                continue;
-            }
-
+        foreach ($latestRowsQuery->cursor() as $latest) {
             $rows[] = [
                 'web_code' => $latest->web_code,
                 'market_id' => $latest->market_id,
@@ -96,6 +97,11 @@ class BackfillLottoRiskCurrentCommand extends Command
             if (count($rows) >= $chunkSize) {
                 $totalWritten += $this->flushRows($rows);
                 $rows = [];
+
+                if ($maxRuntime > 0 && (microtime(true) - $startedAt) >= $maxRuntime) {
+                    $stoppedEarly = true;
+                    break;
+                }
             }
         }
 
@@ -104,16 +110,94 @@ class BackfillLottoRiskCurrentCommand extends Command
         }
 
         $this->info(sprintf(
-            'processed=%d written=%d dry_run=%s',
+            'processed=%d written=%d dry_run=%s stopped_early=%s',
             $totalProcessed,
             $totalWritten,
-            (bool) $this->option('dry-run') ? 'yes' : 'no'
+            (bool) $this->option('dry-run') ? 'yes' : 'no',
+            $stoppedEarly ? 'yes' : 'no'
         ));
 
         return 0;
     }
 
-    private function applyFilters($query, string $alias): void
+    private function latestSnapshotRowsQuery(string $until): Builder
+    {
+        $latestIdSubquery = DB::query()
+            ->fromSub($this->latestSnapshotAtQuery($until), 'latest_snapshot_at')
+            ->join('lotto_dashboard_risk_snapshot as rs2', function ($join): void {
+                $join->on('rs2.web_code', '=', 'latest_snapshot_at.web_code')
+                    ->on('rs2.market_id', '=', 'latest_snapshot_at.market_id')
+                    ->on('rs2.round_id', '=', 'latest_snapshot_at.round_id')
+                    ->on('rs2.bet_type', '=', 'latest_snapshot_at.bet_type')
+                    ->on('rs2.number', '=', 'latest_snapshot_at.number')
+                    ->on('rs2.snapshot_at', '=', 'latest_snapshot_at.latest_snapshot_at');
+            })
+            ->select([
+                'latest_snapshot_at.web_code',
+                'latest_snapshot_at.market_id',
+                'latest_snapshot_at.round_id',
+                'latest_snapshot_at.bet_type',
+                'latest_snapshot_at.number',
+                DB::raw('MAX(rs2.id) as latest_id'),
+            ])
+            ->groupBy(
+                'latest_snapshot_at.web_code',
+                'latest_snapshot_at.market_id',
+                'latest_snapshot_at.round_id',
+                'latest_snapshot_at.bet_type',
+                'latest_snapshot_at.number'
+            );
+
+        return DB::query()
+            ->fromSub($latestIdSubquery, 'latest_ids')
+            ->join('lotto_dashboard_risk_snapshot as rs', 'rs.id', '=', 'latest_ids.latest_id')
+            ->select([
+                'rs.web_code',
+                'rs.market_id',
+                'rs.round_id',
+                'rs.bet_type',
+                'rs.number',
+                'rs.snapshot_at',
+                'rs.stake_total',
+                'rs.payout_if_hit',
+                'rs.liability',
+            ])
+            ->where('rs.snapshot_at', '<=', $until)
+            ->orderBy('rs.web_code')
+            ->orderBy('rs.market_id')
+            ->orderBy('rs.round_id')
+            ->orderBy('rs.bet_type')
+            ->orderBy('rs.number');
+    }
+
+    private function latestSnapshotAtQuery(string $until): Builder
+    {
+        $query = DB::table('lotto_dashboard_risk_snapshot as rs')
+            ->join('lotto_draws as d', 'd.id', '=', 'rs.round_id')
+            ->select([
+                'rs.web_code',
+                'rs.market_id',
+                'rs.round_id',
+                'rs.bet_type',
+                'rs.number',
+                DB::raw('MAX(rs.snapshot_at) as latest_snapshot_at'),
+            ])
+            ->whereNull('d.result_at')
+            ->where('d.status', '!=', 'resulted')
+            ->where(function ($q): void {
+                $q->where('rs.stake_total', '>', 0)
+                    ->orWhere('rs.payout_if_hit', '>', 0)
+                    ->orWhere('rs.liability', '>', 0);
+            })
+            ->where('rs.snapshot_at', '<=', $until)
+            ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number');
+
+        $this->applyFilters($query, 'rs');
+
+        return $query;
+    }
+
+    private function applyFilters(Builder $query, string $alias): void
     {
         $webCode = trim((string) ($this->option('web-code') ?? ''));
         if ($webCode !== '') {
@@ -130,10 +214,36 @@ class BackfillLottoRiskCurrentCommand extends Command
             $query->where("{$alias}.round_id", (int) $roundId);
         }
 
+        $sinceDatetime = $this->resolveSince();
+        if ($sinceDatetime !== null) {
+            $query->where("{$alias}.snapshot_at", '>=', $sinceDatetime);
+        }
+    }
+
+    private function resolveSince(): ?string
+    {
         $since = trim((string) ($this->option('since') ?? ''));
         if ($since !== '') {
-            $query->where("{$alias}.snapshot_at", '>=', $since);
+            return Carbon::parse($since)->toDateTimeString();
         }
+
+        $sinceDays = (int) ($this->option('since-days') ?? 0);
+        if ($sinceDays > 0) {
+            return now()->subDays($sinceDays)->startOfDay()->toDateTimeString();
+        }
+
+        return null;
+    }
+
+    private function resolveUntil(): string
+    {
+        $until = trim((string) ($this->option('until') ?? ''));
+
+        if ($until === '') {
+            return now()->toDateTimeString();
+        }
+
+        return Carbon::parse($until)->toDateTimeString();
     }
 
     /**
