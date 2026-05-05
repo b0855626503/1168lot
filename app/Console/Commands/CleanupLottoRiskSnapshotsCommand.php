@@ -54,21 +54,36 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             return 1;
         }
 
-        $chunkSize = (int) ($this->option('chunk') ?: self::DEFAULT_CHUNK_SIZE);
+        $chunkSize = $this->resolveIntegerOption('chunk', self::DEFAULT_CHUNK_SIZE);
+        if ($chunkSize === null) {
+            $this->error('--chunk ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($chunkSize < 1) {
             $this->error('--chunk ต้องมากกว่า 0');
 
             return 1;
         }
 
-        $maxRuntime = (int) ($this->option('max-runtime') ?: self::DEFAULT_MAX_RUNTIME_SECONDS);
+        $maxRuntime = $this->resolveIntegerOption('max-runtime', self::DEFAULT_MAX_RUNTIME_SECONDS);
+        if ($maxRuntime === null) {
+            $this->error('--max-runtime ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($maxRuntime < 1) {
             $this->error('--max-runtime ต้องมากกว่า 0');
 
             return 1;
         }
 
-        $sleepMs = (int) ($this->option('sleep-ms') ?: self::DEFAULT_SLEEP_MS);
+        $sleepMs = $this->resolveIntegerOption('sleep-ms', self::DEFAULT_SLEEP_MS);
+        if ($sleepMs === null) {
+            $this->error('--sleep-ms ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($sleepMs < 0) {
             $this->error('--sleep-ms ต้องมากกว่าหรือเท่ากับ 0');
 
@@ -150,5 +165,24 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $this->info(sprintf('deleted %d rows before %s', $totalDeleted, $cutoffText));
 
         return 0;
+    }
+
+    private function resolveIntegerOption(string $name, int $default): ?int
+    {
+        $rawValue = $this->option($name);
+        if ($rawValue === null) {
+            return $default;
+        }
+
+        $normalizedValue = trim((string) $rawValue);
+        if ($normalizedValue === '') {
+            return $default;
+        }
+
+        if (! preg_match('/^-?\d+$/', $normalizedValue)) {
+            return null;
+        }
+
+        return (int) $normalizedValue;
     }
 }

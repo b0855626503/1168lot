@@ -3,6 +3,7 @@
 namespace Tests\Unit\Core;
 
 use App\Services\Dashboard\LottoDashboardMetricConfig;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -103,6 +104,34 @@ class CleanupLottoRiskSnapshotsCommandTest extends TestCase
         $this->artisan('dashboard:lotto-risk-retention --dry-run --days=abc')
             ->expectsOutputToContain('--days must be an integer between 1 and 90')
             ->assertExitCode(1);
+    }
+
+    public function test_invalid_chunk_option_is_rejected(): void
+    {
+        $this->artisan('dashboard:lotto-risk-retention --dry-run --chunk=0')
+            ->expectsOutputToContain('--chunk')
+            ->assertExitCode(1);
+    }
+
+    public function test_invalid_max_runtime_option_is_rejected(): void
+    {
+        $this->artisan('dashboard:lotto-risk-retention --dry-run --max-runtime=0')
+            ->expectsOutputToContain('--max-runtime')
+            ->assertExitCode(1);
+    }
+
+    public function test_scheduler_uses_config_driven_retention_without_hardcoded_days_override(): void
+    {
+        $schedule = app(Schedule::class);
+
+        $event = collect($schedule->events())
+            ->first(fn ($scheduledEvent) => str_contains((string) ($scheduledEvent->command ?? ''), 'dashboard:lotto-risk-retention'));
+
+        $this->assertNotNull($event, 'dashboard:lotto-risk-retention not found in schedule');
+        $this->assertStringNotContainsString('--days=', (string) $event->command);
+        $this->assertStringContainsString('--chunk=5000', (string) $event->command);
+        $this->assertStringContainsString('--max-runtime=120', (string) $event->command);
+        $this->assertStringContainsString('--sleep-ms=100', (string) $event->command);
     }
 
     private function recreateSnapshotTable(): void
