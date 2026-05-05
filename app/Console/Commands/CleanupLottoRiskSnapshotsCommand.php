@@ -54,21 +54,36 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             return 1;
         }
 
-        $chunkSize = (int) ($this->option('chunk') ?: self::DEFAULT_CHUNK_SIZE);
+        $chunkSize = $this->resolveIntegerOption('chunk', self::DEFAULT_CHUNK_SIZE);
+        if ($chunkSize === null) {
+            $this->error('--chunk ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($chunkSize < 1) {
             $this->error('--chunk ต้องมากกว่า 0');
 
             return 1;
         }
 
-        $maxRuntime = (int) ($this->option('max-runtime') ?: self::DEFAULT_MAX_RUNTIME_SECONDS);
+        $maxRuntime = $this->resolveIntegerOption('max-runtime', self::DEFAULT_MAX_RUNTIME_SECONDS);
+        if ($maxRuntime === null) {
+            $this->error('--max-runtime ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($maxRuntime < 1) {
             $this->error('--max-runtime ต้องมากกว่า 0');
 
             return 1;
         }
 
-        $sleepMs = (int) ($this->option('sleep-ms') ?: self::DEFAULT_SLEEP_MS);
+        $sleepMs = $this->resolveIntegerOption('sleep-ms', self::DEFAULT_SLEEP_MS);
+        if ($sleepMs === null) {
+            $this->error('--sleep-ms ต้องเป็นจำนวนเต็ม');
+
+            return 1;
+        }
         if ($sleepMs < 0) {
             $this->error('--sleep-ms ต้องมากกว่าหรือเท่ากับ 0');
 
@@ -78,6 +93,13 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $cutoff = Carbon::now()->subDays($days)->startOfSecond();
         $cutoffText = $cutoff->toDateTimeString();
         $isDryRun = (bool) $this->option('dry-run');
+        $this->line('message=lotto_risk_snapshot_cleanup_started');
+        $this->line('retention_days='.$days);
+        $this->line('cutoff='.$cutoffText);
+        $this->line('chunk='.$chunkSize);
+        $this->line('max_runtime='.$maxRuntime);
+        $this->line('sleep_ms='.$sleepMs);
+        $this->line('dry_run='.($isDryRun ? 'yes' : 'no'));
 
         if ($isDryRun) {
             $sampleIds = DB::table('lotto_dashboard_risk_snapshot')
@@ -87,13 +109,11 @@ class CleanupLottoRiskSnapshotsCommand extends Command
                 ->pluck('id');
             $sampleCount = $sampleIds->count();
 
-            $this->line('retention_days='.$days);
-            $this->line('cutoff='.$cutoffText);
-            $this->line('dry_run=yes');
             $this->line('first_batch_would_delete='.$sampleCount);
-            $this->line('chunk='.$chunkSize);
-            $this->line('max_runtime='.$maxRuntime);
-            $this->line('sleep_ms='.$sleepMs);
+            $this->line('message=lotto_risk_snapshot_cleanup_finished');
+            $this->line('deleted_rows=0');
+            $this->line('elapsed_seconds=0');
+            $this->line('stopped_by=dry_run');
 
             return 0;
         }
@@ -101,6 +121,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
         $startedAt = microtime(true);
         $totalDeleted = 0;
         $batchNumber = 0;
+        $stoppedBy = 'complete';
 
         while (true) {
             if ((microtime(true) - $startedAt) >= $maxRuntime) {
@@ -109,6 +130,7 @@ class CleanupLottoRiskSnapshotsCommand extends Command
                     $totalDeleted,
                     $cutoffText
                 ));
+                $stoppedBy = 'max_runtime';
 
                 break;
             }
@@ -147,8 +169,32 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             }
         }
 
+        $elapsedSeconds = (int) round(microtime(true) - $startedAt);
+        $this->line('message=lotto_risk_snapshot_cleanup_finished');
+        $this->line('deleted_rows='.$totalDeleted);
+        $this->line('elapsed_seconds='.$elapsedSeconds);
+        $this->line('stopped_by='.$stoppedBy);
         $this->info(sprintf('deleted %d rows before %s', $totalDeleted, $cutoffText));
 
         return 0;
+    }
+
+    private function resolveIntegerOption(string $name, int $default): ?int
+    {
+        $rawValue = $this->option($name);
+        if ($rawValue === null) {
+            return $default;
+        }
+
+        $normalizedValue = trim((string) $rawValue);
+        if ($normalizedValue === '') {
+            return $default;
+        }
+
+        if (! preg_match('/^-?\d+$/', $normalizedValue)) {
+            return null;
+        }
+
+        return (int) $normalizedValue;
     }
 }

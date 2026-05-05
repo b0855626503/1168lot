@@ -136,7 +136,11 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        $schedule->command('dashboard:lotto-risk-retention --days=90')
+        $schedule->command('dashboard:lotto-risk-retention', [
+            '--chunk' => 5000,
+            '--max-runtime' => 120,
+            '--sleep-ms' => 100,
+        ])
             ->dailyAt('03:40')
             ->withoutOverlapping()
             ->runInBackground();
