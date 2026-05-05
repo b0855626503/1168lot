@@ -165,7 +165,7 @@ class BackfillLottoRiskCurrentCommand extends Command
                 DB::raw('MAX(rs.snapshot_at) as latest_snapshot_at'),
             ])
             ->whereNull('d.result_at')
-            ->whereNotIn('d.status', ['resulted', 'closed'])
+            ->where('d.status', '!=', 'resulted')
             ->where(function ($q): void {
                 $q->where('rs.stake_total', '>', 0)
                     ->orWhere('rs.payout_if_hit', '>', 0)

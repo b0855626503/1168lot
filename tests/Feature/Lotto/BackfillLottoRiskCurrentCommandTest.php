@@ -56,6 +56,21 @@ class BackfillLottoRiskCurrentCommandTest extends TestCase
         $this->assertNull($row);
     }
 
+    public function test_closed_draw_with_risk_is_written_as_current_exposure(): void
+    {
+        $this->insertDraw(10, 'closed', null);
+        $this->insertSnapshot(10, 'web1', 1, 10, '9', '2026-01-01 10:00:00', 500, 5000, 250);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-backfill');
+
+        $this->assertSame(0, $exit);
+        $row = DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->first();
+        $this->assertNotNull($row, 'closed draw (awaiting result) must remain in current exposure');
+        $this->assertSame(500.0, (float) $row->stake_total);
+    }
+
     public function test_zero_risk_snapshot_for_active_draw_is_not_written(): void
     {
         $this->insertDraw(3, 'open', null);
