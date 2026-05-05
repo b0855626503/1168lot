@@ -31,23 +31,25 @@ class SyncDashboardSummaryBucketJobTest extends TestCase
         $service = Mockery::mock(DashboardSummarySyncService::class);
         $service->shouldReceive('consumePendingBucketPayload')
             ->once()
-            ->with('2026-04-04', 'main', ['lotto_cash'], 'lotto', '10')
+            ->with('2026-04-04', 'main', ['lotto_cash'], 'lotto', '10', [])
             ->andReturn([
                 'summary_date' => '2026-04-04',
                 'web_code' => 'main',
                 'updated_sections' => ['lotto_cash', 'net'],
                 'source_type' => 'wallet',
                 'source_id' => '20',
+                'audit_context' => ['reason' => 'test reason', 'actor_id' => 123],
             ]);
 
         $service->shouldReceive('syncBucket')
             ->once()
-            ->withArgs(function (string $summaryDate, string $webCode, array $updatedSections, ?string $sourceType, ?string $sourceId): bool {
+            ->withArgs(function (string $summaryDate, string $webCode, array $updatedSections, ?string $sourceType, ?string $sourceId, array $auditContext): bool {
                 return $summaryDate === '2026-04-04'
                     && $webCode === 'main'
                     && $updatedSections === ['lotto_cash', 'net']
                     && $sourceType === 'wallet'
-                    && $sourceId === '20';
+                    && $sourceId === '20'
+                    && $auditContext === ['reason' => 'test reason', 'actor_id' => 123];
             });
 
         $job->handle($service);

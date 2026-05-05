@@ -59,4 +59,17 @@ class LottoDashboardSummaryObserverTest extends TestCase
         (new LottoDashboardSummaryObserver)->updated($draw);
         $this->addToAssertionCount(1);
     }
+
+    public function test_updated_draw_without_relevant_change_does_not_dispatch(): void
+    {
+        $service = Mockery::mock(DashboardSummarySyncService::class);
+        $service->shouldReceive('dispatchForModelChange')->never();
+        $this->app->instance(DashboardSummarySyncService::class, $service);
+
+        $draw = Mockery::mock(LottoDraw::class)->makePartial();
+        $draw->shouldReceive('wasChanged')->with(['status', 'result_at', 'result_number'])->andReturn(false);
+
+        (new LottoDashboardSummaryObserver)->updated($draw);
+        $this->addToAssertionCount(1);
+    }
 }

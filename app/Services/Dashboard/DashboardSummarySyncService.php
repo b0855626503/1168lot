@@ -41,6 +41,7 @@ class DashboardSummarySyncService
         $model,
         array $overrideSections = [],
         ?string $sourceTypeOverride = null,
+        array $auditContext = [],
     ): void {
         $buckets = $this->bucketResolver->resolve($domain, $model, $overrideSections);
 
@@ -55,10 +56,11 @@ class DashboardSummarySyncService
             buckets: $buckets,
             sourceType: $sourceTypeOverride ?? $domain,
             sourceId: $sourceId,
+            auditContext: $auditContext,
         );
     }
 
-    public function dispatchBuckets(array $buckets, string $sourceType, string $sourceId = ''): void
+    public function dispatchBuckets(array $buckets, string $sourceType, string $sourceId = '', array $auditContext = []): void
     {
         $defaultWebCode = $this->webCodeResolver->resolve();
 
@@ -78,6 +80,7 @@ class DashboardSummarySyncService
                 updatedSections: (array) ($bucket['updated_sections'] ?? []),
                 sourceType: $sourceType,
                 sourceId: $sourceId,
+                auditContext: $auditContext,
             );
 
             SyncDashboardSummaryBucket::dispatch(
@@ -86,12 +89,13 @@ class DashboardSummarySyncService
                 updatedSections: (array) ($pendingPayload['updated_sections'] ?? []),
                 sourceType: $pendingPayload['source_type'] ?? $sourceType,
                 sourceId: $pendingPayload['source_id'] ?? $sourceId,
+                auditContext: (array) ($pendingPayload['audit_context'] ?? []),
             );
         }
     }
 
     /**
-     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,revision:string}
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,audit_context:array<string,mixed>,revision:string}
      */
     public function mergePendingBucketPayload(
         string $summaryDate,
@@ -99,6 +103,7 @@ class DashboardSummarySyncService
         array $updatedSections,
         ?string $sourceType = null,
         ?string $sourceId = null,
+        array $auditContext = [],
     ): array {
         $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
         $existing = Cache::get($cacheKey, []);
@@ -108,6 +113,10 @@ class DashboardSummarySyncService
             ?? $this->normalizeNullableString($existing['source_type'] ?? null);
         $resolvedSourceId = $this->normalizeNullableString($sourceId)
             ?? $this->normalizeNullableString($existing['source_id'] ?? null);
+        $resolvedAuditContext = $this->mergeAuditContext(
+            (array) ($existing['audit_context'] ?? []),
+            $auditContext
+        );
 
         $payload = [
             'summary_date' => $summaryDate,
@@ -118,6 +127,7 @@ class DashboardSummarySyncService
             )),
             'source_type' => $resolvedSourceType,
             'source_id' => $resolvedSourceId,
+            'audit_context' => $resolvedAuditContext,
             'revision' => sprintf('%.6f', microtime(true)),
         ];
 
@@ -127,7 +137,7 @@ class DashboardSummarySyncService
     }
 
     /**
-     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string}
+     * @return array{summary_date:string,web_code:string,updated_sections:array<int,string>,source_type:?string,source_id:?string,audit_context:array<string,mixed>}
      */
     public function consumePendingBucketPayload(
         string $summaryDate,
@@ -135,6 +145,7 @@ class DashboardSummarySyncService
         array $fallbackUpdatedSections = [],
         ?string $fallbackSourceType = null,
         ?string $fallbackSourceId = null,
+        array $fallbackAuditContext = [],
     ): array {
         $cacheKey = $this->pendingBucketCacheKey($summaryDate, $webCode);
         $existing = Cache::pull($cacheKey, []);
@@ -151,6 +162,10 @@ class DashboardSummarySyncService
                 ?? $this->normalizeNullableString($fallbackSourceType),
             'source_id' => $this->normalizeNullableString($existing['source_id'] ?? null)
                 ?? $this->normalizeNullableString($fallbackSourceId),
+            'audit_context' => $this->mergeAuditContext(
+                $fallbackAuditContext,
+                (array) ($existing['audit_context'] ?? [])
+            ),
         ];
     }
 
@@ -160,6 +175,7 @@ class DashboardSummarySyncService
         array $updatedSections = [],
         ?string $sourceType = null,
         ?string $sourceId = null,
+        array $auditContext = [],
     ): array {
         $requestedWebCode = trim((string) $webCode);
         $webCode = $requestedWebCode !== ''
@@ -196,7 +212,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode, $sourceType): void {
+        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode, $sourceType, $auditContext): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -251,6 +267,8 @@ class DashboardSummarySyncService
                     [
                         'source' => $this->resolveRiskSnapshotSource($sourceType),
                         'web_code' => $webCode,
+                        'reason' => $auditContext['reason'] ?? null,
+                        'actor_id' => $auditContext['actor_id'] ?? null,
                     ]
                 );
 
@@ -513,6 +531,29 @@ class DashboardSummarySyncService
             'lotto.manual_audit' => 'manual_audit',
             default => $normalized,
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $override
+     * @return array<string, mixed>
+     */
+    private function mergeAuditContext(array $base, array $override): array
+    {
+        $reason = $this->normalizeNullableString($override['reason'] ?? null)
+            ?? $this->normalizeNullableString($base['reason'] ?? null);
+        $actorIdRaw = $override['actor_id'] ?? $base['actor_id'] ?? null;
+        $actorId = is_numeric($actorIdRaw) ? (int) $actorIdRaw : null;
+
+        $context = [];
+        if ($reason !== null) {
+            $context['reason'] = $reason;
+        }
+        if ($actorId !== null && $actorId > 0) {
+            $context['actor_id'] = $actorId;
+        }
+
+        return $context;
     }
 
     /**

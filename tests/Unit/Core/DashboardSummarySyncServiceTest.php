@@ -126,6 +126,23 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
+    public function test_sync_bucket_manual_audit_with_reason_allows_snapshot_write(): void
+    {
+        $this->createTestTables();
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'manual_audit', null, [
+            'reason' => 'operator verify exposure',
+            'actor_id' => 9001,
+        ]);
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+    }
+
     private function makeService(
         DashboardSummaryProjector $projector,
         DashboardSummaryBroadcastNotifier $notifier,
