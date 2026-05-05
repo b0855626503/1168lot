@@ -6,6 +6,7 @@ use App\Console\Commands\BackfillLottoBetConfirmedAtCommand;
 use App\Console\Commands\BackfillLottoRiskCurrentCommand;
 use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
 use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
+use App\Console\Commands\ValidateLottoRiskCurrentCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
 use Gametech\Auto\Console\Commands\AddCashbackSeamless;
 use Gametech\Auto\Console\Commands\AddMemberIC;
@@ -68,6 +69,7 @@ class Kernel extends ConsoleKernel
         RebuildLottoDashboardSummaryCommand::class,
         BackfillLottoBetConfirmedAtCommand::class,
         BackfillLottoRiskCurrentCommand::class,
+        ValidateLottoRiskCurrentCommand::class,
         CleanupLottoRiskSnapshotsCommand::class,
     ];
 
