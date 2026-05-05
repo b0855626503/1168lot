@@ -115,6 +115,18 @@ class BackfillLottoRiskCurrentCommandTest extends TestCase
         $this->assertSame(1, $count);
     }
 
+    public function test_since_days_excludes_old_snapshots(): void
+    {
+        $this->insertDraw(8, 'open', null);
+        $this->insertSnapshot(8, 'web1', 1, 8, '4', '2020-01-01 10:00:00', 400, 4000, 200);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-backfill', ['--since-days' => 1]);
+
+        $this->assertSame(0, $exit);
+        $row = DB::table('lotto_dashboard_risk_current')->where('round_id', 8)->first();
+        $this->assertNull($row, '--since-days must exclude snapshots older than the given window');
+    }
+
     private function prepareSchema(): void
     {
         Schema::dropIfExists('lotto_dashboard_risk_current');

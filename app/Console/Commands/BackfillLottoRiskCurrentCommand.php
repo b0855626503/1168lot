@@ -18,6 +18,7 @@ class BackfillLottoRiskCurrentCommand extends Command
         {--market-id= : Limit backfill by market ID}
         {--round-id= : Limit backfill by round ID}
         {--since= : Only include snapshots from this datetime/date}
+        {--since-days= : Shorthand: include snapshots from this many days ago, 0 means no lower bound}
         {--until= : Only include snapshots up to this datetime/date, defaults to now}
         {--chunk= : Upsert batch size}
         {--limit-keys= : Limit number of distinct risk keys processed, 0 means no limit}
@@ -196,10 +197,25 @@ class BackfillLottoRiskCurrentCommand extends Command
             $query->where("{$alias}.round_id", (int) $roundId);
         }
 
+        $sinceDatetime = $this->resolveSince();
+        if ($sinceDatetime !== null) {
+            $query->where("{$alias}.snapshot_at", '>=', $sinceDatetime);
+        }
+    }
+
+    private function resolveSince(): ?string
+    {
         $since = trim((string) ($this->option('since') ?? ''));
         if ($since !== '') {
-            $query->where("{$alias}.snapshot_at", '>=', $since);
+            return Carbon::parse($since)->toDateTimeString();
         }
+
+        $sinceDays = (int) ($this->option('since-days') ?? 0);
+        if ($sinceDays > 0) {
+            return now()->subDays($sinceDays)->startOfDay()->toDateTimeString();
+        }
+
+        return null;
     }
 
     private function resolveUntil(): string
