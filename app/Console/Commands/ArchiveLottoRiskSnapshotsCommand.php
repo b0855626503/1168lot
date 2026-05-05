@@ -140,10 +140,12 @@ class ArchiveLottoRiskSnapshotsCommand extends Command
 
             $ids = [];
             $archiveRows = [];
+            $sourceRowsById = [];
             foreach ($rows as $row) {
-                $ids[] = (int) $row->id;
-                $archiveRows[] = [
-                    'id' => (int) $row->id,
+                $rowId = (int) $row->id;
+                $ids[] = $rowId;
+                $sourceRowsById[$rowId] = [
+                    'id' => $rowId,
                     'web_code' => (string) $row->web_code,
                     'market_id' => (int) $row->market_id,
                     'round_id' => (int) $row->round_id,
@@ -153,6 +155,19 @@ class ArchiveLottoRiskSnapshotsCommand extends Command
                     'stake_total' => (string) $row->stake_total,
                     'payout_if_hit' => (string) $row->payout_if_hit,
                     'liability' => (string) $row->liability,
+                ];
+
+                $archiveRows[] = [
+                    'id' => $rowId,
+                    'web_code' => $sourceRowsById[$rowId]['web_code'],
+                    'market_id' => $sourceRowsById[$rowId]['market_id'],
+                    'round_id' => $sourceRowsById[$rowId]['round_id'],
+                    'bet_type' => $sourceRowsById[$rowId]['bet_type'],
+                    'number' => $sourceRowsById[$rowId]['number'],
+                    'snapshot_at' => $sourceRowsById[$rowId]['snapshot_at'],
+                    'stake_total' => $sourceRowsById[$rowId]['stake_total'],
+                    'payout_if_hit' => $sourceRowsById[$rowId]['payout_if_hit'],
+                    'liability' => $sourceRowsById[$rowId]['liability'],
                     'archived_at' => $archiveTimestamp,
                     'created_at' => $row->created_at !== null ? (string) $row->created_at : null,
                     'updated_at' => $row->updated_at !== null ? (string) $row->updated_at : null,
@@ -164,11 +179,44 @@ class ArchiveLottoRiskSnapshotsCommand extends Command
             $deletedThisBatch = 0;
             $skippedDeleteThisBatch = 0;
             if ($deleteSource) {
-                $confirmedArchivedIds = DB::table('lotto_dashboard_risk_snapshot_archive')
+                $archivedRows = DB::table('lotto_dashboard_risk_snapshot_archive')
                     ->whereIn('id', $ids)
-                    ->pluck('id')
-                    ->map(static fn ($id): int => (int) $id)
-                    ->all();
+                    ->select([
+                        'id',
+                        'web_code',
+                        'market_id',
+                        'round_id',
+                        'bet_type',
+                        'number',
+                        'snapshot_at',
+                        'stake_total',
+                        'payout_if_hit',
+                        'liability',
+                    ])
+                    ->get();
+
+                $confirmedArchivedIds = [];
+                foreach ($archivedRows as $archivedRow) {
+                    $archivedId = (int) $archivedRow->id;
+                    $sourceRow = $sourceRowsById[$archivedId] ?? null;
+                    if ($sourceRow === null) {
+                        continue;
+                    }
+
+                    if (
+                        $sourceRow['web_code'] === (string) $archivedRow->web_code
+                        && $sourceRow['market_id'] === (int) $archivedRow->market_id
+                        && $sourceRow['round_id'] === (int) $archivedRow->round_id
+                        && $sourceRow['bet_type'] === (string) $archivedRow->bet_type
+                        && $sourceRow['number'] === (string) $archivedRow->number
+                        && $sourceRow['snapshot_at'] === (string) $archivedRow->snapshot_at
+                        && (string) $sourceRow['stake_total'] === (string) $archivedRow->stake_total
+                        && (string) $sourceRow['payout_if_hit'] === (string) $archivedRow->payout_if_hit
+                        && (string) $sourceRow['liability'] === (string) $archivedRow->liability
+                    ) {
+                        $confirmedArchivedIds[] = $archivedId;
+                    }
+                }
 
                 if (! empty($confirmedArchivedIds)) {
                     $deletedThisBatch = (int) DB::table('lotto_dashboard_risk_snapshot')

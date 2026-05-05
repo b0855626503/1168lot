@@ -62,7 +62,7 @@ class ArchiveLottoRiskSnapshotsCommandTest extends TestCase
         $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_delete_source_only_deletes_ids_confirmed_in_archive(): void
+    public function test_delete_source_skips_when_archive_payload_mismatch(): void
     {
         $this->seedSnapshotRows();
 
@@ -82,29 +82,60 @@ class ArchiveLottoRiskSnapshotsCommandTest extends TestCase
             'updated_at' => now()->subDays(10)->toDateTimeString(),
         ]);
 
-        DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->update([
-            'snapshot_at' => now()->subDays(10)->toDateTimeString(),
-        ]);
-
-        DB::table('lotto_dashboard_risk_snapshot')->where('id', 2)->update([
-            'snapshot_at' => now()->subDays(10)->toDateTimeString(),
-        ]);
-
-        DB::table('lotto_dashboard_risk_snapshot_archive')->where('id', 2)->delete();
-
-        $this->artisan('dashboard:lotto-risk-archive --days=7 --chunk=1 --delete-source')
-            ->expectsOutputToContain('batch=')
+        $this->artisan('dashboard:lotto-risk-archive --days=7 --chunk=100 --delete-source')
+            ->expectsOutputToContain('skipped_delete=')
             ->assertExitCode(0);
 
-        $this->assertNull(
+        $this->assertNotNull(
             DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->first(),
-            'source row id=1 should be deleted because archive row exists'
+            'source row id=1 must not be deleted when archive payload differs'
         );
-        $this->assertNull(
+        $this->assertNotNull(
             DB::table('lotto_dashboard_risk_snapshot')->where('id', 2)->first(),
-            'source row id=2 should be deleted only after archive row confirmed in subsequent batch'
+            'source row id=2 remains because this mixed batch had mismatch and must skip delete for non-confirmed payload set'
         );
-        $this->assertSame(2, DB::table('lotto_dashboard_risk_snapshot_archive')->count());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot_archive')->count());
+    }
+
+    public function test_delete_source_allows_preexisting_archive_with_matching_payload(): void
+    {
+        $this->seedSnapshotRows();
+
+        $sourceRow = DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->first();
+        $this->assertNotNull($sourceRow);
+
+        DB::table('lotto_dashboard_risk_snapshot_archive')->insert([
+            'id' => (int) $sourceRow->id,
+            'web_code' => (string) $sourceRow->web_code,
+            'market_id' => (int) $sourceRow->market_id,
+            'round_id' => (int) $sourceRow->round_id,
+            'bet_type' => (string) $sourceRow->bet_type,
+            'number' => (string) $sourceRow->number,
+            'snapshot_at' => (string) $sourceRow->snapshot_at,
+            'stake_total' => (string) $sourceRow->stake_total,
+            'payout_if_hit' => (string) $sourceRow->payout_if_hit,
+            'liability' => (string) $sourceRow->liability,
+            'archived_at' => now()->subDays(9)->toDateTimeString(),
+            'created_at' => (string) $sourceRow->created_at,
+            'updated_at' => (string) $sourceRow->updated_at,
+        ]);
+
+        $this->artisan('dashboard:lotto-risk-archive --days=7 --chunk=1 --delete-source')
+            ->assertExitCode(0);
+
+        $this->assertNull(DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->first());
+    }
+
+    public function test_delete_source_removes_newly_inserted_archive_rows_when_payload_matches(): void
+    {
+        $this->seedSnapshotRows();
+
+        $this->artisan('dashboard:lotto-risk-archive --days=7 --chunk=100 --delete-source')
+            ->assertExitCode(0);
+
+        $this->assertNull(DB::table('lotto_dashboard_risk_snapshot')->where('id', 1)->first());
+        $this->assertNotNull(DB::table('lotto_dashboard_risk_snapshot')->where('id', 2)->first());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot_archive')->count());
     }
 
     public function test_invalid_days_option_is_rejected(): void
