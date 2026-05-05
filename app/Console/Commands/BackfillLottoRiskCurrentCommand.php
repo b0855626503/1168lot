@@ -155,6 +155,7 @@ class BackfillLottoRiskCurrentCommand extends Command
     private function latestSnapshotAtQuery(string $until): Builder
     {
         $query = DB::table('lotto_dashboard_risk_snapshot as rs')
+            ->join('lotto_draws as d', 'd.id', '=', 'rs.round_id')
             ->select([
                 'rs.web_code',
                 'rs.market_id',
@@ -163,6 +164,13 @@ class BackfillLottoRiskCurrentCommand extends Command
                 'rs.number',
                 DB::raw('MAX(rs.snapshot_at) as latest_snapshot_at'),
             ])
+            ->whereNull('d.result_at')
+            ->whereNotIn('d.status', ['resulted', 'closed'])
+            ->where(function ($q): void {
+                $q->where('rs.stake_total', '>', 0)
+                    ->orWhere('rs.payout_if_hit', '>', 0)
+                    ->orWhere('rs.liability', '>', 0);
+            })
             ->where('rs.snapshot_at', '<=', $until)
             ->groupBy('rs.web_code', 'rs.market_id', 'rs.round_id', 'rs.bet_type', 'rs.number');
 
@@ -171,7 +179,7 @@ class BackfillLottoRiskCurrentCommand extends Command
         return $query;
     }
 
-    private function applyFilters($query, string $alias): void
+    private function applyFilters(Builder $query, string $alias): void
     {
         $webCode = trim((string) ($this->option('web-code') ?? ''));
         if ($webCode !== '') {

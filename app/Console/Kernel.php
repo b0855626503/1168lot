@@ -138,6 +138,11 @@ class Kernel extends ConsoleKernel
             ->dailyAt('03:40')
             ->withoutOverlapping()
             ->runInBackground();
+
+        $schedule->command('dashboard:lotto-risk-current-backfill', ['--chunk' => 500])
+            ->dailyAt('03:50')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     protected function commands()
