@@ -11,6 +11,7 @@ use App\Services\Dashboard\LottoRiskSnapshotWritePolicy;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Tests\TestCase;
@@ -178,6 +179,7 @@ class DashboardSummarySyncServiceTest extends TestCase
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
     {
         config()->set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Log::spy();
         $this->createTestTables();
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
@@ -192,6 +194,9 @@ class DashboardSummarySyncServiceTest extends TestCase
         ]);
 
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('lotto_snapshot_legacy_write_blocked', Mockery::type('array'));
     }
 
     public function test_legacy_snapshot_source_is_allowed_when_feature_flag_enabled(): void
@@ -211,6 +216,38 @@ class DashboardSummarySyncServiceTest extends TestCase
         ]);
 
         $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+    }
+
+    public function test_snapshot_write_path_is_append_only_and_does_not_mutate_existing_row(): void
+    {
+        config()->set('dashboard.lotto.legacy_snapshot_write_enabled', true);
+        $this->createTestTables();
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $existing = $this->lottoPayloadMeaningfulRisk()['risk'][0];
+        DB::table('lotto_dashboard_risk_snapshot')->insert($existing);
+
+        $mutated = $existing;
+        $mutated['stake_total'] = 9999;
+        $mutated['payout_if_hit'] = 9999;
+        $mutated['liability'] = 9999;
+
+        $service->writeRiskSnapshot([$mutated], [
+            'source' => 'scheduled',
+            'reason' => 'test_append_only',
+            'class' => __CLASS__,
+            'file' => __FILE__,
+        ]);
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+
+        $row = DB::table('lotto_dashboard_risk_snapshot')->first();
+        $this->assertSame((float) $existing['stake_total'], (float) $row->stake_total);
+        $this->assertSame((float) $existing['payout_if_hit'], (float) $row->payout_if_hit);
+        $this->assertSame((float) $existing['liability'], (float) $row->liability);
     }
 
     private function makeService(

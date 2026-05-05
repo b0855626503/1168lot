@@ -694,13 +694,8 @@ class DashboardSummarySyncService
             return $snapshotWriteDecision;
         }
 
-        $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'], true)));
         foreach (array_chunk($rows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
-            DB::table('lotto_dashboard_risk_snapshot')->upsert(
-                $chunk,
-                ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at'],
-                $updateColumns
-            );
+            DB::table('lotto_dashboard_risk_snapshot')->insertOrIgnore($chunk);
         }
 
         return $snapshotWriteDecision;
