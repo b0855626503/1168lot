@@ -33,6 +33,12 @@ class ValidateLottoRiskCurrentCommand extends Command
             return 1;
         }
 
+        if (! Schema::hasTable('lotto_draws')) {
+            $this->error('table lotto_draws not found');
+
+            return 1;
+        }
+
         $limit = max(1, (int) $this->option('limit'));
         $failed = false;
 
@@ -47,7 +53,7 @@ class ValidateLottoRiskCurrentCommand extends Command
         }
 
         // 2. Invalid draw rows (missing draw, resulted draw, result_at set)
-        $invalidDrawRows = Schema::hasTable('lotto_draws') ? $this->countInvalidDrawRows() : 0;
+        $invalidDrawRows = $this->countInvalidDrawRows();
         $this->line("invalid_draw_rows = {$invalidDrawRows}");
 
         if ($invalidDrawRows > 0) {
@@ -87,14 +93,17 @@ class ValidateLottoRiskCurrentCommand extends Command
 
     private function hasScopeFilter(): bool
     {
-        return $this->option('web-code') !== null
-            || $this->option('market-id') !== null
-            || $this->option('round-id') !== null;
+        return $this->normalizedOption('web-code') !== null
+            || $this->normalizedOption('market-id') !== null
+            || $this->normalizedOption('round-id') !== null;
     }
 
     private function countDuplicateCurrentRows(): int
     {
-        $sub = DB::table('lotto_dashboard_risk_current')
+        $sub = DB::table('lotto_dashboard_risk_current');
+        $this->applyFilters($sub, null);
+
+        $sub = $sub
             ->selectRaw('COUNT(*) as c')
             ->groupBy('web_code', 'market_id', 'round_id', 'bet_type', 'number')
             ->havingRaw('COUNT(*) > 1');
@@ -186,9 +195,9 @@ class ValidateLottoRiskCurrentCommand extends Command
             })
             ->where(function ($q) use ($tolerance): void {
                 $q->whereNull('c.round_id')
-                    ->orWhereRaw("ABS(COALESCE(snap.stake_total, 0) - COALESCE(c.stake_total, 0)) > {$tolerance}")
-                    ->orWhereRaw("ABS(COALESCE(snap.payout_if_hit, 0) - COALESCE(c.payout_if_hit, 0)) > {$tolerance}")
-                    ->orWhereRaw("ABS(COALESCE(snap.liability, 0) - COALESCE(c.liability, 0)) > {$tolerance}");
+                    ->orWhereRaw('ABS(COALESCE(snap.stake_total, 0) - COALESCE(c.stake_total, 0)) > ?', [$tolerance])
+                    ->orWhereRaw('ABS(COALESCE(snap.payout_if_hit, 0) - COALESCE(c.payout_if_hit, 0)) > ?', [$tolerance])
+                    ->orWhereRaw('ABS(COALESCE(snap.liability, 0) - COALESCE(c.liability, 0)) > ?', [$tolerance]);
             });
 
         $count = $mismatches->count();
@@ -221,22 +230,32 @@ class ValidateLottoRiskCurrentCommand extends Command
     {
         $prefix = $alias ? "{$alias}." : '';
 
-        if ($webCode = $this->option('web-code')) {
+        if (($webCode = $this->normalizedOption('web-code')) !== null) {
             $query->where("{$prefix}web_code", $webCode);
         }
 
-        if ($marketId = $this->option('market-id')) {
+        if (($marketId = $this->normalizedOption('market-id')) !== null) {
             $query->where("{$prefix}market_id", $marketId);
         }
 
-        if ($roundId = $this->option('round-id')) {
+        if (($roundId = $this->normalizedOption('round-id')) !== null) {
             $query->where("{$prefix}round_id", $roundId);
         }
     }
 
+    private function normalizedOption(string $name): ?string
+    {
+        $value = trim((string) $this->option($name));
+
+        return $value === '' ? null : $value;
+    }
+
     private function displayDuplicateSamples(int $limit): void
     {
-        $rows = DB::table('lotto_dashboard_risk_current')
+        $rows = DB::table('lotto_dashboard_risk_current');
+        $this->applyFilters($rows, null);
+
+        $rows = $rows
             ->select('web_code', 'market_id', 'round_id', 'bet_type', 'number', DB::raw('COUNT(*) as c'))
             ->groupBy('web_code', 'market_id', 'round_id', 'bet_type', 'number')
             ->havingRaw('COUNT(*) > 1')

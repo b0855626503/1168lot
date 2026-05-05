@@ -54,7 +54,7 @@ class ValidateLottoRiskCurrentCommandTest extends TestCase
         $this->insertDraw(1, 'open', null);
         // Drop unique constraint so we can insert duplicates
         Schema::table('lotto_dashboard_risk_current', function (Blueprint $table): void {
-            $table->dropUnique(['web_code', 'market_id', 'round_id', 'bet_type', 'number']);
+            $table->dropUnique('lotto_dashboard_risk_current_dimension_unique');
         });
         $this->insertCurrent(1, 'web1', 1, 1, 'straight', '5', 100, 1000, 50);
         $this->insertCurrent(2, 'web1', 1, 1, 'straight', '5', 100, 1000, 50);
@@ -145,6 +145,21 @@ class ValidateLottoRiskCurrentCommandTest extends TestCase
         $this->assertStringContainsString('--compare-snapshot requires at least one scope filter', $output);
     }
 
+    public function test_fails_when_compare_snapshot_scope_is_empty_string(): void
+    {
+        $this->insertDraw(55, 'open', null);
+        $this->insertCurrent(1, 'web1', 1, 55, 'straight', '6', 100, 1000, 50);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', [
+            '--compare-snapshot' => true,
+            '--web-code' => '',
+        ]);
+
+        $this->assertSame(1, $exit);
+        $output = Artisan::output();
+        $this->assertStringContainsString('--compare-snapshot requires at least one scope filter', $output);
+    }
+
     // -----------------------------------------------------------------------
     // --compare-snapshot with scope passes when data matches
     // -----------------------------------------------------------------------
@@ -209,7 +224,7 @@ class ValidateLottoRiskCurrentCommandTest extends TestCase
             $table->decimal('payout_if_hit', 14, 2)->default(0);
             $table->decimal('liability', 14, 2)->default(0);
             $table->timestamps();
-            $table->unique(['web_code', 'market_id', 'round_id', 'bet_type', 'number']);
+            $table->unique(['web_code', 'market_id', 'round_id', 'bet_type', 'number'], 'lotto_dashboard_risk_current_dimension_unique');
         });
     }
 
