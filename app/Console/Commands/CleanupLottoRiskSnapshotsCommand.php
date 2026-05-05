@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Schema;
 
 class CleanupLottoRiskSnapshotsCommand extends Command
 {
+    private const DAYS_RANGE_ERROR = '--days must be an integer between 1 and 90';
+    private const MIN_RETENTION_DAYS = 1;
+    private const MAX_RETENTION_DAYS = 90;
     private const DEFAULT_CHUNK_SIZE = 5000;
     private const DEFAULT_MAX_RUNTIME_SECONDS = 60;
     private const DEFAULT_SLEEP_MS = 100;
@@ -31,9 +34,22 @@ class CleanupLottoRiskSnapshotsCommand extends Command
             return 0;
         }
 
-        $days = (int) ($this->option('days') ?: LottoDashboardMetricConfig::riskSnapshotRetentionDays());
-        if ($days < 1) {
-            $this->error('--days ต้องมากกว่า 0');
+        $daysOption = $this->option('days');
+        $days = LottoDashboardMetricConfig::riskSnapshotRetentionDays();
+        if ($daysOption !== null) {
+            $normalizedDaysOption = trim((string) $daysOption);
+            if ($normalizedDaysOption !== '') {
+                if (! preg_match('/^-?\d+$/', $normalizedDaysOption)) {
+                    $this->error(self::DAYS_RANGE_ERROR);
+
+                    return 1;
+                }
+                $days = (int) $normalizedDaysOption;
+            }
+        }
+
+        if ($days < self::MIN_RETENTION_DAYS || $days > self::MAX_RETENTION_DAYS) {
+            $this->error(self::DAYS_RANGE_ERROR);
 
             return 1;
         }
@@ -61,28 +77,23 @@ class CleanupLottoRiskSnapshotsCommand extends Command
 
         $cutoff = Carbon::now()->subDays($days)->startOfSecond();
         $cutoffText = $cutoff->toDateTimeString();
+        $isDryRun = (bool) $this->option('dry-run');
 
-        $this->line(sprintf(
-            'cleanup cutoff=%s days=%d chunk=%d max_runtime=%ds sleep_ms=%d dry_run=%s',
-            $cutoffText,
-            $days,
-            $chunkSize,
-            $maxRuntime,
-            $sleepMs,
-            (bool) $this->option('dry-run') ? 'yes' : 'no'
-        ));
-
-        if ((bool) $this->option('dry-run')) {
-            $sampleCount = (int) DB::table('lotto_dashboard_risk_snapshot')
+        if ($isDryRun) {
+            $sampleIds = DB::table('lotto_dashboard_risk_snapshot')
                 ->where('snapshot_at', '<', $cutoffText)
+                ->orderBy('id')
                 ->limit($chunkSize)
-                ->count();
+                ->pluck('id');
+            $sampleCount = $sampleIds->count();
 
-            $this->line(sprintf(
-                '[dry-run] first batch would delete up to %d rows before %s',
-                $sampleCount,
-                $cutoffText
-            ));
+            $this->line('retention_days='.$days);
+            $this->line('cutoff='.$cutoffText);
+            $this->line('dry_run=yes');
+            $this->line('first_batch_would_delete='.$sampleCount);
+            $this->line('chunk='.$chunkSize);
+            $this->line('max_runtime='.$maxRuntime);
+            $this->line('sleep_ms='.$sleepMs);
 
             return 0;
         }
