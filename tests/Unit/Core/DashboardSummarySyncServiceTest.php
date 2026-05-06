@@ -104,9 +104,11 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame([], $payload['audit_context']);
     }
 
-    public function test_sync_bucket_zero_risk_scheduled_skips_snapshot_and_keeps_current(): void
+    public function test_sync_bucket_zero_risk_scheduled_skips_snapshot_and_does_not_write_current(): void
     {
+        // BOA-230: zero-risk rows must not be upserted into current.
         $this->createTestTables();
+        $this->seedOpenDraw(10);
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
             $this->mockNotifier(),
@@ -114,7 +116,7 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->count());
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
@@ -122,6 +124,7 @@ class DashboardSummarySyncServiceTest extends TestCase
     {
         // BOA-229: syncBucket must never write lotto_dashboard_risk_snapshot.
         $this->createTestTables();
+        $this->seedOpenDraw(10);
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
             $this->mockNotifier(),
@@ -133,10 +136,12 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_draw_closed_zero_risk_does_not_write_snapshot(): void
+    public function test_sync_bucket_draw_closed_zero_risk_does_not_write_current_or_snapshot(): void
     {
         // BOA-229: draw_closed source no longer triggers a snapshot write at runtime.
+        // BOA-230: zero-risk row is not written to current.
         $this->createTestTables();
+        $this->seedOpenDraw(10);
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
             $this->mockNotifier(),
@@ -144,13 +149,14 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'draw_closed');
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->count());
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_manual_audit_without_reason_does_not_write_snapshot(): void
+    public function test_sync_bucket_manual_audit_without_reason_does_not_write_current_or_snapshot(): void
     {
         $this->createTestTables();
+        $this->seedOpenDraw(10);
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
             $this->mockNotifier(),
@@ -158,7 +164,7 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'manual_audit');
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->count());
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
@@ -166,7 +172,9 @@ class DashboardSummarySyncServiceTest extends TestCase
     {
         // BOA-229: even an operator-initiated manual audit no longer writes
         // lotto_dashboard_risk_snapshot from the runtime sync path.
+        // BOA-230: zero-risk row is not written to current either.
         $this->createTestTables();
+        $this->seedOpenDraw(10);
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
             $this->mockNotifier(),
@@ -177,8 +185,203 @@ class DashboardSummarySyncServiceTest extends TestCase
             'actor_id' => 9001,
         ]);
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->count());
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
+    }
+
+    public function test_current_writer_upserts_open_draw_with_meaningful_risk(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_upserts_closed_but_not_resulted_draw_with_risk(): void
+    {
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'closed', 'result_at' => null]);
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_deletes_existing_row_for_resulted_draw(): void
+    {
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'resulted', 'result_at' => '2026-05-05 12:00:00']);
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_deletes_existing_row_when_result_at_is_not_null_even_if_status_open(): void
+    {
+        // Defensive: result_at IS NOT NULL is invalid regardless of status string.
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'open', 'result_at' => '2026-05-05 12:00:00']);
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_excludes_defensive_extended_statuses(): void
+    {
+        // Production enum is only draft|open|closed|resulted; this guards the
+        // defensive exclude list (cancelled/void/refunded/no_result/...) from
+        // future enum additions per BOA-228/230.
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'draft', 'result_at' => null]);
+        // Pre-existing legacy row for a round whose draw is now in a defensive
+        // exclude state simulated via direct status override:
+        DB::table('lotto_draws')->where('id', 10)->update(['status' => 'cancelled']);
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_deletes_existing_zero_risk_row_by_full_key(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'bet_type' => '2top',
+            'number' => '12',
+            'stake_total' => 50,
+            'payout_if_hit' => 50,
+            'liability' => 50,
+        ]));
+
+        // Payload has zero-risk for the same key; row must be deleted, not upserted.
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '12')
+            ->count());
+    }
+
+    public function test_current_writer_deletes_existing_rows_for_missing_draw(): void
+    {
+        $this->createTestTables();
+        // Note: NO row inserted into lotto_draws for round_id=10.
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_is_set_based_no_n_plus_one_against_lotto_draws(): void
+    {
+        // BOA-230: classifying N payload rows must not issue N queries against
+        // lotto_draws. We assert at most a small constant number of SELECTs hit
+        // lotto_draws regardless of payload row count.
+        $this->createTestTables();
+
+        $payload = $this->lottoPayloadMeaningfulRisk();
+        $template = $payload['risk'][0];
+        $payload['risk'] = [];
+        for ($i = 1; $i <= 25; $i++) {
+            $drawId = 1000 + $i;
+            $this->seedOpenDraw($drawId);
+            $row = $template;
+            $row['round_id'] = $drawId;
+            $row['number'] = sprintf('%02d', $i);
+            $payload['risk'][] = $row;
+        }
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $payload),
+            $this->mockNotifier(),
+        );
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+        $log = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $drawSelects = 0;
+        foreach ($log as $entry) {
+            $sql = (string) ($entry['query'] ?? '');
+            if (stripos($sql, 'from "lotto_draws"') !== false || stripos($sql, 'from `lotto_draws`') !== false) {
+                if (stripos($sql, 'select') === 0) {
+                    $drawSelects++;
+                }
+            }
+        }
+
+        // One classification SELECT for all 25 round_ids — never per-row.
+        $this->assertLessThanOrEqual(2, $drawSelects, 'lotto_draws classification must be set-based, not N+1.');
+        $this->assertSame(25, DB::table('lotto_dashboard_risk_current')->count());
+    }
+
+    public function test_current_writer_mixed_payload_partial_upsert_partial_delete(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);                                            // valid -> upsert
+        $this->seedDraw(11, ['status' => 'resulted', 'result_at' => '2026-05-05']); // invalid -> delete
+
+        // Pre-existing rows for both
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(11));
+
+        $payload = $this->lottoPayloadMeaningfulRisk();
+        $payload['risk'][] = array_merge($payload['risk'][0], ['round_id' => 11, 'number' => '13']);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $payload),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 11)->count());
     }
 
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
@@ -453,6 +656,43 @@ class DashboardSummarySyncServiceTest extends TestCase
         return $payload;
     }
 
+    private function seedOpenDraw(int $id): void
+    {
+        $this->seedDraw($id, ['status' => 'open', 'result_at' => null]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function seedDraw(int $id, array $overrides = []): void
+    {
+        DB::table('lotto_draws')->insertOrIgnore(array_merge([
+            'id' => $id,
+            'status' => 'open',
+            'result_at' => null,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ], $overrides));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function existingCurrentRowFor(int $roundId, array $overrides = []): array
+    {
+        return array_merge([
+            'web_code' => 'main',
+            'market_id' => 1,
+            'round_id' => $roundId,
+            'bet_type' => '2top',
+            'number' => '12',
+            'stake_total' => 100,
+            'payout_if_hit' => 9000,
+            'liability' => 8900,
+        ], $overrides);
+    }
+
     private function createTestTables(): void
     {
         $this->dropTestTables();
@@ -473,6 +713,14 @@ class DashboardSummarySyncServiceTest extends TestCase
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
             $table->unique(['summary_date', 'web_code']);
+        });
+
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('status')->default('open');
+            $table->dateTime('result_at')->nullable();
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
         });
 
         Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
@@ -510,6 +758,7 @@ class DashboardSummarySyncServiceTest extends TestCase
             'lotto_dashboard_risk_current',
             'lotto_dashboard_summary_daily',
             'dashboard_summary_daily',
+            'lotto_draws',
         ] as $table) {
             if (Schema::hasTable($table)) {
                 Schema::drop($table);
