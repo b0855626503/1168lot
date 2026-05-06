@@ -360,6 +360,49 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(25, DB::table('lotto_dashboard_risk_current')->count());
     }
 
+    public function test_cancelled_ticket_leaves_zero_risk_row_which_is_cleaned_from_current(): void
+    {
+        // BOA-230: cancelled ticket leaves sold_amount=0 in exposure; zero-risk delete path removes stale current row.
+        $this->createTestTables();
+        // Active draw (status='open', result_at=NULL) — the draw itself is NOT cancelled.
+        $this->seedOpenDraw(10);
+
+        // Pre-existing current row simulating a prior upsert when the ticket was active and had risk.
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'bet_type' => '2top',
+            'number' => '12',
+            'stake_total' => 200,
+            'payout_if_hit' => 18000,
+            'liability' => 17800,
+        ]));
+
+        // Payload where the exposure pipeline has decremented sold_amount to 0 after ticket cancellation.
+        $payload = $this->lottoPayloadZeroRisk();
+        // Ensure the zero-risk payload matches the same draw+number+bet_type key.
+        $payload['risk'][0] = array_merge($payload['risk'][0], [
+            'round_id' => 10,
+            'bet_type' => '2top',
+            'number' => '12',
+            'stake_total' => 0,
+            'payout_if_hit' => 0,
+            'liability' => 0,
+        ]);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $payload),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        // Zero-risk delete path must have removed the stale current row.
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '12')
+            ->count());
+    }
+
     public function test_current_writer_mixed_payload_partial_upsert_partial_delete(): void
     {
         $this->createTestTables();
