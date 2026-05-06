@@ -5,6 +5,7 @@ namespace App\Console;
 use App\Console\Commands\BackfillLottoBetConfirmedAtCommand;
 use App\Console\Commands\BackfillLottoRiskCurrentCommand;
 use App\Console\Commands\CleanupLottoRiskSnapshotsCommand;
+use App\Console\Commands\Dashboard\LottoRiskCurrentCleanupCommand;
 use App\Console\Commands\RebuildLottoDashboardSummaryCommand;
 use App\Console\Commands\ValidateLottoRiskCurrentCommand;
 use Gametech\Auto\Console\Commands\AddCashback;
@@ -71,6 +72,7 @@ class Kernel extends ConsoleKernel
         BackfillLottoRiskCurrentCommand::class,
         ValidateLottoRiskCurrentCommand::class,
         CleanupLottoRiskSnapshotsCommand::class,
+        LottoRiskCurrentCleanupCommand::class,
     ];
 
     protected function schedule(Schedule $schedule)

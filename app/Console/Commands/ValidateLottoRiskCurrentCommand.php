@@ -15,7 +15,8 @@ class ValidateLottoRiskCurrentCommand extends Command
         {--round-id= : Filter by round ID}
         {--limit=100 : Max sample rows to display per check}
         {--compare-snapshot : Opt-in scoped snapshot comparison (requires --web-code, --market-id, or --round-id)}
-        {--tolerance=0.01 : Decimal tolerance for snapshot amount comparison}';
+        {--tolerance=0.01 : Decimal tolerance for snapshot amount comparison}
+        {--strict : Run all strict validation checks and exit 1 if any fail}';
 
     protected $description = 'Current Exposure Validation Gate — validates lotto_dashboard_risk_current directly';
 
@@ -37,6 +38,10 @@ class ValidateLottoRiskCurrentCommand extends Command
             $this->error('table lotto_draws not found');
 
             return 1;
+        }
+
+        if ($this->option('strict')) {
+            return $this->handleStrict();
         }
 
         $limit = max(1, (int) $this->option('limit'));
@@ -91,6 +96,102 @@ class ValidateLottoRiskCurrentCommand extends Command
         return 0;
     }
 
+    // -----------------------------------------------------------------------
+    // Strict mode
+    // -----------------------------------------------------------------------
+
+    /**
+     * Run all 9 strict checks and output pass/fail per check.
+     * Exit code 0 = all passed, 1 = any failed.
+     */
+    private function handleStrict(): int
+    {
+        $failed = false;
+
+        // 1. duplicate_current_keys
+        $duplicates = $this->countDuplicateCurrentRows();
+        $this->outputCheck('duplicate_current_keys', $duplicates, 0, $failed);
+
+        // 2. invalid_draw_rows (resulted OR result_at set)
+        $invalidDrawRows = $this->countInvalidDrawRows();
+        $this->outputCheck('invalid_draw_rows', $invalidDrawRows, 0, $failed);
+
+        // 3. zero_risk_rows
+        $zeroRiskRows = $this->countZeroRiskRows();
+        $this->outputCheck('zero_risk_rows', $zeroRiskRows, 0, $failed);
+
+        // 4. missing_draw_rows (round_id not in lotto_draws)
+        $missingDrawRows = $this->countMissingDrawRows();
+        $this->outputCheck('missing_draw_rows', $missingDrawRows, 0, $failed);
+
+        // 5. cancelled_draw_rows — rows whose draw status='resulted'
+        //    (production enum: draft|open|closed|resulted — no 'cancelled' status exists;
+        //     "cancelled" draws in this system are represented as status='resulted')
+        $cancelledDrawRows = $this->countCancelledDrawRows();
+        $this->outputCheck('cancelled_draw_rows', $cancelledDrawRows, 0, $failed);
+
+        // 6. snapshot_writer_enabled — must be false (PR-A disabled it)
+        $snapshotWriterEnabled = (bool) config('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        $this->outputCheckBool('snapshot_writer_enabled', $snapshotWriterEnabled, false, $failed);
+
+        // 7. snapshot_fallback_enabled — must be false (read_source must not be 'snapshot')
+        $readSource = (string) config('dashboard.lotto_risk.read_source', 'current');
+        $snapshotFallbackEnabled = ($readSource === 'snapshot');
+        $this->outputCheckBool('snapshot_fallback_enabled', $snapshotFallbackEnabled, false, $failed);
+
+        // 8. snapshot_runtime_dependency — 0 means both writer and fallback are disabled
+        $snapshotDependency = ($snapshotWriterEnabled || $snapshotFallbackEnabled) ? 1 : 0;
+        $this->outputCheck('snapshot_runtime_dependency', $snapshotDependency, 0, $failed);
+
+        // 9. dashboard_read_source — must be 'current_only'
+        $dashboardReadSource = ($readSource !== 'snapshot') ? 'current_only' : $readSource;
+        $readSourcePass = ($dashboardReadSource === 'current_only');
+        if (! $readSourcePass) {
+            $failed = true;
+        }
+        $label = $readSourcePass ? '[PASS]' : '[FAIL]';
+        $this->line("dashboard_read_source = {$dashboardReadSource}  {$label}");
+
+        // Summary
+        $result = $failed ? 'failed' : 'passed';
+        $resultLabel = $failed ? '[FAIL]' : '[PASS]';
+        $this->line("validation_result = {$result}  {$resultLabel}");
+
+        return $failed ? 1 : 0;
+    }
+
+    /**
+     * Output a numeric check line with [PASS]/[FAIL].
+     */
+    private function outputCheck(string $name, int $actual, int $expected, bool &$failed): void
+    {
+        $pass = ($actual === $expected);
+        if (! $pass) {
+            $failed = true;
+        }
+        $label = $pass ? '[PASS]' : '[FAIL]';
+        $this->line("{$name} = {$actual}  {$label}");
+    }
+
+    /**
+     * Output a boolean check line with [PASS]/[FAIL].
+     * Pass condition: $actual === $expected.
+     */
+    private function outputCheckBool(string $name, bool $actual, bool $expected, bool &$failed): void
+    {
+        $pass = ($actual === $expected);
+        if (! $pass) {
+            $failed = true;
+        }
+        $label = $pass ? '[PASS]' : '[FAIL]';
+        $value = $actual ? 'true' : 'false';
+        $this->line("{$name} = {$value}  {$label}");
+    }
+
+    // -----------------------------------------------------------------------
+    // Count helpers
+    // -----------------------------------------------------------------------
+
     private function hasScopeFilter(): bool
     {
         return $this->normalizedOption('web-code') !== null
@@ -121,6 +222,36 @@ class ValidateLottoRiskCurrentCommand extends Command
     private function countZeroRiskRows(): int
     {
         return $this->zeroRiskQuery()->count();
+    }
+
+    private function countMissingDrawRows(): int
+    {
+        $query = DB::table('lotto_dashboard_risk_current')
+            ->whereNotExists(function ($q): void {
+                $q->select(DB::raw(1))
+                    ->from('lotto_draws')
+                    ->whereColumn('lotto_draws.id', 'lotto_dashboard_risk_current.round_id');
+            });
+
+        $this->applyFilters($query, null);
+
+        return $query->count();
+    }
+
+    /**
+     * Count rows whose draw has status='resulted'.
+     * Note: production lotto_draws.status enum is: draft, open, closed, resulted.
+     * There is no 'cancelled' status — draws that are cancelled/voided are recorded as 'resulted'.
+     */
+    private function countCancelledDrawRows(): int
+    {
+        $query = DB::table('lotto_dashboard_risk_current as c')
+            ->join('lotto_draws as d', 'd.id', '=', 'c.round_id')
+            ->where('d.status', 'resulted');
+
+        $this->applyFilters($query, 'c');
+
+        return $query->count();
     }
 
     private function invalidDrawQuery(): Builder

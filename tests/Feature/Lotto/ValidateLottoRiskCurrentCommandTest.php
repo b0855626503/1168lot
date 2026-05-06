@@ -4,6 +4,7 @@ namespace Tests\Feature\Lotto;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -179,6 +180,123 @@ class ValidateLottoRiskCurrentCommandTest extends TestCase
         $output = Artisan::output();
         $this->assertStringContainsString('validation_result = passed', $output);
         $this->assertMatchesRegularExpression('/snapshot_compare_checked = \d+/', $output);
+    }
+
+    // -----------------------------------------------------------------------
+    // --strict: PASS when table is clean and config correct
+    // -----------------------------------------------------------------------
+
+    public function test_strict_passes_with_clean_table_and_correct_config(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Config::set('dashboard.lotto_risk.read_source', 'current');
+
+        $this->insertDraw(10, 'open', null);
+        $this->insertCurrent(10, 'web1', 1, 10, 'straight', '7', 100, 1000, 50);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(0, $exit);
+        $output = Artisan::output();
+        $this->assertStringContainsString('validation_result = passed', $output);
+        $this->assertStringContainsString('[PASS]', $output);
+        $this->assertStringNotContainsString('[FAIL]', $output);
+    }
+
+    public function test_strict_passes_with_empty_table(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Config::set('dashboard.lotto_risk.read_source', 'current');
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(0, $exit);
+        $output = Artisan::output();
+        $this->assertStringContainsString('validation_result = passed', $output);
+    }
+
+    // -----------------------------------------------------------------------
+    // --strict: FAIL on invalid_draw_rows (resulted draw in current)
+    // -----------------------------------------------------------------------
+
+    public function test_strict_fails_when_resulted_draw_row_exists(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Config::set('dashboard.lotto_risk.read_source', 'current');
+
+        $this->insertDraw(20, 'resulted', '2026-01-01 12:00:00');
+        $this->insertCurrent(20, 'web1', 1, 20, 'straight', '5', 100, 1000, 50);
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(1, $exit);
+        $output = Artisan::output();
+        $this->assertMatchesRegularExpression('/invalid_draw_rows = [1-9]\d*\s+\[FAIL\]/', $output);
+        $this->assertStringContainsString('validation_result = failed', $output);
+    }
+
+    // -----------------------------------------------------------------------
+    // --strict: FAIL on snapshot_writer_enabled
+    // -----------------------------------------------------------------------
+
+    public function test_strict_fails_when_snapshot_writer_enabled(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', true);
+        Config::set('dashboard.lotto_risk.read_source', 'current');
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(1, $exit);
+        $output = Artisan::output();
+        $this->assertStringContainsString('snapshot_writer_enabled = true  [FAIL]', $output);
+        $this->assertStringContainsString('validation_result = failed', $output);
+    }
+
+    // -----------------------------------------------------------------------
+    // --strict: FAIL when read_source=snapshot (fallback enabled)
+    // -----------------------------------------------------------------------
+
+    public function test_strict_fails_when_read_source_is_snapshot(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Config::set('dashboard.lotto_risk.read_source', 'snapshot');
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(1, $exit);
+        $output = Artisan::output();
+        $this->assertStringContainsString('snapshot_fallback_enabled = true  [FAIL]', $output);
+        $this->assertStringContainsString('validation_result = failed', $output);
+    }
+
+    // -----------------------------------------------------------------------
+    // --strict: all 9 check lines present
+    // -----------------------------------------------------------------------
+
+    public function test_strict_output_contains_all_required_check_lines(): void
+    {
+        Config::set('dashboard.lotto.legacy_snapshot_write_enabled', false);
+        Config::set('dashboard.lotto_risk.read_source', 'current');
+
+        $exit = Artisan::call('dashboard:lotto-risk-current-validate', ['--strict' => true]);
+
+        $this->assertSame(0, $exit);
+        $output = Artisan::output();
+
+        foreach ([
+            'duplicate_current_keys',
+            'invalid_draw_rows',
+            'zero_risk_rows',
+            'missing_draw_rows',
+            'cancelled_draw_rows',
+            'snapshot_writer_enabled',
+            'snapshot_fallback_enabled',
+            'snapshot_runtime_dependency',
+            'dashboard_read_source',
+            'validation_result',
+        ] as $check) {
+            $this->assertStringContainsString($check, $output, "Missing check line: {$check}");
+        }
     }
 
     // -----------------------------------------------------------------------
