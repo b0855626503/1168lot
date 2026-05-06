@@ -677,6 +677,11 @@ class DashboardSummarySyncService
 
         Log::info('lotto_risk_snapshot_write_allowed', $logContext);
 
+        $checkpointAt = now()->startOfSecond()->toDateTimeString();
+        $snapshotColumns = $this->tableColumns('lotto_dashboard_risk_snapshot');
+        $hasCreatedAt = in_array('created_at', $snapshotColumns, true);
+        $hasUpdatedAt = in_array('updated_at', $snapshotColumns, true);
+
         $rows = [];
         foreach ($riskRows as $row) {
             $filtered = $this->filterPayloadByExistingColumns(
@@ -684,9 +689,19 @@ class DashboardSummarySyncService
                 (array) $row,
                 ['web_code', 'market_id', 'round_id', 'bet_type', 'number', 'snapshot_at']
             );
-            if (! empty($filtered)) {
-                $rows[] = $filtered;
+            if (empty($filtered)) {
+                continue;
             }
+
+            $filtered['snapshot_at'] = $checkpointAt;
+            if ($hasCreatedAt) {
+                $filtered['created_at'] = $checkpointAt;
+            }
+            if ($hasUpdatedAt) {
+                $filtered['updated_at'] = $checkpointAt;
+            }
+
+            $rows[] = $filtered;
         }
         $rows = $this->deduplicateRiskSnapshotRows($rows);
 
