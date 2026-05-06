@@ -533,11 +533,31 @@ class DashboardSummarySyncService
     }
 
     /**
+     * BOA-230: Set-based, self-cleaning current writer.
+     *
+     * Rules:
+     *   - Only upsert rows whose draw is "active liability" (status NOT IN
+     *     resulted/cancelled/canceled/void/refunded/no_result/no-result/cancel/disabled
+     *     AND result_at IS NULL) AND has meaningful risk
+     *     (stake_total > 0 OR payout_if_hit > 0 OR liability > 0).
+     *   - Delete existing current rows for any payload draw_id classified as
+     *     invalid (resulted / result_at not null / draw missing / draw status
+     *     in the exclude list).
+     *   - Delete existing current rows for any payload row that is zero-risk,
+     *     keyed by full (web_code, market_id, round_id, bet_type, number).
+     *   - Production lotto_draws.status enum is currently
+     *     ('draft','open','closed','resulted'); the broader exclude list above
+     *     is kept defensive so future enum additions self-clean automatically.
+     *
      * @param  array<int, array<string, mixed>>  $rows
      */
     private function upsertRiskCurrentRows(array $rows): void
     {
         if (! Schema::hasTable('lotto_dashboard_risk_current')) {
+            return;
+        }
+
+        if (empty($rows)) {
             return;
         }
 
@@ -559,18 +579,138 @@ class DashboardSummarySyncService
             return;
         }
 
+        // Set-based draw classification: one query for all round_ids in the payload.
+        $roundIds = [];
+        foreach ($currentRows as $row) {
+            $rid = (int) ($row['round_id'] ?? 0);
+            if ($rid > 0) {
+                $roundIds[$rid] = true;
+            }
+        }
+        $roundIds = array_keys($roundIds);
+
+        $validDrawIds = [];
+        if (Schema::hasTable('lotto_draws') && ! empty($roundIds)) {
+            $validDrawIds = DB::table('lotto_draws')
+                ->whereIn('id', $roundIds)
+                ->whereNull('result_at')
+                ->whereNotIn('status', $this->invalidDrawStatuses())
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->all();
+            $validDrawIds = array_flip($validDrawIds);
+        }
+
+        $upsertRows = [];
+        // Keyed by "web_code|market_id|round_id" — invalid draw rows wholly dropped.
+        $invalidDrawKeys = [];
+        // Keyed by full payload key — zero-risk rows individually dropped.
+        $zeroRiskKeys = [];
+
+        foreach ($currentRows as $row) {
+            $roundId = (int) ($row['round_id'] ?? 0);
+            $webCode = (string) ($row['web_code'] ?? '');
+            $marketId = (int) ($row['market_id'] ?? 0);
+
+            $isValidDraw = $roundId > 0 && isset($validDrawIds[$roundId]);
+            if (! $isValidDraw) {
+                $invalidDrawKeys[$webCode.'|'.$marketId.'|'.$roundId] = [
+                    'web_code' => $webCode,
+                    'market_id' => $marketId,
+                    'round_id' => $roundId,
+                ];
+
+                continue;
+            }
+
+            if (! $this->hasMeaningfulRisk($row)) {
+                $zeroRiskKeys[] = [
+                    'web_code' => $webCode,
+                    'market_id' => $marketId,
+                    'round_id' => $roundId,
+                    'bet_type' => (string) ($row['bet_type'] ?? ''),
+                    'number' => (string) ($row['number'] ?? ''),
+                ];
+
+                continue;
+            }
+
+            $upsertRows[] = $row;
+        }
+
+        // Batch-delete all current rows for invalid draws in a single statement.
+        // Keyed by round_id only — any row for that draw is stale by definition.
+        $invalidRoundIds = array_unique(
+            array_map(static fn (array $k): int => $k['round_id'], $invalidDrawKeys)
+        );
+        if (! empty($invalidRoundIds)) {
+            DB::table('lotto_dashboard_risk_current')
+                ->whereIn('round_id', $invalidRoundIds)
+                ->delete();
+        }
+
+        // Delete individual zero-risk rows by their full composite key.
+        // Bounded by the number of distinct zero-risk rows in the payload (not N+1 on draws).
+        foreach ($zeroRiskKeys as $key) {
+            DB::table('lotto_dashboard_risk_current')
+                ->where('web_code', $key['web_code'])
+                ->where('market_id', $key['market_id'])
+                ->where('round_id', $key['round_id'])
+                ->where('bet_type', $key['bet_type'])
+                ->where('number', $key['number'])
+                ->delete();
+        }
+
+        if (empty($upsertRows)) {
+            return;
+        }
+
         $updateColumns = array_values(array_filter(
-            array_keys($currentRows[0]),
+            array_keys($upsertRows[0]),
             fn ($column) => ! in_array($column, ['web_code', 'market_id', 'round_id', 'bet_type', 'number'], true)
         ));
 
-        foreach (array_chunk($currentRows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
+        foreach (array_chunk($upsertRows, self::RISK_SNAPSHOT_UPSERT_CHUNK_SIZE) as $chunk) {
             DB::table('lotto_dashboard_risk_current')->upsert(
                 $chunk,
                 ['web_code', 'market_id', 'round_id', 'bet_type', 'number'],
                 $updateColumns
             );
         }
+    }
+
+    /**
+     * Draw statuses that disqualify a draw from current. Production enum today is
+     * only ('draft','open','closed','resulted'); the rest are defensive guards
+     * for future enum additions noted in BOA-228/230.
+     *
+     * @return array<int, string>
+     */
+    private function invalidDrawStatuses(): array
+    {
+        return [
+            'resulted',
+            'cancelled',
+            'canceled',
+            'cancel',
+            'void',
+            'refunded',
+            'no_result',
+            'no-result',
+            'disabled',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function hasMeaningfulRisk(array $row): bool
+    {
+        $stake = (float) ($row['stake_total'] ?? 0);
+        $payout = (float) ($row['payout_if_hit'] ?? 0);
+        $liability = (float) ($row['liability'] ?? 0);
+
+        return $stake > 0 || $payout > 0 || $liability > 0;
     }
 
     /**
