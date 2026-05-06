@@ -225,33 +225,35 @@ class DashboardSummarySyncServiceTest extends TestCase
         $frozen = Carbon::parse('2026-05-06 07:00:00');
         Carbon::setTestNow($frozen);
 
-        $service = $this->makeService(
-            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
-            $this->mockNotifier(),
-        );
+        try {
+            $service = $this->makeService(
+                $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+                $this->mockNotifier(),
+            );
 
-        $payloadRow = $this->lottoPayloadMeaningfulRisk()['risk'][0];
-        $payloadRow['snapshot_at'] = '2026-05-06 23:59:59';
-        $payloadRow['created_at'] = '2026-05-06 23:59:59';
-        $payloadRow['updated_at'] = '2026-05-06 23:59:59';
+            $payloadRow = $this->lottoPayloadMeaningfulRisk()['risk'][0];
+            $payloadRow['snapshot_at'] = '2026-05-06 23:59:59';
+            $payloadRow['created_at'] = '2026-05-06 23:59:59';
+            $payloadRow['updated_at'] = '2026-05-06 23:59:59';
 
-        $service->writeRiskSnapshot([$payloadRow], [
-            'source' => 'scheduled',
-            'class' => __CLASS__,
-            'file' => __FILE__,
-        ]);
+            $service->writeRiskSnapshot([$payloadRow], [
+                'source' => 'scheduled',
+                'class' => __CLASS__,
+                'file' => __FILE__,
+            ]);
 
-        $row = DB::table('lotto_dashboard_risk_snapshot')->first();
-        $this->assertNotNull($row);
-        $this->assertSame($frozen->toDateTimeString(), (string) $row->snapshot_at);
-        $this->assertSame($frozen->toDateTimeString(), (string) $row->created_at);
-        $this->assertSame($frozen->toDateTimeString(), (string) $row->updated_at);
-        $this->assertLessThanOrEqual(
-            strtotime((string) $row->created_at),
-            strtotime((string) $row->snapshot_at)
-        );
-
-        Carbon::setTestNow();
+            $row = DB::table('lotto_dashboard_risk_snapshot')->first();
+            $this->assertNotNull($row);
+            $this->assertSame($frozen->toDateTimeString(), (string) $row->snapshot_at);
+            $this->assertSame($frozen->toDateTimeString(), (string) $row->created_at);
+            $this->assertSame($frozen->toDateTimeString(), (string) $row->updated_at);
+            $this->assertLessThanOrEqual(
+                strtotime((string) $row->created_at),
+                strtotime((string) $row->snapshot_at)
+            );
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_write_risk_snapshot_uses_single_immutable_checkpoint_per_batch(): void
@@ -260,33 +262,35 @@ class DashboardSummarySyncServiceTest extends TestCase
         $frozen = Carbon::parse('2026-05-06 07:15:00');
         Carbon::setTestNow($frozen);
 
-        $service = $this->makeService(
-            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
-            $this->mockNotifier(),
-        );
+        try {
+            $service = $this->makeService(
+                $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+                $this->mockNotifier(),
+            );
 
-        $base = $this->lottoPayloadMeaningfulRisk()['risk'][0];
-        $rowA = $base;
-        $rowA['number'] = '11';
-        $rowA['snapshot_at'] = '2026-05-06 23:59:59';
+            $base = $this->lottoPayloadMeaningfulRisk()['risk'][0];
+            $rowA = $base;
+            $rowA['number'] = '11';
+            $rowA['snapshot_at'] = '2026-05-06 23:59:59';
 
-        $rowB = $base;
-        $rowB['number'] = '22';
-        $rowB['snapshot_at'] = '2099-12-31 23:59:59';
+            $rowB = $base;
+            $rowB['number'] = '22';
+            $rowB['snapshot_at'] = '2099-12-31 23:59:59';
 
-        $service->writeRiskSnapshot([$rowA, $rowB], [
-            'source' => 'scheduled',
-            'class' => __CLASS__,
-            'file' => __FILE__,
-        ]);
+            $service->writeRiskSnapshot([$rowA, $rowB], [
+                'source' => 'scheduled',
+                'class' => __CLASS__,
+                'file' => __FILE__,
+            ]);
 
-        $rows = DB::table('lotto_dashboard_risk_snapshot')->orderBy('number')->get();
-        $this->assertCount(2, $rows);
-        foreach ($rows as $row) {
-            $this->assertSame($frozen->toDateTimeString(), (string) $row->snapshot_at);
+            $rows = DB::table('lotto_dashboard_risk_snapshot')->orderBy('number')->get();
+            $this->assertCount(2, $rows);
+            foreach ($rows as $row) {
+                $this->assertSame($frozen->toDateTimeString(), (string) $row->snapshot_at);
+            }
+        } finally {
+            Carbon::setTestNow();
         }
-
-        Carbon::setTestNow();
     }
 
     public function test_write_risk_snapshot_dedupes_same_dimension_within_one_checkpoint(): void
@@ -294,26 +298,28 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->createTestTables();
         Carbon::setTestNow(Carbon::parse('2026-05-06 07:30:00'));
 
-        $service = $this->makeService(
-            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
-            $this->mockNotifier(),
-        );
+        try {
+            $service = $this->makeService(
+                $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+                $this->mockNotifier(),
+            );
 
-        $base = $this->lottoPayloadMeaningfulRisk()['risk'][0];
-        $rowA = $base;
-        $rowA['snapshot_at'] = '2026-05-06 23:59:59';
-        $rowB = $base;
-        $rowB['snapshot_at'] = '2026-05-07 23:59:59';
+            $base = $this->lottoPayloadMeaningfulRisk()['risk'][0];
+            $rowA = $base;
+            $rowA['snapshot_at'] = '2026-05-06 23:59:59';
+            $rowB = $base;
+            $rowB['snapshot_at'] = '2026-05-07 23:59:59';
 
-        $service->writeRiskSnapshot([$rowA, $rowB], [
-            'source' => 'scheduled',
-            'class' => __CLASS__,
-            'file' => __FILE__,
-        ]);
+            $service->writeRiskSnapshot([$rowA, $rowB], [
+                'source' => 'scheduled',
+                'class' => __CLASS__,
+                'file' => __FILE__,
+            ]);
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
-
-        Carbon::setTestNow();
+            $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_snapshot_write_path_is_append_only_and_does_not_mutate_existing_row(): void
@@ -321,35 +327,38 @@ class DashboardSummarySyncServiceTest extends TestCase
         config()->set('dashboard.lotto.legacy_snapshot_write_enabled', true);
         $this->createTestTables();
         Carbon::setTestNow(Carbon::parse('2026-05-06 07:45:00'));
-        $service = $this->makeService(
-            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
-            $this->mockNotifier(),
-        );
 
-        $existing = $this->lottoPayloadMeaningfulRisk()['risk'][0];
-        $existing['snapshot_at'] = Carbon::now()->startOfSecond()->toDateTimeString();
-        DB::table('lotto_dashboard_risk_snapshot')->insert($existing);
+        try {
+            $service = $this->makeService(
+                $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+                $this->mockNotifier(),
+            );
 
-        $mutated = $existing;
-        $mutated['stake_total'] = 9999;
-        $mutated['payout_if_hit'] = 9999;
-        $mutated['liability'] = 9999;
+            $existing = $this->lottoPayloadMeaningfulRisk()['risk'][0];
+            $existing['snapshot_at'] = Carbon::now()->startOfSecond()->toDateTimeString();
+            DB::table('lotto_dashboard_risk_snapshot')->insert($existing);
 
-        $service->writeRiskSnapshot([$mutated], [
-            'source' => 'scheduled',
-            'reason' => 'test_append_only',
-            'class' => __CLASS__,
-            'file' => __FILE__,
-        ]);
+            $mutated = $existing;
+            $mutated['stake_total'] = 9999;
+            $mutated['payout_if_hit'] = 9999;
+            $mutated['liability'] = 9999;
 
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+            $service->writeRiskSnapshot([$mutated], [
+                'source' => 'scheduled',
+                'reason' => 'test_append_only',
+                'class' => __CLASS__,
+                'file' => __FILE__,
+            ]);
 
-        $row = DB::table('lotto_dashboard_risk_snapshot')->first();
-        $this->assertSame((float) $existing['stake_total'], (float) $row->stake_total);
-        $this->assertSame((float) $existing['payout_if_hit'], (float) $row->payout_if_hit);
-        $this->assertSame((float) $existing['liability'], (float) $row->liability);
+            $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
 
-        Carbon::setTestNow();
+            $row = DB::table('lotto_dashboard_risk_snapshot')->first();
+            $this->assertSame((float) $existing['stake_total'], (float) $row->stake_total);
+            $this->assertSame((float) $existing['payout_if_hit'], (float) $row->payout_if_hit);
+            $this->assertSame((float) $existing['liability'], (float) $row->liability);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     private function makeService(
