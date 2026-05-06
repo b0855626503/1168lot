@@ -459,6 +459,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_lotto_risk_summary_uses_latest_aggregate_layer_and_validates_587_case(): void
     {
+        // BOA-229: legacy aggregate-layer read path is no longer reachable at
+        // runtime. The risk dashboard reads exclusively from
+        // lotto_dashboard_risk_current. Test retained for historical context.
+        $this->markTestSkipped('BOA-229: snapshot/aggregate read path disabled; current-table path covered by sibling tests.');
+
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
@@ -683,6 +688,9 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_lotto_top_risky_numbers_sorted_by_exposure_and_validates_587_case(): void
     {
+        // BOA-229: legacy snapshot read path is no longer reachable at runtime.
+        $this->markTestSkipped('BOA-229: snapshot read path disabled; current-table path covered by sibling tests.');
+
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
@@ -883,6 +891,9 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_top_risky_numbers_summary_fallbacks_to_number_exposures_when_snapshot_missing(): void
     {
+        // BOA-229: legacy snapshot fallback path removed at runtime.
+        $this->markTestSkipped('BOA-229: snapshot fallback path removed; current-table is the sole runtime read source.');
+
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
@@ -985,6 +996,9 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_highest_risky_numbers_summary_uses_peak_rows_independent_of_selected_range(): void
     {
+        // BOA-229: legacy aggregate read path no longer reachable at runtime.
+        $this->markTestSkipped('BOA-229: aggregate read path disabled; current-table path covered by sibling tests.');
+
         Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
             $table->id();
             $table->string('web_code', 64);
@@ -1095,6 +1109,9 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
     public function test_top_risky_numbers_summary_formats_no_result_payload_as_label(): void
     {
+        // BOA-229: legacy snapshot read path no longer reachable at runtime.
+        $this->markTestSkipped('BOA-229: snapshot read path disabled; current-table path covered by sibling tests.');
+
         Schema::create('lotto_markets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
@@ -1693,6 +1710,61 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame('101', $normalRows[0]['member_id']);
         $this->assertCount(1, $yeekeeRows);
         $this->assertSame('102', $yeekeeRows[0]['member_id']);
+    }
+
+    /**
+     * BOA-229: regardless of LOTTO_DASHBOARD_RISK_READ_SOURCE value, the lotto
+     * risk summary path must read from lotto_dashboard_risk_current and never
+     * fall back to lotto_dashboard_risk_snapshot.
+     */
+    public function test_read_source_snapshot_value_is_ignored_and_dashboard_reads_current(): void
+    {
+        config()->set('dashboard.lotto_risk.read_source', 'snapshot');
+
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id');
+            $table->string('status')->nullable();
+            $table->timestamp('result_at')->nullable();
+        });
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_markets')->insert([
+            ['id' => 1, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+        ]);
+        DB::table('lotto_draws')->insert([
+            ['id' => 10, 'market_id' => 1, 'status' => 'open', 'result_at' => null],
+        ]);
+        DB::table('lotto_dashboard_risk_current')->insert([
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'top_3', 'number' => '587', 'stake_total' => 100, 'payout_if_hit' => 300000, 'liability' => 300000, 'snapshot_at' => '2026-04-10 10:00:00'],
+        ]);
+
+        // Note: lotto_dashboard_risk_snapshot table is intentionally NOT created.
+        // If the dashboard fell back to snapshot, the call would fail or return zero.
+        $method = new ReflectionMethod(DashboardService::class, 'lottoRiskSummaryMetrics');
+        $method->setAccessible(true);
+        $summary = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $this->assertSame(1, $summary['numbers']);
+        $this->assertSame(300000.0, (float) $summary['exposure_total']);
+        $this->assertSame('587', $summary['max_risk_number']);
     }
 
     private function dropTableIfExists(string $table): void
