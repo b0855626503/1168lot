@@ -212,7 +212,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode, $sourceType, $auditContext): void {
+        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -261,17 +261,10 @@ class DashboardSummarySyncService
 
             $this->upsertRiskCurrentRows($riskRows);
 
-            $this->writeRiskSnapshot(
-                riskRows: $riskRows,
-                context: [
-                    'source' => $this->resolveRiskSnapshotSource($sourceType),
-                    'web_code' => $webCode,
-                    'reason' => $auditContext['reason'] ?? null,
-                    'actor_id' => $auditContext['actor_id'] ?? null,
-                    'class' => static::class,
-                    'file' => __FILE__,
-                ],
-            );
+            // BOA-229: snapshot runtime write removed. Risk dashboard reads from
+            // lotto_dashboard_risk_current only. writeRiskSnapshot() is retained as
+            // a deprecated legacy helper and is intentionally NOT invoked from any
+            // runtime path (sync/rebuild/observer). Do not re-enable.
 
             if (Schema::hasTable('lotto_dashboard_risk_aggregates')) {
                 DB::table('lotto_dashboard_risk_aggregates')
@@ -622,12 +615,28 @@ class DashboardSummarySyncService
     }
 
     /**
+     * @deprecated BOA-229: Snapshot runtime write has been disabled. This helper
+     * is retained only for legacy callers (e.g. direct admin/legacy maintenance
+     * tooling) and MUST NOT be invoked from any runtime dashboard sync path.
+     * The runtime risk dashboard now reads exclusively from
+     * lotto_dashboard_risk_current. Calls into this method will emit a warning
+     * log and the LOTTO_RISK_SNAPSHOT_LEGACY_WRITE_ENABLED env flag is no
+     * longer honored as a runtime rollback path.
+     *
      * @param  array<int, array<string, mixed>>  $riskRows
      * @param  array<string, mixed>  $context
      * @return array{allowed:bool, source:string, has_meaningful_risk:bool, reason:string}
      */
     public function writeRiskSnapshot(array $riskRows, array $context = []): array
     {
+        Log::warning('lotto_risk_snapshot_write_deprecated', [
+            'message' => 'lotto_risk_snapshot_write_deprecated',
+            'reason' => 'BOA-229 snapshot runtime write disabled; legacy helper invoked',
+            'source' => (string) ($context['source'] ?? 'unknown'),
+            'class' => (string) ($context['class'] ?? static::class),
+            'file' => (string) ($context['file'] ?? __FILE__),
+        ]);
+
         if (! Schema::hasTable('lotto_dashboard_risk_snapshot')) {
             return [
                 'allowed' => false,

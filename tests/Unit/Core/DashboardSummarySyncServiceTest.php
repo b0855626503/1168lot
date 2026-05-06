@@ -118,8 +118,9 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_meaningful_risk_scheduled_writes_snapshot_and_current(): void
+    public function test_sync_bucket_meaningful_risk_scheduled_writes_current_only_no_snapshot(): void
     {
+        // BOA-229: syncBucket must never write lotto_dashboard_risk_snapshot.
         $this->createTestTables();
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
@@ -129,11 +130,12 @@ class DashboardSummarySyncServiceTest extends TestCase
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
 
         $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_draw_closed_zero_risk_allows_snapshot_write(): void
+    public function test_sync_bucket_draw_closed_zero_risk_does_not_write_snapshot(): void
     {
+        // BOA-229: draw_closed source no longer triggers a snapshot write at runtime.
         $this->createTestTables();
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
@@ -143,10 +145,10 @@ class DashboardSummarySyncServiceTest extends TestCase
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'draw_closed');
 
         $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_manual_audit_without_reason_blocks_snapshot_write(): void
+    public function test_sync_bucket_manual_audit_without_reason_does_not_write_snapshot(): void
     {
         $this->createTestTables();
         $service = $this->makeService(
@@ -160,8 +162,10 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
-    public function test_sync_bucket_manual_audit_with_reason_allows_snapshot_write(): void
+    public function test_sync_bucket_manual_audit_with_reason_still_does_not_write_snapshot(): void
     {
+        // BOA-229: even an operator-initiated manual audit no longer writes
+        // lotto_dashboard_risk_snapshot from the runtime sync path.
         $this->createTestTables();
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
@@ -174,7 +178,7 @@ class DashboardSummarySyncServiceTest extends TestCase
         ]);
 
         $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->count());
-        $this->assertSame(1, DB::table('lotto_dashboard_risk_snapshot')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
     }
 
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
@@ -196,8 +200,13 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $this->assertSame(0, DB::table('lotto_dashboard_risk_snapshot')->count());
         Log::shouldHaveReceived('warning')
-            ->once()
-            ->with('lotto_snapshot_legacy_write_blocked', Mockery::type('array'));
+            ->with('lotto_snapshot_legacy_write_blocked', Mockery::type('array'))
+            ->once();
+        // BOA-229: writeRiskSnapshot() is now deprecated and emits a warning
+        // log on every invocation (legacy callers only).
+        Log::shouldHaveReceived('warning')
+            ->with('lotto_risk_snapshot_write_deprecated', Mockery::type('array'))
+            ->once();
     }
 
     public function test_legacy_snapshot_source_is_allowed_when_feature_flag_enabled(): void

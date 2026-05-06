@@ -3458,6 +3458,11 @@ class DashboardService
      */
     private function hydrateLottoTopRiskyRows(Collection $topRows, string $mode, bool $allowSnapshotLookup = true): array
     {
+        // BOA-229: snapshot runtime read has been disabled. Force the snapshot
+        // fallback path off regardless of caller intent so the dashboard never
+        // reads from lotto_dashboard_risk_snapshot at runtime.
+        $allowSnapshotLookup = false;
+
         $topKeys = $topRows
             ->map(static fn (array $row): string => (string) ($row['bet_type'] ?? '').'|'.(string) ($row['number'] ?? ''))
             ->filter(static fn (string $key): bool => $key !== '|')
@@ -5013,9 +5018,11 @@ class DashboardService
 
     private function shouldReadLottoRiskFromCurrent(): bool
     {
-        $source = strtolower(trim((string) config('dashboard.lotto_risk.read_source', 'current')));
-
-        return $source === 'current';
+        // BOA-229: snapshot runtime read has been disabled. Regardless of the
+        // configured LOTTO_DASHBOARD_RISK_READ_SOURCE value, the lotto risk
+        // dashboard reads exclusively from lotto_dashboard_risk_current. The
+        // legacy 'snapshot' value is intentionally ignored (no silent fallback).
+        return true;
     }
 
     private function lottoRiskSummaryFromCurrent(string $startDate, string $endDate, ?string $marketType, array $defaults): array

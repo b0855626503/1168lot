@@ -101,20 +101,9 @@ class RebuildLottoDashboardSummaryCommand extends Command
                     }
                 }
 
-                if (in_array($only, ['risk', 'all'], true) && Schema::hasTable('lotto_dashboard_risk_snapshot')) {
-                    $rows = collect((array) ($lottoPayload['risk'] ?? []))
-                        ->when($marketId !== null, fn ($c) => $c->where('market_id', $marketId))
-                        ->when($roundId !== null, fn ($c) => $c->where('round_id', $roundId))
-                        ->values()
-                        ->all();
-                    $syncService->writeRiskSnapshot($rows, [
-                        'source' => 'rebuild_filtered',
-                        'web_code' => $webCode,
-                        'reason' => 'dashboard_rebuild_filtered',
-                        'class' => static::class,
-                        'file' => __FILE__,
-                    ]);
-                }
+                // BOA-229: rebuild no longer writes lotto_dashboard_risk_snapshot.
+                // Snapshot runtime write has been removed; risk dashboard reads
+                // exclusively from lotto_dashboard_risk_current.
 
                 if (in_array($only, ['risk', 'all'], true) && Schema::hasTable('lotto_dashboard_risk_aggregates')) {
                     DB::table('lotto_dashboard_risk_aggregates')
