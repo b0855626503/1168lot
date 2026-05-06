@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Commands\Dashboard;
 
+use App\Console\Commands\Dashboard\LottoRiskCurrentCleanupCommand;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -16,12 +18,12 @@ class LottoRiskCurrentCleanupCommandTest extends TestCase
 
         // Register the command from the worktree app path (not yet on the main autoload path).
         $classFile = __DIR__.'/../../../../app/Console/Commands/Dashboard/LottoRiskCurrentCleanupCommand.php';
-        if (! class_exists(\App\Console\Commands\Dashboard\LottoRiskCurrentCleanupCommand::class, false)) {
+        if (! class_exists(LottoRiskCurrentCleanupCommand::class, false)) {
             require_once $classFile;
         }
 
-        $this->app->make(\Illuminate\Contracts\Console\Kernel::class)
-            ->registerCommand(new \App\Console\Commands\Dashboard\LottoRiskCurrentCleanupCommand());
+        $this->app->make(Kernel::class)
+            ->registerCommand(new LottoRiskCurrentCleanupCommand);
 
         $this->prepareSchema();
     }
@@ -71,9 +73,17 @@ class LottoRiskCurrentCleanupCommandTest extends TestCase
         $exit = Artisan::call('dashboard:lotto-risk-current-cleanup', ['--dry-run' => true, '--sleep-ms' => 0]);
 
         $this->assertSame(0, $exit);
-        // All 3 rows must still exist
+        // All 3 rows must still exist — dry-run never deletes
         $this->assertSame(3, DB::table('lotto_dashboard_risk_current')->count());
         $output = Artisan::output();
+
+        // All three target count lines must appear in a single dry-run execution
+        $this->assertStringContainsString('target=invalid_draw_rows', $output);
+        $this->assertStringContainsString('target=missing_draw_rows', $output);
+        $this->assertStringContainsString('target=zero_risk_rows', $output);
+
+        // Finished line must show stopped_by=dry_run
+        $this->assertStringContainsString('stopped_by=dry_run', $output);
         $this->assertStringContainsString('message=lotto_risk_current_cleanup_finished', $output);
     }
 

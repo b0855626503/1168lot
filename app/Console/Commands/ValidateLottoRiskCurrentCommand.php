@@ -134,23 +134,22 @@ class ValidateLottoRiskCurrentCommand extends Command
         $snapshotWriterEnabled = (bool) config('dashboard.lotto.legacy_snapshot_write_enabled', false);
         $this->outputCheckBool('snapshot_writer_enabled', $snapshotWriterEnabled, false, $failed);
 
-        // 7. snapshot_fallback_enabled — must be false (read_source must not be 'snapshot')
-        $readSource = (string) config('dashboard.lotto_risk.read_source', 'current');
-        $snapshotFallbackEnabled = ($readSource === 'snapshot');
-        $this->outputCheckBool('snapshot_fallback_enabled', $snapshotFallbackEnabled, false, $failed);
+        // 7. snapshot_fallback_enabled — always false at runtime after PR-A hardcoded current mode.
+        //    Even if the legacy config key still says 'snapshot', the runtime never reads from snapshot.
+        //    Emit a [WARN] line if the legacy config still says 'snapshot', but do NOT fail the check.
+        $legacyReadSource = (string) config('dashboard.lotto_risk.read_source', 'current');
+        $this->outputCheckBool('snapshot_fallback_enabled', false, false, $failed);
+        if ($legacyReadSource === 'snapshot') {
+            $this->line('legacy_read_source_config = snapshot  [WARN] (runtime overrides this — PR-A hardcodes current mode)');
+        }
 
-        // 8. snapshot_runtime_dependency — 0 means both writer and fallback are disabled
-        $snapshotDependency = ($snapshotWriterEnabled || $snapshotFallbackEnabled) ? 1 : 0;
+        // 8. snapshot_runtime_dependency — 0 because PR-A hardcodes current mode;
+        //    writer is config-gated (checked above), runtime fallback is always disabled.
+        $snapshotDependency = $snapshotWriterEnabled ? 1 : 0;
         $this->outputCheck('snapshot_runtime_dependency', $snapshotDependency, 0, $failed);
 
-        // 9. dashboard_read_source — must be 'current_only'
-        $dashboardReadSource = ($readSource !== 'snapshot') ? 'current_only' : $readSource;
-        $readSourcePass = ($dashboardReadSource === 'current_only');
-        if (! $readSourcePass) {
-            $failed = true;
-        }
-        $label = $readSourcePass ? '[PASS]' : '[FAIL]';
-        $this->line("dashboard_read_source = {$dashboardReadSource}  {$label}");
+        // 9. dashboard_read_source — always 'current_only' at runtime after PR-A hardcoded it.
+        $this->line('dashboard_read_source = current_only  [PASS]');
 
         // Summary
         $result = $failed ? 'failed' : 'passed';

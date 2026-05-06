@@ -3,6 +3,7 @@
 namespace App\Console\Commands\Dashboard;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -68,14 +69,15 @@ class LottoRiskCurrentCleanupCommand extends Command
         // ----------------------------------------------------------------
         // Target 2: Missing draw rows (round_id not in lotto_draws)
         // ----------------------------------------------------------------
-        if ($stoppedBy !== 'max_runtime' && $stoppedBy !== 'dry_run') {
+        // Dry-run always continues to count all targets — never short-circuit on 'dry_run'.
+        if ($stoppedBy !== 'max_runtime') {
             $stoppedBy = $this->cleanMissingDrawRows($isDryRun, $chunk, $maxRuntime, $sleepMs, $webCode, $startedAt);
         }
 
         // ----------------------------------------------------------------
         // Target 3: Zero-risk rows
         // ----------------------------------------------------------------
-        if ($stoppedBy !== 'max_runtime' && $stoppedBy !== 'dry_run') {
+        if ($stoppedBy !== 'max_runtime') {
             $stoppedBy = $this->cleanZeroRiskRows($isDryRun, $chunk, $maxRuntime, $sleepMs, $webCode, $startedAt);
         }
 
@@ -237,7 +239,7 @@ class LottoRiskCurrentCleanupCommand extends Command
         return 'complete';
     }
 
-    private function buildInvalidDrawQuery(?string $webCode): \Illuminate\Database\Query\Builder
+    private function buildInvalidDrawQuery(?string $webCode): Builder
     {
         $query = DB::table('lotto_dashboard_risk_current as c')
             ->join('lotto_draws as d', 'd.id', '=', 'c.round_id')
@@ -253,7 +255,7 @@ class LottoRiskCurrentCleanupCommand extends Command
         return $query;
     }
 
-    private function buildMissingDrawQuery(?string $webCode): \Illuminate\Database\Query\Builder
+    private function buildMissingDrawQuery(?string $webCode): Builder
     {
         $query = DB::table('lotto_dashboard_risk_current')
             ->whereNotExists(function ($q): void {
@@ -269,7 +271,7 @@ class LottoRiskCurrentCleanupCommand extends Command
         return $query;
     }
 
-    private function buildZeroRiskQuery(?string $webCode): \Illuminate\Database\Query\Builder
+    private function buildZeroRiskQuery(?string $webCode): Builder
     {
         $query = DB::table('lotto_dashboard_risk_current')
             ->whereRaw('COALESCE(stake_total, 0) <= 0')
