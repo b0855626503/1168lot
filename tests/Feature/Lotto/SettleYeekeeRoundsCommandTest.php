@@ -10,7 +10,6 @@ use Gametech\Lotto\Services\Relay\LotteryRelayPublisher;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\YeekeeResultEngineService;
-use Gametech\Lotto\Services\YeekeeShootingRewardService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -25,16 +24,8 @@ class SettleYeekeeRoundsCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config()->set('yeekee.reward_enabled', false);
         $this->prepareSchema();
         $this->seedData();
-
-        $this->mock(YeekeeShootingRewardService::class)
-            ->shouldReceive('applyForRound')
-            ->zeroOrMoreTimes()
-            ->andReturn([
-                'status' => 'skipped',
-            ]);
     }
 
     protected function tearDown(): void
@@ -289,61 +280,6 @@ class SettleYeekeeRoundsCommandTest extends TestCase
                 return (string) ($context['effective_action'] ?? '') === 'VOID_AND_REFUND';
             })
         );
-    }
-
-    public function test_settle_yeekee_rounds_records_shoot_reward_summary_after_settle_success(): void
-    {
-        Queue::fake();
-        $this->mock(AutoResultHardeningService::class)
-            ->shouldReceive('handleExhaustedTransition')
-            ->zeroOrMoreTimes()
-            ->andReturnNull();
-        $this->mock(LotteryRelayPublisher::class)
-            ->shouldReceive('publishIfReady')
-            ->zeroOrMoreTimes()
-            ->andReturnNull();
-
-        $this->mock(DrawService::class)
-            ->shouldReceive('syncScheduledStatuses')
-            ->once();
-
-        $this->mock(YeekeeResultEngineService::class)
-            ->shouldReceive('computeFromRound')
-            ->once()
-            ->with(3)
-            ->andReturn([
-                'raw_result' => '123',
-                'top_3' => '123',
-                'bottom_2' => '23',
-            ]);
-
-        $this->mock(SettlementService::class)
-            ->shouldReceive('settleDraw')
-            ->once()
-            ->andReturn([
-                'draw_id' => 3003,
-            ]);
-
-        $this->mock(DrawCancelAllRefundService::class)
-            ->shouldReceive('cancelAllActiveTickets')
-            ->never();
-
-        $this->mock(YeekeeShootingRewardService::class)
-            ->shouldReceive('applyForRound')
-            ->once()
-            ->andReturn([
-                'status' => 'paid',
-            ]);
-
-        Artisan::call('lotto:settle-yeekee-rounds', ['--draw_id' => 3003, '--limit' => 1]);
-        $outputLines = preg_split('/\r\n|\r|\n/', trim((string) Artisan::output())) ?: [];
-        $summaryLine = end($outputLines);
-        $summary = is_string($summaryLine) ? json_decode($summaryLine, true) : null;
-
-        $this->assertIsArray($summary);
-        $this->assertSame(1, (int) ($summary['computed_settled'] ?? 0));
-        $this->assertSame(1, (int) ($summary['shoot_reward_paid'] ?? 0));
-        $this->assertSame(0, (int) ($summary['shoot_reward_errors'] ?? 0));
     }
 
     private function seedData(): void

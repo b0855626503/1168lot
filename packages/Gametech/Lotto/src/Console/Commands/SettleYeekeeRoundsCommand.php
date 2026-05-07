@@ -12,7 +12,6 @@ use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Services\Yeekee\Exceptions\YeekeeFormulaInputException;
 use Gametech\Lotto\Services\YeekeeResultEngineService;
-use Gametech\Lotto\Services\YeekeeShootingRewardService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -56,8 +55,7 @@ class SettleYeekeeRoundsCommand extends Command
         DrawService $drawService,
         YeekeeResultEngineService $yeekeeResultEngineService,
         SettlementService $settlementService,
-        DrawCancelAllRefundService $drawCancelAllRefundService,
-        YeekeeShootingRewardService $yeekeeShootingRewardService
+        DrawCancelAllRefundService $drawCancelAllRefundService
     ): int {
         $drawService->syncScheduledStatuses();
 
@@ -94,11 +92,6 @@ class SettleYeekeeRoundsCommand extends Command
             'skipped_not_due' => 0,
             'skipped_already_final' => 0,
             'errors' => 0,
-            'shoot_reward_paid' => 0,
-            'shoot_reward_skipped' => 0,
-            'shoot_reward_already_paid' => 0,
-            'shoot_reward_invalid_policy' => 0,
-            'shoot_reward_errors' => 0,
         ];
 
         foreach ($roundIds as $roundId) {
@@ -108,25 +101,24 @@ class SettleYeekeeRoundsCommand extends Command
                     $dryRun,
                     $yeekeeResultEngineService,
                     $settlementService,
-                    $drawCancelAllRefundService,
-                    $yeekeeShootingRewardService
-                ): array {
+                    $drawCancelAllRefundService
+                ): string {
                     $round = YeekeeRound::query()->lockForUpdate()->find($roundId);
                     if (! $round instanceof YeekeeRound) {
-                        return ['outcome' => 'skipped_already_final'];
+                        return 'skipped_already_final';
                     }
 
                     if (! in_array((string) $round->status, self::PROCESSABLE_ROUND_STATUSES, true)) {
-                        return ['outcome' => 'skipped_already_final'];
+                        return 'skipped_already_final';
                     }
 
                     if (Carbon::parse((string) $round->result_compute_at)->gt(now())) {
-                        return ['outcome' => 'skipped_not_due'];
+                        return 'skipped_not_due';
                     }
 
                     $draw = LottoDraw::query()->lockForUpdate()->find((int) $round->lotto_draw_id);
                     if (! $draw instanceof LottoDraw) {
-                        return ['outcome' => 'skipped_already_final'];
+                        return 'skipped_already_final';
                     }
 
                     if ((string) $draw->status === 'resulted') {
@@ -135,7 +127,7 @@ class SettleYeekeeRoundsCommand extends Command
                             $round->save();
                         }
 
-                        return ['outcome' => 'skipped_already_final'];
+                        return 'skipped_already_final';
                     }
 
                     $activeBetCount = LottoTicket::query()
@@ -172,7 +164,7 @@ class SettleYeekeeRoundsCommand extends Command
                             ]);
 
                             if ($dryRun) {
-                                return ['outcome' => $action];
+                                return $action;
                             }
 
                             if (! $noActiveTickets) {
@@ -200,7 +192,7 @@ class SettleYeekeeRoundsCommand extends Command
                             $round->status = 'voided';
                             $round->save();
 
-                            return ['outcome' => $action];
+                            return $action;
                         }
                     }
 
@@ -219,19 +211,6 @@ class SettleYeekeeRoundsCommand extends Command
                                 $this->attachFormulaAuditToDrawResult($draw->id, $result);
                                 $round->status = 'resulted';
                                 $round->save();
-
-                                $reward = $yeekeeShootingRewardService->applyForRound(
-                                    $round,
-                                    $draw,
-                                    [
-                                        'formula_preset' => $this->resolveFormulaPresetFromRound($round),
-                                    ]
-                                );
-
-                                return [
-                                    'outcome' => 'computed_settled',
-                                    'reward_status' => (string) ($reward['status'] ?? ''),
-                                ];
                             } catch (YeekeeFormulaInputException $exception) {
                                 $formulaPreset = $this->resolveFormulaPresetFromRound($round);
                                 if ($activeBetCount > 0) {
@@ -265,7 +244,7 @@ class SettleYeekeeRoundsCommand extends Command
                                         'message' => $exception->getMessage(),
                                     ]);
 
-                                    return ['outcome' => 'void_refund'];
+                                    return 'void_refund';
                                 }
 
                                 $draw->forceFill([
@@ -290,11 +269,11 @@ class SettleYeekeeRoundsCommand extends Command
                                     'message' => $exception->getMessage(),
                                 ]);
 
-                                return ['outcome' => 'void_no_activity'];
+                                return 'void_no_activity';
                             }
                         }
 
-                        return ['outcome' => 'computed_settled'];
+                        return 'computed_settled';
                     }
 
                     if ($activeBetCount <= 0) {
@@ -311,7 +290,7 @@ class SettleYeekeeRoundsCommand extends Command
                             $round->save();
                         }
 
-                        return ['outcome' => 'void_no_activity'];
+                        return 'void_no_activity';
                     }
 
                     if (! $dryRun) {
@@ -335,28 +314,13 @@ class SettleYeekeeRoundsCommand extends Command
                         $round->save();
                     }
 
-                    return ['outcome' => 'void_refund'];
+                    return 'void_refund';
                 });
 
-                $outcome = (string) ($result['outcome'] ?? 'unknown');
-                if (! isset($summary[$outcome])) {
-                    $summary[$outcome] = 0;
+                if (! isset($summary[$result])) {
+                    $summary[$result] = 0;
                 }
-                $summary[$outcome]++;
-
-                $rewardStatus = (string) ($result['reward_status'] ?? '');
-                if ($rewardStatus === 'paid') {
-                    $summary['shoot_reward_paid']++;
-                } elseif ($rewardStatus === 'skipped') {
-                    $summary['shoot_reward_skipped']++;
-                } elseif ($rewardStatus === 'already_paid') {
-                    $summary['shoot_reward_already_paid']++;
-                } elseif ($rewardStatus === 'invalid_policy') {
-                    $summary['shoot_reward_invalid_policy']++;
-                } elseif ($rewardStatus === 'failed') {
-                    $summary['shoot_reward_errors']++;
-                }
-
+                $summary[$result]++;
                 $summary['processed']++;
             } catch (\Throwable $exception) {
                 $summary['errors']++;
