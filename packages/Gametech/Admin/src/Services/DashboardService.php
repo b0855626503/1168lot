@@ -4228,6 +4228,16 @@ class DashboardService
 
     private function lottoBetTypeInsightsSummary(string $startDate, string $endDate, ?string $marketType = null): array
     {
+        // BOA / issue #70: Lotto Bet Type Insights must derive from
+        // lotto_dashboard_risk_current (the same source as Top 10 Risky Numbers)
+        // so that bet types absent from the active draw never surface as stale
+        // 2-digit rows. Historical aggregate paths are kept behind the legacy
+        // flag for backwards compatibility, but the current-table path is the
+        // authoritative source.
+        if ($this->shouldReadLottoRiskFromCurrent()) {
+            return $this->lottoBetTypeInsightsFromCurrent($startDate, $endDate, $marketType);
+        }
+
         if (
             ! $this->hasTable('lotto_dashboard_bet_type_summary_daily')
             || ! $this->hasTable('lotto_dashboard_bet_type_number_daily')
@@ -4499,6 +4509,154 @@ class DashboardService
                 'max_risk_value_raw' => $maxRiskValueRaw,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Build Lotto Bet Type Insights rows directly from
+     * `lotto_dashboard_risk_current`, mirroring the join/filter contract used
+     * by Top 10 Risky Numbers. Bet types without rows in the active current
+     * table are intentionally absent from the payload (no stale fallback).
+     *
+     * Payload keys are preserved 1:1 with the historical implementation so
+     * that the existing blade view (`lotto_bet_type_insights`) keeps working
+     * without changes.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function lottoBetTypeInsightsFromCurrent(string $startDate, string $endDate, ?string $marketType): array
+    {
+        $query = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($query === null) {
+            return [];
+        }
+
+        $rows = $query->get([
+            'rc.bet_type',
+            'rc.number',
+            'rc.stake_total',
+            'rc.payout_if_hit',
+            'rc.liability',
+        ]);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        // Aggregate by (bet_type, number) so that multiple market/round rows
+        // for the same number collapse to a single logical entry, matching the
+        // Top 10 grouping contract. The resulting `item_count` is therefore
+        // the number of DISTINCT (bet_type, number) entries currently active
+        // in `lotto_dashboard_risk_current` for the given bet_type — NOT the
+        // number of bet rows / ticket items. The blade view labels this
+        // column as "จำนวนเลข" to match this semantics. See PR #71.
+        $byTypeNumber = [];
+        foreach ($rows as $row) {
+            $betType = trim((string) ($row->bet_type ?? ''));
+            $number = trim((string) ($row->number ?? ''));
+            if ($betType === '' || $number === '') {
+                continue;
+            }
+
+            $stake = (float) ($row->stake_total ?? 0);
+            $risk = (float) ($row->liability ?? $row->payout_if_hit ?? 0);
+
+            if (! isset($byTypeNumber[$betType][$number])) {
+                $byTypeNumber[$betType][$number] = [
+                    'stake_total' => 0.0,
+                    'risk_total' => 0.0,
+                ];
+            }
+
+            $byTypeNumber[$betType][$number]['stake_total'] = round(
+                (float) $byTypeNumber[$betType][$number]['stake_total'] + $stake,
+                2
+            );
+            $byTypeNumber[$betType][$number]['risk_total'] = round(
+                (float) $byTypeNumber[$betType][$number]['risk_total'] + $risk,
+                2
+            );
+        }
+
+        if (empty($byTypeNumber)) {
+            return [];
+        }
+
+        // The current table (`lotto_dashboard_risk_current`) has no member_id
+        // and the ticket-data fallback (`lottoDistinctPlayersByBetType`) does
+        // NOT share the active/non-resulted/web_code scope of
+        // `lottoRiskCurrentBaseQuery`. To avoid mixing scopes (which would
+        // re-introduce stale data) we explicitly emit `null` for
+        // `unique_players` here so the blade renders "-". See PR #71.
+        $result = [];
+        foreach ($byTypeNumber as $betType => $numberRows) {
+            $itemCount = count($numberRows);
+            $totalAmount = 0.0;
+
+            $topNumber = '';
+            $topAmount = 0.0;
+            $maxRiskNumber = '';
+            $maxRiskValue = 0.0;
+
+            foreach ($numberRows as $number => $values) {
+                $stake = (float) $values['stake_total'];
+                $risk = (float) $values['risk_total'];
+                $totalAmount = round($totalAmount + $stake, 2);
+
+                if (
+                    $stake > $topAmount
+                    || (
+                        abs($stake - $topAmount) < 0.00001
+                        && ($topNumber === '' || strcmp((string) $number, $topNumber) < 0)
+                    )
+                ) {
+                    $topNumber = (string) $number;
+                    $topAmount = $stake;
+                }
+
+                if (
+                    $risk > $maxRiskValue
+                    || (
+                        abs($risk - $maxRiskValue) < 0.00001
+                        && ($maxRiskNumber === '' || strcmp((string) $number, $maxRiskNumber) < 0)
+                    )
+                ) {
+                    $maxRiskNumber = (string) $number;
+                    $maxRiskValue = $risk;
+                }
+            }
+
+            // The current table does not carry member_id and we cannot derive
+            // unique players from ticket data without violating the active
+            // scope (see comment above). Always emit null.
+            $playerCount = null;
+
+            $result[] = [
+                'bet_type' => $betType,
+                'label' => BetType::label($betType),
+                'item_count' => $itemCount,
+                'total_amount' => core()->currency($totalAmount),
+                'total_amount_raw' => round($totalAmount, 2),
+                'unique_players' => $playerCount,
+                'top_number' => $topNumber !== '' ? $topNumber : null,
+                'top_number_amount' => core()->currency($topAmount),
+                'top_number_amount_raw' => round($topAmount, 2),
+                'hottest_number' => $topNumber !== '' ? $topNumber : null,
+                'hottest_number_amount' => core()->currency($topAmount),
+                'hottest_number_amount_raw' => round($topAmount, 2),
+                'risk_exposure_total' => core()->currency($maxRiskValue),
+                'risk_exposure_total_raw' => round($maxRiskValue, 2),
+                'max_risk_number' => $maxRiskNumber !== '' ? $maxRiskNumber : null,
+                'max_risk_value' => core()->currency($maxRiskValue),
+                'max_risk_value_raw' => round($maxRiskValue, 2),
+                'source' => 'lotto_dashboard_risk_current',
+            ];
+        }
+
+        usort($result, static function (array $a, array $b): int {
+            return strcmp((string) $a['bet_type'], (string) $b['bet_type']);
+        });
+
+        return $result;
     }
 
     /**

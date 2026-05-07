@@ -912,7 +912,7 @@
                                                     <thead class="thead-light">
                                                         <tr>
                                                             <th>ประเภท</th>
-                                                            <th class="text-right">รายการ</th>
+                                                            <th class="text-right">จำนวนเลข</th>
                                                             <th class="text-right">ยอดรวม</th>
                                                             <th class="text-right">ผู้เล่น</th>
                                                             <th>เลขแทงสูงสุด</th>
