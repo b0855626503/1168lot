@@ -65,6 +65,22 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->assertSame(0, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
     }
 
+    public function test_round_reward_config_enabled_false_does_not_pay(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig(['enabled' => false]),
+        ]);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7001);
+        $this->seedTicket(memberId: 7001, drawId: 3003, amount: 150);
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame('skipped', (string) $result['status']);
+        $this->assertSame('reward_config_disabled', (string) $result['reason']);
+        $this->assertSame(0, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+    }
+
     public function test_multiple_reward_positions_pay_from_existing_reward_config_contract(): void
     {
         $this->seedBaseData(snapshot: [
@@ -203,12 +219,14 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $failed = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
         $this->assertSame('min_bet_amount_not_met', (string) $failed['reason']);
         $this->assertSame(0, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(0, DB::table('yeekee_shoot_reward_logs')->count());
 
         DB::table('lotto_tickets')->where('id', 9001)->update(['total_net_amount' => 100]);
         $paid = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
 
         $this->assertSame('paid', (string) $paid['status']);
         $this->assertSame(1, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(1, DB::table('yeekee_shoot_reward_logs')->where('status', 'paid')->count());
     }
 
     public function test_retry_apply_is_idempotent_and_uses_reward_ref_type(): void
@@ -252,6 +270,29 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->assertSame(1, (int) $result['paid_count']);
         $this->assertSame(1, (int) $result['skipped_count']);
         $this->assertSame(1, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(1, DB::table('yeekee_shoot_reward_logs')->where('status', 'paid')->count());
+        $this->assertSame(0, DB::table('yeekee_shoot_reward_logs')->where('status', 'pending')->count());
+    }
+
+    public function test_non_computed_settled_round_does_not_pay(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig(['min_bet_amount' => 0]),
+        ]);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7001);
+        DB::table('lotto_draws')->where('id', 3003)->update([
+            'result_number' => null,
+        ]);
+        DB::table('yeekee_rounds')->where('id', 3)->update(['status' => 'voided']);
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw(), [
+            'settlement_outcome' => 'void_refund',
+        ]);
+
+        $this->assertSame('skipped', (string) $result['status']);
+        $this->assertSame('not_computed_settled', (string) $result['reason']);
+        $this->assertSame(0, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
     }
 
     public function test_reward_scope_per_market_per_day_limits_same_market_only(): void

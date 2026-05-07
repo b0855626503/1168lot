@@ -109,6 +109,11 @@ return new class extends Migration
 
     private function hasIndex(string $table, string $indexName): bool
     {
+        $driver = DB::connection()->getDriverName();
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            return false;
+        }
+
         $database = DB::getDatabaseName();
         if (! $database) {
             return false;

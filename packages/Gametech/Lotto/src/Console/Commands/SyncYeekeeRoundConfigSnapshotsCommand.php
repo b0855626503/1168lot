@@ -7,6 +7,7 @@ use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Models\YeekeeRound;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SyncYeekeeRoundConfigSnapshotsCommand extends Command
 {
@@ -55,6 +56,22 @@ class SyncYeekeeRoundConfigSnapshotsCommand extends Command
                 ->whereIn('lotto_draws.status', ['draft', 'open'])
                 ->select('yeekee_rounds.*')
                 ->orderBy('yeekee_rounds.id');
+
+            if (Schema::hasTable('lotto_tickets')) {
+                $roundQuery->whereNotExists(function ($query): void {
+                    $query->selectRaw('1')
+                        ->from('lotto_tickets')
+                        ->whereColumn('lotto_tickets.draw_id', 'yeekee_rounds.lotto_draw_id');
+                });
+            }
+
+            if (Schema::hasTable('yeekee_shoots')) {
+                $roundQuery->whereNotExists(function ($query): void {
+                    $query->selectRaw('1')
+                        ->from('yeekee_shoots')
+                        ->whereColumn('yeekee_shoots.yeekee_round_id', 'yeekee_rounds.id');
+                });
+            }
 
             $roundQuery->chunkById(200, function ($rounds) use (&$summary, $snapshot, $dryRun): void {
                 foreach ($rounds as $round) {

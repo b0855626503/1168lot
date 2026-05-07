@@ -19,6 +19,8 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('yeekee_shoots');
+        Schema::dropIfExists('lotto_tickets');
         Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('yeekee_market_settings');
         Schema::dropIfExists('lotto_draws');
@@ -279,6 +281,75 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(false, (bool) ($closedSnapshot['reward_enabled'] ?? true));
     }
 
+    public function test_sync_yeekee_round_config_snapshots_skips_rounds_with_activity(): void
+    {
+        $this->seedYeekeeMarket(12, 1, 60);
+
+        DB::table('yeekee_market_settings')->where('market_id', 12)->update([
+            'reward_enabled' => 1,
+            'reward_config' => json_encode([
+                'reward_enabled' => true,
+                'reward_positions' => [
+                    ['position' => 16, 'credit_amount' => 50],
+                ],
+                'min_bet_amount' => 0,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            ['id' => 9201, 'market_id' => 12, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:15:00', 'status' => 'draft', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9202, 'market_id' => 12, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:30:00', 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9203, 'market_id' => 12, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:45:00', 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            ['id' => 9301, 'market_id' => 12, 'lotto_draw_id' => 9201, 'round_date' => '2026-05-01', 'round_no' => 1, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'draft', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9302, 'market_id' => 12, 'lotto_draw_id' => 9202, 'round_date' => '2026-05-01', 'round_no' => 2, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'open', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9303, 'market_id' => 12, 'lotto_draw_id' => 9203, 'round_date' => '2026-05-01', 'round_no' => 3, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'open', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        DB::table('lotto_tickets')->insert([
+            'id' => 9402,
+            'draw_id' => 9202,
+            'member_id' => 7001,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_shoots')->insert([
+            'id' => 9503,
+            'yeekee_round_id' => 9303,
+            'lotto_draw_id' => 9203,
+            'market_id' => 12,
+            'member_id' => 7001,
+            'position' => 16,
+            'number_text' => '12345',
+            'number_value' => 12345,
+            'submitted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Artisan::call('lotto:sync-yeekee-round-config-snapshots', [
+            '--market_id' => 12,
+        ]);
+        $outputLines = preg_split('/\r\n|\r|\n/', trim((string) Artisan::output())) ?: [];
+        $summaryLine = end($outputLines);
+        $summary = is_string($summaryLine) ? json_decode($summaryLine, true) : null;
+
+        $this->assertIsArray($summary);
+        $this->assertSame(1, (int) ($summary['rounds_updated'] ?? 0));
+
+        $noActivitySnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9301)->value('config_snapshot_json'), true);
+        $ticketActivitySnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9302)->value('config_snapshot_json'), true);
+        $shootActivitySnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9303)->value('config_snapshot_json'), true);
+
+        $this->assertSame(true, (bool) ($noActivitySnapshot['reward_enabled'] ?? false));
+        $this->assertSame(false, (bool) ($ticketActivitySnapshot['reward_enabled'] ?? true));
+        $this->assertSame(false, (bool) ($shootActivitySnapshot['reward_enabled'] ?? true));
+    }
+
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes, ?int $shootWindowSeconds = 60): void
     {
         if (! DB::table('lotto_groups')->where('id', $groupId)->exists()) {
@@ -382,6 +453,27 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
             $table->dateTime('expected_settlement_deadline_at');
             $table->string('status', 32)->default('draft');
             $table->json('config_snapshot_json')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('lotto_tickets', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('draw_id');
+            $table->unsignedBigInteger('member_id');
+            $table->string('status', 32)->default('active');
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_shoots', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('yeekee_round_id');
+            $table->unsignedBigInteger('lotto_draw_id');
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('member_id');
+            $table->unsignedInteger('position');
+            $table->string('number_text', 5);
+            $table->unsignedInteger('number_value');
+            $table->dateTime('submitted_at');
             $table->timestamps();
         });
 

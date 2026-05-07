@@ -37,10 +37,21 @@ class YeekeeShootingRewardService
         try {
             return DB::transaction(function () use ($round, $draw, $context): array {
                 $lockedRound = YeekeeRound::query()->lockForUpdate()->findOrFail((int) $round->id);
+                $lockedDraw = LottoDraw::query()->lockForUpdate()->findOrFail((int) $draw->id);
+
+                if (! $this->isComputedSettledContext($lockedRound, $lockedDraw, $context)) {
+                    $this->recordAudit($lockedRound, $lockedDraw, null, [
+                        'status' => 'skipped',
+                        'reason' => 'not_computed_settled',
+                    ]);
+
+                    return $this->result('skipped', 'not_computed_settled');
+                }
+
                 $policy = $this->resolvePolicy($lockedRound);
 
                 if (! (bool) ($policy['reward_enabled'] ?? false)) {
-                    $this->recordAudit($lockedRound, $draw, null, [
+                    $this->recordAudit($lockedRound, $lockedDraw, null, [
                         'status' => 'skipped',
                         'reason' => 'reward_disabled',
                         'policy_source' => (string) $policy['source'],
@@ -50,8 +61,8 @@ class YeekeeShootingRewardService
                 }
 
                 $rewardConfig = is_array($policy['reward_config'] ?? null) ? $policy['reward_config'] : [];
-                if (array_key_exists('reward_enabled', $rewardConfig) && ! $this->toBool($rewardConfig['reward_enabled'])) {
-                    $this->recordAudit($lockedRound, $draw, null, [
+                if ($this->isRewardConfigDisabled($rewardConfig)) {
+                    $this->recordAudit($lockedRound, $lockedDraw, null, [
                         'status' => 'skipped',
                         'reason' => 'reward_config_disabled',
                         'policy_source' => (string) $policy['source'],
@@ -62,7 +73,7 @@ class YeekeeShootingRewardService
 
                 $normalizedPolicy = $this->normalizeRewardPolicy($rewardConfig);
                 if ($normalizedPolicy['reward_positions'] === []) {
-                    $this->recordAudit($lockedRound, $draw, null, [
+                    $this->recordAudit($lockedRound, $lockedDraw, null, [
                         'status' => 'invalid_policy',
                         'reason' => 'missing_valid_reward_positions',
                         'policy_source' => (string) $policy['source'],
@@ -77,7 +88,7 @@ class YeekeeShootingRewardService
                 foreach ($normalizedPolicy['reward_positions'] as $rewardPosition) {
                     $results[] = $this->applyRewardPosition(
                         $lockedRound,
-                        $draw,
+                        $lockedDraw,
                         (string) $policy['source'],
                         $normalizedPolicy,
                         $rewardPosition
@@ -156,28 +167,8 @@ class YeekeeShootingRewardService
             ->where('idempotency_key', $idempotencyKey)
             ->first();
 
-        if (! $log instanceof YeekeeShootRewardLog) {
-            $log = YeekeeShootRewardLog::query()
-                ->where('yeekee_round_id', (int) $round->id)
-                ->where('member_id', $memberId)
-                ->where('position', $position)
-                ->first();
-        }
-
-        if (! $log instanceof YeekeeShootRewardLog) {
-            $log = new YeekeeShootRewardLog;
-        }
-
-        $log->forceFill($this->rewardLogPayload($round, $draw, $shoot, $position, $amount, $currency, $policySource, $policyHash, 'pending', 'pending', null) + [
-            'idempotency_key' => $idempotencyKey,
-        ])->save();
-
-        $alreadyPaid = DB::table('wallet_transactions')
-            ->where('member_id', $memberId)
-            ->where('direction', 'CREDIT')
-            ->where('ref_type', self::REWARD_REF_TYPE)
-            ->where('ref_id', (int) $log->id)
-            ->exists();
+        $alreadyPaid = $log instanceof YeekeeShootRewardLog
+            && $this->hasPaidWalletTransaction($log, $memberId);
 
         if ($alreadyPaid) {
             $this->updateRewardLog($log, [
@@ -194,6 +185,14 @@ class YeekeeShootingRewardService
         if ($scopeDuplicateReason !== null) {
             return $this->skipPosition($round, $draw, $shoot, $policySource, $policyHash, $position, $amount, $currency, $scopeDuplicateReason);
         }
+
+        if (! $log instanceof YeekeeShootRewardLog) {
+            $log = new YeekeeShootRewardLog;
+        }
+
+        $log->forceFill($this->rewardLogPayload($round, $draw, $shoot, $position, $amount, $currency, $policySource, $policyHash, 'pending', 'pending', null) + [
+            'idempotency_key' => $idempotencyKey,
+        ])->save();
 
         $walletTransactionId = app(LottoWalletTransactionService::class)->creditMemberBalance(
             memberId: $memberId,
@@ -225,6 +224,39 @@ class YeekeeShootingRewardService
         Log::info('yeekee.shooting_reward.paid', $this->logContext($round, $draw, $shoot, $position, $amount, $currency, $policySource, $idempotencyKey, 'paid', $policyHash));
 
         return $this->result('paid', 'paid', $policySource, $idempotencyKey, (int) $shoot->id, $memberId, $position, $amount, $currency);
+    }
+
+    /**
+     * @param  array<string,mixed>  $context
+     */
+    private function isComputedSettledContext(YeekeeRound $round, LottoDraw $draw, array $context): bool
+    {
+        if (array_key_exists('settlement_outcome', $context) && (string) $context['settlement_outcome'] !== 'computed_settled') {
+            return false;
+        }
+
+        if ((string) $round->status !== 'resulted' || (string) $draw->status !== 'resulted') {
+            return false;
+        }
+
+        $resultNumber = is_array($draw->result_number) ? $draw->result_number : [];
+
+        return trim((string) ($resultNumber['top_3'] ?? '')) !== ''
+            && trim((string) ($resultNumber['bottom_2'] ?? '')) !== '';
+    }
+
+    /**
+     * @param  array<string,mixed>  $rewardConfig
+     */
+    private function isRewardConfigDisabled(array $rewardConfig): bool
+    {
+        foreach (['enabled', 'reward_enabled'] as $key) {
+            if (array_key_exists($key, $rewardConfig) && ! $this->toBool($rewardConfig[$key])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -388,6 +420,26 @@ class YeekeeShootingRewardService
         return $query;
     }
 
+    private function hasPaidWalletTransaction(YeekeeShootRewardLog $log, int $memberId): bool
+    {
+        $walletTransactionId = (int) ($log->wallet_transaction_id ?? 0);
+        if ($walletTransactionId > 0) {
+            return DB::table('wallet_transactions')
+                ->where('id', $walletTransactionId)
+                ->where('member_id', $memberId)
+                ->where('direction', 'CREDIT')
+                ->where('ref_type', self::REWARD_REF_TYPE)
+                ->exists();
+        }
+
+        return DB::table('wallet_transactions')
+            ->where('member_id', $memberId)
+            ->where('direction', 'CREDIT')
+            ->where('ref_type', self::REWARD_REF_TYPE)
+            ->where('ref_id', (int) $log->id)
+            ->exists();
+    }
+
     private function dailyPaidRewardLogQuery(LottoDraw $draw): Builder
     {
         $query = $this->paidRewardLogQuery();
@@ -446,6 +498,23 @@ class YeekeeShootingRewardService
                 $draw,
                 $shoot,
                 $position > 0 ? $position : null,
+                isset($attributes['amount']) ? (float) $attributes['amount'] : null,
+                isset($attributes['currency']) ? (string) $attributes['currency'] : null,
+                isset($attributes['policy_source']) ? (string) $attributes['policy_source'] : null,
+                null,
+                (string) ($attributes['reason'] ?? ''),
+                isset($attributes['policy_hash']) ? (string) $attributes['policy_hash'] : null
+            ));
+
+            return;
+        }
+
+        if ((string) ($attributes['status'] ?? '') !== 'paid') {
+            Log::info('yeekee.shooting_reward.audit', $this->logContext(
+                $round,
+                $draw,
+                $shoot,
+                $position,
                 isset($attributes['amount']) ? (float) $attributes['amount'] : null,
                 isset($attributes['currency']) ? (string) $attributes['currency'] : null,
                 isset($attributes['policy_source']) ? (string) $attributes['policy_source'] : null,
