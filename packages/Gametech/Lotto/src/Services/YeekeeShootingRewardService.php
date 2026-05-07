@@ -128,16 +128,19 @@ class YeekeeShootingRewardService
         }
 
         $memberId = (int) $shoot->member_id;
-        $memberRoundBet = $this->memberValidBetAmount((int) $draw->id, $memberId);
-        if ($memberRoundBet <= 0) {
-            return $this->skipPosition($round, $draw, $shoot, $policySource, $policyHash, $position, $amount, $currency, 'member_has_no_valid_bet_same_round');
-        }
+        $minBetAmount = (float) $policy['min_bet_amount'];
+        if ($minBetAmount > 0) {
+            $memberRoundBet = $this->memberValidBetAmount((int) $draw->id, $memberId);
+            if ($memberRoundBet <= 0) {
+                return $this->skipPosition($round, $draw, $shoot, $policySource, $policyHash, $position, $amount, $currency, 'member_has_no_valid_bet_same_round');
+            }
 
-        if ($memberRoundBet < (float) $policy['min_bet_amount']) {
-            return $this->skipPosition($round, $draw, $shoot, $policySource, $policyHash, $position, $amount, $currency, 'min_bet_amount_not_met', [
-                'member_round_bet' => $memberRoundBet,
-                'min_bet_amount' => (float) $policy['min_bet_amount'],
-            ]);
+            if ($memberRoundBet < $minBetAmount) {
+                return $this->skipPosition($round, $draw, $shoot, $policySource, $policyHash, $position, $amount, $currency, 'min_bet_amount_not_met', [
+                    'member_round_bet' => $memberRoundBet,
+                    'min_bet_amount' => $minBetAmount,
+                ]);
+            }
         }
 
         $idempotencyKey = sprintf(
