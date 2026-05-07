@@ -58,7 +58,7 @@ class LottoRiskCurrentCleanupCommand extends Command
         $stoppedBy = 'complete';
 
         // ----------------------------------------------------------------
-        // Target 1: Invalid draw rows (resulted status or result_at set)
+        // Target 1: Invalid draw rows (resulted status)
         // ----------------------------------------------------------------
         if ($maxRuntime > 0 && (microtime(true) - $startedAt) >= $maxRuntime) {
             $stoppedBy = 'max_runtime';
@@ -96,7 +96,7 @@ class LottoRiskCurrentCleanupCommand extends Command
     }
 
     /**
-     * Delete rows whose draw is resulted (status='resulted') or already has result_at set.
+     * Delete rows whose draw is resulted (status='resulted').
      */
     private function cleanInvalidDrawRows(
         bool $isDryRun,
@@ -244,8 +244,7 @@ class LottoRiskCurrentCleanupCommand extends Command
         $query = DB::table('lotto_dashboard_risk_current as c')
             ->join('lotto_draws as d', 'd.id', '=', 'c.round_id')
             ->where(function ($q): void {
-                $q->whereNotNull('d.result_at')
-                    ->orWhere('d.status', 'resulted');
+                $q->where('d.status', 'resulted');
             });
 
         if ($webCode !== null) {

@@ -657,11 +657,11 @@ class DashboardSummarySyncService
      *
      * Rules:
      *   - Only upsert rows whose draw is "active liability" (status NOT IN
-     *     resulted/cancelled/canceled/void/refunded/no_result/no-result/cancel/disabled
-     *     AND result_at IS NULL) AND has meaningful risk
+     *     resulted/cancelled/canceled/void/refunded/no_result/no-result/cancel/disabled)
+     *     AND has meaningful risk
      *     (stake_total > 0 OR payout_if_hit > 0 OR liability > 0).
      *   - Delete existing current rows for any payload draw_id classified as
-     *     invalid (resulted / result_at not null / draw missing / draw status
+     *     invalid (resulted / draw missing / draw status
      *     in the exclude list).
      *   - Delete existing current rows for any payload row that is zero-risk,
      *     keyed by full (web_code, market_id, round_id, bet_type, number).
@@ -713,7 +713,6 @@ class DashboardSummarySyncService
         if (Schema::hasTable('lotto_draws') && ! empty($roundIds)) {
             $validDrawIds = DB::table('lotto_draws')
                 ->whereIn('id', $roundIds)
-                ->whereNull('result_at')
                 ->whereNotIn('status', $this->invalidDrawStatuses())
                 ->pluck('id')
                 ->map(static fn ($id) => (int) $id)
@@ -824,10 +823,6 @@ class DashboardSummarySyncService
     private function isDrawActiveForCurrent(?object $draw): bool
     {
         if ($draw === null) {
-            return false;
-        }
-
-        if (! empty($draw->result_at)) {
             return false;
         }
 

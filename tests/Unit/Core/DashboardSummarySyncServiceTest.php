@@ -233,12 +233,12 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
     }
 
-    public function test_current_writer_deletes_existing_row_when_result_at_is_not_null_even_if_status_open(): void
+    public function test_current_writer_keeps_open_draw_even_when_result_at_is_pre_scheduled(): void
     {
-        // Defensive: result_at IS NOT NULL is invalid regardless of status string.
+        // Production data can pre-schedule result_at while draw is still open/closed.
+        // Current risk must remain active until status becomes resulted.
         $this->createTestTables();
         $this->seedDraw(10, ['status' => 'open', 'result_at' => '2026-05-05 12:00:00']);
-        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10));
 
         $service = $this->makeService(
             $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
@@ -247,7 +247,23 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
 
-        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_current_writer_keeps_closed_draw_even_when_result_at_is_pre_scheduled(): void
+    {
+        // Closed-but-not-resulted draws can still carry liability until settlement.
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'closed', 'result_at' => '2026-05-05 12:00:00']);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
     }
 
     public function test_current_writer_excludes_defensive_extended_statuses(): void
