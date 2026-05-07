@@ -917,7 +917,7 @@
                                                             <th class="text-right">ผู้เล่น</th>
                                                             <th>เลขแทงสูงสุด</th>
                                                             <th class="text-right">ยอดเลขแทงสูงสุด</th>
-                                                            <th class="text-right">Max Risk (per number)</th>
+                                                            <th class="text-right">??????????????????????</th>
                                                             <th>เลขเสี่ยงสูงสุด</th>
                                                             <th class="text-right">มูลค่าเสี่ยงสูงสุด</th>
                                                         </tr>
@@ -2594,13 +2594,23 @@
                     const key = String(value || '').trim().toLowerCase();
                     if (!key) return '-';
 
-                    const map = {
-                        top_2: '2 ตัวบน',
-                        top_3: '3 ตัวบน',
-                        bottom_2: '2 ตัวล่าง',
-                        bottom_3: '3 ตัวล่าง',
-                        run_top: 'วิ่งบน',
-                        run_bottom: 'วิ่งล่าง',
+                                        const map = {
+                        top_1: '1 ?????',
+                        top_2: '2 ?????',
+                        top_3: '3 ?????',
+                        tod_2: '2 ???????',
+                        tod_3: '3 ???????',
+                        bottom_1: '1 ???????',
+                        bottom_2: '2 ???????',
+                        bottom_3: '3 ???????',
+                        front_3: '3 ???????',
+                        back_3: '3 ???????',
+                        back_2: '2 ???????',
+                        back_1: '1 ???????',
+                        run_top: '??????',
+                        run_bottom: '????????',
+                        run_2_top: '???? 2 ?????',
+                        run_2_bottom: '???? 2 ???????',
                     };
 
                     return map[key] || value;
@@ -3984,3 +3994,4 @@
         });
     </script>
 @endpush
+

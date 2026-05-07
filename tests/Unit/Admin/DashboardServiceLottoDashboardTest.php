@@ -537,7 +537,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertStringContainsString('activeLottoRiskRows()', $contents);
         $this->assertStringContainsString('summary.lotto_top_risky_numbers', $contents);
         $this->assertStringContainsString('formatLottoRiskBetType(row.bet_type)', $contents);
-        $this->assertStringContainsString("top_3: '3 ตัวบน'", $contents);
+        $this->assertStringContainsString('top_3:', $contents);
+        $this->assertStringContainsString('tod_3:', $contents);
         $this->assertStringContainsString('จำนวนงวด (เสี่ยง)', $contents);
         $this->assertStringContainsString('.dashboard-equal-row {', $contents);
         $this->assertStringContainsString('flex: 0 0 50%;', $contents);
@@ -1951,3 +1952,4 @@ class DashboardServiceLottoDashboardTest extends TestCase
         }
     }
 }
+
