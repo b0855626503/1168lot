@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard;
 
 use App\Jobs\SyncDashboardSummaryBucket;
+use App\Jobs\SyncLottoRiskCurrentForDrawJob;
 use App\Models\DashboardSummaryDaily;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -92,6 +93,92 @@ class DashboardSummarySyncService
                 auditContext: (array) ($pendingPayload['audit_context'] ?? []),
             )->onQueue('default');
         }
+    }
+
+    public function dispatchRiskCurrentForDraw(
+        int $drawId,
+        ?string $webCode = null,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
+        array $auditContext = [],
+    ): void {
+        if ($drawId <= 0) {
+            return;
+        }
+
+        SyncLottoRiskCurrentForDrawJob::dispatch(
+            drawId: $drawId,
+            webCode: $webCode,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
+            auditContext: $auditContext,
+        )->onQueue('default');
+    }
+
+    public function syncRiskCurrentForDraw(
+        int $drawId,
+        ?string $webCode = null,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
+        array $auditContext = [],
+    ): void {
+        if ($drawId <= 0 || ! Schema::hasTable('lotto_dashboard_risk_current')) {
+            return;
+        }
+
+        $resolvedWebCode = $this->webCodeResolver->resolve($webCode);
+        $draw = Schema::hasTable('lotto_draws')
+            ? DB::table('lotto_draws')
+                ->select('id', 'market_id', 'status', 'result_at')
+                ->where('id', $drawId)
+                ->first()
+            : null;
+
+        if (! $this->isDrawActiveForCurrent($draw)) {
+            DB::table('lotto_dashboard_risk_current')
+                ->where('round_id', $drawId)
+                ->delete();
+
+            return;
+        }
+
+        if (! Schema::hasTable('lotto_number_exposures')) {
+            return;
+        }
+
+        $riskRows = DB::table('lotto_number_exposures as e')
+            ->leftJoin('lotto_draw_bet_settings as s', function ($join): void {
+                $join->on('s.draw_id', '=', 'e.draw_id')
+                    ->on('s.bet_type', '=', 'e.bet_type');
+            })
+            ->where('e.draw_id', $drawId)
+            ->select([
+                'e.bet_type',
+                'e.number',
+                DB::raw('COALESCE(e.sold_amount, 0) as stake_total'),
+                DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
+            ])
+            ->get()
+            ->map(function ($row) use ($draw, $drawId, $resolvedWebCode) {
+                $payoutIfHit = round((float) ($row->payout_if_hit ?? 0), 4);
+
+                return [
+                    'web_code' => $resolvedWebCode,
+                    'market_id' => (int) ($draw->market_id ?? 0),
+                    'round_id' => $drawId,
+                    'bet_type' => (string) ($row->bet_type ?? ''),
+                    'number' => (string) ($row->number ?? ''),
+                    'stake_total' => round((float) ($row->stake_total ?? 0), 4),
+                    'payout_if_hit' => $payoutIfHit,
+                    'liability' => $payoutIfHit,
+                    'created_at' => now()->toDateTimeString(),
+                    'updated_at' => now()->toDateTimeString(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $this->upsertRiskCurrentRows($riskRows);
     }
 
     /**
@@ -699,6 +786,21 @@ class DashboardSummarySyncService
             'no-result',
             'disabled',
         ];
+    }
+
+    private function isDrawActiveForCurrent(?object $draw): bool
+    {
+        if ($draw === null) {
+            return false;
+        }
+
+        if (! empty($draw->result_at)) {
+            return false;
+        }
+
+        $status = strtolower((string) ($draw->status ?? ''));
+
+        return $status !== '' && ! in_array($status, $this->invalidDrawStatuses(), true);
     }
 
     /**
