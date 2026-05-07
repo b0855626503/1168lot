@@ -725,7 +725,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
         ]);
         DB::table('lotto_draws')->insert([
             ['id' => 10, 'market_id' => 1, 'status' => 'open', 'result_at' => null],
-            ['id' => 11, 'market_id' => 2, 'status' => 'closed', 'result_at' => null],
+            ['id' => 11, 'market_id' => 2, 'status' => 'open', 'result_at' => '2026-04-10 10:04:00'],
             ['id' => 12, 'market_id' => 1, 'status' => 'resulted', 'result_at' => '2026-04-10 10:00:00'],
         ]);
         DB::table('lotto_dashboard_risk_current')->insert([

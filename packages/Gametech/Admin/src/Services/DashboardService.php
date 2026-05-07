@@ -5231,9 +5231,6 @@ class DashboardService
                     ->orWhere('rc.liability', '>', 0);
             });
 
-        if ($this->hasColumn('lotto_draws', 'result_at')) {
-            $query->whereNull('d.result_at');
-        }
         if ($this->hasColumn('lotto_draws', 'status')) {
             $query->where('d.status', '<>', 'resulted');
         }
