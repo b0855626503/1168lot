@@ -7,20 +7,20 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Foundation\Composer;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Foundation\Composer;
 
 // ⬅️ ใช้คลาส Composer ของ Laravel
 use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 
-class RunGlobalTask implements ShouldQueue, ShouldBeUnique
+class RunGlobalTask implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     // กันซ้ำ 5 นาทีต่อเว็บ/แอ็กชัน
     public int $uniqueFor = 300;
@@ -40,22 +40,23 @@ class RunGlobalTask implements ShouldQueue, ShouldBeUnique
     /** key กันซ้ำ: site + action (+ ตัวแปรเพิ่มถ้าต้องให้รันซ้ำได้) */
     public function uniqueId(): string
     {
-        $site = Str::slug((string)($this->payload['site'] ?? config('app.name', 'app')), '_');
-        $action = (string)($this->payload['action'] ?? 'default');
+        $site = Str::slug((string) ($this->payload['site'] ?? config('app.name', 'app')), '_');
+        $action = (string) ($this->payload['action'] ?? 'default');
         $uniq = $this->payload['uniq'] ?? null; // ใส่มาเมื่ออยาก force ให้รันซ้ำ
-        return $site . '|' . $action . ($uniq ? '|' . $uniq : '');
+
+        return $site.'|'.$action.($uniq ? '|'.$uniq : '');
     }
 
     public function handle(): void
     {
-        $site = Str::slug((string)($this->payload['site'] ?? config('app.name', 'app')), '_');
+        $site = Str::slug((string) ($this->payload['site'] ?? config('app.name', 'app')), '_');
         $action = $this->payload['action'] ?? null;
 
         Log::info('RunGlobalTask start', [
             'site' => $site,
             'base' => base_path(),
             'conn' => $this->connection, // ควรเป็น 'fanout'
-            'queue' => $this->queue,      // เช่น broadcasts:{APP}
+            'queue' => $this->queue,      // เช่น broadcast:{APP}
             'action' => $action,
             'payload' => $this->payload,
         ]);
@@ -93,14 +94,14 @@ class RunGlobalTask implements ShouldQueue, ShouldBeUnique
                     break;
 
                 case 'composer:dump':                              // ⬅️ เพิ่ม action
-                    $optimized = (bool)($this->payload['optimize'] ?? true); // true = -o
+                    $optimized = (bool) ($this->payload['optimize'] ?? true); // true = -o
                     $exit = $this->runComposerDump($optimized);
                     break;
 
                 default:
                     // เผื่อยิง Artisan อะไรก็ได้แบบระบุเอง
                     if (isset($this->payload['command'])) {
-                        $params = (array)($this->payload['params'] ?? []);
+                        $params = (array) ($this->payload['params'] ?? []);
                         $exit = Artisan::call($this->payload['command'], $params);
                     } else {
                         Log::warning('RunGlobalTask: unknown action', ['action' => $action]);
@@ -126,7 +127,7 @@ class RunGlobalTask implements ShouldQueue, ShouldBeUnique
     protected function runComposerDump(bool $optimized = true): int
     {
         // หา php binary
-        $php = (new PhpExecutableFinder())->find(false) ?: 'php';
+        $php = (new PhpExecutableFinder)->find(false) ?: 'php';
 
         // ตัวเลือกตำแหน่ง composer (เรียงลำดับความสำคัญ)
         $candidates = array_filter([
@@ -152,8 +153,8 @@ class RunGlobalTask implements ShouldQueue, ShouldBeUnique
         }
 
         // ถ้ายังไม่เจออะไร ลองพึ่ง PATH: "composer ..."
-        if (!$cmd) {
-            $cmd = 'composer dump-autoload' . ($optimized ? ' -o' : '');
+        if (! $cmd) {
+            $cmd = 'composer dump-autoload'.($optimized ? ' -o' : '');
         }
 
         // เผื่อเครื่องล็อกสิทธิ์ composer เป็น root/sudo (ตามจริงควรตั้งผ่านระบบ deploy)
@@ -171,6 +172,6 @@ class RunGlobalTask implements ShouldQueue, ShouldBeUnique
             'err' => trim($process->getErrorOutput()),
         ]);
 
-        return (int)$process->getExitCode();
+        return (int) $process->getExitCode();
     }
 }

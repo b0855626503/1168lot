@@ -98,12 +98,12 @@ class LogRequestDuration
      */
     protected function dispatchPersistRequestLog(array $payload): void
     {
-        PersistRequestLog::dispatch($payload)->onQueue('cashback');
+        PersistRequestLog::dispatch($payload)->onQueue('default');
     }
 
     protected function dispatchTelegramAlert(string $message): void
     {
-        SendTelegramAlert::dispatch('notify/send', $message)->onQueue('cashback');
+        SendTelegramAlert::dispatch('notify/send', $message)->onQueue('default');
     }
 
     /**

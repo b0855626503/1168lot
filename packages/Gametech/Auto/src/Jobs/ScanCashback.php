@@ -139,7 +139,7 @@ class ScanCashback implements ShouldQueue
                 continue;
             }
 
-            GrantCashback::dispatch($date, $username, $deposit, $withdraw)->onQueue('cashback');
+            GrantCashback::dispatch($date, $username, $deposit, $withdraw)->onQueue('default');
         }
 
         Log::channel('cashback')->info('ScanCashback:done', [

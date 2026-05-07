@@ -35,7 +35,7 @@ class AutoResultExhaustedAlertTest extends TestCase
 
         config()->set('lotto_auto_result.hardening.alerts.enabled', true);
         config()->set('lotto_auto_result.hardening.alerts.telegram_endpoint', 'notify/send');
-        config()->set('lotto_auto_result.hardening.alerts.telegram_queue', 'broadcasts');
+        config()->set('lotto_auto_result.hardening.alerts.telegram_queue', 'lotto');
         config()->set('lotto_auto_result.hardening.alerts.dedupe_seconds', 21600);
         RateLimiter::clear('lotto:auto-result:exhausted-alert:draw:626');
 
@@ -111,7 +111,7 @@ class AutoResultExhaustedAlertTest extends TestCase
             Mockery::mock(ResultMapper::class),
             Mockery::mock(ResultValidator::class),
             Mockery::mock(ResultApplier::class),
-            new AutoResultHardeningService()
+            new AutoResultHardeningService
         );
 
         $service->markExhausted(LottoDraw::query()->with('market')->findOrFail(626));
@@ -126,7 +126,7 @@ class AutoResultExhaustedAlertTest extends TestCase
 
         Bus::assertDispatched(SendTelegramBot::class, function (SendTelegramBot $job): bool {
             return $job->endpoint === 'notify/send'
-                && $job->queue === 'broadcasts'
+                && $job->queue === 'lotto'
                 && str_contains($job->message, 'ลาวพัฒนา')
                 && str_contains($job->message, 'attempts=27')
                 && str_contains($job->message, 'ผลหวยยังไม่ออก');

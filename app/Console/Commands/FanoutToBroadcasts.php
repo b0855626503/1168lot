@@ -4,19 +4,19 @@ namespace App\Console\Commands;
 
 use App\Jobs\RunGlobalTask;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
 
 class FanoutToBroadcasts extends Command
 {
     protected $signature = 'global:fanout-broadcasts {--payload=}';
-    protected $description = 'ส่งงานให้ทุกเว็บผ่านคิว broadcasts:{APP_NAME} บน connection=fanout';
+    protected $description = 'ส่งงานให้ทุกเว็บผ่านคิว broadcast:{APP_NAME} บน connection=fanout';
 
     public function handle(): int
     {
-        $apps = (array)config('sites.apps', []);
+        $apps = (array) config('sites.apps', []);
         if (empty($apps)) {
             $this->error('ยังไม่ตั้งรายชื่อเว็บใน config/sites.php');
+
             return self::INVALID;
         }
 
@@ -26,7 +26,7 @@ class FanoutToBroadcasts extends Command
         }
 
         foreach ($apps as $app) {
-            $queue = 'broadcasts:' . Str::slug($app, '_');
+            $queue = 'broadcast:'.Str::slug($app, '_');
 
             dispatch(
                 (new RunGlobalTask(['site' => $app] + $payload))

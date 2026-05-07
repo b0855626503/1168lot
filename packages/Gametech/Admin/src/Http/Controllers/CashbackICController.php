@@ -23,8 +23,6 @@ class CashbackICController extends AppBaseController
         $this->repository = $repository;
     }
 
-
-
     public function Cashback(Request $request)
     {
         $user = $this->user()->name.' '.$this->user()->surname;
@@ -33,21 +31,18 @@ class CashbackICController extends AppBaseController
         $startdate = $data['date_cashback'];
         unset($data['id']);
 
-
         $data['emp_code'] = $this->id();
         $data['emp_name'] = $user;
         $data['ip'] = $ip;
 
         $items = (object) $data;
 
-
-        $chk = DB::table('members_cashback')->whereDate('date_cashback',$startdate)->where('downline_code',$items->member_code)->where('topupic','Y');
-        if($chk->doesntExist()) {
-            MemberCashbackJob::dispatch($startdate, $items)->onQueue('cashback');
-        }else{
-            return $this->sendError('มีรายการมอบแล้ว',200);
+        $chk = DB::table('members_cashback')->whereDate('date_cashback', $startdate)->where('downline_code', $items->member_code)->where('topupic', 'Y');
+        if ($chk->doesntExist()) {
+            MemberCashbackJob::dispatch($startdate, $items)->onQueue('default');
+        } else {
+            return $this->sendError('มีรายการมอบแล้ว', 200);
         }
-
 
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
 
@@ -61,24 +56,20 @@ class CashbackICController extends AppBaseController
         $startdate = $data['date_cashback'];
         unset($data['id']);
 
-
         $data['emp_code'] = $this->id();
         $data['emp_name'] = $user;
         $data['ip'] = $ip;
 
         $items = (object) $data;
 
-        $chk = DB::table('members_ic')->whereDate('date_cashback',$startdate)->where('member_code',$items->upline_code)->where('downline_code',$items->member_code)->where('topupic','Y');
-        if($chk->doesntExist()){
-            MemberIcJob::dispatch($startdate,$items)->onQueue('ic');
-        }else{
-            return $this->sendError('มีรายการมอบแล้ว',200);
+        $chk = DB::table('members_ic')->whereDate('date_cashback', $startdate)->where('member_code', $items->upline_code)->where('downline_code', $items->member_code)->where('topupic', 'Y');
+        if ($chk->doesntExist()) {
+            MemberIcJob::dispatch($startdate, $items)->onQueue('default');
+        } else {
+            return $this->sendError('มีรายการมอบแล้ว', 200);
         }
-
 
         return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
 
     }
-
-
 }

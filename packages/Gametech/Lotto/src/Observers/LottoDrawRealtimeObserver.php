@@ -288,7 +288,7 @@ class LottoDrawRealtimeObserver
     {
         SendDrawResultSummaryTelegramJob::dispatch($drawId)
             ->delay(now()->addSeconds(2))
-            ->onQueue('cashback');
+            ->onQueue('lotto');
     }
 
     protected function resolveTotalTickets(): int

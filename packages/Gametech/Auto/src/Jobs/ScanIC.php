@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Gametech\Auto\Jobs;
 
 use Illuminate\Bus\Queueable;
@@ -49,8 +48,9 @@ class ScanIC implements ShouldQueue
             'count' => is_countable($lists['result'] ?? null) ? count($lists['result']) : null,
         ]);
 
-        if (empty($lists['result']) || !is_array($lists['result'])) {
+        if (empty($lists['result']) || ! is_array($lists['result'])) {
             Log::channel('cashback')->warning('ScanIC:empty_or_invalid_result', ['date' => $date]);
+
             return;
         }
 
@@ -61,12 +61,12 @@ class ScanIC implements ShouldQueue
             $winlose = $item['winLost'] ?? 0;
             $turn = $item['turn'] ?? 0;
 
-            if (!$username) {
+            if (! $username) {
                 continue;
             }
 
             GrantIC::dispatch($date, $username, $winlose, $turn)
-                ->onQueue('ic');
+                ->onQueue('default');
         }
 
         Log::channel('cashback')->info('ScanCashback:done', ['date' => $date]);

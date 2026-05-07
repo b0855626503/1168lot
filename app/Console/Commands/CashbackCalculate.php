@@ -197,7 +197,7 @@ class CashbackCalculate extends Command
                     $items,
                     $promotion,
                     $target
-                )->onQueue('cashback');
+                )->onQueue('default');
 
                 $dispatchedCount++;
             }

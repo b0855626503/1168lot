@@ -90,7 +90,7 @@ class DashboardSummarySyncService
                 sourceType: $pendingPayload['source_type'] ?? $sourceType,
                 sourceId: $pendingPayload['source_id'] ?? $sourceId,
                 auditContext: (array) ($pendingPayload['audit_context'] ?? []),
-            );
+            )->onQueue('default');
         }
     }
 

@@ -2,11 +2,9 @@
 
 namespace Gametech\Auto\Console\Commands;
 
-
 use Gametech\Auto\Jobs\MemberCashback as MemberCashbackJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-
 
 class Cashback extends Command
 {
@@ -49,7 +47,6 @@ class Cashback extends Command
             $startdate = now()->subDays(1)->toDateString();
         }
 
-
         $promotion = DB::table('promotions')->where('id', 'pro_cashback')->first();
 
         if ($promotion->enable != 'Y' || $promotion->active != 'Y' || $promotion->use_auto != 'Y') {
@@ -57,7 +54,6 @@ class Cashback extends Command
         }
 
         $bonus = $promotion->bonus_percent;
-
 
         $latestBi = DB::table('bills')
             ->select('bills.member_code', DB::raw('SUM(bills.credit_bonus)  as bonus_amount'), DB::raw("DATE_FORMAT(bills.date_create,'%Y-%m-%d') as date_approve"))
@@ -88,9 +84,6 @@ class Cashback extends Command
             })
             ->groupBy('bank_payment.member_topup', DB::raw('Date(bank_payment.date_approve)'));
 
-
-
-
         $lists = DB::table('members')
             ->select('members.upline_code', 'members.code as member_code', 'members.user_name as user_name', 'members.name as member_name', 'members.balance_free as balance', DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'), DB::raw('IFNULL(bonus_amount,0) as bonus_amount'), 'bank_payment.deposit_amount', 'bank_payment.date_cashback', 'bank_payment.date_approve', 'bank_payment.code')
             ->orderByDesc('bank_payment.code')
@@ -118,17 +111,17 @@ class Cashback extends Command
             $items->emp_name = 'SYSTEM';
             if ($items->bonus_amount > 0 || ($items->deposit_amount - $items->withdraw_amount) <= 0) {
                 $bar->advance();
+
                 continue;
             }
             $items->balance_total = ($items->deposit_amount - $items->withdraw_amount);
             $chk = DB::table('members_cashback')->whereDate('date_cashback', $startdate)->where('downline_code', $items->member_code)->where('topupic', 'Y');
             if ($chk->doesntExist()) {
-                MemberCashbackJob::dispatch($startdate, $items)->onQueue('cashback');
+                MemberCashbackJob::dispatch($startdate, $items)->onQueue('default');
             }
             $bar->advance();
         }
         $bar->finish();
 
     }
-
 }

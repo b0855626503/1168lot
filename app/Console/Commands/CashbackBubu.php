@@ -99,7 +99,7 @@ class CashbackBubu extends Command
 
             foreach ($itemlist as $items) {
 
-                \App\Jobs\CashbackBubu::dispatch($startDate, $items, $promotion)->onQueue('cashback');
+                \App\Jobs\CashbackBubu::dispatch($startDate, $items, $promotion)->onQueue('default');
 
             }
 

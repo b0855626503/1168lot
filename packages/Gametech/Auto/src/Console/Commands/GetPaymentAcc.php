@@ -35,7 +35,7 @@ class GetPaymentAcc extends Command
     public function __construct()
     {
         parent::__construct();
-  }
+    }
 
     /**
      * Execute the console command.
@@ -47,7 +47,7 @@ class GetPaymentAcc extends Command
         $id = $this->argument('bank');
         $account = $this->argument('account');
 
-        $this->info('Start get Transaction by : ' . $id . ' , Account No : ' . $account);
+        $this->info('Start get Transaction by : '.$id.' , Account No : '.$account);
         switch ($id) {
             case 'tw':
                 PaymentTrue::dispatch($account)->onQueue($id);
@@ -59,23 +59,21 @@ class GetPaymentAcc extends Command
                 PaymentBay::dispatch($account)->onQueue($id);
                 break;
             case 'ktb':
-                PaymentKtb::dispatch($account)->onQueue('kbank');
+                PaymentKtb::dispatch($account)->onQueue('bank');
                 break;
             case 'scb':
-                PaymentScb::dispatch($account)->onQueue('kbank');
+                PaymentScb::dispatch($account)->onQueue('bank');
                 break;
             case 'gsb':
-                PaymentGsb::dispatch($account)->onQueue('kbank');
+                PaymentGsb::dispatch($account)->onQueue('bank');
                 break;
             case 'wing':
                 PaymentWing::dispatch($account)->onQueue('scb');
                 break;
         }
 
-//        $this->call("payment:check $id 50");
+        //        $this->call("payment:check $id 50");
         return 0;
 
     }
-
-
 }

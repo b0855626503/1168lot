@@ -2,11 +2,9 @@
 
 namespace Gametech\Auto\Console\Commands;
 
-
 use Gametech\Auto\Jobs\NewDelMemberIc as NewDelMemberIcJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-
 
 class DelMemberIC extends Command
 {
@@ -49,8 +47,7 @@ class DelMemberIC extends Command
             $startdate = now()->subDays(1)->toDateString();
         }
 
-        $lists = DB::table('members_ic')->whereDate('date_cashback', $startdate)->where('topupic', 'Y')->where('member_code', '>' , 0)->orderBy('code');
-
+        $lists = DB::table('members_ic')->whereDate('date_cashback', $startdate)->where('topupic', 'Y')->where('member_code', '>', 0)->orderBy('code');
 
         $bar = $this->output->createProgressBar($lists->count());
         $bar->start();
@@ -63,13 +60,12 @@ class DelMemberIC extends Command
             }
         });
 
-//        foreach ($lists->cursor() as $items) {
-//
-//            NewMemberIcJob::dispatch($startdate, $items)->onQueue('ic');
-//            $bar->advance();
-//        }
+        //        foreach ($lists->cursor() as $items) {
+        //
+        //            NewMemberIcJob::dispatch($startdate, $items)->onQueue('default');
+        //            $bar->advance();
+        //        }
         $bar->finish();
 
     }
-
 }

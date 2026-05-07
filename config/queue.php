@@ -41,7 +41,7 @@ return [
         'database' => [
             'driver' => 'database',
             'table' => 'jobs',
-            'queue' => 'default,cashback,ic',
+            'queue' => 'default',
             'retry_after' => 120,
             'after_commit' => true,
         ],
@@ -69,7 +69,7 @@ return [
         'redis' => [
             'driver' => 'redis',
             'connection' => 'queue',
-            'queue' => 'broadcasts',
+            'queue' => 'broadcast',
             'retry_after' => 120,
             'block_for' => null,
             'after_commit' => true,
@@ -78,7 +78,7 @@ return [
         'fanout' => [
             'driver' => 'redis',
             'connection' => 'fanout',  // ชี้ไป redis.fanout
-            'queue' => 'broadcasts:'.$app,
+            'queue' => 'broadcast:'.$app,
             'retry_after' => 90,
             'block_for' => null,
         ],

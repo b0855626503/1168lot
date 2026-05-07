@@ -2,11 +2,9 @@
 
 namespace Gametech\Auto\Console\Commands;
 
-
 use Gametech\Auto\Jobs\NewMemberIcSeamless as NewMemberIcSeamlessJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-
 
 class AddMemberICSeamless extends Command
 {
@@ -49,8 +47,7 @@ class AddMemberICSeamless extends Command
             $startdate = now()->subDays(1)->toDateString();
         }
 
-        $lists = DB::table('members_ic')->whereDate('date_cashback', $startdate)->where('topupic', 'N')->where('member_code', '>' , 0)->orderBy('code');
-
+        $lists = DB::table('members_ic')->whereDate('date_cashback', $startdate)->where('topupic', 'N')->where('member_code', '>', 0)->orderBy('code');
 
         $bar = $this->output->createProgressBar($lists->count());
         $bar->start();
@@ -58,18 +55,17 @@ class AddMemberICSeamless extends Command
         $lists->chunk(100, function ($itemlist) use ($startdate, $bar) {
             foreach ($itemlist as $items) {
 
-                NewMemberIcSeamlessJob::dispatch($startdate, $items)->onQueue('ic');
+                NewMemberIcSeamlessJob::dispatch($startdate, $items)->onQueue('default');
                 $bar->advance();
             }
         });
 
-//        foreach ($lists->cursor() as $items) {
-//
-//            NewMemberIcJob::dispatch($startdate, $items)->onQueue('ic');
-//            $bar->advance();
-//        }
+        //        foreach ($lists->cursor() as $items) {
+        //
+        //            NewMemberIcJob::dispatch($startdate, $items)->onQueue('default');
+        //            $bar->advance();
+        //        }
         $bar->finish();
 
     }
-
 }

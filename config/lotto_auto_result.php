@@ -57,7 +57,7 @@ return [
         'alerts' => [
             'enabled' => (bool) env('LOTTO_AUTO_RESULT_ALERT_ENABLED', true),
             'telegram_endpoint' => (string) env('LOTTO_AUTO_RESULT_ALERT_ENDPOINT', 'notify/send'),
-            'telegram_queue' => (string) env('LOTTO_AUTO_RESULT_ALERT_QUEUE', 'broadcasts'),
+            'telegram_queue' => (string) env('LOTTO_AUTO_RESULT_ALERT_QUEUE', 'lotto'),
             'log_channel' => (string) env('LOTTO_AUTO_RESULT_ALERT_LOG_CHANNEL', 'daily'),
             'dedupe_seconds' => (int) env('LOTTO_AUTO_RESULT_ALERT_DEDUPE_SECONDS', 21600),
         ],

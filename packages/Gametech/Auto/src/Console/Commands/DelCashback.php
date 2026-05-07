@@ -2,12 +2,10 @@
 
 namespace Gametech\Auto\Console\Commands;
 
-
 use Gametech\Auto\Jobs\NewDelMemberCashback as NewDelMemberCashbackJob;
-//use Gametech\Auto\Jobs\NewMemberCashback as NewMemberCashbackJob;
+// use Gametech\Auto\Jobs\NewMemberCashback as NewMemberCashbackJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-
 
 class DelCashback extends Command
 {
@@ -52,7 +50,6 @@ class DelCashback extends Command
 
         $lists = DB::table('members_cashback')->whereDate('date_cashback', $startdate)->where('topupic', 'Y')->orderBy('code');
 
-
         $bar = $this->output->createProgressBar($lists->count());
         $bar->start();
 
@@ -64,14 +61,13 @@ class DelCashback extends Command
             }
         });
 
-//        foreach ($lists->cursor() as $items) {
-//
-//            NewMemberCashbackJob::dispatch($startdate, $items)->onQueue('cashback');
-//
-//            $bar->advance();
-//        }
+        //        foreach ($lists->cursor() as $items) {
+        //
+        //            NewMemberCashbackJob::dispatch($startdate, $items)->onQueue('default');
+        //
+        //            $bar->advance();
+        //        }
         $bar->finish();
 
     }
-
 }

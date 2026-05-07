@@ -2,7 +2,7 @@
 
 namespace Gametech\Auto\Console\Commands;
 
-use Gametech\Auto\Jobs\ScanCashback; // เปลี่ยนเป็น Job สแกน/แตกงาน
+// เปลี่ยนเป็น Job สแกน/แตกงาน
 use Gametech\Auto\Jobs\ScanIC;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -25,15 +25,17 @@ class NewICV2 extends Command
         $mutexKey = "ic:scan:{$date}";
         $force = (bool) $this->option('force');
 
-        if (!$force && !Cache::add($mutexKey, 1, now()->addHour())) {
+        if (! $force && ! Cache::add($mutexKey, 1, now()->addHour())) {
             $this->warn("Skipped: scan for {$date} already enqueued or running. Use --force to override.");
+
             return self::SUCCESS;
         }
 
         // โยนงานสแกน (แตกเป็นงานย่อยต่อสมาชิกภายใน)
-        ScanIC::dispatch($date)->onQueue('ic');
+        ScanIC::dispatch($date)->onQueue('default');
 
         $this->info('Queued. Monitor Horizon for progress.');
+
         return self::SUCCESS;
     }
 }

@@ -60,7 +60,7 @@ class SendDrawResultSummaryTelegramJob implements ShouldQueue
         $summary = $this->buildSummary($draw->id);
         $message = $this->formatMessage($draw, $summary);
 
-        SendTelegramBot::dispatch('notify/send', $message)->onQueue('cashback');
+        SendTelegramBot::dispatch('notify/send', $message)->onQueue('lotto');
     }
 
     /**
