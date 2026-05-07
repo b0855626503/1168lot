@@ -4581,12 +4581,14 @@ class DashboardService
             return [];
         }
 
-        // The current table (`lotto_dashboard_risk_current`) has no member_id
-        // and the ticket-data fallback (`lottoDistinctPlayersByBetType`) does
-        // NOT share the active/non-resulted/web_code scope of
-        // `lottoRiskCurrentBaseQuery`. To avoid mixing scopes (which would
-        // re-introduce stale data) we explicitly emit `null` for
-        // `unique_players` here so the blade renders "-". See PR #71.
+        // unique_players is derived from ticket data joined to the EXACT
+        // (round_id, bet_type, number) tuple set produced by
+        // lottoRiskCurrentBaseQuery, guaranteeing identical web_code /
+        // non-resulted-draw / non-zero-risk / market_type scope. Returns null
+        // (sentinel) when the helper cannot run safely; the blade then
+        // renders "-".
+        $playersByType = $this->lottoDistinctPlayersByBetTypeFromCurrent($marketType);
+
         $result = [];
         foreach ($byTypeNumber as $betType => $numberRows) {
             $itemCount = count($numberRows);
@@ -4625,10 +4627,12 @@ class DashboardService
                 }
             }
 
-            // The current table does not carry member_id and we cannot derive
-            // unique players from ticket data without violating the active
-            // scope (see comment above). Always emit null.
-            $playerCount = null;
+            // null when helper unsupported (missing tables); otherwise the
+            // scope-bound distinct member count, defaulting to 0 when the
+            // current bet_type has no matching ticket items in scope.
+            $playerCount = $playersByType === null
+                ? null
+                : (int) ($playersByType[$betType] ?? 0);
 
             $result[] = [
                 'bet_type' => $betType,
@@ -4726,6 +4730,86 @@ class DashboardService
         }
 
         return $riskByType;
+    }
+
+    /**
+     * Distinct member count per bet_type, scope-bound to the exact
+     * (round_id, bet_type, number) tuple set returned by
+     * lottoRiskCurrentBaseQuery(). Joining ticket items to that derived set
+     * guarantees the same web_code / non-resulted-draw / non-zero-risk /
+     * market_type filters apply, so no stale bet_types or off-scope members
+     * can leak into the count.
+     *
+     * Returns null when the helper cannot run safely (missing
+     * tables/columns or no current-table base query). Returns an empty array
+     * (or a partial map) when the helper ran but no ticket items matched the
+     * tuple set — the consumer treats missing bet_types as 0.
+     *
+     * @return array<string, int>|null
+     */
+    private function lottoDistinctPlayersByBetTypeFromCurrent(?string $marketType): ?array
+    {
+        if (
+            ! $this->hasTable('lotto_ticket_items')
+            || ! $this->hasTable('lotto_tickets')
+            || ! $this->hasColumn('lotto_ticket_items', 'ticket_id')
+            || ! $this->hasColumn('lotto_ticket_items', 'bet_type')
+            || ! $this->hasColumn('lotto_ticket_items', 'number')
+            || ! $this->hasColumn('lotto_tickets', 'id')
+            || ! $this->hasColumn('lotto_tickets', 'draw_id')
+            || ! $this->hasColumn('lotto_tickets', 'member_id')
+        ) {
+            return null;
+        }
+
+        $baseQuery = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($baseQuery === null) {
+            return null;
+        }
+
+        // Clone before mutating the select list so the base query stays
+        // reusable and side-effect-free for any sibling caller.
+        $tupleSql = (clone $baseQuery)
+            ->select([
+                'rc.round_id as cur_round_id',
+                'rc.bet_type as cur_bet_type',
+                'rc.number as cur_number',
+            ])
+            ->distinct();
+
+        $query = DB::table('lotto_ticket_items as i')
+            ->joinSub($tupleSql, 'cur', function ($join): void {
+                $join->on('cur.cur_bet_type', '=', 'i.bet_type')
+                    ->on('cur.cur_number', '=', 'i.number');
+            })
+            ->join('lotto_tickets as t', function ($join): void {
+                $join->on('t.id', '=', 'i.ticket_id')
+                    ->on('t.draw_id', '=', 'cur.cur_round_id');
+            })
+            ->whereNotNull('t.member_id');
+
+        if ($this->hasColumn('lotto_tickets', 'status')) {
+            $query->whereNotIn('t.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_TICKET_STATUSES);
+        }
+        if ($this->hasColumn('lotto_ticket_items', 'status')) {
+            $query->whereNotIn('i.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_ITEM_STATUSES);
+        }
+
+        $rows = $query
+            ->selectRaw('i.bet_type as bet_type, COUNT(DISTINCT t.member_id) as unique_players')
+            ->groupBy('i.bet_type')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $betType = trim((string) ($row->bet_type ?? ''));
+            if ($betType === '') {
+                continue;
+            }
+            $result[$betType] = (int) ($row->unique_players ?? 0);
+        }
+
+        return $result;
     }
 
     /**
