@@ -22,6 +22,9 @@ class LottoDashboardSummaryObserverTest extends TestCase
         $service->shouldReceive('dispatchForModelChange')
             ->once()
             ->with('lotto', Mockery::type('array'), Mockery::type('array'), 'draw_closed');
+        $service->shouldReceive('dispatchRiskCurrentForDraw')
+            ->once()
+            ->with(101, null, 'draw_closed', '101');
         $this->app->instance(DashboardSummarySyncService::class, $service);
 
         $draw = Mockery::mock(LottoDraw::class)->makePartial();
@@ -44,6 +47,9 @@ class LottoDashboardSummaryObserverTest extends TestCase
         $service->shouldReceive('dispatchForModelChange')
             ->once()
             ->with('lotto', Mockery::type('array'), Mockery::type('array'), 'draw_resulted');
+        $service->shouldReceive('dispatchRiskCurrentForDraw')
+            ->once()
+            ->with(102, null, 'draw_resulted', '102');
         $this->app->instance(DashboardSummarySyncService::class, $service);
 
         $draw = Mockery::mock(LottoDraw::class)->makePartial();

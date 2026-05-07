@@ -74,6 +74,7 @@ class LottoDashboardSummaryObserver
                 return;
             }
 
+            $payload['draw_id'] = (int) ($model->draw_id ?? 0);
             $payload['risk_dates'] = array_filter([
                 $model->updated_at,
                 $model->getOriginal('updated_at'),
@@ -90,6 +91,7 @@ class LottoDashboardSummaryObserver
                 $model->result_at,
                 $model->getOriginal('result_at'),
             ]);
+            $payload['draw_id'] = (int) ($model->getKey() ?? 0);
             $payload['product_dates'] = array_filter([
                 $model->result_at,
                 $model->getOriginal('result_at'),
@@ -111,9 +113,27 @@ class LottoDashboardSummaryObserver
         $sourceTypeOverride = $payload['source_type_override'] ?? null;
         unset($payload['source_type_override']);
 
-        DB::afterCommit(function () use ($payload, $sections, $sourceTypeOverride): void {
-            app(DashboardSummarySyncService::class)->dispatchForModelChange('lotto', $payload, $sections, $sourceTypeOverride);
-        });
+        $dispatch = function () use ($payload, $sections, $sourceTypeOverride): void {
+            $service = app(DashboardSummarySyncService::class);
+            $service->dispatchForModelChange('lotto', $payload, $sections, $sourceTypeOverride);
+
+            $drawId = (int) ($payload['draw_id'] ?? 0);
+            if ($drawId > 0 && in_array(LottoDashboardMetricConfig::SECTION_RISK, $sections, true)) {
+                $service->dispatchRiskCurrentForDraw(
+                    drawId: $drawId,
+                    sourceType: $sourceTypeOverride ?? 'lotto',
+                    sourceId: (string) ($payload['id'] ?? '')
+                );
+            }
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($dispatch);
+
+            return;
+        }
+
+        $dispatch();
     }
 
     private function resolveDrawSourceType(LottoDraw $draw): ?string

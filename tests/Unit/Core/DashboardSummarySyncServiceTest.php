@@ -427,6 +427,91 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 11)->count());
     }
 
+    public function test_sync_risk_current_for_draw_upserts_only_target_draw_rows(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $this->seedOpenDraw(11);
+        $this->seedExposureRow(10, '2top', '12', 100);
+        $this->seedExposureRow(11, '2top', '99', 200);
+        $this->seedBetSetting(10, '2top', 90);
+        $this->seedBetSetting(11, '2top', 90);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 11)->count());
+        $row = DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('number', '12')
+            ->first();
+        $this->assertNotNull($row);
+        $this->assertSame(100.0, (float) $row->stake_total);
+        $this->assertSame(9000.0, (float) $row->payout_if_hit);
+        $this->assertSame(8900.0, (float) $row->liability);
+    }
+
+    public function test_sync_risk_current_for_draw_deletes_rows_when_draw_is_resulted(): void
+    {
+        $this->createTestTables();
+        Log::spy();
+        $this->seedDraw(77, ['status' => 'resulted', 'result_at' => '2026-05-07 10:00:00']);
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(77));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(77, 'main', 'draw_resulted', '77');
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 77)->count());
+        Log::shouldHaveReceived('info')
+            ->with('lotto_risk_current_draw_sync_completed', Mockery::on(function (array $context): bool {
+                return (int) ($context['draw_id'] ?? 0) === 77
+                    && (int) ($context['rows_deleted'] ?? -1) === 1
+                    && array_key_exists('duration_ms', $context);
+            }))
+            ->once();
+    }
+
+    public function test_sync_risk_current_for_draw_removes_stale_rows_missing_from_latest_payload(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $this->seedBetSetting(10, '2top', 90);
+        $this->seedExposureRow(10, '2top', '12', 100);
+
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'number' => '12',
+            'stake_total' => 50,
+            'payout_if_hit' => 4500,
+            'liability' => 4450,
+        ]));
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'number' => '99',
+            'stake_total' => 99,
+            'payout_if_hit' => 8910,
+            'liability' => 8811,
+        ]));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->where('number', '12')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->where('number', '99')->count());
+    }
+
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
     {
         config()->set('dashboard.lotto.legacy_snapshot_write_enabled', false);
@@ -711,11 +796,35 @@ class DashboardSummarySyncServiceTest extends TestCase
     {
         DB::table('lotto_draws')->insertOrIgnore(array_merge([
             'id' => $id,
+            'market_id' => 1,
             'status' => 'open',
             'result_at' => null,
             'created_at' => now()->toDateTimeString(),
             'updated_at' => now()->toDateTimeString(),
         ], $overrides));
+    }
+
+    private function seedExposureRow(int $drawId, string $betType, string $number, float $soldAmount): void
+    {
+        DB::table('lotto_number_exposures')->insert([
+            'draw_id' => $drawId,
+            'bet_type' => $betType,
+            'number' => $number,
+            'sold_amount' => $soldAmount,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+    }
+
+    private function seedBetSetting(int $drawId, string $betType, float $payout): void
+    {
+        DB::table('lotto_draw_bet_settings')->insert([
+            'draw_id' => $drawId,
+            'bet_type' => $betType,
+            'payout' => $payout,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
     }
 
     /**
@@ -760,8 +869,26 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         Schema::create('lotto_draws', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id')->default(1);
             $table->string('status')->default('open');
             $table->dateTime('result_at')->nullable();
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
+        });
+
+        Schema::create('lotto_number_exposures', function (Blueprint $table): void {
+            $table->unsignedBigInteger('draw_id');
+            $table->string('bet_type');
+            $table->string('number');
+            $table->decimal('sold_amount', 12, 2)->default(0);
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
+        });
+
+        Schema::create('lotto_draw_bet_settings', function (Blueprint $table): void {
+            $table->unsignedBigInteger('draw_id');
+            $table->string('bet_type');
+            $table->decimal('payout', 12, 2)->default(0);
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
         });
@@ -801,6 +928,8 @@ class DashboardSummarySyncServiceTest extends TestCase
             'lotto_dashboard_risk_current',
             'lotto_dashboard_summary_daily',
             'dashboard_summary_daily',
+            'lotto_draw_bet_settings',
+            'lotto_number_exposures',
             'lotto_draws',
         ] as $table) {
             if (Schema::hasTable($table)) {
