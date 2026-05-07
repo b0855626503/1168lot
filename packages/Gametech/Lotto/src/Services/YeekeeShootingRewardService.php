@@ -7,6 +7,7 @@ use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Models\YeekeeShootRewardLog;
+use Gametech\Lotto\Services\WalletTransactionService as LottoWalletTransactionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -186,7 +187,7 @@ class YeekeeShootingRewardService
                     );
                 }
 
-                app(WalletTransactionService::class)->creditMemberBalance(
+                app(LottoWalletTransactionService::class)->creditMemberBalance(
                     memberId: (int) $shoot->member_id,
                     amount: (float) $normalizedPolicy['amount'],
                     refType: self::REWARD_REF_TYPE,

@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 class YeekeeRewardService
 {
     /**
+     * @deprecated Legacy/manual helper.
+     *             BOA-233 settle runtime reward payout must use YeekeeShootingRewardService::applyForRound().
+     */
+    /**
      * @param  array<int,array{position:int,credit_amount:float}>  $rewardPositions
      * @return array{credited:int,skipped:int}
      */
