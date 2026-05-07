@@ -26,6 +26,7 @@ use Gametech\Lotto\Console\Commands\MigrateRelayResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\RolloutMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\SettleYeekeeRoundsCommand;
 use Gametech\Lotto\Console\Commands\SyncLottoDrawStatusesCommand;
+use Gametech\Lotto\Console\Commands\SyncYeekeeRoundConfigSnapshotsCommand;
 use Gametech\Lotto\Models\LotteryGroupProxy;
 use Gametech\Lotto\Models\LotteryMarketProxy;
 use Gametech\Lotto\Models\LottoDraw;
@@ -160,6 +161,7 @@ class LottoServiceProvider extends ServiceProvider
             MigrateLegacyLottoPermissionsCommand::class,
             MigrateRelayResultSourcesCommand::class,
             SettleYeekeeRoundsCommand::class,
+            SyncYeekeeRoundConfigSnapshotsCommand::class,
             SyncLottoDrawStatusesCommand::class,
             LottoWinningReportBackfillCommand::class,
             LottoWinningReportReconcileCommand::class,

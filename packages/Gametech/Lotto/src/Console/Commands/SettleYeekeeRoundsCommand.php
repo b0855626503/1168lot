@@ -225,6 +225,7 @@ class SettleYeekeeRoundsCommand extends Command
                                     $draw,
                                     [
                                         'formula_preset' => $this->resolveFormulaPresetFromRound($round),
+                                        'settlement_outcome' => 'computed_settled',
                                     ]
                                 );
 
