@@ -1550,11 +1550,18 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(1040000.0, (float) $byType['top_3']['max_risk_value_raw']);
         $this->assertSame(1040000.0, (float) $byType['top_3']['risk_exposure_total_raw']);
         $this->assertSame('lotto_dashboard_risk_current', $byType['top_3']['source']);
-        // Blocker 2 (PR #71): unique_players cannot be derived without
-        // violating the active scope of lottoRiskCurrentBaseQuery, so the
-        // contract is to always emit null rather than mixing scopes.
-        $this->assertNull($byType['top_3']['unique_players']);
-        $this->assertNull($byType['tod_3']['unique_players']);
+        // unique_players is now derived from ticket data joined to the
+        // exact (round_id, bet_type, number) tuple set produced by
+        // lottoRiskCurrentBaseQuery. Tickets/items that bet on a tuple
+        // ABSENT from current must NOT be counted.
+        // - ticket 1001 (draw 101, item top_3/587): top_3/587 is on round
+        //   102 in current, so this ticket DOES NOT match. Member 2001 is
+        //   only counted via ticket 1002.
+        // - ticket 1002 (draw 102, item top_3/587): matches → member 2001.
+        // - ticket 1003 (draw 101, item top_3/111): matches → member 2002.
+        // tod_3 has no ticket items → 0.
+        $this->assertSame(2, (int) $byType['top_3']['unique_players']);
+        $this->assertSame(0, (int) $byType['tod_3']['unique_players']);
 
         // tod_3: one number (111) with stake 200 / risk 12000.
         $this->assertSame(1, (int) $byType['tod_3']['item_count']);
@@ -1693,8 +1700,132 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame('587', $byType['top_3']['max_risk_number']);
         $this->assertSame(250000.0, (float) $byType['top_3']['risk_exposure_total_raw']);
 
-        // Blocker 2: unique_players is null (cannot share active scope).
-        $this->assertNull($byType['top_3']['unique_players']);
+        // 10 distinct members all bet on (top_3, 587) on round 201, which
+        // matches the single current-table tuple → unique_players = 10.
+        $this->assertSame(10, (int) $byType['top_3']['unique_players']);
+    }
+
+    /**
+     * Scope guards for the unique_players helper:
+     *  - Tickets on bet_types ABSENT from lotto_dashboard_risk_current must
+     *    NOT contribute (no stale-bet_type leak).
+     *  - Tickets on draws with status='resulted' must NOT contribute (the
+     *    tuple set already excludes resulted draws).
+     *  - Tickets on (bet_type, number) tuples that exist in current but on
+     *    a DIFFERENT round than the ticket's draw must NOT contribute.
+     */
+    public function test_lotto_bet_type_insights_unique_players_scope_guards(): void
+    {
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id')->nullable();
+            $table->date('draw_date')->nullable();
+            $table->string('status')->nullable();
+        });
+
+        Schema::create('lotto_tickets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('draw_id');
+            $table->unsignedBigInteger('member_id')->nullable();
+            $table->string('status')->nullable();
+        });
+
+        Schema::create('lotto_ticket_items', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('ticket_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('amount', 18, 2)->default(0);
+            $table->decimal('payout_at_time', 18, 2)->default(0);
+            $table->decimal('win_amount', 18, 2)->default(0);
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+
+        DB::table('lotto_draws')->insert([
+            ['id' => 301, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'open'],
+            ['id' => 302, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'resulted'],
+            ['id' => 303, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'open'],
+        ]);
+
+        // Current table: only top_3/777 on round 301 is in scope. The
+        // top_3/777 tuple on round 302 is filtered out by the resulted
+        // status. bottom_2 does not appear in current at all.
+        DB::table('lotto_dashboard_risk_current')->insert([
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 301,
+                'bet_type' => 'top_3',
+                'number' => '777',
+                'stake_total' => 100,
+                'payout_if_hit' => 50000,
+                'liability' => 50000,
+                'snapshot_at' => '2026-04-10 10:00:00',
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 302,
+                'bet_type' => 'top_3',
+                'number' => '777',
+                'stake_total' => 50,
+                'payout_if_hit' => 10000,
+                'liability' => 10000,
+                'snapshot_at' => '2026-04-10 10:00:00',
+            ],
+        ]);
+
+        DB::table('lotto_tickets')->insert([
+            // In-scope: matches top_3/777 on round 301 → member 7001 counted.
+            ['id' => 7100, 'draw_id' => 301, 'member_id' => 7001, 'status' => 'active'],
+            // Stale-bet_type leak: bottom_2 absent from current → 7002 NOT counted.
+            ['id' => 7101, 'draw_id' => 301, 'member_id' => 7002, 'status' => 'active'],
+            // Resulted-draw leak: round 302 excluded by base query → 7003 NOT counted.
+            ['id' => 7102, 'draw_id' => 302, 'member_id' => 7003, 'status' => 'active'],
+            // Off-round leak: ticket on round 303, item top_3/777, but current
+            // has no row for (top_3, 777, round 303). Joining requires
+            // t.draw_id = cur.cur_round_id, so 7004 NOT counted.
+            ['id' => 7103, 'draw_id' => 303, 'member_id' => 7004, 'status' => 'active'],
+        ]);
+
+        DB::table('lotto_ticket_items')->insert([
+            ['ticket_id' => 7100, 'bet_type' => 'top_3', 'number' => '777', 'amount' => 100, 'payout_at_time' => 50000, 'win_amount' => 0],
+            ['ticket_id' => 7101, 'bet_type' => 'bottom_2', 'number' => '99', 'amount' => 50, 'payout_at_time' => 4000, 'win_amount' => 0],
+            ['ticket_id' => 7102, 'bet_type' => 'top_3', 'number' => '777', 'amount' => 50, 'payout_at_time' => 10000, 'win_amount' => 0],
+            ['ticket_id' => 7103, 'bet_type' => 'top_3', 'number' => '777', 'amount' => 25, 'payout_at_time' => 5000, 'win_amount' => 0],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoBetTypeInsightsSummary');
+        $method->setAccessible(true);
+        $rows = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[(string) $row['bet_type']] = $row;
+        }
+
+        // Stale bet_type leak guard: bottom_2 must not appear at all.
+        $this->assertArrayNotHasKey('bottom_2', $byType);
+        $this->assertArrayHasKey('top_3', $byType);
+
+        // Only ticket 7100 (member 7001) survives all four guards
+        // (web_code via current, non-resulted draw, in-scope round, in-scope
+        // bet_type). Members 7002, 7003, 7004 must NOT be counted.
+        $this->assertSame(1, (int) $byType['top_3']['unique_players']);
     }
 
     public function test_lotto_risk_threshold_alerts_only_when_threshold_exceeded(): void
@@ -2142,4 +2273,3 @@ class DashboardServiceLottoDashboardTest extends TestCase
         }
     }
 }
-
