@@ -250,6 +250,22 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
     }
 
+    public function test_current_writer_keeps_closed_draw_even_when_result_at_is_pre_scheduled(): void
+    {
+        // Closed-but-not-resulted draws can still carry liability until settlement.
+        $this->createTestTables();
+        $this->seedDraw(10, ['status' => 'closed', 'result_at' => '2026-05-05 12:00:00']);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadMeaningfulRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
     public function test_current_writer_excludes_defensive_extended_statuses(): void
     {
         // Production enum is only draft|open|closed|resulted; this guards the
