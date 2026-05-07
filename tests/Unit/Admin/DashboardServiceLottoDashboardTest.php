@@ -385,6 +385,128 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(25.0, (float) $summary['lotto']['net_cash_raw']);
     }
 
+    public function test_summary_table_path_still_returns_lotto_risk_from_current_table(): void
+    {
+        $migration = require base_path('database/migrations/2026_03_09_120000_create_dashboard_summary_daily_table.php');
+        $migration->up();
+
+        Schema::table('dashboard_summary_daily', function (Blueprint $table): void {
+            $table->decimal('lotto_sales_cash', 18, 2)->default(0);
+            $table->decimal('lotto_payout_cash', 18, 2)->default(0);
+            $table->decimal('lotto_refund_cash', 18, 2)->default(0);
+            $table->decimal('lotto_net_cash', 18, 2)->default(0);
+        });
+
+        Schema::create('lotto_markets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('name');
+            $table->string('result_mode', 32)->default('normal');
+        });
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id');
+            $table->string('status')->nullable();
+            $table->timestamp('result_at')->nullable();
+        });
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+            $table->timestamps();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('dashboard_summary_daily')->insert([
+            [
+                'summary_date' => '2026-04-12',
+                'web_code' => $webCode,
+                'deposit_success_amount' => 1000,
+                'withdraw_total_amount' => 400,
+                'lotto_sales_cash' => 100,
+                'lotto_payout_cash' => 20,
+                'lotto_refund_cash' => 0,
+                'lotto_net_cash' => 80,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'summary_date' => '2026-04-11',
+                'web_code' => $webCode,
+                'deposit_success_amount' => 900,
+                'withdraw_total_amount' => 350,
+                'lotto_sales_cash' => 90,
+                'lotto_payout_cash' => 30,
+                'lotto_refund_cash' => 0,
+                'lotto_net_cash' => 60,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            ['id' => 37, 'name' => 'Normal Market', 'result_mode' => 'normal'],
+        ]);
+        DB::table('lotto_draws')->insert([
+            ['id' => 3844, 'market_id' => 37, 'status' => 'open', 'result_at' => null],
+        ]);
+
+        DB::table('lotto_dashboard_risk_current')->insert([
+            [
+                'web_code' => $webCode,
+                'market_id' => 37,
+                'round_id' => 3844,
+                'bet_type' => 'top_2',
+                'number' => '12',
+                'stake_total' => 30,
+                'payout_if_hit' => 12000,
+                'liability' => 11970,
+                'snapshot_at' => '2026-04-12 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 37,
+                'round_id' => 3844,
+                'bet_type' => 'top_2',
+                'number' => '34',
+                'stake_total' => 50,
+                'payout_if_hit' => 24000,
+                'liability' => 23950,
+                'snapshot_at' => '2026-04-12 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $summaryWarmCache = new \ReflectionProperty(DashboardService::class, 'summaryWarmCache');
+        $summaryWarmCache->setAccessible(true);
+        $summaryWarmCache->setValue($this->service, [
+            $webCode.'|2026-04-12|2026-04-12' => true,
+            $webCode.'|2026-04-11|2026-04-11' => true,
+        ]);
+
+        $summary = $this->service->getSummary([
+            'date_start' => '2026-04-12',
+            'date_end' => '2026-04-12',
+        ]);
+
+        $this->assertGreaterThan(0, (int) ($summary['lotto_risk']['numbers'] ?? 0));
+        $this->assertGreaterThan(0, (int) ($summary['lotto_risk']['rounds'] ?? 0));
+        $this->assertGreaterThan(0, (int) ($summary['lotto_risk']['markets'] ?? 0));
+        $this->assertGreaterThan(0, (float) ($summary['lotto_risk']['exposure_total_raw'] ?? 0));
+        $this->assertGreaterThan(0, (float) ($summary['lotto_risk']['max_risk_per_number_raw'] ?? 0));
+        $this->assertNotEmpty($summary['top_risky_numbers'] ?? []);
+        $this->assertNotEmpty($summary['lotto_top_risky_numbers'] ?? []);
+    }
+
     public function test_dashboard_view_describes_net_without_lotto_and_shows_thai_risk_copy(): void
     {
         $contents = file_get_contents(base_path('packages/Gametech/Admin/src/Resources/views/module/dashboard/index.blade.php'));
