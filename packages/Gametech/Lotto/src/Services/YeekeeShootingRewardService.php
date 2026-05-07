@@ -351,7 +351,7 @@ class YeekeeShootingRewardService
             'reward_positions' => $rewardPositions,
             'min_bet_amount' => max(0.0, round((float) ($rewardConfig['min_bet_amount'] ?? 0), 2)),
             'reward_scope' => $rewardScope,
-            'max_rewards_per_member_per_round' => max(1, (int) ($rewardConfig['max_rewards_per_member_per_round'] ?? max(1, count($rewardPositions)))),
+            'max_rewards_per_member_per_round' => max(1, (int) ($rewardConfig['max_rewards_per_member_per_round'] ?? 1)),
             'max_rewards_per_member_per_day' => max(0, (int) ($rewardConfig['max_rewards_per_member_per_day'] ?? 0)),
             'currency' => strtoupper(trim((string) ($rewardConfig['currency'] ?? 'THB'))) ?: 'THB',
         ];
