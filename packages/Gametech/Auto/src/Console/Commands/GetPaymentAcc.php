@@ -50,13 +50,13 @@ class GetPaymentAcc extends Command
         $this->info('Start get Transaction by : '.$id.' , Account No : '.$account);
         switch ($id) {
             case 'tw':
-                PaymentTrue::dispatch($account)->onQueue($id);
+                PaymentTrue::dispatch($account)->onQueue('bank');
                 break;
             case 'kbank':
-                PaymentKbank::dispatch($account)->onQueue($id);
+                PaymentKbank::dispatch($account)->onQueue('bank');
                 break;
             case 'bay':
-                PaymentBay::dispatch($account)->onQueue($id);
+                PaymentBay::dispatch($account)->onQueue('bank');
                 break;
             case 'ktb':
                 PaymentKtb::dispatch($account)->onQueue('bank');
@@ -68,7 +68,7 @@ class GetPaymentAcc extends Command
                 PaymentGsb::dispatch($account)->onQueue('bank');
                 break;
             case 'wing':
-                PaymentWing::dispatch($account)->onQueue('scb');
+                PaymentWing::dispatch($account)->onQueue('bank');
                 break;
         }
 
