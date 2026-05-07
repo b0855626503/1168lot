@@ -108,6 +108,28 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->assertSame(0, DB::table('wallet_transactions')->count());
     }
 
+    public function test_snapshot_without_reward_enabled_uses_market_reward_enabled_for_legacy_rounds(): void
+    {
+        $this->seedBaseData(
+            snapshot: [
+                'reward_config' => [
+                    'enabled' => true,
+                    'type' => 'FIXED_AMOUNT_BY_POSITION',
+                    'position' => 16,
+                    'amount' => 70,
+                    'currency' => 'THB',
+                    'pay_on' => 'SETTLED_ONLY',
+                ],
+            ],
+            marketRewardEnabled: true
+        );
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame('paid', (string) $result['status']);
+        $this->assertSame('round_snapshot', (string) $result['policy_source']);
+    }
+
     public function test_it_falls_back_to_market_setting_when_snapshot_missing(): void
     {
         $this->seedBaseData(snapshot: null, marketRewardEnabled: true);
@@ -359,8 +381,10 @@ class YeekeeShootingRewardServiceTest extends TestCase
             $table->unsignedInteger('position');
             $table->decimal('credit_amount', 12, 2);
             $table->string('reward_ref_type', 32)->default('YEEKEE_SHOOT_REWARD');
+            $table->string('idempotency_key', 191)->nullable();
             $table->timestamps();
             $table->unique(['yeekee_round_id', 'member_id', 'position'], 'yeekee_reward_round_member_position_unique');
+            $table->unique('idempotency_key', 'yeekee_reward_idempotency_key_unique');
         });
     }
 }

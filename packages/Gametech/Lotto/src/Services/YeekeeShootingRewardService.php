@@ -140,11 +140,12 @@ class YeekeeShootingRewardService
 
                 $log = YeekeeShootRewardLog::query()->firstOrCreate(
                     [
+                        'idempotency_key' => $idempotencyKey,
+                    ],
+                    [
                         'yeekee_round_id' => (int) $lockedRound->id,
                         'member_id' => (int) $shoot->member_id,
                         'position' => (int) $normalizedPolicy['position'],
-                    ],
-                    [
                         'credit_amount' => (float) $normalizedPolicy['amount'],
                         'reward_ref_type' => self::REWARD_REF_TYPE,
                     ]
@@ -259,23 +260,19 @@ class YeekeeShootingRewardService
         $hasSnapshotRewardPolicy = array_key_exists('reward_config', $snapshot) || array_key_exists('reward_enabled', $snapshot);
         if ($hasSnapshotRewardPolicy) {
             $rewardConfig = is_array($snapshot['reward_config'] ?? null) ? $snapshot['reward_config'] : [];
+            $marketRewardEnabled = $this->resolveMarketRewardEnabled((int) $round->market_id);
+            $snapshotRewardEnabled = array_key_exists('reward_enabled', $snapshot)
+                ? $this->toBool($snapshot['reward_enabled'])
+                : $marketRewardEnabled;
 
             return [
-                'reward_enabled' => $this->toBool($snapshot['reward_enabled'] ?? false),
+                'reward_enabled' => $snapshotRewardEnabled,
                 'reward_config' => $rewardConfig,
                 'source' => 'round_snapshot',
             ];
         }
 
-        if (! Schema::hasTable('yeekee_market_settings')) {
-            return [
-                'reward_enabled' => false,
-                'reward_config' => [],
-                'source' => 'default_disabled',
-            ];
-        }
-
-        $setting = YeekeeMarketSetting::query()->where('market_id', (int) $round->market_id)->first();
+        $setting = $this->resolveMarketSetting((int) $round->market_id);
         if (! $setting instanceof YeekeeMarketSetting) {
             return [
                 'reward_enabled' => false,
@@ -289,6 +286,26 @@ class YeekeeShootingRewardService
             'reward_config' => is_array($setting->reward_config) ? $setting->reward_config : [],
             'source' => 'market_setting',
         ];
+    }
+
+    private function resolveMarketRewardEnabled(int $marketId): bool
+    {
+        $setting = $this->resolveMarketSetting($marketId);
+
+        return $setting instanceof YeekeeMarketSetting
+            ? (bool) ($setting->reward_enabled ?? false)
+            : false;
+    }
+
+    private function resolveMarketSetting(int $marketId): ?YeekeeMarketSetting
+    {
+        if (! Schema::hasTable('yeekee_market_settings')) {
+            return null;
+        }
+
+        $setting = YeekeeMarketSetting::query()->where('market_id', $marketId)->first();
+
+        return $setting instanceof YeekeeMarketSetting ? $setting : null;
     }
 
     /**
