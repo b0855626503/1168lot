@@ -20,6 +20,10 @@ on:
       - 'composer.lock'
       - '.github/workflows/lotto-autoresultv2-unit.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   autoresultv2-unit:
     runs-on: ubuntu-latest
