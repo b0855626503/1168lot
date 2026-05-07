@@ -318,6 +318,7 @@ class GenerateYeekeeRoundsCommand extends Command
             'formula_config' => $normalizedFormulaConfig,
             'reward_config' => is_array($setting?->reward_config) ? $setting->reward_config : [],
             'refund_config' => is_array($setting?->refund_config) ? $setting->refund_config : [],
+            'refund_if_bet_entries_below_min' => (bool) ($setting?->refund_if_bet_entries_below_min ?? false),
             'external_seed_config' => [],
         ];
     }
