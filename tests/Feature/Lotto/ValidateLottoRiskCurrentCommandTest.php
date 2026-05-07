@@ -120,17 +120,17 @@ class ValidateLottoRiskCurrentCommandTest extends TestCase
         $this->assertStringContainsString('validation_result = failed', $output);
     }
 
-    public function test_fails_when_draw_result_at_is_not_null(): void
+    public function test_passes_when_open_draw_has_pre_scheduled_result_at(): void
     {
         $this->insertDraw(3, 'open', '2026-01-01 12:00:00');
         $this->insertCurrent(1, 'web1', 1, 3, 'straight', '2', 60, 600, 20);
 
         $exit = Artisan::call('dashboard:lotto-risk-current-validate');
 
-        $this->assertSame(1, $exit);
+        $this->assertSame(0, $exit);
         $output = Artisan::output();
-        $this->assertStringContainsString('invalid_draw_rows = 1', $output);
-        $this->assertStringContainsString('validation_result = failed', $output);
+        $this->assertStringContainsString('invalid_draw_rows = 0', $output);
+        $this->assertStringContainsString('validation_result = passed', $output);
     }
 
     // -----------------------------------------------------------------------

@@ -57,7 +57,7 @@ class ValidateLottoRiskCurrentCommand extends Command
             $this->displayDuplicateSamples($limit);
         }
 
-        // 2. Invalid draw rows (missing draw, resulted draw, result_at set)
+        // 2. Invalid draw rows (missing draw, resulted draw)
         $invalidDrawRows = $this->countInvalidDrawRows();
         $this->line("invalid_draw_rows = {$invalidDrawRows}");
 
@@ -112,7 +112,7 @@ class ValidateLottoRiskCurrentCommand extends Command
         $duplicates = $this->countDuplicateCurrentRows();
         $this->outputCheck('duplicate_current_keys', $duplicates, 0, $failed);
 
-        // 2. invalid_draw_rows (resulted OR result_at set)
+        // 2. invalid_draw_rows (resulted)
         $invalidDrawRows = $this->countInvalidDrawRows();
         $this->outputCheck('invalid_draw_rows', $invalidDrawRows, 0, $failed);
 
@@ -259,7 +259,6 @@ class ValidateLottoRiskCurrentCommand extends Command
             ->leftJoin('lotto_draws as d', 'd.id', '=', 'c.round_id')
             ->where(function ($q): void {
                 $q->whereNull('d.id')
-                    ->orWhereNotNull('d.result_at')
                     ->orWhere('d.status', 'resulted');
             });
 
