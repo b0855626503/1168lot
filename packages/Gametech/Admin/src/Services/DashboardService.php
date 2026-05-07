@@ -4542,11 +4542,13 @@ class DashboardService
             return [];
         }
 
-        $isSingleDay = $startDate === $endDate;
-
         // Aggregate by (bet_type, number) so that multiple market/round rows
         // for the same number collapse to a single logical entry, matching the
-        // Top 10 grouping contract.
+        // Top 10 grouping contract. The resulting `item_count` is therefore
+        // the number of DISTINCT (bet_type, number) entries currently active
+        // in `lotto_dashboard_risk_current` for the given bet_type — NOT the
+        // number of bet rows / ticket items. The blade view labels this
+        // column as "จำนวนเลข" to match this semantics. See PR #71.
         $byTypeNumber = [];
         foreach ($rows as $row) {
             $betType = trim((string) ($row->bet_type ?? ''));
@@ -4579,14 +4581,12 @@ class DashboardService
             return [];
         }
 
-        // Optional distinct-player breakdown, only meaningful for single-day
-        // queries. The current table has no member_id; we still populate this
-        // from `lotto_ticket_items` joins (same source the daily path used)
-        // when available, otherwise fall back to null.
-        $distinctPlayersByType = $isSingleDay
-            ? $this->lottoDistinctPlayersByBetType($startDate, $endDate, $marketType)
-            : [];
-
+        // The current table (`lotto_dashboard_risk_current`) has no member_id
+        // and the ticket-data fallback (`lottoDistinctPlayersByBetType`) does
+        // NOT share the active/non-resulted/web_code scope of
+        // `lottoRiskCurrentBaseQuery`. To avoid mixing scopes (which would
+        // re-introduce stale data) we explicitly emit `null` for
+        // `unique_players` here so the blade renders "-". See PR #71.
         $result = [];
         foreach ($byTypeNumber as $betType => $numberRows) {
             $itemCount = count($numberRows);
@@ -4625,15 +4625,10 @@ class DashboardService
                 }
             }
 
-            // The current table does not carry member_id, so distinct players
-            // can only be derived from ticket data. When that derivation is
-            // unavailable (multi-day window or missing tables) emit null
-            // explicitly so the blade renders "-" rather than fabricating a
-            // count from an unrelated column.
+            // The current table does not carry member_id and we cannot derive
+            // unique players from ticket data without violating the active
+            // scope (see comment above). Always emit null.
             $playerCount = null;
-            if ($isSingleDay && array_key_exists($betType, $distinctPlayersByType)) {
-                $playerCount = (int) $distinctPlayersByType[$betType];
-            }
 
             $result[] = [
                 'bet_type' => $betType,

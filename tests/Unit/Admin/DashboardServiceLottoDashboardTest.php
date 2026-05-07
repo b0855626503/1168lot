@@ -1550,7 +1550,11 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $this->assertSame(1040000.0, (float) $byType['top_3']['max_risk_value_raw']);
         $this->assertSame(1040000.0, (float) $byType['top_3']['risk_exposure_total_raw']);
         $this->assertSame('lotto_dashboard_risk_current', $byType['top_3']['source']);
-        $this->assertSame(2, (int) $byType['top_3']['unique_players']);
+        // Blocker 2 (PR #71): unique_players cannot be derived without
+        // violating the active scope of lottoRiskCurrentBaseQuery, so the
+        // contract is to always emit null rather than mixing scopes.
+        $this->assertNull($byType['top_3']['unique_players']);
+        $this->assertNull($byType['tod_3']['unique_players']);
 
         // tod_3: one number (111) with stake 200 / risk 12000.
         $this->assertSame(1, (int) $byType['tod_3']['item_count']);
@@ -1568,6 +1572,129 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $topBetTypes = array_unique(array_map(static fn (array $row): string => (string) $row['bet_type'], $top));
         sort($topBetTypes);
         $this->assertSame(['tod_3', 'top_3'], $topBetTypes);
+    }
+
+    /**
+     * Regression for PR #71 blockers 3 and 4:
+     *  - Repeated tickets on the same (bet_type, number) must NOT inflate
+     *    `item_count`, because lotto_dashboard_risk_current carries one row
+     *    per (bet_type, number) per round. `item_count` is the count of
+     *    DISTINCT numbers per bet_type (Option A contract).
+     *  - `max_risk_value_raw` MUST come from `liability` and NEVER from
+     *    `payout_if_hit`. Seed rows where the two columns disagree and lock
+     *    the metric to liability so future refactors cannot silently swap.
+     */
+    public function test_lotto_bet_type_insights_item_count_and_risk_metric_contract(): void
+    {
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id')->nullable();
+            $table->date('draw_date')->nullable();
+            $table->string('status')->nullable();
+        });
+
+        Schema::create('lotto_tickets', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('draw_id');
+            $table->unsignedBigInteger('member_id')->nullable();
+            $table->string('status')->nullable();
+        });
+
+        Schema::create('lotto_ticket_items', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('ticket_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('amount', 18, 2)->default(0);
+            $table->decimal('payout_at_time', 18, 2)->default(0);
+            $table->decimal('win_amount', 18, 2)->default(0);
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+
+        DB::table('lotto_draws')->insert([
+            ['id' => 201, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'open'],
+        ]);
+
+        // 10 tickets (each with one item) all betting on the SAME
+        // (bet_type=top_3, number=587). The risk_current table still has a
+        // single row for that (bet_type, number, round_id).
+        $tickets = [];
+        $items = [];
+        for ($i = 0; $i < 10; $i++) {
+            $ticketId = 3000 + $i;
+            $tickets[] = [
+                'id' => $ticketId,
+                'draw_id' => 201,
+                'member_id' => 5000 + $i,
+                'status' => 'active',
+            ];
+            $items[] = [
+                'ticket_id' => $ticketId,
+                'bet_type' => 'top_3',
+                'number' => '587',
+                'amount' => 50,
+                'payout_at_time' => 30000,
+                'win_amount' => 0,
+            ];
+        }
+        DB::table('lotto_tickets')->insert($tickets);
+        DB::table('lotto_ticket_items')->insert($items);
+
+        // Single risk_current row for (top_3, 587). liability and
+        // payout_if_hit DIFFER on purpose so we can prove the risk metric is
+        // sourced from `liability`, not `payout_if_hit`.
+        DB::table('lotto_dashboard_risk_current')->insert([
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 201,
+                'bet_type' => 'top_3',
+                'number' => '587',
+                'stake_total' => 500,
+                'payout_if_hit' => 999999,
+                'liability' => 250000,
+                'snapshot_at' => '2026-04-10 10:00:00',
+            ],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoBetTypeInsightsSummary');
+        $method->setAccessible(true);
+        $rows = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[(string) $row['bet_type']] = $row;
+        }
+
+        $this->assertArrayHasKey('top_3', $byType);
+
+        // Blocker 3: 10 tickets/items on the same number must collapse to a
+        // single distinct number => item_count = 1 (Option A: distinct
+        // numbers per bet_type sourced from lotto_dashboard_risk_current).
+        $this->assertSame(1, (int) $byType['top_3']['item_count']);
+
+        // Blocker 4: risk metric is liability, NOT payout_if_hit.
+        $this->assertSame(250000.0, (float) $byType['top_3']['max_risk_value_raw']);
+        $this->assertNotSame(999999.0, (float) $byType['top_3']['max_risk_value_raw']);
+        $this->assertSame('587', $byType['top_3']['max_risk_number']);
+        $this->assertSame(250000.0, (float) $byType['top_3']['risk_exposure_total_raw']);
+
+        // Blocker 2: unique_players is null (cannot share active scope).
+        $this->assertNull($byType['top_3']['unique_players']);
     }
 
     public function test_lotto_risk_threshold_alerts_only_when_threshold_exceeded(): void
