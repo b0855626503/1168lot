@@ -86,6 +86,7 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->seedBaseData(snapshot: [
             'reward_enabled' => true,
             'reward_config' => $this->rewardConfig([
+                'max_rewards_per_member_per_round' => 3,
                 'reward_positions' => [
                     ['position' => 1, 'credit_amount' => 10],
                     ['position' => 16, 'credit_amount' => 20],
@@ -104,6 +105,85 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->assertSame(3, (int) $result['paid_count']);
         $this->assertSame(3, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
         $this->assertSame(60.0, (float) DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->sum('amount'));
+    }
+
+    public function test_default_caps_same_member_to_single_reward_per_round(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig([
+                'reward_positions' => [
+                    ['position' => 1, 'credit_amount' => 10],
+                    ['position' => 16, 'credit_amount' => 20],
+                ],
+            ]),
+        ]);
+        $this->seedShoot(id: 4001, position: 1, memberId: 7001);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7001);
+        $this->seedTicket(memberId: 7001, drawId: 3003, amount: 150);
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame(1, (int) $result['paid_count']);
+        $this->assertSame(1, (int) $result['skipped_count']);
+        $this->assertSame(1, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(1, DB::table('yeekee_shoot_reward_logs')->where('status', 'paid')->count());
+        $this->assertSame(0, DB::table('yeekee_shoot_reward_logs')->where('status', 'pending')->count());
+        $this->assertSame(1, DB::table('yeekee_shoot_reward_logs')->where('member_id', 7001)->count());
+    }
+
+    public function test_default_does_not_block_different_members_in_same_round(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig([
+                'reward_positions' => [
+                    ['position' => 1, 'credit_amount' => 10],
+                    ['position' => 16, 'credit_amount' => 20],
+                ],
+            ]),
+        ]);
+        DB::table('members')->insert([
+            'code' => 7002,
+            'balance' => 1000,
+            'date_update' => now(),
+        ]);
+        $this->seedShoot(id: 4001, position: 1, memberId: 7001);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7002);
+        $this->seedTicket(memberId: 7001, drawId: 3003, amount: 150, id: 9001);
+        $this->seedTicket(memberId: 7002, drawId: 3003, amount: 150, id: 9002);
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame(2, (int) $result['paid_count']);
+        $this->assertSame(0, (int) $result['skipped_count']);
+        $this->assertSame(2, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(1, DB::table('wallet_transactions')->where('member_id', 7001)->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(1, DB::table('wallet_transactions')->where('member_id', 7002)->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+    }
+
+    public function test_explicit_max_rewards_per_member_per_round_two_allows_two_rewards(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig([
+                'max_rewards_per_member_per_round' => 2,
+                'reward_positions' => [
+                    ['position' => 1, 'credit_amount' => 10],
+                    ['position' => 16, 'credit_amount' => 20],
+                ],
+            ]),
+        ]);
+        $this->seedShoot(id: 4001, position: 1, memberId: 7001);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7001);
+        $this->seedTicket(memberId: 7001, drawId: 3003, amount: 150);
+
+        $result = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame(2, (int) $result['paid_count']);
+        $this->assertSame(0, (int) $result['skipped_count']);
+        $this->assertSame(2, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame(30.0, (float) DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->sum('amount'));
     }
 
     public function test_missing_position_skips_only_that_position(): void
