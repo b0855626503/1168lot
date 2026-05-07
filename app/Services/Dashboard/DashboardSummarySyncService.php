@@ -128,79 +128,110 @@ class DashboardSummarySyncService
         }
 
         $resolvedWebCode = $this->webCodeResolver->resolve($webCode);
-        $rowsUpserted = 0;
-        $rowsDeleted = 0;
-        $draw = Schema::hasTable('lotto_draws')
-            ? DB::table('lotto_draws')
-                ->select('id', 'market_id', 'status', 'result_at')
-                ->where('id', $drawId)
-                ->first()
-            : null;
+        $lockKey = sprintf('dashboard:lotto-risk-current:draw:%s:%d', $resolvedWebCode, $drawId);
+        $lock = Cache::lock($lockKey, 15);
 
-        if (! $this->isDrawActiveForCurrent($draw)) {
-            $rowsDeleted += DB::table('lotto_dashboard_risk_current')
-                ->where('round_id', $drawId)
-                ->delete();
-
-            $this->logDrawRiskSyncResult(
+        $lock->block(5, function () use (
+            $drawId,
+            $resolvedWebCode,
+            $sourceType,
+            $sourceId,
+            $auditContext,
+            $startedAt
+        ): void {
+            $this->syncRiskCurrentForDrawLocked(
                 drawId: $drawId,
-                webCode: $resolvedWebCode,
+                resolvedWebCode: $resolvedWebCode,
                 sourceType: $sourceType,
                 sourceId: $sourceId,
-                rowsUpserted: $rowsUpserted,
-                rowsDeleted: $rowsDeleted,
-                startedAt: $startedAt,
                 auditContext: $auditContext,
+                startedAt: $startedAt,
             );
+        });
+    }
 
-            return;
-        }
+    private function syncRiskCurrentForDrawLocked(
+        int $drawId,
+        string $resolvedWebCode,
+        ?string $sourceType,
+        ?string $sourceId,
+        array $auditContext,
+        float $startedAt,
+    ): void {
+        $rowsUpserted = 0;
+        $rowsDeleted = 0;
+        DB::transaction(function () use (
+            $drawId,
+            $resolvedWebCode,
+            &$rowsDeleted,
+            &$rowsUpserted
+        ): void {
+            $draw = Schema::hasTable('lotto_draws')
+                ? DB::table('lotto_draws')
+                    ->select('id', 'market_id', 'status', 'result_at')
+                    ->where('id', $drawId)
+                    ->lockForUpdate()
+                    ->first()
+                : null;
 
-        if (! Schema::hasTable('lotto_number_exposures')) {
-            return;
-        }
+            $drawMarketId = (int) ($draw->market_id ?? 0);
+            if (! $this->isDrawActiveForCurrent($draw)) {
+                $rowsDeleted += DB::table('lotto_dashboard_risk_current')
+                    ->where('web_code', $resolvedWebCode)
+                    ->where('market_id', $drawMarketId)
+                    ->where('round_id', $drawId)
+                    ->delete();
 
-        $riskRows = DB::table('lotto_number_exposures as e')
-            ->leftJoin('lotto_draw_bet_settings as s', function ($join): void {
-                $join->on('s.draw_id', '=', 'e.draw_id')
-                    ->on('s.bet_type', '=', 'e.bet_type');
-            })
-            ->where('e.draw_id', $drawId)
-            ->select([
-                'e.bet_type',
-                'e.number',
-                DB::raw('COALESCE(e.sold_amount, 0) as stake_total'),
-                DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
-            ])
-            ->get()
-            ->map(function ($row) use ($draw, $drawId, $resolvedWebCode) {
-                $stakeTotal = round((float) ($row->stake_total ?? 0), 4);
-                $payoutIfHit = round((float) ($row->payout_if_hit ?? 0), 4);
-                $liability = round($payoutIfHit - $stakeTotal, 4);
+                return;
+            }
 
-                return [
-                    'web_code' => $resolvedWebCode,
-                    'market_id' => (int) ($draw->market_id ?? 0),
-                    'round_id' => $drawId,
-                    'bet_type' => (string) ($row->bet_type ?? ''),
-                    'number' => (string) ($row->number ?? ''),
-                    'stake_total' => $stakeTotal,
-                    'payout_if_hit' => $payoutIfHit,
-                    'liability' => $liability,
-                    'created_at' => now()->toDateTimeString(),
-                    'updated_at' => now()->toDateTimeString(),
-                ];
-            })
-            ->values()
-            ->all();
+            if (! Schema::hasTable('lotto_number_exposures')) {
+                return;
+            }
 
-        // Draw-scoped rebuild: remove stale rows that are absent from the latest
-        // exposure payload, then upsert the fresh set for this draw.
-        $rowsDeleted += DB::table('lotto_dashboard_risk_current')
-            ->where('round_id', $drawId)
-            ->delete();
-        $this->upsertRiskCurrentRows($riskRows);
-        $rowsUpserted = count($riskRows);
+            $riskRows = DB::table('lotto_number_exposures as e')
+                ->leftJoin('lotto_draw_bet_settings as s', function ($join): void {
+                    $join->on('s.draw_id', '=', 'e.draw_id')
+                        ->on('s.bet_type', '=', 'e.bet_type');
+                })
+                ->where('e.draw_id', $drawId)
+                ->select([
+                    'e.bet_type',
+                    'e.number',
+                    DB::raw('COALESCE(e.sold_amount, 0) as stake_total'),
+                    DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
+                ])
+                ->get()
+                ->map(function ($row) use ($drawMarketId, $drawId, $resolvedWebCode) {
+                    $stakeTotal = round((float) ($row->stake_total ?? 0), 4);
+                    $payoutIfHit = round((float) ($row->payout_if_hit ?? 0), 4);
+                    $liability = round($payoutIfHit - $stakeTotal, 4);
+
+                    return [
+                        'web_code' => $resolvedWebCode,
+                        'market_id' => $drawMarketId,
+                        'round_id' => $drawId,
+                        'bet_type' => (string) ($row->bet_type ?? ''),
+                        'number' => (string) ($row->number ?? ''),
+                        'stake_total' => $stakeTotal,
+                        'payout_if_hit' => $payoutIfHit,
+                        'liability' => $liability,
+                        'created_at' => now()->toDateTimeString(),
+                        'updated_at' => now()->toDateTimeString(),
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $this->upsertRiskCurrentRows($riskRows);
+            $rowsUpserted = count($riskRows);
+            $rowsDeleted += $this->cleanupStaleDrawCurrentRows(
+                webCode: $resolvedWebCode,
+                marketId: $drawMarketId,
+                drawId: $drawId,
+                latestRows: $riskRows,
+            );
+        });
 
         $this->logDrawRiskSyncResult(
             drawId: $drawId,
@@ -212,6 +243,83 @@ class DashboardSummarySyncService
             startedAt: $startedAt,
             auditContext: $auditContext,
         );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $latestRows
+     */
+    private function cleanupStaleDrawCurrentRows(
+        string $webCode,
+        int $marketId,
+        int $drawId,
+        array $latestRows,
+    ): int {
+        $keepKeys = [];
+        foreach ($latestRows as $row) {
+            if (! $this->hasMeaningfulRisk($row)) {
+                continue;
+            }
+
+            $keepKeys[$this->riskCurrentDimensionKey($row)] = true;
+        }
+
+        $staleKeys = [];
+        $existingRows = DB::table('lotto_dashboard_risk_current')
+            ->select(['web_code', 'market_id', 'round_id', 'bet_type', 'number'])
+            ->where('web_code', $webCode)
+            ->where('market_id', $marketId)
+            ->where('round_id', $drawId)
+            ->get();
+
+        foreach ($existingRows as $row) {
+            $key = $this->riskCurrentDimensionKey([
+                'web_code' => (string) ($row->web_code ?? ''),
+                'market_id' => (int) ($row->market_id ?? 0),
+                'round_id' => (int) ($row->round_id ?? 0),
+                'bet_type' => (string) ($row->bet_type ?? ''),
+                'number' => (string) ($row->number ?? ''),
+            ]);
+            if (! isset($keepKeys[$key])) {
+                $staleKeys[] = [
+                    'web_code' => (string) ($row->web_code ?? ''),
+                    'market_id' => (int) ($row->market_id ?? 0),
+                    'round_id' => (int) ($row->round_id ?? 0),
+                    'bet_type' => (string) ($row->bet_type ?? ''),
+                    'number' => (string) ($row->number ?? ''),
+                ];
+            }
+        }
+
+        if (empty($staleKeys)) {
+            return 0;
+        }
+
+        $deleted = 0;
+        foreach ($staleKeys as $key) {
+            $deleted += DB::table('lotto_dashboard_risk_current')
+                ->where('web_code', $key['web_code'])
+                ->where('market_id', $key['market_id'])
+                ->where('round_id', $key['round_id'])
+                ->where('bet_type', $key['bet_type'])
+                ->where('number', $key['number'])
+                ->delete();
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function riskCurrentDimensionKey(array $row): string
+    {
+        return implode('|', [
+            (string) ($row['web_code'] ?? ''),
+            (string) ((int) ($row['market_id'] ?? 0)),
+            (string) ((int) ($row['round_id'] ?? 0)),
+            (string) ($row['bet_type'] ?? ''),
+            (string) ($row['number'] ?? ''),
+        ]);
     }
 
     /**

@@ -528,6 +528,87 @@ class DashboardSummarySyncServiceTest extends TestCase
         $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->where('number', '99')->count());
     }
 
+    public function test_sync_risk_current_for_draw_updates_duplicate_number_without_wiping_scope(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $this->seedBetSetting(10, '2top', 90);
+
+        // Existing scope contains target number + another number in the same draw.
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'bet_type' => '2top',
+            'number' => '12',
+            'stake_total' => 50,
+            'payout_if_hit' => 4500,
+            'liability' => 4450,
+        ]));
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'bet_type' => '2top',
+            'number' => '34',
+            'stake_total' => 70,
+            'payout_if_hit' => 6300,
+            'liability' => 6230,
+        ]));
+
+        // Simulate repeated betting on the same number: sold_amount rises to 120.
+        $this->seedExposureRow(10, '2top', '12', 120);
+        $this->seedExposureRow(10, '2top', '34', 70);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+
+        $this->assertSame(2, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $updated = DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '12')
+            ->first();
+        $this->assertNotNull($updated);
+        $this->assertSame(120.0, (float) $updated->stake_total);
+        $this->assertSame(10800.0, (float) $updated->payout_if_hit);
+        $this->assertSame(10680.0, (float) $updated->liability);
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '34')
+            ->count());
+    }
+
+    public function test_sync_risk_current_for_draw_is_idempotent_for_repeated_runs(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $this->seedBetSetting(10, '2top', 90);
+        $this->seedExposureRow(10, '2top', '12', 100);
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '12')
+            ->count());
+        $row = DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('bet_type', '2top')
+            ->where('number', '12')
+            ->first();
+        $this->assertNotNull($row);
+        $this->assertSame(100.0, (float) $row->stake_total);
+        $this->assertSame(9000.0, (float) $row->payout_if_hit);
+        $this->assertSame(8900.0, (float) $row->liability);
+    }
+
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
     {
         config()->set('dashboard.lotto.legacy_snapshot_write_enabled', false);
