@@ -15,7 +15,7 @@ class SyncYeekeeRoundConfigSnapshotsCommand extends Command
         {--market_id= : Sync only one Yeekee market}
         {--dry-run : Preview only without updating rounds}';
 
-    protected $description = 'Sync current Yeekee market settings into draft/open Yeekee round config snapshots';
+    protected $description = 'Sync current Yeekee market settings into draft/open no-activity Yeekee round config snapshots';
 
     public function handle(): int
     {

@@ -167,13 +167,15 @@ class YeekeeShootingRewardService
             ->where('idempotency_key', $idempotencyKey)
             ->first();
 
-        $alreadyPaid = $log instanceof YeekeeShootRewardLog
-            && $this->hasPaidWalletTransaction($log, $memberId);
+        $paidWalletTransactionId = $log instanceof YeekeeShootRewardLog
+            ? $this->resolvePaidWalletTransactionId($log, $memberId)
+            : null;
 
-        if ($alreadyPaid) {
+        if ($paidWalletTransactionId !== null) {
             $this->updateRewardLog($log, [
                 'status' => 'paid',
                 'reason' => 'already_paid',
+                'wallet_transaction_id' => $paidWalletTransactionId,
             ]);
 
             Log::info('yeekee.shooting_reward.already_paid', $this->logContext($round, $draw, $shoot, $position, $amount, $currency, $policySource, $idempotencyKey, 'already_paid', $policyHash));
@@ -420,24 +422,28 @@ class YeekeeShootingRewardService
         return $query;
     }
 
-    private function hasPaidWalletTransaction(YeekeeShootRewardLog $log, int $memberId): bool
+    private function resolvePaidWalletTransactionId(YeekeeShootRewardLog $log, int $memberId): ?int
     {
         $walletTransactionId = (int) ($log->wallet_transaction_id ?? 0);
         if ($walletTransactionId > 0) {
-            return DB::table('wallet_transactions')
+            $exists = DB::table('wallet_transactions')
                 ->where('id', $walletTransactionId)
                 ->where('member_id', $memberId)
                 ->where('direction', 'CREDIT')
                 ->where('ref_type', self::REWARD_REF_TYPE)
                 ->exists();
+
+            return $exists ? $walletTransactionId : null;
         }
 
-        return DB::table('wallet_transactions')
+        $resolvedId = DB::table('wallet_transactions')
             ->where('member_id', $memberId)
             ->where('direction', 'CREDIT')
             ->where('ref_type', self::REWARD_REF_TYPE)
             ->where('ref_id', (int) $log->id)
-            ->exists();
+            ->value('id');
+
+        return $resolvedId === null ? null : (int) $resolvedId;
     }
 
     private function dailyPaidRewardLogQuery(LottoDraw $draw): Builder

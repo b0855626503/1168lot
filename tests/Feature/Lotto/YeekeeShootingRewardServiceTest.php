@@ -247,6 +247,41 @@ class YeekeeShootingRewardServiceTest extends TestCase
         $this->assertStringStartsWith('YEEKEE_SHOOT_REWARD:', (string) $first['idempotency_key']);
         $this->assertSame(1, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
         $this->assertSame('YEEKEE_SHOOT_REWARD', (string) DB::table('wallet_transactions')->value('ref_type'));
+        $this->assertSame(
+            (int) DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->value('id'),
+            (int) DB::table('yeekee_shoot_reward_logs')->where('status', 'paid')->value('wallet_transaction_id')
+        );
+    }
+
+    public function test_retry_recovers_pending_log_when_wallet_credit_already_exists(): void
+    {
+        $this->seedBaseData(snapshot: [
+            'reward_enabled' => true,
+            'reward_config' => $this->rewardConfig(),
+        ]);
+        $this->seedShoot(id: 4016, position: 16, memberId: 7001);
+        $this->seedTicket(memberId: 7001, drawId: 3003, amount: 150);
+
+        $first = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+        $logId = (int) DB::table('yeekee_shoot_reward_logs')->value('id');
+        DB::table('yeekee_shoot_reward_logs')->where('id', $logId)->update([
+            'status' => 'pending',
+            'reason' => 'pending',
+            'wallet_transaction_id' => null,
+            'paid_at' => null,
+        ]);
+
+        $retry = app(YeekeeShootingRewardService::class)->applyForRound($this->round(), $this->draw());
+
+        $this->assertSame('paid', (string) $first['status']);
+        $this->assertSame('already_paid', (string) $retry['status']);
+        $this->assertSame(1, DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->count());
+        $this->assertSame('paid', (string) DB::table('yeekee_shoot_reward_logs')->where('id', $logId)->value('status'));
+        $this->assertSame('already_paid', (string) DB::table('yeekee_shoot_reward_logs')->where('id', $logId)->value('reason'));
+        $this->assertSame(
+            (int) DB::table('wallet_transactions')->where('ref_type', 'YEEKEE_SHOOT_REWARD')->value('id'),
+            (int) DB::table('yeekee_shoot_reward_logs')->where('id', $logId)->value('wallet_transaction_id')
+        );
     }
 
     public function test_max_rewards_per_member_per_round_limits_rewards(): void
