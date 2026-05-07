@@ -228,6 +228,57 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame((string) $firstRound->bet_close_at, (string) $firstRound->shoot_close_at);
     }
 
+    public function test_sync_yeekee_round_config_snapshots_updates_only_draft_and_open_rounds(): void
+    {
+        $this->seedYeekeeMarket(11, 1, 60);
+
+        DB::table('yeekee_market_settings')->where('market_id', 11)->update([
+            'reward_enabled' => 1,
+            'reward_config' => json_encode([
+                'reward_enabled' => true,
+                'reward_positions' => [
+                    ['position' => 1, 'credit_amount' => 20],
+                    ['position' => 16, 'credit_amount' => 50],
+                ],
+                'min_bet_amount' => 100,
+            ], JSON_UNESCAPED_UNICODE),
+            'formula_config' => json_encode([
+                'default_preset' => 'SHOOTS_SUM_MINUS_POSITION',
+                'subtract_position' => 16,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            ['id' => 9001, 'market_id' => 11, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:15:00', 'status' => 'draft', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9002, 'market_id' => 11, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:30:00', 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9003, 'market_id' => 11, 'draw_date' => '2026-05-01', 'open_at' => '2026-05-01 00:00:00', 'close_at' => '2026-05-01 00:45:00', 'status' => 'closed', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            ['id' => 9101, 'market_id' => 11, 'lotto_draw_id' => 9001, 'round_date' => '2026-05-01', 'round_no' => 1, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'draft', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9102, 'market_id' => 11, 'lotto_draw_id' => 9002, 'round_date' => '2026-05-01', 'round_no' => 2, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'open', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9103, 'market_id' => 11, 'lotto_draw_id' => 9003, 'round_date' => '2026-05-01', 'round_no' => 3, 'bet_open_at' => now(), 'bet_close_at' => now(), 'shoot_open_at' => now(), 'shoot_close_at' => now(), 'result_compute_at' => now(), 'expected_settlement_deadline_at' => now(), 'status' => 'draft', 'config_snapshot_json' => json_encode(['reward_enabled' => false]), 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        Artisan::call('lotto:sync-yeekee-round-config-snapshots', [
+            '--market_id' => 11,
+        ]);
+        $outputLines = preg_split('/\r\n|\r|\n/', trim((string) Artisan::output())) ?: [];
+        $summaryLine = end($outputLines);
+        $summary = is_string($summaryLine) ? json_decode($summaryLine, true) : null;
+
+        $this->assertIsArray($summary);
+        $this->assertSame(2, (int) ($summary['rounds_updated'] ?? 0));
+
+        $draftSnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9101)->value('config_snapshot_json'), true);
+        $openSnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9102)->value('config_snapshot_json'), true);
+        $closedSnapshot = json_decode((string) DB::table('yeekee_rounds')->where('id', 9103)->value('config_snapshot_json'), true);
+
+        $this->assertSame(true, (bool) ($draftSnapshot['reward_enabled'] ?? false));
+        $this->assertSame(16, (int) ($openSnapshot['reward_config']['reward_positions'][1]['position'] ?? 0));
+        $this->assertSame(false, (bool) ($closedSnapshot['reward_enabled'] ?? true));
+    }
+
     private function seedYeekeeMarket(int $marketId, int $groupId, int $durationMinutes, ?int $shootWindowSeconds = 60): void
     {
         if (! DB::table('lotto_groups')->where('id', $groupId)->exists()) {
