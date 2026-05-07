@@ -1413,21 +1413,35 @@ class DashboardServiceLottoDashboardTest extends TestCase
 
         $webCode = app(DashboardWebCodeResolver::class)->resolve();
 
+        // Stale daily-summary rows for bet types that are no longer present
+        // in the active current table. The new contract must NEVER surface
+        // these.
         DB::table('lotto_dashboard_bet_type_summary_daily')->insert([
-            'summary_date' => '2026-04-10',
-            'bet_type' => 'top_3',
-            'item_count' => 120,
-            'total_amount' => 50000,
-            'unique_players' => 12,
-            'created_at' => now(),
-            'updated_at' => now(),
+            [
+                'summary_date' => '2026-04-10',
+                'bet_type' => 'top_2',
+                'item_count' => 120,
+                'total_amount' => 50000,
+                'unique_players' => 12,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'summary_date' => '2026-04-10',
+                'bet_type' => 'bottom_2',
+                'item_count' => 80,
+                'total_amount' => 30000,
+                'unique_players' => 8,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         DB::table('lotto_dashboard_bet_type_number_daily')->insert([
             [
                 'summary_date' => '2026-04-10',
-                'bet_type' => 'top_3',
-                'number' => '111',
+                'bet_type' => 'top_2',
+                'number' => '11',
                 'item_count' => 35,
                 'total_amount' => 1000,
                 'created_at' => now(),
@@ -1435,8 +1449,8 @@ class DashboardServiceLottoDashboardTest extends TestCase
             ],
             [
                 'summary_date' => '2026-04-10',
-                'bet_type' => 'top_3',
-                'number' => '587',
+                'bet_type' => 'bottom_2',
+                'number' => '22',
                 'item_count' => 30,
                 'total_amount' => 800,
                 'created_at' => now(),
@@ -1444,6 +1458,7 @@ class DashboardServiceLottoDashboardTest extends TestCase
             ],
         ]);
 
+        // Current active risk: only top_3 and tod_3 exist.
         DB::table('lotto_dashboard_risk_current')->insert([
             [
                 'web_code' => $webCode,
@@ -1473,6 +1488,20 @@ class DashboardServiceLottoDashboardTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 1,
+                'round_id' => 101,
+                'bet_type' => 'tod_3',
+                'number' => '111',
+                'stake_total' => 200,
+                'payout_if_hit' => 12000,
+                'liability_total' => 12000,
+                'liability' => 12000,
+                'snapshot_at' => '2026-04-10 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         DB::table('lotto_draws')->insert([
@@ -1496,15 +1525,49 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $method->setAccessible(true);
         $rows = $method->invoke($this->service, '2026-04-10', '2026-04-10');
 
-        $this->assertCount(1, $rows);
-        $this->assertSame(2, (int) $rows[0]['unique_players']);
-        $this->assertSame('111', $rows[0]['top_number']);
-        $this->assertSame(1000.0, (float) $rows[0]['top_number_amount_raw']);
-        $this->assertSame('111', $rows[0]['hottest_number']);
-        $this->assertSame(1000.0, (float) $rows[0]['hottest_number_amount_raw']);
-        $this->assertSame('587', $rows[0]['max_risk_number']);
-        $this->assertSame(1040000.0, (float) $rows[0]['max_risk_value_raw']);
-        $this->assertSame(1040000.0, (float) $rows[0]['risk_exposure_total_raw']);
+        // Only bet types present in lotto_dashboard_risk_current must surface.
+        // Stale top_2 / bottom_2 rows from the daily summary tables must NOT
+        // bleed into the payload.
+        $betTypes = array_map(static fn (array $row): string => (string) $row['bet_type'], $rows);
+        sort($betTypes);
+        $this->assertSame(['tod_3', 'top_3'], $betTypes);
+        $this->assertNotContains('top_2', $betTypes);
+        $this->assertNotContains('bottom_2', $betTypes);
+
+        $byType = [];
+        foreach ($rows as $row) {
+            $byType[(string) $row['bet_type']] = $row;
+        }
+
+        // top_3: two distinct numbers (111, 587), stake 1000+800=1800, max
+        // risk on 587 with liability 1040000.
+        $this->assertSame(2, (int) $byType['top_3']['item_count']);
+        $this->assertSame(1800.0, (float) $byType['top_3']['total_amount_raw']);
+        $this->assertSame('111', $byType['top_3']['top_number']);
+        $this->assertSame(1000.0, (float) $byType['top_3']['top_number_amount_raw']);
+        $this->assertSame('111', $byType['top_3']['hottest_number']);
+        $this->assertSame('587', $byType['top_3']['max_risk_number']);
+        $this->assertSame(1040000.0, (float) $byType['top_3']['max_risk_value_raw']);
+        $this->assertSame(1040000.0, (float) $byType['top_3']['risk_exposure_total_raw']);
+        $this->assertSame('lotto_dashboard_risk_current', $byType['top_3']['source']);
+        $this->assertSame(2, (int) $byType['top_3']['unique_players']);
+
+        // tod_3: one number (111) with stake 200 / risk 12000.
+        $this->assertSame(1, (int) $byType['tod_3']['item_count']);
+        $this->assertSame(200.0, (float) $byType['tod_3']['total_amount_raw']);
+        $this->assertSame('111', $byType['tod_3']['top_number']);
+        $this->assertSame('111', $byType['tod_3']['max_risk_number']);
+        $this->assertSame(12000.0, (float) $byType['tod_3']['max_risk_value_raw']);
+        $this->assertSame('lotto_dashboard_risk_current', $byType['tod_3']['source']);
+
+        // Top 10 Risky Numbers must use the same current-table source so that
+        // both payloads agree on which bet types exist.
+        $topMethod = new ReflectionMethod(DashboardService::class, 'lottoTopRiskyNumbersSummary');
+        $topMethod->setAccessible(true);
+        $top = $topMethod->invoke($this->service, '2026-04-10', '2026-04-10', 10, null);
+        $topBetTypes = array_unique(array_map(static fn (array $row): string => (string) $row['bet_type'], $top));
+        sort($topBetTypes);
+        $this->assertSame(['tod_3', 'top_3'], $topBetTypes);
     }
 
     public function test_lotto_risk_threshold_alerts_only_when_threshold_exceeded(): void
