@@ -5,6 +5,7 @@ namespace Tests\Unit\Core;
 use App\Jobs\SyncLottoRiskCurrentForDrawJob;
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 
@@ -36,5 +37,21 @@ class SyncLottoRiskCurrentForDrawJobTest extends TestCase
         $job->handle($service);
 
         $this->assertTrue(true);
+    }
+
+    public function test_job_uses_without_overlapping_with_draw_web_scope(): void
+    {
+        $job = new SyncLottoRiskCurrentForDrawJob(321, 'web-a');
+
+        $middlewares = $job->middleware();
+
+        $this->assertCount(1, $middlewares);
+        $this->assertInstanceOf(WithoutOverlapping::class, $middlewares[0]);
+
+        $reflection = new \ReflectionClass($middlewares[0]);
+        $property = $reflection->getProperty('key');
+        $property->setAccessible(true);
+
+        $this->assertSame('lotto-risk-current:draw:321:web-a', (string) $property->getValue($middlewares[0]));
     }
 }

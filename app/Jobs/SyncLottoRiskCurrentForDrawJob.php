@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -50,6 +51,15 @@ class SyncLottoRiskCurrentForDrawJob implements ShouldBeUnique, ShouldQueue
             sourceId: $this->sourceId,
             auditContext: $this->auditContext,
         );
+    }
+
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping($this->uniqueId()))
+                ->releaseAfter(2)
+                ->expireAfter($this->timeout + 30),
+        ];
     }
 
     public function failed(Throwable $e): void
