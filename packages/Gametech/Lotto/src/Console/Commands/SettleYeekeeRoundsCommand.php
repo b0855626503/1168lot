@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Schema;
 
 class SettleYeekeeRoundsCommand extends Command
 {
+    private const SUPPORTED_REFUND_POLICY_ACTION = 'VOID_AND_REFUND';
+
     private const PROCESSABLE_ROUND_STATUSES = [
         'draft',
         'open',
@@ -44,6 +46,10 @@ class SettleYeekeeRoundsCommand extends Command
         {--dry-run : Preview only without write}';
 
     protected $description = 'Resolve due yeekee rounds by policy: no-activity void, no-shoot refund, has-shoot settle';
+
+    private ?bool $hasYeekeeMarketSettingsTable = null;
+
+    private ?bool $hasLottoTicketItemsTable = null;
 
     public function handle(
         DrawService $drawService,
@@ -129,7 +135,7 @@ class SettleYeekeeRoundsCommand extends Command
                         ->where('status', 'active')
                         ->count();
 
-                    $refundPolicy = $this->resolveRefundPolicy($round, (int) $draw->market_id);
+                    $refundPolicy = $this->resolveRefundPolicy($round, (int) $draw->market_id, (int) $draw->id);
                     if ($refundPolicy['enabled'] && $refundPolicy['min_bet_entries_required'] > 0) {
                         $effectiveCountMode = $this->resolveCountMode((string) $refundPolicy['count_mode'], (int) $round->id, (int) $draw->id);
                         $effectiveBetEntryCount = $this->resolveEffectiveBetEntryCount($effectiveCountMode, (int) $draw->id);
@@ -154,6 +160,7 @@ class SettleYeekeeRoundsCommand extends Command
                                 'result_fetch_status' => $resultFetchStatus,
                                 'dry_run' => $dryRun,
                                 'policy_source' => (string) $refundPolicy['source'],
+                                'effective_action' => (string) $refundPolicy['action'],
                             ]);
 
                             if ($dryRun) {
@@ -337,7 +344,7 @@ class SettleYeekeeRoundsCommand extends Command
     /**
      * @return array{enabled:bool,min_bet_entries_required:int,count_mode:string,action:string,source:string}
      */
-    private function resolveRefundPolicy(YeekeeRound $round, int $marketId): array
+    private function resolveRefundPolicy(YeekeeRound $round, int $marketId, int $drawId): array
     {
         $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
         $snapshotRefundConfig = is_array($snapshot['refund_config'] ?? null) ? $snapshot['refund_config'] : null;
@@ -350,17 +357,23 @@ class SettleYeekeeRoundsCommand extends Command
                 'enabled' => $enabled,
                 'min_bet_entries_required' => max(0, (int) ($snapshotRefundConfig['min_bet_entries_required'] ?? 0)),
                 'count_mode' => (string) ($snapshotRefundConfig['count_mode'] ?? 'count_bet_entries'),
-                'action' => (string) ($snapshotRefundConfig['action'] ?? 'VOID_AND_REFUND'),
+                'action' => $this->resolvePolicyAction(
+                    (string) ($snapshotRefundConfig['action'] ?? self::SUPPORTED_REFUND_POLICY_ACTION),
+                    (int) $round->id,
+                    $drawId,
+                    $marketId,
+                    'round_snapshot'
+                ),
                 'source' => 'round_snapshot',
             ];
         }
 
-        if (! Schema::hasTable('yeekee_market_settings')) {
+        if (! $this->hasYeekeeMarketSettingsTable()) {
             return [
                 'enabled' => false,
                 'min_bet_entries_required' => 0,
                 'count_mode' => 'count_bet_entries',
-                'action' => 'VOID_AND_REFUND',
+                'action' => self::SUPPORTED_REFUND_POLICY_ACTION,
                 'source' => 'default_disabled',
             ];
         }
@@ -376,7 +389,13 @@ class SettleYeekeeRoundsCommand extends Command
                 'enabled' => $enabled,
                 'min_bet_entries_required' => max(0, (int) ($refundConfig['min_bet_entries_required'] ?? 0)),
                 'count_mode' => (string) ($refundConfig['count_mode'] ?? 'count_bet_entries'),
-                'action' => (string) ($refundConfig['action'] ?? 'VOID_AND_REFUND'),
+                'action' => $this->resolvePolicyAction(
+                    (string) ($refundConfig['action'] ?? self::SUPPORTED_REFUND_POLICY_ACTION),
+                    (int) $round->id,
+                    $drawId,
+                    $marketId,
+                    'market_setting'
+                ),
                 'source' => 'market_setting',
             ];
         }
@@ -385,9 +404,37 @@ class SettleYeekeeRoundsCommand extends Command
             'enabled' => false,
             'min_bet_entries_required' => 0,
             'count_mode' => 'count_bet_entries',
-            'action' => 'VOID_AND_REFUND',
+            'action' => self::SUPPORTED_REFUND_POLICY_ACTION,
             'source' => 'default_disabled',
         ];
+    }
+
+    private function resolvePolicyAction(
+        string $action,
+        int $roundId,
+        int $drawId,
+        int $marketId,
+        string $policySource
+    ): string {
+        $normalized = strtoupper(trim($action));
+        if ($normalized === '') {
+            return self::SUPPORTED_REFUND_POLICY_ACTION;
+        }
+
+        if ($normalized === self::SUPPORTED_REFUND_POLICY_ACTION) {
+            return $normalized;
+        }
+
+        Log::warning('yeekee.minimum_bet_entries_policy.invalid_action', [
+            'yeekee_round_id' => $roundId,
+            'lotto_draw_id' => $drawId,
+            'market_id' => $marketId,
+            'policy_source' => $policySource,
+            'original_action' => $action,
+            'effective_action' => self::SUPPORTED_REFUND_POLICY_ACTION,
+        ]);
+
+        return self::SUPPORTED_REFUND_POLICY_ACTION;
     }
 
     private function resolveCountMode(string $countMode, int $roundId, int $drawId): string
@@ -417,7 +464,7 @@ class SettleYeekeeRoundsCommand extends Command
                 ->count('member_id');
         }
 
-        if (Schema::hasTable('lotto_ticket_items')) {
+        if ($this->hasLottoTicketItemsTable()) {
             return (int) DB::table('lotto_ticket_items as items')
                 ->join('lotto_tickets as tickets', 'tickets.id', '=', 'items.ticket_id')
                 ->where('tickets.draw_id', $drawId)
@@ -434,6 +481,24 @@ class SettleYeekeeRoundsCommand extends Command
             ->where('draw_id', $drawId)
             ->where('status', 'active')
             ->count();
+    }
+
+    private function hasYeekeeMarketSettingsTable(): bool
+    {
+        if ($this->hasYeekeeMarketSettingsTable === null) {
+            $this->hasYeekeeMarketSettingsTable = Schema::hasTable('yeekee_market_settings');
+        }
+
+        return $this->hasYeekeeMarketSettingsTable;
+    }
+
+    private function hasLottoTicketItemsTable(): bool
+    {
+        if ($this->hasLottoTicketItemsTable === null) {
+            $this->hasLottoTicketItemsTable = Schema::hasTable('lotto_ticket_items');
+        }
+
+        return $this->hasLottoTicketItemsTable;
     }
 
     private function toBoolean(mixed $value): bool
