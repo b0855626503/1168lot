@@ -4733,9 +4733,6 @@ class DashboardService
     }
 
     /**
-     * @return array<string, int>
-     */
-    /**
      * Distinct member count per bet_type, scope-bound to the exact
      * (round_id, bet_type, number) tuple set returned by
      * lottoRiskCurrentBaseQuery(). Joining ticket items to that derived set
@@ -4770,11 +4767,15 @@ class DashboardService
             return null;
         }
 
-        $tupleSql = $baseQuery->select([
-            'rc.round_id as cur_round_id',
-            'rc.bet_type as cur_bet_type',
-            'rc.number as cur_number',
-        ])->distinct();
+        // Clone before mutating the select list so the base query stays
+        // reusable and side-effect-free for any sibling caller.
+        $tupleSql = (clone $baseQuery)
+            ->select([
+                'rc.round_id as cur_round_id',
+                'rc.bet_type as cur_bet_type',
+                'rc.number as cur_number',
+            ])
+            ->distinct();
 
         $query = DB::table('lotto_ticket_items as i')
             ->joinSub($tupleSql, 'cur', function ($join): void {
@@ -4784,7 +4785,8 @@ class DashboardService
             ->join('lotto_tickets as t', function ($join): void {
                 $join->on('t.id', '=', 'i.ticket_id')
                     ->on('t.draw_id', '=', 'cur.cur_round_id');
-            });
+            })
+            ->whereNotNull('t.member_id');
 
         if ($this->hasColumn('lotto_tickets', 'status')) {
             $query->whereNotIn('t.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_TICKET_STATUSES);
@@ -4810,6 +4812,9 @@ class DashboardService
         return $result;
     }
 
+    /**
+     * @return array<string, int>
+     */
     private function lottoDistinctPlayersByBetType(string $startDate, string $endDate, ?string $marketType): array
     {
         if (
