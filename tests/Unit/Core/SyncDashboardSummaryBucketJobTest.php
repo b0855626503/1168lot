@@ -4,7 +4,7 @@ namespace Tests\Unit\Core;
 
 use App\Jobs\SyncDashboardSummaryBucket;
 use App\Services\Dashboard\DashboardSummarySyncService;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 
@@ -16,12 +16,13 @@ class SyncDashboardSummaryBucketJobTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_job_is_unique_per_bucket_until_processing(): void
+    public function test_job_is_unique_per_bucket_until_finished(): void
     {
         $job = new SyncDashboardSummaryBucket('2026-04-04', 'main', ['net'], 'lotto', '10');
 
-        $this->assertInstanceOf(ShouldBeUniqueUntilProcessing::class, $job);
+        $this->assertInstanceOf(ShouldBeUnique::class, $job);
         $this->assertSame('dashboard-summary:main:2026-04-04', $job->uniqueId());
+        $this->assertSame(600, $job->uniqueFor);
     }
 
     public function test_handle_consumes_pending_payload_before_syncing_bucket(): void

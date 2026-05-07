@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,13 +13,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class SyncDashboardSummaryBucket implements ShouldBeUniqueUntilProcessing, ShouldQueue
+class SyncDashboardSummaryBucket implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 5;
     public int $timeout = 120;
-    public int $uniqueFor = 180;
+    public int $uniqueFor = 600;
 
     /**
      * @var int[]
