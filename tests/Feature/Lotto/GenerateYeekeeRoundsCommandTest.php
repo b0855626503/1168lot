@@ -59,6 +59,8 @@ class GenerateYeekeeRoundsCommandTest extends TestCase
         $this->assertSame(16, (int) ($decoded['formula_config']['subtract_position'] ?? 0));
         $this->assertArrayNotHasKey('default_preset', (array) ($decoded['formula_config'] ?? []));
         $this->assertSame(60, (int) ($decoded['round_config']['round_duration_minutes'] ?? 0));
+        $this->assertArrayHasKey('reward_enabled', $decoded);
+        $this->assertSame(0, (int) ($decoded['reward_enabled'] ?? 1));
         $this->assertIsArray($decoded['reward_config'] ?? null);
         $this->assertIsArray($decoded['refund_config'] ?? null);
         $this->assertIsArray($decoded['external_seed_config'] ?? null);

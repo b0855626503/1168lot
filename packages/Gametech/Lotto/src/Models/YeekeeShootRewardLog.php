@@ -14,5 +14,6 @@ class YeekeeShootRewardLog extends Model
         'position',
         'credit_amount',
         'reward_ref_type',
+        'idempotency_key',
     ];
 }
