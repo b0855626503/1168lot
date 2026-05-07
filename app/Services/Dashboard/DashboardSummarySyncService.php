@@ -122,11 +122,14 @@ class DashboardSummarySyncService
         ?string $sourceId = null,
         array $auditContext = [],
     ): void {
+        $startedAt = microtime(true);
         if ($drawId <= 0 || ! Schema::hasTable('lotto_dashboard_risk_current')) {
             return;
         }
 
         $resolvedWebCode = $this->webCodeResolver->resolve($webCode);
+        $rowsUpserted = 0;
+        $rowsDeleted = 0;
         $draw = Schema::hasTable('lotto_draws')
             ? DB::table('lotto_draws')
                 ->select('id', 'market_id', 'status', 'result_at')
@@ -135,9 +138,20 @@ class DashboardSummarySyncService
             : null;
 
         if (! $this->isDrawActiveForCurrent($draw)) {
-            DB::table('lotto_dashboard_risk_current')
+            $rowsDeleted += DB::table('lotto_dashboard_risk_current')
                 ->where('round_id', $drawId)
                 ->delete();
+
+            $this->logDrawRiskSyncResult(
+                drawId: $drawId,
+                webCode: $resolvedWebCode,
+                sourceType: $sourceType,
+                sourceId: $sourceId,
+                rowsUpserted: $rowsUpserted,
+                rowsDeleted: $rowsDeleted,
+                startedAt: $startedAt,
+                auditContext: $auditContext,
+            );
 
             return;
         }
@@ -160,7 +174,9 @@ class DashboardSummarySyncService
             ])
             ->get()
             ->map(function ($row) use ($draw, $drawId, $resolvedWebCode) {
+                $stakeTotal = round((float) ($row->stake_total ?? 0), 4);
                 $payoutIfHit = round((float) ($row->payout_if_hit ?? 0), 4);
+                $liability = round($payoutIfHit - $stakeTotal, 4);
 
                 return [
                     'web_code' => $resolvedWebCode,
@@ -168,9 +184,9 @@ class DashboardSummarySyncService
                     'round_id' => $drawId,
                     'bet_type' => (string) ($row->bet_type ?? ''),
                     'number' => (string) ($row->number ?? ''),
-                    'stake_total' => round((float) ($row->stake_total ?? 0), 4),
+                    'stake_total' => $stakeTotal,
                     'payout_if_hit' => $payoutIfHit,
-                    'liability' => $payoutIfHit,
+                    'liability' => $liability,
                     'created_at' => now()->toDateTimeString(),
                     'updated_at' => now()->toDateTimeString(),
                 ];
@@ -178,7 +194,24 @@ class DashboardSummarySyncService
             ->values()
             ->all();
 
+        // Draw-scoped rebuild: remove stale rows that are absent from the latest
+        // exposure payload, then upsert the fresh set for this draw.
+        $rowsDeleted += DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', $drawId)
+            ->delete();
         $this->upsertRiskCurrentRows($riskRows);
+        $rowsUpserted = count($riskRows);
+
+        $this->logDrawRiskSyncResult(
+            drawId: $drawId,
+            webCode: $resolvedWebCode,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
+            rowsUpserted: $rowsUpserted,
+            rowsDeleted: $rowsDeleted,
+            startedAt: $startedAt,
+            auditContext: $auditContext,
+        );
     }
 
     /**
@@ -801,6 +834,28 @@ class DashboardSummarySyncService
         $status = strtolower((string) ($draw->status ?? ''));
 
         return $status !== '' && ! in_array($status, $this->invalidDrawStatuses(), true);
+    }
+
+    private function logDrawRiskSyncResult(
+        int $drawId,
+        string $webCode,
+        ?string $sourceType,
+        ?string $sourceId,
+        int $rowsUpserted,
+        int $rowsDeleted,
+        float $startedAt,
+        array $auditContext = [],
+    ): void {
+        Log::info('lotto_risk_current_draw_sync_completed', [
+            'draw_id' => $drawId,
+            'web_code' => $webCode,
+            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            'rows_upserted' => $rowsUpserted,
+            'rows_deleted' => $rowsDeleted,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+            'audit_context' => $auditContext,
+        ]);
     }
 
     /**

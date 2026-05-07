@@ -446,11 +446,20 @@ class DashboardSummarySyncServiceTest extends TestCase
 
         $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
         $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 11)->count());
+        $row = DB::table('lotto_dashboard_risk_current')
+            ->where('round_id', 10)
+            ->where('number', '12')
+            ->first();
+        $this->assertNotNull($row);
+        $this->assertSame(100.0, (float) $row->stake_total);
+        $this->assertSame(9000.0, (float) $row->payout_if_hit);
+        $this->assertSame(8900.0, (float) $row->liability);
     }
 
     public function test_sync_risk_current_for_draw_deletes_rows_when_draw_is_resulted(): void
     {
         $this->createTestTables();
+        Log::spy();
         $this->seedDraw(77, ['status' => 'resulted', 'result_at' => '2026-05-07 10:00:00']);
         DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(77));
 
@@ -462,6 +471,45 @@ class DashboardSummarySyncServiceTest extends TestCase
         $service->syncRiskCurrentForDraw(77, 'main', 'draw_resulted', '77');
 
         $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 77)->count());
+        Log::shouldHaveReceived('info')
+            ->with('lotto_risk_current_draw_sync_completed', Mockery::on(function (array $context): bool {
+                return (int) ($context['draw_id'] ?? 0) === 77
+                    && (int) ($context['rows_deleted'] ?? -1) === 1
+                    && array_key_exists('duration_ms', $context);
+            }))
+            ->once();
+    }
+
+    public function test_sync_risk_current_for_draw_removes_stale_rows_missing_from_latest_payload(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+        $this->seedBetSetting(10, '2top', 90);
+        $this->seedExposureRow(10, '2top', '12', 100);
+
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'number' => '12',
+            'stake_total' => 50,
+            'payout_if_hit' => 4500,
+            'liability' => 4450,
+        ]));
+        DB::table('lotto_dashboard_risk_current')->insert($this->existingCurrentRowFor(10, [
+            'number' => '99',
+            'stake_total' => 99,
+            'payout_if_hit' => 8910,
+            'liability' => 8811,
+        ]));
+
+        $service = $this->makeService(
+            $this->mockProjectorWithPayload($this->dailyPayload(), $this->lottoPayloadZeroRisk()),
+            $this->mockNotifier(),
+        );
+
+        $service->syncRiskCurrentForDraw(10, 'main', 'lotto', 'draw-10');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->where('number', '12')->count());
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->where('number', '99')->count());
     }
 
     public function test_legacy_snapshot_source_is_blocked_when_feature_flag_disabled(): void
