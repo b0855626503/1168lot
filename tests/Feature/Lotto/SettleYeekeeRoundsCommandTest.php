@@ -32,6 +32,7 @@ class SettleYeekeeRoundsCommandTest extends TestCase
     {
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('lotto_tickets');
+        Schema::dropIfExists('yeekee_market_settings');
         Schema::dropIfExists('yeekee_rounds');
         Schema::dropIfExists('lotto_draws');
         Schema::dropIfExists('lotto_markets');
@@ -199,6 +200,86 @@ class SettleYeekeeRoundsCommandTest extends TestCase
             $this->assertSame('resulted', (string) DB::table('lotto_draws')->where('id', $drawId)->value('status'));
             $this->assertSame('NO_ACTIVITY', (string) DB::table('lotto_draws')->where('id', $drawId)->value('result_fetch_status'));
         }
+    }
+
+    public function test_settle_yeekee_rounds_fallbacks_invalid_minimum_policy_action_to_void_and_refund(): void
+    {
+        Queue::fake();
+        Log::spy();
+        $this->mock(AutoResultHardeningService::class)
+            ->shouldReceive('handleExhaustedTransition')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+        $this->mock(LotteryRelayPublisher::class)
+            ->shouldReceive('publishIfReady')
+            ->zeroOrMoreTimes()
+            ->andReturnNull();
+
+        $drawService = $this->mock(DrawService::class);
+        $drawService->shouldReceive('syncScheduledStatuses')->once();
+
+        $this->mock(YeekeeResultEngineService::class)
+            ->shouldReceive('computeFromRound')
+            ->never();
+
+        $this->mock(SettlementService::class)
+            ->shouldReceive('settleDraw')
+            ->never();
+
+        $this->mock(DrawCancelAllRefundService::class)
+            ->shouldReceive('cancelAllActiveTickets')
+            ->once()
+            ->withArgs(function (LottoDraw $draw): bool {
+                return (int) $draw->id === 3002;
+            })
+            ->andReturn([
+                'cancelled_tickets' => 1,
+                'refunded_amount' => 100.0,
+                'group_code' => 'test',
+            ]);
+
+        DB::table('yeekee_market_settings')->insert([
+            'market_id' => 106,
+            'refund_config' => json_encode([
+                'refund_if_bet_entries_below_min' => true,
+                'min_bet_entries_required' => 2,
+                'count_mode' => 'count_bet_entries',
+                'action' => 'UNSUPPORTED_ACTION',
+            ]),
+            'refund_if_bet_entries_below_min' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Artisan::call('lotto:settle-yeekee-rounds', ['--draw_id' => 3002, '--limit' => 1]);
+        $outputLines = preg_split('/\r\n|\r|\n/', trim((string) Artisan::output())) ?: [];
+        $summaryLine = end($outputLines);
+        $summary = is_string($summaryLine) ? json_decode($summaryLine, true) : null;
+
+        $this->assertIsArray($summary);
+        $this->assertSame(1, (int) ($summary['minimum_void_refund'] ?? 0));
+        $this->assertSame('voided', (string) DB::table('yeekee_rounds')->where('id', 2)->value('status'));
+        $this->assertSame('resulted', (string) DB::table('lotto_draws')->where('id', 3002)->value('status'));
+        $this->assertSame('YEEKEE_MIN_BET_ENTRIES_VOID_REFUND', (string) DB::table('lotto_draws')->where('id', 3002)->value('result_fetch_status'));
+
+        Log::shouldHaveReceived('warning')->with(
+            'yeekee.minimum_bet_entries_policy.invalid_action',
+            \Mockery::on(static function (array $context): bool {
+                return (int) ($context['yeekee_round_id'] ?? 0) === 2
+                    && (int) ($context['lotto_draw_id'] ?? 0) === 3002
+                    && (int) ($context['market_id'] ?? 0) === 106
+                    && (string) ($context['policy_source'] ?? '') === 'market_setting'
+                    && (string) ($context['original_action'] ?? '') === 'UNSUPPORTED_ACTION'
+                    && (string) ($context['effective_action'] ?? '') === 'VOID_AND_REFUND';
+            })
+        );
+
+        Log::shouldHaveReceived('info')->once()->with(
+            'yeekee.minimum_bet_entries_policy.applied',
+            \Mockery::on(static function (array $context): bool {
+                return (string) ($context['effective_action'] ?? '') === 'VOID_AND_REFUND';
+            })
+        );
     }
 
     private function seedData(): void
@@ -579,6 +660,14 @@ class SettleYeekeeRoundsCommandTest extends TestCase
             $table->unsignedBigInteger('draw_id');
             $table->unsignedBigInteger('member_id')->nullable();
             $table->string('status', 32)->default('active');
+            $table->timestamps();
+        });
+
+        Schema::create('yeekee_market_settings', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('market_id');
+            $table->json('refund_config')->nullable();
+            $table->boolean('refund_if_bet_entries_below_min')->default(false);
             $table->timestamps();
         });
 
