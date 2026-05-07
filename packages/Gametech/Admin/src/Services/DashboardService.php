@@ -4265,8 +4265,9 @@ class DashboardService
         }
 
         $riskByType = [];
-
-        if ($this->hasTable('lotto_dashboard_risk_aggregates')) {
+        if ($this->shouldReadLottoRiskFromCurrent()) {
+            $riskByType = $this->lottoBetTypeRiskFromCurrent($marketType);
+        } elseif ($this->hasTable('lotto_dashboard_risk_aggregates')) {
             $riskRows = DB::table('lotto_dashboard_risk_aggregates')
                 ->where('web_code', $this->dashboardWebCode())
                 ->whereBetween('summary_date', [$startDate, $endDate])
@@ -4384,6 +4385,8 @@ class DashboardService
                 }
             }
         }
+
+        $distinctPlayersByType = $this->lottoDistinctPlayersByBetType($startDate, $endDate, $marketType);
         $numberRows = DB::table('lotto_dashboard_bet_type_number_daily');
         if (
             $normalizedMarketType !== 'all'
@@ -4453,7 +4456,7 @@ class DashboardService
             }
         }
 
-        return $dailyRows->map(function ($row) use ($isSingleDay, $topByType, $riskByType): array {
+        return $dailyRows->map(function ($row) use ($isSingleDay, $topByType, $riskByType, $distinctPlayersByType): array {
             $betType = (string) ($row->bet_type ?? '');
             $top = $topByType[$betType] ?? [
                 'top_number' => '',
@@ -4471,6 +4474,10 @@ class DashboardService
             $riskExposureTotalRaw = (float) ($risk['risk_exposure_total_raw'] ?? 0);
             $maxRiskNumber = (string) ($risk['max_risk_number'] ?? '');
             $maxRiskValueRaw = (float) ($risk['max_risk_value_raw'] ?? 0);
+            $distinctPlayers = $distinctPlayersByType[$betType] ?? null;
+            $playerCount = $distinctPlayers !== null
+                ? (int) $distinctPlayers
+                : (int) ($row->unique_players ?? 0);
 
             return [
                 'bet_type' => $betType,
@@ -4478,7 +4485,7 @@ class DashboardService
                 'item_count' => (int) ($row->item_count ?? 0),
                 'total_amount' => core()->currency($totalAmountRaw),
                 'total_amount_raw' => $totalAmountRaw,
-                'unique_players' => $isSingleDay ? (int) ($row->unique_players ?? 0) : null,
+                'unique_players' => $isSingleDay ? $playerCount : null,
                 'top_number' => $topNumber !== '' ? $topNumber : null,
                 'top_number_amount' => core()->currency($topAmountRaw),
                 'top_number_amount_raw' => $topAmountRaw,
@@ -4492,6 +4499,135 @@ class DashboardService
                 'max_risk_value_raw' => $maxRiskValueRaw,
             ];
         })->values()->all();
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function lottoBetTypeRiskFromCurrent(?string $marketType): array
+    {
+        $query = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($query === null) {
+            return [];
+        }
+
+        $rows = $query->get([
+            'rc.bet_type',
+            'rc.number',
+            'rc.liability',
+            'rc.payout_if_hit',
+        ]);
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $riskByTypeNumber = [];
+        foreach ($rows as $row) {
+            $betType = trim((string) ($row->bet_type ?? ''));
+            $number = trim((string) ($row->number ?? ''));
+            if ($betType === '' || $number === '') {
+                continue;
+            }
+
+            $riskValue = round((float) ($row->liability ?? $row->payout_if_hit ?? 0), 2);
+            $key = $betType.'|'.$number;
+            $riskByTypeNumber[$key] = round((float) ($riskByTypeNumber[$key] ?? 0) + $riskValue, 2);
+        }
+
+        if (empty($riskByTypeNumber)) {
+            return [];
+        }
+
+        $riskByType = [];
+        foreach ($riskByTypeNumber as $key => $riskValue) {
+            [$betType, $number] = explode('|', $key, 2);
+            $riskValue = (float) $riskValue;
+
+            if (! isset($riskByType[$betType])) {
+                $riskByType[$betType] = [
+                    'risk_exposure_total_raw' => 0.0,
+                    'max_risk_number' => '',
+                    'max_risk_value_raw' => 0.0,
+                ];
+            }
+
+            if (
+                $riskValue > (float) $riskByType[$betType]['max_risk_value_raw']
+                || (
+                    abs($riskValue - (float) $riskByType[$betType]['max_risk_value_raw']) < 0.00001
+                    && (
+                        $riskByType[$betType]['max_risk_number'] === ''
+                        || strcmp($number, (string) $riskByType[$betType]['max_risk_number']) < 0
+                    )
+                )
+            ) {
+                $riskByType[$betType]['risk_exposure_total_raw'] = round($riskValue, 2);
+                $riskByType[$betType]['max_risk_number'] = $number;
+                $riskByType[$betType]['max_risk_value_raw'] = round($riskValue, 2);
+            }
+        }
+
+        return $riskByType;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function lottoDistinctPlayersByBetType(string $startDate, string $endDate, ?string $marketType): array
+    {
+        if (
+            ! $this->hasTable('lotto_ticket_items')
+            || ! $this->hasTable('lotto_tickets')
+            || ! $this->hasTable('lotto_draws')
+            || ! $this->hasColumn('lotto_ticket_items', 'ticket_id')
+            || ! $this->hasColumn('lotto_ticket_items', 'bet_type')
+            || ! $this->hasColumn('lotto_tickets', 'id')
+            || ! $this->hasColumn('lotto_tickets', 'draw_id')
+            || ! $this->hasColumn('lotto_tickets', 'member_id')
+            || ! $this->hasColumn('lotto_draws', 'id')
+            || ! $this->hasColumn('lotto_draws', 'draw_date')
+        ) {
+            return [];
+        }
+
+        $query = DB::table('lotto_ticket_items as i')
+            ->join('lotto_tickets as t', 't.id', '=', 'i.ticket_id')
+            ->join('lotto_draws as d', 'd.id', '=', 't.draw_id')
+            ->whereBetween('d.draw_date', [$startDate, $endDate]);
+
+        if ($this->hasColumn('lotto_tickets', 'status')) {
+            $query->whereNotIn('t.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_TICKET_STATUSES);
+        }
+        if ($this->hasColumn('lotto_ticket_items', 'status')) {
+            $query->whereNotIn('i.status', LottoDashboardMetricConfig::LOTTO_INSIGHT_EXCLUDED_ITEM_STATUSES);
+        }
+
+        $allowedMarketIds = $this->resolveAllowedLottoMarketIdsByType($marketType);
+        if ($allowedMarketIds !== null) {
+            if (empty($allowedMarketIds)) {
+                return [];
+            }
+            if (! $this->hasColumn('lotto_draws', 'market_id')) {
+                return [];
+            }
+            $query->whereIn('d.market_id', array_keys($allowedMarketIds));
+        }
+
+        $rows = $query
+            ->selectRaw('i.bet_type, COUNT(DISTINCT t.member_id) as unique_players')
+            ->groupBy('i.bet_type')
+            ->get();
+
+        $distinct = [];
+        foreach ($rows as $row) {
+            $betType = trim((string) ($row->bet_type ?? ''));
+            if ($betType === '') {
+                continue;
+            }
+            $distinct[$betType] = (int) ($row->unique_players ?? 0);
+        }
+
+        return $distinct;
     }
 
     private function registerTotals(array $filters, string $startDate, string $endDate): array

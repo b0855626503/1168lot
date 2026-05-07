@@ -832,8 +832,8 @@
                                             <div class="lotto-block">
                                                 <div class="lotto-block-title">Lotto Risk (ความเสี่ยงหวย)</div>
                                                 <div class="lotto-block-main">@{{ uiValue(summary.lotto_risk.max_risk_per_number || summary.lotto_risk.liability_max, '0.00') }}</div>
-                                                <div class="lotto-block-line"><span>ยอดเสี่ยงสูงสุดต่อเลข</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_per_number || summary.lotto_risk.liability_max, '0.00') }}</strong></div>
-                                                <div class="lotto-block-line"><span>เลขเสี่ยงสูงสุด</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_number, '-') }}</strong></div>
+                                                <div class="lotto-block-line"><span>ยอดเสี่ยงสูงสุดต่อเลขรวมทุกประเภท</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_per_number || summary.lotto_risk.liability_max, '0.00') }}</strong></div>
+                                                <div class="lotto-block-line"><span>เลขเสี่ยงสูงสุดรวมทุกประเภท</span><strong>@{{ uiValue(summary.lotto_risk.max_risk_number, '-') }}</strong></div>
                                                 <div class="lotto-block-line"><span>ยอดจ่ายถ้าถูกทั้งหมด</span><strong>@{{ uiValue(summary.lotto_risk.total_exposure || summary.lotto_risk.exposure_total, '0.00') }}</strong></div>
                                                 <div v-if="!summary.lotto_risk.liability_total_same_as_exposure" class="lotto-block-line"><span>ยอดความเสี่ยงรวมทุกเลข</span><strong>@{{ uiValue(summary.lotto_risk.liability_total, '0.00') }}</strong></div>
                                                 <div class="lotto-block-line"><span>จำนวนตลาด/งวด/เลขที่ติดตาม</span><strong>@{{ uiCount(summary.lotto_risk.tracked_market_count || summary.lotto_risk.markets) }} / @{{ uiCount(summary.lotto_risk.tracked_round_count || summary.lotto_risk.rounds) }} / @{{ uiCount(summary.lotto_risk.tracked_number_count || summary.lotto_risk.numbers) }}</strong></div>
@@ -928,8 +928,8 @@
                                                             <td class="text-right">@{{ uiCount(row.item_count) }}</td>
                                                             <td class="text-right">@{{ uiValue(row.total_amount, '0.00') }}</td>
                                                             <td class="text-right">@{{ row.unique_players === null ? '-' : uiCount(row.unique_players) }}</td>
-                                                            <td>@{{ uiValue(row.hottest_number || row.top_number, '-') }}</td>
-                                                            <td class="text-right">@{{ uiValue(row.hottest_number_amount || row.top_number_amount, '0.00') }}</td>
+                                                            <td>@{{ uiValue(row.top_number, '-') }}</td>
+                                                            <td class="text-right">@{{ uiValue(row.top_number_amount, '0.00') }}</td>
                                                             <td class="text-right">@{{ uiValue(row.risk_exposure_total, '0.00') }}</td>
                                                             <td>@{{ uiValue(row.max_risk_number, '-') }}</td>
                                                             <td class="text-right">@{{ uiValue(row.max_risk_value, '0.00') }}</td>

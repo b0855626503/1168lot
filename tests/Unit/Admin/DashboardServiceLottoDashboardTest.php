@@ -1371,19 +1371,17 @@ class DashboardServiceLottoDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('lotto_dashboard_risk_aggregates', function (Blueprint $table): void {
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
             $table->id();
             $table->string('web_code', 64);
-            $table->date('summary_date');
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
             $table->string('bet_type', 64);
             $table->string('number', 32);
             $table->decimal('stake_total', 18, 2)->default(0);
-            $table->decimal('exposure_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
             $table->decimal('liability_total', 18, 2)->default(0);
-            $table->unsignedInteger('market_count')->default(0);
-            $table->unsignedInteger('round_count')->default(0);
-            $table->longText('market_ids_json')->nullable();
-            $table->longText('round_ids_json')->nullable();
+            $table->decimal('liability', 18, 2)->default(0);
             $table->timestamp('snapshot_at');
             $table->timestamps();
         });
@@ -1392,11 +1390,13 @@ class DashboardServiceLottoDashboardTest extends TestCase
             $table->unsignedBigInteger('id')->primary();
             $table->unsignedBigInteger('market_id')->nullable();
             $table->date('draw_date')->nullable();
+            $table->string('status')->nullable();
         });
 
         Schema::create('lotto_tickets', function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->unsignedBigInteger('draw_id');
+            $table->unsignedBigInteger('member_id')->nullable();
             $table->string('status')->nullable();
         });
 
@@ -1443,31 +1443,31 @@ class DashboardServiceLottoDashboardTest extends TestCase
             ],
         ]);
 
-        DB::table('lotto_dashboard_risk_aggregates')->insert([
+        DB::table('lotto_dashboard_risk_current')->insert([
             [
                 'web_code' => $webCode,
-                'summary_date' => '2026-04-10',
+                'market_id' => 1,
+                'round_id' => 101,
                 'bet_type' => 'top_3',
                 'number' => '111',
                 'stake_total' => 1000,
-                'exposure_total' => 500000,
+                'payout_if_hit' => 500000,
                 'liability_total' => 500000,
-                'market_count' => 2,
-                'round_count' => 2,
+                'liability' => 500000,
                 'snapshot_at' => '2026-04-10 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'web_code' => $webCode,
-                'summary_date' => '2026-04-10',
+                'market_id' => 2,
+                'round_id' => 102,
                 'bet_type' => 'top_3',
                 'number' => '587',
                 'stake_total' => 800,
-                'exposure_total' => 1040000,
+                'payout_if_hit' => 1040000,
                 'liability_total' => 1040000,
-                'market_count' => 4,
-                'round_count' => 4,
+                'liability' => 1040000,
                 'snapshot_at' => '2026-04-10 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -1475,19 +1475,20 @@ class DashboardServiceLottoDashboardTest extends TestCase
         ]);
 
         DB::table('lotto_draws')->insert([
-            ['id' => 101, 'market_id' => 1, 'draw_date' => '2026-04-10'],
-            ['id' => 102, 'market_id' => 2, 'draw_date' => '2026-04-10'],
+            ['id' => 101, 'market_id' => 1, 'draw_date' => '2026-04-10', 'status' => 'open'],
+            ['id' => 102, 'market_id' => 2, 'draw_date' => '2026-04-10', 'status' => 'open'],
         ]);
 
         DB::table('lotto_tickets')->insert([
-            ['id' => 1001, 'draw_id' => 101, 'status' => 'active'],
-            ['id' => 1002, 'draw_id' => 102, 'status' => 'active'],
+            ['id' => 1001, 'draw_id' => 101, 'member_id' => 2001, 'status' => 'active'],
+            ['id' => 1002, 'draw_id' => 102, 'member_id' => 2001, 'status' => 'active'],
+            ['id' => 1003, 'draw_id' => 101, 'member_id' => 2002, 'status' => 'active'],
         ]);
 
         DB::table('lotto_ticket_items')->insert([
             ['ticket_id' => 1001, 'bet_type' => 'top_3', 'number' => '587', 'amount' => 100, 'payout_at_time' => 1000, 'win_amount' => 0],
             ['ticket_id' => 1002, 'bet_type' => 'top_3', 'number' => '587', 'amount' => 100, 'payout_at_time' => 1000, 'win_amount' => 0],
-            ['ticket_id' => 1001, 'bet_type' => 'top_3', 'number' => '111', 'amount' => 50, 'payout_at_time' => 1000, 'win_amount' => 0],
+            ['ticket_id' => 1003, 'bet_type' => 'top_3', 'number' => '111', 'amount' => 50, 'payout_at_time' => 1000, 'win_amount' => 0],
         ]);
 
         $method = new ReflectionMethod(DashboardService::class, 'lottoBetTypeInsightsSummary');
@@ -1495,6 +1496,9 @@ class DashboardServiceLottoDashboardTest extends TestCase
         $rows = $method->invoke($this->service, '2026-04-10', '2026-04-10');
 
         $this->assertCount(1, $rows);
+        $this->assertSame(2, (int) $rows[0]['unique_players']);
+        $this->assertSame('111', $rows[0]['top_number']);
+        $this->assertSame(1000.0, (float) $rows[0]['top_number_amount_raw']);
         $this->assertSame('111', $rows[0]['hottest_number']);
         $this->assertSame(1000.0, (float) $rows[0]['hottest_number_amount_raw']);
         $this->assertSame('587', $rows[0]['max_risk_number']);
@@ -1523,6 +1527,57 @@ class DashboardServiceLottoDashboardTest extends TestCase
             'max_risk_per_number' => 999999,
         ]);
         $this->assertSame([], $alertsNotExceeded);
+    }
+
+    public function test_lotto_risk_summary_aggregates_by_number_across_bet_types(): void
+    {
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedBigInteger('market_id')->nullable();
+            $table->string('status')->nullable();
+        });
+
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedBigInteger('market_id');
+            $table->unsignedBigInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+        });
+
+        $webCode = app(DashboardWebCodeResolver::class)->resolve();
+        DB::table('lotto_draws')->insert([
+            ['id' => 10, 'market_id' => 1, 'status' => 'open'],
+        ]);
+        DB::table('lotto_dashboard_risk_current')->insert([
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'top_3', 'number' => '254', 'stake_total' => 10, 'payout_if_hit' => 5000, 'liability' => 5000, 'snapshot_at' => '2026-04-10 10:00:00'],
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'tod_3', 'number' => '254', 'stake_total' => 10, 'payout_if_hit' => 4000, 'liability' => 4000, 'snapshot_at' => '2026-04-10 10:00:00'],
+            ['web_code' => $webCode, 'market_id' => 1, 'round_id' => 10, 'bet_type' => 'top_3', 'number' => '812', 'stake_total' => 10, 'payout_if_hit' => 5600, 'liability' => 5600, 'snapshot_at' => '2026-04-10 10:00:00'],
+        ]);
+
+        $method = new ReflectionMethod(DashboardService::class, 'lottoRiskSummaryMetrics');
+        $method->setAccessible(true);
+        $summary = $method->invoke($this->service, '2026-04-10', '2026-04-10');
+
+        $this->assertSame('254', $summary['max_risk_number']);
+        $this->assertSame(9000.0, (float) $summary['max_risk_per_number']);
+    }
+
+    public function test_dashboard_insight_table_maps_top_number_fields_and_risk_block_labels_are_explicit(): void
+    {
+        $contents = file_get_contents(base_path('packages/Gametech/Admin/src/Resources/views/module/dashboard/index.blade.php'));
+
+        $this->assertStringContainsString('ยอดเสี่ยงสูงสุดต่อเลขรวมทุกประเภท', $contents);
+        $this->assertStringContainsString('เลขเสี่ยงสูงสุดรวมทุกประเภท', $contents);
+        $this->assertStringContainsString("@{{ uiValue(row.top_number, '-') }}", $contents);
+        $this->assertStringContainsString("@{{ uiValue(row.top_number_amount, '0.00') }}", $contents);
+        $this->assertStringNotContainsString('row.hottest_number || row.top_number', $contents);
+        $this->assertStringNotContainsString('row.hottest_number_amount || row.top_number_amount', $contents);
     }
 
     public function test_lotto_risk_trend_compares_latest_and_previous_snapshot(): void
