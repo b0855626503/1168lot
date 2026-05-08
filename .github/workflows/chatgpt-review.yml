@@ -1,0 +1,54 @@
+name: chatgpt-review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to review
+        required: true
+      body:
+        description: Review comment body to post
+        required: true
+
+permissions:
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  post-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CHATGPT_REVIEW_APP_ID }}
+          private-key: ${{ secrets.CHATGPT_REVIEW_PRIVATE_KEY }}
+
+      - name: Upsert ChatGPT review comment
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEW_BODY: ${{ inputs.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          marker='<!-- chatgpt-review-support -->'
+          body="$(cat <<EOF
+${marker}
+## ChatGPT Review Support
+
+${REVIEW_BODY}
+EOF
+          )"
+          comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | tail -n 1)"
+          if [ -n "${comment_id}" ]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${comment_id}" -f body="${body}" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -f body="${body}" >/dev/null
+          fi
