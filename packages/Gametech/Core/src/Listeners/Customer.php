@@ -5,11 +5,11 @@ namespace Gametech\Core\Listeners;
 use Exception;
 use Gametech\Member\Repositories\MemberLogRepository;
 use Gametech\Member\Repositories\MemberRepository;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Auth\Events\Failed;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 class Customer
@@ -21,8 +21,7 @@ class Customer
     public function __construct(
         MemberRepository $memberRepository,
         MemberLogRepository $memberLogRepository
-    )
-    {
+    ) {
         $this->memberRepository = $memberRepository;
         $this->memberLogRepository = $memberLogRepository;
     }
@@ -47,11 +46,13 @@ class Customer
                 // Fallback: array payload
                 $username = $user['username'] ?? ($user['email'] ?? null);
                 $password = $user['password'] ?? null;
+                $providedSummary = $user['summary'] ?? null;
             } else {
                 // Unsupported payload type → log and stop
                 Log::warning('Login fail event with unsupported payload type', [
                     'type' => is_object($user) ? get_class($user) : gettype($user),
                 ]);
+
                 return;
             }
 
@@ -71,7 +72,9 @@ class Customer
             }
 
             // --- Build summary without touching null fields ---
-            if (!$chk) {
+            if (isset($providedSummary) && is_string($providedSummary) && $providedSummary !== '') {
+                $summary = $providedSummary;
+            } elseif (! $chk) {
                 $summary = 'USER NOT FOUND';
             } else {
                 $hash = $chk->password ?? ($chk->user_pass ?? null);
@@ -83,20 +86,20 @@ class Customer
             }
 
             $this->memberLogRepository->create([
-                'member_code'   => 0,
-                'mode'          => 'LOGIN',
-                'menu'          => 'login',
-                'record'        => 0,
-                'remark'        => 'Login FAIL',
-                'item_before'   => is_string($user) ? $user : json_encode($user),
-                'item'          => is_string($user) ? $user : json_encode($user),
-                'username'      => $username,
-                'password'      => $password,       // ⚠️ เก็บเป็น plain ตามของเดิม (แนะนำลบ/มาสก์ในอนาคต)
+                'member_code' => 0,
+                'mode' => 'LOGIN',
+                'menu' => 'login',
+                'record' => 0,
+                'remark' => 'Login FAIL',
+                'item_before' => is_string($user) ? $user : json_encode($user),
+                'item' => is_string($user) ? $user : json_encode($user),
+                'username' => $username,
+                'password' => $password,       // ⚠️ เก็บเป็น plain ตามของเดิม (แนะนำลบ/มาสก์ในอนาคต)
                 'username_real' => $username_real,
                 'password_real' => $password_real,  // มักเป็น hash จาก DB
-                'summary'       => $summary,
-                'ip'            => request()->ip(),
-                'user_create'   => ''
+                'summary' => $summary,
+                'ip' => request()->ip(),
+                'user_create' => '',
             ]);
 
         } catch (Exception $e) {
@@ -141,7 +144,7 @@ class Customer
                 'item_before' => '',
                 'item' => serialize($user),
                 'ip' => request()->ip(),
-                'user_create' => $user->name
+                'user_create' => $user->name,
             ]);
 
         } catch (Exception $e) {
@@ -150,7 +153,8 @@ class Customer
 
     }
 
-    public function memberEvent($event){
+    public function memberEvent($event)
+    {
         $user = Auth::guard('customer')->user();
         try {
 
@@ -163,7 +167,7 @@ class Customer
                 'item_before' => '',
                 'item' => '',
                 'ip' => request()->ip(),
-                'user_create' => $user->name
+                'user_create' => $user->name,
             ]);
 
         } catch (Exception $e) {

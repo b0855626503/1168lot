@@ -8,9 +8,14 @@ use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 use Gametech\Lotto\Services\InternalResultSources\InternalResultService;
 use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
+use Illuminate\Support\Facades\Cache;
 
 class CentralLotteryResultService
 {
+    private const CACHE_TTL_PAST_DATE_SECONDS = 1800;
+
+    private const CACHE_TTL_CURRENT_DATE_SECONDS = 60;
+
     public function __construct(
         private InternalResultService $internalResultService,
         private LotteryRelayTypeRegistry $typeRegistry,
@@ -135,6 +140,12 @@ class CentralLotteryResultService
             ]]);
         }
 
+        $cacheKey = 'central_lottery_result:'.$canonicalType.':'.$date;
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
         $lookupDate = $this->resolveLookupDate($canonicalType, $date);
         $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $canonicalType, 'date' => $lookupDate], 15);
 
@@ -159,7 +170,21 @@ class CentralLotteryResultService
         // but clone selection always compares against the draw's business date.
         $decoded['date'] = $date;
 
+        Cache::put($cacheKey, $decoded, $this->resolveCacheTtl($date));
+
         return $decoded;
+    }
+
+    private function resolveCacheTtl(string $date): int
+    {
+        $parsed = CarbonImmutable::createFromFormat('Y-m-d', $date, 'Asia/Bangkok');
+        if ($parsed === false) {
+            return self::CACHE_TTL_CURRENT_DATE_SECONDS;
+        }
+
+        return $parsed->toDateString() < CarbonImmutable::now('Asia/Bangkok')->toDateString()
+            ? self::CACHE_TTL_PAST_DATE_SECONDS
+            : self::CACHE_TTL_CURRENT_DATE_SECONDS;
     }
 
     /**

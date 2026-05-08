@@ -4,6 +4,8 @@ namespace Tests\Feature\Lotto;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -160,6 +162,101 @@ class CentralLotteryResultEndpointTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['date']);
+    }
+
+    public function test_get_lottery_caches_successful_upstream_response(): void
+    {
+        Cache::flush();
+        config()->set('lottery_result_relay.upstream_get_lottery_url', 'http://upstream.test/get_lottery.php');
+
+        $callCount = 0;
+        Http::fake([
+            'http://upstream.test/get_lottery.php*' => function () use (&$callCount) {
+                $callCount++;
+
+                return Http::response([
+                    'type' => 'laosvip',
+                    'nameTH' => 'ลาว VIP',
+                    'date' => '2026-04-01',
+                    'page' => 1,
+                    'count' => 1,
+                    'results' => [['lottosNumber' => '11111', 'lottosUnder' => '11']],
+                ], 200);
+            },
+        ]);
+
+        // First call — hits upstream
+        $r1 = $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-04-01');
+        $r1->assertOk();
+        $this->assertSame(1, $callCount);
+
+        // Second call — served from cache, upstream NOT called again
+        $r2 = $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-04-01');
+        $r2->assertOk();
+        $this->assertSame(1, $callCount, 'Upstream should not be called again on cache hit');
+        $this->assertSame($r1->json(), $r2->json());
+    }
+
+    public function test_get_lottery_does_not_cache_upstream_errors(): void
+    {
+        Cache::flush();
+        config()->set('lottery_result_relay.upstream_get_lottery_url', 'http://upstream.test/get_lottery.php');
+
+        $callCount = 0;
+        Http::fake([
+            'http://upstream.test/get_lottery.php*' => function () use (&$callCount) {
+                $callCount++;
+
+                return Http::response('Internal Server Error', 500);
+            },
+        ]);
+
+        $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-04-01');
+        $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-04-01');
+
+        $this->assertSame(2, $callCount, 'Error responses must not be cached — upstream must be retried');
+    }
+
+    public function test_get_lottery_uses_long_ttl_for_past_dates_and_short_ttl_for_today(): void
+    {
+        Carbon::setTestNow('2026-05-08 12:00:00');
+
+        try {
+            Cache::flush();
+            config()->set('lottery_result_relay.upstream_get_lottery_url', 'http://upstream.test/get_lottery.php');
+
+            Http::fake([
+                'http://upstream.test/get_lottery.php*' => Http::response([
+                    'type' => 'laosvip',
+                    'nameTH' => 'ลาว VIP',
+                    'date' => '2026-05-07',
+                    'page' => 1,
+                    'count' => 1,
+                    'results' => [['lottosNumber' => '99999', 'lottosUnder' => '99']],
+                ], 200),
+            ]);
+
+            // Past date — cache should be set with 1800s TTL
+            $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-05-07');
+            $this->assertTrue(Cache::has('central_lottery_result:laosvip:2026-05-07'));
+
+            Http::fake([
+                'http://upstream.test/get_lottery.php*' => Http::response([
+                    'type' => 'laosvip',
+                    'nameTH' => 'ลาว VIP',
+                    'date' => '2026-05-08',
+                    'page' => 1,
+                    'count' => 1,
+                    'results' => [['lottosNumber' => '55555', 'lottosUnder' => '55']],
+                ], 200),
+            ]);
+
+            // Today — cache should be set with 60s TTL
+            $this->getLotteryJson('/api/v1/get_lottery?type=laosvip&date=2026-05-08');
+            $this->assertTrue(Cache::has('central_lottery_result:laosvip:2026-05-08'));
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_get_lottery_applies_lookup_date_offset_for_downjone_star(): void
