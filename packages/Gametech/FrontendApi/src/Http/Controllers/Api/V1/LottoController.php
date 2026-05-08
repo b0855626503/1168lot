@@ -13,6 +13,7 @@ use Gametech\Lotto\Models\LottoMarketBetSetting;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
 use Gametech\Lotto\Models\LottoTicket;
+use Gametech\Lotto\Models\YeekeeMarketSetting;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Models\YeekeeShoot;
 use Gametech\Lotto\Models\YeekeeShootRewardLog;
@@ -27,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
@@ -1267,9 +1269,9 @@ class LottoController extends BaseController
             $isRevealed = $this->isYeekeeResultRevealed($round, $draw);
             $sourceData = $this->resolvePublicYeekeeShootsSource($round);
             $summary = $this->buildPublicYeekeeShootSummary($sourceData['shoots'], $sourceData['shoot_source']);
-            $winningShoots = $sourceData['shoots']
-                ->whereIn('position', [1, 16])
-                ->keyBy(static fn (array $shoot): int => (int) ($shoot['position'] ?? 0));
+            $shootRewards = $this->buildPublicYeekeeShootRewards($round, $sourceData['shoots'], $isRevealed);
+            $winnersByPosition = collect($shootRewards['winners'])
+                ->keyBy(static fn (array $winner): int => (int) ($winner['position'] ?? 0));
 
             $publicProof = [
                 'formula_label' => (string) ($round->config_snapshot_json['formula_config']['preset'] ?? ''),
@@ -1292,9 +1294,10 @@ class LottoController extends BaseController
                 'status' => (string) $round->status,
                 'is_revealed' => $isRevealed,
                 'shoot_summary' => $summary,
+                'shoot_rewards' => $shootRewards,
                 'winning_shoots' => [
-                    'first' => $winningShoots->has(1) ? $this->mapPublicYeekeeShoot((array) $winningShoots->get(1), $isRevealed) : null,
-                    'sixteenth' => $winningShoots->has(16) ? $this->mapPublicYeekeeShoot((array) $winningShoots->get(16), $isRevealed) : null,
+                    'first' => $winnersByPosition->has(1) ? $this->mapLegacyYeekeeWinningShootAlias((array) $winnersByPosition->get(1)) : null,
+                    'sixteenth' => $winnersByPosition->has(16) ? $this->mapLegacyYeekeeWinningShootAlias((array) $winnersByPosition->get(16)) : null,
                 ],
                 'proof' => $publicProof,
                 'server_time' => now()->format('Y-m-d H:i:s'),
@@ -1321,7 +1324,17 @@ class LottoController extends BaseController
                 ->where('yeekee_round_id', $roundId)
                 ->where('member_id', (int) $member->code)
                 ->orderBy('position')
-                ->get(['position', 'credit_amount']);
+                ->get(['member_id', 'position', 'credit_amount']);
+
+            $namesByCode = $this->resolveYeekeeMemberNamesByCode(
+                $rewardLogs
+                    ->pluck('member_id')
+                    ->map(static fn ($memberId): int => (int) $memberId)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all()
+            );
 
             return $this->sendResponse([
                 'round_id' => (int) $round->id,
@@ -1329,10 +1342,14 @@ class LottoController extends BaseController
                 'reward_enabled' => true,
                 'reward_count' => $rewardLogs->count(),
                 'rewarded' => $rewardLogs->isNotEmpty(),
-                'items' => $rewardLogs->map(static function (YeekeeShootRewardLog $log): array {
+                'items' => $rewardLogs->map(function (YeekeeShootRewardLog $log) use ($namesByCode): array {
+                    $memberId = (int) ($log->member_id ?? 0);
+
                     return [
                         'position' => (int) $log->position,
                         'credit_amount' => (float) $log->credit_amount,
+                        'member_id' => $memberId,
+                        ...$this->maskedYeekeeMemberNamePayload((string) ($namesByCode[$memberId] ?? '')),
                     ];
                 })->values()->all(),
             ], 'ดึงสถานะรางวัลยิงเลขสำเร็จ');
@@ -2506,15 +2523,14 @@ class LottoController extends BaseController
             ->get(['member_id', 'position', 'number_text', 'number_value', 'submitted_at']);
 
         $memberIds = $rows->pluck('member_id')->map(static fn ($id): int => (int) $id)->filter()->values()->all();
-        $namesByCode = $memberIds === []
-            ? []
-            : DB::table('members')->whereIn('code', $memberIds)->pluck('user_name', 'code')->all();
+        $namesByCode = $this->resolveYeekeeMemberNamesByCode($memberIds);
 
         return [
             'shoot_source' => 'live',
             'shoots' => $rows->map(function (YeekeeShoot $shoot) use ($namesByCode): array {
                 $memberId = (int) ($shoot->member_id ?? 0);
                 $memberName = (string) ($namesByCode[$memberId] ?? '');
+                $maskedMemberName = $this->maskedYeekeeMemberNamePayload($memberName);
 
                 return [
                     'member_id' => $memberId,
@@ -2523,8 +2539,8 @@ class LottoController extends BaseController
                     'number_value' => (int) $shoot->number_value,
                     'submitted_at' => (string) $shoot->submitted_at,
                     'member_name' => $memberName,
-                    'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
-                    'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
+                    'member_name_prefix_masked' => $maskedMemberName['member_name_prefix_masked'],
+                    'member_name_masked' => $maskedMemberName['member_name_masked'],
                 ];
             })->values(),
         ];
@@ -2582,9 +2598,7 @@ class LottoController extends BaseController
             ->values()
             ->all();
 
-        $namesByCode = $missingNameMemberIds === []
-            ? []
-            : DB::table('members')->whereIn('code', $missingNameMemberIds)->pluck('user_name', 'code')->all();
+        $namesByCode = $this->resolveYeekeeMemberNamesByCode($missingNameMemberIds);
 
         return $shoots->map(function (array $shoot) use ($namesByCode): array {
             $memberId = (int) ($shoot['member_id'] ?? 0);
@@ -2592,17 +2606,277 @@ class LottoController extends BaseController
             if ($memberName === '' && $memberId > 0) {
                 $memberName = (string) ($namesByCode[$memberId] ?? '');
             }
+            $maskedMemberName = $this->maskedYeekeeMemberNamePayload($memberName);
 
             if (trim((string) ($shoot['member_name_prefix_masked'] ?? '')) === '') {
-                $shoot['member_name_prefix_masked'] = $this->maskYeekeeMemberNamePrefix($memberName);
+                $shoot['member_name_prefix_masked'] = $maskedMemberName['member_name_prefix_masked'];
             }
 
             if (trim((string) ($shoot['member_name_masked'] ?? '')) === '') {
-                $shoot['member_name_masked'] = $this->maskYeekeeMemberNameTail($memberName);
+                $shoot['member_name_masked'] = $maskedMemberName['member_name_masked'];
             }
 
             return $shoot;
         })->values();
+    }
+
+    /**
+     * @param  array<int,int>  $memberIds
+     * @return array<int,string>
+     */
+    private function resolveYeekeeMemberNamesByCode(array $memberIds): array
+    {
+        $normalizedMemberIds = collect($memberIds)
+            ->map(static fn ($memberId): int => (int) $memberId)
+            ->filter(static fn (int $memberId): bool => $memberId > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($normalizedMemberIds === []) {
+            return [];
+        }
+
+        return DB::table('members')
+            ->whereIn('code', $normalizedMemberIds)
+            ->pluck('user_name', 'code')
+            ->mapWithKeys(static fn ($userName, $code): array => [(int) $code => (string) $userName])
+            ->all();
+    }
+
+    /**
+     * @return array{member_name_prefix_masked:string,member_name_masked:string}
+     */
+    private function maskedYeekeeMemberNamePayload(?string $memberName): array
+    {
+        return [
+            'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
+            'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
+        ];
+    }
+
+    /**
+     * @param  Collection<int,array<string,mixed>>  $shoots
+     * @return array{policy:array<int,array<string,mixed>>,policy_meta:array<string,mixed>,winners:array<int,array<string,mixed>>}
+     */
+    private function buildPublicYeekeeShootRewards(YeekeeRound $round, Collection $shoots, bool $isRevealed): array
+    {
+        $policyData = $this->resolvePublicYeekeeRewardPolicy($round);
+        $shootsByPosition = $shoots->keyBy(static fn (array $shoot): int => (int) ($shoot['position'] ?? 0));
+        $policyByPosition = collect($policyData['reward_positions'])
+            ->keyBy(static fn (array $rewardPosition): int => (int) ($rewardPosition['position'] ?? 0));
+        $rewardLogs = YeekeeShootRewardLog::query()
+            ->where('yeekee_round_id', (int) $round->id)
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['member_id', 'position', 'credit_amount']);
+        $namesByCode = $this->resolveYeekeeMemberNamesByCode(
+            $rewardLogs
+                ->filter(static function (YeekeeShootRewardLog $log) use ($shootsByPosition): bool {
+                    $position = (int) ($log->position ?? 0);
+                    $memberId = (int) ($log->member_id ?? 0);
+                    $shoot = $shootsByPosition->has($position) ? (array) $shootsByPosition->get($position) : [];
+
+                    $isDifferentMember = (int) ($shoot['member_id'] ?? 0) !== $memberId;
+                    $isMissingMaskedName = trim((string) ($shoot['member_name_prefix_masked'] ?? '')) === ''
+                        && trim((string) ($shoot['member_name_masked'] ?? '')) === '';
+
+                    return $memberId > 0 && ($isDifferentMember || $isMissingMaskedName);
+                })
+                ->pluck('member_id')
+                ->map(static fn ($memberId): int => (int) $memberId)
+                ->unique()
+                ->values()
+                ->all()
+        );
+
+        $winners = $rewardLogs
+            ->map(function (YeekeeShootRewardLog $log) use ($policyByPosition, $shootsByPosition, $namesByCode, $isRevealed): ?array {
+                $position = (int) ($log->position ?? 0);
+                if ($position <= 0) {
+                    return null;
+                }
+
+                $policyRow = (array) $policyByPosition->get($position, []);
+                $memberId = (int) ($log->member_id ?? 0);
+                $shootRow = $shootsByPosition->has($position) ? (array) $shootsByPosition->get($position) : [];
+                $shoot = $shootRow !== []
+                    ? $this->mapPublicYeekeeShoot($shootRow, $isRevealed)
+                    : null;
+                $maskedMemberName = ((int) ($shootRow['member_id'] ?? 0) === $memberId)
+                    ? [
+                        'member_name_prefix_masked' => (string) ($shootRow['member_name_prefix_masked'] ?? ''),
+                        'member_name_masked' => (string) ($shootRow['member_name_masked'] ?? ''),
+                    ]
+                    : ['member_name_prefix_masked' => '', 'member_name_masked' => ''];
+
+                if ($maskedMemberName['member_name_prefix_masked'] === '' && $maskedMemberName['member_name_masked'] === '') {
+                    $maskedMemberName = $this->maskedYeekeeMemberNamePayload((string) ($namesByCode[$memberId] ?? ''));
+                }
+
+                return [
+                    'position' => $position,
+                    'label' => (string) ($policyRow['label'] ?? $this->yeekeeRewardPositionLabel($position)),
+                    'credit_amount' => (float) ($log->credit_amount ?? ($policyRow['credit_amount'] ?? 0)),
+                    'member_id' => $memberId,
+                    ...$maskedMemberName,
+                    'shoot' => $shoot === null ? null : [
+                        'number_text' => $shoot['number_text'],
+                        'number_text_masked' => $shoot['number_text_masked'],
+                        'number_text_revealed' => $shoot['number_text_revealed'],
+                        'is_number_revealed' => $shoot['is_number_revealed'],
+                        'submitted_at' => $shoot['submitted_at'],
+                    ],
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'policy' => $policyData['reward_positions'],
+            'policy_meta' => [
+                'source' => $policyData['source'],
+                'reward_enabled' => $policyData['reward_enabled'],
+                'min_bet_amount' => $policyData['min_bet_amount'],
+                'reward_scope' => $policyData['reward_scope'],
+                'max_rewards_per_member_per_round' => $policyData['max_rewards_per_member_per_round'],
+                'max_rewards_per_member_per_day' => $policyData['max_rewards_per_member_per_day'],
+                'currency' => $policyData['currency'],
+                'policy_hash' => $policyData['policy_hash'],
+            ],
+            'winners' => $winners,
+        ];
+    }
+
+    /**
+     * @param  array<string,mixed>  $winner
+     * @return array<string,mixed>
+     */
+    private function mapLegacyYeekeeWinningShootAlias(array $winner): array
+    {
+        $shoot = is_array($winner['shoot'] ?? null) ? $winner['shoot'] : [];
+
+        return [
+            'position' => (int) ($winner['position'] ?? 0),
+            'number_text' => (string) ($shoot['number_text'] ?? ''),
+            'number_text_masked' => (string) ($shoot['number_text_masked'] ?? ''),
+            'number_text_revealed' => $shoot['number_text_revealed'] ?? null,
+            'is_number_revealed' => (bool) ($shoot['is_number_revealed'] ?? false),
+            'member_name_prefix_masked' => (string) ($winner['member_name_prefix_masked'] ?? ''),
+            'member_name_masked' => (string) ($winner['member_name_masked'] ?? ''),
+            'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
+        ];
+    }
+
+    /**
+     * @return array{source:string,reward_enabled:bool,reward_positions:array<int,array{position:int,label:string,credit_amount:float}>,min_bet_amount:float,reward_scope:string,max_rewards_per_member_per_round:int,max_rewards_per_member_per_day:int,currency:string,policy_hash:string}
+     */
+    private function resolvePublicYeekeeRewardPolicy(YeekeeRound $round): array
+    {
+        $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
+        if (array_key_exists('reward_config', $snapshot) || array_key_exists('reward_enabled', $snapshot)) {
+            $policy = $this->normalizePublicYeekeeRewardPolicy(
+                is_array($snapshot['reward_config'] ?? null) ? $snapshot['reward_config'] : []
+            );
+            $policy['source'] = 'round_snapshot';
+            $policy['reward_enabled'] = array_key_exists('reward_enabled', $snapshot)
+                ? filter_var($snapshot['reward_enabled'], FILTER_VALIDATE_BOOLEAN)
+                : false;
+
+            return $policy;
+        }
+
+        if (! Schema::hasTable('yeekee_market_settings')) {
+            return $this->emptyPublicYeekeeRewardPolicy('default_disabled');
+        }
+
+        $setting = YeekeeMarketSetting::query()
+            ->where('market_id', (int) $round->market_id)
+            ->first();
+
+        if (! $setting instanceof YeekeeMarketSetting) {
+            return $this->emptyPublicYeekeeRewardPolicy('default_disabled');
+        }
+
+        $policy = $this->normalizePublicYeekeeRewardPolicy(
+            is_array($setting->reward_config) ? $setting->reward_config : []
+        );
+        $policy['source'] = 'market_setting';
+        $policy['reward_enabled'] = (bool) ($setting->reward_enabled ?? false);
+
+        return $policy;
+    }
+
+    /**
+     * @return array{source:string,reward_enabled:bool,reward_positions:array<int,array{position:int,label:string,credit_amount:float}>,min_bet_amount:float,reward_scope:string,max_rewards_per_member_per_round:int,max_rewards_per_member_per_day:int,currency:string,policy_hash:string}
+     */
+    private function emptyPublicYeekeeRewardPolicy(string $source): array
+    {
+        $policy = $this->normalizePublicYeekeeRewardPolicy([]);
+        $policy['source'] = $source;
+        $policy['reward_enabled'] = false;
+
+        return $policy;
+    }
+
+    /**
+     * @param  array<string,mixed>  $rewardConfig
+     * @return array{source:string,reward_enabled:bool,reward_positions:array<int,array{position:int,label:string,credit_amount:float}>,min_bet_amount:float,reward_scope:string,max_rewards_per_member_per_round:int,max_rewards_per_member_per_day:int,currency:string,policy_hash:string}
+     */
+    private function normalizePublicYeekeeRewardPolicy(array $rewardConfig): array
+    {
+        $rewardPositions = [];
+        foreach ((array) ($rewardConfig['reward_positions'] ?? []) as $positionConfig) {
+            if (! is_array($positionConfig)) {
+                continue;
+            }
+
+            $position = (int) ($positionConfig['position'] ?? 0);
+            $creditAmount = round((float) ($positionConfig['credit_amount'] ?? 0), 2);
+            if ($position <= 0 || $creditAmount <= 0) {
+                continue;
+            }
+
+            $rewardPositions[] = [
+                'position' => $position,
+                'label' => $this->yeekeeRewardPositionLabel($position),
+                'credit_amount' => $creditAmount,
+            ];
+        }
+
+        $rewardScope = strtolower(trim((string) ($rewardConfig['reward_scope'] ?? 'per_round')));
+        if (! in_array($rewardScope, ['per_round', 'per_market_per_day', 'global_per_day'], true)) {
+            $rewardScope = 'per_round';
+        }
+
+        $policy = [
+            'source' => '',
+            'reward_enabled' => false,
+            'reward_positions' => $rewardPositions,
+            'min_bet_amount' => max(0.0, round((float) ($rewardConfig['min_bet_amount'] ?? 0), 2)),
+            'reward_scope' => $rewardScope,
+            'max_rewards_per_member_per_round' => max(1, (int) ($rewardConfig['max_rewards_per_member_per_round'] ?? 1)),
+            'max_rewards_per_member_per_day' => max(0, (int) ($rewardConfig['max_rewards_per_member_per_day'] ?? 0)),
+            'currency' => strtoupper(trim((string) ($rewardConfig['currency'] ?? 'THB'))) ?: 'THB',
+        ];
+        $hashPolicy = $policy;
+        unset($hashPolicy['source'], $hashPolicy['reward_enabled']);
+        $hashPolicy['reward_positions'] = collect($hashPolicy['reward_positions'])
+            ->map(static fn (array $rewardPosition): array => [
+                'position' => (int) ($rewardPosition['position'] ?? 0),
+                'credit_amount' => (float) ($rewardPosition['credit_amount'] ?? 0),
+            ])
+            ->values()
+            ->all();
+        $policy['policy_hash'] = hash('sha256', json_encode($hashPolicy, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+
+        return $policy;
+    }
+
+    private function yeekeeRewardPositionLabel(int $position): string
+    {
+        return 'รางวัลยิงเลขลำดับที่ '.$position;
     }
 
     /**
