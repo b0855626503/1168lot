@@ -2488,7 +2488,7 @@ class LottoController extends BaseController
 
                 return [
                     'shoot_source' => 'snapshot',
-                    'shoots' => $this->withFallbackYeekeeMemberNames($rows),
+                    'shoots' => $this->withFallbackYeekeeMemberNames($rows, (int) $round->id),
                 ];
             }
         }
@@ -2534,8 +2534,41 @@ class LottoController extends BaseController
      * @param  Collection<int,array<string,mixed>>  $shoots
      * @return Collection<int,array<string,mixed>>
      */
-    private function withFallbackYeekeeMemberNames(Collection $shoots): Collection
+    private function withFallbackYeekeeMemberNames(Collection $shoots, int $roundId): Collection
     {
+        $missingMemberIdPositions = $shoots
+            ->filter(static function (array $shoot): bool {
+                return (int) ($shoot['member_id'] ?? 0) <= 0
+                    && (int) ($shoot['position'] ?? 0) > 0
+                    && trim((string) ($shoot['member_name_prefix_masked'] ?? '')) === ''
+                    && trim((string) ($shoot['member_name_masked'] ?? '')) === ''
+                    && trim((string) ($shoot['member_name'] ?? '')) === '';
+            })
+            ->pluck('position')
+            ->map(static fn ($position): int => (int) $position)
+            ->unique()
+            ->values()
+            ->all();
+
+        $memberIdsByPosition = $missingMemberIdPositions === []
+            ? []
+            : YeekeeShoot::query()
+                ->where('yeekee_round_id', $roundId)
+                ->whereIn('position', $missingMemberIdPositions)
+                ->pluck('member_id', 'position')
+                ->all();
+
+        if ($memberIdsByPosition !== []) {
+            $shoots = $shoots->map(static function (array $shoot) use ($memberIdsByPosition): array {
+                $position = (int) ($shoot['position'] ?? 0);
+                if ((int) ($shoot['member_id'] ?? 0) <= 0 && $position > 0) {
+                    $shoot['member_id'] = (int) ($memberIdsByPosition[$position] ?? 0);
+                }
+
+                return $shoot;
+            })->values();
+        }
+
         $missingNameMemberIds = $shoots
             ->filter(static function (array $shoot): bool {
                 return (int) ($shoot['member_id'] ?? 0) > 0

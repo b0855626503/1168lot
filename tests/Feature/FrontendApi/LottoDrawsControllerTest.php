@@ -1123,12 +1123,39 @@ class LottoDrawsControllerTest extends TestCase
             'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
             'status' => 'resulted',
             'shoot_snapshot_json' => json_encode(['shoots' => [
-                ['member_id' => 2001, 'position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
-                ['member_id' => 2002, 'position' => 2, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['position' => 2, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
             ]]),
             'shoot_snapshot_hash' => 'snap-725',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_shoots')->insert([
+            [
+                'yeekee_round_id' => 725,
+                'lotto_draw_id' => 325,
+                'market_id' => 9,
+                'member_id' => 2001,
+                'position' => 1,
+                'number_text' => '99999',
+                'number_value' => 99999,
+                'submitted_at' => now()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'yeekee_round_id' => 725,
+                'lotto_draw_id' => 325,
+                'market_id' => 9,
+                'member_id' => 2002,
+                'position' => 2,
+                'number_text' => '88888',
+                'number_value' => 88888,
+                'submitted_at' => now()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         $request = Request::create('/api/v1/lotto/yeekee/rounds/725/shoots', 'GET');
@@ -1140,6 +1167,8 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.1.member_name_prefix_masked', 'boa');
         $response->assertJsonPath('data.items.1.member_name_masked', 'boa***');
         $response->assertJsonMissingPath('data.items.1.member_id');
+        $this->assertStringNotContainsString('99999', $response->getContent());
+        $this->assertStringNotContainsString('88888', $response->getContent());
         $this->assertStringNotContainsString('boa777', $response->getContent());
         $this->assertStringNotContainsString('cat888', $response->getContent());
     }
@@ -1279,12 +1308,39 @@ class LottoDrawsControllerTest extends TestCase
             'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
             'status' => 'shoot_open',
             'shoot_snapshot_json' => json_encode(['shoots' => [
-                ['member_id' => 3001, 'position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
-                ['member_id' => 3016, 'position' => 16, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['position' => 16, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
             ]]),
             'shoot_snapshot_hash' => 'snap-723',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        DB::table('yeekee_shoots')->insert([
+            [
+                'yeekee_round_id' => 723,
+                'lotto_draw_id' => 323,
+                'market_id' => 9,
+                'member_id' => 3001,
+                'position' => 1,
+                'number_text' => '99999',
+                'number_value' => 99999,
+                'submitted_at' => now()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'yeekee_round_id' => 723,
+                'lotto_draw_id' => 323,
+                'market_id' => 9,
+                'member_id' => 3016,
+                'position' => 16,
+                'number_text' => '88888',
+                'number_value' => 88888,
+                'submitted_at' => now()->format('Y-m-d H:i:s'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         $request = Request::create('/api/v1/lotto/yeekee/rounds/723/result-proof', 'GET');
@@ -1310,6 +1366,8 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonMissingPath('data.winning_shoots.first.user_agent');
         $this->assertStringNotContainsString('12345', $response->getContent());
         $this->assertStringNotContainsString('54321', $response->getContent());
+        $this->assertStringNotContainsString('99999', $response->getContent());
+        $this->assertStringNotContainsString('88888', $response->getContent());
         $this->assertStringNotContainsString('boa999', $response->getContent());
         $this->assertStringNotContainsString('winner888', $response->getContent());
 
