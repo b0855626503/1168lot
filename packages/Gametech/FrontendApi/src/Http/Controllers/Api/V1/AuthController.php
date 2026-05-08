@@ -151,11 +151,25 @@ class AuthController extends BaseController
             ->__toString();
         $password = (string) $request->input('password');
 
-        $member = app('Gametech\Member\Repositories\MemberRepository')
-            ->findOneByField('user_name', $username);
+        $member = MemberProxy::query()
+            ->without('bank')
+            ->where('user_name', $username)
+            ->first([
+                'code',
+                'bank_code',
+                'user_name',
+                'name',
+                'confirm',
+                'enable',
+                'password',
+                'user_pass',
+            ]);
 
         if (! $member) {
-            Event::dispatch('customer.login.fail', $username.'|'.$password);
+            Event::dispatch('customer.login.fail', [
+                'username' => $username,
+                'summary' => 'USER NOT FOUND',
+            ]);
 
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }
@@ -175,7 +189,10 @@ class AuthController extends BaseController
         }
 
         if (! $validPassword) {
-            Event::dispatch('customer.login.fail', $username.'|'.$password);
+            Event::dispatch('customer.login.fail', [
+                'username' => $username,
+                'summary' => 'PASSWORD NOT MATCH',
+            ]);
 
             return $this->sendError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 401);
         }

@@ -519,6 +519,136 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.groups.0.markets.0.latest_draw.round_status', 'shoot_open');
     }
 
+    public function test_markets_latest_batch_fetches_yeekee_rounds_for_multiple_markets(): void
+    {
+        DB::table('lotto_groups')->insert([
+            'id' => 1,
+            'name' => 'Yeekee Group',
+            'code' => 'yeekee',
+            'is_enabled' => 1,
+            'sort' => 1,
+        ]);
+
+        DB::table('lotto_markets')->insert([
+            [
+                'id' => 10,
+                'group_id' => 1,
+                'name' => 'Yeekee A',
+                'code' => 'yeekee-a',
+                'is_enabled' => 1,
+                'result_mode' => 'yeekee',
+            ],
+            [
+                'id' => 11,
+                'group_id' => 1,
+                'name' => 'Yeekee B',
+                'code' => 'yeekee-b',
+                'is_enabled' => 1,
+                'result_mode' => 'yeekee',
+            ],
+            [
+                'id' => 12,
+                'group_id' => 1,
+                'name' => 'Normal C',
+                'code' => 'normal-c',
+                'is_enabled' => 1,
+                'result_mode' => 'normal',
+            ],
+        ]);
+
+        DB::table('lotto_draws')->insert([
+            [
+                'id' => 201,
+                'market_id' => 10,
+                'draw_date' => '2026-05-08',
+                'open_at' => '2026-05-08 10:00:00',
+                'close_at' => '2026-05-08 10:15:00',
+                'status' => 'closed',
+                'result_number' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 202,
+                'market_id' => 11,
+                'draw_date' => '2026-05-08',
+                'open_at' => '2026-05-08 10:00:00',
+                'close_at' => '2026-05-08 10:15:00',
+                'status' => 'open',
+                'result_number' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 203,
+                'market_id' => 12,
+                'draw_date' => '2026-05-08',
+                'open_at' => '2026-05-08 09:00:00',
+                'close_at' => '2026-05-08 15:00:00',
+                'status' => 'open',
+                'result_number' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        DB::table('yeekee_rounds')->insert([
+            [
+                'id' => 601,
+                'market_id' => 10,
+                'lotto_draw_id' => 201,
+                'round_date' => '2026-05-08',
+                'round_no' => 10,
+                'bet_open_at' => '2026-05-08 10:00:00',
+                'bet_close_at' => '2026-05-08 10:15:00',
+                'shoot_open_at' => '2026-05-08 10:15:00',
+                'shoot_close_at' => '2026-05-08 10:16:00',
+                'result_compute_at' => '2026-05-08 10:17:00',
+                'expected_settlement_deadline_at' => '2026-05-08 10:22:00',
+                'status' => 'shoot_open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 602,
+                'market_id' => 11,
+                'lotto_draw_id' => 202,
+                'round_date' => '2026-05-08',
+                'round_no' => 11,
+                'bet_open_at' => '2026-05-08 10:00:00',
+                'bet_close_at' => '2026-05-08 10:15:00',
+                'shoot_open_at' => '2026-05-08 10:15:00',
+                'shoot_close_at' => '2026-05-08 10:16:00',
+                'result_compute_at' => '2026-05-08 10:17:00',
+                'expected_settlement_deadline_at' => '2026-05-08 10:22:00',
+                'status' => 'bet_open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $request = Request::create('/api/v1/lotto/markets/latest', 'GET');
+        $request->attributes->set('frontend_language', 'th');
+
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->marketsLatestByGroup($request));
+
+        $response->assertOk();
+
+        $markets = collect($response->json('data.groups.0.markets'))->keyBy('market_id');
+
+        // Yeekee A: round_no=10, shoot_open
+        $this->assertSame(10, $markets->get(10)['latest_draw']['round_no']);
+        $this->assertSame('shoot_open', $markets->get(10)['latest_draw']['round_status']);
+
+        // Yeekee B: round_no=11, bet_open
+        $this->assertSame(11, $markets->get(11)['latest_draw']['round_no']);
+        $this->assertSame('bet_open', $markets->get(11)['latest_draw']['round_status']);
+
+        // Normal C: no yeekee round
+        $this->assertNull($markets->get(12)['latest_draw']['round_no']);
+        $this->assertNull($markets->get(12)['latest_draw']['round_status']);
+    }
+
     public function test_yeekee_current_round_and_proof_visibility_follow_reveal_timing(): void
     {
         $member = new Member;
@@ -960,10 +1090,58 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.0.number_text', '55555');
         $response->assertJsonPath('data.items.0.number_text_masked', '555**');
         $response->assertJsonPath('data.items.0.number_text_revealed', '55555');
-        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'bo*****');
-        $response->assertJsonPath('data.items.0.member_name_masked', '**at123');
+        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'boa');
+        $response->assertJsonPath('data.items.0.member_name_masked', 'boa***');
         $response->assertJsonMissingPath('data.items.0.member_id');
         $response->assertJsonMissingPath('data.items.0.ip_address');
+    }
+
+    public function test_yeekee_shoots_old_snapshot_falls_back_to_masked_member_username(): void
+    {
+        $member = new Member;
+        $member->code = 7788;
+
+        DB::table('members')->insert([
+            ['code' => 2001, 'user_name' => 'boa777'],
+            ['code' => 2002, 'user_name' => 'cat888'],
+        ]);
+        DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
+        DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
+        DB::table('lotto_draws')->insert(['id' => 325, 'market_id' => 9, 'draw_date' => '2026-04-29', 'status' => 'resulted', 'created_at' => now(), 'updated_at' => now()]);
+
+        DB::table('yeekee_rounds')->insert([
+            'id' => 725,
+            'market_id' => 9,
+            'lotto_draw_id' => 325,
+            'round_date' => '2026-04-29',
+            'round_no' => 25,
+            'bet_open_at' => '2026-04-29 10:00:00',
+            'bet_close_at' => '2026-04-29 10:15:00',
+            'shoot_open_at' => '2026-04-29 10:15:00',
+            'shoot_close_at' => '2026-04-29 10:16:00',
+            'result_compute_at' => '2026-04-29 10:17:00',
+            'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
+            'status' => 'resulted',
+            'shoot_snapshot_json' => json_encode(['shoots' => [
+                ['member_id' => 2001, 'position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['member_id' => 2002, 'position' => 2, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+            ]]),
+            'shoot_snapshot_hash' => 'snap-725',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/yeekee/rounds/725/shoots', 'GET');
+        $request->setUserResolver(static fn (?string $guard = null) => $guard === 'customer' ? $member : null);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->yeekeeShoots($request, 725));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.shoot_source', 'snapshot');
+        $response->assertJsonPath('data.items.1.member_name_prefix_masked', 'boa');
+        $response->assertJsonPath('data.items.1.member_name_masked', 'boa***');
+        $response->assertJsonMissingPath('data.items.1.member_id');
+        $this->assertStringNotContainsString('boa777', $response->getContent());
+        $this->assertStringNotContainsString('cat888', $response->getContent());
     }
 
     public function test_yeekee_shoots_snapshot_source_remains_stable_when_live_changes(): void
@@ -1071,6 +1249,10 @@ class LottoDrawsControllerTest extends TestCase
 
     public function test_yeekee_result_proof_contains_shoot_summary_and_winners_without_full_list(): void
     {
+        DB::table('members')->insert([
+            ['code' => 3001, 'user_name' => 'boa999'],
+            ['code' => 3016, 'user_name' => 'winner888'],
+        ]);
         DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
         DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
         DB::table('lotto_draws')->insert([
@@ -1097,8 +1279,8 @@ class LottoDrawsControllerTest extends TestCase
             'expected_settlement_deadline_at' => '2026-04-29 10:22:00',
             'status' => 'shoot_open',
             'shoot_snapshot_json' => json_encode(['shoots' => [
-                ['position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
-                ['position' => 16, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['member_id' => 3001, 'position' => 1, 'number_text' => '12345', 'number_value' => 12345, 'submitted_at' => now()->format('Y-m-d H:i:s')],
+                ['member_id' => 3016, 'position' => 16, 'number_text' => '54321', 'number_value' => 54321, 'submitted_at' => now()->format('Y-m-d H:i:s')],
             ]]),
             'shoot_snapshot_hash' => 'snap-723',
             'created_at' => now(),
@@ -1114,6 +1296,10 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.winning_shoots.first.number_text', '123**');
         $response->assertJsonPath('data.winning_shoots.first.number_text_revealed', null);
         $response->assertJsonPath('data.winning_shoots.first.is_number_revealed', false);
+        $response->assertJsonPath('data.winning_shoots.first.member_name_prefix_masked', 'boa');
+        $response->assertJsonPath('data.winning_shoots.first.member_name_masked', 'boa***');
+        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_prefix_masked', 'win');
+        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_masked', 'win***');
         $response->assertJsonPath('data.proof.result_payload', null);
         $response->assertJsonMissingPath('data.proof.result_payload.shoot_sum');
         $response->assertJsonMissingPath('data.proof.result_payload.shoot_count');
@@ -1124,6 +1310,8 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonMissingPath('data.winning_shoots.first.user_agent');
         $this->assertStringNotContainsString('12345', $response->getContent());
         $this->assertStringNotContainsString('54321', $response->getContent());
+        $this->assertStringNotContainsString('boa999', $response->getContent());
+        $this->assertStringNotContainsString('winner888', $response->getContent());
 
         DB::table('lotto_draws')->where('id', 323)->update(['status' => 'resulted']);
         DB::table('yeekee_rounds')->where('id', 723)->update(['status' => 'resulted']);

@@ -122,12 +122,18 @@ class LottoController extends BaseController
                 ->get(['id', 'market_id', 'draw_date', 'open_at', 'close_at', 'result_at', 'status', 'result_number'])
                 ->keyBy(static fn (LottoDraw $draw): int => (int) $draw->market_id);
 
+            $allDrawIds = $latestDrawMap->map(static fn (LottoDraw $d): int => (int) $d->id)->values()->all();
+            $yeekeeRoundByDrawId = YeekeeRound::query()
+                ->whereIn('lotto_draw_id', $allDrawIds)
+                ->get()
+                ->keyBy(static fn (YeekeeRound $r): int => (int) $r->lotto_draw_id);
+
             $marketRowsByGroup = $markets
                 ->groupBy(static fn (LotteryMarket $market): int => (int) $market->group_id);
 
             $now = Carbon::now();
 
-            $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $language, $now): array {
+            $rows = $groups->map(function (LotteryGroup $group) use ($marketRowsByGroup, $latestDrawMap, $yeekeeRoundByDrawId, $language, $now): array {
                 $groupMarkets = $marketRowsByGroup->get((int) $group->id, collect());
                 $groupDescription = $this->localizedDescriptionByLanguage((string) ($group->description ?? ''), $language);
 
@@ -145,12 +151,12 @@ class LottoController extends BaseController
                     'group_icon' => (string) ($group->icon ?? ''),
                     'group_image' => (string) (($group->logo ?: $group->icon) ?? ''),
                     'markets' => $groupMarkets
-                        ->map(function (LotteryMarket $market) use ($latestDrawMap, $language): array {
+                        ->map(function (LotteryMarket $market) use ($latestDrawMap, $yeekeeRoundByDrawId, $language): array {
                             $draw = $latestDrawMap->get((int) $market->id);
                             $resultNumber = is_array($draw?->result_number) ? $draw->result_number : [];
                             $status = $draw ? $this->latestDrawStatus($draw) : 'draft';
                             $resultMode = $this->marketResultMode($market);
-                            $yeekeeRound = $this->resolveYeekeeRoundForDraw((int) $market->id, $draw ? (int) $draw->id : 0);
+                            $yeekeeRound = $draw ? $yeekeeRoundByDrawId->get((int) $draw->id) : null;
 
                             return [
                                 'market_id' => (int) $market->id,
@@ -237,16 +243,23 @@ class LottoController extends BaseController
                 ->values()
                 ->all();
 
-            $rows = LottoDraw::query()
+            $draws = LottoDraw::query()
                 ->with('market:id,name,result_mode')
                 ->whereIn('id', $latestDrawIds)
                 ->orderByDesc('draw_date')
                 ->orderByDesc('id')
                 ->limit($limit)
+                ->get();
+
+            $drawsYeekeeRoundByDrawId = YeekeeRound::query()
+                ->whereIn('lotto_draw_id', $draws->pluck('id')->all())
                 ->get()
-                ->map(function (LottoDraw $draw): array {
+                ->keyBy(static fn (YeekeeRound $r): int => (int) $r->lotto_draw_id);
+
+            $rows = $draws
+                ->map(function (LottoDraw $draw) use ($drawsYeekeeRoundByDrawId): array {
                     $resultMode = $this->marketResultMode($draw->market);
-                    $yeekeeRound = $this->resolveYeekeeRoundForDraw((int) $draw->market_id, (int) $draw->id);
+                    $yeekeeRound = $drawsYeekeeRoundByDrawId->get((int) $draw->id);
 
                     return [
                         'id' => (int) $draw->id,
@@ -2461,18 +2474,21 @@ class LottoController extends BaseController
                     ->filter(static fn ($row): bool => is_array($row))
                     ->map(static function (array $shoot): array {
                         return [
+                            'member_id' => (int) ($shoot['member_id'] ?? 0),
                             'position' => (int) ($shoot['position'] ?? 0),
                             'number_text' => (string) ($shoot['number_text'] ?? ''),
                             'number_value' => (int) ($shoot['number_value'] ?? 0),
                             'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
                             'member_name' => (string) ($shoot['member_name'] ?? ''),
+                            'member_name_prefix_masked' => (string) ($shoot['member_name_prefix_masked'] ?? ''),
+                            'member_name_masked' => (string) ($shoot['member_name_masked'] ?? ''),
                         ];
                     })
                     ->values();
 
                 return [
                     'shoot_source' => 'snapshot',
-                    'shoots' => $rows,
+                    'shoots' => $this->withFallbackYeekeeMemberNames($rows),
                 ];
             }
         }
@@ -2496,18 +2512,64 @@ class LottoController extends BaseController
 
         return [
             'shoot_source' => 'live',
-            'shoots' => $rows->map(static function (YeekeeShoot $shoot) use ($namesByCode): array {
+            'shoots' => $rows->map(function (YeekeeShoot $shoot) use ($namesByCode): array {
                 $memberId = (int) ($shoot->member_id ?? 0);
+                $memberName = (string) ($namesByCode[$memberId] ?? '');
 
                 return [
+                    'member_id' => $memberId,
                     'position' => (int) $shoot->position,
                     'number_text' => (string) $shoot->number_text,
                     'number_value' => (int) $shoot->number_value,
                     'submitted_at' => (string) $shoot->submitted_at,
-                    'member_name' => (string) ($namesByCode[$memberId] ?? ''),
+                    'member_name' => $memberName,
+                    'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
+                    'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
                 ];
             })->values(),
         ];
+    }
+
+    /**
+     * @param  Collection<int,array<string,mixed>>  $shoots
+     * @return Collection<int,array<string,mixed>>
+     */
+    private function withFallbackYeekeeMemberNames(Collection $shoots): Collection
+    {
+        $missingNameMemberIds = $shoots
+            ->filter(static function (array $shoot): bool {
+                return (int) ($shoot['member_id'] ?? 0) > 0
+                    && trim((string) ($shoot['member_name_prefix_masked'] ?? '')) === ''
+                    && trim((string) ($shoot['member_name_masked'] ?? '')) === ''
+                    && trim((string) ($shoot['member_name'] ?? '')) === '';
+            })
+            ->pluck('member_id')
+            ->map(static fn ($memberId): int => (int) $memberId)
+            ->unique()
+            ->values()
+            ->all();
+
+        $namesByCode = $missingNameMemberIds === []
+            ? []
+            : DB::table('members')->whereIn('code', $missingNameMemberIds)->pluck('user_name', 'code')->all();
+
+        return $shoots->map(function (array $shoot) use ($namesByCode): array {
+            $memberId = (int) ($shoot['member_id'] ?? 0);
+            $memberName = trim((string) ($shoot['member_name'] ?? ''));
+            if ($memberName === '' && $memberId > 0) {
+                $memberName = (string) ($namesByCode[$memberId] ?? '');
+            }
+
+            if (trim((string) ($shoot['member_name_prefix_masked'] ?? '')) === '') {
+                $shoot['member_name_prefix_masked'] = $this->maskYeekeeMemberNamePrefix($memberName);
+            }
+
+            if (trim((string) ($shoot['member_name_masked'] ?? '')) === '') {
+                $shoot['member_name_masked'] = $this->maskYeekeeMemberNameTail($memberName);
+            }
+
+            return $shoot;
+        })->values();
     }
 
     /**
@@ -2542,6 +2604,8 @@ class LottoController extends BaseController
         $isValidFullNumber = preg_match('/^\d{5}$/', $fullNumber) === 1;
         $maskedNumber = self::maskYeekeeNumberText($fullNumber);
         $memberName = (string) ($shoot['member_name'] ?? '');
+        $memberNamePrefixMasked = trim((string) ($shoot['member_name_prefix_masked'] ?? ''));
+        $memberNameMasked = trim((string) ($shoot['member_name_masked'] ?? ''));
 
         return [
             'position' => (int) ($shoot['position'] ?? 0),
@@ -2549,8 +2613,8 @@ class LottoController extends BaseController
             'number_text_masked' => $maskedNumber,
             'number_text_revealed' => ($isRevealed && $isValidFullNumber) ? $fullNumber : null,
             'is_number_revealed' => $isRevealed && $isValidFullNumber,
-            'member_name_prefix_masked' => $this->maskYeekeeMemberNamePrefix($memberName),
-            'member_name_masked' => $this->maskYeekeeMemberNameTail($memberName),
+            'member_name_prefix_masked' => $memberNamePrefixMasked !== '' ? $memberNamePrefixMasked : $this->maskYeekeeMemberNamePrefix($memberName),
+            'member_name_masked' => $memberNameMasked !== '' ? $memberNameMasked : $this->maskYeekeeMemberNameTail($memberName),
             'submitted_at' => (string) ($shoot['submitted_at'] ?? ''),
         ];
     }
@@ -2566,10 +2630,10 @@ class LottoController extends BaseController
             return '*';
         }
         if ($length === 2) {
-            return $value;
+            return mb_substr($value, 0, 1).'*';
         }
 
-        return mb_substr($value, 0, 2).str_repeat('*', $length - 2);
+        return mb_substr($value, 0, 3);
     }
 
     private function maskYeekeeMemberNameTail(?string $name): string
@@ -2583,10 +2647,10 @@ class LottoController extends BaseController
             return '*';
         }
         if ($length === 2) {
-            return '**';
+            return mb_substr($value, 0, 1).'*';
         }
 
-        return '**'.mb_substr($value, 2);
+        return mb_substr($value, 0, 3).'***';
     }
 
     /**

@@ -10,6 +10,7 @@ use Gametech\Lotto\Services\Yeekee\Seed\ExternalSeedResolverService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class YeekeeResultEngineService
@@ -226,14 +227,30 @@ class YeekeeResultEngineService
             ->where('yeekee_round_id', (int) $round->id)
             ->orderBy('position')
             ->orderBy('id')
-            ->get(['id', 'position', 'number_text', 'number_value', 'submitted_at'])
-            ->map(static function (YeekeeShoot $row): array {
+            ->get(['id', 'member_id', 'position', 'number_text', 'number_value', 'submitted_at']);
+        $memberIds = $shootsSnapshot
+            ->pluck('member_id')
+            ->map(static fn ($memberId): int => (int) $memberId)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $namesByCode = $this->resolveMemberUserNames($memberIds);
+
+        $shootsSnapshot = $shootsSnapshot
+            ->map(function (YeekeeShoot $row) use ($namesByCode): array {
+                $memberId = (int) $row->member_id;
+                $memberName = (string) ($namesByCode[$memberId] ?? '');
+
                 return [
                     'id' => (int) $row->id,
+                    'member_id' => $memberId,
                     'position' => (int) $row->position,
                     'number_text' => (string) $row->number_text,
                     'number_value' => (int) $row->number_value,
                     'submitted_at' => (string) $row->submitted_at,
+                    'member_name_prefix_masked' => $this->maskMemberNamePrefix($memberName),
+                    'member_name_masked' => $this->maskMemberName($memberName),
                 ];
             })
             ->values()
@@ -293,10 +310,13 @@ class YeekeeResultEngineService
             ->map(static function (array $row): array {
                 return [
                     'id' => (int) ($row['id'] ?? 0),
+                    'member_id' => (int) ($row['member_id'] ?? 0),
                     'position' => (int) ($row['position'] ?? 0),
                     'number_text' => (string) ($row['number_text'] ?? ''),
                     'number_value' => (int) ($row['number_value'] ?? 0),
                     'submitted_at' => (string) ($row['submitted_at'] ?? ''),
+                    'member_name_prefix_masked' => (string) ($row['member_name_prefix_masked'] ?? ''),
+                    'member_name_masked' => (string) ($row['member_name_masked'] ?? ''),
                 ];
             })
             ->values()
@@ -318,5 +338,55 @@ class YeekeeResultEngineService
             'last_shoot_position' => (int) ($snapshot['last_shoot_position'] ?? $metadataSource['last_shoot_position'] ?? ($shoots[count($shoots) - 1]['position'] ?? 0)),
             'shoots' => $shoots,
         ];
+    }
+
+    /**
+     * @param  array<int>  $memberIds
+     * @return array<int,string>
+     */
+    private function resolveMemberUserNames(array $memberIds): array
+    {
+        if ($memberIds === [] || ! Schema::hasTable('members') || ! Schema::hasColumn('members', 'code')) {
+            return [];
+        }
+
+        return DB::table('members')
+            ->whereIn('code', $memberIds)
+            ->pluck('user_name', 'code')
+            ->all();
+    }
+
+    private function maskMemberNamePrefix(?string $name): string
+    {
+        $value = trim((string) ($name ?? ''));
+        $length = mb_strlen($value);
+        if ($length <= 0) {
+            return '';
+        }
+        if ($length === 1) {
+            return '*';
+        }
+        if ($length === 2) {
+            return mb_substr($value, 0, 1).'*';
+        }
+
+        return mb_substr($value, 0, 3);
+    }
+
+    private function maskMemberName(?string $name): string
+    {
+        $value = trim((string) ($name ?? ''));
+        $length = mb_strlen($value);
+        if ($length <= 0) {
+            return '';
+        }
+        if ($length === 1) {
+            return '*';
+        }
+        if ($length === 2) {
+            return mb_substr($value, 0, 1).'*';
+        }
+
+        return mb_substr($value, 0, 3).'***';
     }
 }
