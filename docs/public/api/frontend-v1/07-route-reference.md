@@ -1800,8 +1800,8 @@ GET /api/v1/reward/history?page=1&per_page=20
 
 <a id="get-apiv1lottoyeekeeroundsroundidreward-status"></a>
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status`
-- คำอธิบาย: ดึงสถานะว่ารอบนี้สมาชิกได้รับรางวัลยิงเลขหรือไม่
-- ใช้เมื่อ: หน้า profile/round status ต้องแสดงสิทธิ์รางวัลยิงเลขของสมาชิก
+- คำอธิบาย: ดึงสถานะว่ารอบนี้สมาชิกที่ login อยู่ได้รับรางวัลยิงเลขหรือไม่
+- ใช้เมื่อ: หน้า profile/round status ต้องแสดงสิทธิ์รางวัลยิงเลขของสมาชิกปัจจุบันเท่านั้น ไม่ใช่ endpoint ประกาศผู้ชนะทั้งรอบ
 - Auth: ต้องใช้ token
 - Path params:
   - `roundId` = id ของรอบยี่กี่
@@ -1819,7 +1819,10 @@ GET /api/v1/reward/history?page=1&per_page=20
     "items": [
       {
         "position": 88,
-        "credit_amount": 20
+        "credit_amount": 20,
+        "member_id": 61240,
+        "member_name_prefix_masked": "085*******",
+        "member_name_masked": "*******503"
       }
     ]
   }
@@ -1828,8 +1831,8 @@ GET /api/v1/reward/history?page=1&per_page=20
 
 <a id="get-apiv1lottoyeekeeroundsroundidresult-proof"></a>
 ### `GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof`
-- คำอธิบาย: ดึงข้อมูล proof สำหรับตรวจสอบความโปร่งใสของผลยี่กี่
-- ใช้เมื่อ: หน้า result/proof ต้องแสดงหลักฐานก่อนหรือหลัง reveal
+- คำอธิบาย: ดึงข้อมูลประกาศผล/หลักฐานผลยี่กี่หลังออกผล พร้อมข้อมูลรางวัลยิงเลขระดับรอบ
+- ใช้เมื่อ: หน้า result/proof ต้องแสดงหลักฐานผล, วิธีคำนวณ, summary, reward policy และ winner rows แบบ public round-level
 - Auth: ต้องใช้ token
 - Path params:
   - `roundId` = id ของรอบยี่กี่
@@ -1843,6 +1846,31 @@ GET /api/v1/reward/history?page=1&per_page=20
     "draw_id": 7788,
     "status": "result_pending",
     "is_revealed": false,
+    "shoot_summary": {
+      "shoot_sum": "0",
+      "shoot_count": 0,
+      "shoot_source": "snapshot"
+    },
+    "shoot_rewards": {
+      "policy": [
+        {
+          "position": 1,
+          "label": "รางวัลยิงเลขลำดับที่ 1",
+          "credit_amount": 20
+        }
+      ],
+      "policy_meta": {
+        "source": "round_snapshot",
+        "reward_enabled": true,
+        "currency": "THB",
+        "policy_hash": "..."
+      },
+      "winners": []
+    },
+    "winning_shoots": {
+      "first": null,
+      "sixteenth": null
+    },
     "proof": {
       "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
@@ -1864,6 +1892,57 @@ GET /api/v1/reward/history?page=1&per_page=20
     "draw_id": 7788,
     "status": "resulted",
     "is_revealed": true,
+    "shoot_summary": {
+      "shoot_sum": "164530",
+      "shoot_count": 3,
+      "shoot_source": "snapshot"
+    },
+    "shoot_rewards": {
+      "policy": [
+        {
+          "position": 1,
+          "label": "รางวัลยิงเลขลำดับที่ 1",
+          "credit_amount": 20
+        }
+      ],
+      "policy_meta": {
+        "source": "round_snapshot",
+        "reward_enabled": true,
+        "currency": "THB",
+        "policy_hash": "..."
+      },
+      "winners": [
+        {
+          "position": 1,
+          "label": "รางวัลยิงเลขลำดับที่ 1",
+          "credit_amount": 20,
+          "member_id": 61240,
+          "member_name_prefix_masked": "085*******",
+          "member_name_masked": "*******503",
+          "winner_credit_status": "rewarded",
+          "shoot": {
+            "number_text": "25095",
+            "number_text_masked": "250**",
+            "number_text_revealed": "25095",
+            "is_number_revealed": true,
+            "submitted_at": "2026-05-08 09:41:41"
+          }
+        }
+      ]
+    },
+    "winning_shoots": {
+      "first": {
+        "position": 1,
+        "number_text": "25095",
+        "number_text_masked": "250**",
+        "number_text_revealed": "25095",
+        "is_number_revealed": true,
+        "member_name_prefix_masked": "085*******",
+        "member_name_masked": "*******503",
+        "submitted_at": "2026-05-08 09:41:41"
+      },
+      "sixteenth": null
+    },
     "proof": {
       "formula_label": "<runtime_formula_preset>",
       "precommit_signature": "7f4d...",
@@ -1910,6 +1989,7 @@ GET /api/v1/reward/history?page=1&per_page=20
 For GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots:
 - display_mode: live_masked | result_revealed
 - is_number_revealed: boolean
+- Use this endpoint as the paginated shoot participant list
 - number_text is compatibility display field: masked before reveal, full after reveal
 - New frontend should use number_text_masked and number_text_revealed as primary fields
 - number_text_revealed is null before reveal and full after reveal
@@ -1919,7 +1999,18 @@ For GET /api/v1/lotto/yeekee/rounds/{roundId}/shoots:
 
 For GET /api/v1/lotto/yeekee/rounds/{roundId}/result-proof:
 - Includes shoot_summary even before reveal
-- Includes winner summary only: winning_shoots.first and winning_shoots.sixteenth
+- Includes round-level shoot_rewards.policy and shoot_rewards.winners
+- shoot_rewards.policy is derived from the actual reward policy/config for the round or market
+- shoot_rewards.winners is derived from reward winner logs and includes masked member fields only
+- If reward winner logs are not created yet, winners can be derived from reward policy + shoot snapshot with winner_credit_status = pending
+- For historical rounds with config snapshot but missing reward_config, policy_meta.source = snapshot_missing_reward_config and the API does not fallback to current market settings
+- winning_shoots.first and winning_shoots.sixteenth are legacy aliases derived from shoot_rewards.winners
 - Does not return full shoots list
 - Before reveal, winner numbers remain masked and number_text_revealed = null
 - If proof.result_payload is hidden by reveal rule, shoot_* fields must not appear in result_payload
+
+For GET /api/v1/lotto/yeekee/rounds/{roundId}/reward-status:
+- Use this endpoint as "my reward status" for the authenticated member
+- items[] represents reward winner rows for the authenticated member only
+- items[] includes member_id, member_name_prefix_masked, and member_name_masked
+- Do not use this endpoint as the round-level winner announcement
