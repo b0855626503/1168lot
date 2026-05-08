@@ -190,21 +190,16 @@ class LottoDrawRealtimeObserver
     ): void {
         $total = $this->resolveTotalTickets();
 
-        broadcast(new LottoTicketListChanged('resulted', $total, $marketName, $drawDate));
-        broadcast(new RealtimePublicActivityUpdated(
-            'lotto',
-            'lotto.ticket.list.changed',
-            [
-                'action' => 'resulted',
-                'total' => $total,
-                'market_name' => $marketName,
-                'draw_date' => $drawDate,
-                'result_mode' => $resultMode,
-                'round_no' => $roundNo,
-                'actor_id' => null,
-                'amount' => null,
-            ],
-            $this->buildTicketListActivityMessage('resulted', $marketName, $drawDate, null, null, $resultMode, $roundNo)
+        broadcast(new LottoTicketListChanged(
+            'resulted',
+            $total,
+            $marketName,
+            $drawDate,
+            null,
+            null,
+            null,
+            $resultMode !== '' ? $resultMode : null,
+            $roundNo,
         ));
     }
 
@@ -228,42 +223,6 @@ class LottoDrawRealtimeObserver
             $resultMode !== '' ? $resultMode : null,
             $roundNo,
         );
-    }
-
-    private function buildTicketListActivityMessage(
-        string $action,
-        string $marketName,
-        string $drawDate,
-        ?string $actorId,
-        ?float $amount,
-        string $resultMode = '',
-        ?int $roundNo = null
-    ): string {
-        $formatter = new LottoMarketDisplayFormatter;
-        $rm = $resultMode !== '' ? $resultMode : null;
-
-        if ($action === 'resulted') {
-            return $formatter->formatStatusMessage($marketName, $drawDate, 'อัปเดตรายการโพยหลังออกผลแล้ว', $rm, $roundNo);
-        }
-
-        if ($action === 'created') {
-            $subject = $formatter->formatDrawSubject($marketName, $drawDate, $rm, $roundNo);
-            $message = "มีรายการโพยหวยใหม่: {$subject}";
-
-            if ($actorId !== null && $actorId !== '') {
-                $message .= " โดย {$actorId}";
-            }
-
-            if ($amount !== null) {
-                $message .= ' จำนวน '.number_format($amount, 2, '.', '');
-            }
-
-            return $message;
-        }
-
-        $subject = $formatter->formatDrawSubject($marketName, $drawDate, $rm, $roundNo);
-
-        return "มีการอัปเดตรายการโพยหวย: {$subject}";
     }
 
     private function resolveYeekeeRoundNo(LottoDraw $draw, string $resultMode): ?int

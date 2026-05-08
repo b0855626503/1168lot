@@ -3,6 +3,7 @@
 namespace Tests\Unit\Lotto;
 
 use App\Events\LottoTicketListChanged;
+use App\Events\RealtimePublicActivityUpdated;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoTicket;
@@ -12,6 +13,7 @@ use Gametech\Member\Models\Member;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -282,7 +284,7 @@ class LottoRealtimeObserverTest extends TestCase
         $observer = new class extends LottoDrawRealtimeObserver
         {
             public int $drawStatusBroadcasts = 0;
-            public int $drawActivityBroadcasts = 0;
+            public array $drawActivityEvents = [];
             public array $ticketResultedEvents = [];
             public array $telegramDispatches = [];
 
@@ -305,15 +307,34 @@ class LottoRealtimeObserverTest extends TestCase
 
             protected function broadcastDrawPublicActivityUpdated(string $method, string $event, array $data): void
             {
-                $this->drawActivityBroadcasts++;
+                $this->drawActivityEvents[] = [
+                    'method' => $method,
+                    'event' => $event,
+                    'data' => $data,
+                ];
             }
 
             protected function broadcastResultedTicketListChanged(LottoDraw $draw, string $marketName, string $drawDate, string $resultMode = '', ?int $roundNo = null): void
             {
+                $event = new LottoTicketListChanged(
+                    'resulted',
+                    12,
+                    $marketName,
+                    $drawDate,
+                    null,
+                    null,
+                    null,
+                    $resultMode !== '' ? $resultMode : null,
+                    $roundNo
+                );
+
                 $this->ticketResultedEvents[] = [
                     'draw_id' => (int) $draw->id,
                     'market_name' => $marketName,
                     'draw_date' => $drawDate,
+                    'result_mode' => $resultMode,
+                    'round_no' => $roundNo,
+                    'message' => $event->message,
                 ];
             }
 
@@ -323,27 +344,112 @@ class LottoRealtimeObserverTest extends TestCase
             }
         };
 
-        $market = new LotteryMarket(['name' => 'หวยมาเลเซีย']);
+        $market = new LotteryMarket(['name' => 'หวยยี่กี่รวม', 'result_mode' => LotteryMarket::RESULT_MODE_YEEKEE]);
         $draw = new LottoDraw([
             'status' => 'closed',
-            'draw_date' => '2026-04-04',
-            'updated_at' => Carbon::parse('2026-04-04 23:20:00'),
+            'draw_date' => '2026-05-08',
+            'updated_at' => Carbon::parse('2026-05-08 23:20:00'),
         ]);
         $draw->id = 548;
+        $draw->setRelation('yeekeeRound', (object) ['round_no' => 18]);
         $draw->setRelation('market', $market);
         $draw->syncOriginal();
         $draw->status = 'resulted';
-        $draw->updated_at = Carbon::parse('2026-04-04 23:20:01');
+        $draw->updated_at = Carbon::parse('2026-05-08 23:20:01');
         $draw->syncChanges();
 
         $observer->updated($draw);
 
         $this->assertSame(1, $observer->drawStatusBroadcasts);
-        $this->assertSame(1, $observer->drawActivityBroadcasts);
+        $this->assertCount(1, $observer->drawActivityEvents);
+        $this->assertSame('lotto.draw_resulted', $observer->drawActivityEvents[0]['event']);
+        $this->assertSame('2026-05-08', $observer->drawActivityEvents[0]['data']['draw_date']);
         $this->assertCount(1, $observer->ticketResultedEvents);
         $this->assertSame(548, $observer->ticketResultedEvents[0]['draw_id']);
-        $this->assertSame('หวยมาเลเซีย', $observer->ticketResultedEvents[0]['market_name']);
-        $this->assertSame('2026-04-04', $observer->ticketResultedEvents[0]['draw_date']);
+        $this->assertSame('หวยยี่กี่รวม', $observer->ticketResultedEvents[0]['market_name']);
+        $this->assertSame('2026-05-08', $observer->ticketResultedEvents[0]['draw_date']);
+        $this->assertSame(LotteryMarket::RESULT_MODE_YEEKEE, $observer->ticketResultedEvents[0]['result_mode']);
+        $this->assertSame(18, $observer->ticketResultedEvents[0]['round_no']);
+        $this->assertStringContainsString('รอบ 18', $observer->ticketResultedEvents[0]['message']);
+        $this->assertNotContains(
+            'lotto.ticket.list.changed',
+            array_column($observer->drawActivityEvents, 'event')
+        );
+        $this->assertSame([548], $observer->telegramDispatches);
+    }
+
+    public function test_resulted_draw_broadcasts_staff_ticket_update_and_only_draw_resulted_public_activity(): void
+    {
+        Event::fake([
+            LottoTicketListChanged::class,
+            RealtimePublicActivityUpdated::class,
+        ]);
+
+        $observer = new class extends LottoDrawRealtimeObserver
+        {
+            public array $telegramDispatches = [];
+
+            protected function afterCommit(callable $callback): void
+            {
+                $callback();
+            }
+
+            protected function broadcastDrawStatusChanged(
+                int $drawId,
+                string $marketName,
+                string $drawDate,
+                string $status,
+                string $statusLabel,
+                string $actor,
+                string $changedAt
+            ): void {}
+
+            protected function resolveTotalTickets(): int
+            {
+                return 12;
+            }
+
+            protected function dispatchResultSummaryTelegram(int $drawId): void
+            {
+                $this->telegramDispatches[] = $drawId;
+            }
+        };
+
+        $market = new LotteryMarket(['name' => 'หวยยี่กี่รวม', 'result_mode' => LotteryMarket::RESULT_MODE_YEEKEE]);
+        $draw = new LottoDraw([
+            'status' => 'closed',
+            'draw_date' => '2026-05-08',
+            'updated_at' => Carbon::parse('2026-05-08 23:20:00'),
+        ]);
+        $draw->id = 548;
+        $draw->setRelation('market', $market);
+        $draw->setRelation('yeekeeRound', (object) ['round_no' => 18]);
+        $draw->syncOriginal();
+        $draw->status = 'resulted';
+        $draw->updated_at = Carbon::parse('2026-05-08 23:20:01');
+        $draw->syncChanges();
+
+        $observer->updated($draw);
+
+        Event::assertDispatched(LottoTicketListChanged::class, function (LottoTicketListChanged $event): bool {
+            return $event->action === 'resulted'
+                && $event->resultMode === LotteryMarket::RESULT_MODE_YEEKEE
+                && $event->roundNo === 18
+                && $event->broadcastWith()['draw_date'] === '2026-05-08'
+                && str_contains($event->message, 'รอบ 18');
+        });
+
+        Event::assertDispatched(RealtimePublicActivityUpdated::class, function (RealtimePublicActivityUpdated $event): bool {
+            return $event->event === 'lotto.draw_resulted'
+                && ($event->data['draw_date'] ?? null) === '2026-05-08'
+                && ($event->data['round_no'] ?? null) === 18;
+        });
+
+        Event::assertNotDispatched(RealtimePublicActivityUpdated::class, function (RealtimePublicActivityUpdated $event): bool {
+            return $event->event === 'lotto.ticket.list.changed'
+                && ($event->data['action'] ?? null) === 'resulted';
+        });
+
         $this->assertSame([548], $observer->telegramDispatches);
     }
 
@@ -353,9 +459,6 @@ class LottoRealtimeObserverTest extends TestCase
 
         $drawMessage = new \ReflectionMethod($observer, 'buildDrawActivityMessage');
         $drawMessage->setAccessible(true);
-
-        $ticketMessage = new \ReflectionMethod($observer, 'buildTicketListActivityMessage');
-        $ticketMessage->setAccessible(true);
 
         $this->assertSame(
             'หวยออมสิน งวดวันที่ 25 ปิดรับแล้ว',
@@ -369,10 +472,6 @@ class LottoRealtimeObserverTest extends TestCase
             'หวยออมสิน งวดวันที่ 25 เปิดรับแล้ว',
             $drawMessage->invoke($observer, 'lotto.draw_status_changed', 'หวยออมสิน', '2026-04-25')
         );
-        $this->assertSame(
-            'หวยออมสิน งวดวันที่ 25 อัปเดตรายการโพยหลังออกผลแล้ว',
-            $ticketMessage->invoke($observer, 'resulted', 'หวยออมสิน', '2026-04-25', null, null)
-        );
     }
 
     public function test_draw_activity_message_yeekee_includes_round_no(): void
@@ -382,20 +481,13 @@ class LottoRealtimeObserverTest extends TestCase
         $drawMessage = new \ReflectionMethod($observer, 'buildDrawActivityMessage');
         $drawMessage->setAccessible(true);
 
-        $ticketMessage = new \ReflectionMethod($observer, 'buildTicketListActivityMessage');
-        $ticketMessage->setAccessible(true);
-
         $this->assertSame(
-            'หวยยี่กี่ รอบที่ 88 งวดวันที่ 4 ปิดรับแล้ว',
-            $drawMessage->invoke($observer, 'lotto.draw_closed', 'หวยยี่กี่', '2026-05-04', 'yeekee', 88)
+            'หวยยี่กี่ รอบ 88 งวดวันที่ 4 ปิดรับแล้ว',
+            $drawMessage->invoke($observer, 'lotto.draw_closed', 'หวยยี่กี่', '2026-05-04', LotteryMarket::RESULT_MODE_YEEKEE, 88)
         );
         $this->assertSame(
-            'หวยยี่กี่ รอบที่ 88 งวดวันที่ 4 ออกผลแล้ว',
-            $drawMessage->invoke($observer, 'lotto.draw_resulted', 'หวยยี่กี่', '2026-05-04', 'yeekee', 88)
-        );
-        $this->assertSame(
-            'หวยยี่กี่ รอบที่ 88 งวดวันที่ 4 อัปเดตรายการโพยหลังออกผลแล้ว',
-            $ticketMessage->invoke($observer, 'resulted', 'หวยยี่กี่', '2026-05-04', null, null, 'yeekee', 88)
+            'หวยยี่กี่ รอบ 88 งวดวันที่ 4 ออกผลแล้ว',
+            $drawMessage->invoke($observer, 'lotto.draw_resulted', 'หวยยี่กี่', '2026-05-04', LotteryMarket::RESULT_MODE_YEEKEE, 88)
         );
     }
 
@@ -406,10 +498,10 @@ class LottoRealtimeObserverTest extends TestCase
         $drawMessage = new \ReflectionMethod($observer, 'buildDrawActivityMessage');
         $drawMessage->setAccessible(true);
 
-        $message = $drawMessage->invoke($observer, 'lotto.draw_closed', 'หวยยี่กี่', '2026-05-04', 'yeekee', null);
+        $message = $drawMessage->invoke($observer, 'lotto.draw_closed', 'หวยยี่กี่', '2026-05-04', LotteryMarket::RESULT_MODE_YEEKEE, null);
 
         $this->assertSame('หวยยี่กี่ งวดวันที่ 4 ปิดรับแล้ว', $message);
-        $this->assertStringNotContainsString('รอบที่', $message);
+        $this->assertStringNotContainsString('รอบ', $message);
     }
 
     public function test_draw_activity_message_normal_draw_unchanged(): void
