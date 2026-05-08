@@ -39,12 +39,13 @@ jobs:
         run: |
           set -euo pipefail
           marker='<!-- chatgpt-review-support -->'
-          body="$(cat <<EOF
-${marker}
-## ChatGPT Review Support
+          body="$(python3 - <<'PY'
+          import os
 
-${REVIEW_BODY}
-EOF
+          marker = "<!-- chatgpt-review-support -->"
+          review_body = os.environ["REVIEW_BODY"]
+          print(f"{marker}\n## ChatGPT Review Support\n\n{review_body}")
+          PY
           )"
           comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | tail -n 1)"
           if [ -n "${comment_id}" ]; then
