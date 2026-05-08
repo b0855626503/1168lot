@@ -1090,8 +1090,8 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.0.number_text', '55555');
         $response->assertJsonPath('data.items.0.number_text_masked', '555**');
         $response->assertJsonPath('data.items.0.number_text_revealed', '55555');
-        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'boa');
-        $response->assertJsonPath('data.items.0.member_name_masked', 'boa***');
+        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'boa****');
+        $response->assertJsonPath('data.items.0.member_name_masked', '****123');
         $response->assertJsonMissingPath('data.items.0.member_id');
         $response->assertJsonMissingPath('data.items.0.ip_address');
     }
@@ -1164,8 +1164,8 @@ class LottoDrawsControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('data.shoot_source', 'snapshot');
-        $response->assertJsonPath('data.items.1.member_name_prefix_masked', 'boa');
-        $response->assertJsonPath('data.items.1.member_name_masked', 'boa***');
+        $response->assertJsonPath('data.items.1.member_name_prefix_masked', 'boa***');
+        $response->assertJsonPath('data.items.1.member_name_masked', '***777');
         $response->assertJsonMissingPath('data.items.1.member_id');
         $this->assertStringNotContainsString('99999', $response->getContent());
         $this->assertStringNotContainsString('88888', $response->getContent());
@@ -1352,10 +1352,10 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.winning_shoots.first.number_text', '123**');
         $response->assertJsonPath('data.winning_shoots.first.number_text_revealed', null);
         $response->assertJsonPath('data.winning_shoots.first.is_number_revealed', false);
-        $response->assertJsonPath('data.winning_shoots.first.member_name_prefix_masked', 'boa');
-        $response->assertJsonPath('data.winning_shoots.first.member_name_masked', 'boa***');
-        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_prefix_masked', 'win');
-        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_masked', 'win***');
+        $response->assertJsonPath('data.winning_shoots.first.member_name_prefix_masked', 'boa***');
+        $response->assertJsonPath('data.winning_shoots.first.member_name_masked', '***999');
+        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_prefix_masked', 'win******');
+        $response->assertJsonPath('data.winning_shoots.sixteenth.member_name_masked', '******888');
         $response->assertJsonPath('data.proof.result_payload', null);
         $response->assertJsonMissingPath('data.proof.result_payload.shoot_sum');
         $response->assertJsonMissingPath('data.proof.result_payload.shoot_count');

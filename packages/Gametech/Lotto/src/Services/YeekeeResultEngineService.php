@@ -363,14 +363,11 @@ class YeekeeResultEngineService
         if ($length <= 0) {
             return '';
         }
-        if ($length === 1) {
-            return '*';
-        }
-        if ($length === 2) {
-            return mb_substr($value, 0, 1).'*';
+        if ($length <= 3) {
+            return str_repeat('*', $length);
         }
 
-        return mb_substr($value, 0, 3);
+        return mb_substr($value, 0, 3).str_repeat('*', $length - 3);
     }
 
     private function maskMemberName(?string $name): string
@@ -380,13 +377,10 @@ class YeekeeResultEngineService
         if ($length <= 0) {
             return '';
         }
-        if ($length === 1) {
-            return '*';
-        }
-        if ($length === 2) {
-            return mb_substr($value, 0, 1).'*';
+        if ($length <= 3) {
+            return str_repeat('*', $length);
         }
 
-        return mb_substr($value, 0, 3).'***';
+        return str_repeat('*', $length - 3).mb_substr($value, -3);
     }
 }
