@@ -28,7 +28,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class LottoController extends BaseController
 {
@@ -2670,6 +2669,14 @@ class LottoController extends BaseController
             ->orderBy('position')
             ->orderBy('id')
             ->get(['member_id', 'position', 'credit_amount']);
+        if ($rewardLogs->isEmpty()) {
+            return [
+                'policy' => $policyData['reward_positions'],
+                'policy_meta' => $this->mapPublicYeekeeRewardPolicyMeta($policyData),
+                'winners' => $this->mapPendingPublicYeekeeShootRewardWinners($policyData['reward_positions'], $shootsByPosition, $isRevealed),
+            ];
+        }
+
         $namesByCode = $this->resolveYeekeeMemberNamesByCode(
             $rewardLogs
                 ->filter(static function (YeekeeShootRewardLog $log) use ($shootsByPosition): bool {
@@ -2720,6 +2727,7 @@ class LottoController extends BaseController
                     'credit_amount' => (float) ($log->credit_amount ?? ($policyRow['credit_amount'] ?? 0)),
                     'member_id' => $memberId,
                     ...$maskedMemberName,
+                    'winner_credit_status' => 'rewarded',
                     'shoot' => $shoot === null ? null : [
                         'number_text' => $shoot['number_text'],
                         'number_text_masked' => $shoot['number_text_masked'],
@@ -2735,17 +2743,65 @@ class LottoController extends BaseController
 
         return [
             'policy' => $policyData['reward_positions'],
-            'policy_meta' => [
-                'source' => $policyData['source'],
-                'reward_enabled' => $policyData['reward_enabled'],
-                'min_bet_amount' => $policyData['min_bet_amount'],
-                'reward_scope' => $policyData['reward_scope'],
-                'max_rewards_per_member_per_round' => $policyData['max_rewards_per_member_per_round'],
-                'max_rewards_per_member_per_day' => $policyData['max_rewards_per_member_per_day'],
-                'currency' => $policyData['currency'],
-                'policy_hash' => $policyData['policy_hash'],
-            ],
+            'policy_meta' => $this->mapPublicYeekeeRewardPolicyMeta($policyData),
             'winners' => $winners,
+        ];
+    }
+
+    /**
+     * @param  array<int,array<string,mixed>>  $rewardPositions
+     * @param  Collection<int,array<string,mixed>>  $shootsByPosition
+     * @return array<int,array<string,mixed>>
+     */
+    private function mapPendingPublicYeekeeShootRewardWinners(array $rewardPositions, Collection $shootsByPosition, bool $isRevealed): array
+    {
+        return collect($rewardPositions)
+            ->map(function (array $rewardPosition) use ($shootsByPosition, $isRevealed): ?array {
+                $position = (int) ($rewardPosition['position'] ?? 0);
+                if ($position <= 0 || ! $shootsByPosition->has($position)) {
+                    return null;
+                }
+
+                $shootRow = (array) $shootsByPosition->get($position);
+                $shoot = $this->mapPublicYeekeeShoot($shootRow, $isRevealed);
+
+                return [
+                    'position' => $position,
+                    'label' => (string) ($rewardPosition['label'] ?? $this->yeekeeRewardPositionLabel($position)),
+                    'credit_amount' => (float) ($rewardPosition['credit_amount'] ?? 0),
+                    'member_id' => (int) ($shootRow['member_id'] ?? 0),
+                    'member_name_prefix_masked' => (string) ($shootRow['member_name_prefix_masked'] ?? ''),
+                    'member_name_masked' => (string) ($shootRow['member_name_masked'] ?? ''),
+                    'winner_credit_status' => 'pending',
+                    'shoot' => [
+                        'number_text' => $shoot['number_text'],
+                        'number_text_masked' => $shoot['number_text_masked'],
+                        'number_text_revealed' => $shoot['number_text_revealed'],
+                        'is_number_revealed' => $shoot['is_number_revealed'],
+                        'submitted_at' => $shoot['submitted_at'],
+                    ],
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string,mixed>  $policyData
+     * @return array<string,mixed>
+     */
+    private function mapPublicYeekeeRewardPolicyMeta(array $policyData): array
+    {
+        return [
+            'source' => $policyData['source'],
+            'reward_enabled' => $policyData['reward_enabled'],
+            'min_bet_amount' => $policyData['min_bet_amount'],
+            'reward_scope' => $policyData['reward_scope'],
+            'max_rewards_per_member_per_round' => $policyData['max_rewards_per_member_per_round'],
+            'max_rewards_per_member_per_day' => $policyData['max_rewards_per_member_per_day'],
+            'currency' => $policyData['currency'],
+            'policy_hash' => $policyData['policy_hash'],
         ];
     }
 
@@ -2775,20 +2831,20 @@ class LottoController extends BaseController
     private function resolvePublicYeekeeRewardPolicy(YeekeeRound $round): array
     {
         $snapshot = is_array($round->config_snapshot_json) ? $round->config_snapshot_json : [];
-        if (array_key_exists('reward_config', $snapshot) || array_key_exists('reward_enabled', $snapshot)) {
+        if ($snapshot !== []) {
+            if (! array_key_exists('reward_config', $snapshot)) {
+                return $this->emptyPublicYeekeeRewardPolicy('snapshot_missing_reward_config');
+            }
+
             $policy = $this->normalizePublicYeekeeRewardPolicy(
                 is_array($snapshot['reward_config'] ?? null) ? $snapshot['reward_config'] : []
             );
             $policy['source'] = 'round_snapshot';
             $policy['reward_enabled'] = array_key_exists('reward_enabled', $snapshot)
                 ? filter_var($snapshot['reward_enabled'], FILTER_VALIDATE_BOOLEAN)
-                : false;
+                : $policy['reward_positions'] !== [];
 
             return $policy;
-        }
-
-        if (! Schema::hasTable('yeekee_market_settings')) {
-            return $this->emptyPublicYeekeeRewardPolicy('default_disabled');
         }
 
         $setting = YeekeeMarketSetting::query()

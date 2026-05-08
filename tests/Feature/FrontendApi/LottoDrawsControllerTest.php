@@ -27,6 +27,7 @@ class LottoDrawsControllerTest extends TestCase
         Schema::dropIfExists('yeekee_shoot_reward_logs');
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
+        Schema::dropIfExists('yeekee_market_settings');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
 
@@ -100,6 +101,14 @@ class LottoDrawsControllerTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('yeekee_market_settings', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('market_id');
+            $table->boolean('reward_enabled')->default(false);
+            $table->json('reward_config')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('yeekee_shoots', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('yeekee_round_id');
@@ -136,6 +145,7 @@ class LottoDrawsControllerTest extends TestCase
         Schema::dropIfExists('yeekee_shoot_reward_logs');
         Schema::dropIfExists('yeekee_shoots');
         Schema::dropIfExists('yeekee_rounds');
+        Schema::dropIfExists('yeekee_market_settings');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
 
@@ -1393,6 +1403,7 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_id', 3001);
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_name_prefix_masked', 'boa***');
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_name_masked', '***999');
+        $response->assertJsonPath('data.shoot_rewards.winners.0.winner_credit_status', 'rewarded');
         $response->assertJsonPath('data.shoot_rewards.winners.0.shoot.number_text', '123**');
         $response->assertJsonPath('data.shoot_rewards.winners.0.shoot.number_text_revealed', null);
         $response->assertJsonPath('data.shoot_rewards.winners.1.position', 16);
@@ -1476,10 +1487,6 @@ class LottoDrawsControllerTest extends TestCase
             ['yeekee_round_id' => 726, 'lotto_draw_id' => 326, 'market_id' => 9, 'member_id' => 4002, 'position' => 2, 'number_text' => '22222', 'number_value' => 22222, 'submitted_at' => now()->format('Y-m-d H:i:s'), 'created_at' => now(), 'updated_at' => now()],
             ['yeekee_round_id' => 726, 'lotto_draw_id' => 326, 'market_id' => 9, 'member_id' => 4100, 'position' => 100, 'number_text' => '00100', 'number_value' => 100, 'submitted_at' => now()->format('Y-m-d H:i:s'), 'created_at' => now(), 'updated_at' => now()],
         ]);
-        DB::table('yeekee_shoot_reward_logs')->insert([
-            ['yeekee_round_id' => 726, 'member_id' => 4002, 'position' => 2, 'credit_amount' => 30, 'reward_ref_type' => 'shoot_position', 'created_at' => now(), 'updated_at' => now()],
-            ['yeekee_round_id' => 726, 'member_id' => 4100, 'position' => 100, 'credit_amount' => 50, 'reward_ref_type' => 'shoot_position', 'created_at' => now(), 'updated_at' => now()],
-        ]);
 
         $request = Request::create('/api/v1/lotto/yeekee/rounds/726/result-proof', 'GET');
         DB::flushQueryLog();
@@ -1498,6 +1505,7 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_id', 4002);
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_name_prefix_masked', 'sec******');
         $response->assertJsonPath('data.shoot_rewards.winners.0.member_name_masked', '******222');
+        $response->assertJsonPath('data.shoot_rewards.winners.0.winner_credit_status', 'pending');
         $response->assertJsonPath('data.shoot_rewards.winners.0.shoot.number_text', '222**');
         $response->assertJsonPath('data.shoot_rewards.winners.1.position', 100);
         $response->assertJsonPath('data.shoot_rewards.winners.1.member_name_prefix_masked', 'hun*******');
@@ -1519,7 +1527,7 @@ class LottoDrawsControllerTest extends TestCase
         $member->code = 5001;
 
         DB::table('members')->insert([
-            ['code' => 5001, 'user_name' => 'reward503'],
+            ['code' => 5001, 'user_name' => '0851234503'],
         ]);
         DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Yeekee Group', 'code' => 'yeekee', 'is_enabled' => 1, 'sort' => 1]);
         DB::table('lotto_markets')->insert(['id' => 9, 'group_id' => 1, 'name' => 'Yeekee Market', 'code' => 'yeekee-market', 'is_enabled' => 1, 'result_mode' => 'yeekee']);
@@ -1563,9 +1571,9 @@ class LottoDrawsControllerTest extends TestCase
         $response->assertJsonPath('data.items.0.position', 1);
         $response->assertJsonPath('data.items.0.credit_amount', 20);
         $response->assertJsonPath('data.items.0.member_id', 5001);
-        $response->assertJsonPath('data.items.0.member_name_prefix_masked', 'rew******');
-        $response->assertJsonPath('data.items.0.member_name_masked', '******503');
-        $this->assertStringNotContainsString('reward503', $response->getContent());
+        $response->assertJsonPath('data.items.0.member_name_prefix_masked', '085*******');
+        $response->assertJsonPath('data.items.0.member_name_masked', '*******503');
+        $this->assertStringNotContainsString('0851234503', $response->getContent());
         $this->assertSame(1, collect($queries)->filter(static function (array $query): bool {
             $sql = (string) ($query['query'] ?? '');
 
