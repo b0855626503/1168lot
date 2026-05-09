@@ -215,8 +215,3 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.reward.history');
         });
     });
-
-Route::domain($apiSubdomain.'.'.$apiDomain)
-    ->middleware(['api'])
-    ->get('api/frontend/theme', [FrontendThemeController::class, 'show'])
-    ->name('frontend.api.theme');

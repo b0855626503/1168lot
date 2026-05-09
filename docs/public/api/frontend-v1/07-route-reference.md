@@ -360,13 +360,6 @@ GET /api/v1/theme
 }
 ```
 
-<a id="get-apifrontendtheme"></a>
-### `GET /api/frontend/theme`
-- คำอธิบาย: Alias ของ endpoint ธีมหน้าบ้าน
-- ใช้เมื่อ: client เก่าต้องการเรียกตามเส้นทาง `/api/frontend/theme`
-- Auth: ไม่ต้องใช้ token
-- Response: รูปแบบเดียวกับ `GET /api/v1/theme`
-
 <a id="get-apiv1realtimeconfig"></a>
 ### `GET /api/v1/realtime/config`
 - คำอธิบาย: ดึงคอนฟิกระบบ realtime ที่ frontend ต้องใช้เชื่อมต่อ
