@@ -49,21 +49,9 @@ class ResultCorrectionRetryDebitService
                 }
 
                 $resolvedMemberCode = $this->resolveMemberCode((int) $item->member_id);
-                $currentBalance = round((float) DB::table('members')->where('code', $resolvedMemberCode)->value('balance'), 2);
-                $debitAmount = min($remaining, max(0, $currentBalance));
-
-                if ($debitAmount <= 0) {
-                    $item->update([
-                        'status' => 'reverse_failed',
-                        'note' => 'retry_no_balance',
-                    ]);
-
-                    continue;
-                }
-
-                $txnId = $this->walletTransactionService->debitMemberBalance(
+                $debitResult = $this->walletTransactionService->debitAvailableMemberBalance(
                     memberId: $resolvedMemberCode,
-                    amount: $debitAmount,
+                    requestedAmount: $remaining,
                     refType: self::REF_REVERSE,
                     refId: $this->buildRetryRefId((int) $item->id),
                     refCode: (string) $item->draw_id,
@@ -79,6 +67,17 @@ class ResultCorrectionRetryDebitService
                     createdById: $actorId,
                     description: 'หักคืนยอดค้างแก้ไขผลหวย'
                 );
+                $debitAmount = round((float) ($debitResult['debited_amount'] ?? 0), 2);
+
+                if ($debitAmount <= 0) {
+                    $item->update([
+                        'status' => 'reverse_failed',
+                        'note' => 'retry_no_balance',
+                    ]);
+
+                    continue;
+                }
+                $txnId = isset($debitResult['transaction_id']) ? (int) $debitResult['transaction_id'] : null;
 
                 $newDebited = round((float) $item->reverse_debited_amount + $debitAmount, 2);
                 $newRemaining = round((float) $item->reverse_required_amount - $newDebited, 2);

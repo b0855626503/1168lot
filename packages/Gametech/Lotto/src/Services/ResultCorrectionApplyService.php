@@ -44,7 +44,7 @@ class ResultCorrectionApplyService
 
         $drawId = (int) $correction->draw_id;
         $lockKey = 'lotto:draw-result-correction:'.$drawId;
-        $lock = Cache::lock($lockKey, 20);
+        $lock = Cache::lock($lockKey, 600);
         if (! $lock->get()) {
             throw new RuntimeException('มี correction อื่นกำลังทำงานกับงวดนี้');
         }
@@ -91,7 +91,7 @@ class ResultCorrectionApplyService
                 foreach ($items as $item) {
                     if (! isset($activeTicketIdSet[(int) $item->ticket_id])) {
                         $item->update([
-                            'status' => 'skipped_cancelled',
+                            'status' => 'completed',
                             'note' => 'skip_cancelled_ticket',
                             'reverse_debited_amount' => 0,
                             'reverse_remaining_amount' => 0,
@@ -138,31 +138,27 @@ class ResultCorrectionApplyService
 
                     if ($delta < 0) {
                         $required = round(abs($delta), 2);
-                        $currentBalance = round((float) DB::table('members')->where('code', $resolvedMemberCode)->value('balance'), 2);
-                        $debitAmount = min($required, max(0, $currentBalance));
-                        $remaining = round($required - $debitAmount, 2);
-                        $reverseTxnId = null;
-
-                        if ($debitAmount > 0) {
-                            $reverseTxnId = $this->walletTransactionService->debitMemberBalance(
-                                memberId: $resolvedMemberCode,
-                                amount: $debitAmount,
-                                refType: self::REF_REVERSE,
-                                refId: (int) $item->id,
-                                refCode: (string) $drawId,
-                                groupCode: 'LOTTO_RESULT_CORRECTION_'.(int) $correction->id,
-                                meta: [
-                                    'correction_id' => (int) $correction->id,
-                                    'correction_item_id' => (int) $item->id,
-                                    'draw_id' => $drawId,
-                                    'ticket_id' => (int) $item->ticket_id,
-                                    'retry' => false,
-                                ],
-                                createdByType: 'admin',
-                                createdById: $actorId,
-                                description: 'หักคืนส่วนต่างแก้ไขผลหวย'
-                            );
-                        }
+                        $debitResult = $this->walletTransactionService->debitAvailableMemberBalance(
+                            memberId: $resolvedMemberCode,
+                            requestedAmount: $required,
+                            refType: self::REF_REVERSE,
+                            refId: (int) $item->id,
+                            refCode: (string) $drawId,
+                            groupCode: 'LOTTO_RESULT_CORRECTION_'.(int) $correction->id,
+                            meta: [
+                                'correction_id' => (int) $correction->id,
+                                'correction_item_id' => (int) $item->id,
+                                'draw_id' => $drawId,
+                                'ticket_id' => (int) $item->ticket_id,
+                                'retry' => false,
+                            ],
+                            createdByType: 'admin',
+                            createdById: $actorId,
+                            description: 'หักคืนส่วนต่างแก้ไขผลหวย'
+                        );
+                        $debitAmount = round((float) ($debitResult['debited_amount'] ?? 0), 2);
+                        $remaining = round((float) ($debitResult['remaining_amount'] ?? $required), 2);
+                        $reverseTxnId = isset($debitResult['transaction_id']) ? (int) $debitResult['transaction_id'] : null;
 
                         $item->update([
                             'reverse_required_amount' => $required,

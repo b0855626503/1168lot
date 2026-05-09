@@ -12,6 +12,115 @@ class WalletTransactionService
 {
     /**
      * @param  array<string, mixed>  $meta
+     * @return array{requested_amount:float,debited_amount:float,remaining_amount:float,transaction_id:int|null,balance_before:float,balance_after:float}
+     */
+    public function debitAvailableMemberBalance(
+        int $memberId,
+        float $requestedAmount,
+        string $refType,
+        ?int $refId = null,
+        ?string $refCode = null,
+        ?string $groupCode = null,
+        ?int $relatedTxnId = null,
+        array $meta = [],
+        string $createdByType = 'system',
+        ?int $createdById = null,
+        ?string $description = null
+    ): array {
+        $normalizedRequested = round($requestedAmount, 2);
+        if ($normalizedRequested <= 0) {
+            throw new RuntimeException('Transaction amount must be greater than zero');
+        }
+
+        $member = DB::table('members')
+            ->where('code', $memberId)
+            ->lockForUpdate()
+            ->first(['code', 'balance']);
+
+        if (! $member) {
+            throw new RuntimeException('Member not found');
+        }
+
+        $balanceBefore = round((float) ($member->balance ?? 0), 2);
+        $debitedAmount = min($normalizedRequested, max(0, $balanceBefore));
+        $remainingAmount = round($normalizedRequested - $debitedAmount, 2);
+        if ($debitedAmount <= 0) {
+            return [
+                'requested_amount' => $normalizedRequested,
+                'debited_amount' => 0.0,
+                'remaining_amount' => $normalizedRequested,
+                'transaction_id' => null,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceBefore,
+            ];
+        }
+
+        $balanceAfter = round($balanceBefore - $debitedAmount, 2);
+        DB::table('members')
+            ->where('code', $memberId)
+            ->update([
+                'balance' => $balanceAfter,
+                'date_update' => now(),
+            ]);
+
+        $createdAt = now();
+        $txId = (int) DB::table('wallet_transactions')->insertGetId([
+            'member_id' => $memberId,
+            'scope' => 'MEMBER',
+            'game_user_id' => null,
+            'direction' => 'DEBIT',
+            'amount' => $debitedAmount,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $balanceAfter,
+            'ref_type' => $refType,
+            'ref_id' => $refId,
+            'ref_code' => $refCode,
+            'group_code' => $groupCode,
+            'related_txn_id' => $relatedTxnId,
+            'status' => 'SUCCESS',
+            'description' => $description,
+            'meta' => empty($meta) ? null : json_encode($meta, JSON_UNESCAPED_UNICODE),
+            'created_by_type' => $createdByType,
+            'created_by_id' => $createdById,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
+
+        if (in_array($refType, array_merge(
+            LottoDashboardMetricConfig::salesRefTypes(),
+            LottoDashboardMetricConfig::payoutRefTypes(),
+            LottoDashboardMetricConfig::refundRefTypes()
+        ), true)) {
+            DB::afterCommit(function () use ($txId, $createdAt): void {
+                app(DashboardSummarySyncService::class)->dispatchForModelChange('lotto', [
+                    'id' => (string) $txId,
+                    'cash_dates' => [$createdAt],
+                ], [LottoDashboardMetricConfig::SECTION_CASH, 'net']);
+            });
+        }
+
+        $this->broadcastMemberRealtimeActivity(
+            memberId: $memberId,
+            direction: 'DEBIT',
+            amount: $debitedAmount,
+            balanceAfter: $balanceAfter,
+            refType: $refType,
+            refId: $refId,
+            meta: $meta
+        );
+
+        return [
+            'requested_amount' => $normalizedRequested,
+            'debited_amount' => $debitedAmount,
+            'remaining_amount' => $remainingAmount,
+            'transaction_id' => $txId,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $balanceAfter,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
      */
     public function debitMemberBalance(
         int $memberId,
