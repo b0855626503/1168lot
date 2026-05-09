@@ -272,6 +272,24 @@ return [
         'sort' => 6,
     ],
     [
+        'key' => 'lotto_settings.frontend_theme',
+        'name' => 'Frontend Theme',
+        'route' => 'admin.lotto.frontend_theme.index',
+        'sort' => 9,
+    ],
+    [
+        'key' => 'lotto_settings.frontend_theme.index',
+        'name' => 'เห็นเมนู Frontend Theme',
+        'route' => 'admin.lotto.frontend_theme.index',
+        'sort' => 1,
+    ],
+    [
+        'key' => 'lotto_settings.frontend_theme.update',
+        'name' => 'สิทธิ์ แก้ไข Frontend Theme',
+        'route' => 'admin.lotto.frontend_theme.update',
+        'sort' => 2,
+    ],
+    [
         'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',

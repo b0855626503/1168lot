@@ -32,6 +32,7 @@ use Gametech\Lotto\Models\LotteryMarketProxy;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSettingProxy;
 use Gametech\Lotto\Models\LottoDrawProxy;
+use Gametech\Lotto\Models\LottoFrontendThemeSettingProxy;
 use Gametech\Lotto\Models\LottoMarketBetSettingProxy;
 use Gametech\Lotto\Models\LottoNavbarItemProxy;
 use Gametech\Lotto\Models\LottoNavbarProxy;
@@ -51,6 +52,7 @@ use Gametech\Lotto\Services\BetService;
 use Gametech\Lotto\Services\DrawService;
 use Gametech\Lotto\Services\ExposureService;
 use Gametech\Lotto\Services\LottoConfigResolver;
+use Gametech\Lotto\Services\LottoFrontendThemeSettingService;
 use Gametech\Lotto\Services\LottoPackageResolver;
 use Gametech\Lotto\Services\MemberMarketPolicyService;
 use Gametech\Lotto\Services\Relay\LotteryRelayPublisher;
@@ -98,6 +100,10 @@ class LottoServiceProvider extends ServiceProvider
 
         $this->app->singleton(LottoConfigResolver::class, function ($app) {
             return new LottoConfigResolver;
+        });
+
+        $this->app->singleton(LottoFrontendThemeSettingService::class, function ($app) {
+            return new LottoFrontendThemeSettingService;
         });
 
         $this->app->singleton(LottoPackageResolver::class, function ($app) {
@@ -199,6 +205,10 @@ class LottoServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             dirname(__DIR__).'/Config/acl.php', 'acl'
         );
+
+        $this->mergeConfigFrom(
+            dirname(__DIR__).'/Config/frontend-theme-presets.php', 'lotto.frontend_theme'
+        );
     }
 
     protected function registerObservers(): void
@@ -215,6 +225,7 @@ class LottoServiceProvider extends ServiceProvider
         LottoNumberExposureProxy::observe(LottoAuditObserver::class);
         LottoNumberExposureProxy::observe(LottoDashboardSummaryObserver::class);
         LottoNumberBlockProxy::observe(LottoAuditObserver::class);
+        LottoFrontendThemeSettingProxy::observe(LottoAuditObserver::class);
         LottoNavbarProxy::observe(LottoAuditObserver::class);
         LottoNavbarItemProxy::observe(LottoAuditObserver::class);
         LottoTicketProxy::observe(LottoAuditObserver::class);
