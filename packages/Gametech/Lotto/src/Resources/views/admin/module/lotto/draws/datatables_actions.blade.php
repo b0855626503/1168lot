@@ -2,6 +2,7 @@
     $canEdit = bouncer()->hasPermission('lotto_settings.draws.update') || bouncer()->hasPermission('lotto_draws.edit');
     $canSettle = bouncer()->hasPermission('lotto_settings.draws.settle') || bouncer()->hasPermission('lotto_draws.settle');
     $canRetry = bouncer()->hasPermission('lotto_settings.draws.auto_result_manual_retry') || bouncer()->hasPermission('lotto_draws.auto_result_manual_retry');
+    $canCorrectResult = bouncer()->hasPermission('lotto_settings.draws.correct_result');
     $canCancelAllRefund = bouncer()->hasPermission('lotto_settings.draws.cancel_all_refund')
         || bouncer()->hasPermission('lotto_settings.draws.settle')
         || bouncer()->hasPermission('lotto_draws.settle');
@@ -18,6 +19,12 @@
     @if($status === 'closed' && empty($is_yeekee) && ($canSettle || $canRetry))
         <button type="button" class="btn btn-success btn-block btn-xs mr-1 mb-1" onclick="settleModal({{ $id }})">
             <i class="fas fa-check-circle"></i> ออกผล
+        </button>
+    @endif
+
+    @if($status === 'resulted' && $canCorrectResult)
+        <button type="button" class="btn btn-warning btn-block btn-xs mr-1 mb-1" onclick="openCorrectResultModal({{ $id }})">
+            <i class="fas fa-redo-alt"></i> ออกผลใหม่
         </button>
     @endif
 

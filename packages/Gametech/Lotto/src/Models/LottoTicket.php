@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Models;
 
 use Gametech\Lotto\Contracts\LottoTicket as LottoTicketContract;
+use Gametech\Member\Models\Member;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -58,7 +59,7 @@ class LottoTicket extends Model implements LottoTicketContract
     // Relationships
     public function member()
     {
-        return $this->belongsTo(\Gametech\Member\Models\Member::class, 'member_id', 'code');
+        return $this->belongsTo(Member::class, 'member_id', 'code');
     }
 
     public function draw()
@@ -70,5 +71,9 @@ class LottoTicket extends Model implements LottoTicketContract
     {
         return $this->hasMany(LottoTicketItem::class, 'ticket_id');
     }
-}
 
+    public function resultCorrectionItems()
+    {
+        return $this->hasMany(LottoResultCorrectionItem::class, 'ticket_id');
+    }
+}

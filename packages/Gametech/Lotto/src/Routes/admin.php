@@ -269,6 +269,10 @@ Route::domain(
 
             Route::post('draws/auto-result-manual-retry', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultManualRetry')
                 ->name('admin.lotto.draws.auto_result_manual_retry');
+            Route::post('draws/correct-result-preview', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@correctResultPreview')
+                ->name('admin.lotto.draws.correct_result_preview');
+            Route::post('draws/correct-result-apply', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@correctResultApply')
+                ->name('admin.lotto.draws.correct_result_apply');
 
             Route::get('draws/auto-result-logs', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@autoResultLogs')
                 ->name('admin.lotto.draws.auto_result_logs');
@@ -378,6 +382,17 @@ Route::domain(
                 ->name('admin.lotto.winning_report.bets');
             Route::get('winning-report/export', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoWinningReportController@export')
                 ->name('admin.lotto.winning_report.export');
+
+            Route::get('reports/result-corrections', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultCorrectionReportController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.result_corrections.index',
+                'menu_badge_key' => 'lotto_reports.result_corrections',
+            ])->name('admin.lotto.result_corrections.index');
+            Route::get('reports/result-corrections/loaddata', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultCorrectionReportController@loadData')
+                ->name('admin.lotto.result_corrections.loaddata');
+            Route::get('reports/result-corrections/{id}', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultCorrectionReportController@show')->whereNumber('id')
+                ->name('admin.lotto.result_corrections.show');
+            Route::post('reports/result-corrections/{id}/retry-debit', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoResultCorrectionReportController@retryDebit')->whereNumber('id')
+                ->name('admin.lotto.result_corrections.retry_debit');
 
             Route::get('yeekee/audit/rounds', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\YeekeeAuditController@loadRounds')
                 ->name('admin.lotto.yeekee.audit.rounds');

@@ -152,6 +152,70 @@
     </div>
 </b-modal>
 
+<b-modal
+    ref="correctResultModal"
+    id="correctResultModal"
+    centered
+    size="md"
+    title="ออกผลใหม่ (Manual)"
+    :no-close-on-backdrop="true"
+    hide-footer>
+    <div class="mb-2 text-muted">
+        <div>ตลาด: <strong>@{{ currentDraw.market_name || '-' }}</strong></div>
+        <div>วันงวด: <strong>@{{ currentDraw.draw_date || '-' }}</strong></div>
+        <div>สถานะ: <strong>@{{ currentDraw.status_label || '-' }}</strong></div>
+    </div>
+
+    <b-form @submit.prevent="submitCorrectResultForm">
+        <b-row>
+            <b-col cols="12" md="8">
+                <b-form-group label="รางวัลที่ 1 (3-6 หลัก)" label-for="correct_result_first_prize">
+                    <b-form-input
+                        id="correct_result_first_prize"
+                        v-model="correctResultForm.result_number.first_prize"
+                        type="text"
+                        maxlength="6"
+                        size="sm"
+                        placeholder="เช่น 123, 2575, 12345 หรือ 123456"></b-form-input>
+                </b-form-group>
+            </b-col>
+            <b-col cols="12" md="4">
+                <b-form-group label="เลขท้าย 2 ตัว" label-for="correct_result_last_2_digits">
+                    <b-form-input
+                        id="correct_result_last_2_digits"
+                        v-model="correctResultForm.result_number.last_2_digits"
+                        type="text"
+                        maxlength="2"
+                        size="sm"
+                        placeholder="เช่น 89"></b-form-input>
+                </b-form-group>
+            </b-col>
+        </b-row>
+
+        <b-form-group label="เหตุผล" label-for="correct_result_reason">
+            <b-form-textarea
+                id="correct_result_reason"
+                v-model.trim="correctResultForm.reason"
+                rows="3"
+                max-rows="5"
+                placeholder="ระบุเหตุผลที่ต้องออกผลใหม่"></b-form-textarea>
+        </b-form-group>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted" v-if="!canSubmitCorrectResultForm">
+                กรอกผลแบบ manual และเหตุผลให้ครบก่อน
+            </small>
+            <b-button
+                type="submit"
+                variant="warning"
+                size="sm"
+                :disabled="!canSubmitCorrectResultForm || isCorrectResultSubmitting">
+                ยืนยันออกผลใหม่
+            </b-button>
+        </div>
+    </b-form>
+</b-modal>
+
 <b-modal ref="blockedNumbersModal" id="blockedNumbersModal" centered size="xl" title="รายการเลขอั้นในงวด" ok-only ok-title="ปิด" modal-class="lotto-blocked-summary-modal">
     <div class="row no-gutters mb-2 lotto-summary-row">
         <div class="col-4 lotto-blocked-summary-item"><span>งวด :</span><strong>@{{ blockedNumbersData.draw.draw_date || '-' }}</strong></div>
@@ -752,6 +816,15 @@
                         status_label: '',
                     },
                     settleModeDrawId: null,
+                    isCorrectResultSubmitting: false,
+                    correctResultForm: {
+                        draw_id: null,
+                        reason: '',
+                        result_number: {
+                            first_prize: '',
+                            last_2_digits: '',
+                        },
+                    },
                     canUseManualSettle: @json((bool) (bouncer()->hasPermission('lotto_settings.draws.settle') || bouncer()->hasPermission('lotto_draws.settle'))),
                     canUseAutoSettle: @json((bool) (bouncer()->hasPermission('lotto_settings.draws.auto_result_manual_retry') || bouncer()->hasPermission('lotto_draws.auto_result_manual_retry'))),
                     canUseNoResultSettle: @json((bool) ((bouncer()->hasPermission('lotto_settings.draws.mark_no_result') || bouncer()->hasPermission('lotto_settings.draws.settle')) || bouncer()->hasPermission('lotto_draws.settle'))),
@@ -894,6 +967,13 @@
                     return firstPrizeLen >= 3 && firstPrizeLen <= 6
                         && onlyDigits(this.formaddedit.result_number.last_2_digits).length === 2;
                 },
+                canSubmitCorrectResultForm() {
+                    const firstPrizeLen = onlyDigits(this.correctResultForm.result_number.first_prize).length;
+                    const last2Len = onlyDigits(this.correctResultForm.result_number.last_2_digits).length;
+                    const reason = String(this.correctResultForm.reason || '').trim();
+
+                    return firstPrizeLen >= 3 && firstPrizeLen <= 6 && last2Len === 2 && reason !== '';
+                },
                 firstMarketOption() {
                     for (const group of this.markets) {
                         if (Array.isArray(group.options) && group.options.length > 0) {
@@ -1020,6 +1100,105 @@
                 settleModal(id) {
                     this.settleModeDrawId = id;
                     this.$refs.settleModeModal.show();
+                },
+                async openCorrectResultModal(id) {
+                    const drawId = Number(id || 0);
+                    if (!drawId) {
+                        return;
+                    }
+                    this.code = drawId;
+                    this.correctResultForm = {
+                        draw_id: drawId,
+                        reason: '',
+                        result_number: {
+                            first_prize: '',
+                            last_2_digits: '',
+                        },
+                    };
+
+                    try {
+                        await this.loadData();
+                        this.$refs.correctResultModal.show();
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'โหลดข้อมูลงวดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    }
+                },
+                async submitCorrectResultForm() {
+                    if (!this.canSubmitCorrectResultForm || this.isCorrectResultSubmitting) {
+                        return;
+                    }
+
+                    const drawId = Number(this.correctResultForm.draw_id || this.code || 0);
+                    const firstPrize = onlyDigits(this.correctResultForm.result_number.first_prize);
+                    const last2 = onlyDigits(this.correctResultForm.result_number.last_2_digits);
+                    const reason = String(this.correctResultForm.reason || '').trim();
+
+                    this.isCorrectResultSubmitting = true;
+
+                    try {
+                        const previewResponse = await this.$http.post("{{ route('admin.lotto.draws.correct_result_preview') }}", {
+                            id: drawId,
+                            mode: 'manual',
+                            reason,
+                            result_number: {
+                                first_prize: firstPrize,
+                                last_2_digits: last2,
+                            },
+                        });
+
+                        const preview = previewResponse?.data?.data || {};
+                        const summary = preview.summary || {};
+                        const message = [
+                            'พรีวิวแก้ไขผลสำเร็จ',
+                            `โพยทั้งหมด: ${summary.ticket_count || 0}`,
+                            `โพยที่กระทบ: ${summary.affected_ticket_count || 0}`,
+                            `ยอดจ่ายเพิ่ม: ${this.formatMoney(summary.total_credit_amount || 0)} บาท`,
+                            `ยอดหักคืน: ${this.formatMoney(summary.total_reverse_amount || 0)} บาท`,
+                            `ยอดหักคืนที่คาดว่าเก็บไม่ครบ: ${this.formatMoney(summary.estimated_reverse_uncollectable_amount || 0)} บาท`,
+                            '',
+                            'ยืนยัน apply correction ทันทีหรือไม่?',
+                        ].join('\n');
+
+                        const confirmed = await this.$bvModal.msgBoxConfirm(message, {
+                            title: 'ยืนยันออกผลใหม่',
+                            size: 'lg',
+                            buttonSize: 'sm',
+                            okVariant: 'danger',
+                            okTitle: 'ยืนยัน apply',
+                            cancelTitle: 'ยกเลิก',
+                            centered: true,
+                        });
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        const applyResponse = await this.$http.post("{{ route('admin.lotto.draws.correct_result_apply') }}", {
+                            id: drawId,
+                            mode: 'manual',
+                            reason,
+                            result_number: {
+                                first_prize: firstPrize,
+                                last_2_digits: last2,
+                            },
+                            confirm: 1,
+                        });
+
+                        await this.$bvModal.msgBoxOk(applyResponse?.data?.message || 'ออกผลใหม่สำเร็จ', {
+                            title: 'ผลการดำเนินการ',
+                            size: 'sm',
+                            buttonSize: 'sm',
+                            okVariant: 'success',
+                            centered: true,
+                        });
+
+                        this.$refs.correctResultModal.hide();
+                        window.LaravelDataTables['lottoDrawsTable'].draw(false);
+                    } catch (error) {
+                        await this.showSubmitErrorModal(error, 'ออกผลใหม่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+                    } finally {
+                        this.isCorrectResultSubmitting = false;
+                    }
                 },
                 async chooseSettleMode(mode) {
                     const drawId = Number(this.settleModeDrawId || 0);
@@ -1979,6 +2158,7 @@
         window.addModal = function () { window.app.addModal(); };
         window.editModal = function (id) { window.app.editModal(id); };
         window.settleModal = function (id) { window.app.settleModal(id); };
+        window.openCorrectResultModal = function (id) { window.app.openCorrectResultModal(id); };
         window.openDraw = function (id) { window.app.openDraw(id); };
         window.closeDraw = function (id) { window.app.closeDraw(id); };
         window.toggleDrawStatus = function (id, targetAction) { window.app.toggleDrawStatus(id, targetAction); };

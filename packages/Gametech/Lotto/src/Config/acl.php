@@ -98,6 +98,12 @@ return [
         'sort' => 13,
     ],
     [
+        'key' => 'lotto_settings.draws.correct_result',
+        'name' => 'สิทธิ์ ออกผลใหม่งวดหวย',
+        'route' => 'admin.lotto.draws.correct_result_preview',
+        'sort' => 14,
+    ],
+    [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
@@ -342,6 +348,30 @@ return [
         'name' => 'ส่งออกรายงานผลชนะ',
         'route' => 'admin.lotto.winning_report.export',
         'sort' => 8,
+    ],
+    [
+        'key' => 'lotto_reports.result_corrections',
+        'name' => 'ดูรายงานแก้ไขผลหวย',
+        'route' => 'admin.lotto.result_corrections.index',
+        'sort' => 9,
+    ],
+    [
+        'key' => 'lotto_result_corrections.view',
+        'name' => 'ดูรายงานแก้ไขผลหวย',
+        'route' => 'admin.lotto.result_corrections.index',
+        'sort' => 10,
+    ],
+    [
+        'key' => 'lotto_result_corrections.view_detail',
+        'name' => 'ดูรายละเอียดรายงานแก้ไขผลหวย',
+        'route' => 'admin.lotto.result_corrections.show',
+        'sort' => 11,
+    ],
+    [
+        'key' => 'lotto_result_corrections.debit_remaining',
+        'name' => 'สิทธิ์หักเครดิตเพิ่มจากยอดค้างแก้ไขผลหวย',
+        'route' => 'admin.lotto.result_corrections.retry_debit',
+        'sort' => 12,
     ],
     [
         'key' => 'lotto.yeekee.audit.view',
