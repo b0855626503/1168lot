@@ -287,6 +287,7 @@ class ResultCorrectionApplyService
         $drawId = (int) $correction->draw_id;
         $normalizedNewResult = is_array($correction->new_result_number) ? $correction->new_result_number : [];
         $context = $this->resolveLottoContext($drawId);
+        $settlementBatchId = $this->resolveSettlementBatchId($drawId);
 
         LottoWinning::query()
             ->where('draw_id', $drawId)
@@ -341,13 +342,27 @@ class ResultCorrectionApplyService
                 'result_number' => $matchedContext['result_number'],
                 'matched_rule' => $matchedContext['matched_rule'],
                 'status' => 'settled',
-                'settlement_batch_id' => 0,
+                'settlement_batch_id' => $settlementBatchId,
                 'settled_at' => now(),
                 'credited_at' => null,
                 'voided_by_correction_id' => null,
                 'voided_at' => null,
             ]);
         }
+    }
+
+    private function resolveSettlementBatchId(int $drawId): int
+    {
+        $settlementBatchId = DB::table('settlement_batches')
+            ->where('draw_id', $drawId)
+            ->orderByDesc('id')
+            ->value('id');
+
+        if ($settlementBatchId === null) {
+            throw new InvalidArgumentException('ไม่พบ settlement batch ของงวดนี้');
+        }
+
+        return (int) $settlementBatchId;
     }
 
     /**

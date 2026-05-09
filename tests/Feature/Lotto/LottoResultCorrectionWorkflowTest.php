@@ -25,6 +25,7 @@ class LottoResultCorrectionWorkflowTest extends TestCase
     {
         Schema::dropIfExists('lotto_result_correction_items');
         Schema::dropIfExists('lotto_result_corrections');
+        Schema::dropIfExists('settlement_batches');
         Schema::dropIfExists('wallet_transactions');
         Schema::dropIfExists('lotto_winnings');
         Schema::dropIfExists('logs');
@@ -250,6 +251,26 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('settlement_batches', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('draw_id');
+            $table->date('draw_date')->nullable();
+            $table->string('lottery_type', 64)->nullable();
+            $table->string('market', 64)->nullable();
+            $table->string('mode', 32)->default('settlement');
+            $table->string('status', 32)->default('settled');
+            $table->dateTime('started_at')->nullable();
+            $table->dateTime('finished_at')->nullable();
+            $table->string('idempotency_key')->nullable();
+            $table->unsignedInteger('total_bets_processed')->default(0);
+            $table->unsignedInteger('total_winning_records')->default(0);
+            $table->decimal('total_stake', 14, 2)->default(0);
+            $table->decimal('total_payout', 14, 2)->default(0);
+            $table->text('error_message')->nullable();
+            $table->string('triggered_by')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('lotto_winnings', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('draw_id');
@@ -353,6 +374,27 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             'status' => 'resulted',
             'result_number' => json_encode(['top_3' => '123', 'top_2' => '23', 'bottom_2' => '45']),
             'result_hash' => 'h1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]]);
+
+        DB::table('settlement_batches')->insert([[
+            'id' => 1,
+            'draw_id' => 100,
+            'draw_date' => '2026-05-09',
+            'lottery_type' => 'main',
+            'market' => 'A1',
+            'mode' => 'settlement',
+            'status' => 'settled',
+            'started_at' => now(),
+            'finished_at' => now(),
+            'idempotency_key' => 'seed-settlement-100',
+            'total_bets_processed' => 2,
+            'total_winning_records' => 1,
+            'total_stake' => 10,
+            'total_payout' => 1000,
+            'error_message' => null,
+            'triggered_by' => 'seed',
             'created_at' => now(),
             'updated_at' => now(),
         ]]);
