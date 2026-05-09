@@ -196,6 +196,13 @@ Route::domain(
                 'view' => 'admin::module.lotto.navbar_configs.index',
             ])->name('admin.lotto.navbar_configs.index');
 
+            Route::get('frontend-theme', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoFrontendThemeSettingController@index')->defaults('_config', [
+                'view' => 'admin::module.lotto.frontend_theme.index',
+            ])->name('admin.lotto.frontend_theme.index');
+
+            Route::post('frontend-theme/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoFrontendThemeSettingController@update')
+                ->name('admin.lotto.frontend_theme.update');
+
             Route::get('navbar-configs/list', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoNavbarController@list')
                 ->name('admin.lotto.navbar_configs.list');
 

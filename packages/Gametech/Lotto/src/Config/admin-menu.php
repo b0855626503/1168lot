@@ -102,6 +102,16 @@ return [
         'status' => 1,
     ],
     [
+        'key' => 'lotto_settings.frontend_theme',
+        'name' => 'Frontend Theme',
+        'route' => 'admin.lotto.frontend_theme.index',
+        'sort' => 9,
+        'icon-class' => 'fa-ticket',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1,
+    ],
+    [
         'key' => 'lotto_reports',
         'name' => 'รายงาน Lotto',
         'route' => 'admin.lotto.reports.pending_bets',

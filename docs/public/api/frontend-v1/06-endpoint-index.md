@@ -20,6 +20,7 @@
 | GET | `/api/v1/meta/online-members` | No token | ดึงจำนวนสมาชิกออนไลน์แบบสรุป | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1metaonline-members) |
 | GET | `/api/v1/meta/contact-channels` | No token | ดึงช่องทางติดต่อที่เปิดใช้งาน เช่น Line, Telegram | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1metacontact-channels) |
 | GET | `/api/v1/meta/site` | No token | ดึงข้อมูลเมตาของเว็บ เช่น ชื่อเว็บ สถานะบำรุงรักษา | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1metasite) |
+| GET | `/api/v1/theme` | No token | ดึงธีมหน้าบ้านปัจจุบันสำหรับ frontend (preset + tokens + version) | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1theme) |
 | GET | `/api/v1/realtime/config` | No token | ดึงคอนฟิกระบบ realtime ที่ frontend ต้องใช้เชื่อมต่อ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1realtimeconfig) |
 | GET | `/api/v1/lotto/draws` | No token | ดึงงวดหวยตาม market ที่ระบุ | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottodraws) |
 | GET | `/api/v1/lotto/draws/{id}` | No token | ดึงรายละเอียดงวดหวยรายงวด | [Open](/docs/api/frontend-v1/07-route-reference#get-apiv1lottodrawsid) |

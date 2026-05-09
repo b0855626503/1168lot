@@ -320,6 +320,46 @@ GET /api/v1/meta/site
 }
 ```
 
+<a id="get-apiv1theme"></a>
+### `GET /api/v1/theme`
+- คำอธิบาย: ดึงธีมหน้าบ้านปัจจุบันสำหรับ frontend
+- ใช้เมื่อ: โหลด design tokens สำหรับ render UI ฝั่งลูกค้า
+- Auth: ไม่ต้องใช้ token
+- Request example:
+```http
+GET /api/v1/theme
+```
+- Response example:
+```json
+{
+  "success": true,
+  "message": "ดึง Frontend Theme สำเร็จ",
+  "data": {
+    "preset_key": "midnight",
+    "preset_name": "Midnight",
+    "is_customized": false,
+    "version": 1,
+    "tokens": {
+      "surface-subtle": "#1e293b",
+      "surface-card": "#0f172a",
+      "surface-page": "#020617",
+      "surface-navbar": "rgba(15,23,42,0.92)",
+      "surface-highlight": "#f59e0b",
+      "brand-primary": "#fbbf24",
+      "brand-primary-hover": "#fcd34d",
+      "text-strong": "#f8fafc",
+      "text-default": "#cbd5e1",
+      "text-muted": "#94a3b8",
+      "border-default": "rgba(241,245,249,0.12)",
+      "status-error": "#f87171",
+      "status-success": "#34d399",
+      "status-warning": "#fbbf24"
+    },
+    "updated_at": "2026-05-09T14:00:00+07:00"
+  }
+}
+```
+
 <a id="get-apiv1realtimeconfig"></a>
 ### `GET /api/v1/realtime/config`
 - คำอธิบาย: ดึงคอนฟิกระบบ realtime ที่ frontend ต้องใช้เชื่อมต่อ

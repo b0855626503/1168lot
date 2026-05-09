@@ -6,6 +6,7 @@ use Gametech\Lotto\Models\LotteryGroup;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoDrawBetSetting;
+use Gametech\Lotto\Models\LottoFrontendThemeSetting;
 use Gametech\Lotto\Models\LottoGroupPackage;
 use Gametech\Lotto\Models\LottoGroupPackageBetSetting;
 use Gametech\Lotto\Models\LottoMarketBetSetting;
@@ -45,6 +46,7 @@ class ModuleServiceProvider extends BaseModuleServiceProvider
         LottoResultSource::class,
         LottoResultFetchLog::class,
         MemberLottoMarketPolicy::class,
+        LottoFrontendThemeSetting::class,
         LottoNavbar::class,
         LottoNavbarItem::class,
     ];

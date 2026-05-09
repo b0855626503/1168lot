@@ -4,6 +4,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\AuthController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\ContactChannelController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\CouponController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\DepositController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\FrontendThemeController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoNavbarConfigController;
@@ -58,6 +59,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.meta.contact_channels');
             Route::get('meta/site', [SiteMetaController::class, 'info'])
                 ->name('frontend.api.v1.meta.site');
+            Route::get('theme', [FrontendThemeController::class, 'show'])
+                ->name('frontend.api.v1.theme');
             Route::get('realtime/config', [RealtimeController::class, 'config'])
                 ->name('frontend.api.v1.realtime.config');
 
