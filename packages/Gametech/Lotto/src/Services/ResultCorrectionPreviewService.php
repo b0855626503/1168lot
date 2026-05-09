@@ -129,6 +129,7 @@ class ResultCorrectionPreviewService
                         'member_id' => (int) $row['member_id'],
                         'old_win_amount' => (float) $row['old_win_amount'],
                         'new_win_amount' => (float) $row['new_win_amount'],
+                        'initial_member_balance' => (float) ($row['current_balance'] ?? 0),
                         'reverse_required_amount' => (float) $row['reverse_required_amount'],
                         'reverse_debited_amount' => 0,
                         'reverse_remaining_amount' => (float) $row['reverse_required_amount'],

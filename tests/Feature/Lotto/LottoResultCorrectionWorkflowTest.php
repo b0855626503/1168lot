@@ -249,6 +249,7 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             $table->unsignedBigInteger('member_id');
             $table->decimal('old_win_amount', 14, 2)->default(0);
             $table->decimal('new_win_amount', 14, 2)->default(0);
+            $table->decimal('initial_member_balance', 14, 2)->default(0);
             $table->decimal('reverse_required_amount', 14, 2)->default(0);
             $table->decimal('reverse_debited_amount', 14, 2)->default(0);
             $table->decimal('reverse_remaining_amount', 14, 2)->default(0);

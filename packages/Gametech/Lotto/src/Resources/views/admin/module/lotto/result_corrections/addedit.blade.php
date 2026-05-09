@@ -30,6 +30,7 @@
                                 <th>ID</th>
                                 <th>Username</th>
                                 <th>จำนวนโพย</th>
+                                <th>ยอดตั้งต้น</th>
                                 <th>ยอดหักที่ต้องทำ</th>
                                 <th>ยอดที่หักแล้ว</th>
                                 <th>ยอดคงค้าง</th>
@@ -41,7 +42,7 @@
                         </thead>
                         <tbody id="rcDetailBody">
                             <tr>
-                                <td colspan="10" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                <td colspan="11" class="text-center text-muted">ไม่พบข้อมูล</td>
                             </tr>
                         </tbody>
                     </table>

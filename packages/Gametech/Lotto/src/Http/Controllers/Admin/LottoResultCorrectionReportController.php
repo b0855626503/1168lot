@@ -117,6 +117,7 @@ class LottoResultCorrectionReportController extends AppBaseController
                 $reverseDebitedAmount = round((float) $memberItems->sum('reverse_debited_amount'), 2);
                 $reverseRemainingAmount = round((float) $memberItems->sum('reverse_remaining_amount'), 2);
                 $newCreditAmount = round((float) $memberItems->sum('new_credit_amount'), 2);
+                $initialMemberBalance = round((float) $memberItems->max('initial_member_balance'), 2);
 
                 $status = 'completed';
                 if ($reverseRemainingAmount > 0) {
@@ -139,6 +140,7 @@ class LottoResultCorrectionReportController extends AppBaseController
                         ?? $memberRecord->name
                         ?? (string) $memberId),
                     'ticket_count' => $ticketCount,
+                    'initial_member_balance' => $initialMemberBalance,
                     'reverse_required_amount' => $reverseRequiredAmount,
                     'reverse_debited_amount' => $reverseDebitedAmount,
                     'reverse_remaining_amount' => $reverseRemainingAmount,

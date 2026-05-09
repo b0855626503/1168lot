@@ -28,7 +28,7 @@
                 $tbody.empty();
 
                 if (!Array.isArray(items) || items.length === 0) {
-                    $tbody.append('<tr><td colspan="10" class="text-center text-muted">ไม่พบข้อมูล</td></tr>');
+                    $tbody.append('<tr><td colspan="11" class="text-center text-muted">ไม่พบข้อมูล</td></tr>');
                     return;
                 }
 
@@ -45,6 +45,7 @@
                         + '<td>' + (item.id || 0) + '</td>'
                         + '<td>' + (item.member_username || ('MEM-' + (item.member_id || 0))) + '</td>'
                         + '<td>' + (item.ticket_count || 0) + '</td>'
+                        + '<td class="text-right">' + renderMoney(item.initial_member_balance) + '</td>'
                         + '<td class="text-right">' + renderMoney(item.reverse_required_amount) + '</td>'
                         + '<td class="text-right">' + renderMoney(item.reverse_debited_amount) + '</td>'
                         + '<td class="text-right ' + remainingClass + '">' + renderMoney(item.reverse_remaining_amount) + '</td>'
@@ -73,7 +74,7 @@
                 const data = response && response.data && response.data.data ? response.data.data : null;
 
                 if (!data) {
-                    $('#rcDetailBody').html('<tr><td colspan="10" class="text-center text-danger">โหลดข้อมูลไม่สำเร็จ</td></tr>');
+                    $('#rcDetailBody').html('<tr><td colspan="11" class="text-center text-danger">โหลดข้อมูลไม่สำเร็จ</td></tr>');
                     return;
                 }
 
@@ -92,7 +93,7 @@
                 activeCorrectionId = correctionId;
                 activeCanRetryDebit = false;
                 $('#resultCorrectionDetailTitle').text('รายละเอียดการแก้ไขผลหวย #' + correctionId);
-                $('#rcDetailBody').html('<tr><td colspan="10" class="text-center text-muted">กำลังโหลด...</td></tr>');
+                $('#rcDetailBody').html('<tr><td colspan="11" class="text-center text-muted">กำลังโหลด...</td></tr>');
                 renderSummary({ deducted_count: 0, remaining_count: 0, completed_count: 0 });
                 $('#rcRetryAllRemainingBtn').addClass('d-none');
                 $('#resultCorrectionDetailModal').modal('show');
@@ -100,7 +101,7 @@
                 try {
                     await reloadCorrectionDetail();
                 } catch (error) {
-                    $('#rcDetailBody').html('<tr><td colspan="10" class="text-center text-danger">โหลดข้อมูลไม่สำเร็จ</td></tr>');
+                    $('#rcDetailBody').html('<tr><td colspan="11" class="text-center text-danger">โหลดข้อมูลไม่สำเร็จ</td></tr>');
                 }
             });
 
