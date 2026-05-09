@@ -69,6 +69,10 @@ class LottoResultCorrectionWorkflowTest extends TestCase
         $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->whereNull('voided_at')->count());
         $this->assertSame(0, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2001)->whereNull('voided_at')->count());
         $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2002)->whereNull('voided_at')->count());
+        $activeSettlementBatchId = (int) DB::table('lotto_winnings')->where('draw_id', 100)->whereNull('voided_at')->value('settlement_batch_id');
+        $this->assertNotSame(0, $activeSettlementBatchId);
+        $this->assertNotSame(1, $activeSettlementBatchId);
+        $this->assertSame('result_correction', (string) DB::table('settlement_batches')->where('id', $activeSettlementBatchId)->value('mode'));
 
         DB::table('members')->where('code', 2001)->update(['balance' => 700, 'date_update' => now()]);
         $retry = app(ResultCorrectionRetryDebitService::class)->retryRemaining((int) $preview['correction_id'], null, 1);
@@ -99,6 +103,14 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             ->where('bet_item_id', 6002)
             ->whereNull('voided_at')
             ->count());
+        $activeSettlementBatchId = (int) DB::table('lotto_winnings')
+            ->where('draw_id', 100)
+            ->where('bet_item_id', 6002)
+            ->whereNull('voided_at')
+            ->value('settlement_batch_id');
+        $this->assertNotSame(0, $activeSettlementBatchId);
+        $this->assertNotSame(1, $activeSettlementBatchId);
+        $this->assertSame('result_correction', (string) DB::table('settlement_batches')->where('id', $activeSettlementBatchId)->value('mode'));
         $this->assertSame(0, DB::table('lotto_winnings')
             ->where('draw_id', 100)
             ->where('bet_item_id', 6003)

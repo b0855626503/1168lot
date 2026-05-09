@@ -183,7 +183,7 @@ class ResultCorrectionApplyService
                 }
 
                 $this->syncAffectedTicketsResultState($correction);
-                $this->syncWinningReportMaterializedData($correction);
+                $this->syncWinningReportMaterializedData($correction, $draw);
 
                 $hasRemaining = LottoResultCorrectionItem::query()
                     ->where('correction_id', (int) $correction->id)
@@ -282,12 +282,12 @@ class ResultCorrectionApplyService
         }
     }
 
-    private function syncWinningReportMaterializedData(LottoResultCorrection $correction): void
+    private function syncWinningReportMaterializedData(LottoResultCorrection $correction, LottoDraw $draw): void
     {
         $drawId = (int) $correction->draw_id;
         $normalizedNewResult = is_array($correction->new_result_number) ? $correction->new_result_number : [];
         $context = $this->resolveLottoContext($drawId);
-        $settlementBatchId = $this->resolveSettlementBatchId($drawId);
+        $settlementBatchId = $this->resolveCorrectionSettlementBatchId($correction, $draw, $context);
 
         LottoWinning::query()
             ->where('draw_id', $drawId)
@@ -351,18 +351,45 @@ class ResultCorrectionApplyService
         }
     }
 
-    private function resolveSettlementBatchId(int $drawId): int
-    {
+    /**
+     * @param  array{lottery_type:string, market:?string}  $context
+     */
+    private function resolveCorrectionSettlementBatchId(
+        LottoResultCorrection $correction,
+        LottoDraw $draw,
+        array $context
+    ): int {
+        $idempotencyKey = sprintf('result-correction:%d', (int) $correction->id);
+
         $settlementBatchId = DB::table('settlement_batches')
-            ->where('draw_id', $drawId)
-            ->orderByDesc('id')
+            ->where('idempotency_key', $idempotencyKey)
             ->value('id');
 
-        if ($settlementBatchId === null) {
-            throw new InvalidArgumentException('ไม่พบ settlement batch ของงวดนี้');
+        if ($settlementBatchId !== null) {
+            return (int) $settlementBatchId;
         }
 
-        return (int) $settlementBatchId;
+        $batchId = DB::table('settlement_batches')->insertGetId([
+            'draw_id' => (int) $correction->draw_id,
+            'draw_date' => $draw->draw_date,
+            'lottery_type' => (string) ($context['lottery_type'] ?? ''),
+            'market' => (string) ($context['market'] ?? ''),
+            'mode' => 'result_correction',
+            'status' => 'settled',
+            'started_at' => $correction->started_at ?? now(),
+            'finished_at' => now(),
+            'idempotency_key' => $idempotencyKey,
+            'total_bets_processed' => 0,
+            'total_winning_records' => 0,
+            'total_stake' => 0,
+            'total_payout' => 0,
+            'error_message' => null,
+            'triggered_by' => $correction->created_by !== null ? (string) $correction->created_by : 'system',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return (int) $batchId;
     }
 
     /**
