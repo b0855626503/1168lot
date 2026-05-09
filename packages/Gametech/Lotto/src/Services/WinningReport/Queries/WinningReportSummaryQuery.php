@@ -44,7 +44,8 @@ class WinningReportSummaryQuery
         }
 
         $aggregatesQuery = DB::table('lotto_winnings')
-            ->whereIn('draw_id', $drawIds);
+            ->whereIn('draw_id', $drawIds)
+            ->whereNull('voided_at');
 
         $this->applyUserFilter($aggregatesQuery, $filters);
 
@@ -110,7 +111,8 @@ class WinningReportSummaryQuery
             $query->whereExists(function ($subQuery) use ($filters): void {
                 $subQuery->selectRaw('1')
                     ->from('lotto_winnings as w')
-                    ->whereColumn('w.draw_id', 'settlement_batches.draw_id');
+                    ->whereColumn('w.draw_id', 'settlement_batches.draw_id')
+                    ->whereNull('w.voided_at');
 
                 if (! empty($filters['user_id'])) {
                     $subQuery->where('w.user_id', (int) $filters['user_id']);
@@ -132,7 +134,8 @@ class WinningReportSummaryQuery
     private function resolveLatestDrawIdForDetails(array $drawIds, array $filters): ?int
     {
         $latestQuery = DB::table('lotto_winnings')
-            ->whereIn('draw_id', $drawIds);
+            ->whereIn('draw_id', $drawIds)
+            ->whereNull('voided_at');
 
         $this->applyUserFilter($latestQuery, $filters);
 

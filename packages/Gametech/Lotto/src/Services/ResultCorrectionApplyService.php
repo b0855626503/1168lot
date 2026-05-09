@@ -9,6 +9,7 @@ use Gametech\Lotto\Models\LottoResultCorrection;
 use Gametech\Lotto\Models\LottoResultCorrectionItem;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
+use Gametech\Lotto\Models\LottoWinning;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -182,6 +183,7 @@ class ResultCorrectionApplyService
                 }
 
                 $this->syncAffectedTicketsResultState($correction);
+                $this->syncWinningReportMaterializedData($correction);
 
                 $hasRemaining = LottoResultCorrectionItem::query()
                     ->where('correction_id', (int) $correction->id)
@@ -278,5 +280,127 @@ class ResultCorrectionApplyService
                 'total_win_amount' => $ticketWinAmount,
             ]);
         }
+    }
+
+    private function syncWinningReportMaterializedData(LottoResultCorrection $correction): void
+    {
+        $drawId = (int) $correction->draw_id;
+        $normalizedNewResult = is_array($correction->new_result_number) ? $correction->new_result_number : [];
+        $context = $this->resolveLottoContext($drawId);
+
+        LottoWinning::query()
+            ->where('draw_id', $drawId)
+            ->whereNull('voided_at')
+            ->update([
+                'voided_by_correction_id' => (int) $correction->id,
+                'voided_at' => now(),
+            ]);
+
+        $winningItems = LottoTicketItem::query()
+            ->join('lotto_tickets as t', 't.id', '=', 'lotto_ticket_items.ticket_id')
+            ->leftJoin('members as m', 'm.code', '=', 't.member_id')
+            ->where('t.draw_id', $drawId)
+            ->where('t.status', '!=', 'cancelled')
+            ->where('lotto_ticket_items.result_status', 'win')
+            ->orderBy('lotto_ticket_items.id')
+            ->get([
+                'lotto_ticket_items.id as item_id',
+                'lotto_ticket_items.ticket_id',
+                'lotto_ticket_items.bet_type',
+                'lotto_ticket_items.number',
+                'lotto_ticket_items.amount',
+                'lotto_ticket_items.payout_at_time',
+                'lotto_ticket_items.win_amount',
+                't.member_id',
+                'm.code as member_code',
+            ]);
+
+        foreach ($winningItems as $winningItem) {
+            $matchedContext = $this->resolveMatchedContext(
+                (string) $winningItem->bet_type,
+                $normalizedNewResult
+            );
+            $payout = round((float) ($winningItem->win_amount ?? 0), 2);
+            $stake = round((float) ($winningItem->amount ?? 0), 2);
+
+            LottoWinning::query()->create([
+                'draw_id' => $drawId,
+                'bet_id' => (int) $winningItem->ticket_id,
+                'bet_item_id' => (int) $winningItem->item_id,
+                'ticket_no' => (string) $winningItem->ticket_id,
+                'user_id' => (int) $winningItem->member_id,
+                'username' => (string) ($winningItem->member_code ?? ''),
+                'lottery_type' => (string) ($context['lottery_type'] ?? ''),
+                'market' => (string) ($context['market'] ?? ''),
+                'bet_type' => (string) $winningItem->bet_type,
+                'number' => (string) $winningItem->number,
+                'stake' => $stake,
+                'odds' => round((float) ($winningItem->payout_at_time ?? 0), 4),
+                'payout' => $payout,
+                'net_profit' => round($stake - $payout, 2),
+                'result_number' => $matchedContext['result_number'],
+                'matched_rule' => $matchedContext['matched_rule'],
+                'status' => 'settled',
+                'settlement_batch_id' => 0,
+                'settled_at' => now(),
+                'credited_at' => null,
+                'voided_by_correction_id' => null,
+                'voided_at' => null,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, string>  $normalizedResult
+     * @return array{result_number:?string, matched_rule:?string}
+     */
+    private function resolveMatchedContext(string $betType, array $normalizedResult): array
+    {
+        return match ($betType) {
+            'top_3', 'tod_3', 'run_top' => [
+                'result_number' => $normalizedResult['top_3'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            'top_2' => [
+                'result_number' => $normalizedResult['top_2'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            'bottom_2', 'run_bottom' => [
+                'result_number' => $normalizedResult['bottom_2'] ?? null,
+                'matched_rule' => $betType,
+            ],
+            default => [
+                'result_number' => null,
+                'matched_rule' => $betType,
+            ],
+        };
+    }
+
+    /**
+     * @return array{lottery_type:string, market:?string}
+     */
+    private function resolveLottoContext(int $drawId): array
+    {
+        $row = DB::table('lotto_draws as d')
+            ->leftJoin('lotto_markets as m', 'm.id', '=', 'd.market_id')
+            ->leftJoin('lotto_groups as g', 'g.id', '=', 'm.group_id')
+            ->where('d.id', $drawId)
+            ->select([
+                'g.code as lottery_type',
+                'm.code as market_code',
+            ])
+            ->first();
+
+        $lotteryType = (string) ($row->lottery_type ?? '');
+        if ($lotteryType === '') {
+            throw new InvalidArgumentException('ไม่พบ lottery_type จาก market.group.code');
+        }
+
+        $marketCode = (string) ($row->market_code ?? '');
+
+        return [
+            'lottery_type' => $lotteryType,
+            'market' => $marketCode !== '' ? $marketCode : null,
+        ];
     }
 }

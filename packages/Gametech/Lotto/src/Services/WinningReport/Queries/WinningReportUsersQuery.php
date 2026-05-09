@@ -19,6 +19,7 @@ class WinningReportUsersQuery
 
         $query = DB::table('lotto_winnings')
             ->where('draw_id', $drawId)
+            ->whereNull('voided_at')
             ->groupBy('user_id', 'username')
             ->selectRaw('user_id')
             ->selectRaw('MAX(COALESCE(username, "")) as username')

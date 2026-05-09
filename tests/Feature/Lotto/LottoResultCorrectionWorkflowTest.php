@@ -26,6 +26,7 @@ class LottoResultCorrectionWorkflowTest extends TestCase
         Schema::dropIfExists('lotto_result_correction_items');
         Schema::dropIfExists('lotto_result_corrections');
         Schema::dropIfExists('wallet_transactions');
+        Schema::dropIfExists('lotto_winnings');
         Schema::dropIfExists('logs');
         Schema::dropIfExists('lotto_ticket_items');
         Schema::dropIfExists('lotto_tickets');
@@ -64,12 +65,44 @@ class LottoResultCorrectionWorkflowTest extends TestCase
         $this->assertSame('lose', (string) DB::table('lotto_ticket_items')->where('id', 6001)->value('result_status'));
         $this->assertSame('win', (string) DB::table('lotto_ticket_items')->where('id', 6002)->value('result_status'));
         $this->assertSame(0.0, (float) DB::table('lotto_tickets')->where('id', 5003)->value('total_win_amount'));
+        $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->whereNull('voided_at')->count());
+        $this->assertSame(0, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2001)->whereNull('voided_at')->count());
+        $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2002)->whereNull('voided_at')->count());
 
         DB::table('members')->where('code', 2001)->update(['balance' => 700, 'date_update' => now()]);
         $retry = app(ResultCorrectionRetryDebitService::class)->retryRemaining((int) $preview['correction_id'], null, 1);
         $this->assertSame('completed', $retry['status']);
         $this->assertSame(0.0, $retry['remaining_amount']);
         $this->assertSame(3, DB::table('wallet_transactions')->count());
+    }
+
+    public function test_apply_voids_old_winnings_and_rebuilds_active_winnings_from_latest_result(): void
+    {
+        $draw = LottoDraw::query()->findOrFail(100);
+        $preview = app(ResultCorrectionPreviewService::class)->preview(
+            $draw,
+            ['top_3' => '999', 'top_2' => '99', 'bottom_2' => '45'],
+            'rebuild_winnings',
+            1
+        );
+
+        app(ResultCorrectionApplyService::class)->apply((int) $preview['correction_id'], 1);
+
+        $this->assertSame(1, DB::table('lotto_winnings')
+            ->where('draw_id', 100)
+            ->where('bet_item_id', 6001)
+            ->whereNotNull('voided_at')
+            ->count());
+        $this->assertSame(1, DB::table('lotto_winnings')
+            ->where('draw_id', 100)
+            ->where('bet_item_id', 6002)
+            ->whereNull('voided_at')
+            ->count());
+        $this->assertSame(0, DB::table('lotto_winnings')
+            ->where('draw_id', 100)
+            ->where('bet_item_id', 6003)
+            ->whereNull('voided_at')
+            ->count());
     }
 
     public function test_apply_is_idempotent_after_completed_or_partial_failed(): void
@@ -217,6 +250,33 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('lotto_winnings', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('draw_id');
+            $table->unsignedBigInteger('bet_id');
+            $table->unsignedBigInteger('bet_item_id');
+            $table->string('ticket_no', 64)->nullable();
+            $table->unsignedBigInteger('user_id');
+            $table->string('username', 191)->nullable();
+            $table->string('lottery_type', 64)->nullable();
+            $table->string('market', 64)->nullable();
+            $table->string('bet_type', 32);
+            $table->string('number', 32);
+            $table->decimal('stake', 14, 2)->default(0);
+            $table->decimal('odds', 14, 4)->default(0);
+            $table->decimal('payout', 14, 2)->nullable();
+            $table->decimal('net_profit', 14, 2)->nullable();
+            $table->string('result_number', 32)->nullable();
+            $table->string('matched_rule', 32)->nullable();
+            $table->string('status', 32)->default('settled');
+            $table->unsignedBigInteger('settlement_batch_id')->default(0);
+            $table->dateTime('settled_at')->nullable();
+            $table->dateTime('credited_at')->nullable();
+            $table->unsignedBigInteger('voided_by_correction_id')->nullable();
+            $table->dateTime('voided_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('lotto_result_corrections', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('draw_id');
@@ -307,6 +367,31 @@ class LottoResultCorrectionWorkflowTest extends TestCase
             ['id' => 6001, 'ticket_id' => 5001, 'bet_type' => 'top_3', 'number' => '123', 'amount' => 10, 'payout_at_time' => 100, 'potential_win_amount_at_time' => 1000, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 6002, 'ticket_id' => 5002, 'bet_type' => 'top_3', 'number' => '999', 'amount' => 10, 'payout_at_time' => 100, 'potential_win_amount_at_time' => 1000, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 6003, 'ticket_id' => 5003, 'bet_type' => 'top_3', 'number' => '999', 'amount' => 10, 'payout_at_time' => 100, 'potential_win_amount_at_time' => 1000, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        DB::table('lotto_winnings')->insert([
+            'draw_id' => 100,
+            'bet_id' => 5001,
+            'bet_item_id' => 6001,
+            'ticket_no' => '5001',
+            'user_id' => 2001,
+            'username' => '0855626503',
+            'lottery_type' => 'main',
+            'market' => 'A1',
+            'bet_type' => 'top_3',
+            'number' => '123',
+            'stake' => 10,
+            'odds' => 100,
+            'payout' => 1000,
+            'net_profit' => -990,
+            'result_number' => '123',
+            'matched_rule' => 'top_3',
+            'status' => 'credited',
+            'settlement_batch_id' => 1,
+            'settled_at' => now(),
+            'credited_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }
