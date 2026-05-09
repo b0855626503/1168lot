@@ -10,6 +10,7 @@ class LottoFrontendThemeSetting extends Model implements LottoFrontendThemeSetti
     protected $table = 'lotto_frontend_theme_settings';
 
     protected $fillable = [
+        'singleton_key',
         'preset_key',
         'tokens',
         'custom_tokens',

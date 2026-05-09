@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Lotto;
 
+use Gametech\Admin\Bouncer as AdminBouncer;
 use Gametech\Lotto\Http\Controllers\Admin\LottoFrontendThemeSettingController;
 use Gametech\Lotto\Services\LottoFrontendThemeSettingService;
 use Illuminate\Database\Schema\Blueprint;
@@ -18,6 +19,7 @@ class AdminLottoFrontendThemeSettingControllerTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        $this->mockBouncerPermission(true);
         Schema::dropIfExists('logs');
         Schema::dropIfExists('lotto_frontend_theme_settings');
         Schema::create('logs', function (Blueprint $table): void {
@@ -96,5 +98,34 @@ class AdminLottoFrontendThemeSettingControllerTest extends TestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.version', 2);
         $this->assertNull(Cache::get(LottoFrontendThemeSettingService::CACHE_KEY));
+    }
+
+    public function test_update_returns_403_when_user_has_no_update_permission(): void
+    {
+        $this->mockBouncerPermission(false);
+
+        $request = Request::create('/admin/lotto/frontend-theme/update', 'POST', [
+            'data' => [
+                'preset_key' => 'midnight',
+                'custom_tokens' => [],
+            ],
+        ]);
+
+        $response = TestResponse::fromBaseResponse(app(LottoFrontendThemeSettingController::class)->update($request));
+        $response->assertStatus(403);
+        $response->assertJsonPath('success', false);
+    }
+
+    private function mockBouncerPermission(bool $allowed): void
+    {
+        app()->instance(AdminBouncer::class, new class($allowed)
+        {
+            public function __construct(private bool $allowed) {}
+
+            public function hasPermission(string $key): bool
+            {
+                return $this->allowed;
+            }
+        });
     }
 }

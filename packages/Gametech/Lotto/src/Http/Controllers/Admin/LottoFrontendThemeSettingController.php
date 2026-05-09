@@ -27,6 +27,11 @@ class LottoFrontendThemeSettingController extends AppBaseController
 
     public function update(Request $request): JsonResponse
     {
+        $canUpdate = ! function_exists('bouncer') || bouncer()->hasPermission('lotto_settings.frontend_theme.update');
+        if (! $canUpdate) {
+            return $this->sendError('ไม่มีสิทธิ์แก้ไข Frontend Theme', 403);
+        }
+
         $payload = (array) $request->input('data', []);
         $user = auth()->user();
         $updatedBy = null;

@@ -14,23 +14,21 @@ class LottoFrontendThemeSettingService
 
     public function ensureSingleton(): LottoFrontendThemeSetting
     {
-        $existing = LottoFrontendThemeSetting::query()->orderBy('id')->first();
-        if ($existing instanceof LottoFrontendThemeSetting) {
-            return $existing;
-        }
-
         $defaultPreset = $this->defaultPresetKey();
         $preset = $this->presetByKey($defaultPreset);
         $tokens = $this->normalizeTokens((array) ($preset['tokens'] ?? []));
 
-        return LottoFrontendThemeSetting::query()->create([
-            'preset_key' => $defaultPreset,
-            'tokens' => $tokens,
-            'custom_tokens' => [],
-            'is_customized' => false,
-            'version' => 1,
-            'updated_by' => null,
-        ]);
+        return LottoFrontendThemeSetting::query()->firstOrCreate(
+            ['singleton_key' => 'default'],
+            [
+                'preset_key' => $defaultPreset,
+                'tokens' => $tokens,
+                'custom_tokens' => [],
+                'is_customized' => false,
+                'version' => 1,
+                'updated_by' => null,
+            ]
+        );
     }
 
     /**
@@ -51,10 +49,16 @@ class LottoFrontendThemeSettingService
         $this->assertValidColorTokens($mergedTokens);
 
         $setting = DB::transaction(function () use ($presetKey, $customTokens, $mergedTokens, $updatedBy): LottoFrontendThemeSetting {
-            $row = LottoFrontendThemeSetting::query()->lockForUpdate()->orderBy('id')->first();
+            $row = LottoFrontendThemeSetting::query()
+                ->where('singleton_key', 'default')
+                ->lockForUpdate()
+                ->first();
             if (! $row instanceof LottoFrontendThemeSetting) {
                 $row = $this->ensureSingleton();
-                $row = LottoFrontendThemeSetting::query()->lockForUpdate()->find((int) $row->id);
+                $row = LottoFrontendThemeSetting::query()
+                    ->where('singleton_key', 'default')
+                    ->lockForUpdate()
+                    ->first();
             }
 
             $nextVersion = ((int) $row->version) + 1;
