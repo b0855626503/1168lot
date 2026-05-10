@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default' => 'midnight',
+    'default' => 'default',
     'required_token_keys' => [
         'surface-subtle',
         'surface-card',
@@ -19,6 +19,25 @@ return [
         'status-warning',
     ],
     'presets' => [
+        'default' => [
+            'name' => 'Default',
+            'tokens' => [
+                'surface-subtle' => '#edf1f6',
+                'surface-card' => '#ffffff',
+                'surface-page' => '#edf1f6',
+                'surface-navbar' => 'rgba(255,255,255,0.96)',
+                'surface-highlight' => '#0071e3',
+                'brand-primary' => '#0071e3',
+                'brand-primary-hover' => '#0077ed',
+                'text-strong' => '#0f172a',
+                'text-default' => '#334155',
+                'text-muted' => '#64748b',
+                'border-default' => 'rgba(15, 23, 42, 0.14)',
+                'status-error' => '#ff3b30',
+                'status-success' => '#34c759',
+                'status-warning' => '#ff9500',
+            ],
+        ],
         'midnight' => [
             'name' => 'Midnight',
             'tokens' => [

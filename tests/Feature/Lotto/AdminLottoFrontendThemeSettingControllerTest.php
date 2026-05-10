@@ -59,8 +59,9 @@ class AdminLottoFrontendThemeSettingControllerTest extends TestCase
     {
         $payload = app(LottoFrontendThemeSettingService::class)->formatForAdminResponse();
 
-        $this->assertSame('midnight', $payload['preset_key']);
+        $this->assertSame('default', $payload['preset_key']);
         $this->assertArrayHasKey('surface-subtle', $payload['tokens']);
+        $this->assertSame('default', $payload['presets'][0]['key'] ?? null);
     }
 
     public function test_update_rejects_invalid_color_string(): void

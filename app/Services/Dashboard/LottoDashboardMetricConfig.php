@@ -43,7 +43,7 @@ class LottoDashboardMetricConfig
      */
     public static function payoutRefTypes(): array
     {
-        return ['LOTTO_SETTLE_WIN', 'LOTTO_PAYOUT'];
+        return ['LOTTO_SETTLE_WIN', 'LOTTO_PAYOUT', 'LOTTO_RESULT_CORRECTION_CREDIT'];
     }
 
     /**
@@ -51,7 +51,7 @@ class LottoDashboardMetricConfig
      */
     public static function refundRefTypes(): array
     {
-        return ['LOTTO_CANCEL'];
+        return ['LOTTO_CANCEL', 'LOTTO_RESULT_CORRECTION_REVERSE'];
     }
 
     public static function riskSnapshotRetentionDays(): int
