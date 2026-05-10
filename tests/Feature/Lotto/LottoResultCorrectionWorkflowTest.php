@@ -185,6 +185,10 @@ class LottoResultCorrectionWorkflowTest extends TestCase
         $this->assertGreaterThanOrEqual(1, DB::table('wallet_transactions')
             ->where('ref_type', 'LOTTO_RESULT_CORRECTION_CREDIT')
             ->count());
+        $this->assertSame(1, DB::table('lotto_winnings')
+            ->where('draw_id', 100)
+            ->where('bet_item_id', 6002)
+            ->count());
     }
 
     private function prepareSchema(): void

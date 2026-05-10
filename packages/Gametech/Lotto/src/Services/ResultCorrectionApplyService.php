@@ -330,30 +330,34 @@ class ResultCorrectionApplyService
                 ? $memberUsername
                 : (string) ($winningItem->member_code ?? '');
 
-            LottoWinning::query()->create([
-                'draw_id' => $drawId,
-                'bet_id' => (int) $winningItem->ticket_id,
-                'bet_item_id' => (int) $winningItem->item_id,
-                'ticket_no' => (string) $winningItem->ticket_id,
-                'user_id' => (int) $winningItem->member_id,
-                'username' => $displayUsername,
-                'lottery_type' => (string) ($context['lottery_type'] ?? ''),
-                'market' => (string) ($context['market'] ?? ''),
-                'bet_type' => (string) $winningItem->bet_type,
-                'number' => (string) $winningItem->number,
-                'stake' => $stake,
-                'odds' => round((float) ($winningItem->payout_at_time ?? 0), 4),
-                'payout' => $payout,
-                'net_profit' => round($stake - $payout, 2),
-                'result_number' => $matchedContext['result_number'],
-                'matched_rule' => $matchedContext['matched_rule'],
-                'status' => 'settled',
-                'settlement_batch_id' => $settlementBatchId,
-                'settled_at' => now(),
-                'credited_at' => null,
-                'voided_by_correction_id' => null,
-                'voided_at' => null,
-            ]);
+            LottoWinning::query()->updateOrCreate(
+                [
+                    'draw_id' => $drawId,
+                    'bet_item_id' => (int) $winningItem->item_id,
+                ],
+                [
+                    'bet_id' => (int) $winningItem->ticket_id,
+                    'ticket_no' => (string) $winningItem->ticket_id,
+                    'user_id' => (int) $winningItem->member_id,
+                    'username' => $displayUsername,
+                    'lottery_type' => (string) ($context['lottery_type'] ?? ''),
+                    'market' => (string) ($context['market'] ?? ''),
+                    'bet_type' => (string) $winningItem->bet_type,
+                    'number' => (string) $winningItem->number,
+                    'stake' => $stake,
+                    'odds' => round((float) ($winningItem->payout_at_time ?? 0), 4),
+                    'payout' => $payout,
+                    'net_profit' => round($stake - $payout, 2),
+                    'result_number' => $matchedContext['result_number'],
+                    'matched_rule' => $matchedContext['matched_rule'],
+                    'status' => 'settled',
+                    'settlement_batch_id' => $settlementBatchId,
+                    'settled_at' => now(),
+                    'credited_at' => null,
+                    'voided_by_correction_id' => null,
+                    'voided_at' => null,
+                ]
+            );
         }
     }
 
