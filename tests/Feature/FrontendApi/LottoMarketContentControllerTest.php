@@ -146,4 +146,80 @@ class LottoMarketContentControllerTest extends TestCase
         $response->assertJsonPath('data.content.title', null);
         $response->assertJsonPath('data.content.rules_content', null);
     }
+
+    public function test_market_content_falls_back_to_th_locale_for_other_supported_locale(): void
+    {
+        DB::table('lotto_markets')->insert([
+            'id' => 13,
+            'name' => 'Market D',
+            'code' => 'market_d',
+            'is_enabled' => 1,
+            'result_mode' => 'normal',
+        ]);
+
+        DB::table('lotto_market_contents')->insert([
+            'market_id' => 13,
+            'locale' => 'th',
+            'title' => 'กติกาภาษาไทย',
+            'is_enabled' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/markets/13/content', 'GET', ['language' => 'lo']);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->marketContent($request, 13));
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.locale', 'lo');
+        $response->assertJsonPath('data.fallback_locale', 'th');
+        $response->assertJsonPath('data.content.title', 'กติกาภาษาไทย');
+    }
+
+    public function test_market_content_merges_en_with_th_fallback_per_field(): void
+    {
+        DB::table('lotto_markets')->insert([
+            'id' => 14,
+            'name' => 'Market E',
+            'code' => 'market_e',
+            'is_enabled' => 1,
+            'result_mode' => 'normal',
+        ]);
+
+        DB::table('lotto_market_contents')->insert([
+            'market_id' => 14,
+            'locale' => 'th',
+            'title' => 'ชื่อไทย',
+            'summary' => 'สรุปไทย',
+            'rules_content' => 'กติกาไทย',
+            'schedule_content' => 'เวลาไทย',
+            'is_enabled' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('lotto_market_contents')->insert([
+            'market_id' => 14,
+            'locale' => 'en',
+            'title' => 'English title',
+            'summary' => null,
+            'rules_content' => '',
+            'schedule_content' => 'English schedule',
+            'is_enabled' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $request = Request::create('/api/v1/lotto/markets/14/content', 'GET', ['language' => 'en']);
+        $response = TestResponse::fromBaseResponse(app(LottoController::class)->marketContent($request, 14));
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.locale', 'en');
+        $response->assertJsonPath('data.fallback_locale', 'th');
+        $response->assertJsonPath('data.content.title', 'English title');
+        $response->assertJsonPath('data.content.summary', 'สรุปไทย');
+        $response->assertJsonPath('data.content.rules_content', 'กติกาไทย');
+        $response->assertJsonPath('data.content.schedule_content', 'English schedule');
+    }
 }

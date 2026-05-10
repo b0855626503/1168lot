@@ -10,6 +10,16 @@ use Illuminate\Support\Facades\Cache;
 class LottoMarketContentService
 {
     public const CACHE_TTL_SECONDS = 60;
+    private const CONTENT_FIELDS = [
+        'title',
+        'summary',
+        'rules_content',
+        'schedule_content',
+        'prize_content',
+        'formula_content',
+        'seo_title',
+        'seo_description',
+    ];
 
     /**
      * @return array<int, string>
@@ -106,6 +116,25 @@ class LottoMarketContentService
 
         $primary = $this->getEnabledContentByLocaleWithCache($marketId, $locale);
         if ($primary !== null) {
+            if ($locale === 'th') {
+                return [
+                    'locale' => $locale,
+                    'fallback_locale' => null,
+                    'content' => $this->contentObject($primary),
+                ];
+            }
+
+            $fallback = $this->getEnabledContentByLocaleWithCache($marketId, 'th');
+            if ($fallback !== null) {
+                [$content, $usedFallback] = $this->mergeWithFallbackContent($primary, $fallback);
+
+                return [
+                    'locale' => $locale,
+                    'fallback_locale' => $usedFallback ? 'th' : null,
+                    'content' => $content,
+                ];
+            }
+
             return [
                 'locale' => $locale,
                 'fallback_locale' => null,
@@ -164,16 +193,12 @@ class LottoMarketContentService
      */
     public function contentObject(array $row): array
     {
-        return [
-            'title' => $row['title'] ?? null,
-            'summary' => $row['summary'] ?? null,
-            'rules_content' => $row['rules_content'] ?? null,
-            'schedule_content' => $row['schedule_content'] ?? null,
-            'prize_content' => $row['prize_content'] ?? null,
-            'formula_content' => $row['formula_content'] ?? null,
-            'seo_title' => $row['seo_title'] ?? null,
-            'seo_description' => $row['seo_description'] ?? null,
-        ];
+        $content = [];
+        foreach (self::CONTENT_FIELDS as $field) {
+            $content[$field] = $row[$field] ?? null;
+        }
+
+        return $content;
     }
 
     /**
@@ -181,16 +206,7 @@ class LottoMarketContentService
      */
     public function emptyContentObject(): array
     {
-        return [
-            'title' => null,
-            'summary' => null,
-            'rules_content' => null,
-            'schedule_content' => null,
-            'prize_content' => null,
-            'formula_content' => null,
-            'seo_title' => null,
-            'seo_description' => null,
-        ];
+        return array_fill_keys(self::CONTENT_FIELDS, null);
     }
 
     /**
@@ -200,5 +216,38 @@ class LottoMarketContentService
     public function sanitizeSingleLocalePayload(array $payload): array
     {
         return LottoContentSanitizer::sanitizePayload($payload);
+    }
+
+    /**
+     * @param  array<string,mixed>  $primary
+     * @param  array<string,mixed>  $fallback
+     * @return array{0:array<string,mixed>,1:bool}
+     */
+    private function mergeWithFallbackContent(array $primary, array $fallback): array
+    {
+        $primaryContent = $this->contentObject($primary);
+        $fallbackContent = $this->contentObject($fallback);
+        $merged = $primaryContent;
+        $usedFallback = false;
+
+        foreach (self::CONTENT_FIELDS as $field) {
+            if ($this->hasTextValue($merged[$field] ?? null)) {
+                continue;
+            }
+
+            if (! $this->hasTextValue($fallbackContent[$field] ?? null)) {
+                continue;
+            }
+
+            $merged[$field] = $fallbackContent[$field];
+            $usedFallback = true;
+        }
+
+        return [$merged, $usedFallback];
+    }
+
+    private function hasTextValue(mixed $value): bool
+    {
+        return trim((string) ($value ?? '')) !== '';
     }
 }
