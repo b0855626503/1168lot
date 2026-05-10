@@ -69,6 +69,8 @@ class LottoResultCorrectionWorkflowTest extends TestCase
         $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->whereNull('voided_at')->count());
         $this->assertSame(0, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2001)->whereNull('voided_at')->count());
         $this->assertSame(1, DB::table('lotto_winnings')->where('draw_id', 100)->where('user_id', 2002)->whereNull('voided_at')->count());
+        $this->assertSame('credited', (string) DB::table('lotto_winnings')->where('draw_id', 100)->where('bet_item_id', 6002)->value('status'));
+        $this->assertNotNull(DB::table('lotto_winnings')->where('draw_id', 100)->where('bet_item_id', 6002)->value('credited_at'));
         $activeSettlementBatchId = (int) DB::table('lotto_winnings')->where('draw_id', 100)->whereNull('voided_at')->value('settlement_batch_id');
         $this->assertNotSame(0, $activeSettlementBatchId);
         $this->assertNotSame(1, $activeSettlementBatchId);

@@ -288,6 +288,18 @@ class ResultCorrectionApplyService
         $normalizedNewResult = is_array($correction->new_result_number) ? $correction->new_result_number : [];
         $context = $this->resolveLottoContext($drawId);
         $settlementBatchId = $this->resolveCorrectionSettlementBatchId($correction, $draw, $context);
+        $previousActiveWinnings = LottoWinning::query()
+            ->where('draw_id', $drawId)
+            ->whereNull('voided_at')
+            ->get(['bet_item_id', 'status', 'credited_at'])
+            ->keyBy('bet_item_id');
+        $creditedAtByTicketId = DB::table('lotto_result_correction_items as ci')
+            ->leftJoin('wallet_transactions as wt', 'wt.id', '=', 'ci.new_credit_wallet_txn_id')
+            ->where('ci.correction_id', (int) $correction->id)
+            ->whereNotNull('ci.new_credit_wallet_txn_id')
+            ->whereNotNull('wt.created_at')
+            ->orderBy('ci.id')
+            ->pluck('wt.created_at', 'ci.ticket_id');
 
         LottoWinning::query()
             ->where('draw_id', $drawId)
@@ -329,6 +341,11 @@ class ResultCorrectionApplyService
             $displayUsername = $memberUsername !== ''
                 ? $memberUsername
                 : (string) ($winningItem->member_code ?? '');
+            $previousRow = $previousActiveWinnings->get((int) $winningItem->item_id);
+            $creditedAt = isset($creditedAtByTicketId[(int) $winningItem->ticket_id])
+                ? (string) $creditedAtByTicketId[(int) $winningItem->ticket_id]
+                : ($previousRow?->credited_at !== null ? (string) $previousRow->credited_at : null);
+            $winningStatus = $creditedAt !== null ? 'credited' : 'settled';
 
             LottoWinning::query()->updateOrCreate(
                 [
@@ -350,10 +367,10 @@ class ResultCorrectionApplyService
                     'net_profit' => round($stake - $payout, 2),
                     'result_number' => $matchedContext['result_number'],
                     'matched_rule' => $matchedContext['matched_rule'],
-                    'status' => 'settled',
+                    'status' => $winningStatus,
                     'settlement_batch_id' => $settlementBatchId,
                     'settled_at' => now(),
-                    'credited_at' => null,
+                    'credited_at' => $creditedAt,
                     'voided_by_correction_id' => null,
                     'voided_at' => null,
                 ]
