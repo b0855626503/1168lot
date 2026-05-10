@@ -14,6 +14,7 @@ class WinningReportBetsQuery
     {
         $query = DB::table('lotto_winnings')
             ->where('draw_id', $drawId)
+            ->whereNull('voided_at')
             ->select([
                 'id',
                 'draw_id',

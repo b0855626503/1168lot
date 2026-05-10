@@ -128,4 +128,9 @@ class LottoDraw extends Model implements LottoDrawContract
     {
         return $this->hasOne(YeekeeRound::class, 'lotto_draw_id');
     }
+
+    public function resultCorrections()
+    {
+        return $this->hasMany(LottoResultCorrection::class, 'draw_id');
+    }
 }

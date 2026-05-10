@@ -30,6 +30,8 @@ class LottoWinning extends Model implements LottoWinningContract
         'settlement_batch_id',
         'settled_at',
         'credited_at',
+        'voided_by_correction_id',
+        'voided_at',
     ];
 
     protected $casts = [
@@ -44,6 +46,8 @@ class LottoWinning extends Model implements LottoWinningContract
         'settlement_batch_id' => 'integer',
         'settled_at' => 'datetime',
         'credited_at' => 'datetime',
+        'voided_by_correction_id' => 'integer',
+        'voided_at' => 'datetime',
     ];
 
     public function draw()
@@ -54,5 +58,10 @@ class LottoWinning extends Model implements LottoWinningContract
     public function settlementBatch()
     {
         return $this->belongsTo(SettlementBatch::class, 'settlement_batch_id');
+    }
+
+    public function voidedByCorrection()
+    {
+        return $this->belongsTo(LottoResultCorrection::class, 'voided_by_correction_id');
     }
 }

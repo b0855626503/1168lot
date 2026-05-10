@@ -191,4 +191,14 @@ return [
         'badge-color' => 'badge-primary',
         'status' => 1,
     ],
+    [
+        'key' => 'lotto_reports.result_corrections',
+        'name' => 'รายงานแก้ไขผลหวย',
+        'route' => 'admin.lotto.result_corrections.index',
+        'sort' => 8,
+        'icon-class' => 'fa-ticket',
+        'badge' => 0,
+        'badge-color' => 'badge-primary',
+        'status' => 1,
+    ],
 ];

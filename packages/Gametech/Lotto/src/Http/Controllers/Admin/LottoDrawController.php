@@ -16,6 +16,8 @@ use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Services\AutoResultHardeningService;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\DrawService;
+use Gametech\Lotto\Services\ResultCorrectionApplyService;
+use Gametech\Lotto\Services\ResultCorrectionPreviewService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\DrawStatusFlow;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
@@ -675,6 +677,95 @@ class LottoDrawController extends AppBaseController
             'params' => $params,
             'output' => $output !== '' ? $output : null,
         ], 'ดำเนินการ Retry Auto Result เรียบร้อยแล้ว');
+    }
+
+    public function correctResultPreview(Request $request, ResultCorrectionPreviewService $previewService): JsonResponse
+    {
+        if (! bouncer()->hasPermission('lotto_settings.draws.correct_result')) {
+            return $this->sendError('ไม่มีสิทธิ์ออกผลใหม่', 403);
+        }
+
+        $validated = validator($request->all(), [
+            'id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'mode' => ['required', Rule::in(['manual'])],
+            'reason' => ['required', 'string', 'max:1000'],
+            'result_number' => ['required', 'array'],
+        ])->validate();
+
+        $draw = LottoDraw::query()->find((int) $validated['id']);
+        if (! $draw instanceof LottoDraw) {
+            return $this->sendError('ไม่พบข้อมูลงวดหวย', 404);
+        }
+
+        if ((string) $draw->status !== 'resulted') {
+            return $this->sendError('ออกผลใหม่ได้เฉพาะงวดที่ประกาศผลแล้ว', 422);
+        }
+
+        try {
+            $preview = $previewService->preview(
+                draw: $draw,
+                resultNumber: (array) $validated['result_number'],
+                reason: (string) $validated['reason'],
+                createdBy: (int) (auth()->id() ?? 0),
+                persist: false
+            );
+
+            return $this->sendResponse($preview, 'พรีวิวแก้ไขผลหวยสำเร็จ');
+        } catch (InvalidArgumentException $e) {
+            return $this->sendError($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('พรีวิวแก้ไขผลหวยไม่สำเร็จ: '.$e->getMessage(), 500);
+        }
+    }
+
+    public function correctResultApply(
+        Request $request,
+        ResultCorrectionApplyService $applyService,
+        ResultCorrectionPreviewService $previewService
+    ): JsonResponse {
+        if (! bouncer()->hasPermission('lotto_settings.draws.correct_result')) {
+            return $this->sendError('ไม่มีสิทธิ์ออกผลใหม่', 403);
+        }
+
+        $validated = validator($request->all(), [
+            'correction_id' => ['nullable', 'integer', 'exists:lotto_result_corrections,id'],
+            'id' => ['nullable', 'integer', 'exists:lotto_draws,id'],
+            'mode' => ['nullable', Rule::in(['manual'])],
+            'reason' => ['nullable', 'string', 'max:1000'],
+            'result_number' => ['nullable', 'array'],
+            'confirm' => ['required', 'accepted'],
+        ])->validate();
+
+        try {
+            $correctionId = isset($validated['correction_id']) ? (int) $validated['correction_id'] : 0;
+            if ($correctionId <= 0) {
+                $draw = LottoDraw::query()->find((int) ($validated['id'] ?? 0));
+                if (! $draw instanceof LottoDraw) {
+                    return $this->sendError('ไม่พบข้อมูลงวดหวย', 404);
+                }
+
+                $preview = $previewService->preview(
+                    draw: $draw,
+                    resultNumber: (array) ($validated['result_number'] ?? []),
+                    reason: (string) ($validated['reason'] ?? ''),
+                    createdBy: (int) (auth()->id() ?? 0),
+                    persist: true
+                );
+
+                $correctionId = (int) ($preview['correction_id'] ?? 0);
+                if ($correctionId <= 0) {
+                    return $this->sendError('ไม่สามารถสร้าง correction เพื่อบันทึกผลใหม่ได้', 422);
+                }
+            }
+
+            $result = $applyService->apply($correctionId, auth()->id() ? (int) auth()->id() : null);
+
+            return $this->sendResponse($result, 'แก้ไขผลหวยสำเร็จ');
+        } catch (InvalidArgumentException $e) {
+            return $this->sendError($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            return $this->sendError('แก้ไขผลหวยไม่สำเร็จ: '.$e->getMessage(), 500);
+        }
     }
 
     public function autoResultLogs(Request $request): JsonResponse

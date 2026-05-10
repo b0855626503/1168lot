@@ -72,7 +72,9 @@ class WinningReportService
     {
         $this->assertDrawReadyForReport($drawId);
 
-        $query = DB::table('lotto_winnings')->where('draw_id', $drawId);
+        $query = DB::table('lotto_winnings')
+            ->where('draw_id', $drawId)
+            ->whereNull('voided_at');
 
         if (! empty($filters['user_id'])) {
             $query->where('user_id', (int) $filters['user_id']);

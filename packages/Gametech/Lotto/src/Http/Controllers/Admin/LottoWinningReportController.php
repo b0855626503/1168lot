@@ -78,7 +78,8 @@ class LottoWinningReportController extends AppBaseController
     private function resolveFilterOptionsByDate(string $date, string $lotteryType = ''): array
     {
         $baseQuery = DB::table('lotto_winnings as w')
-            ->join('settlement_batches as b', 'b.id', '=', 'w.settlement_batch_id');
+            ->join('settlement_batches as b', 'b.id', '=', 'w.settlement_batch_id')
+            ->whereNull('w.voided_at');
 
         if (Schema::hasColumn('settlement_batches', 'draw_date')) {
             $baseQuery->whereDate('b.draw_date', $date);
