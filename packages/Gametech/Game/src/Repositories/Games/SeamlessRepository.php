@@ -152,16 +152,21 @@ class SeamlessRepository extends Repository
 
     public function GameCurl($param, $action)
     {
+        $startedAt = microtime(true);
+        $errorClass = null;
+        $errorMessage = null;
+        $url = $this->url.$action;
+        $traceId = trim((string) (data_get($param, 'trace_id') ?? ''));
 
-        $response = rescue(function () use ($param, $action) {
-
-            $url = $this->url.$action;
+        $response = rescue(function () use ($param, $url) {
 
             return Http::timeout(10)->withHeaders([
                 'Authorization' => 'Basic '.base64_encode($this->agent.':'.$this->secretkey),
             ])->withOptions(['debug' => false])->asJson()->post($url, $param);
 
-        }, function ($e) {
+        }, function ($e) use (&$errorClass, &$errorMessage) {
+            $errorClass = get_class($e);
+            $errorMessage = (string) $e->getMessage();
 
             return false;
 
@@ -181,6 +186,21 @@ class SeamlessRepository extends Repository
             //            $result['main'] = false;
             $result['success'] = false;
             $result['msg'] = 'เชื่อมต่อไม่ได้';
+            $result['error_type'] = str_contains(strtolower($errorMessage ?? ''), 'timed out')
+                ? 'timeout'
+                : 'connection_failed';
+            $result['error_class'] = $errorClass;
+            $result['error_message'] = $errorMessage;
+
+            Log::channel('api')->warning('seamless.api.call.failed', [
+                'trace_id' => $traceId,
+                'action' => $action,
+                'url' => $url,
+                'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error_type' => $result['error_type'],
+                'error_class' => $errorClass,
+                'error_message' => $errorMessage,
+            ]);
 
             return $result;
         }
@@ -199,6 +219,17 @@ class SeamlessRepository extends Repository
         } else {
             $result['success'] = false;
         }
+
+        Log::channel('api')->info('seamless.api.call', [
+            'trace_id' => $traceId,
+            'action' => $action,
+            'url' => $url,
+            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            'http_status' => $response->status(),
+            'success' => (bool) ($result['success'] ?? false),
+            'code' => $result['code'] ?? null,
+            'message' => (string) ($result['msg'] ?? ''),
+        ]);
 
         return $result;
 

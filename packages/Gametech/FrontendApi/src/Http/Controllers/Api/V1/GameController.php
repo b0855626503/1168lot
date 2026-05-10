@@ -10,6 +10,7 @@ use Gametech\Game\Repositories\GameUserRepository;
 use Gametech\Payment\Repositories\BankPaymentRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -218,6 +219,21 @@ class GameController extends BaseController
             'path' => (string) $request->path(),
         ]);
 
+        $breakerKey = $this->gameLoginBreakerKey((int) $user->code, $provider, $gameCode);
+        $breakerState = Cache::get($breakerKey);
+        if (is_array($breakerState) && ! empty($breakerState['reason'])) {
+            Log::channel('api')->warning('frontend.game.login.fast_fail', [
+                'trace_id' => $traceId,
+                'member_code' => (int) $user->code,
+                'provider' => $provider,
+                'game_code' => $gameCode,
+                'reason' => (string) $breakerState['reason'],
+                'until' => (string) ($breakerState['until'] ?? ''),
+            ]);
+
+            return $this->sendError('ระบบเกมปลายทางไม่พร้อมใช้งานชั่วคราว กรุณาลองใหม่อีกครั้ง', 422);
+        }
+
         $this->bankPaymentRepository
             ->where('member_topup', $user->code)
             ->where('pro_check', 'N')
@@ -269,6 +285,13 @@ class GameController extends BaseController
         ]);
 
         if (($result['success'] ?? false) !== true || empty($result['url'])) {
+            $errorType = $this->resolveLoginErrorType((array) $result);
+            if (in_array($errorType, ['timeout', 'connection_failed'], true)) {
+                $this->putGameLoginBreaker($breakerKey, $errorType);
+
+                return $this->sendError('ระบบเกมปลายทางไม่พร้อมใช้งานชั่วคราว กรุณาลองใหม่อีกครั้ง', 422);
+            }
+
             return $this->sendError((string) ($result['msg'] ?? 'ไม่สามารถเข้าสู่เกมได้ในขณะนี้'), 422);
         }
 
@@ -311,5 +334,58 @@ class GameController extends BaseController
             'provider' => $provider,
             'code' => $gameCode,
         ], 'เข้าสู่เกมสำเร็จ');
+    }
+
+    private function gameLoginBreakerKey(int $memberCode, string $provider, string $gameCode): string
+    {
+        return sprintf(
+            'frontend:game-login:breaker:%d:%s:%s',
+            $memberCode,
+            strtoupper($provider),
+            strtolower($gameCode)
+        );
+    }
+
+    /**
+     * @param  array<string,mixed>  $result
+     */
+    private function resolveLoginErrorType(array $result): string
+    {
+        $typed = strtolower(trim((string) ($result['error_type'] ?? '')));
+        if ($typed !== '') {
+            return $typed;
+        }
+
+        $message = strtolower(trim((string) ($result['msg'] ?? '')));
+        if ($message === '') {
+            return 'unknown';
+        }
+
+        if (
+            str_contains($message, 'timeout')
+            || str_contains($message, 'timed out')
+        ) {
+            return 'timeout';
+        }
+
+        if (
+            str_contains($message, 'เชื่อมต่อไม่ได้')
+            || str_contains($message, 'connection')
+            || str_contains($message, 'curl error')
+        ) {
+            return 'connection_failed';
+        }
+
+        return 'unknown';
+    }
+
+    private function putGameLoginBreaker(string $breakerKey, string $reason): void
+    {
+        $seconds = 20;
+
+        Cache::put($breakerKey, [
+            'reason' => $reason,
+            'until' => now()->addSeconds($seconds)->toIso8601String(),
+        ], now()->addSeconds($seconds));
     }
 }
