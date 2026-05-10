@@ -59,7 +59,7 @@ return [
                 'maxProcesses' => 1,
                 'tries' => 1,
                 'timeout' => 30,
-                'sleep' => 0,
+                'sleep' => 1,
                 'memory' => 128,
             ],
             'supervisor-topup' => [
