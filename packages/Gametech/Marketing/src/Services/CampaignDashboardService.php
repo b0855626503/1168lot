@@ -318,14 +318,18 @@ class CampaignDashboardService
 
     /**
      * @param  string[]  $memberCodes
-     * @return int[]
+     * @return array<int|string>
      */
     private function memberIdsByCodes(array $memberCodes): array
     {
         return DB::table('members')
             ->whereIn('code', $memberCodes)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
+            ->pluck('code')
+            ->map(static function ($code) {
+                $value = (string) $code;
+
+                return ctype_digit($value) ? (int) $value : $value;
+            })
             ->all();
     }
 
