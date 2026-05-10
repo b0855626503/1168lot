@@ -8,6 +8,7 @@ use Gametech\Lotto\Services\Relay\LotteryRelayRuntime;
 use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Tests\TestCase;
@@ -79,6 +80,41 @@ class FetchRelayLotteryResultJobTest extends TestCase
         $this->app->instance(AutoResultPipelineService::class, $pipeline);
 
         $job = new FetchRelayLotteryResultJob('dji', '2026-04-11', 'dji:2026-04-11:abcdef', 'checksum-1');
+        $job->handle(
+            $this->app->make(LotteryRelayRuntime::class),
+            $this->app->make(LotteryRelayTypeRegistry::class),
+            $pipeline
+        );
+
+        $this->assertTrue(true);
+    }
+
+    public function test_job_noops_with_audit_log_when_draw_not_found(): void
+    {
+        DB::table('lotto_markets')->insert([
+            'id' => 12,
+            'code' => 'downjone-stock',
+            'is_enabled' => 1,
+        ]);
+
+        Log::shouldReceive('channel')
+            ->once()
+            ->with('daily')
+            ->andReturnSelf();
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function (string $event, array $context): bool {
+                return $event === 'LOTTERY_RELAY_FETCH_DRAW_NOT_FOUND_NOOP'
+                    && ($context['event_id'] ?? null) === 'baac:2026-05-09:abc'
+                    && ($context['type'] ?? null) === 'baac'
+                    && ($context['date'] ?? null) === '2026-05-09'
+                    && ($context['action'] ?? null) === 'no_op';
+            });
+
+        $pipeline = Mockery::mock(AutoResultPipelineService::class);
+        $pipeline->shouldReceive('processDraw')->never();
+
+        $job = new FetchRelayLotteryResultJob('baac', '2026-05-09', 'baac:2026-05-09:abc', 'checksum-404');
         $job->handle(
             $this->app->make(LotteryRelayRuntime::class),
             $this->app->make(LotteryRelayTypeRegistry::class),

@@ -14,7 +14,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 class FetchRelayLotteryResultJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -61,7 +60,16 @@ class FetchRelayLotteryResultJob implements ShouldBeUniqueUntilProcessing, Shoul
 
         $draw = $this->resolveDraw($typeRegistry);
         if (! $draw instanceof LottoDraw) {
-            throw new RuntimeException(sprintf('Relay draw not found for type=%s date=%s', $this->type, $this->date));
+            Log::channel($runtime->logChannel())->warning('LOTTERY_RELAY_FETCH_DRAW_NOT_FOUND_NOOP', [
+                'event_id' => $this->eventId,
+                'type' => $this->type,
+                'date' => $this->date,
+                'checksum' => $this->checksum,
+                'reason' => 'draw_not_found',
+                'action' => 'no_op',
+            ]);
+
+            return;
         }
 
         $result = $pipeline->processDraw($draw, false, false, 'relay_'.$this->eventId, $this->date);
