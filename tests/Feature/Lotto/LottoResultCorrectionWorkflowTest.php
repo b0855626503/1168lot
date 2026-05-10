@@ -191,6 +191,7 @@ class LottoResultCorrectionWorkflowTest extends TestCase
     {
         Schema::create('members', function (Blueprint $table): void {
             $table->unsignedBigInteger('code')->primary();
+            $table->string('user_name')->nullable();
             $table->decimal('balance', 14, 2)->default(0);
             $table->dateTime('date_update')->nullable();
         });
@@ -372,8 +373,8 @@ class LottoResultCorrectionWorkflowTest extends TestCase
     private function seedData(): void
     {
         DB::table('members')->insert([
-            ['code' => 2001, 'balance' => 300, 'date_update' => now()],
-            ['code' => 2002, 'balance' => 300, 'date_update' => now()],
+            ['code' => 2001, 'user_name' => 'MEM-2001', 'balance' => 300, 'date_update' => now()],
+            ['code' => 2002, 'user_name' => '0855626503', 'balance' => 300, 'date_update' => now()],
         ]);
 
         DB::table('lotto_groups')->insert([['id' => 1, 'code' => 'main']]);

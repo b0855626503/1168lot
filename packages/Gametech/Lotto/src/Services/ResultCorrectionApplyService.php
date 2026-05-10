@@ -313,6 +313,7 @@ class ResultCorrectionApplyService
                 'lotto_ticket_items.payout_at_time',
                 'lotto_ticket_items.win_amount',
                 't.member_id',
+                'm.user_name as member_username',
                 'm.code as member_code',
             ]);
 
@@ -324,13 +325,18 @@ class ResultCorrectionApplyService
             $payout = round((float) ($winningItem->win_amount ?? 0), 2);
             $stake = round((float) ($winningItem->amount ?? 0), 2);
 
+            $memberUsername = trim((string) ($winningItem->member_username ?? ''));
+            $displayUsername = $memberUsername !== ''
+                ? $memberUsername
+                : (string) ($winningItem->member_code ?? '');
+
             LottoWinning::query()->create([
                 'draw_id' => $drawId,
                 'bet_id' => (int) $winningItem->ticket_id,
                 'bet_item_id' => (int) $winningItem->item_id,
                 'ticket_no' => (string) $winningItem->ticket_id,
                 'user_id' => (int) $winningItem->member_id,
-                'username' => (string) ($winningItem->member_code ?? ''),
+                'username' => $displayUsername,
                 'lottery_type' => (string) ($context['lottery_type'] ?? ''),
                 'market' => (string) ($context['market'] ?? ''),
                 'bet_type' => (string) $winningItem->bet_type,
