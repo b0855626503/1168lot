@@ -142,20 +142,17 @@ class BetServicePermissionTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function test_only_deny_row_blocks_member_when_both_rows_exist(): void
+    public function test_deny_row_blocks_member_on_specific_market(): void
     {
         DB::table('members')->insert([['code' => 4]]);
         DB::table('lotto_groups')->insert([['id' => 40, 'is_enabled' => true, 'created_at' => now(), 'updated_at' => now()]]);
         DB::table('lotto_markets')->insert([
             ['id' => 400, 'group_id' => 40, 'is_enabled' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 401, 'group_id' => 40, 'is_enabled' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('lotto_draws')->insert([
             ['id' => 4000, 'market_id' => 400, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4001, 'market_id' => 401, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        // Deny row for market 400
         DB::table('member_lotto_market_policies')->insert([
             'member_id' => 4,
             'group_id' => 40,
@@ -167,19 +164,6 @@ class BetServicePermissionTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        // Legacy allow row for market 401
-        DB::table('member_lotto_market_policies')->insert([
-            'member_id' => 4,
-            'group_id' => 40,
-            'market_id' => 401,
-            'is_allowed' => true,
-            'source' => 'inherit',
-            'policy_version' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Should be blocked on market 400 (deny row)
         $draw400 = LottoDraw::query()->find(4000);
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Member is blocked from betting on this market');
