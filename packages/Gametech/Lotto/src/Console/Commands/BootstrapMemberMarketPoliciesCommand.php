@@ -13,18 +13,10 @@ class BootstrapMemberMarketPoliciesCommand extends Command
 
     public function handle(MemberMarketPolicyService $policyService): int
     {
-        if (! $policyService->supportsPolicyTables()) {
-            $this->warn('Policy tables are not ready. Run migrations first.');
-
-            return self::FAILURE;
-        }
-
-        $chunk = max(50, (int) $this->option('chunk'));
-        $count = $policyService->bootstrapAllMembers($chunk);
-
-        $this->info("Bootstrap completed for {$count} members.");
+        $this->warn('This command is deprecated under the blacklist model.');
+        $this->info('The system now operates as default-allow: no policy row means the member can bet.');
+        $this->info('Only explicit is_allowed=false rows block betting. Mass allow-row creation is no longer needed.');
 
         return self::SUCCESS;
     }
 }
-

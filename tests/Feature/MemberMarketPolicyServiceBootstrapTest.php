@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Gametech\Lotto\Services\MemberMarketPolicyService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -63,7 +64,7 @@ class MemberMarketPolicyServiceBootstrapTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_bootstrap_for_member_creates_policies_for_all_enabled_markets(): void
+    public function test_bootstrap_for_member_no_longer_creates_policy_rows(): void
     {
         DB::table('members')->insert([
             ['code' => 9001],
@@ -81,27 +82,19 @@ class MemberMarketPolicyServiceBootstrapTest extends TestCase
             ['id' => 104, 'group_id' => 11, 'is_enabled' => false, 'rollout_mode' => null, 'policy_version' => 1, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'MemberMarketPolicyService: bootstrapForMember is disabled under blacklist model.'
+                    && ($context['member_id'] ?? 0) === 9001;
+            });
+
         app(MemberMarketPolicyService::class)->bootstrapForMember(9001);
 
-        $policies = DB::table('member_lotto_market_policies')
-            ->orderBy('market_id')
-            ->get()
-            ->map(fn ($row): array => (array) $row)
-            ->all();
-
-        $this->assertCount(2, $policies);
-        $this->assertSame(101, (int) $policies[0]['market_id']);
-        $this->assertSame(11, (int) $policies[0]['group_id']);
-        $this->assertSame(1, (int) $policies[0]['is_allowed']);
-        $this->assertSame('inherit', $policies[0]['source']);
-        $this->assertSame(2, (int) $policies[0]['policy_version']);
-
-        $this->assertSame(102, (int) $policies[1]['market_id']);
-        $this->assertSame(0, (int) $policies[1]['is_allowed']);
-        $this->assertSame(5, (int) $policies[1]['policy_version']);
+        $this->assertSame(0, DB::table('member_lotto_market_policies')->count());
     }
 
-    public function test_bootstrap_for_member_updates_existing_policy_without_creating_duplicates(): void
+    public function test_bootstrap_for_member_does_not_create_duplicates_or_updates(): void
     {
         DB::table('members')->insert([
             ['code' => 9002],
@@ -128,14 +121,15 @@ class MemberMarketPolicyServiceBootstrapTest extends TestCase
 
         app(MemberMarketPolicyService::class)->bootstrapForMember(9002);
 
+        // bootstrapForMember is a no-op under blacklist — no new rows, existing row unchanged
         $this->assertSame(1, DB::table('member_lotto_market_policies')->count());
         $this->assertDatabaseHas('member_lotto_market_policies', [
             'member_id' => 9002,
             'market_id' => 201,
             'group_id' => 21,
-            'is_allowed' => 1,
-            'source' => 'inherit',
-            'policy_version' => 4,
+            'is_allowed' => 0,
+            'source' => 'legacy',
+            'policy_version' => 1,
         ]);
     }
 }
