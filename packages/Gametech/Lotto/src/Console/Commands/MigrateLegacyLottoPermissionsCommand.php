@@ -88,7 +88,7 @@ class MigrateLegacyLottoPermissionsCommand extends Command
         }
 
         $this->info('Legacy rows: '.$legacyRows->count());
-        $this->info('Legacy deny rows migrated: '.$denyRows->count());
+        $this->info('Legacy deny rows '.($dryRun ? 'to migrate (dry-run)' : 'migrated').': '.$denyRows->count());
         $this->info('Legacy allow rows skipped: '.$skippedAllowRows.' (no-ops under blacklist)');
         $this->info('Target policy rows: '.count($upsertPayloads));
         $this->info('Dry-run: '.($dryRun ? 'yes' : 'no'));
