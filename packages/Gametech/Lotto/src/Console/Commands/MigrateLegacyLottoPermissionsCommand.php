@@ -14,16 +14,22 @@ class MigrateLegacyLottoPermissionsCommand extends Command
 
     public function handle(): int
     {
+        $this->warn('This command is deprecated. Under the blacklist model, only is_allowed=false rows block betting.');
+        $this->info('Legacy allow rows (is_allowed=true) are no-ops and no longer need migration.');
+        $this->info('Only legacy deny rows (is_allowed=false) remain meaningful.');
+
         $hasLegacyTable = Schema::hasTable('member_lotto_permissions');
         $hasPolicyTable = Schema::hasTable('member_lotto_market_policies');
 
         if (! $hasPolicyTable) {
             $this->error('member_lotto_market_policies table is missing. Run lotto migrations first.');
+
             return self::FAILURE;
         }
 
         if (! $hasLegacyTable) {
             $this->info('Legacy table member_lotto_permissions does not exist. Nothing to migrate.');
+
             return self::SUCCESS;
         }
 
@@ -70,9 +76,9 @@ class MigrateLegacyLottoPermissionsCommand extends Command
             );
         }
 
-        $this->info('Legacy rows: ' . $legacyRows->count());
-        $this->info('Target policy rows: ' . count($upsertPayloads));
-        $this->info('Dry-run: ' . ($dryRun ? 'yes' : 'no'));
+        $this->info('Legacy rows: '.$legacyRows->count());
+        $this->info('Target policy rows: '.count($upsertPayloads));
+        $this->info('Dry-run: '.($dryRun ? 'yes' : 'no'));
 
         return self::SUCCESS;
     }

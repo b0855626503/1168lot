@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Schema;
  * Validation Flow:
  * 1. load draw
  * 2. เช็ค draw open
- * 3. เช็ค member permission
+ * 3. เช็ค member permission (blacklist: blocks only if is_allowed=false row exists)
  * 4. เช็ค market active
  * 5. เช็ค bet_type enabled
  * 6. เช็ค block number
@@ -217,14 +217,14 @@ class BetService
 
     private function validateMemberPermission(int $memberId, LottoDraw $draw): void
     {
-        $hasPermission = MemberLottoMarketPolicy::query()
+        $isDenied = MemberLottoMarketPolicy::query()
             ->where('member_id', $memberId)
             ->where('market_id', (int) $draw->market_id)
-            ->where('is_allowed', true)
+            ->where('is_allowed', false)
             ->exists();
 
-        if (! $hasPermission) {
-            throw new Exception('Member does not have permission to bet');
+        if ($isDenied) {
+            throw new Exception('Member is blocked from betting on this market');
         }
     }
 

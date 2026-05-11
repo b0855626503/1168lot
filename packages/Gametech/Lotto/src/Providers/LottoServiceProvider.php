@@ -189,13 +189,19 @@ class LottoServiceProvider extends ServiceProvider
 
         $this->registerObservers();
 
-        Event::listen('member.created.after', function ($member): void {
-            if (! isset($member->code)) {
-                return;
-            }
-
-            app(MemberMarketPolicyService::class)->bootstrapForMember((int) $member->code);
-        });
+        // Blacklist-model safety gate: member.created.after event listener is disabled.
+        // New members no longer need pre-created policy rows — no row means allowed.
+        // Only members explicitly blocked (is_allowed=false) are denied.
+        // If this listener must be re-enabled, ensure the bootstrap methods are
+        // updated to insert is_allowed=false rows instead of is_allowed=true.
+        //
+        // Event::listen('member.created.after', function ($member): void {
+        //     if (! isset($member->code)) {
+        //         return;
+        //     }
+        //
+        //     app(MemberMarketPolicyService::class)->bootstrapForMember((int) $member->code);
+        // });
     }
 
     protected function registerConfig(): void

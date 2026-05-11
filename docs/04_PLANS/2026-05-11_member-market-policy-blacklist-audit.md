@@ -225,33 +225,51 @@ These files are NOT registered in Composer autoload in this snapshot. They exist
 - [x] Identify all creation, reading, enforcement points
 - [x] Document affected files and risk analysis
 
-### PR-02 (BetService enforcement flip)
-- Change `BetService::validateMemberPermission()` from whitelist to blacklist
-- New logic: `where('is_allowed', false)->exists()` → block; no row → allow
-- Keep exception message or update it
-- Add tests for both paths
+### PR-02 (BetService enforcement flip + safety gates) — IMPLEMENTED
+- **Branch**: `boa-245-pr-02-convert-policy-runtime-to-default-allow-blacklist`
+- **Linear**: BOA-245
+- **Date**: 2026-05-12
+- **Source of truth**: Local working tree (not GitHub PR #81 snapshot)
 
-### PR-03 (Stop mass allow-row creation)
+Changes:
+- `BetService::validateMemberPermission()` flipped from whitelist (`is_allowed=true` required) to blacklist (`is_allowed=false` blocks)
+- `MemberMarketPolicyService`: 5 mass-row methods (`bootstrapForMember`, `bootstrapAllMembers`, `applyGroupRollout`, `applyMarketRollout`, `rolloutMarkets`) converted to no-ops with `Log::warning()`
+- `LottoServiceProvider`: `member.created.after` event listener disabled (commented out)
+- `BootstrapMemberMarketPoliciesCommand`: exits with deprecation info, returns SUCCESS
+- `RolloutMemberMarketPoliciesCommand`: exits with deprecation info, returns SUCCESS
+- `MigrateLegacyLottoPermissionsCommand`: deprecation warning added, command still functional
 
-**Critical safety requirement**: These commands currently recreate mass `is_allowed = true` rows. If any of them is run after PR-02 without a safety gate, it will silently undo the blacklist migration by inserting millions of no-op allow rows — which, while not breaking enforcement, pollutes the table and makes future cleanup harder. Every command below must be safety-gated before PR-02 ships.
+Tests added:
+- `tests/Feature/Lotto/BetServicePermissionTest.php` — 5 tests covering blacklist enforcement
+- `tests/Feature/MemberMarketPolicyServiceBootstrapTest.php` — updated for no-op behavior
+- `tests/Feature/Lotto/MemberMarketPolicyRolloutCommandTest.php` — updated for deprecated command
 
-- Remove `member.created.after` event listener in `LottoServiceProvider`
-- Add safety gate to `lotto:policy-bootstrap-members` — prevent mass allow-row creation post-blacklist (e.g., check a config flag or exit with warning)
-- Add safety gate to `lotto:policy-rollout-markets` — same, prevent mass allow-row creation
-- Deprecate `lotto:migrate-legacy-permissions` — add deprecation warning, schedule for removal
+Rollback:
+- Revert `BetService::validateMemberPermission()` to query `is_allowed=true`
+- Uncomment event listener in `LottoServiceProvider`
+- Restore `MemberMarketPolicyService` mass-row methods from git history
+- Mass-bootstrap members if needed (may be slow)
 
-### PR-04 (Admin UI updates)
+Risk: Medium — enforcement is the only bet gate. Legacy allow rows are no-ops. New members default to allowed.
+
+Not done (out of scope for PR-02):
+- No deletion of legacy `is_allowed=true` rows
+- No admin UI label changes
+- No `rollout_mode` column cleanup
+- No Lottobk changes
+
+### PR-03 (Admin UI updates)
 - Update `MemberLottoPermissionTransformer.php` labels: "อนุญาต/ปิด" → "บล็อก/ปกติ" (or similar)
 - Update `addedit.blade.php` form labels
 - Consider adding confirmation dialog for blocking
 
-### PR-05 (Database cleanup)
+### PR-04 (Database cleanup)
 - Plan migration to mark legacy `is_allowed = true` rows
 - Batch-delete redundant rows (millions potentially)
 - Clean up `rollout_mode` column from groups/markets if unused
 - Production SQL verification
 
-### PR-06 (Dead code removal — optional)
+### PR-05 (Dead code removal — optional)
 - Remove or archive `packages/Gametech/Lottobk`
 
 ---
