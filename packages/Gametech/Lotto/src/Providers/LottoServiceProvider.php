@@ -82,7 +82,8 @@ class LottoServiceProvider extends ServiceProvider
                 $app->make(ExposureService::class),
                 $app->make(LottoConfigResolver::class),
                 $app->make(LottoPackageResolver::class),
-                $app->make(WalletTransactionService::class)
+                $app->make(WalletTransactionService::class),
+                $app->make(MemberMarketPolicyService::class)
             );
         });
 
@@ -189,11 +190,15 @@ class LottoServiceProvider extends ServiceProvider
 
         $this->registerObservers();
 
-        // Blacklist-model safety gate: member.created.after event listener is disabled.
-        // New members no longer need pre-created policy rows — no row means allowed.
-        // Only members explicitly blocked (is_allowed=false) are denied.
-        // If this listener must be re-enabled, ensure the bootstrap methods are
-        // updated to insert is_allowed=false rows instead of is_allowed=true.
+        // PERMANENT: member.created.after event listener is disabled under the
+        // blacklist/default-allow model (BOA-245 PR-02).
+        //
+        // Under the blacklist model, new members default to ALLOWED — no policy
+        // row means the member can bet on all markets. Only members explicitly
+        // blocked with an is_allowed=false row are denied.
+        //
+        // If re-enabling in the future (e.g., to auto-block certain cohorts),
+        // the bootstrap methods must create is_allowed=false rows, not allow rows.
         //
         // Event::listen('member.created.after', function ($member): void {
         //     if (! isset($member->code)) {

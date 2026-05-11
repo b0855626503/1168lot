@@ -9,7 +9,6 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LottoTicketItem;
-use Gametech\Lotto\Models\MemberLottoMarketPolicy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -41,7 +40,8 @@ class BetService
         private ExposureService $exposureService,
         private LottoConfigResolver $configResolver,
         private LottoPackageResolver $packageResolver,
-        private WalletTransactionService $walletTransactionService
+        private WalletTransactionService $walletTransactionService,
+        private MemberMarketPolicyService $policyService
     ) {}
 
     /**
@@ -217,13 +217,7 @@ class BetService
 
     private function validateMemberPermission(int $memberId, LottoDraw $draw): void
     {
-        $isDenied = MemberLottoMarketPolicy::query()
-            ->where('member_id', $memberId)
-            ->where('market_id', (int) $draw->market_id)
-            ->where('is_allowed', false)
-            ->exists();
-
-        if ($isDenied) {
+        if ($this->policyService->isMemberBlockedForMarket($memberId, (int) $draw->market_id)) {
             throw new Exception('Member is blocked from betting on this market');
         }
     }

@@ -39,6 +39,25 @@ class MemberMarketPolicyService
         ]);
     }
 
+    /**
+     * Check whether a member is explicitly blocked from betting on a market.
+     *
+     * Under the blacklist/default-allow model, only rows with is_allowed=false
+     * block betting. No row means the member is allowed to bet.
+     */
+    public function isMemberBlockedForMarket(int $memberId, int $marketId): bool
+    {
+        if (! $this->supportsPolicyTables()) {
+            return false;
+        }
+
+        return DB::table('member_lotto_market_policies')
+            ->where('member_id', $memberId)
+            ->where('market_id', $marketId)
+            ->where('is_allowed', false)
+            ->exists();
+    }
+
     public function bootstrapAllMembers(int $chunkSize = 500): int
     {
         Log::warning('MemberMarketPolicyService: bootstrapAllMembers is disabled under blacklist model.');
@@ -46,9 +65,17 @@ class MemberMarketPolicyService
         return 0;
     }
 
+    /**
+     * Apply group-level policy rollout.
+     *
+     * Under the blacklist model, mass allow-row creation is disabled.
+     * This method is intentionally preserved as a future entry point for
+     * explicit group-level deny management (is_allowed=false).
+     * Currently returns 0 without creating rows.
+     */
     public function applyGroupRollout(int $groupId, string $scope, array $memberIds = []): int
     {
-        Log::warning('MemberMarketPolicyService: applyGroupRollout is disabled under blacklist model.', [
+        Log::warning('MemberMarketPolicyService: applyGroupRollout called under blacklist model — no rows created.', [
             'group_id' => $groupId,
             'scope' => $scope,
         ]);
@@ -56,9 +83,17 @@ class MemberMarketPolicyService
         return 0;
     }
 
+    /**
+     * Apply market-level policy rollout.
+     *
+     * Under the blacklist model, mass allow-row creation is disabled.
+     * This method is intentionally preserved as a future entry point for
+     * explicit market-level deny management (is_allowed=false).
+     * Currently returns 0 without creating rows.
+     */
     public function applyMarketRollout(int $marketId, string $scope, array $memberIds = []): int
     {
-        Log::warning('MemberMarketPolicyService: applyMarketRollout is disabled under blacklist model.', [
+        Log::warning('MemberMarketPolicyService: applyMarketRollout called under blacklist model — no rows created.', [
             'market_id' => $marketId,
             'scope' => $scope,
         ]);
@@ -83,6 +118,8 @@ class MemberMarketPolicyService
         ]);
 
         return [
+            'disabled' => true,
+            'reason' => 'blacklist_model_default_allow',
             'mode' => $this->normalizePolicyRolloutMode($mode),
             'scope' => $this->normalizeScope($scope),
             'dry_run' => $dryRun,
@@ -123,6 +160,9 @@ class MemberMarketPolicyService
         return $this->isValidPolicyRolloutMode($mode) ? $mode : self::ROLLOUT_MODE_MISSING_ONLY;
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function resolveTargetMemberIds(string $scope, array $memberIds): Collection
     {
         if ($this->isSelectedScope($scope)) {
@@ -141,6 +181,9 @@ class MemberMarketPolicyService
             ->values();
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function processMemberChunks(string $scope, Collection $resolvedMemberIds, int $chunkSize, callable $callback): void
     {
         if ($this->isSelectedScope($scope)) {
@@ -169,6 +212,9 @@ class MemberMarketPolicyService
             });
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function loadEnabledMarketsWithGroup(?\Closure $callback = null): Collection
     {
         $query = LotteryMarket::query()
@@ -185,6 +231,9 @@ class MemberMarketPolicyService
         return $query->get();
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function buildPolicyRows(Collection $memberIds, Collection $markets, bool $forceAllow, string $source): array
     {
         $rows = [];
@@ -217,6 +266,9 @@ class MemberMarketPolicyService
         return $rows;
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function syncPoliciesForMembers(
         Collection $memberIds,
         Collection $markets,
@@ -234,6 +286,9 @@ class MemberMarketPolicyService
         }
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function countExistingPolicies(array $marketIds, string $scope, Collection $memberIds): int
     {
         $query = DB::table('member_lotto_market_policies')
@@ -250,6 +305,9 @@ class MemberMarketPolicyService
         return (int) $query->count();
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function resolveRolloutMode(string $mode): string
     {
         return in_array($mode, self::VALID_ROLLOUT_MODES, true)
@@ -257,6 +315,9 @@ class MemberMarketPolicyService
             : self::ROLLOUT_NEW_ONLY;
     }
 
+    /**
+     * @deprecated Unused under blacklist model. Retained for rollback reference.
+     */
     private function isAllowedByMode(string $mode): bool
     {
         return in_array($mode, [self::ROLLOUT_NEW_ONLY, self::ROLLOUT_ALL], true);
