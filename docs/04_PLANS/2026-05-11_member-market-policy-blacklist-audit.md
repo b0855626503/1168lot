@@ -12,7 +12,13 @@
 - **Linear Project**: [1168lot: Convert member lotto market policies to blacklist](https://linear.app/boatjunior/project/1168lot-convert-member-lotto-market-policies-to-blacklist-269c4fe3e430)
 - **Linear Issue**: [BOA-244 PR-01 Audit](https://linear.app/boatjunior/issue/BOA-244/pr-01-audit-current-whitelist-policy-usage-and-runtime)
 - **Git Branch**: `b0855626503/boa-244-pr-01-audit-current-whitelist-policy-usage-and-runtime`
-- **Package Scope**: `packages/Gametech/Lotto` (active), `packages/Gametech/Lottobk` (dead code, not autoloaded)
+- **Package Scope**: `packages/Gametech/Lotto` (active), `packages/Gametech/Lottobk` (not Composer-autoloaded in this snapshot; verify local `composer.json`, package registration, and manual includes before ignoring)
+
+---
+
+## Source of Truth Note
+
+This audit was reviewed against the GitHub PR snapshot. Before PR-02 implementation, the agent must re-run all grep/search patterns against the local working tree. Local codebase wins over GitHub if there is drift.
 
 ---
 
@@ -20,7 +26,7 @@
 
 `member_lotto_market_policies` currently operates as a **whitelist** table: a member needs a row with `is_allowed = true` to place a bet on a market. The system creates these rows en masse via bootstrap/rollout commands and a `member.created.after` event listener. The FrontendApi does NOT filter/hide markets by policy — it shows all enabled markets regardless. The only enforcement point is `BetService::validateMemberPermission()` which blocks betting if no `is_allowed = true` row exists.
 
-**The Lottobk variant** (`packages/Gametech/Lottobk`) is dead code — it shares the `Gametech\Lotto` namespace but is NOT registered in `composer.json` autoload. All active code lives in `packages/Gametech/Lotto`.
+**The Lottobk variant** (`packages/Gametech/Lottobk`) shares the `Gametech\Lotto` namespace but is NOT registered in `composer.json` autoload in this snapshot. Before treating it as dead code in PR-02+, verify local `composer.json`, package registration, and any manual includes. All confirmed active code lives in `packages/Gametech/Lotto`.
 
 ---
 
@@ -157,9 +163,9 @@ private function isAllowedByMode(string $mode): bool
 | `src/Observers/LottoAuditObserver.php` | Audit logging | LOW — `member_lotto_market_policies` is in skip-list (line 71) |
 | `src/Resources/views/admin/module/lotto/member_permissions/addedit.blade.php` | Admin form UI | LOW — checkbox label may need update |
 
-### 4.2 Dead Code: `packages/Gametech/Lottobk`
+### 4.2 Not Autoloaded: `packages/Gametech/Lottobk`
 
-These files are NOT autoloaded. They exist on disk for reference but are NOT executed in production. All files in this directory can be treated as dead code for the purpose of this migration.
+These files are NOT registered in Composer autoload in this snapshot. They exist on disk for reference but are NOT confirmed to be executed in production. Before treating this directory as dead code in PR-02+, verify local `composer.json`, package registration, and any manual includes. If confirmed dead, all files in this directory can be treated as out-of-scope for this migration.
 
 - `src/Services/MemberMarketPolicyService.php` (simpler variant, no `rolloutMarkets` method)
 - `src/Services/BetService.php` (simpler variant with legacy MemberLottoPermission fallback)
@@ -172,7 +178,7 @@ These files are NOT autoloaded. They exist on disk for reference but are NOT exe
 
 ### 4.3 FrontendApi
 
-**ZERO references** to member market policies. No changes needed.
+**ZERO references** to member market policies found via the grep patterns listed in Section 11. This is a grep-based finding — no direct policy filter/join was found in `marketsLatestByGroup` or other FrontendApi query paths. Before concluding no FrontendApi changes are needed in PR-02, the implementer must verify local API payloads, transformers, and any indirect policy effects through joined queries or cached data.
 
 ### 4.4 Tests
 
@@ -190,7 +196,7 @@ These files are NOT autoloaded. They exist on disk for reference but are NOT exe
 
 ### 5.1 High Risk
 
-1. **Mass allow-row creation on new member registration**: Every new member gets `is_allowed = true` rows for ALL enabled markets via `member.created.after` event. If we stop this without handling the blacklist logic, all new members will be blocked from betting. **Mitigation**: Remove event listener AND change BetService to blacklist model in the same deploy.
+1. **Mass allow-row creation on new member registration**: Every new member gets `is_allowed = true` rows for ALL enabled markets via `member.created.after` event. If we stop this without handling the blacklist logic, all new members will be blocked from betting. **Mitigation**: Flip BetService to blacklist first (PR-02); only then remove the event listener (PR-03). Never remove the listener before flipping enforcement. The sequenced approach is safe because existing `is_allowed = true` rows are harmless no-ops under the new blacklist query — they don't block bets, and the blacklist only checks for `is_allowed = false`.
 
 2. **Existing millions of allow rows**: Database likely contains millions of rows (members × markets). The blacklist model means "no row = allowed," making most existing rows redundant. **Mitigation**: Plan a phased cleanup migration — first mark existing `is_allowed = true` rows as legacy, then batch-delete.
 
@@ -226,10 +232,13 @@ These files are NOT autoloaded. They exist on disk for reference but are NOT exe
 - Add tests for both paths
 
 ### PR-03 (Stop mass allow-row creation)
+
+**Critical safety requirement**: These commands currently recreate mass `is_allowed = true` rows. If any of them is run after PR-02 without a safety gate, it will silently undo the blacklist migration by inserting millions of no-op allow rows — which, while not breaking enforcement, pollutes the table and makes future cleanup harder. Every command below must be safety-gated before PR-02 ships.
+
 - Remove `member.created.after` event listener in `LottoServiceProvider`
-- Add safety gate to `lotto:policy-bootstrap-members`
-- Add safety gate to `lotto:policy-rollout-markets`
-- Deprecate `lotto:migrate-legacy-permissions`
+- Add safety gate to `lotto:policy-bootstrap-members` — prevent mass allow-row creation post-blacklist (e.g., check a config flag or exit with warning)
+- Add safety gate to `lotto:policy-rollout-markets` — same, prevent mass allow-row creation
+- Deprecate `lotto:migrate-legacy-permissions` — add deprecation warning, schedule for removal
 
 ### PR-04 (Admin UI updates)
 - Update `MemberLottoPermissionTransformer.php` labels: "อนุญาต/ปิด" → "บล็อก/ปกติ" (or similar)
@@ -249,14 +258,23 @@ These files are NOT autoloaded. They exist on disk for reference but are NOT exe
 
 ## 7. SQL Verification Checklist (Production)
 
+**Safety notes before running any of these queries on production:**
+
+- Run `EXPLAIN` before each query on large tables (`member_lotto_market_policies`, `lotto_markets`, `lotto_groups`).
+- Avoid running global `COUNT(DISTINCT ...) NOT IN (...)` during peak hours — use indexed/batched verification instead.
+- For large-table analysis, batch by `member_id` range or use a temporary summary table rather than scanning the full table in a single query.
+- Verify that indexes on `member_lotto_market_policies` cover `(is_allowed)`, `(member_id)`, and `(market_id)` before running these queries.
+
 ```sql
--- 1. Count total policies
+-- 1. Count total policies (lightweight, safe for any time)
 SELECT COUNT(*) FROM member_lotto_market_policies;
 
--- 2. Distribution of is_allowed
+-- 2. Distribution of is_allowed (lightweight, safe for any time)
 SELECT is_allowed, COUNT(*) FROM member_lotto_market_policies GROUP BY is_allowed;
 
 -- 3. Members with ONLY allow rows (no deny rows)
+-- WARNING: Heavy query on large tables. Run EXPLAIN first.
+-- Prefer batched approach: iterate by member_id range, 10k members at a time.
 SELECT COUNT(DISTINCT member_id) 
 FROM member_lotto_market_policies 
 WHERE is_allowed = 1 
@@ -264,16 +282,16 @@ AND member_id NOT IN (
     SELECT DISTINCT member_id FROM member_lotto_market_policies WHERE is_allowed = 0
 );
 
--- 4. Members blocked (is_allowed = false)
+-- 4. Members blocked (is_allowed = false) — lightweight, safe for any time
 SELECT COUNT(DISTINCT member_id) 
 FROM member_lotto_market_policies 
 WHERE is_allowed = 0;
 
--- 5. Markets with rollout_mode set
+-- 5. Markets with rollout_mode set (lightweight, safe for any time)
 SELECT rollout_mode, COUNT(*) FROM lotto_markets GROUP BY rollout_mode;
 SELECT rollout_mode, COUNT(*) FROM lotto_groups GROUP BY rollout_mode;
 
--- 6. Verify table indexes
+-- 6. Verify table indexes (lightweight, safe for any time)
 SHOW INDEXES FROM member_lotto_market_policies;
 ```
 
