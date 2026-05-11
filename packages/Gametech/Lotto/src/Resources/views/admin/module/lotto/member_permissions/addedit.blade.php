@@ -32,10 +32,9 @@
 				required
 			></b-form-select>
 		</b-form-group>
-		<b-form-group>
-			<b-form-checkbox v-model="formaddedit.is_allowed" :value="0" :unchecked-value="1">
-				บล็อกการเล่น
-			</b-form-checkbox>
+		<b-form-group label="สถานะ:">
+			<p class="form-control-static mb-0">บล็อกการเล่น</p>
+			<small class="text-muted">หากต้องการปลดบล็อก ให้กดปุ่มถังขยะในตาราง</small>
 		</b-form-group>
 		<b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
 	</b-form>
@@ -140,9 +139,10 @@
 								buttonSize: 'sm',
 								okVariant: 'success',
 								centered: true,
+							}).then(() => {
+								this.$refs.addedit.hide();
+								window.LaravelDataTables['dataTableBuilder'].draw(false);
 							});
-							this.$refs.addedit.hide();
-							window.LaravelDataTables['dataTableBuilder'].draw(false);
 						});
 				},
 				delModal(id) {
@@ -169,8 +169,9 @@
 									buttonSize: 'sm',
 									okVariant: 'success',
 									centered: true,
+								}).then(() => {
+									window.LaravelDataTables['dataTableBuilder'].draw(false);
 								});
-								window.LaravelDataTables['dataTableBuilder'].draw(false);
 							});
 					});
 				},
