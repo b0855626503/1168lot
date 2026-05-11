@@ -6,6 +6,7 @@
 ดูแผนงาน active/pending แยก domain ได้ที่: `docs/04_PLANS/_current_work.md`
 
 ## ACTIVE
+- `2026-05-11_member-market-policy-blacklist-audit.md` (`Member lotto market policies whitelist→blacklist — PR-01 audit`)
 - `2026-04-06_laravel-8-to-9-upgrade.md` (`Laravel 8 to 10` practical target)
 - `2026-05-02_yeekee-shooting-flow-hardening.md` (`Yeekee shooting hardening docs contract lock`)
 

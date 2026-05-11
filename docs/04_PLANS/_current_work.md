@@ -19,6 +19,7 @@
 
 | Domain | Plan File | สถานะ |
 |--------|-----------|--------|
+| policy | `docs/04_PLANS/2026-05-11_member-market-policy-blacklist-audit.md` | ACTIVE (PR-01 audit) |
 | laravel | `docs/04_PLANS/2026-04-06_laravel-8-to-9-upgrade.md` | ACTIVE |
 | lotto/yeekee | `docs/04_PLANS/2026-05-02_yeekee-shooting-flow-hardening.md` | ACTIVE |
 
