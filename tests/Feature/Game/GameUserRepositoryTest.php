@@ -143,6 +143,126 @@ class GameUserRepositoryTest extends TestCase
         $this->assertSame('provider rejected', $result['msg']);
     }
 
+    public function test_query_seamless_bet_records_returns_success_payload(): void
+    {
+        $repository = $this->app->make(GameUserRepository::class);
+
+        $driver = Mockery::mock();
+        $driver->shouldReceive('queryBetRecords')
+            ->once()
+            ->with(Mockery::on(function (array $payload): bool {
+                return ($payload['productId'] ?? null) === 'PGSOFT'
+                    && ($payload['nextId'] ?? null) === 'cursor-1';
+            }))
+            ->andReturn([
+                'success' => true,
+                'msg' => 'OK',
+                'req_id' => 'req-1',
+                'next_id' => 'cursor-2',
+                'has_next' => true,
+                'transactions' => [
+                    ['id' => 'txn-1', 'stake' => 100.5, 'payout' => 50.0],
+                ],
+                'summary' => ['count' => 1, 'stake' => 100.5, 'payout' => 50.0, 'scope' => 'chunk'],
+            ]);
+
+        $this->app->bind('Gametech\Game\Repositories\Games\AmbexapiRepository', static function () use ($driver) {
+            return $driver;
+        });
+
+        $result = $repository->querySeamlessBetRecords([
+            'productId' => 'PGSOFT',
+            'startTime' => '2026-05-11T10:00:00+07:00',
+            'endTime' => '2026-05-11T10:59:59+07:00',
+            'nextId' => 'cursor-1',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('req-1', $result['req_id']);
+        $this->assertSame('cursor-2', $result['next_id']);
+        $this->assertTrue($result['has_next']);
+        $this->assertCount(1, $result['transactions']);
+    }
+
+    public function test_query_seamless_bet_records_returns_empty_transactions_chunk(): void
+    {
+        $repository = $this->app->make(GameUserRepository::class);
+
+        $driver = Mockery::mock();
+        $driver->shouldReceive('queryBetRecords')
+            ->once()
+            ->andReturn([
+                'success' => true,
+                'msg' => 'OK',
+                'req_id' => 'req-2',
+                'next_id' => null,
+                'has_next' => false,
+                'transactions' => [],
+                'summary' => ['count' => 0, 'stake' => 0.0, 'payout' => 0.0, 'scope' => 'chunk'],
+            ]);
+
+        $this->app->bind('Gametech\Game\Repositories\Games\AmbexapiRepository', static function () use ($driver) {
+            return $driver;
+        });
+
+        $result = $repository->querySeamlessBetRecords([
+            'productId' => 'PGSOFT',
+            'startTime' => '2026-05-11T10:00:00+07:00',
+            'endTime' => '2026-05-11T10:30:00+07:00',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame([], $result['transactions']);
+        $this->assertFalse($result['has_next']);
+    }
+
+    public function test_query_seamless_bet_records_returns_provider_error_without_throwing(): void
+    {
+        $repository = $this->app->make(GameUserRepository::class);
+
+        $driver = Mockery::mock();
+        $driver->shouldReceive('queryBetRecords')
+            ->once()
+            ->andReturn([
+                'success' => false,
+                'msg' => 'เชื่อมต่อไม่ได้',
+                'req_id' => null,
+                'next_id' => null,
+                'has_next' => false,
+                'transactions' => [],
+                'summary' => ['count' => 0, 'stake' => 0.0, 'payout' => 0.0, 'scope' => 'chunk'],
+            ]);
+
+        $this->app->bind('Gametech\Game\Repositories\Games\AmbexapiRepository', static function () use ($driver) {
+            return $driver;
+        });
+
+        $result = $repository->querySeamlessBetRecords([
+            'productId' => 'PGSOFT',
+            'startTime' => '2026-05-11T10:00:00+07:00',
+            'endTime' => '2026-05-11T10:30:00+07:00',
+        ]);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('เชื่อมต่อไม่ได้', $result['msg']);
+        $this->assertSame([], $result['transactions']);
+    }
+
+    public function test_query_seamless_bet_records_rejects_range_more_than_one_hour(): void
+    {
+        $repository = $this->app->make(GameUserRepository::class);
+
+        $result = $repository->querySeamlessBetRecords([
+            'productId' => 'PGSOFT',
+            'startTime' => '2026-05-11T10:00:00+07:00',
+            'endTime' => '2026-05-11T11:01:00+07:00',
+        ]);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('range query must not exceed 1 hour', $result['msg']);
+        $this->assertSame([], $result['transactions']);
+    }
+
     private function makeRepositoryWithDriverResult(array $driverResult): GameUserRepository
     {
         $gameRepository = Mockery::mock(GameRepository::class);

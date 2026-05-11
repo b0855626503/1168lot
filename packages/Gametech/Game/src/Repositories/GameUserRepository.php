@@ -6,6 +6,7 @@ use Gametech\API\Models\GameListProxy;
 use Gametech\Core\Eloquent\Repository;
 use Gametech\Game\Models\GameUser;
 use Illuminate\Container\Container as App;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -713,6 +714,72 @@ class GameUserRepository extends Repository
         }
 
         return [];
+    }
+
+    public function querySeamlessBetRecords(array $filters): array
+    {
+        $result = [
+            'success' => false,
+            'msg' => 'พบปัญหาบางประการ',
+            'req_id' => null,
+            'next_id' => null,
+            'has_next' => false,
+            'transactions' => [],
+            'summary' => [
+                'count' => 0,
+                'stake' => 0.0,
+                'payout' => 0.0,
+                'scope' => 'chunk',
+            ],
+        ];
+
+        $productId = (string) ($filters['productId'] ?? '');
+        if ($productId === '') {
+            $result['msg'] = 'productId is required';
+
+            return $result;
+        }
+
+        $startTime = $filters['startTime'] ?? null;
+        $endTime = $filters['endTime'] ?? null;
+
+        if (! empty($startTime) && ! empty($endTime)) {
+            try {
+                $start = Carbon::parse((string) $startTime);
+                $end = Carbon::parse((string) $endTime);
+
+                if ($end->lt($start)) {
+                    $result['msg'] = 'endTime must be after startTime';
+
+                    return $result;
+                }
+
+                if ($start->diffInSeconds($end) > 3600) {
+                    $result['msg'] = 'range query must not exceed 1 hour';
+
+                    return $result;
+                }
+            } catch (Throwable $e) {
+                $result['msg'] = 'invalid time format';
+
+                return $result;
+            }
+        }
+
+        if (is_file(base_path('packages/Gametech/Game/src/Repositories/Games/SeamlessRepository.php'))) {
+            return app('Gametech\Game\Repositories\Games\SeamlessRepository', ['method' => $this->gameMethod, 'debug' => false])
+                ->queryBetRecords([
+                    'productId' => $productId,
+                    'date' => $filters['date'] ?? null,
+                    'startTime' => $startTime,
+                    'endTime' => $endTime,
+                    'nextId' => $filters['nextId'] ?? null,
+                ]);
+        }
+
+        $result['msg'] = 'provider repository not available';
+
+        return $result;
     }
 
     public function UserDepositTransfer($product_id, $game_code, $user_name, $total, $update = true, $debug = false): array

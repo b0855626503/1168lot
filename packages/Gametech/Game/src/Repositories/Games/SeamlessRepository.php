@@ -862,11 +862,9 @@ class SeamlessRepository extends Repository
             'nextId' => $data['nextId'],
         ];
 
-        //			        dd($param);
+        //        dd($product_id);
 
         $response = $this->GameCurlGet($param, 'seamless/betTransactionsV2');
-        //			dd($response);
-
         if ($response['success'] === true) {
 
             $return['success'] = true;
@@ -879,6 +877,90 @@ class SeamlessRepository extends Repository
         }
 
         return $return;
+    }
+
+    public function queryBetRecords(array $filters): array
+    {
+        $result = [
+            'success' => false,
+            'msg' => 'พบปัญหาบางประการ',
+            'req_id' => null,
+            'next_id' => null,
+            'has_next' => false,
+            'transactions' => [],
+            'summary' => [
+                'count' => 0,
+                'stake' => 0.0,
+                'payout' => 0.0,
+                'scope' => 'chunk',
+            ],
+        ];
+
+        $param = [
+            'productId' => (string) ($filters['productId'] ?? ''),
+        ];
+
+        if (! empty($filters['date'])) {
+            $param['date'] = (string) $filters['date'];
+        }
+        if (! empty($filters['startTime'])) {
+            $param['startTime'] = (string) $filters['startTime'];
+        }
+        if (! empty($filters['endTime'])) {
+            $param['endTime'] = (string) $filters['endTime'];
+        }
+        if (! empty($filters['nextId'])) {
+            $param['nextId'] = (string) $filters['nextId'];
+        }
+
+//        dd($param);
+
+        $response = $this->GameCurlGet($param, 'seamless/betTransactionsV2');
+
+        Log::channel('api')->info('seamless.gamelog.response', [
+            'param' => $param,
+            'response' => $response,
+        ]);
+
+        $result['msg'] = (string) ($response['msg'] ?? $result['msg']);
+        $result['success'] = (bool) ($response['success'] ?? false);
+
+        $payload = (array) ($response['data'] ?? []);
+        $transactions = (array) ($payload['txns'] ?? []);
+
+        $result['req_id'] = $payload['reqId'] ?? ($payload['req_id'] ?? null);
+        $result['next_id'] = $payload['nextId'] ?? ($payload['next_id'] ?? null);
+        $result['has_next'] = ! empty($result['next_id']);
+
+        $result['transactions'] = array_map(function ($txn) {
+            $row = is_array($txn) ? $txn : [];
+
+            return [
+                'id' => $row['id'] ?? null,
+                'betId' => $row['betId'] ?? null,
+                'username' => $row['username'] ?? null,
+                'currency' => $row['currency'] ?? null,
+                'accountingDate' => $row['accountingDate'] ?? null,
+                'updatedDate' => $row['updatedDate'] ?? null,
+                'stake' => (float) ($row['stake'] ?? 0),
+                'payout' => (float) ($row['payout'] ?? 0),
+                'productId' => $row['productId'] ?? null,
+                'gameCode' => $row['gameCode'] ?? null,
+                'gameName' => $row['gameName'] ?? null,
+                'roundId' => $row['roundId'] ?? null,
+                'betStatus' => $row['betStatus'] ?? null,
+                'payoutStatus' => $row['payoutStatus'] ?? null,
+            ];
+        }, $transactions);
+
+        $result['summary'] = [
+            'count' => count($result['transactions']),
+            'stake' => array_sum(array_column($result['transactions'], 'stake')),
+            'payout' => array_sum(array_column($result['transactions'], 'payout')),
+            'scope' => 'chunk',
+        ];
+
+        return $result;
     }
 
     public function betLimit($product_id)

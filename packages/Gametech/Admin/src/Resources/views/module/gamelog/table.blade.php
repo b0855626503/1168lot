@@ -15,6 +15,38 @@
     <script src="{{ asset('vendor/daterangepicker/daterangepicker.js') }}"></script>
     <script>
         $(document).ready(function () {
+            var tableReadyBound = false;
+
+            function getTable() {
+                if (!window.LaravelDataTables) {
+                    return null;
+                }
+
+                return window.LaravelDataTables['dataTableBuilder'] || null;
+            }
+
+            function bindTableEventsWhenReady() {
+                if (tableReadyBound) {
+                    return;
+                }
+
+                var table = getTable();
+                if (!table) {
+                    setTimeout(bindTableEventsWhenReady, 150);
+
+                    return;
+                }
+
+                tableReadyBound = true;
+
+                table.on('xhr', function () {
+                    var payload = table.ajax.json() || {};
+                    var hasNext = !!payload.has_next;
+                    $('#nextId').val(payload.next_id || '');
+                    $('#btnLoadNext').prop('disabled', !hasNext);
+                });
+            }
+
             $('#search_date').daterangepicker({
                 showDropdowns: true,
                 timePicker: true,
@@ -40,7 +72,7 @@
             });
 
             $('#startDate').val(moment().startOf('day').format());
-            $('#endDate').val(moment().endOf('day').format());
+            $('#endDate').val(moment().startOf('day').add(1, 'hour').format());
 
             $('#search_date').on('apply.daterangepicker', function (ev, picker) {
                 var start = picker.startDate.format();
@@ -51,8 +83,25 @@
 
 
             $("#frmsearch").submit(function () {
-                window.LaravelDataTables["dataTableBuilder"].draw(true);
+                $('#hasSearched').val('1');
+                $('#nextId').val('');
+                var table = getTable();
+                if (table) {
+                    table.draw(true);
+                }
             });
+
+            $('#btnLoadNext').on('click', function () {
+                if ($('#hasSearched').val() !== '1') {
+                    return;
+                }
+                var table = getTable();
+                if (table) {
+                    table.draw(true);
+                }
+            });
+
+            bindTableEventsWhenReady();
 
             $('body').addClass('sidebar-collapse');
         });

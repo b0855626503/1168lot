@@ -7,6 +7,7 @@ use Gametech\Core\Eloquent\Repository;
 use Illuminate\Container\Container as App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Agent;
 
@@ -46,34 +47,33 @@ class AmbexapiRepository extends Repository
 
         $this->debug = $debug;
 
-        $this->url = config($this->method . '.' . $game . '.apiurl');
+        $this->url = config($this->method.'.'.$game.'.apiurl');
 
-        $this->agent = config($this->method . '.' . $game . '.agent');
+        $this->agent = config($this->method.'.'.$game.'.agent');
 
-        $this->agentPass = config($this->method . '.' . $game . '.agent_pass');
+        $this->agentPass = config($this->method.'.'.$game.'.agent_pass');
 
-        $this->login = config($this->method . '.' . $game . '.login');
+        $this->login = config($this->method.'.'.$game.'.login');
 
-        $this->auth = config($this->method . '.' . $game . '.auth');
+        $this->auth = config($this->method.'.'.$game.'.auth');
 
-        $this->passkey = config($this->method . '.' . $game . '.passkey');
+        $this->passkey = config($this->method.'.'.$game.'.passkey');
 
-        $this->secretkey = config($this->method . '.' . $game . '.secretkey');
+        $this->secretkey = config($this->method.'.'.$game.'.secretkey');
 
-        $this->prefix = config($this->method . '.' . $game . '.prefix');
+        $this->prefix = config($this->method.'.'.$game.'.prefix');
 
-        $this->web = config($this->method . '.' . $game . '.web');
+        $this->web = config($this->method.'.'.$game.'.web');
 
         $this->responses = [];
 
         parent::__construct($app);
     }
 
-
     public function Debug($response, $custom = false)
     {
 
-        if (!$custom) {
+        if (! $custom) {
             $return['body'] = $response->body();
             $return['json'] = $response->json();
             $return['successful'] = $response->successful();
@@ -91,7 +91,6 @@ class AmbexapiRepository extends Repository
 
         $this->responses[] = $return;
 
-
     }
 
     public function GameCurl($param, $action)
@@ -99,12 +98,11 @@ class AmbexapiRepository extends Repository
 
         $response = rescue(function () use ($param, $action) {
 
-            $url = $this->url . $action . '/' . $this->prefix . '/' . $this->agent;
+            $url = $this->url.$action.'/'.$this->prefix.'/'.$this->agent;
 
             return Http::timeout(60)->withHeaders([
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'application/json',
             ])->withOptions(['debug' => false])->asJson()->post($url, $param);
-
 
         }, function ($e) {
 
@@ -117,12 +115,12 @@ class AmbexapiRepository extends Repository
         }
 
         if ($response === false) {
-//            $result['main'] = false;
+            //            $result['main'] = false;
             $result['success'] = false;
             $result['msg'] = 'เชื่อมต่อไม่ได้';
+
             return $result;
         }
-
 
         $result = $response->json();
 
@@ -148,12 +146,11 @@ class AmbexapiRepository extends Repository
 
         $response = rescue(function () use ($param, $action) {
 
-            $url = 'https://test.ambsuperapi.com/' . $action;
+            $url = 'https://test.ambsuperapi.com/'.$action;
 
             return Http::timeout(60)->withHeaders([
-                'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey)
+                'Authorization' => 'Basic '.base64_encode($this->agent.':'.$this->secretkey),
             ])->withOptions(['debug' => false])->asJson()->post($url, $param);
-
 
         }, function ($e) {
 
@@ -166,12 +163,12 @@ class AmbexapiRepository extends Repository
         }
 
         if ($response === false) {
-//            $result['main'] = false;
+            //            $result['main'] = false;
             $result['success'] = false;
             $result['msg'] = 'เชื่อมต่อไม่ได้';
+
             return $result;
         }
-
 
         $result = $response->json();
 
@@ -197,12 +194,11 @@ class AmbexapiRepository extends Repository
 
         $response = rescue(function () use ($param, $action) {
 
-            $url = $this->url . $action;
+            $url = $this->url.$action;
 
             return Http::timeout(15)->withHeaders([
-                'Authorization' => 'Basic ' . base64_encode($this->agent . ':' . $this->secretkey)
+                'Authorization' => 'Basic '.base64_encode($this->agent.':'.$this->secretkey),
             ])->asJson()->get($url, $param);
-
 
         }, function ($e) {
 
@@ -215,18 +211,18 @@ class AmbexapiRepository extends Repository
         }
 
         if ($response === false) {
-//            $result['main'] = false;
+            //            $result['main'] = false;
             $result['success'] = false;
             $result['msg'] = 'เชื่อมต่อไม่ได้';
+
             return $result;
         }
 
         $result = $response->json();
 
-//        dd($result);
+        //        dd($result);
 
         $result['msg'] = ($result['message'] ?? 'พบปัญหาบางประการ');
-
 
         if ($response->successful()) {
             if ($result['code'] == 0) {
@@ -258,13 +254,12 @@ class AmbexapiRepository extends Repository
         $return['success'] = true;
         $return['account'] = '';
 
-
         $response = DB::table('games_user')->select('code')->latest('code');
 
         if ($response->exists()) {
             $code = $response->first();
 
-            $user_name = $this->agent . Str::padLeft(($code + 1), 7, '0');
+            $user_name = $this->agent.Str::padLeft(($code + 1), 7, '0');
 
             $responses = DB::table('games_user')->where('user_name', $user_name);
             if ($responses->exists()) {
@@ -275,10 +270,9 @@ class AmbexapiRepository extends Repository
 
             }
 
-
         } else {
 
-            $user_name = $this->agent . Str::padLeft((0 + 1), 7, '0');
+            $user_name = $this->agent.Str::padLeft((0 + 1), 7, '0');
 
             $responses = DB::table('games_user')->where('user_name', $user_name);
             if ($responses->exists()) {
@@ -298,7 +292,7 @@ class AmbexapiRepository extends Repository
     {
         $return['success'] = false;
 
-        $user_pass = $data['user_pass'] ?? "Aa" . rand(100000, 999999);
+        $user_pass = $data['user_pass'] ?? 'Aa'.rand(100000, 999999);
 
         $param = [
             'agentUsername' => $this->agent,
@@ -309,14 +303,12 @@ class AmbexapiRepository extends Repository
             'web' => $this->web,
         ];
 
-
         $response = $this->GameCurl($param, 'ext/createUser');
 
-        $path = storage_path('logs/seamless/register' . now()->format('Y_m_d') . '.log');
-//        file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
+        $path = storage_path('logs/seamless/register'.now()->format('Y_m_d').'.log');
+        //        file_put_contents($path, print_r('-- TRANSACTION --', true), FILE_APPEND);
         file_put_contents($path, print_r($response, true), FILE_APPEND);
-//        file_put_contents($path, print_r($param, true), FILE_APPEND);
-
+        //        file_put_contents($path, print_r($param, true), FILE_APPEND);
 
         if ($response['success'] === true) {
 
@@ -331,10 +323,10 @@ class AmbexapiRepository extends Repository
 
         }
 
-
         if ($this->debug) {
             return ['debug' => $this->responses, 'success' => true];
         }
+
         return $return;
     }
 
@@ -346,7 +338,7 @@ class AmbexapiRepository extends Repository
             'Method' => 'SP',
             'Password' => $data['user_pass'],
             'Timestamp' => time(),
-            'Username' => $data['user_name']
+            'Username' => $data['user_name'],
         ];
 
         $response = $this->GameCurl($param, '');
@@ -361,10 +353,10 @@ class AmbexapiRepository extends Repository
             $return['success'] = false;
         }
 
-
         if ($this->debug) {
             return ['debug' => $this->responses, 'success' => true];
         }
+
         return $return;
     }
 
@@ -379,7 +371,6 @@ class AmbexapiRepository extends Repository
             'username' => $username,
             'web' => $this->web,
         ];
-
 
         $response = $this->GameCurlGet($param, 'ext/getProfileAndCredit');
 
@@ -396,7 +387,6 @@ class AmbexapiRepository extends Repository
             $return['success'] = false;
         }
 
-
         if ($this->debug) {
             return ['debug' => $this->responses, 'success' => true];
         }
@@ -411,17 +401,17 @@ class AmbexapiRepository extends Repository
         $score = $amount;
 
         if ($score < 0) {
-            $return['msg'] = "เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง";
+            $return['msg'] = 'เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง';
             if ($this->debug) {
                 $this->Debug($return, true);
             }
-        } elseif (empty($username) || !$username || is_null($username)) {
-            $return['msg'] = "เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก";
+        } elseif (empty($username) || ! $username || is_null($username)) {
+            $return['msg'] = 'เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก';
             if ($this->debug) {
                 $this->Debug($return, true);
             }
         } else {
-            $transID = "DP" . date('YmdHis') . rand(100, 999);
+            $transID = 'DP'.date('YmdHis').rand(100, 999);
 
             $param = [
                 'agentUsername' => $this->agent,
@@ -431,7 +421,6 @@ class AmbexapiRepository extends Repository
                 'isDp' => true,
                 'web' => $this->web,
             ];
-
 
             $response = $this->GameCurl($param, 'ext/deposit');
 
@@ -462,22 +451,21 @@ class AmbexapiRepository extends Repository
     {
         $return['success'] = false;
 
-
         $score = $amount;
 
         if ($score < 1) {
-            $return['msg'] = "เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง";
+            $return['msg'] = 'เกิดข้อผิดพลาด จำนวนยอดเงินไม่ถูกต้อง';
             if ($this->debug) {
                 $this->Debug($return, true);
             }
         } elseif (empty($username)) {
-            $return['msg'] = "เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก";
+            $return['msg'] = 'เกิดข้อผิดพลาด ไม่พบข้อมูลรหัสสมาชิก';
             if ($this->debug) {
                 $this->Debug($return, true);
             }
         } else {
 
-            $transID = "WD" . date('YmdHis') . rand(100, 999);
+            $transID = 'WD'.date('YmdHis').rand(100, 999);
             $param = [
                 'agentUsername' => $this->agent,
                 'key' => $this->secretkey,
@@ -518,7 +506,7 @@ class AmbexapiRepository extends Repository
 
         $param = ['productId' => $product_id];
 
-//        dd($product_id);
+        //        dd($product_id);
 
         $response = $this->GameCurlGet($param, 'seamless/games');
         if ($response['success'] == true) {
@@ -538,7 +526,7 @@ class AmbexapiRepository extends Repository
             $return['success'] = false;
         }
 
-//        dd($return);
+        //        dd($return);
 
         return $return;
     }
@@ -554,11 +542,9 @@ class AmbexapiRepository extends Repository
             'web' => $this->web,
         ];
 
-
-
         $response = $this->GameCurlGet($param, 'ext/gameList');
 
-//        dd($response);
+        //        dd($response);
 
         if ($response['success'] === true) {
 
@@ -568,10 +554,10 @@ class AmbexapiRepository extends Repository
 
             foreach ($return['games'] as $item) {
 
-//                GameListProxy::firstOrCreate(
-//                    ['product' => $product_id, 'code' => $item['code'] , 'game' => $item['code']],
-//                    ['category' => $item['category'], 'type' => $item['type'], 'img' => $item['img'], 'name' => $item['name'], 'rank' => $item['rank']]
-//                );
+                //                GameListProxy::firstOrCreate(
+                //                    ['product' => $product_id, 'code' => $item['code'] , 'game' => $item['code']],
+                //                    ['category' => $item['category'], 'type' => $item['type'], 'img' => $item['img'], 'name' => $item['name'], 'rank' => $item['rank']]
+                //                );
 
                 GameListProxy::updateOrCreate(
                     ['product' => $product_id, 'code' => $item['code'], 'game' => $item['code']],
@@ -579,13 +565,12 @@ class AmbexapiRepository extends Repository
                 );
             }
 
-
         } else {
             $return['msg'] = $response['msg'];
             $return['success'] = false;
         }
 
-//        dd($return);
+        //        dd($return);
 
         return $return;
     }
@@ -594,7 +579,7 @@ class AmbexapiRepository extends Repository
     {
         $pid = Str::upper($data['productId']);
         $return['game'] = $pid;
-        $Agent = new Agent();
+        $Agent = new Agent;
 
         if ($pid == 'COCKFIGHT') {
             $mobile = true;
@@ -609,13 +594,11 @@ class AmbexapiRepository extends Repository
         $return['success'] = false;
         $response = [];
         $member = DB::table('members')->select('user_name')->where('session_id', request()->session()->getId())->first();
-//        dd($member);
+        //        dd($member);
 
         if ($member) {
 
-
             if ($member->user_name == $data['username']) {
-
 
                 if ($pid == 'RELAX') {
                     $session = Str::limit(request()->session()->getId(), 20, '');
@@ -628,28 +611,26 @@ class AmbexapiRepository extends Repository
                     'gameCode' => $data['gameCode'],
                     'isMobileLogin' => $mobile,
                     'language' => app()->getLocale() == 'kh' ? 'en' : app()->getLocale(),
-                    'sessionToken' => $session
+                    'sessionToken' => $session,
                 ];
 
-//                dd($param);
+                //                dd($param);
 
-//                $path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
-//                file_put_contents($path, print_r($param, true), FILE_APPEND);
+                //                $path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
+                //                file_put_contents($path, print_r($param, true), FILE_APPEND);
 
-//                if($pid = 'PGSOFT2'){
-//                    $response = $this->GameCurlPg($param, 'seamless/logIn');
-//
-//                }else{
-//                    $response = $this->GameCurl($param, 'seamless/logIn');
-//                }
+                //                if($pid = 'PGSOFT2'){
+                //                    $response = $this->GameCurlPg($param, 'seamless/logIn');
+                //
+                //                }else{
+                //                    $response = $this->GameCurl($param, 'seamless/logIn');
+                //                }
 
                 $response = $this->GameCurl($param, 'seamless/logIn');
 
-
-//                dd($response);
-//                $path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
-//                file_put_contents($path, print_r($response, true), FILE_APPEND);
-
+                //                dd($response);
+                //                $path = storage_path('logs/seamless/login_' . now()->format('Y_m_d') . '.log');
+                //                file_put_contents($path, print_r($response, true), FILE_APPEND);
 
                 if ($response['success'] === true && isset($response['data']['url'])) {
                     $return['success'] = true;
@@ -671,24 +652,23 @@ class AmbexapiRepository extends Repository
     {
         $return['success'] = false;
 
-//        $param = [
-//            'username' => $data['username'],
-//            'productId' => $data['productId'],
-//            'startTime' => $data['startTime'],
-//            'endTime' => $data['endTime'],
-//            'offset' => $data['offset'],
-//            'limit' => $data['limit'],
-//        ];
+        //        $param = [
+        //            'username' => $data['username'],
+        //            'productId' => $data['productId'],
+        //            'startTime' => $data['startTime'],
+        //            'endTime' => $data['endTime'],
+        //            'offset' => $data['offset'],
+        //            'limit' => $data['limit'],
+        //        ];
 
         $param = [
             'productId' => $data['productId'],
             'startTime' => $data['startTime'],
             'endTime' => $data['endTime'],
-            'nextId' => $data['nextId']
+            'nextId' => $data['nextId'],
         ];
 
-
-//        dd($product_id);
+        //        dd($product_id);
 
         $response = $this->GameCurlGet($param, 'seamless/betTransactionsV2');
         if ($response['success'] === true) {
@@ -705,14 +685,97 @@ class AmbexapiRepository extends Repository
         return $return;
     }
 
+    public function queryBetRecords(array $filters): array
+    {
+        $result = [
+            'success' => false,
+            'msg' => 'พบปัญหาบางประการ',
+            'req_id' => null,
+            'next_id' => null,
+            'has_next' => false,
+            'transactions' => [],
+            'summary' => [
+                'count' => 0,
+                'stake' => 0.0,
+                'payout' => 0.0,
+                'scope' => 'chunk',
+            ],
+        ];
+
+        $param = [
+            'productId' => (string) ($filters['productId'] ?? ''),
+        ];
+
+        if (! empty($filters['date'])) {
+            $param['date'] = (string) $filters['date'];
+        }
+        if (! empty($filters['startTime'])) {
+            $param['startTime'] = (string) $filters['startTime'];
+        }
+        if (! empty($filters['endTime'])) {
+            $param['endTime'] = (string) $filters['endTime'];
+        }
+        if (! empty($filters['nextId'])) {
+            $param['nextId'] = (string) $filters['nextId'];
+        }
+
+//        dd($param);
+
+        $response = $this->GameCurlGet($param, 'seamless/betTransactionsV2');
+
+        Log::channel('api')->info('seamless.gamelog.response', [
+            'param' => $param,
+            'response' => $response,
+        ]);
+
+        $result['msg'] = (string) ($response['msg'] ?? $result['msg']);
+        $result['success'] = (bool) ($response['success'] ?? false);
+
+        $payload = (array) ($response['data'] ?? []);
+        $transactions = (array) ($payload['txns'] ?? []);
+
+        $result['req_id'] = $payload['reqId'] ?? ($payload['req_id'] ?? null);
+        $result['next_id'] = $payload['nextId'] ?? ($payload['next_id'] ?? null);
+        $result['has_next'] = ! empty($result['next_id']);
+
+        $result['transactions'] = array_map(function ($txn) {
+            $row = is_array($txn) ? $txn : [];
+
+            return [
+                'id' => $row['id'] ?? null,
+                'betId' => $row['betId'] ?? null,
+                'username' => $row['username'] ?? null,
+                'currency' => $row['currency'] ?? null,
+                'accountingDate' => $row['accountingDate'] ?? null,
+                'updatedDate' => $row['updatedDate'] ?? null,
+                'stake' => (float) ($row['stake'] ?? 0),
+                'payout' => (float) ($row['payout'] ?? 0),
+                'productId' => $row['productId'] ?? null,
+                'gameCode' => $row['gameCode'] ?? null,
+                'gameName' => $row['gameName'] ?? null,
+                'roundId' => $row['roundId'] ?? null,
+                'betStatus' => $row['betStatus'] ?? null,
+                'payoutStatus' => $row['payoutStatus'] ?? null,
+            ];
+        }, $transactions);
+
+        $result['summary'] = [
+            'count' => count($result['transactions']),
+            'stake' => array_sum(array_column($result['transactions'], 'stake')),
+            'payout' => array_sum(array_column($result['transactions'], 'payout')),
+            'scope' => 'chunk',
+        ];
+
+        return $result;
+    }
 
     /**
      * Specify Model class name
      *
      * @return mixed
      */
-    function model(): string
+    public function model(): string
     {
-        return 'Gametech\Game\Contracts\User';
+        return \Gametech\Game\Models\User::class;
     }
 }

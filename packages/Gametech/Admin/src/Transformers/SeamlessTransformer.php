@@ -2,15 +2,11 @@
 
 namespace Gametech\Admin\Transformers;
 
-
 use Carbon\Carbon;
-use Gametech\Member\Contracts\MemberCreditLog;
-use Illuminate\Support\Str;
 use League\Fractal\TransformerAbstract;
 
 class SeamlessTransformer extends TransformerAbstract
 {
-
     protected $no;
 
     public function __construct($no = 1)
@@ -21,21 +17,43 @@ class SeamlessTransformer extends TransformerAbstract
 
     public function transform(array $model)
     {
+        $accountingDate = $model['accountingDate'] ?? null;
+        $updatedDate = $model['updatedDate'] ?? null;
 
-//        dd($model);
         return [
             'code' => ++$this->no,
-            'username' => $model['username'],
-            'betTime' => Carbon::createFromTimestampMs($model['betTime'], 'Asia/Bangkok')->format('Y-m-d H:i:s'),
-            'settleTime' => Carbon::createFromTimestampMs($model['settleTime'], 'Asia/Bangkok')->format('Y-m-d H:i:s'),
-            'gameCompany' => $model['gameCompany'],
-            'gameRef' => $model['gameRef'],
-            'betAmount' => $model['betAmount'],
-            'settleAmount' => $model['settleAmount'],
-            'result' => $model['result'],
+            'id' => $model['id'] ?? null,
+            'betId' => $model['betId'] ?? null,
+            'username' => $model['username'] ?? null,
+            'currency' => $model['currency'] ?? null,
+            'accountingDate' => $this->formatDateTime($accountingDate),
+            'updatedDate' => $this->formatDateTime($updatedDate),
+            'stake' => $model['stake'] ?? 0,
+            'payout' => $model['payout'] ?? 0,
+            'productId' => $model['productId'] ?? null,
+            'gameCode' => $model['gameCode'] ?? null,
+            'gameName' => $model['gameName'] ?? null,
+            'roundId' => $model['roundId'] ?? null,
+            'betStatus' => $model['betStatus'] ?? null,
+            'payoutStatus' => $model['payoutStatus'] ?? null,
 
         ];
     }
 
+    private function formatDateTime($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
 
+        try {
+            if (is_numeric($value)) {
+                return Carbon::createFromTimestampMs((int) $value, 'Asia/Bangkok')->format('Y-m-d H:i:s');
+            }
+
+            return Carbon::parse((string) $value)->setTimezone('Asia/Bangkok')->format('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
 }

@@ -27,17 +27,23 @@
                                                name="startDate">
                                         <input type="hidden" class="form-control float-right" id="endDate"
                                                name="endDate">
+                                        <input type="hidden" id="hasSearched" name="hasSearched" value="0">
                                     </div>
                                 </div>
 
                                 <div class="form-group col-6">
-                                    {!! Form::select('gameType',  (['0' => 'Slot' , '1' => 'Live Casino' , '3' => 'Fish' , '4' => 'Sport' , '5' => 'Lotto']), '',['id' => 'gameType', 'class' => 'form-control form-control-sm']) !!}
+                                    {!! Form::select('productId', ['' => 'เลือก Product'] + ($games ?? collect())->toArray(), '', ['id' => 'productId', 'class' => 'form-control form-control-sm']) !!}
 
                                 </div>
                                 <div class="form-group col-6">
-                                    <input type="text" class="form-control form-control-sm" id="username"
-                                           placeholder="Username"
-                                           name="username">
+                                    <input type="hidden" id="nextId" name="nextId">
+                                    <button type="button" class="btn btn-outline-primary btn-sm btn-block" id="btnLoadNext" disabled>
+                                        <i class="fa fa-forward"></i> Load Next Chunk
+                                    </button>
+                                </div>
+
+                                <div class="form-group col-12">
+                                    <small class="text-muted">Range query must not exceed 1 hour. Summary stake/payout is for currently loaded chunk only.</small>
                                 </div>
 
                                 <div class="form-group col-auto">
@@ -64,4 +70,3 @@
     </section>
 
 @endsection
-
