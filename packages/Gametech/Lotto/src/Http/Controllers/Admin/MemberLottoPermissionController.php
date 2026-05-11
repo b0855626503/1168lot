@@ -91,7 +91,7 @@ class MemberLottoPermissionController extends AppBaseController
             'member_id' => (int) $validated['member_id'],
             'group_id' => (int) $validated['group_id'],
             'market_id' => (int) $validated['market_id'],
-            'is_allowed' => (bool) ($validated['is_allowed'] ?? false),
+            'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => 1,
         ]);
@@ -160,7 +160,7 @@ class MemberLottoPermissionController extends AppBaseController
             'member_id' => (int) $validated['member_id'],
             'group_id' => (int) $validated['group_id'],
             'market_id' => (int) $validated['market_id'],
-            'is_allowed' => (bool) ($validated['is_allowed'] ?? false),
+            'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => (int) $item->policy_version + 1,
         ]);

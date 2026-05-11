@@ -33,7 +33,7 @@
 			></b-form-select>
 		</b-form-group>
 		<b-form-group>
-			<b-form-checkbox v-model="formaddedit.is_allowed" :value="1" :unchecked-value="0">
+			<b-form-checkbox v-model="formaddedit.is_allowed" :value="0" :unchecked-value="1">
 				บล็อกการเล่น
 			</b-form-checkbox>
 		</b-form-group>

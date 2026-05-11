@@ -11,7 +11,7 @@ class MemberLottoPermissionTransformer extends TransformerAbstract
     {
         $memberName = trim((string) (($model->member->user_name ?? '') ?: ($model->member->name ?? '')));
         $nextStatus = $model->is_allowed ? 0 : 1;
-        $toggleClick = 'editdata('.(int) $model->id.','.$nextStatus.",'is_allowed')";
+        $toggleClick = "editdata({$model->id},{$nextStatus},'is_allowed')";
 
         return [
             'id' => (int) $model->id,

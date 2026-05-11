@@ -112,35 +112,95 @@ class MemberLottoPermissionControllerTest extends TestCase
         $this->assertStringContainsString('fa-check', $result['is_allowed']);
     }
 
-    public function test_create_model_defaults_is_allowed_to_false(): void
+    public function test_create_controller_defaults_is_allowed_to_false(): void
     {
         DB::table('members')->insert([['code' => 400, 'user_name' => 'test5']]);
         DB::table('lotto_groups')->insert([['id' => 5, 'is_enabled' => true, 'name' => 'G5', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]]);
         DB::table('lotto_markets')->insert([['id' => 80, 'group_id' => 5, 'is_enabled' => true, 'name' => 'M5', 'created_at' => now(), 'updated_at' => now()]]);
 
+        $this->withoutMiddleware()
+            ->post('http://admin.localhost/lotto/member-permissions/create', [
+                'data' => [
+                    'member_id' => 400,
+                    'group_id' => 5,
+                    'market_id' => 80,
+                ],
+            ])
+            ->assertJsonPath('success', true);
+
+        $policy = MemberLottoMarketPolicy::query()->where('member_id', 400)->first();
+        $this->assertNotNull($policy);
+        $this->assertSame(false, (bool) $policy->is_allowed);
+        $this->assertSame('admin', $policy->source);
+    }
+
+    public function test_create_controller_forces_is_allowed_false_even_when_input_true(): void
+    {
+        DB::table('members')->insert([['code' => 401, 'user_name' => 'test6']]);
+        DB::table('lotto_groups')->insert([['id' => 6, 'is_enabled' => true, 'name' => 'G6', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]]);
+        DB::table('lotto_markets')->insert([['id' => 81, 'group_id' => 6, 'is_enabled' => true, 'name' => 'M6', 'created_at' => now(), 'updated_at' => now()]]);
+
+        $this->withoutMiddleware()
+            ->post('http://admin.localhost/lotto/member-permissions/create', [
+                'data' => [
+                    'member_id' => 401,
+                    'group_id' => 6,
+                    'market_id' => 81,
+                    'is_allowed' => 1,
+                ],
+            ])
+            ->assertJsonPath('success', true);
+
+        $policy = MemberLottoMarketPolicy::query()->where('member_id', 401)->first();
+        $this->assertNotNull($policy);
+        $this->assertSame(false, (bool) $policy->is_allowed);
+    }
+
+    public function test_update_controller_forces_is_allowed_false_when_input_true(): void
+    {
+        DB::table('members')->insert([['code' => 500, 'user_name' => 'test7']]);
+        DB::table('lotto_groups')->insert([['id' => 7, 'is_enabled' => true, 'name' => 'G7', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]]);
+        DB::table('lotto_markets')->insert([
+            ['id' => 90, 'group_id' => 7, 'is_enabled' => true, 'name' => 'M7', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 91, 'group_id' => 7, 'is_enabled' => true, 'name' => 'M8', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         $policy = MemberLottoMarketPolicy::query()->create([
-            'member_id' => 400,
-            'group_id' => 5,
-            'market_id' => 80,
+            'member_id' => 500,
+            'group_id' => 7,
+            'market_id' => 90,
             'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => 1,
         ]);
 
+        $this->withoutMiddleware()
+            ->post('http://admin.localhost/lotto/member-permissions/update', [
+                'id' => $policy->id,
+                'data' => [
+                    'member_id' => 500,
+                    'group_id' => 7,
+                    'market_id' => 91,
+                    'is_allowed' => 1,
+                ],
+            ])
+            ->assertJsonPath('success', true);
+
+        $policy->refresh();
         $this->assertSame(false, (bool) $policy->is_allowed);
-        $this->assertSame('admin', $policy->source);
+        $this->assertSame(91, (int) $policy->market_id);
     }
 
-    public function test_delete_removes_row_for_unblock(): void
+    public function test_delete_route_removes_row(): void
     {
-        DB::table('members')->insert([['code' => 500, 'user_name' => 'test6']]);
-        DB::table('lotto_groups')->insert([['id' => 6, 'is_enabled' => true, 'name' => 'G6', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]]);
-        DB::table('lotto_markets')->insert([['id' => 90, 'group_id' => 6, 'is_enabled' => true, 'name' => 'M6', 'created_at' => now(), 'updated_at' => now()]]);
+        DB::table('members')->insert([['code' => 600, 'user_name' => 'test8']]);
+        DB::table('lotto_groups')->insert([['id' => 8, 'is_enabled' => true, 'name' => 'G8', 'sort' => 1, 'created_at' => now(), 'updated_at' => now()]]);
+        DB::table('lotto_markets')->insert([['id' => 100, 'group_id' => 8, 'is_enabled' => true, 'name' => 'M9', 'created_at' => now(), 'updated_at' => now()]]);
 
         $policy = MemberLottoMarketPolicy::query()->create([
-            'member_id' => 500,
-            'group_id' => 6,
-            'market_id' => 90,
+            'member_id' => 600,
+            'group_id' => 8,
+            'market_id' => 100,
             'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => 1,
@@ -148,8 +208,17 @@ class MemberLottoPermissionControllerTest extends TestCase
 
         $this->assertNotNull(MemberLottoMarketPolicy::query()->find($policy->id));
 
-        $policy->delete();
+        $this->withoutMiddleware()
+            ->post('http://admin.localhost/lotto/member-permissions/delete', ['id' => $policy->id])
+            ->assertJsonPath('success', true);
 
         $this->assertNull(MemberLottoMarketPolicy::query()->find($policy->id));
+    }
+
+    public function test_delete_route_returns_error_when_row_not_found(): void
+    {
+        $this->withoutMiddleware()
+            ->post('http://admin.localhost/lotto/member-permissions/delete', ['id' => 99999])
+            ->assertJsonPath('success', false);
     }
 }
