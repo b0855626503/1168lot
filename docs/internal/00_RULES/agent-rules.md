@@ -11,20 +11,20 @@
 - ทุกการเปลี่ยนแปลงที่กระทบ lifecycle/validation/ACL/route/cron/schema ต้องอัปเดต:
   - `docs/internal/01_SYSTEM/system-current-state/index.md`
   - `docs/internal/02_DECISIONS/decision-log/index.md`
-  - `docs/internal/01_SYSTEM/system_current_state.md` (entrypoint/compat)
-  - `docs/internal/02_DECISIONS/decision_log.md` (entrypoint/compat)
+  - `docs/internal/01_SYSTEM/system-current-state.md` (entrypoint/compat)
+  - `docs/internal/02_DECISIONS/decision-log.md` (entrypoint/compat)
   - เอกสาร domain/plan ที่เกี่ยวข้อง
 
 ## Startup Path
 
-→ ดู `docs/START_HERE.md` สำหรับ startup path ที่กำหนดไว้
+→ ดู `docs/START-HERE.md` สำหรับ startup path ที่กำหนดไว้
 
 สรุปย่อ:
-1. `docs/START_HERE.md`
+1. `docs/START-HERE.md`
 2. `.codebase-memory/SUMMARY.md` (ถ้ามี)
-3. `docs/internal/01_SYSTEM/system_map.md`
+3. `docs/internal/01_SYSTEM/system-map.md`
 4. domain note ที่เกี่ยวข้อง 1 ไฟล์
-5. Code Discovery — `docs/internal/00_RULES/code_discovery_protocol.md`
+5. Code Discovery — `docs/internal/00_RULES/code-discovery-protocol.md`
 
 เปิด `system-current-state/index.md` และ `decision-log/index.md` เฉพาะเมื่อ high-risk หรือ mismatch
 
@@ -32,7 +32,7 @@
 
 - ห้ามอ่านไฟล์ใหญ่ทั้งก้อนทุกครั้งโดยไม่มีเหตุจำเป็น
 - ใช้ `system_map + domain note` เป็น default path
-- ใช้ `system_current_state` และ `decision_log` เป็น escalation path ตาม risk
+- ใช้ `system-current-state` และ `decision-log` เป็น escalation path ตาม risk
 - งานเล็กไม่ควรต้องแบก startup cost เท่างานใหญ่
 
 ## Targeted Lookup Policy (บังคับใช้)
@@ -58,7 +58,7 @@
 
 **Synchronization Contract:**
 การเปลี่ยนแปลงต่อไปนี้ต้องอัปเดต doc ด้วยเสมอ:
-- เปลี่ยน route หรือ entrypoint → อัปเดต `docs/internal/01_SYSTEM/system_map.md`
+- เปลี่ยน route หรือ entrypoint → อัปเดต `docs/internal/01_SYSTEM/system-map.md`
 - เปลี่ยน service / flow → อัปเดต `*_discovery.md` ที่เกี่ยวข้อง พร้อม Last Verified ใหม่
 - เปลี่ยน table / schema → อัปเดต domain note + discovery map
 
@@ -69,7 +69,7 @@
   - `.codebase-memory/SUMMARY.md`
   - `memory/<domain>.md`
 - ค่อยเปิด docs เฉพาะ section ที่จำเป็นเมื่อ memory ยังไม่พอ
-- ถ้าต้องตรวจหลักฐาน retrieval consistency ให้เปิด `docs/internal/01_SYSTEM/retrieval_system_status.md`
+- ถ้าต้องตรวจหลักฐาน retrieval consistency ให้เปิด `docs/internal/01_SYSTEM/retrieval-system-status.md`
 
 **Memory boundary:**
 - memory = keyword lookup + context เบื้องต้น

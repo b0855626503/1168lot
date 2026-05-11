@@ -19,4 +19,4 @@
 ## Legacy Full Dump
 
 รายละเอียดเดิมทั้งก้อนถูกเก็บที่:
-- `docs/internal/05_ARCHIVE/monolith/system_current_state.2026-04-18.md`
+- `docs/internal/05_ARCHIVE/monolith/system-current-state.2026-04-18.md`

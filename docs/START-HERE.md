@@ -6,9 +6,9 @@
 
 1. ไฟล์นี้ — เสร็จแล้ว
 2. `.codebase-memory/SUMMARY.md` — ถ้ามี
-3. `docs/internal/01_SYSTEM/system_map.md` — แผนที่ domain/package/entrypoint สั้น
+3. `docs/internal/01_SYSTEM/system-map.md` — แผนที่ domain/package/entrypoint สั้น
 4. domain discovery/note ที่เกี่ยวข้องกับงาน 1 ไฟล์ (ดู `docs/internal/03_DOMAINS/`)
-5. ทำ Code Discovery — Light/Standard: `docs/internal/00_RULES/code_discovery_quick.md` | High Risk: `docs/internal/00_RULES/code_discovery_protocol.md`
+5. ทำ Code Discovery — Light/Standard: `docs/internal/00_RULES/code-discovery-quick.md` | High Risk: `docs/internal/00_RULES/code-discovery-protocol.md`
 
 ## Escalate เมื่อ Risk สูง
 
@@ -25,12 +25,12 @@
 
 ## Policies & Rules
 
-→ ดู `docs/internal/00_RULES/agent_rules.md` สำหรับกฎทั้งหมด
+→ ดู `docs/internal/00_RULES/agent-rules.md` สำหรับกฎทั้งหมด
 
 ## กรณีพิเศษ
 
-- งาน MCP / knowledge graph: เพิ่ม `docs/internal/01_SYSTEM/mcp_operating_guide.md`
-- ตรวจ retrieval/index: `docs/internal/01_SYSTEM/retrieval_system_status.md`
+- งาน MCP / knowledge graph: เพิ่ม `docs/internal/01_SYSTEM/mcp-operating-guide.md`
+- ตรวจ retrieval/index: `docs/internal/01_SYSTEM/retrieval-system-status.md`
 
 ## Hard Rules
 

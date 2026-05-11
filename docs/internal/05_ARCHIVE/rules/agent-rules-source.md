@@ -21,8 +21,8 @@ Do NOT write full documentation in English.
 
 ต้องมีไฟล์เหล่านี้ในระบบ:
 
-1. docs/internal/01_SYSTEM/system_current_state.md
-2. docs/internal/02_DECISIONS/decision_log.md
+1. docs/internal/01_SYSTEM/system-current-state.md
+2. docs/internal/02_DECISIONS/decision-log.md
 3. docs/internal/03_DOMAINS/<domain>.md
 4. docs/04_PLANS/YYYY-MM-DD_topic-name.md
 
@@ -34,8 +34,8 @@ Do NOT write full documentation in English.
 
 1. อ่าน:
 
-    * docs/internal/01_SYSTEM/system_current_state.md
-    * docs/internal/02_DECISIONS/decision_log.md
+    * docs/internal/01_SYSTEM/system-current-state.md
+    * docs/internal/02_DECISIONS/decision-log.md
     * docs/internal/03_DOMAINS/*.md ที่เกี่ยวข้อง
 
 2. ใช้เอกสารเหล่านี้เป็น source of truth เท่านั้น
@@ -63,7 +63,7 @@ Do NOT write full documentation in English.
 
 ---
 
-## 1. อัปเดต docs/internal/02_DECISIONS/decision_log.md
+## 1. อัปเดต docs/internal/02_DECISIONS/decision-log.md
 
 ต้องเพิ่ม entry ใหม่:
 
@@ -79,7 +79,7 @@ Do NOT write full documentation in English.
 
 ---
 
-## 2. อัปเดต docs/internal/01_SYSTEM/system_current_state.md
+## 2. อัปเดต docs/internal/01_SYSTEM/system-current-state.md
 
 * ต้องสะท้อน “ระบบปัจจุบันจริง”
 * ห้ามเขียนเป็นแผน
@@ -146,8 +146,8 @@ Do NOT write full documentation in English.
 
 1. ตรวจว่า:
 
-    * docs/internal/01_SYSTEM/system_current_state.md ตรงกับโค้ดจริง
-    * docs/internal/02_DECISIONS/decision_log.md มี decision ใหม่ครบ
+    * docs/internal/01_SYSTEM/system-current-state.md ตรงกับโค้ดจริง
+    * docs/internal/02_DECISIONS/decision-log.md มี decision ใหม่ครบ
     * DOMAIN docs อัปเดตแล้ว
     * WORK_PLAN ครบ
 

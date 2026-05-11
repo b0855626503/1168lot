@@ -69,5 +69,5 @@
 
 ## Source-of-Truth References
 
-- `docs/internal/03_DOMAINS/frontend_api.md`
+- `docs/internal/03_DOMAINS/frontend-api.md`
 - `docs/public/api/frontend-v1/03-endpoints.md`

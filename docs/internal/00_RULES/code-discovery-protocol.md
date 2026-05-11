@@ -2,7 +2,7 @@
 
 ## Purpose
 Full reference สำหรับงาน **High Risk** เท่านั้น
-งาน Light / Standard ใช้ `code_discovery_quick.md` แทน — เร็วกว่า ลด token
+งาน Light / Standard ใช้ `code-discovery-quick.md` แทน — เร็วกว่า ลด token
 
 บังคับ agent ค้นหาไฟล์และ call flow ก่อนแก้โค้ด เพื่อป้องกันการเดาไฟล์ผิด, แก้ผิด layer, หรือพลาด side effects
 
@@ -16,9 +16,9 @@ Full reference สำหรับงาน **High Risk** เท่านั้�
 - ระบุไฟล์เป้าหมายชัดเจน และไม่กระทบ behavior ใด
 
 สิ่งที่ต้องทำ:
-- อ่าน `docs/START_HERE.md`
+- อ่าน `docs/START-HERE.md`
 - verify ไฟล์เป้าหมาย
-- ไม่ต้องอ่าน `system_current_state.md` / `decision_log.md` ถ้าไม่เสี่ยง
+- ไม่ต้องอ่าน `system-current-state.md` / `decision-log.md` ถ้าไม่เสี่ยง
 
 ### Standard
 ใช้เมื่อ:
@@ -26,8 +26,8 @@ Full reference สำหรับงาน **High Risk** เท่านั้�
 - bug fix ที่ไม่ใช่เงิน / permission / schema
 
 สิ่งที่ต้องทำ:
-- อ่าน `docs/START_HERE.md`
-- อ่าน `docs/internal/01_SYSTEM/system_map.md`
+- อ่าน `docs/START-HERE.md`
+- อ่าน `docs/internal/01_SYSTEM/system-map.md`
 - อ่าน domain discovery/note ที่เกี่ยวข้อง
 - `rg`/`git grep` อย่างน้อย business keyword + technical keyword + table/class
 - สรุป Discovery Report แบบย่อ
@@ -43,8 +43,8 @@ Full reference สำหรับงาน **High Risk** เท่านั้�
 - auth / security / ACL
 
 สิ่งที่ต้องทำ:
-- อ่าน `docs/START_HERE.md`
-- อ่าน `docs/internal/01_SYSTEM/system_map.md`
+- อ่าน `docs/START-HERE.md`
+- อ่าน `docs/internal/01_SYSTEM/system-map.md`
 - อ่าน domain discovery/note ที่เกี่ยวข้อง
 - อ่าน `docs/internal/01_SYSTEM/system-current-state/index.md`
 - อ่าน `docs/internal/02_DECISIONS/decision-log/index.md`
@@ -73,9 +73,9 @@ Full reference สำหรับงาน **High Risk** เท่านั้�
 ## Required Discovery Steps
 
 ### Step 1: Read Source of Truth
-อ่านตาม startup path ที่กำหนดใน `docs/START_HERE.md`:
-1. `docs/START_HERE.md`
-2. `docs/internal/01_SYSTEM/system_map.md`
+อ่านตาม startup path ที่กำหนดใน `docs/START-HERE.md`:
+1. `docs/START-HERE.md`
+2. `docs/internal/01_SYSTEM/system-map.md`
 3. domain note ที่เกี่ยวข้อง (ดู `docs/internal/03_DOMAINS/`)
 4. สำหรับ High Risk เท่านั้น: `docs/internal/01_SYSTEM/system-current-state/index.md` + `docs/internal/02_DECISIONS/decision-log/index.md`
 5. แผนงาน active ที่เกี่ยวข้อง: `docs/04_PLANS/_current_work.md`
@@ -285,11 +285,11 @@ Tests: [test file หรือ none found]
 สรุปงาน 2-4 บรรทัด
 
 ### Source of Truth Read
-- [ ] docs/START_HERE.md
-- [ ] system_map.md
+- [ ] docs/START-HERE.md
+- [ ] system-map.md
 - [ ] domain discovery/note
-- [ ] system_current_state.md
-- [ ] decision_log.md
+- [ ] system-current-state.md
+- [ ] decision-log.md
 - [ ] current plan
 
 ### Keywords Used

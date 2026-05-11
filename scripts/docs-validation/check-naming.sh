@@ -96,7 +96,7 @@ for f in "${md_files[@]}"; do
   fi
 
   # Allowed uppercase filename exceptions.
-  if [[ "$bn" == "README.md" || "$bn" == "START_HERE.md" ]]; then
+  if [[ "$bn" == "README.md" || "$bn" == "START-HERE.md" ]]; then
     :
   else
     if [[ "$bn" =~ [A-Z] ]]; then

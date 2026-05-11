@@ -34,10 +34,10 @@
 - Config: `scripts/docs-validation/config.sh`
 
 ### code-doc-map.tsv — sync contract rules ✅
-- `lotto_routes_sync`: Lotto routes → system_map.md / lotto_discovery.md
-- `lotto_service_sync`: Lotto service → lotto_discovery.md / lotto.md
-- `wallet_discovery_sync`: Wallet service → wallet_discovery.md / wallet.md
-- `frontend_api_discovery_sync`: FrontendApi route/controller → frontend_api_discovery.md / 07-route-reference.md
+- `lotto_routes_sync`: Lotto routes → system-map.md / lotto-discovery.md
+- `lotto_service_sync`: Lotto service → lotto-discovery.md / lotto.md
+- `wallet_discovery_sync`: Wallet service → wallet-discovery.md / wallet.md
+- `frontend_api_discovery_sync`: FrontendApi route/controller → frontend-api-discovery.md / 07-route-reference.md
 - Severity: `[WARN]` (heuristic — human judgment required)
 
 ### check-service-discovery-sync.sh ✅ (generic fallback heuristic)
@@ -78,7 +78,7 @@
 - Proposed severity: `[ERROR]`
 
 ### 2. Startup policy conflict detection
-- warn ถ้า `START_HERE.md`, `startup_digest.md`, `agent_rules.md` มี startup policy conflict
+- warn ถ้า `START-HERE.md`, `startup-digest.md`, `agent-rules.md` มี startup policy conflict
 - Proposed severity: `[ERROR]`
 
 ### 3. Legacy WARN → tiered debt tracking

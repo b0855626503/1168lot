@@ -1,10 +1,10 @@
 # Lotto Discovery Map
 
-> **Last Verified:** 2026-05-03 | **Source:** rg-verified | **Confidence:** high | **Stability:** volatile
+> **Last Verified:** 2026-05-12 | **Source:** rg-verified | **Confidence:** high | **Stability:** volatile
 > ไฟล์นี้เป็น derived snapshot — อาจ drift ได้ถ้า code เปลี่ยนโดยไม่อัปเดต
 > **ให้ verify entrypoint ด้วย `rg` เสมอก่อนตัดสินใจ**
 
-แผนที่สำหรับค้น code path — ใช้คู่กับ `lotto.md` และ `code_discovery_quick.md`; งาน High Risk ค่อยใช้ `code_discovery_protocol.md`
+แผนที่สำหรับค้น code path — ใช้คู่กับ `lotto.md` และ `code-discovery-quick.md`; งาน High Risk ค่อยใช้ `code-discovery-protocol.md`
 
 ---
 
@@ -38,10 +38,14 @@
 ## Member Market Policy
 
 - Service: `MemberMarketPolicyService`
-- Command: `BootstrapMemberMarketPoliciesCommand`
+- Admin controller: `MemberLottoPermissionController`
+- Admin route: `POST /admin/lotto/member-permissions/delete` (deactivate)
+- Model: default-allow + blacklist (`is_allowed=false` blocks betting)
+- Commands: `BootstrapMemberMarketPoliciesCommand`, `RolloutMemberMarketPoliciesCommand`, `MigrateLegacyLottoPermissionsCommand`
 - Table: `member_lotto_market_policies`
 - Fields: `rollout_mode`, `policy_version`, `is_allowed`
-- Search keywords: `MemberMarketPolicyService`, `member_lotto_market_policies`, `rollout_mode`, `applyMarketRollout`, `applyGroupRollout`
+- Tests: `tests/Feature/Lotto/MemberLottoPermissionControllerTest.php`, `tests/Feature/Lotto/BetServicePermissionTest.php`
+- Search keywords: `MemberMarketPolicyService`, `member_lotto_market_policies`, `rollout_mode`, `is_allowed`, `MemberLottoPermissionController`
 
 ## Yeekee / Yiki
 

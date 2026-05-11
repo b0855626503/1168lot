@@ -1,7 +1,7 @@
 # Decision Log
 
-อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr_baseline.md`
-อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+อ้างอิงสรุป decision ชุดแกนกลางได้ที่ `docs/internal/02_DECISIONS/adr-baseline.md`
+อ้างอิงทางลัดตาม domain ได้ที่ `docs/internal/02_DECISIONS/adr-index-by-domain.md`
 
 ## 2026-04-13 — Lotto Draw ACL Must Map Action Permissions to Action Routes and Keep Legacy Key Fallback in UI/Service Guards (APPROVED)
 
@@ -495,18 +495,18 @@
 ## 2026-04-06 — Agent Startup Must Use Lean Core Docs First (APPROVED)
 
 - ปัญหา:
-  - startup เดิมบังคับอ่าน `system_current_state.md` และ `decision_log.md` ทั้งก้อนทุกงาน
+  - startup เดิมบังคับอ่าน `system-current-state.md` และ `decision-log.md` ทั้งก้อนทุกงาน
   - งานเล็กเสีย token สูงมากตั้งแต่ก่อนเริ่ม implement
 - decision:
   - startup default เปลี่ยนเป็นอ่านชุดสั้น:
-    - `START_HERE.md`
-    - `agent_rules.md`
-    - `startup_digest.md`
-    - `adr_baseline.md`
-    - `adr_index_by_domain.md`
+    - `START-HERE.md`
+    - `agent-rules.md`
+    - `startup-digest.md`
+    - `adr-baseline.md`
+    - `adr-index-by-domain.md`
     - `04_PLANS/README.md`
   - ใช้ domain notes ใน `docs/internal/03_DOMAINS/` เป็นชั้นถัดไป
-  - ให้ `system_current_state.md` และ `decision_log.md` เป็น escalation docs ตาม risk และ scope ของงาน
+  - ให้ `system-current-state.md` และ `decision-log.md` เป็น escalation docs ตาม risk และ scope ของงาน
 - consequence:
   - startup token ลดลงมากสำหรับงานเล็กและงานกลาง
   - ยังรักษา source-of-truth และ decision boundary ได้ เพราะ full docs ยังถูกเปิดเมื่อ task ต้องใช้จริง
@@ -1887,9 +1887,9 @@
 - แยก internal/public ชัดเจน
 - ย้ายเอกสารกระจัดกระจายจาก root/.github/packages/public/vendor เข้า `docs/internal`
 - ตั้ง source-of-truth หลัก:
-  - `docs/internal/00_RULES/agent_rules.md`
-  - `docs/internal/01_SYSTEM/system_current_state.md`
-  - `docs/internal/02_DECISIONS/decision_log.md`
+  - `docs/internal/00_RULES/agent-rules.md`
+  - `docs/internal/01_SYSTEM/system-current-state.md`
+  - `docs/internal/02_DECISIONS/decision-log.md`
 - เอกสารซ้ำและเวอร์ชันเก่าถูกย้ายไป `docs/internal/05_ARCHIVE/`
 
 ## 2026-03-27 — Lotto Draw Lifecycle Hardening (LOCKED)

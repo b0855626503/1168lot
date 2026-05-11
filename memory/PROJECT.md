@@ -1,6 +1,6 @@
 # 1168lot Project Memory
 
-อัปเดตล่าสุด: 2026-04-30
+อัปเดตล่าสุด: 2026-05-12
 
 ## Issues Fixed:
 1. **Withdraw clear ไม่ทำงาน** (2026-04-07)
@@ -27,8 +27,13 @@
 
 6. **Docs startup optimization** (2026-04-30)
    - ปรับเอกสารนำทางให้กระชับและลด token ที่ใช้ตอนเริ่มงาน
-   - ไฟล์ที่ปรับ: `docs/README.md`, `docs/START_HERE.md`, `docs/internal/01_SYSTEM/startup_digest.md`
+   - ไฟล์ที่ปรับ: `docs/README.md`, `docs/START-HERE.md`, `docs/internal/01_SYSTEM/startup-digest.md`
    - กำหนด workflow การอ่านเป็น `Memory First -> Domain On-Demand -> Escalation`
+
+7. **Member Market Policy Blacklist** (PR #83, 2026-05-11)
+   - เปลี่ยน member_lotto_market_policies เป็น default-allow + blacklist model
+   - Admin: `MemberLottoPermissionController@delete` route ใหม่, หน้า UI แสดง "Blocked" แบบ static label
+   - Tests: `MemberLottoPermissionControllerTest`, `BetServicePermissionTest`
 
 ## Architecture Decisions (ต้องจำ):
 - **ADR-003**: `wallet_transactions` คือ financial source of truth

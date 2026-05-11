@@ -118,4 +118,4 @@ mapping transforms ให้รองรับรูปแบบที่ระ�
 
 - เพิ่มได้: nested fields ที่ backward-compatible และระบบรองรับจริง
 - เพิ่มได้: metadata เพิ่มเติมใน `fetch_config_json.*`, `selection_config_json.meta.*`, `validation_config_json.field_rules.*`, `readiness_config_json.*`, `retry_policy_json.*`
-- ห้ามเพิ่ม: top-level key ใหม่โดยไม่อัปเดตเอกสารนี้และ `docs/internal/02_DECISIONS/decision_log.md`
+- ห้ามเพิ่ม: top-level key ใหม่โดยไม่อัปเดตเอกสารนี้และ `docs/internal/02_DECISIONS/decision-log.md`

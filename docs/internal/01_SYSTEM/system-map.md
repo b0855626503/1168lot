@@ -22,6 +22,7 @@
 ### Lotto
 - Package: `packages/Gametech/Lotto/src/`
 - Admin controllers: `packages/Gametech/Lotto/src/Http/Controllers/Admin/`
+  - `MemberLottoPermissionController` (member-permissions CRUD + delete)
 - API controllers: `packages/Gametech/Lotto/src/Http/Controllers/Api/`
   - `BetController`, `DrawController`, `TicketController`, `PackageController`
   - `CentralLotteryResultController`, `InternalResultController`
@@ -29,7 +30,7 @@
 - Key services: `BetService`, `DrawService`, `SettlementService`, `ResultApplier`, `MemberMarketPolicyService`
 - Key tables: `lotto_draws`, `lotto_draw_bet_settings`, `lotto_market_bet_settings`, `lotto_tickets`, `lotto_ticket_items`, `member_lotto_market_policies`
 - Tests: `tests/Feature/Lotto/`, `tests/Unit/Lotto/`
-- Domain docs: `docs/internal/03_DOMAINS/lotto.md`, `docs/internal/03_DOMAINS/lotto_discovery.md`
+- Domain docs: `docs/internal/03_DOMAINS/lotto.md`, `docs/internal/03_DOMAINS/lotto-discovery.md`
 
 ### Wallet
 - Package: `packages/Gametech/Wallet/src/`
@@ -37,7 +38,7 @@
 - Financial source of truth: `wallet_transactions`
 - Frontend entry: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/WalletController.php`
 - Tests: search `tests/Feature/` and `tests/Unit/` with `rg "wallet"`
-- Domain docs: `docs/internal/03_DOMAINS/wallet.md`, `docs/internal/03_DOMAINS/wallet_discovery.md`
+- Domain docs: `docs/internal/03_DOMAINS/wallet.md`, `docs/internal/03_DOMAINS/wallet-discovery.md`
 
 ### Payment
 - Package: `packages/Gametech/Payment/src/`
@@ -56,13 +57,13 @@
 - Middleware: `packages/Gametech/FrontendApi/src/Http/Middleware/`
 - Public API docs: `docs/public/api/frontend-v1/index.md`
 - Tests: `tests/Feature/FrontendApi/`, `tests/Unit/FrontendApi/`
-- Domain docs: `docs/internal/03_DOMAINS/frontend_api.md`, `docs/internal/03_DOMAINS/frontend_api_discovery.md`
+- Domain docs: `docs/internal/03_DOMAINS/frontend-api.md`, `docs/internal/03_DOMAINS/frontend-api-discovery.md`
 
 ### Admin / ACL
 - Package: `packages/Gametech/Admin/src/`
 - Lotto admin controllers: `packages/Gametech/Lotto/src/Http/Controllers/Admin/`
 - Tests: `tests/Feature/Admin/`
-- Domain docs: `docs/internal/03_DOMAINS/admin_lotto.md`
+- Domain docs: `docs/internal/03_DOMAINS/admin-lotto.md`
 
 ### Dashboard
 - Services: `DashboardService`, `DashboardSummaryProjector`, `DashboardSummarySyncService` — verify with `rg`

@@ -26,8 +26,8 @@ count_words() {
 }
 
 legacy_pack_words=$(count_words \
-  "docs/internal/05_ARCHIVE/monolith/system_current_state.2026-04-18.md" \
-  "docs/internal/05_ARCHIVE/monolith/decision_log.2026-04-18.md" \
+  "docs/internal/05_ARCHIVE/monolith/system-current-state.2026-04-18.md" \
+  "docs/internal/05_ARCHIVE/monolith/decision-log.2026-04-18.md" \
   "docs/public/api/archive/api-frontend-v1.2026-04-18.md")
 
 current_pack_words=$(count_words \
@@ -36,12 +36,12 @@ current_pack_words=$(count_words \
   "memory/payment.md" \
   "memory/wallet.md" \
   "memory/game.md" \
-  "docs/internal/01_SYSTEM/retrieval_system_status.md")
+  "docs/internal/01_SYSTEM/retrieval-system-status.md")
 
 legacy_token_estimate=$((legacy_pack_words * 13 / 10))
 current_token_estimate=$((current_pack_words * 13 / 10))
 
-memory_first_pointer_count=$(rg -l "memory" docs/START_HERE.md docs/internal/01_SYSTEM/startup_digest.md docs/internal/00_RULES/agent_rules.md 2>/dev/null | wc -l)
+memory_first_pointer_count=$(rg -l "memory" docs/START-HERE.md docs/internal/01_SYSTEM/startup-digest.md docs/internal/00_RULES/agent-rules.md 2>/dev/null | wc -l)
 docs_first_pointer_count=0
 
 critical_now=0

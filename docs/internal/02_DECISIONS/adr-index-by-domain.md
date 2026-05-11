@@ -3,13 +3,13 @@
 อัปเดตล่าสุด: 2026-04-05
 
 ไฟล์นี้เป็นทางลัดสำหรับหา decision สำคัญตาม domain
-ให้ใช้คู่กับ `adr_baseline.md` และ `decision_log.md`
+ให้ใช้คู่กับ `adr-baseline.md` และ `decision-log.md`
 
 ## วิธีใช้
 
-- ถ้างานข้ามหลาย domain: อ่าน `adr_baseline.md` ก่อน
+- ถ้างานข้ามหลาย domain: อ่าน `adr-baseline.md` ก่อน
 - ถ้างานอยู่ใน domain เดียว: เปิดหัวข้อของ domain นั้นก่อน
-- ถ้า decision ยังไม่พอ: ตามต่อใน `decision_log.md`
+- ถ้า decision ยังไม่พอ: ตามต่อใน `decision-log.md`
 
 ## FrontendApi
 
@@ -89,7 +89,7 @@
 ## ลำดับอ่านเร็วที่สุดตามชนิดงาน
 
 1. งาน FrontendApi:
-   - `adr_baseline.md` เฉพาะ `ADR-001` ถึง `ADR-003`, `ADR-012`
+   - `adr-baseline.md` เฉพาะ `ADR-001` ถึง `ADR-003`, `ADR-012`
 2. งาน Lotto policy:
    - `ADR-004` ถึง `ADR-006`
 3. งานรายงาน Lotto:

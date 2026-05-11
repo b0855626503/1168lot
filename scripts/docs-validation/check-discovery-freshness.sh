@@ -82,7 +82,7 @@ while IFS= read -r -d '' f; do
     log_warn "$f" "discovery doc is large ($lines lines > ${DISCOVERY_MAX_LINES} limit) — split or trim to keep it scannable"
   fi
 
-done < <(find docs/internal/03_DOMAINS -maxdepth 1 -name "*_discovery.md" -print0 | sort -z)
+done < <(find docs/internal/03_DOMAINS -maxdepth 1 -name "*-discovery.md" -print0 | sort -z)
 
 if (( errors > 0 )); then
   exit 1

@@ -10,7 +10,7 @@
 - `/docs` คือ source of truth
 - MCP memory/graph คือ acceleration layer
 - ถ้า docs กับ memory ไม่ตรง ให้ยึด `/docs` ก่อน
-- จุดรวมหลักฐาน retrieval/memory/index อยู่ที่ `docs/internal/01_SYSTEM/retrieval_system_status.md`
+- จุดรวมหลักฐาน retrieval/memory/index อยู่ที่ `docs/internal/01_SYSTEM/retrieval-system-status.md`
 
 ## 1) วิธีใช้งาน `octocode_mcp`
 

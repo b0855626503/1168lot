@@ -5,12 +5,12 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
-target="docs/internal/01_SYSTEM/retrieval_system_status.md"
+target="docs/internal/01_SYSTEM/retrieval-system-status.md"
 files=(
-  "docs/START_HERE.md"
-  "docs/internal/00_RULES/agent_rules.md"
-  "docs/internal/01_SYSTEM/startup_digest.md"
-  "docs/internal/01_SYSTEM/mcp_operating_guide.md"
+  "docs/START-HERE.md"
+  "docs/internal/00_RULES/agent-rules.md"
+  "docs/internal/01_SYSTEM/startup-digest.md"
+  "docs/internal/01_SYSTEM/mcp-operating-guide.md"
 )
 
 errors=0

@@ -326,14 +326,14 @@
 ## นโยบายเริ่มงานของ Agent (Lean Startup Docs)
 
 - startup default ของ agent ต้องใช้ชุดเอกสารสั้นก่อน:
-  - `docs/START_HERE.md`
-  - `docs/internal/00_RULES/agent_rules.md`
-  - `docs/internal/01_SYSTEM/startup_digest.md`
-  - `docs/internal/02_DECISIONS/adr_baseline.md`
-  - `docs/internal/02_DECISIONS/adr_index_by_domain.md`
+  - `docs/START-HERE.md`
+  - `docs/internal/00_RULES/agent-rules.md`
+  - `docs/internal/01_SYSTEM/startup-digest.md`
+  - `docs/internal/02_DECISIONS/adr-baseline.md`
+  - `docs/internal/02_DECISIONS/adr-index-by-domain.md`
   - `docs/04_PLANS/README.md`
 - หลังจากนั้นให้อ่านเฉพาะ domain note ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/`
-- `system_current_state.md` และ `decision_log.md` ใช้เป็น escalation docs:
+- `system-current-state.md` และ `decision-log.md` ใช้เป็น escalation docs:
   - เปิดเมื่อ task จะเปลี่ยน behavior
   - เปิดเมื่อ task high-risk
   - เปิดเมื่อ task แตะ state machine / retry / queue / cron / pipeline
@@ -1187,8 +1187,8 @@
 
 ## เอกสารระบบหลักที่ใช้งานจริง
 
-- กฎ agent: `docs/internal/00_RULES/agent_rules.md`
-- บันทึกการตัดสินใจ: `docs/internal/02_DECISIONS/decision_log.md`
+- กฎ agent: `docs/internal/00_RULES/agent-rules.md`
+- บันทึกการตัดสินใจ: `docs/internal/02_DECISIONS/decision-log.md`
 - แผนงาน: `docs/04_PLANS/`
 - Domain docs: `docs/internal/03_DOMAINS/`
 

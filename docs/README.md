@@ -9,8 +9,8 @@
 
 เริ่มจากไฟล์เดียวก่อน:
 
-- Agent: `docs/START_HERE.md`
-- Developer: `docs/internal/01_SYSTEM/startup_digest.md`
+- Agent: `docs/START-HERE.md`
+- Developer: `docs/internal/01_SYSTEM/startup-digest.md`
 
 จากนั้นอ่านเฉพาะ domain ที่เกี่ยวข้องใน `docs/internal/03_DOMAINS/` และเปิดไฟล์ใหญ่เมื่อจำเป็นเท่านั้น
 

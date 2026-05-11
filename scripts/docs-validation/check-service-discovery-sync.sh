@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generic fallback heuristic: any Service.php change should have at least one *_discovery.md touched.
+# Generic fallback heuristic: any Service.php change should have at least one *-discovery.md touched.
 # This catches new domains not yet explicitly mapped in code-doc-map.tsv.
 # Severity: WARN only — heuristic, requires human judgment.
 
@@ -36,15 +36,15 @@ if [[ -z "$services_changed" ]]; then
   exit 0
 fi
 
-# Check: any *_discovery.md touched?
-discovery_touched="$(printf '%s' "$changed_blob" | grep -E '^docs/internal/03_DOMAINS/.*_discovery\.md$' || true)"
+# Check: any *-discovery.md touched?
+discovery_touched="$(printf '%s' "$changed_blob" | grep -E '^docs/internal/03_DOMAINS/.*-discovery\.md$' || true)"
 
 if [[ -n "$discovery_touched" ]]; then
   log_info "service-discovery-sync" "service changed and a discovery doc was updated — ok"
   exit 0
 fi
 
-log_warn "service-discovery-sync" "service file(s) changed but no docs/internal/03_DOMAINS/*_discovery.md was updated — verify if flow changed and bump Last Verified if so"
+log_warn "service-discovery-sync" "service file(s) changed but no docs/internal/03_DOMAINS/*-discovery.md was updated — verify if flow changed and bump Last Verified if so"
 
 # WARN only: heuristic, not a hard block
 exit 0

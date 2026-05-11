@@ -13,4 +13,4 @@
 
 ## Legacy Full Dump
 
-- `docs/internal/05_ARCHIVE/monolith/decision_log.2026-04-18.md`
+- `docs/internal/05_ARCHIVE/monolith/decision-log.2026-04-18.md`

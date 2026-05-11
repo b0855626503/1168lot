@@ -9,8 +9,8 @@
 
 แนวทางใช้งาน:
 - อ่านไฟล์นี้ก่อนถ้างานมีผลต่อ architecture หรือหลาย domain
-- ใช้คู่กับ `decision_log.md`
-- ถ้าตัดสินใจใหม่ระดับ architecture ให้เพิ่มใน `decision_log.md` ก่อน แล้วค่อยสรุปเข้ามาที่ไฟล์นี้เมื่อ decision นิ่งแล้ว
+- ใช้คู่กับ `decision-log.md`
+- ถ้าตัดสินใจใหม่ระดับ architecture ให้เพิ่มใน `decision-log.md` ก่อน แล้วค่อยสรุปเข้ามาที่ไฟล์นี้เมื่อ decision นิ่งแล้ว
 
 ## ADR-001: FrontendApi Boundary
 

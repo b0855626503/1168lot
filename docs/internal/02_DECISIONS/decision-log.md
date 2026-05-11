@@ -8,4 +8,4 @@
 - `docs/internal/02_DECISIONS/decision-log/index.md`
 
 full snapshot เดิมอยู่ที่:
-- `docs/internal/05_ARCHIVE/monolith/decision_log.2026-04-18.md`
+- `docs/internal/05_ARCHIVE/monolith/decision-log.2026-04-18.md`

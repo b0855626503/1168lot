@@ -14,4 +14,4 @@
 ## Related Docs
 
 - `docs/public/api/frontend-v1/index.md`
-- `docs/internal/03_DOMAINS/frontend_api.md`
+- `docs/internal/03_DOMAINS/frontend-api.md`

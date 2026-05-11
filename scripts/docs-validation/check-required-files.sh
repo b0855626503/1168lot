@@ -12,11 +12,11 @@ plans_dir="$(plans_root)"
 required_files=(
   "AGENTS.md"
   "README.md"
-  "docs/START_HERE.md"
+  "docs/START-HERE.md"
   "docs/README.md"
-  "docs/internal/00_RULES/agent_rules.md"
-  "docs/internal/01_SYSTEM/system_current_state.md"
-  "docs/internal/02_DECISIONS/decision_log.md"
+  "docs/internal/00_RULES/agent-rules.md"
+  "docs/internal/01_SYSTEM/system-current-state.md"
+  "docs/internal/02_DECISIONS/decision-log.md"
   "$plans_dir/README.md"
 )
 

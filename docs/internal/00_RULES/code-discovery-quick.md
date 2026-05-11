@@ -1,7 +1,7 @@
 # Code Discovery — Quick Reference
 
 > ใช้ไฟล์นี้สำหรับงาน Light และ Standard
-> งาน High Risk: ใช้ `code_discovery_protocol.md` แทน
+> งาน High Risk: ใช้ `code-discovery-protocol.md` แทน
 
 ---
 
@@ -11,7 +11,7 @@
 |-------|----------|--------|
 | **Light** | doc-only / typo / ระบุไฟล์ชัดแล้ว ไม่กระทบ behavior | 1 บรรทัด |
 | **Standard** | bug fix ทั่วไป / code ที่ไม่ใช่ wallet/payment/settlement | 3–5 บรรทัด |
-| **High Risk** | wallet / payment / lotto settlement / yeekee / permission / schema / auth | full report → ดู `code_discovery_protocol.md` |
+| **High Risk** | wallet / payment / lotto settlement / yeekee / permission / schema / auth | full report → ดู `code-discovery-protocol.md` |
 
 ---
 
@@ -29,8 +29,8 @@ Light: แก้ [ชื่อไฟล์] — [สิ่งที่แก้]
 
 ## Standard — Compact Read
 
-1. อ่าน `docs/START_HERE.md`
-2. อ่าน `docs/internal/01_SYSTEM/system_map.md` (domain section ที่เกี่ยวข้อง)
+1. อ่าน `docs/START-HERE.md`
+2. อ่าน `docs/internal/01_SYSTEM/system-map.md` (domain section ที่เกี่ยวข้อง)
 3. อ่าน discovery doc 1 ไฟล์: `docs/internal/03_DOMAINS/*_discovery.md`
 4. `rg` อย่างน้อย 2 keyword (business + class/table)
 

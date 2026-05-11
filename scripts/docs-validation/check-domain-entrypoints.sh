@@ -6,12 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 required=(
-  "docs/internal/03_DOMAINS/frontend_api.md"
+  "docs/internal/03_DOMAINS/frontend-api.md"
   "docs/internal/03_DOMAINS/wallet.md"
   "docs/internal/03_DOMAINS/payment.md"
   "docs/internal/03_DOMAINS/auth.md"
   "docs/internal/03_DOMAINS/lotto.md"
-  "docs/internal/03_DOMAINS/admin_lotto.md"
+  "docs/internal/03_DOMAINS/admin-lotto.md"
   "docs/internal/03_DOMAINS/realtime.md"
 )
 
