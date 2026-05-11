@@ -172,6 +172,16 @@
 								}).then(() => {
 									window.LaravelDataTables['dataTableBuilder'].draw(false);
 								});
+							})
+							.catch(error => {
+								const message = error?.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+								this.$bvModal.msgBoxOk(message, {
+									title: 'ข้อผิดพลาด',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'danger',
+									centered: true,
+								});
 							});
 					});
 				},

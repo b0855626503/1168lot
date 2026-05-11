@@ -79,7 +79,7 @@ class MemberLottoPermissionController extends AppBaseController
             ],
             'is_allowed' => ['nullable'],
         ], [
-            'market_id.unique' => 'สมาชิกนี้ถูกบล็อกในรายการหวยนี้แล้ว',
+            'market_id.unique' => 'สมาชิกนี้มีรายการในหวยนี้อยู่แล้ว กรุณาตรวจสอบหรือลบรายการเดิมก่อน',
         ])->validate();
 
         $market = LotteryMarket::query()->find((int) $validated['market_id']);
@@ -148,7 +148,7 @@ class MemberLottoPermissionController extends AppBaseController
             ],
             'is_allowed' => ['nullable'],
         ], [
-            'market_id.unique' => 'สมาชิกนี้ถูกบล็อกในรายการหวยนี้แล้ว',
+            'market_id.unique' => 'สมาชิกนี้มีรายการในหวยนี้อยู่แล้ว กรุณาตรวจสอบหรือลบรายการเดิมก่อน',
         ])->validate();
 
         $market = LotteryMarket::query()->find((int) $validated['market_id']);
