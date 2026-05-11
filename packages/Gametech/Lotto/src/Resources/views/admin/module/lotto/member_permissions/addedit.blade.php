@@ -1,4 +1,4 @@
-<b-modal ref="addedit" id="addedit" centered size="sm" title="สิทธิ์การเล่นสมาชิก" :no-stacking="true"
+<b-modal ref="addedit" id="addedit" centered size="sm" title="บล็อกหวยรายสมาชิก" :no-stacking="true"
 		 :no-close-on-backdrop="true"
 		 :hide-footer="true">
 	<b-form @submit.prevent="addEditSubmit" v-if="show">
@@ -34,7 +34,7 @@
 		</b-form-group>
 		<b-form-group>
 			<b-form-checkbox v-model="formaddedit.is_allowed" :value="1" :unchecked-value="0">
-				อนุญาตให้เล่น
+				บล็อกการเล่น
 			</b-form-checkbox>
 		</b-form-group>
 		<b-button type="submit" variant="primary" size="sm">บันทึก</b-button>
@@ -56,7 +56,7 @@
 						member_id: null,
 						group_id: null,
 						market_id: null,
-						is_allowed: 1,
+						is_allowed: 0,
 					},
 				};
 			},
@@ -100,7 +100,7 @@
 						member_id: null,
 						group_id: this.groupOptions.length > 0 ? this.groupOptions[0].value : null,
 						market_id: null,
-						is_allowed: 1,
+						is_allowed: 0,
 					};
 					this.onGroupChanged();
 					this.show = false;
@@ -145,11 +145,41 @@
 							window.LaravelDataTables['dataTableBuilder'].draw(false);
 						});
 				},
+				delModal(id) {
+					const policyId = Number(id || 0);
+					if (!policyId) {
+						return;
+					}
+
+					this.$bvModal.msgBoxConfirm('ต้องการปลดบล็อกสมาชิกนี้หรือไม่?', {
+						title: 'ยืนยันการปลดบล็อก',
+						size: 'sm',
+						buttonSize: 'sm',
+						okVariant: 'danger',
+						okTitle: 'ปลดบล็อก',
+						cancelTitle: 'ยกเลิก',
+						centered: true,
+					}).then(value => {
+						if (!value) return;
+						this.$http.post("{{ route('admin.lotto.member_permissions.delete') }}", { id: policyId })
+							.then(response => {
+								this.$bvModal.msgBoxOk(response.data.message, {
+									title: 'ผลการดำเนินการ',
+									size: 'sm',
+									buttonSize: 'sm',
+									okVariant: 'success',
+									centered: true,
+								});
+								window.LaravelDataTables['dataTableBuilder'].draw(false);
+							});
+					});
+				},
 			},
 		});
 
 		window.addModal = function () { window.app.addModal(); };
 		window.editModal = function (id) { window.app.editModal(id); };
 		window.editdata = function (id, status, method) { window.app.editdata(id, status, method); };
+		window.delModal = function (id) { window.app.delModal(id); };
 	</script>
 @endpush

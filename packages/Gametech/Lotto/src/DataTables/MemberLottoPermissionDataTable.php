@@ -15,7 +15,7 @@ class MemberLottoPermissionDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->setTransformer(new MemberLottoPermissionTransformer());
+        return $dataTable->setTransformer(new MemberLottoPermissionTransformer);
     }
 
     public function query(MemberLottoMarketPolicy $model)
@@ -59,11 +59,10 @@ class MemberLottoPermissionDataTable extends DataTable
             ['data' => 'member_name', 'name' => 'member.user_name', 'title' => 'ชื่อสมาชิก', 'className' => 'text-left'],
             ['data' => 'group_name', 'name' => 'group.name', 'title' => 'กลุ่มหวย', 'className' => 'text-left'],
             ['data' => 'market_name', 'name' => 'market.name', 'title' => 'รายการหวย', 'className' => 'text-left'],
-            ['data' => 'is_allowed', 'name' => 'is_allowed', 'title' => 'สิทธิ์', 'className' => 'text-center', 'orderable' => false],
+            ['data' => 'is_allowed', 'name' => 'is_allowed', 'title' => 'สถานะ', 'className' => 'text-center', 'orderable' => false],
             ['data' => 'source', 'name' => 'source', 'title' => 'ที่มา', 'className' => 'text-center'],
             ['data' => 'policy_version', 'name' => 'policy_version', 'title' => 'Version', 'className' => 'text-center'],
             ['data' => 'action', 'name' => 'action', 'title' => 'จัดการ', 'className' => 'text-center', 'orderable' => false, 'searchable' => false],
         ];
     }
 }
-
