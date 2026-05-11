@@ -1,6 +1,12 @@
+> สถานะ: ACTIVE
+> วันที่: 2026-05-11
+> โดเมน/เรื่อง: policy / member-lotto-market-blacklist
+> แทนแผนเก่า: -
+> อ้างอิง: BOA-244
+
 # Member Lotto Market Policy Blacklist — Code Audit
 
-- **Status**: IN PROGRESS (PR-01 audit phase)
+- **Status**: ACTIVE (PR-01 audit phase)
 - **Date**: 2026-05-11
 - **Domain**: Lotto — member market permissions
 - **Linear Project**: [1168lot: Convert member lotto market policies to blacklist](https://linear.app/boatjunior/project/1168lot-convert-member-lotto-market-policies-to-blacklist-269c4fe3e430)
