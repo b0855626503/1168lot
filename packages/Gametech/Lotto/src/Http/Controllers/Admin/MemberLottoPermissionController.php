@@ -79,7 +79,7 @@ class MemberLottoPermissionController extends AppBaseController
             ],
             'is_allowed' => ['nullable'],
         ], [
-            'market_id.unique' => 'สมาชิกนี้มีสิทธิ์ในรายการหวยนี้แล้ว',
+            'market_id.unique' => 'สมาชิกนี้ถูกบล็อกในรายการหวยนี้แล้ว',
         ])->validate();
 
         $market = LotteryMarket::query()->find((int) $validated['market_id']);
@@ -91,12 +91,12 @@ class MemberLottoPermissionController extends AppBaseController
             'member_id' => (int) $validated['member_id'],
             'group_id' => (int) $validated['group_id'],
             'market_id' => (int) $validated['market_id'],
-            'is_allowed' => (bool) ($validated['is_allowed'] ?? false),
+            'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => 1,
         ]);
 
-        return $this->sendSuccess('เพิ่มสิทธิ์สมาชิกเรียบร้อยแล้ว');
+        return $this->sendSuccess('เพิ่มรายการบล็อกสมาชิกเรียบร้อยแล้ว');
     }
 
     public function edit(Request $request): JsonResponse
@@ -148,7 +148,7 @@ class MemberLottoPermissionController extends AppBaseController
             ],
             'is_allowed' => ['nullable'],
         ], [
-            'market_id.unique' => 'สมาชิกนี้มีสิทธิ์ในรายการหวยนี้แล้ว',
+            'market_id.unique' => 'สมาชิกนี้ถูกบล็อกในรายการหวยนี้แล้ว',
         ])->validate();
 
         $market = LotteryMarket::query()->find((int) $validated['market_id']);
@@ -160,12 +160,25 @@ class MemberLottoPermissionController extends AppBaseController
             'member_id' => (int) $validated['member_id'],
             'group_id' => (int) $validated['group_id'],
             'market_id' => (int) $validated['market_id'],
-            'is_allowed' => (bool) ($validated['is_allowed'] ?? false),
+            'is_allowed' => false,
             'source' => 'admin',
             'policy_version' => (int) $item->policy_version + 1,
         ]);
 
-        return $this->sendSuccess('อัปเดตสิทธิ์สมาชิกเรียบร้อยแล้ว');
+        return $this->sendSuccess('อัปเดตรายการบล็อกสมาชิกเรียบร้อยแล้ว');
+    }
+
+    public function delete(Request $request): JsonResponse
+    {
+        $id = (int) $request->input('id');
+
+        $item = MemberLottoMarketPolicy::query()->find($id);
+        if (! $item) {
+            return $this->sendError('ไม่พบข้อมูลดังกล่าว', 200);
+        }
+
+        $item->delete();
+
+        return $this->sendSuccess('ปลดบล็อกสมาชิกเรียบร้อยแล้ว');
     }
 }
-

@@ -11,7 +11,7 @@ class MemberLottoPermissionTransformer extends TransformerAbstract
     {
         $memberName = trim((string) (($model->member->user_name ?? '') ?: ($model->member->name ?? '')));
         $nextStatus = $model->is_allowed ? 0 : 1;
-        $toggleClick = "editdata(" . (int) $model->id . "," . $nextStatus . ",'is_allowed')";
+        $toggleClick = "editdata({$model->id},{$nextStatus},'is_allowed')";
 
         return [
             'id' => (int) $model->id,
@@ -19,11 +19,11 @@ class MemberLottoPermissionTransformer extends TransformerAbstract
             'member_name' => $memberName !== '' ? $memberName : '-',
             'group_name' => $model->group->name ?? '-',
             'market_name' => $model->market->name ?? '-',
-            'is_allowed' => '<button type="button" class="btn ' . ($model->is_allowed ? 'btn-success' : 'btn-danger') . ' btn-xs"'
-                . ' onclick="' . $toggleClick . '">'
-                . ($model->is_allowed ? '<i class="fa fa-check"></i> อนุญาต' : '<i class="fa fa-times"></i> ปิด')
-                . '</button>',
-            'source' => '<span class="badge badge-info">' . e((string) $model->source) . '</span>',
+            'is_allowed' => '<button type="button" class="btn '.($model->is_allowed ? 'btn-success' : 'btn-danger').' btn-xs"'
+                .' onclick="'.$toggleClick.'">'
+                .($model->is_allowed ? '<i class="fa fa-check"></i> ปกติ' : '<i class="fa fa-ban"></i> บล็อก')
+                .'</button>',
+            'source' => '<span class="badge badge-info">'.e((string) $model->source).'</span>',
             'policy_version' => (int) $model->policy_version,
             'action' => view('admin::module.lotto.member_permissions.datatables_actions', [
                 'id' => $model->id,
@@ -31,4 +31,3 @@ class MemberLottoPermissionTransformer extends TransformerAbstract
         ];
     }
 }
-

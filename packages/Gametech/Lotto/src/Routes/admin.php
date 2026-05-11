@@ -145,6 +145,9 @@ Route::domain(
             Route::post('member-permissions/update', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@update')
                 ->name('admin.lotto.member_permissions.update');
 
+            Route::post('member-permissions/delete', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\MemberLottoPermissionController@delete')
+                ->name('admin.lotto.member_permissions.delete');
+
             Route::get('draws', 'Gametech\\Lotto\\Http\\Controllers\\Admin\\LottoDrawController@index')->defaults('_config', [
                 'view' => 'admin::module.lotto.draws.index',
             ])->name('admin.lotto.draws.index');
