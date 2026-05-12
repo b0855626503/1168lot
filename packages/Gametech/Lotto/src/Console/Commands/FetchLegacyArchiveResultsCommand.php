@@ -61,12 +61,6 @@ class FetchLegacyArchiveResultsCommand extends Command
             return self::FAILURE;
         }
 
-        if ($fromDate === false || $toDate === false) {
-            $this->error('Invalid date format. Expected YYYY-MM-DD.');
-
-            return self::FAILURE;
-        }
-
         $force = (bool) $this->option('force');
         $limitRaw = $this->option('limit');
         $limit = $limitRaw !== null ? (int) $limitRaw : null;
