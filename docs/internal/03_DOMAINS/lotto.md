@@ -58,9 +58,7 @@
 - Fill: `lotto:fill-missing-results` command สำหรับข้อมูลที่ขาดจาก external source
 - Reconcile: `lotto:reconcile-result-archive` command — guard ด้วย `--market`, `--from`, `--to`, `--yes`
 - FrontendApi: `GET /api/v1/lotto/results/{marketCode}` (public, no auth, throttle 60/min)
-- FrontendApi: `GET /api/v1/lotto/result-archive-legacy` (public, no auth, legacy-compatible)
 - ไม่รวมหวยยี่กี — archive เฉพาะหวยชุด
-- `LegacyArchiveResultService` — map archive rows → legacy response shape (three_up→lottosNumber, two_down→lottosUnder)
 
 ## Entry Points
 
