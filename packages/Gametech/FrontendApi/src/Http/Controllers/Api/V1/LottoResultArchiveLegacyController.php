@@ -87,26 +87,20 @@ class LottoResultArchiveLegacyController extends Controller
             $dateLabel = $rawFrom.'..'.$rawTo;
         }
 
-        // Resolve nameTH: prefer lotto_markets display name; fall back to snapshot's stored name_th, then type code.
-        // Per BOA-262, market_id is optional — snapshot-only types are served without rejection.
-        // Yeekee types are still excluded via service-level whereNotIn on getYeekeeCodes().
+        // Resolve nameTH from lotto_markets when available.
+        // For snapshot-only types (not in lotto_markets), nameTH is resolved inside Cache::remember
+        // so the snapshot DB query is only executed on cache misses, not on every cached response.
+        // Per BOA-262, market_id is optional — unknown types are not rejected.
         $nameTH = 'ทั้งหมด';
+        $marketNameTH = null;
 
         if ($type) {
             $market = LotteryMarket::where('code', $type)
                 ->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE)
                 ->first();
 
-            if ($market) {
-                $nameTH = $market->name ?: $type;
-            } else {
-                // Snapshot-only type: read display name from stored name_th column.
-                $snapshotNameTH = LottoResultArchiveLegacyResult::where('type', $type)
-                    ->where('fetch_status', 'success')
-                    ->whereNotNull('name_th')
-                    ->value('name_th');
-                $nameTH = $snapshotNameTH ?: $type;
-            }
+            $marketNameTH = $market ? ($market->name ?: $type) : null;
+            $nameTH = $marketNameTH ?? $type; // temporary; overridden inside cache for snapshot-only
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');
@@ -125,8 +119,19 @@ class LottoResultArchiveLegacyController extends Controller
         }
 
         $payload = Cache::remember($cacheKey, $ttl, function () use (
-            $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH
+            $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH, $marketNameTH
         ): array {
+            // For snapshot-only types (no lotto_markets entry), read nameTH from snapshot.
+            // Placed inside the cache closure so the extra DB query only runs on cache misses.
+            $resolvedNameTH = $nameTH;
+            if ($type !== null && $marketNameTH === null) {
+                $snapshotNameTH = LottoResultArchiveLegacyResult::where('type', $type)
+                    ->where('fetch_status', 'success')
+                    ->whereNotNull('name_th')
+                    ->value('name_th');
+                $resolvedNameTH = $snapshotNameTH ?: $type;
+            }
+
             $result = $this->legacyService->query(
                 type: $type,
                 fromDate: $fromDateStr,
@@ -145,7 +150,7 @@ class LottoResultArchiveLegacyController extends Controller
 
             return [
                 'type' => $type ?: 'all',
-                'nameTH' => $nameTH,
+                'nameTH' => $resolvedNameTH,
                 'date' => $dateLabel,
                 'page' => $page,
                 'count' => count($result['results']),
