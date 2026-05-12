@@ -11,13 +11,11 @@ return new class extends Migration
         Schema::create('lotto_result_archive_legacy_results', function (Blueprint $table): void {
             $table->id();
 
-            // Source API envelope fields
             $table->string('type', 100);
             $table->string('name_th')->nullable();
             $table->date('request_date')->nullable();
             $table->unsignedInteger('page')->nullable();
 
-            // Source API result item fields
             $table->unsignedBigInteger('source_result_id')->nullable();
             $table->string('lottos_name', 100);
             $table->string('lottos_th')->nullable();
@@ -27,11 +25,9 @@ return new class extends Migration
             $table->string('lottos_number', 50)->nullable();
             $table->string('lottos_under', 50)->nullable();
 
-            // Optional loose link to lotto_markets (NOT a FK constraint)
             $table->string('market_code', 100)->nullable();
             $table->unsignedBigInteger('market_id')->nullable();
 
-            // Fetch/audit fields
             $table->text('source_url')->nullable();
             $table->dateTime('fetched_at')->nullable();
             $table->enum('fetch_status', ['success', 'not_found', 'failed'])->default('success');
@@ -39,12 +35,10 @@ return new class extends Migration
             $table->string('checksum', 64)->nullable();
             $table->json('payload_json')->nullable();
 
-            // Dedup key: computed by application, never nullable
             $table->string('unique_key');
 
             $table->timestamps();
 
-            // Indexes
             $table->unique('unique_key');
             $table->index(['type', 'request_date'], 'lrlar_type_date');
             $table->index('request_date', 'lrlar_request_date');

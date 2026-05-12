@@ -66,7 +66,7 @@ class LottoResultArchiveLegacyResultModelTest extends TestCase
 
     public function test_table_is_created(): void
     {
-        $record = LottoResultArchiveLegacyResult::create([
+        $record = LottoResultArchiveLegacyResult::factory()->create([
             'type' => 'thai_gov',
             'name_th' => 'หวยรัฐบาล',
             'request_date' => '2026-05-01',
@@ -102,7 +102,7 @@ class LottoResultArchiveLegacyResultModelTest extends TestCase
 
     public function test_casts_are_applied(): void
     {
-        LottoResultArchiveLegacyResult::create([
+        LottoResultArchiveLegacyResult::factory()->create([
             'type' => 'thai_gov',
             'lottos_name' => 'THAI_GOV',
             'request_date' => '2026-05-01',

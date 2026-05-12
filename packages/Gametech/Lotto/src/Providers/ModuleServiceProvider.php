@@ -14,6 +14,7 @@ use Gametech\Lotto\Models\LottoNavbar;
 use Gametech\Lotto\Models\LottoNavbarItem;
 use Gametech\Lotto\Models\LottoNumberBlock;
 use Gametech\Lotto\Models\LottoNumberExposure;
+use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
 use Gametech\Lotto\Models\LottoResultCorrection;
 use Gametech\Lotto\Models\LottoResultCorrectionItem;
 use Gametech\Lotto\Models\LottoResultFetchLog;
@@ -38,6 +39,7 @@ class ModuleServiceProvider extends BaseModuleServiceProvider
         LottoDraw::class,
         LottoDrawBetSetting::class,
         LottoNumberExposure::class,
+        LottoResultArchiveLegacyResult::class,
         LottoResultCorrection::class,
         LottoResultCorrectionItem::class,
         LottoNumberBlock::class,

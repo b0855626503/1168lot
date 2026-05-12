@@ -2,10 +2,19 @@
 
 namespace Gametech\Lotto\Models;
 
+use Gametech\Lotto\Database\Factories\LottoResultArchiveLegacyResultFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class LottoResultArchiveLegacyResult extends Model
 {
+    use HasFactory;
+
+    protected static function newFactory(): LottoResultArchiveLegacyResultFactory
+    {
+        return LottoResultArchiveLegacyResultFactory::new();
+    }
+
     protected $table = 'lotto_result_archive_legacy_results';
 
     protected $fillable = [
