@@ -1,6 +1,6 @@
 # BOA-262: Legacy Archive Snapshot Table Architecture
 
-> Status: DONE | Linear: BOA-262 | Merged: PRs 01–05
+> Status: PENDING MERGE | Linear: BOA-262 | Covers: PRs 01–05
 
 ---
 

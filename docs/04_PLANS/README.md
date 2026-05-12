@@ -23,7 +23,7 @@
 - `2026-03-27_lotto-auto-result-execution-tracker.md` (implementation memory only; merged plan is source of truth)
 
 ## DONE
-- `2026-05-12_boa-262-legacy-archive-snapshot-architecture.md` (`BOA-262: Legacy archive snapshot table — PRs 01–05 complete`)
+- `2026-05-12_boa-262-legacy-archive-snapshot-architecture.md` (`BOA-262: Legacy archive snapshot table — Covers PRs 01–05`)
 - `2026-05-01_lotto-market-content-rules-system.md`
 - `2026-05-02_boa-marketing-phase5-rollout-checklist.md`
 - `2026-05-01_yeekee-formula-failure-policy.md`
