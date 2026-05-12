@@ -14,10 +14,12 @@ class LegacyArchiveSourceClient
      * Returns one or more mapped field arrays suitable for LegacyArchiveResultRepository::upsert().
      *
      * Status rules:
-     * - HTTP 200 with results array  → fetch_status = 'success', one row per result item
-     * - HTTP 404                      → fetch_status = 'not_found', single sentinel row
-     * - Any other HTTP error          → fetch_status = 'failed',   single sentinel row
-     * - Connection/timeout exception  → fetch_status = 'failed',   single sentinel row
+     * - HTTP 200 with non-empty results array → fetch_status = 'success', one row per result item
+     * - HTTP 200 with empty results array     → fetch_status = 'not_found', single sentinel row
+     * - HTTP 200 with missing/non-array results or non-JSON body → fetch_status = 'failed' + Log::warning
+     * - HTTP 404                              → fetch_status = 'not_found', single sentinel row
+     * - Any other HTTP error                  → fetch_status = 'failed',   single sentinel row + Log::warning
+     * - Connection/timeout exception          → fetch_status = 'failed',   single sentinel row + Log::error
      *
      * @return array<int, array<string, mixed>>
      */
@@ -61,12 +63,34 @@ class LegacyArchiveSourceClient
             $payload = $response->json();
 
             if (! is_array($payload)) {
+                Log::warning('LegacyArchiveSourceClient: non-JSON response body', [
+                    'type' => $type,
+                    'date' => $date,
+                    'url' => $url,
+                ]);
+
                 return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', 'Non-JSON response body')];
             }
 
-            $results = $payload['results'] ?? [];
+            if (! array_key_exists('results', $payload)) {
+                Log::warning('LegacyArchiveSourceClient: missing results key in response', [
+                    'type' => $type,
+                    'date' => $date,
+                    'url' => $url,
+                ]);
+
+                return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', 'Missing results key in response')];
+            }
+
+            $results = $payload['results'];
 
             if (! is_array($results)) {
+                Log::warning('LegacyArchiveSourceClient: non-array results field', [
+                    'type' => $type,
+                    'date' => $date,
+                    'url' => $url,
+                ]);
+
                 return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', 'Unexpected non-array results field')];
             }
 

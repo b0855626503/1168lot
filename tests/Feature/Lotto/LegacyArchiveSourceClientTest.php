@@ -424,4 +424,48 @@ class LegacyArchiveSourceClientTest extends TestCase
 
         $this->assertSame(2, LottoResultArchiveLegacyResult::count());
     }
+
+    // -------------------------------------------------------------------------
+    // Edge cases: empty results and missing results key
+    // -------------------------------------------------------------------------
+
+    public function test_empty_results_array_returns_not_found_sentinel(): void
+    {
+        Http::fake([
+            $this->baseUrl.'*' => Http::response([
+                'type' => 'egx30',
+                'nameTH' => 'หุ้นอียิปต์',
+                'date' => '2026-04-22',
+                'page' => 1,
+                'results' => [],
+            ], 200),
+        ]);
+
+        $client = new LegacyArchiveSourceClient;
+        $rows = $client->fetch('egx30', '2026-04-22');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('not_found', $rows[0]['fetch_status']);
+        $this->assertNull($rows[0]['last_error']);
+    }
+
+    public function test_missing_results_key_returns_failed_sentinel(): void
+    {
+        Http::fake([
+            $this->baseUrl.'*' => Http::response([
+                'type' => 'egx30',
+                'nameTH' => 'หุ้นอียิปต์',
+                'date' => '2026-04-22',
+                'page' => 1,
+                // 'results' key intentionally omitted to simulate malformed upstream response
+            ], 200),
+        ]);
+
+        $client = new LegacyArchiveSourceClient;
+        $rows = $client->fetch('egx30', '2026-04-22');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('failed', $rows[0]['fetch_status']);
+        $this->assertStringContainsString('Missing results key', (string) $rows[0]['last_error']);
+    }
 }
