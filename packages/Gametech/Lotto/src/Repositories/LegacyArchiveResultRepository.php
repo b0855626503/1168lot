@@ -43,9 +43,11 @@ class LegacyArchiveResultRepository
                 }
             }
 
+            $values = array_diff_key($data, ['unique_key' => true]);
+
             return LottoResultArchiveLegacyResult::updateOrCreate(
                 ['unique_key' => $key],
-                $data
+                $values
             );
         });
     }

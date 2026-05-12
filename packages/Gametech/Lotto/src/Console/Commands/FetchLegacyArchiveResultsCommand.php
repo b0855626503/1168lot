@@ -61,6 +61,12 @@ class FetchLegacyArchiveResultsCommand extends Command
             return self::FAILURE;
         }
 
+        if ($fromDate->format('Y-m-d') !== (string) $from || $toDate->format('Y-m-d') !== (string) $to) {
+            $this->error('Invalid date. Expected a real calendar date in YYYY-MM-DD format.');
+
+            return self::FAILURE;
+        }
+
         $force = (bool) $this->option('force');
         $limitRaw = $this->option('limit');
         $limit = $limitRaw !== null ? (int) $limitRaw : null;
