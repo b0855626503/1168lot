@@ -74,12 +74,6 @@ for f in "${md_files[@]}"; do
       continue
     fi
 
-    if [[ "$f" == .codebase-memory/* ]]; then
-      log_warn "$f" "markdown under .codebase-memory is temporarily allowlisted"
-      warnings=$((warnings + 1))
-      continue
-    fi
-
     if [[ "$f" == workspace/* ]]; then
       log_warn "$f" "markdown under workspace is temporarily allowlisted"
       warnings=$((warnings + 1))

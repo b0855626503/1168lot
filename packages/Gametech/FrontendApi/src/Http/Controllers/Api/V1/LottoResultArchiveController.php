@@ -26,9 +26,8 @@ class LottoResultArchiveController extends Controller
      */
     public function index(Request $request, string $marketCode): JsonResponse
     {
-        $datePattern = '/^\d{4}-\d{2}-\d{2}$/';
-        $fromDate = $request->query('from_date');
-        $toDate = $request->query('to_date');
+        $rawFrom = $request->query('from_date');
+        $rawTo = $request->query('to_date');
         $perPage = (int) $request->query('per_page', 20);
         $page = (int) $request->query('page', 1);
 
@@ -43,45 +42,60 @@ class LottoResultArchiveController extends Controller
             return response()->json(['message' => 'Market not found'], Response::HTTP_NOT_FOUND);
         }
 
-        if (($fromDate && ! $toDate) || (! $fromDate && $toDate)) {
+        if (($rawFrom && ! $rawTo) || (! $rawFrom && $rawTo)) {
             return response()->json([
                 'message' => 'Both from_date and to_date must be provided, or neither',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if ($fromDate && ! preg_match($datePattern, (string) $fromDate)) {
-            return response()->json(['message' => 'from_date must be YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $fromDate = null;
+        $toDate = null;
+
+        if ($rawFrom) {
+            $fromDate = Carbon::createFromFormat('Y-m-d', (string) $rawFrom);
+            if (! $fromDate) {
+                return response()->json(['message' => 'from_date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $fromDate = $fromDate->startOfDay();
         }
-        if ($toDate && ! preg_match($datePattern, (string) $toDate)) {
-            return response()->json(['message' => 'to_date must be YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        if ($rawTo) {
+            $toDate = Carbon::createFromFormat('Y-m-d', (string) $rawTo);
+            if (! $toDate) {
+                return response()->json(['message' => 'to_date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $toDate = $toDate->startOfDay();
         }
 
         if (! $fromDate && ! $toDate) {
-            $fromDate = now()->subDays(365)->format('Y-m-d');
-            $toDate = now()->format('Y-m-d');
+            $fromDate = now()->subDays(365)->startOfDay();
+            $toDate = now()->startOfDay();
         }
 
-        if (strtotime((string) $toDate) - strtotime((string) $fromDate) > 366 * 86400) {
-            return response()->json([
-                'message' => 'Date range must not exceed 366 days',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-
-        if (strtotime((string) $fromDate) > strtotime((string) $toDate)) {
+        if ($fromDate->gt($toDate)) {
             return response()->json([
                 'message' => 'from_date must be before or equal to to_date',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $queryFingerprint = md5("{$fromDate}|{$toDate}|{$page}|{$perPage}");
+        if ($fromDate->diffInDays($toDate) > 366) {
+            return response()->json([
+                'message' => 'Date range must not exceed 366 days',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $fromDateStr = $fromDate->format('Y-m-d');
+        $toDateStr = $toDate->format('Y-m-d');
+
+        $queryFingerprint = md5("{$fromDateStr}|{$toDateStr}|{$page}|{$perPage}");
         $version = Cache::get("lotto:archive:{$marketCode}:version", 1);
         $cacheKey = "lotto:archive:{$marketCode}:v{$version}:list:{$queryFingerprint}";
 
         $payload = Cache::remember($cacheKey, 120, function () use (
-            $marketCode, $fromDate, $toDate, $perPage
+            $marketCode, $fromDateStr, $toDateStr, $perPage
         ): array {
             $paginator = $this->archiveRepo->findDistinctDrawDates(
-                $marketCode, $fromDate, $toDate, $perPage,
+                $marketCode, $fromDateStr, $toDateStr, $perPage,
             );
 
             $drawDates = collect($paginator->items())->pluck('draw_date')->map(

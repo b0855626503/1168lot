@@ -44,6 +44,12 @@ class FillMissingResultsCommand extends Command
             return self::FAILURE;
         }
 
+        if (($market->result_mode ?? null) === LotteryMarket::RESULT_MODE_YEEKEE) {
+            $this->error("Market {$marketCode} is yeekee — excluded from archive.");
+
+            return self::FAILURE;
+        }
+
         $runId = (string) Str::uuid();
         $mode = $sync ? 'SYNC' : 'QUEUE';
         $this->info("Fill missing results: market={$marketCode}, from={$fromDate}, to={$toDate}, mode={$mode}".($dryRun ? ' (DRY RUN)' : ''));
