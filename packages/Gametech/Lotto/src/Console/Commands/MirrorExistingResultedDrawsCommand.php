@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Console\Commands;
 
 use Gametech\Lotto\Models\LottoDraw;
+use Gametech\Lotto\Models\LottoResultArchive;
 use Gametech\Lotto\Services\ArchiveNormalizerService;
 use Gametech\Lotto\Services\ArchiveWriterService;
 use Illuminate\Console\Command;
@@ -120,20 +121,13 @@ class MirrorExistingResultedDrawsCommand extends Command
 
     protected function filterOnlyMissing(array $rows, int $drawId): array
     {
-        $missing = [];
+        $drawKeys = array_column($rows, 'draw_key');
 
-        foreach ($rows as $row) {
-            $drawKey = $row['draw_key'];
-            $exists = \DB::table('lotto_result_archives')
-                ->where('source_draw_id', $drawId)
-                ->where('draw_key', $drawKey)
-                ->exists();
+        $existingKeys = LottoResultArchive::where('source_draw_id', $drawId)
+            ->whereIn('draw_key', $drawKeys)
+            ->pluck('draw_key')
+            ->toArray();
 
-            if (! $exists) {
-                $missing[] = $row;
-            }
-        }
-
-        return $missing;
+        return array_filter($rows, fn ($row) => ! in_array($row['draw_key'], $existingKeys, true));
     }
 }

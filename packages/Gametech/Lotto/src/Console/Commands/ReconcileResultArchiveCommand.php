@@ -73,6 +73,12 @@ class ReconcileResultArchiveCommand extends Command
             ->orderBy('draw_key')
             ->get();
 
+        $drawIds = $archives->pluck('source_draw_id')->unique()->filter()->values()->all();
+        $draws = LottoDraw::with(['market', 'betSettings'])
+            ->whereIn('id', $drawIds)
+            ->get()
+            ->keyBy('id');
+
         $matched = 0;
         $mismatched = 0;
         $fixed = 0;
@@ -92,8 +98,7 @@ class ReconcileResultArchiveCommand extends Command
                 continue;
             }
 
-            $draw = LottoDraw::with(['market', 'betSettings'])
-                ->find($archive->source_draw_id);
+            $draw = $draws->get($archive->source_draw_id);
 
             if (! $draw || $draw->status !== 'resulted') {
                 $this->warn("  WARN: {$archive->draw_date}/{$archive->draw_key} — source draw missing/not resulted");

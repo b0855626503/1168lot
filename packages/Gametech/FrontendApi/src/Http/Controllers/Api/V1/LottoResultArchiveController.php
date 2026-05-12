@@ -3,6 +3,7 @@
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Carbon\Carbon;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Repositories\ArchiveRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -159,6 +160,6 @@ class LottoResultArchiveController extends Controller
      */
     protected function marketExists(string $code): bool
     {
-        return \DB::table('lotto_markets')->where('code', $code)->exists();
+        return LotteryMarket::where('code', $code)->exists();
     }
 }
