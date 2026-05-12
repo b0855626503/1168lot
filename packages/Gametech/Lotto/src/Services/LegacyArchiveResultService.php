@@ -4,6 +4,7 @@ namespace Gametech\Lotto\Services;
 
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class LegacyArchiveResultService
@@ -23,6 +24,7 @@ class LegacyArchiveResultService
         $yeekeeCodes = $this->getYeekeeCodes();
 
         $query = LottoResultArchiveLegacyResult::query()
+            ->where('fetch_status', 'success')
             ->where('request_date', '>=', $fromDate)
             ->where('request_date', '<=', $toDate)
             ->whereNotIn('type', $yeekeeCodes);
@@ -55,7 +57,7 @@ class LegacyArchiveResultService
     /**
      * Format snapshot rows into the legacy API response shape.
      *
-     * @param  \Illuminate\Support\Collection<int, LottoResultArchiveLegacyResult>  $rows
+     * @param  Collection<int, LottoResultArchiveLegacyResult>  $rows
      * @return array<int, array{
      *     id: int,
      *     lottosName: string,
@@ -66,7 +68,7 @@ class LegacyArchiveResultService
      *     lottosUnder: string,
      * }>
      */
-    protected function formatResults(\Illuminate\Support\Collection $rows): array
+    protected function formatResults(Collection $rows): array
     {
         $results = [];
 
@@ -74,7 +76,7 @@ class LegacyArchiveResultService
             $results[] = [
                 'id' => $row->source_result_id !== null
                     ? (int) $row->source_result_id
-                    : (int) sprintf('%u', crc32($row->lottos_name.'|'.($row->lottos_date_raw ?? ''))),
+                    : (int) $row->id,
                 'lottosName' => (string) $row->lottos_name,
                 'lottosTH' => (string) ($row->lottos_th ?? $row->lottos_name),
                 'lottosDate' => (string) ($row->lottos_date_raw ?? ''),

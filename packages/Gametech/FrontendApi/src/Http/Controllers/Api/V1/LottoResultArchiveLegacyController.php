@@ -25,8 +25,9 @@ class LottoResultArchiveLegacyController extends Controller
      * GET /api/v1/lotto/result-archive-legacy
      *
      * Legacy-compatible public archive result endpoint.
-     * Result data comes from lotto_result_archives only.
+     * Result data comes from lotto_result_archive_legacy_results (API snapshot table).
      * Lookup to lotto_markets is allowed only for display name and yeekee exclusion.
+     * An unknown type is NOT rejected — snapshot data is served if available (market_id is optional per BOA-262).
      * Forbidden: lotto_draws / settlement / wallet / tickets.
      */
     public function index(Request $request): JsonResponse
@@ -85,7 +86,9 @@ class LottoResultArchiveLegacyController extends Controller
             $dateLabel = $rawFrom.'..'.$rawTo;
         }
 
-        // Validate type exists in lotto_markets (non-yeekee)
+        // Resolve nameTH: prefer lotto_markets display name; fall back to snapshot name_th, then type code.
+        // Per BOA-262, market_id is optional — snapshot-only types are served without rejection.
+        // Yeekee types are still excluded via service-level whereNotIn on getYeekeeCodes().
         $nameTH = 'ทั้งหมด';
 
         if ($type) {
@@ -93,21 +96,7 @@ class LottoResultArchiveLegacyController extends Controller
                 ->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE)
                 ->first();
 
-            if (! $market) {
-                return response()->json([
-                    'type' => $type,
-                    'nameTH' => $type,
-                    'date' => $dateLabel,
-                    'page' => $page,
-                    'count' => 0,
-                    'results' => [],
-                    'errors' => [
-                        ['code' => 'UNSUPPORTED_TYPE', 'message' => "Market type '{$type}' is not supported."],
-                    ],
-                ]);
-            }
-
-            $nameTH = $market->name ?: $type;
+            $nameTH = $market ? ($market->name ?: $type) : $type;
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');
