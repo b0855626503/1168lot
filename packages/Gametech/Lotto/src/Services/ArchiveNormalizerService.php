@@ -19,6 +19,16 @@ class ArchiveNormalizerService
         'bottom_2' => ['result_key' => 'bottom_2', 'draw_key' => 'two_down'],
     ];
 
+    /**
+     * Bet types that exist in the draw but are intentionally excluded from
+     * lotto_result_archives in phase 1. Silently skipped — not archive-ready yet.
+     */
+    protected const KNOWN_UNSUPPORTED_BET_TYPES = [
+        'tod_3',
+        'run_top',
+        'run_bottom',
+    ];
+
     protected ArchiveChecksumService $checksum;
 
     public function __construct(?ArchiveChecksumService $checksum = null)
@@ -51,11 +61,13 @@ class ArchiveNormalizerService
             $betType = $betSetting->bet_type;
 
             if (! isset(static::BET_TYPE_MAP[$betType])) {
-                Log::warning('ArchiveNormalizer: unknown bet_type, skipping', [
-                    'draw_id' => $draw->id,
-                    'market_code' => $marketCode,
-                    'bet_type' => $betType,
-                ]);
+                if (! in_array($betType, static::KNOWN_UNSUPPORTED_BET_TYPES, true)) {
+                    Log::warning('ArchiveNormalizer: unknown bet_type, skipping', [
+                        'draw_id' => $draw->id,
+                        'market_code' => $marketCode,
+                        'bet_type' => $betType,
+                    ]);
+                }
 
                 continue;
             }

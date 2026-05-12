@@ -3,6 +3,7 @@
 namespace Tests\Unit\Lotto;
 
 use Gametech\Lotto\Services\ArchiveNormalizerService;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class ArchiveNormalizerServiceTest extends TestCase
@@ -175,5 +176,97 @@ class ArchiveNormalizerServiceTest extends TestCase
         $rows = $this->service->normalizeDraw($draw);
 
         $this->assertSame('chaina-afternoon', $rows[0]['market_code']);
+    }
+
+    public function test_tod_3_skipped_without_warning(): void
+    {
+        Log::spy();
+
+        $draw = new NormalizerTestDraw(
+            id: 1008,
+            marketCode: 'hangseng-afternoon',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785'],
+            betTypes: ['top_3', 'tod_3'],
+        );
+
+        $rows = $this->service->normalizeDraw($draw);
+
+        $this->assertCount(1, $rows);
+        Log::shouldNotHaveReceived('warning');
+    }
+
+    public function test_run_top_skipped_without_warning(): void
+    {
+        Log::spy();
+
+        $draw = new NormalizerTestDraw(
+            id: 1008,
+            marketCode: 'hangseng-afternoon',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785'],
+            betTypes: ['top_3', 'run_top'],
+        );
+
+        $rows = $this->service->normalizeDraw($draw);
+
+        $this->assertCount(1, $rows);
+        Log::shouldNotHaveReceived('warning');
+    }
+
+    public function test_run_bottom_skipped_without_warning(): void
+    {
+        Log::spy();
+
+        $draw = new NormalizerTestDraw(
+            id: 1008,
+            marketCode: 'hangseng-afternoon',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785'],
+            betTypes: ['top_3', 'run_bottom'],
+        );
+
+        $rows = $this->service->normalizeDraw($draw);
+
+        $this->assertCount(1, $rows);
+        Log::shouldNotHaveReceived('warning');
+    }
+
+    public function test_truly_unknown_bet_type_logs_warning(): void
+    {
+        Log::spy();
+
+        $draw = new NormalizerTestDraw(
+            id: 99,
+            marketCode: 'chaina-morning',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785'],
+            betTypes: ['top_3', 'future_unknown_type'],
+        );
+
+        $this->service->normalizeDraw($draw);
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(fn ($msg) => str_contains($msg, 'unknown bet_type'));
+    }
+
+    public function test_known_unsupported_types_not_in_archive_output(): void
+    {
+        $draw = new NormalizerTestDraw(
+            id: 1,
+            marketCode: 'chaina-morning',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785', 'top_2' => '85', 'bottom_2' => '71'],
+            betTypes: ['top_3', 'top_2', 'bottom_2', 'tod_3', 'run_top', 'run_bottom'],
+        );
+
+        $rows = $this->service->normalizeDraw($draw);
+        $drawKeys = collect($rows)->pluck('draw_key')->all();
+
+        $this->assertNotContains('tod_3', $drawKeys);
+        $this->assertNotContains('run_top', $drawKeys);
+        $this->assertNotContains('run_bottom', $drawKeys);
+        $this->assertSame(['three_up', 'two_up', 'two_down'], $drawKeys);
     }
 }
