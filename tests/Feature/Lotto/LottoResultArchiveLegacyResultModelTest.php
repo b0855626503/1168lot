@@ -44,7 +44,7 @@ class LottoResultArchiveLegacyResultModelTest extends TestCase
             $table->string('checksum', 64)->nullable();
             $table->json('payload_json')->nullable();
 
-            $table->string('unique_key');
+            $table->string('unique_key', 64);
 
             $table->timestamps();
 
