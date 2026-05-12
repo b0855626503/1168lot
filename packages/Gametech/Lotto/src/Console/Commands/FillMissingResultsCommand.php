@@ -1,0 +1,101 @@
+<?php
+
+namespace Gametech\Lotto\Console\Commands;
+
+use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Services\ArchiveWriterService;
+use Gametech\Lotto\Services\ExternalResultFetcherService;
+use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+
+class FillMissingResultsCommand extends Command
+{
+    protected $signature = 'lotto:fill-missing-results
+        {--market= : Filter by market code (required)}
+        {--from= : Start date YYYY-MM-DD (required)}
+        {--to= : End date YYYY-MM-DD (required)}
+        {--dry-run : Report only, do not write}';
+
+    protected $description = 'Fill missing archive results from external sources';
+
+    public function handle(
+        ExternalResultFetcherService $fetcher,
+        ArchiveWriterService $writer,
+    ): int {
+        $marketCode = $this->option('market');
+        $fromDate = $this->option('from');
+        $toDate = $this->option('to');
+        $dryRun = (bool) $this->option('dry-run');
+
+        if (! $marketCode || ! $fromDate || ! $toDate) {
+            $this->error('--market, --from, and --to are required.');
+
+            return self::FAILURE;
+        }
+
+        $market = LotteryMarket::where('code', $marketCode)->first();
+        if (! $market) {
+            $this->error("Market not found: {$marketCode}");
+
+            return self::FAILURE;
+        }
+
+        $runId = (string) Str::uuid();
+        $this->info("Fill missing results: market={$marketCode}, from={$fromDate}, to={$toDate}".($dryRun ? ' (DRY RUN)' : ''));
+
+        $cursor = Carbon::parse($fromDate);
+        $end = Carbon::parse($toDate);
+        $filled = 0;
+        $attempted = 0;
+        $failed = 0;
+
+        while ($cursor->lte($end)) {
+            $date = $cursor->format('Y-m-d');
+
+            $hasArchive = \DB::table('lotto_result_archives')
+                ->where('market_code', $marketCode)
+                ->where('draw_date', $date)
+                ->exists();
+
+            if ($hasArchive) {
+                $cursor->addDay();
+
+                continue;
+            }
+
+            $attempted++;
+
+            if ($dryRun) {
+                $this->line("  [DRY RUN] Would fetch: {$date}");
+                $cursor->addDay();
+
+                continue;
+            }
+
+            $rows = $fetcher->fetchMissing($marketCode, $date);
+
+            if (! $rows) {
+                $this->warn("  No data for {$date}");
+                $failed++;
+                $cursor->addDay();
+
+                continue;
+            }
+
+            $result = $writer->writeArchive($rows, 'external_fetch', null, $runId);
+            $this->line("  {$date}: created={$result['created']}, skipped={$result['skipped']}");
+            $filled += $result['created'];
+            $cursor->addDay();
+        }
+
+        $this->info("Done. Run ID: {$runId}");
+        $this->table(['Metric', 'Count'], [
+            ['Attempted', $attempted],
+            ['Filled', $filled],
+            ['Failed', $failed],
+        ]);
+
+        return self::SUCCESS;
+    }
+}
