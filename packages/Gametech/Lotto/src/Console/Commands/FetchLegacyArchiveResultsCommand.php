@@ -3,8 +3,10 @@
 namespace Gametech\Lotto\Console\Commands;
 
 use Gametech\Lotto\Repositories\LegacyArchiveResultRepository;
+use Gametech\Lotto\Services\LegacyArchiveSourceClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class FetchLegacyArchiveResultsCommand extends Command
 {
@@ -37,7 +39,7 @@ class FetchLegacyArchiveResultsCommand extends Command
         'dow_jones',
     ];
 
-    public function handle(LegacyArchiveResultRepository $repository): int
+    public function handle(LegacyArchiveResultRepository $repository, LegacyArchiveSourceClient $client): int
     {
         $today = $this->option('today');
         $from = $this->option('from');
@@ -97,7 +99,7 @@ class FetchLegacyArchiveResultsCommand extends Command
 
                 $this->line(sprintf('Processing type=%s date=%s', $type, $dateStr));
 
-                $rows = $this->fetchForDate($type, $dateStr);
+                $rows = $this->fetchForDate($type, $dateStr, $client);
 
                 foreach ($rows as $row) {
                     if ($limit !== null && $totalUpserted >= $limit) {
@@ -105,8 +107,12 @@ class FetchLegacyArchiveResultsCommand extends Command
                         break;
                     }
 
-                    $repository->upsert($row, $force);
+                    $saved = $repository->upsert($row, $force);
                     $totalUpserted++;
+
+                    if (($saved->fetch_status ?? null) === 'success') {
+                        Cache::increment('lotto:archive:'.$type.':version');
+                    }
                 }
 
                 if ($sleepMs > 0) {
@@ -123,17 +129,14 @@ class FetchLegacyArchiveResultsCommand extends Command
     }
 
     /**
-     * Fetch raw result rows for a given type and date.
+     * Fetch raw result rows for a given type and date via the source client.
      *
      * Returns an array of mapped field arrays suitable for repository->upsert().
      *
      * @return array<int, array<string, mixed>>
-     *
-     * @todo Wire LegacyArchiveSourceClient in PR-03
      */
-    protected function fetchForDate(string $type, string $date): array
+    protected function fetchForDate(string $type, string $date, LegacyArchiveSourceClient $client): array
     {
-        // TODO: wire LegacyArchiveSourceClient in PR-03
-        return [];
+        return $client->fetch($type, $date);
     }
 }
