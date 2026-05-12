@@ -61,7 +61,7 @@ class LottoResultArchiveController extends Controller
         $queryFingerprint = md5("{$fromDate}|{$toDate}|{$page}|{$perPage}");
         $cacheKey = "lotto:archive:{$marketCode}:list:{$queryFingerprint}";
 
-        return Cache::flexible($cacheKey, [60, 120], function () use (
+        return Cache::remember($cacheKey, 120, function () use (
             $marketCode, $fromDate, $toDate, $perPage
         ): JsonResponse {
             $paginator = $this->archiveRepo->findDistinctDrawDates(
@@ -109,7 +109,7 @@ class LottoResultArchiveController extends Controller
 
         $cacheKey = "lotto:archive:{$marketCode}:{$drawDate}";
 
-        return Cache::flexible($cacheKey, [300, 86400], function () use ($marketCode, $drawDate): JsonResponse {
+        return Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate): JsonResponse {
             $rows = $this->archiveRepo->findByDrawDates($marketCode, [$drawDate]);
 
             if ($rows->isEmpty()) {
@@ -137,7 +137,7 @@ class LottoResultArchiveController extends Controller
 
         $cacheKey = "lotto:archive:{$marketCode}:{$drawDate}:{$drawKey}";
 
-        return Cache::flexible($cacheKey, [300, 86400], function () use ($marketCode, $drawDate, $drawKey): JsonResponse {
+        return Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate, $drawKey): JsonResponse {
             $archive = $this->archiveRepo->findByIdentity($marketCode, $drawDate, $drawKey);
 
             if (! $archive) {

@@ -100,7 +100,6 @@ class ArchiveRepository
         string $sourceType,
         ?int $sourceDrawId,
         ?array $sourceInfo,
-        string $runId,
         bool $allowExternalOverwrite = false,
     ): array {
         return DB::transaction(function () use (

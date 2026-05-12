@@ -139,8 +139,13 @@ class ResultApplier
 
             $reloaded = LottoDraw::query()->findOrFail($locked->id);
             $reloaded->forceFill([
+                'result_fetch_status' => 'APPLIED',
+                'result_fetch_error' => null,
+                'result_hash' => $resultHash,
                 'result_raw_payload_json' => $rawPayload,
                 'result_normalized_payload_json' => $validated,
+                'result_applied_at' => now(),
+                'result_fetched_at' => now(),
             ])->save();
 
             DB::afterCommit(function () use ($reloaded) {

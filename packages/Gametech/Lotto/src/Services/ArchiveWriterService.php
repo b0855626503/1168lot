@@ -56,7 +56,6 @@ class ArchiveWriterService
                 sourceType: $sourceType,
                 sourceDrawId: $sourceDrawId,
                 sourceInfo: $row['source_info_json'] ?? $row['source_info'] ?? null,
-                runId: $runId,
                 allowExternalOverwrite: $allowExternalOverwrite,
             );
 
