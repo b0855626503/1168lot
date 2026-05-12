@@ -69,7 +69,7 @@
 | `lottosUnder` | `lottos_under`        |
 | `lottosTH`    | `lottos_th`           |
 | `id`          | `source_result_id` (fallback: row `id`) |
-| `nameTH`      | `name_th` (from snapshot, not from `lotto_markets`) |
+| `nameTH`      | `lotto_markets.name` (preferred, for known types) or `name_th` (snapshot-only types, resolved inside cache-closure query) |
 
 ---
 
