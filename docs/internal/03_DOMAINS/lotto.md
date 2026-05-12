@@ -1,6 +1,6 @@
 # Lotto Domain Note
 
-อัปเดตล่าสุด: 2026-04-24
+อัปเดตล่าสุด: 2026-05-12
 
 ## ใช้อ่านเมื่อ
 
@@ -57,7 +57,6 @@
 - Mirror: `lotto:mirror-result-archives` command + `MirrorDrawToArchiveJob` (afterCommit, queue `lotto`)
 - Fill: `lotto:fill-missing-results` command สำหรับข้อมูลที่ขาดจาก external source
 - Reconcile: `lotto:reconcile-result-archive` command — guard ด้วย `--market`, `--from`, `--to`, `--yes`
-- FrontendApi: `GET /api/v1/lotto/results/{marketCode}` (public, no auth, throttle 60/min)
 - FrontendApi: `GET /api/v1/lotto/results/{marketCode}` อ่านจาก `lotto_result_archives` (public, no auth, throttle 60/min)
 - ไม่รวมหวยยี่กี — archive เฉพาะหวยชุด
 
