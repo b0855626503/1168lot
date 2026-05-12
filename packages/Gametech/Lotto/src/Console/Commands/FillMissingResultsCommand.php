@@ -17,7 +17,8 @@ class FillMissingResultsCommand extends Command
         {--from= : Start date YYYY-MM-DD (required)}
         {--to= : End date YYYY-MM-DD (required)}
         {--dry-run : Report only, do not write}
-        {--sync : Process synchronously instead of dispatching queue jobs}';
+        {--sync : Process synchronously instead of dispatching queue jobs}
+        {--force : Bypass primary-instance guard (use only on primary)}';
 
     protected $description = 'Fill missing archive results from external sources';
 
@@ -25,6 +26,12 @@ class FillMissingResultsCommand extends Command
         ExternalResultFetcherService $fetcher,
         ArchiveWriterService $writer,
     ): int {
+        if (! $this->option('force') && ! $this->isFetchEnabled()) {
+            $this->warn('External fetch is disabled on this instance. Set LOTTO_ARCHIVE_FETCH_ENABLED=true or use --force.');
+
+            return self::FAILURE;
+        }
+
         $marketCode = $this->option('market');
         $fromDate = $this->option('from');
         $toDate = $this->option('to');
@@ -114,5 +121,10 @@ class FillMissingResultsCommand extends Command
         ]));
 
         return self::SUCCESS;
+    }
+
+    protected function isFetchEnabled(): bool
+    {
+        return (bool) (env('LOTTO_ARCHIVE_FETCH_ENABLED') ?? true);
     }
 }

@@ -31,6 +31,15 @@ class FillMissingResultArchiveJob implements ShouldQueue
         ExternalResultFetcherService $fetcher,
         ArchiveWriterService $writer,
     ): void {
+        if (! $this->isFetchEnabled()) {
+            Log::info('FillMissingResultArchiveJob: fetch disabled on this instance, skipping', [
+                'market_code' => $this->marketCode,
+                'draw_date' => $this->drawDate,
+            ]);
+
+            return;
+        }
+
         $rows = $fetcher->fetchMissing($this->marketCode, $this->drawDate);
 
         if (! $rows) {
@@ -49,5 +58,10 @@ class FillMissingResultArchiveJob implements ShouldQueue
             'draw_date' => $this->drawDate,
             'created' => $result['created'],
         ]);
+    }
+
+    protected function isFetchEnabled(): bool
+    {
+        return (bool) (env('LOTTO_ARCHIVE_FETCH_ENABLED') ?? true);
     }
 }
