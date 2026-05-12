@@ -2,15 +2,21 @@
 
 namespace Gametech\Lotto\Services;
 
+use Carbon\Carbon;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoResultArchive;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class LegacyArchiveResultService
 {
     /**
-     * Query archive rows for legacy-compatible response.
+     * Query archive rows for legacy-compatible response with grouped pagination.
+     *
+     * Two-step query:
+     * 1. Paginate distinct (market_code, draw_date) groups
+     * 2. Fetch all rows for those groups
      *
      * @return array{results: array, total: int}
      */
@@ -21,88 +27,112 @@ class LegacyArchiveResultService
         int $perPage = 100,
         int $page = 1,
     ): array {
-        $query = LottoResultArchive::query()
+        $yeekeeCodes = $this->getYeekeeCodes();
+
+        // Step 1: paginate distinct grouped keys
+        $baseQuery = DB::table('lotto_result_archives')
+            ->select('market_code', 'draw_date')
             ->whereDate('draw_date', '>=', $fromDate)
-            ->whereDate('draw_date', '<=', $toDate);
+            ->whereDate('draw_date', '<=', $toDate)
+            ->whereNotIn('market_code', $yeekeeCodes);
 
         if ($type) {
-            $query->where('market_code', $type);
+            $baseQuery->where('market_code', $type);
         }
 
-        $query->whereHas('market', fn ($q) => $q->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE));
+        $totalGroups = $baseQuery->distinct()->count('*');
+        $offset = ($page - 1) * $perPage;
 
-        $paginator = $query
+        $groupKeys = (clone $baseQuery)
+            ->groupBy('market_code', 'draw_date')
             ->orderBy('draw_date', 'desc')
             ->orderBy('market_code')
-            ->orderBy('draw_key')
-            ->paginate($perPage, ['*'], 'page', $page);
+            ->offset($offset)
+            ->limit($perPage)
+            ->get();
 
-        $results = $this->formatResults($paginator);
+        if ($groupKeys->isEmpty()) {
+            return ['results' => [], 'total' => 0];
+        }
+
+        // Step 2: fetch all rows for those grouped keys
+        $marketCodes = $groupKeys->pluck('market_code')->unique()->all();
+        $drawDates = $groupKeys->pluck('draw_date')->unique()->all();
+
+        $rows = LottoResultArchive::query()
+            ->whereIn('market_code', $marketCodes)
+            ->whereIn('draw_date', $drawDates)
+            ->whereIn('draw_key', ['three_up', 'two_down'])
+            ->get();
+
+        $results = $this->formatGroupedResults($groupKeys, $rows);
 
         return [
             'results' => $results,
-            'total' => $paginator->total(),
+            'total' => $totalGroups,
         ];
     }
 
     /**
-     * Format paginated archive rows into legacy response shape.
+     * Format grouped archive rows into legacy response shape.
      *
+     * @param  Collection  $groupKeys  distinct (market_code, draw_date) pairs
+     * @param  Collection  $rows  archive rows with draw_key in ['three_up', 'two_down']
      * @return array<int, array>
      */
-    protected function formatResults(LengthAwarePaginator $paginator): array
+    protected function formatGroupedResults(Collection $groupKeys, Collection $rows): array
     {
-        $marketNames = $this->loadMarketNames($paginator->getCollection());
+        $marketNames = $this->loadMarketNames($rows);
 
-        return $paginator->getCollection()
-            ->groupBy(fn (LottoResultArchive $row) => $row->market_code.'|'.$row->draw_date->format('Y-m-d'))
-            ->map(function (Collection $group, string $key) use ($marketNames): array {
-                [$marketCode, $drawDate] = explode('|', $key, 2);
+        // Index rows by market_code|draw_date|draw_key
+        $indexed = [];
+        foreach ($rows as $row) {
+            $drawDate = $row->draw_date instanceof Carbon
+                ? $row->draw_date->format('Y-m-d')
+                : $row->draw_date;
+            $indexed[$row->market_code.'|'.$drawDate.'|'.$row->draw_key] = $row->result_set;
+        }
 
-                $resultsByKey = $group->pluck('result_set', 'draw_key');
+        $results = [];
 
-                $lottosNumber = $this->extractResultValue($resultsByKey, 'three_up');
-                $lottosUnder = $this->extractResultValue($resultsByKey, 'two_down');
+        foreach ($groupKeys as $group) {
+            $marketCode = $group->market_code;
+            $drawDate = $group->draw_date;
 
-                $sourceDrawId = $group->first()->source_draw_id;
+            $prefix = $marketCode.'|'.$drawDate.'|';
+            $lottosNumber = $this->extractResultValue($indexed[$prefix.'three_up'] ?? null);
+            $lottosUnder = $this->extractResultValue($indexed[$prefix.'two_down'] ?? null);
 
-                return [
-                    'id' => $sourceDrawId
-                        ? (int) $sourceDrawId
-                        : (int) sprintf('%u', crc32($marketCode.'|'.$drawDate)),
-                    'lottosName' => $marketCode,
-                    'lottosTH' => $marketNames[$marketCode] ?? $marketCode,
-                    'lottosDate' => $drawDate,
-                    'lottosTime' => '', // archive rows don't store draw time
-                    'lottosNumber' => $lottosNumber,
-                    'lottosUnder' => $lottosUnder,
-                ];
-            })
-            ->values()
-            ->all();
+            // Use first matching row for source_draw_id
+            $sourceDrawId = $rows->firstWhere('market_code', $marketCode)?->source_draw_id;
+
+            $results[] = [
+                'id' => $sourceDrawId
+                    ? (int) $sourceDrawId
+                    : (int) sprintf('%u', crc32($marketCode.'|'.$drawDate)),
+                'lottosName' => $marketCode,
+                'lottosTH' => $marketNames[$marketCode] ?? $marketCode,
+                'lottosDate' => $drawDate,
+                'lottosTime' => '',
+                'lottosNumber' => $lottosNumber,
+                'lottosUnder' => $lottosUnder,
+            ];
+        }
+
+        return $results;
     }
 
-    /**
-     * Extract a single value from a draw_key -> array mapping.
-     * Returns first element if array, or the value itself.
-     */
-    protected function extractResultValue(Collection $resultsByKey, string $drawKey): string
+    protected function extractResultValue(?array $resultSet): string
     {
-        $resultSet = $resultsByKey->get($drawKey);
-
-        if ($resultSet === null) {
+        if ($resultSet === null || count($resultSet) === 0) {
             return '';
         }
 
-        if (is_array($resultSet) && count($resultSet) > 0) {
-            return (string) $resultSet[0];
-        }
-
-        return (string) $resultSet;
+        return (string) $resultSet[0];
     }
 
     /**
-     * Load market names for the result set, with cache.
+     * Load market names for the result set.
      *
      * @return array<string, string> market_code => name
      */
@@ -110,8 +140,28 @@ class LegacyArchiveResultService
     {
         $codes = $rows->pluck('market_code')->unique()->values()->all();
 
-        return LotteryMarket::whereIn('code', $codes)
-            ->pluck('name', 'code')
-            ->all();
+        if (empty($codes)) {
+            return [];
+        }
+
+        return Cache::remember('lotto:legacy:market_names:'.md5(implode(',', $codes)), 3600, function () use ($codes) {
+            return LotteryMarket::whereIn('code', $codes)
+                ->pluck('name', 'code')
+                ->all();
+        });
+    }
+
+    /**
+     * Get yeekee market codes for exclusion.
+     * Uses whereNotIn instead of whereHas to avoid hiding historical archive rows
+     * whose market lookup may no longer exist.
+     */
+    protected function getYeekeeCodes(): array
+    {
+        return Cache::remember('lotto:legacy:yeekee_codes', 3600, function () {
+            return LotteryMarket::where('result_mode', LotteryMarket::RESULT_MODE_YEEKEE)
+                ->pluck('code')
+                ->all();
+        });
     }
 }

@@ -85,7 +85,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         ]);
 
         DB::table('lotto_result_archives')->insert([
-            // Morning: three_up, two_up, two_down — source_draw_id = 100
             [
                 'market_code' => 'test-legacy-morning',
                 'draw_date' => '2026-04-22',
@@ -119,7 +118,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            // Afternoon: three_up + two_down — no source_draw_id (external)
             [
                 'market_code' => 'test-legacy-afternoon',
                 'draw_date' => '2026-04-22',
@@ -142,7 +140,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            // Yeekee — must be excluded
             [
                 'market_code' => 'test-legacy-yeekee',
                 'draw_date' => '2026-04-22',
@@ -170,17 +167,13 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ->assertJsonPath('errors', []);
 
         $result = $response->json('results.0');
-
         $this->assertNotNull($result);
         $this->assertEquals('test-legacy-morning', $result['lottosName']);
         $this->assertEquals('หวยทดสอบเช้า', $result['lottosTH']);
         $this->assertEquals(100, $result['id']);
         $this->assertEquals('785', $result['lottosNumber']);
         $this->assertEquals('71', $result['lottosUnder']);
-
-        // must NOT expose two_up
         $this->assertArrayNotHasKey('two_up', $result);
-        // must NOT expose internals
         $this->assertArrayNotHasKey('source_info_json', $result);
         $this->assertArrayNotHasKey('result_hash', $result);
         $this->assertArrayNotHasKey('raw_payload', $result);
@@ -190,7 +183,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     public function test_type_and_date_range(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&from_date=2026-04-01&to_date=2026-04-30');
-
         $response->assertOk()
             ->assertJsonPath('type', 'test-legacy-morning')
             ->assertJsonPath('date', '2026-04-01..2026-04-30')
@@ -200,25 +192,33 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     public function test_all_types_and_date_range(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30&per_page=50');
-
         $response->assertOk()
             ->assertJsonPath('type', 'all')
             ->assertJsonPath('nameTH', 'ทั้งหมด')
-            ->assertJsonPath('count', 2); // morning + afternoon, NOT yeekee
+            ->assertJsonPath('count', 2);
     }
 
     public function test_yeekee_market_excluded(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-yeekee&date=2026-04-22');
-
         $response->assertOk()
-            ->assertJsonPath('count', 0);
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('errors.0.code', 'UNSUPPORTED_TYPE');
+    }
+
+    public function test_unsupported_type_returns_error(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=nonexistent&date=2026-04-22');
+        $response->assertOk()
+            ->assertJsonPath('type', 'nonexistent')
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('results', [])
+            ->assertJsonPath('errors.0.code', 'UNSUPPORTED_TYPE');
     }
 
     public function test_preserves_leading_zero(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
-
         $result = $response->json('results.0');
         $this->assertEquals('014', $result['lottosNumber']);
         $this->assertEquals('07', $result['lottosUnder']);
@@ -227,16 +227,32 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     public function test_deterministic_id_for_external_rows(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
-
         $result = $response->json('results.0');
         $expectedId = (int) sprintf('%u', crc32('test-legacy-afternoon|2026-04-22'));
         $this->assertEquals($expectedId, $result['id']);
     }
 
+    public function test_grouped_pagination_returns_complete_object(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&from_date=2026-04-01&to_date=2026-04-30&per_page=1');
+        $response->assertOk()->assertJsonPath('count', 1);
+        $result = $response->json('results.0');
+        $this->assertNotEmpty($result['lottosNumber']);
+        $this->assertNotEmpty($result['lottosUnder']);
+    }
+
+    public function test_not_found_returns_errors(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-01-01');
+        $response->assertOk()
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('results', [])
+            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+    }
+
     public function test_no_date_returns_422(): void
     {
-        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy')
-            ->assertStatus(422);
+        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy')->assertStatus(422);
     }
 
     public function test_date_mixed_with_range_returns_422(): void
@@ -273,5 +289,11 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     {
         $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?to_date=2026-04-30')
             ->assertStatus(422);
+    }
+
+    public function test_all_types_pagination_counts_groups_not_rows(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30');
+        $response->assertOk()->assertJsonPath('count', 2);
     }
 }
