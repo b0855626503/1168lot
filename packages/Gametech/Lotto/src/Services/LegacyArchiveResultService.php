@@ -29,7 +29,6 @@ class LegacyArchiveResultService
     ): array {
         $yeekeeCodes = $this->getYeekeeCodes();
 
-        // Step 1: paginate distinct grouped keys
         $baseQuery = DB::table('lotto_result_archives')
             ->select('market_code', 'draw_date')
             ->whereDate('draw_date', '>=', $fromDate)
@@ -40,11 +39,14 @@ class LegacyArchiveResultService
             $baseQuery->where('market_code', $type);
         }
 
-        $totalGroups = $baseQuery->distinct()->count('*');
+        // Step 1: paginate distinct grouped keys with subquery-based count
+        $groupedQuery = (clone $baseQuery)
+            ->groupBy('market_code', 'draw_date');
+
+        $totalGroups = DB::query()->fromSub($groupedQuery, 'groups')->count();
         $offset = ($page - 1) * $perPage;
 
-        $groupKeys = (clone $baseQuery)
-            ->groupBy('market_code', 'draw_date')
+        $groupKeys = (clone $groupedQuery)
             ->orderBy('draw_date', 'desc')
             ->orderBy('market_code')
             ->offset($offset)
@@ -55,14 +57,17 @@ class LegacyArchiveResultService
             return ['results' => [], 'total' => 0];
         }
 
-        // Step 2: fetch all rows for those grouped keys
-        $marketCodes = $groupKeys->pluck('market_code')->unique()->all();
-        $drawDates = $groupKeys->pluck('draw_date')->unique()->all();
-
+        // Step 2: fetch rows for exact (market_code, draw_date) pairs only
         $rows = LottoResultArchive::query()
-            ->whereIn('market_code', $marketCodes)
-            ->whereIn('draw_date', $drawDates)
             ->whereIn('draw_key', ['three_up', 'two_down'])
+            ->where(function ($q) use ($groupKeys) {
+                foreach ($groupKeys as $group) {
+                    $q->orWhere(function ($sub) use ($group) {
+                        $sub->where('market_code', $group->market_code)
+                            ->whereDate('draw_date', $group->draw_date);
+                    });
+                }
+            })
             ->get();
 
         $results = $this->formatGroupedResults($groupKeys, $rows);

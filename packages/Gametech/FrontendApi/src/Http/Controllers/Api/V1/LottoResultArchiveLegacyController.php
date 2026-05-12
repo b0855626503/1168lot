@@ -113,12 +113,19 @@ class LottoResultArchiveLegacyController extends Controller
         $fromDateStr = $fromDate->format('Y-m-d');
         $toDateStr = $toDate->format('Y-m-d');
 
-        // Cache: type-specific or all-types
+        // Cache: uses archive writer's version key for invalidation
         $queryFingerprint = md5(($type ?: 'all').'|'.$fromDateStr.'|'.$toDateStr.'|'.$page.'|'.$perPage);
-        $version = Cache::get('lotto:archive:legacy:version', 1);
-        $cacheKey = "lotto:archive:legacy:v{$version}:list:{$queryFingerprint}";
 
-        $payload = Cache::remember($cacheKey, 120, function () use (
+        if ($type) {
+            $version = Cache::get("lotto:archive:{$type}:version", 1);
+            $cacheKey = "lotto:archive:legacy:{$type}:v{$version}:list:{$queryFingerprint}";
+            $ttl = 120;
+        } else {
+            $cacheKey = "lotto:archive:legacy:all:list:{$queryFingerprint}";
+            $ttl = 60;
+        }
+
+        $payload = Cache::remember($cacheKey, $ttl, function () use (
             $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH
         ): array {
             $result = $this->legacyService->query(
