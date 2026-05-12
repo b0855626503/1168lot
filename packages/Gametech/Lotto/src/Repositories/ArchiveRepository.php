@@ -146,6 +146,8 @@ class ArchiveRepository
             $existing->update([
                 'result_set' => $resultSet,
                 'result_hash' => $resultHash,
+                'source_draw_id' => $sourceDrawId ?? $existing->source_draw_id,
+                'source_type' => $sourceType,
                 'correction_count' => $existing->correction_count + 1,
                 'previous_result_set' => $previousResultSet,
                 'corrected_at' => now(),

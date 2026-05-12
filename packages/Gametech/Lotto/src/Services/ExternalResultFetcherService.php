@@ -109,6 +109,18 @@ class ExternalResultFetcherService
         return $url;
     }
 
+    /**
+     * Canonical draw_keys from ArchiveNormalizerService::BET_TYPE_MAP.
+     * Providers may return raw keys (top_3, top_2, bottom_2) or canonical keys.
+     */
+    protected const CANONICAL_DRAW_KEYS = ['three_up', 'two_up', 'two_down'];
+
+    protected const RAW_TO_CANONICAL = [
+        'top_3' => 'three_up',
+        'top_2' => 'two_up',
+        'bottom_2' => 'two_down',
+    ];
+
     protected function normalizeExternalResult(
         array $rawResult,
         string $marketCode,
@@ -130,12 +142,25 @@ class ExternalResultFetcherService
                 continue;
             }
 
+            $drawKey = $this->canonicalizeDrawKey($key);
+
+            if ($drawKey === null) {
+                Log::warning('ExternalResultFetcher: unknown draw_key from provider, skipping', [
+                    'raw_key' => $key,
+                    'market_code' => $marketCode,
+                    'draw_date' => $drawDate,
+                    'source_id' => $source->id,
+                ]);
+
+                continue;
+            }
+
             $resultSet = is_array($value) ? array_map('strval', $value) : [(string) $value];
 
             $rows[] = [
                 'market_code' => $marketCode,
                 'draw_date' => $drawDate,
-                'draw_key' => $key,
+                'draw_key' => $drawKey,
                 'result_set' => $resultSet,
                 'result_hash' => $this->checksum->computeResultHash($resultSet),
                 'source_info_json' => $sourceInfo,
@@ -143,5 +168,18 @@ class ExternalResultFetcherService
         }
 
         return $rows;
+    }
+
+    /**
+     * Map a raw provider key to a canonical draw_key.
+     * Returns null if the key is unrecognized.
+     */
+    protected function canonicalizeDrawKey(string $rawKey): ?string
+    {
+        if (in_array($rawKey, static::CANONICAL_DRAW_KEYS, true)) {
+            return $rawKey;
+        }
+
+        return static::RAW_TO_CANONICAL[$rawKey] ?? null;
     }
 }

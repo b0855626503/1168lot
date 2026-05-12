@@ -87,6 +87,8 @@ class ArchiveWriterService
                 default => 'success',
             };
 
+            $sourceInfo = $row['source_info_json'] ?? $row['source_info'] ?? null;
+
             $this->logRepo->logAction(
                 archiveId: $archive?->id,
                 marketCode: $row['market_code'],
@@ -101,6 +103,7 @@ class ArchiveWriterService
                     $archive?->previous_result_set ?? [],
                     $row['result_set'],
                 ) : null,
+                sourceInfo: $sourceInfo,
             );
             $logs++;
 
