@@ -4,6 +4,7 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Carbon\Carbon;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
 use Gametech\Lotto\Services\LegacyArchiveResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,7 +87,7 @@ class LottoResultArchiveLegacyController extends Controller
             $dateLabel = $rawFrom.'..'.$rawTo;
         }
 
-        // Resolve nameTH: prefer lotto_markets display name; fall back to snapshot name_th, then type code.
+        // Resolve nameTH: prefer lotto_markets display name; fall back to snapshot's stored name_th, then type code.
         // Per BOA-262, market_id is optional — snapshot-only types are served without rejection.
         // Yeekee types are still excluded via service-level whereNotIn on getYeekeeCodes().
         $nameTH = 'ทั้งหมด';
@@ -96,7 +97,16 @@ class LottoResultArchiveLegacyController extends Controller
                 ->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE)
                 ->first();
 
-            $nameTH = $market ? ($market->name ?: $type) : $type;
+            if ($market) {
+                $nameTH = $market->name ?: $type;
+            } else {
+                // Snapshot-only type: read display name from stored name_th column.
+                $snapshotNameTH = LottoResultArchiveLegacyResult::where('type', $type)
+                    ->where('fetch_status', 'success')
+                    ->whereNotNull('name_th')
+                    ->value('name_th');
+                $nameTH = $snapshotNameTH ?: $type;
+            }
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');

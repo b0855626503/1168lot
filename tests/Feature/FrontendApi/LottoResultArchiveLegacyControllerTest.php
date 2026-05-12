@@ -241,6 +241,44 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
     }
 
+    public function test_name_th_from_snapshot_for_market_not_in_lotto_markets(): void
+    {
+        // Seed a snapshot-only type (not in lotto_markets) with a stored name_th.
+        // Controller should read nameTH from snapshot's name_th, not from LotteryMarket.
+        DB::table('lotto_result_archive_legacy_results')->insert([
+            'type' => 'snapshot-only',
+            'name_th' => 'หวย Snapshot Only',
+            'request_date' => '2026-04-22',
+            'page' => 1,
+            'source_result_id' => 9999,
+            'lottos_name' => 'snapshot-only',
+            'lottos_th' => 'หวย Snapshot Only',
+            'lottos_date' => '2026-04-22 00:00:00',
+            'lottos_date_raw' => '22/04/2569',
+            'lottos_time' => '10:00',
+            'lottos_number' => '555',
+            'lottos_under' => '55',
+            'market_code' => null,
+            'market_id' => null,
+            'source_url' => null,
+            'fetched_at' => now(),
+            'fetch_status' => 'success',
+            'last_error' => null,
+            'checksum' => null,
+            'payload_json' => null,
+            'unique_key' => hash('sha256', 'snapshot-only|2026-04-22|9999'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=snapshot-only&date=2026-04-22');
+        $response->assertOk()
+            ->assertJsonPath('type', 'snapshot-only')
+            ->assertJsonPath('nameTH', 'หวย Snapshot Only')
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('results.0.lottosNumber', '555');
+    }
+
     public function test_preserves_leading_zero(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
