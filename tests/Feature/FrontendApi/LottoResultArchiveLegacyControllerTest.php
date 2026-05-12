@@ -166,7 +166,8 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ->assertJsonPath('nameTH', 'หวยทดสอบเช้า')
             ->assertJsonPath('date', '2026-04-22')
             ->assertJsonPath('count', 1)
-            ->assertJsonPath('page', 1);
+            ->assertJsonPath('page', 1)
+            ->assertJsonPath('errors', []);
 
         $result = $response->json('results.0');
 

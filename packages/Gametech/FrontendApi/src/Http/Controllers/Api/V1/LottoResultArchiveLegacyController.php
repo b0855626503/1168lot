@@ -102,6 +102,7 @@ class LottoResultArchiveLegacyController extends Controller
             'page' => $page,
             'count' => count($result['results']),
             'results' => $result['results'],
+            'errors' => [],
         ]);
     }
 
