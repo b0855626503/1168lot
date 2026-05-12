@@ -469,6 +469,46 @@ GET /api/v1/lotto/results/by-date?date=2026-04-19
 }
 ```
 
+### `GET /api/v1/lotto/result-archive-legacy`
+- คำอธิบาย: ดึงผลหวยจาก archive ในรูปแบบ legacy-compatible (เทียบเท่า `get_lottery` แบบเก่า)
+- ใช้เมื่อ: ต้องการ migrate frontend เก่าที่ยังเรียก `/api/v1/get_lottery` มาอ่านจาก archive
+- Auth: ไม่ต้องใช้ token
+- Query params:
+  - `type` (string, optional) — market code เช่น `egx30`
+  - `date` (YYYY-MM-DD, optional) — วันเดียว ห้ามใช้ร่วมกับ from_date/to_date
+  - `from_date` + `to_date` (YYYY-MM-DD, optional) — ช่วงวันที่ ต้องคู่กัน
+  - `page` (integer, default 1)
+  - `per_page` (integer, default 100, max 500)
+- Query example:
+```http
+GET /api/v1/lotto/result-archive-legacy?type=egx30&date=2026-04-22
+GET /api/v1/lotto/result-archive-legacy?type=egx30&from_date=2026-04-01&to_date=2026-04-30
+GET /api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30&page=1&per_page=100
+```
+- Response example:
+```json
+{
+  "type": "egx30",
+  "nameTH": "หุ้นอียิปต์",
+  "date": "2026-04-22",
+  "page": 1,
+  "count": 1,
+  "results": [
+    {
+      "id": 100,
+      "lottosName": "egx30",
+      "lottosTH": "หุ้นอียิปต์",
+      "lottosDate": "2026-04-22",
+      "lottosTime": "",
+      "lottosNumber": "785",
+      "lottosUnder": "71"
+    }
+  ],
+  "errors": []
+}
+```
+- หมายเหตุ: อ่านจาก `lotto_result_archives` เท่านั้น ไม่ query `lotto_draws`, ไม่รวมหวยยี่กี
+
 ### `GET /api/v1/lotto/navbar-config`
 - คำอธิบาย: ดึงคอนฟิกเมนูนำทางของโมดูลหวยตามโค้ดที่กำหนด
 - ใช้เมื่อ: ประกอบ navbar/dynamic menu ของหน้า lotto
