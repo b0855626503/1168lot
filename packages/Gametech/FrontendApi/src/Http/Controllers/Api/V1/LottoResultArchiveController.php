@@ -26,10 +26,18 @@ class LottoResultArchiveController extends Controller
      */
     public function index(Request $request, string $marketCode): JsonResponse
     {
+        $datePattern = '/^\d{4}-\d{2}-\d{2}$/';
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
-        $perPage = min((int) $request->query('per_page', 20), 50);
+        $perPage = (int) $request->query('per_page', 20);
         $page = (int) $request->query('page', 1);
+
+        if ($page < 1) {
+            return response()->json(['message' => 'page must be >= 1'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        if ($perPage < 1 || $perPage > 50) {
+            return response()->json(['message' => 'per_page must be between 1 and 50'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         if (! $this->marketExists($marketCode)) {
             return response()->json(['message' => 'Market not found'], Response::HTTP_NOT_FOUND);
@@ -41,18 +49,25 @@ class LottoResultArchiveController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        if ($fromDate && ! preg_match($datePattern, (string) $fromDate)) {
+            return response()->json(['message' => 'from_date must be YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        if ($toDate && ! preg_match($datePattern, (string) $toDate)) {
+            return response()->json(['message' => 'to_date must be YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         if (! $fromDate && ! $toDate) {
             $fromDate = now()->subDays(365)->format('Y-m-d');
             $toDate = now()->format('Y-m-d');
         }
 
-        if (strtotime($toDate) - strtotime($fromDate) > 366 * 86400) {
+        if (strtotime((string) $toDate) - strtotime((string) $fromDate) > 366 * 86400) {
             return response()->json([
                 'message' => 'Date range must not exceed 366 days',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (strtotime($fromDate) > strtotime($toDate)) {
+        if (strtotime((string) $fromDate) > strtotime((string) $toDate)) {
             return response()->json([
                 'message' => 'from_date must be before or equal to to_date',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -62,9 +77,9 @@ class LottoResultArchiveController extends Controller
         $version = Cache::get("lotto:archive:{$marketCode}:version", 1);
         $cacheKey = "lotto:archive:{$marketCode}:v{$version}:list:{$queryFingerprint}";
 
-        return Cache::remember($cacheKey, 120, function () use (
+        $payload = Cache::remember($cacheKey, 120, function () use (
             $marketCode, $fromDate, $toDate, $perPage
-        ): JsonResponse {
+        ): array {
             $paginator = $this->archiveRepo->findDistinctDrawDates(
                 $marketCode, $fromDate, $toDate, $perPage,
             );
@@ -88,15 +103,17 @@ class LottoResultArchiveController extends Controller
                 'results' => $dateRows->pluck('result_set', 'draw_key')->all(),
             ])->values();
 
-            return response()->json([
+            return [
                 'data' => $grouped,
                 'meta' => [
                     'current_page' => $paginator->currentPage(),
                     'per_page' => $paginator->perPage(),
                     'total' => $paginator->total(),
                 ],
-            ]);
+            ];
         });
+
+        return response()->json($payload);
     }
 
     /**
@@ -110,21 +127,27 @@ class LottoResultArchiveController extends Controller
 
         $cacheKey = "lotto:archive:{$marketCode}:{$drawDate}";
 
-        return Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate): JsonResponse {
+        $payload = Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate): array {
             $rows = $this->archiveRepo->findByDrawDates($marketCode, [$drawDate]);
 
             if ($rows->isEmpty()) {
-                return response()->json(['message' => 'No results found'], Response::HTTP_NOT_FOUND);
+                return ['_empty' => true];
             }
 
-            $result = [
-                'market_code' => $rows->first()->market_code,
-                'draw_date' => $drawDate,
-                'results' => $rows->pluck('result_set', 'draw_key')->all(),
+            return [
+                'data' => [
+                    'market_code' => $rows->first()->market_code,
+                    'draw_date' => $drawDate,
+                    'results' => $rows->pluck('result_set', 'draw_key')->all(),
+                ],
             ];
-
-            return response()->json(['data' => $result]);
         });
+
+        if (($payload['_empty'] ?? false) === true) {
+            return response()->json(['message' => 'No results found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($payload);
     }
 
     /**
@@ -138,22 +161,28 @@ class LottoResultArchiveController extends Controller
 
         $cacheKey = "lotto:archive:{$marketCode}:{$drawDate}:{$drawKey}";
 
-        return Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate, $drawKey): JsonResponse {
+        $payload = Cache::remember($cacheKey, 86400, function () use ($marketCode, $drawDate, $drawKey): array {
             $archive = $this->archiveRepo->findByIdentity($marketCode, $drawDate, $drawKey);
 
             if (! $archive) {
-                return response()->json(['message' => 'Result not found'], Response::HTTP_NOT_FOUND);
+                return ['_empty' => true];
             }
 
-            return response()->json(['data' => [
+            return ['data' => [
                 'market_code' => $archive->market_code,
                 'draw_date' => $archive->draw_date instanceof Carbon
                     ? $archive->draw_date->format('Y-m-d')
                     : $archive->draw_date,
                 'draw_key' => $archive->draw_key,
                 'result_set' => $archive->result_set,
-            ]]);
+            ]];
         });
+
+        if (($payload['_empty'] ?? false) === true) {
+            return response()->json(['message' => 'Result not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($payload);
     }
 
     /**

@@ -74,10 +74,10 @@ class ArchiveWriterService
             };
 
             $logAction = match ($status) {
-                'created' => self::ACTION_MIRROR_INTERNAL,
-                'skipped' => self::ACTION_MIRROR_INTERNAL,
                 'corrected' => self::ACTION_CORRECTION,
-                default => self::ACTION_MIRROR_INTERNAL,
+                default => $sourceType === 'external_fetch'
+                    ? self::ACTION_FETCH_EXTERNAL
+                    : self::ACTION_MIRROR_INTERNAL,
             };
 
             $logStatus = match ($status) {

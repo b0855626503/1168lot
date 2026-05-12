@@ -121,14 +121,20 @@ class MirrorExistingResultedDrawsCommand extends Command
 
     protected function filterOnlyMissing(array $rows, int $drawId): array
     {
-        $existing = LottoResultArchive::where('source_draw_id', $drawId)
-            ->get(['market_code', 'draw_date', 'draw_key'])
-            ->map(fn ($a) => $a->market_code.'|'.$a->draw_date.'|'.$a->draw_key)
+        if (empty($rows)) {
+            return [];
+        }
+
+        $marketCode = $rows[0]['market_code'];
+        $drawDate = $rows[0]['draw_date'];
+        $drawKeys = array_column($rows, 'draw_key');
+
+        $existingKeys = LottoResultArchive::where('market_code', $marketCode)
+            ->whereDate('draw_date', $drawDate)
+            ->whereIn('draw_key', $drawKeys)
+            ->pluck('draw_key')
             ->toArray();
 
-        return array_filter($rows, fn ($row) => ! in_array(
-            $row['market_code'].'|'.$row['draw_date'].'|'.$row['draw_key'],
-            $existing, true
-        ));
+        return array_filter($rows, fn ($row) => ! in_array($row['draw_key'], $existingKeys, true));
     }
 }
