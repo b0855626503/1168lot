@@ -13,7 +13,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     {
         parent::setUp();
 
-        Schema::dropIfExists('lotto_result_archives');
+        Schema::dropIfExists('lotto_result_archive_legacy_results');
         Schema::dropIfExists('lotto_markets');
         Schema::dropIfExists('lotto_groups');
 
@@ -33,21 +33,31 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             $table->string('result_mode', 32)->default('normal');
         });
 
-        Schema::create('lotto_result_archives', function (Blueprint $table): void {
+        Schema::create('lotto_result_archive_legacy_results', function (Blueprint $table): void {
             $table->id();
-            $table->string('market_code', 50);
-            $table->date('draw_date');
-            $table->string('draw_key', 50);
-            $table->json('result_set');
-            $table->string('result_hash', 64);
-            $table->unsignedBigInteger('source_draw_id')->nullable();
-            $table->string('source_type', 30)->default('internal_mirror');
-            $table->unsignedInteger('correction_count')->default(0);
-            $table->json('previous_result_set')->nullable();
-            $table->json('source_info_json')->nullable();
-            $table->dateTime('corrected_at')->nullable();
+            $table->string('type', 100);
+            $table->string('name_th')->nullable();
+            $table->date('request_date')->nullable();
+            $table->unsignedInteger('page')->nullable();
+            $table->unsignedBigInteger('source_result_id')->nullable();
+            $table->string('lottos_name', 100);
+            $table->string('lottos_th')->nullable();
+            $table->dateTime('lottos_date')->nullable();
+            $table->string('lottos_date_raw', 50)->nullable();
+            $table->string('lottos_time', 20)->nullable();
+            $table->string('lottos_number', 50)->nullable();
+            $table->string('lottos_under', 50)->nullable();
+            $table->string('market_code', 100)->nullable();
+            $table->unsignedBigInteger('market_id')->nullable();
+            $table->text('source_url')->nullable();
+            $table->dateTime('fetched_at')->nullable();
+            $table->enum('fetch_status', ['success', 'not_found', 'failed'])->default('success');
+            $table->text('last_error')->nullable();
+            $table->string('checksum', 64)->nullable();
+            $table->json('payload_json')->nullable();
+            $table->string('unique_key', 64);
             $table->timestamps();
-            $table->unique(['market_code', 'draw_date', 'draw_key']);
+            $table->unique('unique_key');
         });
 
         DB::table('lotto_groups')->insert(['id' => 1, 'name' => 'Test Group', 'code' => 'test-group']);
@@ -84,70 +94,79 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ],
         ]);
 
-        DB::table('lotto_result_archives')->insert([
+        DB::table('lotto_result_archive_legacy_results')->insert([
             [
+                'type' => 'test-legacy-morning',
+                'name_th' => 'หวยทดสอบเช้า',
+                'request_date' => '2026-04-22',
+                'page' => 1,
+                'source_result_id' => 100,
+                'lottos_name' => 'test-legacy-morning',
+                'lottos_th' => 'หวยทดสอบเช้า',
+                'lottos_date' => '2026-04-22 00:00:00',
+                'lottos_date_raw' => '22/04/2569',
+                'lottos_time' => '15:00',
+                'lottos_number' => '785',
+                'lottos_under' => '71',
                 'market_code' => 'test-legacy-morning',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'three_up',
-                'result_set' => json_encode(['785']),
-                'result_hash' => 'abc123',
-                'source_draw_id' => 100,
-                'source_type' => 'internal_mirror',
+                'market_id' => 1,
+                'source_url' => null,
+                'fetched_at' => now(),
+                'fetch_status' => 'success',
+                'last_error' => null,
+                'checksum' => null,
+                'payload_json' => null,
+                'unique_key' => hash('sha256', 'test-legacy-morning|2026-04-22|100'),
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'market_code' => 'test-legacy-morning',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'two_up',
-                'result_set' => json_encode(['85']),
-                'result_hash' => 'abc456',
-                'source_draw_id' => 100,
-                'source_type' => 'internal_mirror',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'market_code' => 'test-legacy-morning',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'two_down',
-                'result_set' => json_encode(['71']),
-                'result_hash' => 'abc789',
-                'source_draw_id' => 100,
-                'source_type' => 'internal_mirror',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
+                'type' => 'test-legacy-afternoon',
+                'name_th' => 'หวยทดสอบบ่าย',
+                'request_date' => '2026-04-22',
+                'page' => 1,
+                'source_result_id' => null,
+                'lottos_name' => 'test-legacy-afternoon',
+                'lottos_th' => 'หวยทดสอบบ่าย',
+                'lottos_date' => '2026-04-22 00:00:00',
+                'lottos_date_raw' => '22/04/2569',
+                'lottos_time' => '16:30',
+                'lottos_number' => '014',
+                'lottos_under' => '07',
                 'market_code' => 'test-legacy-afternoon',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'three_up',
-                'result_set' => json_encode(['014']),
-                'result_hash' => 'def123',
-                'source_draw_id' => null,
-                'source_type' => 'external_fetch',
+                'market_id' => 2,
+                'source_url' => null,
+                'fetched_at' => now(),
+                'fetch_status' => 'success',
+                'last_error' => null,
+                'checksum' => null,
+                'payload_json' => null,
+                'unique_key' => hash('sha256', 'test-legacy-afternoon|2026-04-22|ext'),
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'market_code' => 'test-legacy-afternoon',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'two_down',
-                'result_set' => json_encode(['07']),
-                'result_hash' => 'def456',
-                'source_draw_id' => null,
-                'source_type' => 'external_fetch',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
+                'type' => 'test-legacy-yeekee',
+                'name_th' => 'หวยยี่กีทดสอบ',
+                'request_date' => '2026-04-22',
+                'page' => 1,
+                'source_result_id' => 200,
+                'lottos_name' => 'test-legacy-yeekee',
+                'lottos_th' => 'หวยยี่กีทดสอบ',
+                'lottos_date' => '2026-04-22 00:00:00',
+                'lottos_date_raw' => '22/04/2569',
+                'lottos_time' => '12:00',
+                'lottos_number' => '999',
+                'lottos_under' => '99',
                 'market_code' => 'test-legacy-yeekee',
-                'draw_date' => '2026-04-22',
-                'draw_key' => 'three_up',
-                'result_set' => json_encode(['999']),
-                'result_hash' => 'yee001',
-                'source_draw_id' => 200,
-                'source_type' => 'internal_mirror',
+                'market_id' => 3,
+                'source_url' => null,
+                'fetched_at' => now(),
+                'fetch_status' => 'success',
+                'last_error' => null,
+                'checksum' => null,
+                'payload_json' => null,
+                'unique_key' => hash('sha256', 'test-legacy-yeekee|2026-04-22|200'),
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -173,11 +192,13 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $this->assertEquals(100, $result['id']);
         $this->assertEquals('785', $result['lottosNumber']);
         $this->assertEquals('71', $result['lottosUnder']);
-        $this->assertArrayNotHasKey('two_up', $result);
+        $this->assertEquals('22/04/2569', $result['lottosDate']);
+        $this->assertEquals('15:00', $result['lottosTime']);
+        $this->assertArrayNotHasKey('source_result_id', $result);
         $this->assertArrayNotHasKey('source_info_json', $result);
         $this->assertArrayNotHasKey('result_hash', $result);
         $this->assertArrayNotHasKey('raw_payload', $result);
-        $this->assertArrayNotHasKey('result_set', $result);
+        $this->assertArrayNotHasKey('payload_json', $result);
     }
 
     public function test_type_and_date_range(): void
@@ -224,21 +245,19 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $this->assertEquals('07', $result['lottosUnder']);
     }
 
-    public function test_deterministic_id_for_external_rows(): void
+    public function test_deterministic_id_for_rows_without_source_result_id(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
         $result = $response->json('results.0');
-        $expectedId = (int) sprintf('%u', crc32('test-legacy-afternoon|2026-04-22'));
+        $expectedId = (int) sprintf('%u', crc32('test-legacy-afternoon|22/04/2569'));
         $this->assertEquals($expectedId, $result['id']);
     }
 
-    public function test_grouped_pagination_returns_complete_object(): void
+    public function test_lottos_date_uses_raw_string(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&from_date=2026-04-01&to_date=2026-04-30&per_page=1');
-        $response->assertOk()->assertJsonPath('count', 1);
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-04-22');
         $result = $response->json('results.0');
-        $this->assertNotEmpty($result['lottosNumber']);
-        $this->assertNotEmpty($result['lottosUnder']);
+        $this->assertEquals('22/04/2569', $result['lottosDate']);
     }
 
     public function test_not_found_returns_errors(): void
@@ -291,7 +310,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_all_types_pagination_counts_groups_not_rows(): void
+    public function test_all_types_pagination_counts_rows(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30');
         $response->assertOk()->assertJsonPath('count', 2);
