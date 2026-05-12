@@ -8,6 +8,7 @@ use Gametech\Lotto\Console\Commands\BackfillYeekeeRoundShootingWindowCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMissingResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
+use Gametech\Lotto\Console\Commands\FetchLegacyArchiveResultsCommand;
 use Gametech\Lotto\Console\Commands\FillMissingResultsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
 use Gametech\Lotto\Console\Commands\GenerateYeekeeRoundsCommand;
@@ -179,6 +180,7 @@ class LottoServiceProvider extends ServiceProvider
             LottoWinningReportReconcileCommand::class,
             LottoCloneAutoPullThaiResultsCommand::class,
             MirrorExistingResultedDrawsCommand::class,
+            FetchLegacyArchiveResultsCommand::class,
             FillMissingResultsCommand::class,
             ReconcileResultArchiveCommand::class,
         ]);
