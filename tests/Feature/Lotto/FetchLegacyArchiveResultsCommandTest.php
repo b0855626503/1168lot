@@ -85,6 +85,14 @@ class FetchLegacyArchiveResultsCommandTest extends TestCase
             ->assertExitCode(1);
     }
 
+    public function test_inverted_date_range_returns_failure(): void
+    {
+        $this->artisan('lotto:legacy-results:fetch', [
+            '--from' => '2026-05-10',
+            '--to' => '2026-05-01',
+        ])->assertExitCode(1);
+    }
+
     public function test_today_option_runs_without_error(): void
     {
         $this->artisan('lotto:legacy-results:fetch', ['--today' => true])

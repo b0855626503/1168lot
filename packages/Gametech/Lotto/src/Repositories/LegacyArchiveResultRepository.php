@@ -3,6 +3,7 @@
 namespace Gametech\Lotto\Repositories;
 
 use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
+use Illuminate\Support\Facades\DB;
 
 class LegacyArchiveResultRepository
 {
@@ -26,24 +27,27 @@ class LegacyArchiveResultRepository
         $key = $data['unique_key'] ?? $this->deriveUniqueKey($data);
         $data['unique_key'] = $key;
 
-        $existing = LottoResultArchiveLegacyResult::query()
-            ->where('unique_key', $key)
-            ->first();
+        return DB::transaction(function () use ($key, $data, $force): LottoResultArchiveLegacyResult {
+            $existing = LottoResultArchiveLegacyResult::query()
+                ->where('unique_key', $key)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing !== null && ! $force) {
-            $incomingStatus = $data['fetch_status'] ?? null;
-            if (
-                $existing->fetch_status === 'success' &&
-                in_array($incomingStatus, ['failed', 'not_found'], true)
-            ) {
-                return $existing;
+            if ($existing !== null && ! $force) {
+                $incomingStatus = $data['fetch_status'] ?? null;
+                if (
+                    $existing->fetch_status === 'success' &&
+                    in_array($incomingStatus, ['failed', 'not_found'], true)
+                ) {
+                    return $existing;
+                }
             }
-        }
 
-        return LottoResultArchiveLegacyResult::updateOrCreate(
-            ['unique_key' => $key],
-            $data
-        );
+            return LottoResultArchiveLegacyResult::updateOrCreate(
+                ['unique_key' => $key],
+                $data
+            );
+        });
     }
 
     /**

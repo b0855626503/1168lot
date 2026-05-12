@@ -74,6 +74,12 @@ class FetchLegacyArchiveResultsCommand extends Command
         $current = $fromDate->copy()->startOfDay();
         $end = $toDate->copy()->startOfDay();
 
+        if ($current->gt($end)) {
+            $this->error('--from date must not be after --to date.');
+
+            return self::FAILURE;
+        }
+
         while ($current->lte($end) && ! $limitReached) {
             $dateStr = $current->format('Y-m-d');
 
