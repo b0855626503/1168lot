@@ -8,7 +8,11 @@ use Illuminate\Support\Facades\DB;
 class LegacyArchiveResultRepository
 {
     /**
-     * Upsert a single result row idempotently.
+     * Upsert a single result row idempotently and return the persisted model.
+     *
+     * This method is the original public contract of the repository.
+     * For commands or callers that need fine-grained outcome information
+     * (created / updated / skipped), use {@see upsertWithResult()} instead.
      *
      * unique_key derivation (if not already present in $data):
      *   - if source_result_id is present: sha256(type|request_date|source_result_id)
@@ -22,7 +26,21 @@ class LegacyArchiveResultRepository
      * @param  array<string, mixed>  $data  Mapped field array (must include type, lottos_name, unique_key or derivable fields)
      * @param  bool  $force  If true, overwrite even success rows
      */
-    public function upsert(array $data, bool $force = false): LegacyArchiveUpsertResult
+    public function upsert(array $data, bool $force = false): LottoResultArchiveLegacyResult
+    {
+        return $this->upsertWithResult($data, $force)->model;
+    }
+
+    /**
+     * Upsert a single result row idempotently and return a rich result object.
+     *
+     * Identical to {@see upsert()} but returns a {@see LegacyArchiveUpsertResult} value object
+     * that reports whether the row was created, actually updated, or skipped — allowing callers
+     * such as the fetch command to make accurate cache-invalidation decisions.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function upsertWithResult(array $data, bool $force = false): LegacyArchiveUpsertResult
     {
         $key = $data['unique_key'] ?? $this->deriveUniqueKey($data);
         $data['unique_key'] = $key;
@@ -58,7 +76,7 @@ class LegacyArchiveResultRepository
             return new LegacyArchiveUpsertResult(
                 model: $model,
                 wasCreated: $model->wasRecentlyCreated,
-                wasUpdated: ! $model->wasRecentlyCreated,
+                wasUpdated: ! $model->wasRecentlyCreated && $model->wasChanged(),
                 wasSkipped: false,
             );
         });

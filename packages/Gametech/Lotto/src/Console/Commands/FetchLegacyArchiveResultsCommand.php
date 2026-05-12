@@ -107,7 +107,7 @@ class FetchLegacyArchiveResultsCommand extends Command
                         break;
                     }
 
-                    $result = $repository->upsert($row, $force);
+                    $result = $repository->upsertWithResult($row, $force);
                     $totalUpserted++;
 
                     if ($result->wasWritten() && $result->model->fetch_status === 'success') {
