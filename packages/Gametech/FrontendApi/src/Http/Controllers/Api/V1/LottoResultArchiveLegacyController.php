@@ -4,6 +4,7 @@ namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
 use Carbon\Carbon;
 use Gametech\Lotto\Models\LotteryMarket;
+use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
 use Gametech\Lotto\Services\LegacyArchiveResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,8 +26,9 @@ class LottoResultArchiveLegacyController extends Controller
      * GET /api/v1/lotto/result-archive-legacy
      *
      * Legacy-compatible public archive result endpoint.
-     * Result data comes from lotto_result_archives only.
+     * Result data comes from lotto_result_archive_legacy_results (API snapshot table).
      * Lookup to lotto_markets is allowed only for display name and yeekee exclusion.
+     * An unknown type is NOT rejected — snapshot data is served if available (market_id is optional per BOA-262).
      * Forbidden: lotto_draws / settlement / wallet / tickets.
      */
     public function index(Request $request): JsonResponse
@@ -85,29 +87,20 @@ class LottoResultArchiveLegacyController extends Controller
             $dateLabel = $rawFrom.'..'.$rawTo;
         }
 
-        // Validate type exists in lotto_markets (non-yeekee)
+        // Resolve nameTH from lotto_markets when available.
+        // For snapshot-only types (not in lotto_markets), nameTH is resolved inside Cache::remember
+        // so the snapshot DB query is only executed on cache misses, not on every cached response.
+        // Per BOA-262, market_id is optional — unknown types are not rejected.
         $nameTH = 'ทั้งหมด';
+        $marketNameTH = null;
 
         if ($type) {
             $market = LotteryMarket::where('code', $type)
                 ->where('result_mode', '!=', LotteryMarket::RESULT_MODE_YEEKEE)
                 ->first();
 
-            if (! $market) {
-                return response()->json([
-                    'type' => $type,
-                    'nameTH' => $type,
-                    'date' => $dateLabel,
-                    'page' => $page,
-                    'count' => 0,
-                    'results' => [],
-                    'errors' => [
-                        ['code' => 'UNSUPPORTED_TYPE', 'message' => "Market type '{$type}' is not supported."],
-                    ],
-                ]);
-            }
-
-            $nameTH = $market->name ?: $type;
+            $marketNameTH = $market ? ($market->name ?: $type) : null;
+            $nameTH = $marketNameTH ?? $type; // temporary; overridden inside cache for snapshot-only
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');
@@ -126,8 +119,19 @@ class LottoResultArchiveLegacyController extends Controller
         }
 
         $payload = Cache::remember($cacheKey, $ttl, function () use (
-            $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH
+            $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH, $marketNameTH
         ): array {
+            // For snapshot-only types (no lotto_markets entry), read nameTH from snapshot.
+            // Placed inside the cache closure so the extra DB query only runs on cache misses.
+            $resolvedNameTH = $nameTH;
+            if ($type !== null && $marketNameTH === null) {
+                $snapshotNameTH = LottoResultArchiveLegacyResult::where('type', $type)
+                    ->where('fetch_status', 'success')
+                    ->whereNotNull('name_th')
+                    ->value('name_th');
+                $resolvedNameTH = $snapshotNameTH ?: $type;
+            }
+
             $result = $this->legacyService->query(
                 type: $type,
                 fromDate: $fromDateStr,
@@ -146,7 +150,7 @@ class LottoResultArchiveLegacyController extends Controller
 
             return [
                 'type' => $type ?: 'all',
-                'nameTH' => $nameTH,
+                'nameTH' => $resolvedNameTH,
                 'date' => $dateLabel,
                 'page' => $page,
                 'count' => count($result['results']),
