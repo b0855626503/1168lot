@@ -311,12 +311,14 @@ class LegacyArchiveSourceClientTest extends TestCase
 
     public function test_cache_not_bumped_when_protection_rule_blocks_not_found_overwrite(): void
     {
-        $existingKey = hash('sha256', 'egx30|2026-04-22|999');
+        // The 404 sentinel from LegacyArchiveSourceClient has source_result_id=null,
+        // lottos_name='egx30', lottos_date_raw=null → key = sha256('egx30|2026-04-22|egx30|')
+        // Pre-seed a success row with that exact key so the protection rule fires.
+        $existingKey = hash('sha256', 'egx30|2026-04-22|egx30|');
         LottoResultArchiveLegacyResult::create([
             'type' => 'egx30',
             'lottos_name' => 'egx30',
             'request_date' => '2026-04-22',
-            'source_result_id' => 999,
             'fetch_status' => 'success',
             'unique_key' => $existingKey,
         ]);
@@ -354,6 +356,24 @@ class LegacyArchiveSourceClientTest extends TestCase
         $this->assertCount(1, $rows);
         $this->assertSame('failed', $rows[0]['fetch_status']);
         $this->assertStringContainsString('Non-JSON', (string) $rows[0]['last_error']);
+    }
+
+    public function test_non_array_results_field_returns_failed_sentinel(): void
+    {
+        Http::fake([
+            $this->baseUrl.'*' => Http::response([
+                'type' => 'egx30',
+                'date' => '2026-04-22',
+                'results' => 'pending',
+            ], 200),
+        ]);
+
+        $client = new LegacyArchiveSourceClient;
+        $rows = $client->fetch('egx30', '2026-04-22');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('failed', $rows[0]['fetch_status']);
+        $this->assertStringContainsString('non-array', strtolower((string) $rows[0]['last_error']));
     }
 
     // -------------------------------------------------------------------------

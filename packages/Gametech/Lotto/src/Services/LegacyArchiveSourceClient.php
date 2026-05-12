@@ -59,6 +59,11 @@ class LegacyArchiveSourceClient
             }
 
             $results = $payload['results'] ?? [];
+
+            if (! is_array($results)) {
+                return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', 'Unexpected non-array results field')];
+            }
+
             $nameTH = (string) ($payload['nameTH'] ?? '');
             $page = isset($payload['page']) ? (int) $payload['page'] : null;
 
