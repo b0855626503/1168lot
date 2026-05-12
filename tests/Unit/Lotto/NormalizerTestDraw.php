@@ -36,6 +36,7 @@ class NormalizerTestDraw
 class NormalizerTestMarket
 {
     public string $code;
+    public ?string $result_mode = null;
 
     public function __construct(string $code)
     {

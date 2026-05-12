@@ -61,9 +61,9 @@ class ArchiveNormalizerServiceTest extends TestCase
 
         $rows = $this->service->normalizeDraw($draw);
 
-        $this->assertCount(6, $rows);
+        $this->assertCount(3, $rows);
         $keys = collect($rows)->pluck('draw_key')->sort()->values()->all();
-        $this->assertSame(['run_down', 'run_up', 'three_front', 'three_up', 'two_down', 'two_up'], $keys);
+        $this->assertSame(['three_up', 'two_down', 'two_up'], $keys);
     }
 
     public function test_unknown_bet_type_skipped(): void

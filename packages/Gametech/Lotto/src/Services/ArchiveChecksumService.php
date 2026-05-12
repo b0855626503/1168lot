@@ -10,12 +10,17 @@ class ArchiveChecksumService
      *
      * @param  array<string>  $resultSet
      */
+    private const HASH_VERSION = 1;
+
     public function computeResultHash(array $resultSet): string
     {
         $sorted = $resultSet;
         sort($sorted, SORT_STRING);
 
-        return hash('sha256', implode('|', $sorted));
+        return hash('sha256', json_encode([
+            'v' => self::HASH_VERSION,
+            'result_set' => $sorted,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     public function verifyIntegrity(string $storedHash, array $resultSet): bool

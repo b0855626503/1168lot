@@ -13,12 +13,9 @@ class ArchiveNormalizerService
      * draw_key:   stable public-facing key for the archive
      */
     protected const BET_TYPE_MAP = [
-        'top_3' => ['result_key' => 'top_3',       'draw_key' => 'three_up'],
-        'top_2' => ['result_key' => 'top_2',       'draw_key' => 'two_up'],
-        'bottom_2' => ['result_key' => 'bottom_2',    'draw_key' => 'two_down'],
-        'run_top' => ['result_key' => 'top_2',       'draw_key' => 'run_up'],
-        'run_bottom' => ['result_key' => 'bottom_2',    'draw_key' => 'run_down'],
-        'tod_3' => ['result_key' => 'top_3',       'draw_key' => 'three_front'],
+        'top_3' => ['result_key' => 'top_3', 'draw_key' => 'three_up'],
+        'top_2' => ['result_key' => 'top_2', 'draw_key' => 'two_up'],
+        'bottom_2' => ['result_key' => 'bottom_2', 'draw_key' => 'two_down'],
     ];
 
     protected ArchiveChecksumService $checksum;
@@ -35,8 +32,13 @@ class ArchiveNormalizerService
      */
     public function normalizeDraw(object $draw): array
     {
+        $market = $draw->market;
+        if (($market->result_mode ?? null) === 'yeekee') {
+            return [];
+        }
+
         $rows = [];
-        $marketCode = $draw->market->code;
+        $marketCode = $market->code;
         $drawDate = $draw->draw_date->format('Y-m-d');
         $resultNumber = $draw->result_number;
 

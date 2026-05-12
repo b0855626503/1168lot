@@ -9,6 +9,10 @@ use InvalidArgumentException;
 
 class ArchiveWriterService
 {
+    public const ACTION_MIRROR_INTERNAL = 'mirror_internal';
+    public const ACTION_FETCH_EXTERNAL = 'fetch_external';
+    public const ACTION_CORRECTION = 'correction';
+    public const ACTION_RECONCILE = 'reconcile';
     protected ArchiveRepository $archiveRepo;
     protected ArchiveLogRepository $logRepo;
 
@@ -70,10 +74,10 @@ class ArchiveWriterService
             };
 
             $logAction = match ($status) {
-                'created' => 'mirror',
-                'skipped' => 'mirror',
-                'corrected' => 'correct',
-                default => 'mirror',
+                'created' => self::ACTION_MIRROR_INTERNAL,
+                'skipped' => self::ACTION_MIRROR_INTERNAL,
+                'corrected' => self::ACTION_CORRECTION,
+                default => self::ACTION_MIRROR_INTERNAL,
             };
 
             $logStatus = match ($status) {
@@ -144,5 +148,6 @@ class ArchiveWriterService
     {
         Cache::forget("lotto:archive:{$marketCode}:{$drawDate}");
         Cache::forget("lotto:archive:{$marketCode}:{$drawDate}:{$drawKey}");
+        Cache::increment("lotto:archive:{$marketCode}:version");
     }
 }

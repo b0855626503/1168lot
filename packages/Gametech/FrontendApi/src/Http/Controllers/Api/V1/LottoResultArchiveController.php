@@ -59,7 +59,8 @@ class LottoResultArchiveController extends Controller
         }
 
         $queryFingerprint = md5("{$fromDate}|{$toDate}|{$page}|{$perPage}");
-        $cacheKey = "lotto:archive:{$marketCode}:list:{$queryFingerprint}";
+        $version = Cache::get("lotto:archive:{$marketCode}:version", 1);
+        $cacheKey = "lotto:archive:{$marketCode}:v{$version}:list:{$queryFingerprint}";
 
         return Cache::remember($cacheKey, 120, function () use (
             $marketCode, $fromDate, $toDate, $perPage

@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\Console\Commands;
 
+use Gametech\Lotto\Jobs\FillMissingResultArchiveJob;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Services\ArchiveWriterService;
 use Gametech\Lotto\Services\ExternalResultFetcherService;
@@ -15,7 +16,8 @@ class FillMissingResultsCommand extends Command
         {--market= : Filter by market code (required)}
         {--from= : Start date YYYY-MM-DD (required)}
         {--to= : End date YYYY-MM-DD (required)}
-        {--dry-run : Report only, do not write}';
+        {--dry-run : Report only, do not write}
+        {--sync : Process synchronously instead of dispatching queue jobs}';
 
     protected $description = 'Fill missing archive results from external sources';
 
@@ -27,6 +29,7 @@ class FillMissingResultsCommand extends Command
         $fromDate = $this->option('from');
         $toDate = $this->option('to');
         $dryRun = (bool) $this->option('dry-run');
+        $sync = (bool) $this->option('sync');
 
         if (! $marketCode || ! $fromDate || ! $toDate) {
             $this->error('--market, --from, and --to are required.');
@@ -42,12 +45,14 @@ class FillMissingResultsCommand extends Command
         }
 
         $runId = (string) Str::uuid();
-        $this->info("Fill missing results: market={$marketCode}, from={$fromDate}, to={$toDate}".($dryRun ? ' (DRY RUN)' : ''));
+        $mode = $sync ? 'SYNC' : 'QUEUE';
+        $this->info("Fill missing results: market={$marketCode}, from={$fromDate}, to={$toDate}, mode={$mode}".($dryRun ? ' (DRY RUN)' : ''));
 
         $cursor = Carbon::parse($fromDate);
         $end = Carbon::parse($toDate);
-        $filled = 0;
         $attempted = 0;
+        $dispatched = 0;
+        $filled = 0;
         $failed = 0;
 
         while ($cursor->lte($end)) {
@@ -73,28 +78,34 @@ class FillMissingResultsCommand extends Command
                 continue;
             }
 
-            $rows = $fetcher->fetchMissing($marketCode, $date);
+            if ($sync) {
+                $rows = $fetcher->fetchMissing($marketCode, $date);
 
-            if (! $rows) {
-                $this->warn("  No data for {$date}");
-                $failed++;
-                $cursor->addDay();
+                if (! $rows) {
+                    $this->warn("  No data for {$date}");
+                    $failed++;
+                    $cursor->addDay();
 
-                continue;
+                    continue;
+                }
+
+                $result = $writer->writeArchive($rows, 'external_fetch', null, $runId);
+                $this->line("  {$date}: created={$result['created']}, skipped={$result['skipped']}");
+                $filled += $result['created'];
+            } else {
+                FillMissingResultArchiveJob::dispatch($marketCode, $date, $runId);
+                $dispatched++;
             }
 
-            $result = $writer->writeArchive($rows, 'external_fetch', null, $runId);
-            $this->line("  {$date}: created={$result['created']}, skipped={$result['skipped']}");
-            $filled += $result['created'];
             $cursor->addDay();
         }
 
         $this->info("Done. Run ID: {$runId}");
-        $this->table(['Metric', 'Count'], [
+        $this->table(['Metric', 'Count'], array_filter([
             ['Attempted', $attempted],
-            ['Filled', $filled],
+            $sync ? ['Filled', $filled] : ['Dispatched', $dispatched],
             ['Failed', $failed],
-        ]);
+        ]));
 
         return self::SUCCESS;
     }
