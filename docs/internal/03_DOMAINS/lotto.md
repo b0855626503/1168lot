@@ -46,6 +46,19 @@
 - การเขียนข้อมูลลง `lotto_dashboard_risk_snapshot` และ `lotto_result_fetch_logs` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `lotto_tickets` และ `lotto_ticket_items` จะไม่เขียน audit ลงตาราง `logs`
 - การเขียนข้อมูลลง `member_lotto_market_policies` จะไม่เขียน audit ลงตาราง `logs`
+- การเขียนข้อมูลลง `lotto_result_archives` และ `lotto_result_archive_logs` จะไม่เขียน audit ลงตาราง `logs`
+
+## Result Archive (Read Model)
+
+- `lotto_result_archives` เป็น dedicated read model สำหรับ public result API — ห้ามใช้แทน `lotto_draws`
+- Archive identity: `unique(market_code, draw_date, draw_key)`
+- `draw_key` เป็น stable public key (three_up, two_down, etc.) — map จาก `bet_type` ภายใน
+- `result_set` = `array<string>` เท่านั้น — preserve leading zero
+- Mirror: `lotto:mirror-result-archives` command + `MirrorDrawToArchiveJob` (afterCommit, queue `lotto`)
+- Fill: `lotto:fill-missing-results` command สำหรับข้อมูลที่ขาดจาก external source
+- Reconcile: `lotto:reconcile-result-archive` command — guard ด้วย `--market`, `--from`, `--to`, `--yes`
+- FrontendApi: `GET /api/v1/lotto/results/{marketCode}` (public, no auth, throttle 60/min)
+- ไม่รวมหวยยี่กี — archive เฉพาะหวยชุด
 
 ## Entry Points
 

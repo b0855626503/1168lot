@@ -27,8 +27,8 @@
   - `BetController`, `DrawController`, `TicketController`, `PackageController`
   - `CentralLotteryResultController`, `InternalResultController`
 - Routes: `packages/Gametech/Lotto/src/Routes/admin.php`, `api.php`
-- Key services: `BetService`, `DrawService`, `SettlementService`, `ResultApplier`, `MemberMarketPolicyService`
-- Key tables: `lotto_draws`, `lotto_draw_bet_settings`, `lotto_market_bet_settings`, `lotto_tickets`, `lotto_ticket_items`, `member_lotto_market_policies`
+- Key services: `BetService`, `DrawService`, `SettlementService`, `ResultApplier`, `MemberMarketPolicyService`, `ArchiveNormalizerService`, `ArchiveWriterService`
+- Key tables: `lotto_draws`, `lotto_draw_bet_settings`, `lotto_market_bet_settings`, `lotto_tickets`, `lotto_ticket_items`, `member_lotto_market_policies`, `lotto_result_archives`, `lotto_result_archive_logs`
 - Tests: `tests/Feature/Lotto/`, `tests/Unit/Lotto/`
 - Domain docs: `docs/internal/03_DOMAINS/lotto.md`, `docs/internal/03_DOMAINS/lotto-discovery.md`
 
@@ -54,6 +54,7 @@
 - Package: `packages/Gametech/FrontendApi/src/`
 - Routes: `packages/Gametech/FrontendApi/src/Routes/api.php`
 - Controllers: `packages/Gametech/FrontendApi/src/Http/Controllers/Api/V1/`
+  - `LottoResultArchiveController` (public result archive — index/show/item, paginated, cached)
 - Middleware: `packages/Gametech/FrontendApi/src/Http/Middleware/`
 - Public API docs: `docs/public/api/frontend-v1/index.md`
 - Tests: `tests/Feature/FrontendApi/`, `tests/Unit/FrontendApi/`
