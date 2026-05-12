@@ -306,8 +306,54 @@ class LegacyArchiveSourceClientTest extends TestCase
             new NullOutput
         );
 
-        // Cache::increment creates the key at 1 if missing, so we check it was NOT set.
         $this->assertNull(Cache::get('lotto:archive:egx30:version'));
+    }
+
+    public function test_cache_not_bumped_when_protection_rule_blocks_not_found_overwrite(): void
+    {
+        $existingKey = hash('sha256', 'egx30|2026-04-22|999');
+        LottoResultArchiveLegacyResult::create([
+            'type' => 'egx30',
+            'lottos_name' => 'egx30',
+            'request_date' => '2026-04-22',
+            'source_result_id' => 999,
+            'fetch_status' => 'success',
+            'unique_key' => $existingKey,
+        ]);
+
+        Http::fake([
+            $this->baseUrl.'*' => Http::response('Not Found', 404),
+        ]);
+
+        Cache::forget('lotto:archive:egx30:version');
+
+        $command = new FetchLegacyArchiveResultsCommand;
+        $command->setLaravel($this->app);
+
+        $command->run(
+            new ArrayInput([
+                '--from' => '2026-04-22',
+                '--to' => '2026-04-22',
+                '--type' => 'egx30',
+            ], $command->getDefinition()),
+            new NullOutput
+        );
+
+        $this->assertNull(Cache::get('lotto:archive:egx30:version'));
+    }
+
+    public function test_non_json_200_response_returns_failed_sentinel(): void
+    {
+        Http::fake([
+            $this->baseUrl.'*' => Http::response('<html>error</html>', 200),
+        ]);
+
+        $client = new LegacyArchiveSourceClient;
+        $rows = $client->fetch('egx30', '2026-04-22');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('failed', $rows[0]['fetch_status']);
+        $this->assertStringContainsString('Non-JSON', (string) $rows[0]['last_error']);
     }
 
     // -------------------------------------------------------------------------

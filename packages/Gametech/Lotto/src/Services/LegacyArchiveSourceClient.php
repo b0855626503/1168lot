@@ -54,6 +54,10 @@ class LegacyArchiveSourceClient
 
             $payload = $response->json();
 
+            if (! is_array($payload)) {
+                return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', 'Non-JSON response body')];
+            }
+
             $results = $payload['results'] ?? [];
             $nameTH = (string) ($payload['nameTH'] ?? '');
             $page = isset($payload['page']) ? (int) $payload['page'] : null;
