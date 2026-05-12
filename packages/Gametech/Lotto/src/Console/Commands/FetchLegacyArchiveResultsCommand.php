@@ -107,10 +107,10 @@ class FetchLegacyArchiveResultsCommand extends Command
                         break;
                     }
 
-                    $repository->upsert($row, $force);
+                    $result = $repository->upsert($row, $force);
                     $totalUpserted++;
 
-                    if (($row['fetch_status'] ?? null) === 'success') {
+                    if ($result->wasWritten() && $result->model->fetch_status === 'success') {
                         Cache::increment('lotto:archive:'.$type.':version');
                     }
                 }

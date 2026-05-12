@@ -23,9 +23,15 @@ class LegacyArchiveSourceClient
      */
     public function fetch(string $type, string $date): array
     {
-        $baseUrl = rtrim((string) config('lotto.legacy_archive.base_url', ''), '/');
-        $url = sprintf('%s?type=%s&date=%s', $baseUrl, urlencode($type), urlencode($date));
         $fetchedAt = Carbon::now();
+        $baseUrl = config('lotto.legacy_archive.base_url');
+
+        if (empty($baseUrl)) {
+            return [$this->buildSentinelRow($type, $date, '', $fetchedAt, 'failed', 'LOTTO_LEGACY_ARCHIVE_BASE_URL is not configured')];
+        }
+
+        $baseUrl = rtrim((string) $baseUrl, '/');
+        $url = sprintf('%s?type=%s&date=%s', $baseUrl, urlencode($type), urlencode($date));
 
         try {
             $response = Http::timeout(30)->get($url);

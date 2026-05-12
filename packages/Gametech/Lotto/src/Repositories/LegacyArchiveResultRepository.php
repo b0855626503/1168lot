@@ -22,12 +22,12 @@ class LegacyArchiveResultRepository
      * @param  array<string, mixed>  $data  Mapped field array (must include type, lottos_name, unique_key or derivable fields)
      * @param  bool  $force  If true, overwrite even success rows
      */
-    public function upsert(array $data, bool $force = false): LottoResultArchiveLegacyResult
+    public function upsert(array $data, bool $force = false): LegacyArchiveUpsertResult
     {
         $key = $data['unique_key'] ?? $this->deriveUniqueKey($data);
         $data['unique_key'] = $key;
 
-        return DB::transaction(function () use ($key, $data, $force): LottoResultArchiveLegacyResult {
+        return DB::transaction(function () use ($key, $data, $force): LegacyArchiveUpsertResult {
             $existing = LottoResultArchiveLegacyResult::query()
                 ->where('unique_key', $key)
                 ->lockForUpdate()
@@ -39,15 +39,27 @@ class LegacyArchiveResultRepository
                     $existing->fetch_status === 'success' &&
                     in_array($incomingStatus, ['failed', 'not_found'], true)
                 ) {
-                    return $existing;
+                    return new LegacyArchiveUpsertResult(
+                        model: $existing,
+                        wasCreated: false,
+                        wasUpdated: false,
+                        wasSkipped: true,
+                    );
                 }
             }
 
             $values = array_diff_key($data, ['unique_key' => true]);
 
-            return LottoResultArchiveLegacyResult::updateOrCreate(
+            $model = LottoResultArchiveLegacyResult::updateOrCreate(
                 ['unique_key' => $key],
                 $values
+            );
+
+            return new LegacyArchiveUpsertResult(
+                model: $model,
+                wasCreated: $model->wasRecentlyCreated,
+                wasUpdated: ! $model->wasRecentlyCreated,
+                wasSkipped: false,
             );
         });
     }
