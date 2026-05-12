@@ -8,6 +8,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\FrontendThemeController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoNavbarConfigController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoResultArchiveController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MarketingClickController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
@@ -82,6 +83,21 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.results_by_date');
             Route::get('lotto/navbar-config', [LottoNavbarConfigController::class, 'show'])
                 ->name('frontend.api.v1.lotto.navbar_config');
+
+            Route::middleware('throttle:60,1')->group(function (): void {
+                Route::get('lotto/results/{marketCode}', [LottoResultArchiveController::class, 'index'])
+                    ->where('marketCode', '[A-Za-z0-9_-]+')
+                    ->name('frontend.api.v1.lotto.results.archive.index');
+                Route::get('lotto/results/{marketCode}/{drawDate}', [LottoResultArchiveController::class, 'show'])
+                    ->where('marketCode', '[A-Za-z0-9_-]+')
+                    ->where('drawDate', '\d{4}-\d{2}-\d{2}')
+                    ->name('frontend.api.v1.lotto.results.archive.show');
+                Route::get('lotto/results/{marketCode}/{drawDate}/{drawKey}', [LottoResultArchiveController::class, 'item'])
+                    ->where('marketCode', '[A-Za-z0-9_-]+')
+                    ->where('drawDate', '\d{4}-\d{2}-\d{2}')
+                    ->where('drawKey', '[A-Za-z0-9_-]+')
+                    ->name('frontend.api.v1.lotto.results.archive.item');
+            });
 
             Route::post('marketing/clicks', [MarketingClickController::class, 'track'])
                 ->middleware('throttle:60,1')

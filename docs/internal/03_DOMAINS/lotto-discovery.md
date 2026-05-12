@@ -72,3 +72,13 @@
 - Endpoint: `GET /api/v1/lotto/navbar-config`
 - Tables: `lotto_navbars`, `lotto_navbar_items`
 - Search keywords: `LottoNavbarController`, `navbar-config`, `lotto_navbars`
+
+## Result Archive
+
+- Service: `ArchiveNormalizerService`, `ArchiveChecksumService`, `ArchiveWriterService`
+- Repository: `ArchiveRepository`, `ArchiveLogRepository`
+- Job: `MirrorDrawToArchiveJob` (afterCommit, queue `lotto`)
+- Commands: `MirrorExistingResultedDrawsCommand`, `FillMissingResultsCommand`, `ReconcileResultArchiveCommand`
+- Tables: `lotto_result_archives`, `lotto_result_archive_logs`
+- API: `GET /api/v1/lotto/results/{marketCode}` → `LottoResultArchiveController` (public, paginated, cached)
+- Search keywords: `lotto_result_archives`, `ArchiveNormalizerService`, `MirrorDrawToArchiveJob`, `lotto:mirror-result-archives`, `lotto:fill-missing-results`, `lotto:reconcile-result-archive`

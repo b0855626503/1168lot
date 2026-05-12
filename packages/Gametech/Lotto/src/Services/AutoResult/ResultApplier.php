@@ -2,12 +2,14 @@
 
 namespace Gametech\Lotto\Services\AutoResult;
 
+use Gametech\Lotto\Jobs\MirrorDrawToArchiveJob;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class ResultApplier
@@ -98,6 +100,13 @@ class ResultApplier
                     'result_fetched_at' => now(),
                 ])->save();
 
+                DB::afterCommit(function () use ($locked) {
+                    MirrorDrawToArchiveJob::dispatch(
+                        $locked->id,
+                        (string) Str::uuid(),
+                    );
+                });
+
                 return [
                     'status' => 'APPLIED',
                     'result_hash' => $resultHash,
@@ -138,6 +147,13 @@ class ResultApplier
                 'result_applied_at' => now(),
                 'result_fetched_at' => now(),
             ])->save();
+
+            DB::afterCommit(function () use ($reloaded) {
+                MirrorDrawToArchiveJob::dispatch(
+                    $reloaded->id,
+                    (string) Str::uuid(),
+                );
+            });
 
             return [
                 'status' => 'APPLIED',
