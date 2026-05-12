@@ -3,7 +3,7 @@
 namespace Gametech\Lotto\Services;
 
 use Gametech\Lotto\Models\LottoResultSource;
-use Gametech\Lotto\Services\AutoResult\AutoResultPipelineService;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ExternalResultFetcherService
@@ -57,15 +57,56 @@ class ExternalResultFetcherService
         }
     }
 
-    /**
-     * @param  array  $result  Raw result data from external source
-     */
     protected function fetchFromSource(LottoResultSource $source, string $drawDate): ?array
     {
-        return app(AutoResultPipelineService::class)->fetchUsingSource(
-            source: $source,
-            lookupDate: $drawDate,
-        );
+        $url = $this->buildFetchUrl($source, $drawDate);
+        $method = strtolower($source->http_method ?? 'get');
+
+        try {
+            $response = Http::timeout($source->timeout_seconds ?: 30)
+                ->withHeaders($source->request_headers_json ?? [])
+                ->{$method}($url);
+
+            if (! $response->successful()) {
+                Log::warning('ExternalResultFetcher: non-successful response', [
+                    'source_id' => $source->id,
+                    'url' => $url,
+                    'status' => $response->status(),
+                ]);
+
+                return null;
+            }
+
+            $body = $response->json();
+
+            if (! is_array($body)) {
+                return null;
+            }
+
+            return $body;
+        } catch (\Exception $e) {
+            Log::warning('ExternalResultFetcher: HTTP request failed', [
+                'source_id' => $source->id,
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    protected function buildFetchUrl(LottoResultSource $source, string $drawDate): string
+    {
+        $url = $source->endpoint_url;
+
+        if (empty($url)) {
+            return '';
+        }
+
+        $url = str_replace('{date}', $drawDate, $url);
+        $url = str_replace('{lookup_date}', $drawDate, $url);
+
+        return $url;
     }
 
     protected function normalizeExternalResult(
