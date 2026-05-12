@@ -96,15 +96,13 @@ class LottoResultArchiveController extends Controller
                 : collect();
 
             $grouped = $rows->groupBy('market_code')->map(
-                fn ($marketRows) => [
-                    'market_code' => $marketRows->first()->market_code,
-                    'dates' => $marketRows->groupBy(fn ($r) => $r->draw_date instanceof Carbon
+                fn ($marketRows, $marketCode) => [
+                    'market_code' => $marketCode,
+                    'draw_dates' => $marketRows->groupBy(fn ($r) => $r->draw_date instanceof Carbon
                         ? $r->draw_date->format('Y-m-d')
                         : $r->draw_date,
-                    )->map(fn ($dateRows) => [
-                        'draw_date' => $dateRows->first()->draw_date instanceof Carbon
-                            ? $dateRows->first()->draw_date->format('Y-m-d')
-                            : $dateRows->first()->draw_date,
+                    )->map(fn ($dateRows, $drawDate) => [
+                        'draw_date' => $drawDate,
                         'results' => $dateRows->pluck('result_set', 'draw_key')->all(),
                     ])->values()->all(),
                 ]
