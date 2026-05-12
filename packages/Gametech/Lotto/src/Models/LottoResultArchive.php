@@ -23,6 +23,11 @@ class LottoResultArchive extends Model implements LottoResultArchiveContract
         'corrected_at',
     ];
 
+    public function market()
+    {
+        return $this->belongsTo(LotteryMarket::class, 'market_code', 'code');
+    }
+
     protected $casts = [
         'draw_date' => 'date',
         'result_set' => 'array',
