@@ -4,6 +4,7 @@ namespace Tests\Feature\Lotto;
 
 use Gametech\Lotto\Console\Commands\FetchLegacyArchiveResultsCommand;
 use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
+use Gametech\Lotto\Services\LegacyArchiveSourceClient;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -18,7 +19,7 @@ class TestableFetchLegacyArchiveResultsCommand extends FetchLegacyArchiveResults
     /** @var array<int, array<string, mixed>> */
     public array $stubRows = [];
 
-    protected function fetchForDate(string $type, string $date): array
+    protected function fetchForDate(string $type, string $date, LegacyArchiveSourceClient $client): array
     {
         return $this->stubRows;
     }

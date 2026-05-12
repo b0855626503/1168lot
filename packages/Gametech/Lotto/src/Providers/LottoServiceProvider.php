@@ -230,6 +230,10 @@ class LottoServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             dirname(__DIR__).'/Config/frontend-theme-presets.php', 'lotto.frontend_theme'
         );
+
+        $this->mergeConfigFrom(
+            dirname(__DIR__).'/Config/legacy-archive.php', 'lotto.legacy_archive'
+        );
     }
 
     protected function registerObservers(): void

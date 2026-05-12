@@ -4,6 +4,7 @@ namespace Tests\Feature\Lotto;
 
 use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
 use Gametech\Lotto\Repositories\LegacyArchiveResultRepository;
+use Gametech\Lotto\Repositories\LegacyArchiveUpsertResult;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -67,7 +68,7 @@ class LegacyArchiveResultRepositoryTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_upsert_creates_new_row(): void
+    public function test_upsert_returns_model(): void
     {
         $data = [
             'type' => 'egx30',
@@ -78,12 +79,35 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '100',
         ];
 
-        $result = $this->repository->upsert($data);
+        $model = $this->repository->upsert($data);
 
-        $this->assertInstanceOf(LottoResultArchiveLegacyResult::class, $result);
-        $this->assertNotNull($result->id);
-        $this->assertSame('egx30', $result->type);
-        $this->assertSame('EGX30', $result->lottos_name);
+        $this->assertInstanceOf(LottoResultArchiveLegacyResult::class, $model);
+        $this->assertNotNull($model->id);
+        $this->assertSame('egx30', $model->type);
+        $this->assertSame('EGX30', $model->lottos_name);
+        $this->assertSame(1, LottoResultArchiveLegacyResult::count());
+    }
+
+    public function test_upsert_with_result_creates_new_row(): void
+    {
+        $data = [
+            'type' => 'egx30',
+            'lottos_name' => 'EGX30',
+            'request_date' => '2026-01-15',
+            'source_result_id' => 12345,
+            'fetch_status' => 'success',
+            'lottos_number' => '100',
+        ];
+
+        $result = $this->repository->upsertWithResult($data);
+
+        $this->assertInstanceOf(LegacyArchiveUpsertResult::class, $result);
+        $this->assertNotNull($result->model->id);
+        $this->assertSame('egx30', $result->model->type);
+        $this->assertSame('EGX30', $result->model->lottos_name);
+        $this->assertTrue($result->wasCreated);
+        $this->assertFalse($result->wasUpdated);
+        $this->assertFalse($result->wasSkipped);
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
     }
 
@@ -98,10 +122,11 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '100',
         ];
 
-        $first = $this->repository->upsert($data);
-        $second = $this->repository->upsert($data);
+        $first = $this->repository->upsertWithResult($data);
+        $second = $this->repository->upsertWithResult($data);
 
-        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->model->id, $second->model->id);
+        $this->assertFalse($second->wasUpdated);
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
     }
 
@@ -116,7 +141,7 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '999',
         ];
 
-        $this->repository->upsert($successData);
+        $this->repository->upsertWithResult($successData);
 
         $failedData = array_merge($successData, [
             'fetch_status' => 'failed',
@@ -124,10 +149,12 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => null,
         ]);
 
-        $result = $this->repository->upsert($failedData, false);
+        $result = $this->repository->upsertWithResult($failedData, false);
 
-        $this->assertSame('success', $result->fetch_status);
-        $this->assertSame('999', $result->lottos_number);
+        $this->assertSame('success', $result->model->fetch_status);
+        $this->assertSame('999', $result->model->lottos_number);
+        $this->assertTrue($result->wasSkipped);
+        $this->assertFalse($result->wasWritten());
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
     }
 
@@ -142,17 +169,18 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '456',
         ];
 
-        $this->repository->upsert($successData);
+        $this->repository->upsertWithResult($successData);
 
         $notFoundData = array_merge($successData, [
             'fetch_status' => 'not_found',
             'lottos_number' => null,
         ]);
 
-        $result = $this->repository->upsert($notFoundData, false);
+        $result = $this->repository->upsertWithResult($notFoundData, false);
 
-        $this->assertSame('success', $result->fetch_status);
-        $this->assertSame('456', $result->lottos_number);
+        $this->assertSame('success', $result->model->fetch_status);
+        $this->assertSame('456', $result->model->lottos_number);
+        $this->assertTrue($result->wasSkipped);
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
     }
 
@@ -167,7 +195,7 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '999',
         ];
 
-        $this->repository->upsert($successData);
+        $this->repository->upsertWithResult($successData);
 
         $failedData = array_merge($successData, [
             'fetch_status' => 'failed',
@@ -175,10 +203,12 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => null,
         ]);
 
-        $result = $this->repository->upsert($failedData, true);
+        $result = $this->repository->upsertWithResult($failedData, true);
 
-        $this->assertSame('failed', $result->fetch_status);
-        $this->assertNull($result->lottos_number);
+        $this->assertSame('failed', $result->model->fetch_status);
+        $this->assertNull($result->model->lottos_number);
+        $this->assertFalse($result->wasSkipped);
+        $this->assertTrue($result->wasWritten());
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
     }
 
@@ -194,16 +224,16 @@ class LegacyArchiveResultRepositoryTest extends TestCase
             'lottos_number' => '111222',
         ];
 
-        $first = $this->repository->upsert($data);
+        $first = $this->repository->upsertWithResult($data);
 
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
 
-        $second = $this->repository->upsert($data);
+        $second = $this->repository->upsertWithResult($data);
 
-        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->model->id, $second->model->id);
         $this->assertSame(1, LottoResultArchiveLegacyResult::count());
 
         $expectedKey = hash('sha256', 'thai_gov|2026-03-01|THAI_GOV|01/03/2026');
-        $this->assertSame($expectedKey, $first->unique_key);
+        $this->assertSame($expectedKey, $first->model->unique_key);
     }
 }
