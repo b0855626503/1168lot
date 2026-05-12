@@ -9,6 +9,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\GameController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoNavbarConfigController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoResultArchiveController;
+use Gametech\FrontendApi\Http\Controllers\Api\V1\LottoResultArchiveLegacyController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MarketingClickController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\MemberController;
 use Gametech\FrontendApi\Http\Controllers\Api\V1\OnlineController;
@@ -85,6 +86,8 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.navbar_config');
 
             Route::middleware('throttle:60,1')->group(function (): void {
+                Route::get('lotto/result-archive-legacy', [LottoResultArchiveLegacyController::class, 'index'])
+                    ->name('frontend.api.v1.lotto.result_archive_legacy');
                 Route::get('lotto/results', [LottoResultArchiveController::class, 'allMarkets'])
                     ->name('frontend.api.v1.lotto.results.archive.all');
                 Route::get('lotto/results/{marketCode}', [LottoResultArchiveController::class, 'index'])
