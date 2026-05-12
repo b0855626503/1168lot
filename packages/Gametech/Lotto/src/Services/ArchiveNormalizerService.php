@@ -2,6 +2,7 @@
 
 namespace Gametech\Lotto\Services;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Illuminate\Support\Facades\Log;
 
 class ArchiveNormalizerService
@@ -33,7 +34,7 @@ class ArchiveNormalizerService
     public function normalizeDraw(object $draw): array
     {
         $market = $draw->market;
-        if (($market->result_mode ?? null) === 'yeekee') {
+        if (($market->result_mode ?? null) === LotteryMarket::RESULT_MODE_YEEKEE) {
             return [];
         }
 

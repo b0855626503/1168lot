@@ -129,6 +129,39 @@ class ArchiveNormalizerServiceTest extends TestCase
         $this->assertNotEmpty($rows[0]['result_hash']);
     }
 
+    public function test_yeekee_draw_returns_empty(): void
+    {
+        $draw = new NormalizerTestDraw(
+            id: 1,
+            marketCode: 'yeekee',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785', 'top_2' => '85', 'bottom_2' => '71'],
+            betTypes: ['top_3', 'top_2', 'bottom_2'],
+        );
+        $draw->market->result_mode = 'yeekee';
+
+        $rows = $this->service->normalizeDraw($draw);
+
+        $this->assertEmpty($rows);
+    }
+
+    public function test_normal_draw_not_excluded(): void
+    {
+        $draw = new NormalizerTestDraw(
+            id: 1,
+            marketCode: 'chaina-morning',
+            drawDate: '2026-05-12',
+            resultNumber: ['top_3' => '785'],
+            betTypes: ['top_3'],
+        );
+        $draw->market->result_mode = 'normal';
+
+        $rows = $this->service->normalizeDraw($draw);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('three_up', $rows[0]['draw_key']);
+    }
+
     public function test_market_code_matches_draw_market(): void
     {
         $draw = new NormalizerTestDraw(

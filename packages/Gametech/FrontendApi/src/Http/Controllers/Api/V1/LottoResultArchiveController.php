@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 
 class LottoResultArchiveController extends Controller
@@ -26,17 +27,23 @@ class LottoResultArchiveController extends Controller
      */
     public function index(Request $request, string $marketCode): JsonResponse
     {
+        $validator = Validator::make($request->query(), [
+            'from_date' => 'nullable|date_format:Y-m-d',
+            'to_date' => 'nullable|date_format:Y-m-d',
+            'page' => 'integer|min:1',
+            'per_page' => 'integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $rawFrom = $request->query('from_date');
         $rawTo = $request->query('to_date');
         $perPage = (int) $request->query('per_page', 20);
         $page = (int) $request->query('page', 1);
-
-        if ($page < 1) {
-            return response()->json(['message' => 'page must be >= 1'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-        if ($perPage < 1 || $perPage > 50) {
-            return response()->json(['message' => 'per_page must be between 1 and 50'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
 
         if (! $this->marketExists($marketCode)) {
             return response()->json(['message' => 'Market not found'], Response::HTTP_NOT_FOUND);
@@ -48,40 +55,24 @@ class LottoResultArchiveController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $fromDate = null;
-        $toDate = null;
+        if ($rawFrom && $rawTo) {
+            $fromDate = Carbon::createFromFormat('!Y-m-d', (string) $rawFrom);
+            $toDate = Carbon::createFromFormat('!Y-m-d', (string) $rawTo);
 
-        if ($rawFrom) {
-            $fromDate = Carbon::createFromFormat('Y-m-d', (string) $rawFrom);
-            if (! $fromDate) {
-                return response()->json(['message' => 'from_date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            if ($fromDate->gt($toDate)) {
+                return response()->json([
+                    'message' => 'from_date must be before or equal to to_date',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
-            $fromDate = $fromDate->startOfDay();
-        }
 
-        if ($rawTo) {
-            $toDate = Carbon::createFromFormat('Y-m-d', (string) $rawTo);
-            if (! $toDate) {
-                return response()->json(['message' => 'to_date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            if ($fromDate->diffInDays($toDate) > 366) {
+                return response()->json([
+                    'message' => 'Date range must not exceed 366 days',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
-            $toDate = $toDate->startOfDay();
-        }
-
-        if (! $fromDate && ! $toDate) {
+        } else {
             $fromDate = now()->subDays(365)->startOfDay();
             $toDate = now()->startOfDay();
-        }
-
-        if ($fromDate->gt($toDate)) {
-            return response()->json([
-                'message' => 'from_date must be before or equal to to_date',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-
-        if ($fromDate->diffInDays($toDate) > 366) {
-            return response()->json([
-                'message' => 'Date range must not exceed 366 days',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');
@@ -135,6 +126,10 @@ class LottoResultArchiveController extends Controller
      */
     public function show(string $marketCode, string $drawDate): JsonResponse
     {
+        if (! $this->validDrawDate($drawDate)) {
+            return response()->json(['message' => 'drawDate must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         if (! $this->marketExists($marketCode)) {
             return response()->json(['message' => 'Market not found'], Response::HTTP_NOT_FOUND);
         }
@@ -169,6 +164,10 @@ class LottoResultArchiveController extends Controller
      */
     public function item(string $marketCode, string $drawDate, string $drawKey): JsonResponse
     {
+        if (! $this->validDrawDate($drawDate)) {
+            return response()->json(['message' => 'drawDate must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         if (! $this->marketExists($marketCode)) {
             return response()->json(['message' => 'Market not found'], Response::HTTP_NOT_FOUND);
         }
@@ -205,5 +204,26 @@ class LottoResultArchiveController extends Controller
     protected function marketExists(string $code): bool
     {
         return LotteryMarket::where('code', $code)->exists();
+    }
+
+    /**
+     * Strict date validation with round-trip check: parsed->format('Y-m-d') === raw.
+     *
+     * date_format:Y-m-d rejects invalid dates like 2026-99-99, 2026-02-31, abc, 2026-1-1.
+     * The round-trip check catches Carbon coercions (e.g. 2026-02-30 → 2026-03-02).
+     */
+    protected function validDrawDate(string $raw): bool
+    {
+        $validator = Validator::make(['drawDate' => $raw], [
+            'drawDate' => ['required', 'date_format:Y-m-d'],
+        ]);
+
+        if ($validator->fails()) {
+            return false;
+        }
+
+        $parsed = Carbon::createFromFormat('!Y-m-d', $raw);
+
+        return $parsed && $parsed->format('Y-m-d') === $raw;
     }
 }
