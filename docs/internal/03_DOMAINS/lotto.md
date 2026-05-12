@@ -1,6 +1,6 @@
 # Lotto Domain Note
 
-อัปเดตล่าสุด: 2026-04-24
+อัปเดตล่าสุด: 2026-05-12
 
 ## ใช้อ่านเมื่อ
 
@@ -57,10 +57,18 @@
 - Mirror: `lotto:mirror-result-archives` command + `MirrorDrawToArchiveJob` (afterCommit, queue `lotto`)
 - Fill: `lotto:fill-missing-results` command สำหรับข้อมูลที่ขาดจาก external source
 - Reconcile: `lotto:reconcile-result-archive` command — guard ด้วย `--market`, `--from`, `--to`, `--yes`
-- FrontendApi: `GET /api/v1/lotto/results/{marketCode}` (public, no auth, throttle 60/min)
-- FrontendApi: `GET /api/v1/lotto/result-archive-legacy` (public, no auth, legacy-compatible)
+- FrontendApi: `GET /api/v1/lotto/results/{marketCode}` อ่านจาก `lotto_result_archives` (public, no auth, throttle 60/min)
 - ไม่รวมหวยยี่กี — archive เฉพาะหวยชุด
-- `LegacyArchiveResultService` — map archive rows → legacy response shape (three_up→lottosNumber, two_down→lottosUnder)
+
+## Legacy Archive Snapshot Table (BOA-262)
+
+- `lotto_result_archive_legacy_results` เป็น API snapshot table — ไม่ใช่ settlement source
+- Populated by: `lotto:legacy-results:fetch` command (`FetchLegacyArchiveResultsCommand`) ผ่าน `LegacyArchiveSourceClient`
+- FrontendApi: `GET /api/v1/lotto/result-archive-legacy` อ่านจาก `lotto_result_archive_legacy_results` (public, no auth)
+- `LegacyArchiveResultService` — query snapshot โดย `fetch_status='success'` เท่านั้น → format → response
+- `fetch_status` enum: `success` | `not_found` | `failed` — sentinel rows (`not_found`/`failed`) ไม่แสดงใน API
+- `unique_key` deduplication: `sha256(type|date|source_result_id)` หรือ fallback `sha256(type|date|lottos_name|lottos_date_raw)`
+- ไม่เชื่อมกับ `lotto_draws` / settlement / wallet / tickets — ห้ามใช้เป็น payout source
 
 ## Entry Points
 
