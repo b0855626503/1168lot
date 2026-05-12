@@ -87,7 +87,6 @@ class LottoResultArchiveLegacyController extends Controller
 
         // Validate type exists in lotto_markets (non-yeekee)
         $nameTH = 'ทั้งหมด';
-        $errors = [];
 
         if ($type) {
             $market = LotteryMarket::where('code', $type)

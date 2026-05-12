@@ -1,0 +1,36 @@
+{
+    "generated_at": "2026-05-12T08:05:55+00:00",
+    "retrieval_metrics": {
+        "estimated_hops_before": 4,
+        "estimated_hops_after": 2,
+        "estimated_files_opened_before": 4,
+        "estimated_files_opened_after": 2,
+        "memory_first_pointer_count": 0,
+        "docs_first_pointer_count": 0
+    },
+    "token_estimate": {
+        "legacy_pack_words": 0,
+        "current_pack_words": 0,
+        "legacy_token_estimate": 0,
+        "current_token_estimate": 0,
+        "estimated_token_reduction": 0
+    },
+    "drift": {
+        "before_total": 0,
+        "after_total": 16,
+        "delta": -16,
+        "critical_after": 16,
+        "non_critical_after": 0,
+        "domains_low_coverage": [
+            "auth",
+            "payment",
+            "wallet",
+            "game"
+        ]
+    },
+    "non_critical_buckets": {
+        "useful_soon": 0,
+        "docs_only_acceptable": 0,
+        "ignore_noise": 0
+    }
+}

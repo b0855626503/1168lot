@@ -103,8 +103,10 @@ class LegacyArchiveResultService
             $lottosNumber = $this->extractResultValue($indexed[$prefix.'three_up'] ?? null);
             $lottosUnder = $this->extractResultValue($indexed[$prefix.'two_down'] ?? null);
 
-            // Use first matching row for source_draw_id
-            $sourceDrawId = $rows->firstWhere('market_code', $marketCode)?->source_draw_id;
+            // Use first matching row for source_draw_id (must match both market_code AND draw_date)
+            $sourceDrawId = $rows
+                ->where('market_code', $marketCode)
+                ->firstWhere('draw_date', $drawDate)?->source_draw_id;
 
             $results[] = [
                 'id' => $sourceDrawId
