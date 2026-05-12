@@ -62,6 +62,6 @@ class FillMissingResultArchiveJob implements ShouldQueue
 
     protected function isFetchEnabled(): bool
     {
-        return (bool) (env('LOTTO_ARCHIVE_FETCH_ENABLED') ?? true);
+        return (bool) (env('LOTTO_ARCHIVE_FETCH_ENABLED', false));
     }
 }

@@ -87,6 +87,36 @@ class ArchiveRepository
     }
 
     /**
+     * Paginated distinct draw_dates across ALL markets.
+     */
+    public function findDistinctDrawDatesAll(
+        ?string $fromDate,
+        ?string $toDate,
+        int $perPage = 20,
+    ): LengthAwarePaginator {
+        return DB::table('lotto_result_archives')
+            ->select('draw_date')
+            ->when($fromDate, fn ($q) => $q->where('draw_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->where('draw_date', '<=', $toDate))
+            ->distinct()
+            ->orderBy('draw_date', 'desc')
+            ->paginate($perPage);
+    }
+
+    /**
+     * All rows for given draw_dates across ALL markets, grouped by market_code.
+     */
+    public function findAllByDrawDates(array $drawDates): Collection
+    {
+        return $this->model->newQuery()
+            ->whereIn('draw_date', $drawDates)
+            ->orderBy('market_code')
+            ->orderBy('draw_date', 'desc')
+            ->orderBy('draw_key')
+            ->get();
+    }
+
+    /**
      * Persist one archive row with idempotent three-branch logic.
      *
      * Returns: ['status' => 'created'|'skipped'|'corrected', 'archive' => ?LottoResultArchive]

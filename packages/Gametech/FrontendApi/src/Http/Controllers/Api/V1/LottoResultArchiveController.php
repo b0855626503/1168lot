@@ -22,6 +22,108 @@ class LottoResultArchiveController extends Controller
     }
 
     /**
+     * GET /api/v1/lotto/results?date=YYYY-MM-DD or ?from_date=&to_date=
+     * Paginated results for all markets on a single date or date range.
+     */
+    public function allMarkets(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->query(), [
+            'date' => 'nullable|date_format:Y-m-d|prohibits:from_date,to_date',
+            'from_date' => 'nullable|date_format:Y-m-d|required_with:to_date',
+            'to_date' => 'nullable|date_format:Y-m-d|required_with:from_date',
+            'page' => 'integer|min:1',
+            'per_page' => 'integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $perPage = (int) $request->query('per_page', 20);
+        $page = (int) $request->query('page', 1);
+
+        $singleDate = $request->query('date');
+        $rawFrom = $request->query('from_date');
+        $rawTo = $request->query('to_date');
+
+        if ($singleDate) {
+            if (! $this->validDrawDate($singleDate)) {
+                return response()->json(['message' => 'date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $fromDate = Carbon::createFromFormat('!Y-m-d', $singleDate);
+            $toDate = $fromDate->copy();
+        } elseif ($rawFrom && $rawTo) {
+            $fromDate = Carbon::createFromFormat('!Y-m-d', (string) $rawFrom);
+            $toDate = Carbon::createFromFormat('!Y-m-d', (string) $rawTo);
+
+            if ($fromDate->gt($toDate)) {
+                return response()->json([
+                    'message' => 'from_date must be before or equal to to_date',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            if ($fromDate->diffInDays($toDate) > 366) {
+                return response()->json([
+                    'message' => 'Date range must not exceed 366 days',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        } else {
+            $fromDate = now()->subDays(365)->startOfDay();
+            $toDate = now()->startOfDay();
+        }
+
+        $fromDateStr = $fromDate->format('Y-m-d');
+        $toDateStr = $toDate->format('Y-m-d');
+
+        $queryFingerprint = md5("all|{$fromDateStr}|{$toDateStr}|{$page}|{$perPage}");
+        $cacheKey = "lotto:archive:all:v1:list:{$queryFingerprint}";
+
+        $payload = Cache::remember($cacheKey, 120, function () use (
+            $fromDateStr, $toDateStr, $perPage
+        ): array {
+            $paginator = $this->archiveRepo->findDistinctDrawDatesAll(
+                $fromDateStr, $toDateStr, $perPage,
+            );
+
+            $drawDates = collect($paginator->items())->pluck('draw_date')->map(
+                fn ($d) => $d instanceof Carbon ? $d->format('Y-m-d') : $d,
+            )->filter()->values()->all();
+
+            $rows = ! empty($drawDates)
+                ? $this->archiveRepo->findAllByDrawDates($drawDates)
+                : collect();
+
+            $grouped = $rows->groupBy('market_code')->map(
+                fn ($marketRows) => [
+                    'market_code' => $marketRows->first()->market_code,
+                    'dates' => $marketRows->groupBy(fn ($r) => $r->draw_date instanceof Carbon
+                        ? $r->draw_date->format('Y-m-d')
+                        : $r->draw_date,
+                    )->map(fn ($dateRows) => [
+                        'draw_date' => $dateRows->first()->draw_date instanceof Carbon
+                            ? $dateRows->first()->draw_date->format('Y-m-d')
+                            : $dateRows->first()->draw_date,
+                        'results' => $dateRows->pluck('result_set', 'draw_key')->all(),
+                    ])->values()->all(),
+                ]
+            )->values();
+
+            return [
+                'data' => $grouped,
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ],
+            ];
+        });
+
+        return response()->json($payload);
+    }
+
+    /**
      * GET /api/v1/lotto/results/{marketCode}
      * Paginated results for a market, grouped by draw_date.
      */
