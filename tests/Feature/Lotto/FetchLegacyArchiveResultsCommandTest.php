@@ -19,7 +19,7 @@ class TestableFetchLegacyArchiveResultsCommand extends FetchLegacyArchiveResults
     /** @var array<int, array<string, mixed>> */
     public array $stubRows = [];
 
-    protected function fetchForDate(string $type, string $date, LegacyArchiveSourceClient $client): array
+    protected function fetchForDate(string $type, string $date, LegacyArchiveSourceClient $client, ?string $endpointUrl = null, array $queryParams = []): array
     {
         return $this->stubRows;
     }

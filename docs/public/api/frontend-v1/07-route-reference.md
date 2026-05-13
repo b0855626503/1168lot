@@ -592,7 +592,7 @@ GET /api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30&
   "errors": []
 }
 ```
-- หมายเหตุ: อ่านจาก `lotto_result_archives` เท่านั้น ไม่ query `lotto_draws`, ไม่รวมหวยยี่กี
+- หมายเหตุ: อ่านจาก `lotto_result_archive_legacy_results` (snapshot จาก external `get_lottery.php` populate โดย `php artisan lotto:legacy-results:fetch`) ไม่ query `lotto_draws`, ไม่รวมหวยยี่กี
 
 <a id="get-apiv1lottonavbar-config-old"></a>
 ### `GET /api/v1/lotto/navbar-config`

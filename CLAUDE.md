@@ -25,6 +25,7 @@ Do not load workspace memory/persona files for normal coding tasks.
 - If code and docs mismatch, report it before changing behavior.
 - Use the startup path from `docs/START-HERE.md`.
 - Open large files only when task scope or risk justifies it.
+- Never answer with guessed/fabricated config keys, env vars, class names, method names, or file paths. Grep/read the local codebase first, verify, then answer.
 
 ---
 

@@ -23,17 +23,22 @@ class LegacyArchiveSourceClient
      *
      * @return array<int, array<string, mixed>>
      */
-    public function fetch(string $type, string $date): array
+    public function fetch(string $type, string $date, ?string $endpointUrl = null, array $queryParams = []): array
     {
         $fetchedAt = Carbon::now();
-        $baseUrl = config('lotto.legacy_archive.base_url');
+        $baseUrl = $endpointUrl ?: config('lotto.legacy_archive.base_url');
 
         if (empty($baseUrl)) {
             return [$this->buildSentinelRow($type, $date, '', $fetchedAt, 'failed', 'LOTTO_LEGACY_ARCHIVE_BASE_URL is not configured')];
         }
 
         $baseUrl = rtrim((string) $baseUrl, '/');
-        $url = sprintf('%s?type=%s&date=%s', $baseUrl, urlencode($type), urlencode($date));
+
+        if (empty($queryParams)) {
+            $queryParams = ['type' => $type, 'date' => $date];
+        }
+
+        $url = $baseUrl.'?'.http_build_query($queryParams);
 
         try {
             $response = Http::timeout(30)->get($url);
@@ -98,7 +103,7 @@ class LegacyArchiveSourceClient
             $page = isset($payload['page']) ? (int) $payload['page'] : null;
 
             if (empty($results)) {
-                return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'not_found', null)];
+                return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'not_found', null, $nameTH, $page)];
             }
 
             $rows = [];
@@ -118,6 +123,148 @@ class LegacyArchiveSourceClient
 
             return [$this->buildSentinelRow($type, $date, $url, $fetchedAt, 'failed', $e->getMessage())];
         }
+    }
+
+    /**
+     * Fetch result rows from exphuay.com SvelteKit data endpoint.
+     *
+     * One request returns ~30 days of results. The response uses SvelteKit's
+     * de-duplicated JSON format where a template object maps field names to
+     * array indices, and values follow at those indices.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchFromExphuay(string $type, string $endpointUrl): array
+    {
+        $fetchedAt = Carbon::now();
+        $url = sprintf('https://exphuay.com/result/%s/__data.json?x-sveltekit-invalidated=01', urlencode($type));
+
+        try {
+            $response = Http::timeout(30)->get($url);
+
+            if (! $response->successful()) {
+                Log::warning('LegacyArchiveSourceClient: exphuay non-successful response', [
+                    'type' => $type,
+                    'url' => $url,
+                    'status' => $response->status(),
+                ]);
+
+                return [];
+            }
+
+            $payload = $response->json();
+
+            if (! is_array($payload)) {
+                return [];
+            }
+
+            $rows = $this->parseExphuayPayload($payload, $type, $url, $fetchedAt);
+
+            if (empty($rows)) {
+                return [$this->buildSentinelRow($type, '', $url, $fetchedAt, 'not_found', null)];
+            }
+
+            // Fill request_date from lottos_date for exphuay rows (no separate query date)
+            foreach ($rows as &$row) {
+                if (empty($row['request_date']) && ! empty($row['lottos_date'])) {
+                    $row['request_date'] = $row['lottos_date'] instanceof \DateTimeInterface
+                        ? $row['lottos_date']->format('Y-m-d')
+                        : Carbon::parse($row['lottos_date'])->format('Y-m-d');
+                }
+            }
+            unset($row);
+
+            return $rows;
+        } catch (\Throwable $e) {
+            Log::error('LegacyArchiveSourceClient: exphuay fetch exception', [
+                'type' => $type,
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Parse exphuay SvelteKit de-duplicated JSON payload.
+     *
+     * The SvelteKit format uses a template→absolute-index map: a template object
+     * maps field names to absolute indices in the data array. Resolution is simply
+     * $value = $data[$template[$fieldName]].
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    protected function parseExphuayPayload(array $payload, string $type, string $url, Carbon $fetchedAt): array
+    {
+        $data = $payload['nodes'][1]['data'] ?? null;
+
+        if (! is_array($data)) {
+            return [];
+        }
+
+        $rows = [];
+
+        // Current result template is at data[2]
+        $current = $this->exphuayEntry($data, $data[2] ?? []);
+
+        if ($current !== null) {
+            $rows[] = $this->mapResultItem($current, $type, '', '', null, $url, $fetchedAt);
+        }
+
+        // Backward list: each index points to an entry template object
+        $backwardIdx = $data[1]['backward'] ?? null;
+        $backwardIndices = $backwardIdx !== null ? ($data[$backwardIdx] ?? []) : [];
+
+        foreach ($backwardIndices as $entryTemplateIdx) {
+            $entryTemplate = $data[$entryTemplateIdx] ?? null;
+
+            if (! is_array($entryTemplate)) {
+                continue;
+            }
+
+            $entry = $this->exphuayEntry($data, $entryTemplate);
+
+            if ($entry !== null) {
+                $rows[] = $this->mapResultItem($entry, $type, '', '', null, $url, $fetchedAt);
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Resolve a single exphuay entry from the data array using a template.
+     *
+     * The template maps field names to absolute array indices.
+     *
+     * @param  array<int, mixed>  $data
+     * @param  array<string, int>  $template  e.g. {lottosName:6, lottosNumber:10, ...}
+     */
+    protected function exphuayEntry(array $data, array $template): ?array
+    {
+        $fields = ['id', 'lottosName', 'lottosTH', 'lottosDate', 'lottosTime', 'lottosNumber', 'lottosUnder'];
+
+        $entry = [];
+
+        foreach ($fields as $field) {
+            $idx = $template[$field] ?? null;
+
+            if ($idx === null || ! isset($data[$idx])) {
+                continue;
+            }
+
+            $value = $data[$idx];
+
+            if (is_array($value)) {
+                continue;
+            }
+
+            $entry[$field] = $value;
+        }
+
+        return ! empty($entry['lottosName']) && ! empty($entry['lottosNumber']) ? $entry : null;
     }
 
     /**
@@ -179,12 +326,14 @@ class LegacyArchiveSourceClient
         Carbon $fetchedAt,
         string $fetchStatus,
         ?string $lastError,
+        string $nameTH = '',
+        ?int $page = null,
     ): array {
         return [
             'type' => $type,
-            'name_th' => null,
+            'name_th' => $nameTH !== '' ? $nameTH : null,
             'request_date' => $date,
-            'page' => null,
+            'page' => $page,
             'source_result_id' => null,
             'lottos_name' => $type,
             'lottos_th' => null,
