@@ -339,7 +339,9 @@ class LottoResultArchiveLegacyController extends BaseController
             'draw_id' => $row->source_result_id !== null
                 ? (int) $row->source_result_id
                 : (int) $row->id,
-            'draw_date' => (string) ($row->request_date ?? ''),
+            'draw_date' => $row->request_date instanceof \DateTimeInterface
+                ? $row->request_date->format('Y-m-d')
+                : (string) ($row->request_date ?? ''),
             'result_at' => $row->fetched_at instanceof \DateTimeInterface
                 ? $row->fetched_at->format('Y-m-d H:i:s')
                 : (string) ($row->fetched_at ?? ''),
