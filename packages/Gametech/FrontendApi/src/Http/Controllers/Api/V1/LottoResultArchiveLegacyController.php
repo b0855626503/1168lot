@@ -359,12 +359,21 @@ class LottoResultArchiveLegacyController extends BaseController
 
     protected function resolveResultAt(LottoResultArchiveLegacyResult $row): string
     {
+        $timezone = (string) config('app.timezone', 'Asia/Bangkok');
+
         if ($row->lottos_date instanceof \DateTimeInterface) {
-            return $row->lottos_date->format('Y-m-d H:i:s');
+            $localDate = $row->lottos_date->copy()->timezone($timezone);
+            $timeStr = trim((string) ($row->lottos_time ?? ''));
+
+            if ($timeStr !== '' && preg_match('/^\d{2}:\d{2}$/', $timeStr)) {
+                return $localDate->format('Y-m-d').' '.$timeStr.':00';
+            }
+
+            return $localDate->format('Y-m-d H:i:s');
         }
 
         if ($row->fetched_at instanceof \DateTimeInterface) {
-            return $row->fetched_at->format('Y-m-d H:i:s');
+            return $row->fetched_at->copy()->timezone($timezone)->format('Y-m-d H:i:s');
         }
 
         return (string) ($row->fetched_at ?? '');

@@ -288,11 +288,9 @@ class LegacyArchiveSourceClient
 
         if ($lottosDateRaw !== null && $lottosDateRaw !== '') {
             try {
-                $lottosDate = Carbon::parse($lottosDateRaw);
-                $resolvedRequestDate = $lottosDate
-                    ->copy()
-                    ->timezone(config('app.timezone', 'Asia/Bangkok'))
-                    ->format('Y-m-d');
+                $lottosDate = Carbon::parse($lottosDateRaw)
+                    ->timezone(config('app.timezone', 'Asia/Bangkok'));
+                $resolvedRequestDate = $lottosDate->format('Y-m-d');
             } catch (\Throwable) {
                 $lottosDate = null;
             }
