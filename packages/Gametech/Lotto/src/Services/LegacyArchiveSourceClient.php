@@ -164,12 +164,12 @@ class LegacyArchiveSourceClient
                 return [$this->buildSentinelRow($type, '', $url, $fetchedAt, 'not_found', null)];
             }
 
-            // Fill request_date from lottos_date for exphuay rows (no separate query date)
+            // Fill request_date from lottos_date for exphuay rows (safety net — mapResultItem already handles this)
             foreach ($rows as &$row) {
                 if (empty($row['request_date']) && ! empty($row['lottos_date'])) {
                     $row['request_date'] = $row['lottos_date'] instanceof \DateTimeInterface
-                        ? $row['lottos_date']->format('Y-m-d')
-                        : Carbon::parse($row['lottos_date'])->format('Y-m-d');
+                        ? $row['lottos_date']->copy()->timezone(config('app.timezone', 'Asia/Bangkok'))->format('Y-m-d')
+                        : Carbon::parse($row['lottos_date'])->timezone(config('app.timezone', 'Asia/Bangkok'))->format('Y-m-d');
                 }
             }
             unset($row);
@@ -284,10 +284,15 @@ class LegacyArchiveSourceClient
     ): array {
         $lottosDateRaw = isset($item['lottosDate']) ? (string) $item['lottosDate'] : null;
         $lottosDate = null;
+        $resolvedRequestDate = $requestDate;
 
         if ($lottosDateRaw !== null && $lottosDateRaw !== '') {
             try {
                 $lottosDate = Carbon::parse($lottosDateRaw);
+                $resolvedRequestDate = $lottosDate
+                    ->copy()
+                    ->timezone(config('app.timezone', 'Asia/Bangkok'))
+                    ->format('Y-m-d');
             } catch (\Throwable) {
                 $lottosDate = null;
             }
@@ -296,7 +301,7 @@ class LegacyArchiveSourceClient
         return [
             'type' => $type,
             'name_th' => $nameTH !== '' ? $nameTH : null,
-            'request_date' => $requestDate,
+            'request_date' => $resolvedRequestDate,
             'page' => $page,
             'source_result_id' => isset($item['id']) ? (int) $item['id'] : null,
             'lottos_name' => (string) ($item['lottosName'] ?? ''),
