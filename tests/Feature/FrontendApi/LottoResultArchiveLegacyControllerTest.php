@@ -502,4 +502,175 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ->assertJsonPath('groups', [])
             ->assertJsonPath('summary.result_count', 0);
     }
+
+    // ── /by-date endpoint tests ───────────────────────────────────────────
+
+    public function test_by_date_returns_send_response_wrapper(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'ดึงผลรางวัลตามวันที่สำเร็จ');
+    }
+
+    public function test_by_date_requires_valid_date(): void
+    {
+        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date')
+            ->assertStatus(422);
+        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=invalid')
+            ->assertStatus(422);
+    }
+
+    public function test_by_date_returns_grouped_shape_matching_results_by_date(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+
+        $response->assertOk()
+            ->assertJsonPath('data.draw_date', '2026-04-22')
+            ->assertJsonPath('data.summary.group_count', 1)
+            ->assertJsonPath('data.summary.result_count', 2);
+
+        // language may be th or en depending on middleware — just verify it exists
+        $this->assertNotNull($response->json('data.language'));
+        $this->assertContains($response->json('data.language'), ['th', 'en']);
+
+        $group = $response->json('data.groups.0');
+        $this->assertArrayHasKey('group_id', $group);
+        $this->assertArrayHasKey('group_code', $group);
+        $this->assertArrayHasKey('group_name', $group);
+        $this->assertArrayHasKey('markets', $group);
+        $this->assertIsArray($group['markets']);
+        $this->assertGreaterThanOrEqual(1, count($group['markets']));
+
+        $market = $group['markets'][0];
+        $this->assertArrayHasKey('market_id', $market);
+        $this->assertArrayHasKey('market_name', $market);
+        $this->assertArrayHasKey('market_logo', $market);
+        $this->assertArrayHasKey('market_icon', $market);
+        $this->assertArrayHasKey('result', $market);
+        $this->assertIsArray($market['result']);
+
+        $result = $market['result'];
+        $this->assertArrayHasKey('draw_id', $result);
+        $this->assertArrayHasKey('draw_date', $result);
+        $this->assertArrayHasKey('result_at', $result);
+        $this->assertArrayHasKey('status', $result);
+        $this->assertEquals('resulted', $result['status']);
+        $this->assertArrayHasKey('result_number', $result);
+        $this->assertIsArray($result['result_number']);
+        $this->assertArrayHasKey('first_prize', $result);
+        $this->assertArrayHasKey('last_2_digits', $result);
+        $this->assertArrayHasKey('result_top_3', $result);
+        $this->assertArrayHasKey('result_top_2', $result);
+        $this->assertArrayHasKey('result_bottom_2', $result);
+    }
+
+    public function test_by_date_result_number_maps_snapshot_fields(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+
+        $groups = $response->json('data.groups');
+        $allMarkets = [];
+        foreach ($groups as $group) {
+            foreach ($group['markets'] as $market) {
+                $allMarkets[$market['market_name']] = $market;
+            }
+        }
+
+        $this->assertArrayHasKey('หวยทดสอบเช้า', $allMarkets);
+        $morning = $allMarkets['หวยทดสอบเช้า'];
+        $result = $morning['result'];
+
+        $this->assertEquals('785', $result['first_prize']);
+        $this->assertEquals('71', $result['last_2_digits']);
+        $this->assertEquals('71', $result['result_bottom_2']);
+        $this->assertEquals('785', $result['result_top_3']); // last 3 chars of '785' = '785'
+    }
+
+    public function test_by_date_yeekee_excluded(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+
+        $response->assertOk();
+        $groups = $response->json('data.groups');
+        foreach ($groups as $group) {
+            foreach ($group['markets'] as $market) {
+                $this->assertNotEquals('test-legacy-yeekee', $market['market_code'] ?? '');
+            }
+        }
+    }
+
+    public function test_by_date_empty_date_returns_empty_groups(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-01-01');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.groups', [])
+            ->assertJsonPath('data.summary.result_count', 0);
+    }
+
+    // ── /markets/{marketId}/results endpoint tests ─────────────────────────
+
+    public function test_market_results_returns_send_response_wrapper(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'ดึงผลย้อนหลังสำเร็จ');
+    }
+
+    public function test_market_results_unknown_market_returns_404(): void
+    {
+        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/9999/results')
+            ->assertStatus(404);
+    }
+
+    public function test_market_results_returns_market_info(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+
+        $response->assertOk()
+            ->assertJsonPath('data.market.id', 1)
+            ->assertJsonPath('data.market.name', 'หวยทดสอบเช้า')
+            ->assertJsonPath('data.market.group_id', 1)
+            ->assertJsonPath('data.market.group_name', 'Test Group');
+    }
+
+    public function test_market_results_returns_history_and_pagination(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+
+        $response->assertOk()
+            ->assertJsonPath('data.pagination.page', 1)
+            ->assertJsonPath('data.pagination.limit', 20)
+            ->assertJsonPath('data.pagination.count', 1)
+            ->assertJsonPath('data.pagination.total', 1);
+    }
+
+    public function test_market_results_latest_and_history_match(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+
+        $response->assertOk();
+        $latest = $response->json('data.latest_result');
+        $this->assertNotNull($latest);
+        $this->assertEquals('785', $latest['first_prize']);
+        $this->assertEquals('71', $latest['last_2_digits']);
+        $this->assertEquals('resulted', $latest['status']);
+
+        $history = $response->json('data.history');
+        $this->assertCount(1, $history);
+        $this->assertEquals($latest['first_prize'], $history[0]['first_prize']);
+    }
+
+    public function test_market_results_pagination_limit_obeys_limits(): void
+    {
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results?limit=1&page=1');
+
+        $response->assertOk()
+            ->assertJsonPath('data.pagination.limit', 1);
+    }
 }

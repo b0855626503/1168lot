@@ -554,9 +554,132 @@ GET /api/v1/lotto/results/by-date?date=2026-04-19
 ```
 
 <a id="get-apiv1lottonavbar-config"></a>
+### `GET /api/v1/lotto/result-archive-legacy/by-date`
+- คำอธิบาย: ดึงผลหวยจาก snapshot `lotto_result_archive_legacy_results` ในรูปแบบ grouped (เหมือน `GET /lotto/results/by-date` ทุกประการ)
+- ใช้เมื่อ: ใช้แทน `GET /lotto/results/by-date` โดยอ่านจาก snapshot table แทน `lotto_draws`
+- Auth: ไม่ต้องใช้ token
+- Query params:
+  - `date` หรือ `draw_date` (YYYY-MM-DD, required) — วันที่ต้องการดึงผล
+- Response format: เหมือน `GET /api/v1/lotto/results/by-date` 100% (wrapper `sendResponse` → `success`, `data`, `message`)
+- Response example:
+```json
+{
+  "success": true,
+  "data": {
+    "draw_date": "2026-04-22",
+    "groups": [
+      {
+        "group_id": 1,
+        "group_code": "thai",
+        "group_name": "หวยไทย",
+        "markets": [
+          {
+            "market_id": 1,
+            "market_name": "ฮานอยพิเศษ",
+            "market_logo": "",
+            "market_icon": "",
+            "result": {
+              "draw_id": 100,
+              "draw_date": "2026-04-22",
+              "result_at": "2026-04-22 18:30:00",
+              "status": "resulted",
+              "result_number": {
+                "first_prize": "35037",
+                "last_2_digits": "51",
+                "top_3": "037",
+                "top_2": "37",
+                "bottom_2": "51"
+              },
+              "result_top_3": "037",
+              "result_top_2": "37",
+              "result_bottom_2": "51",
+              "first_prize": "35037",
+              "last_2_digits": "51"
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "group_count": 1,
+      "market_count": 1,
+      "result_count": 1
+    },
+    "language": "th"
+  },
+  "message": "ดึงผลรางวัลตามวันที่สำเร็จ"
+}
+```
+```http
+GET /api/v1/lotto/result-archive-legacy/by-date?date=2026-05-13
+GET /api/v1/lotto/result-archive-legacy/by-date?draw_date=2026-05-13
+```
+- หมายเหตุ: อ่านจาก `lotto_result_archive_legacy_results` (snapshot) เสริม market/group จาก `lotto_markets` + `lottery_groups` ผ่าน `LotteryRelayTypeRegistry` snapshot-only types ที่ไม่มี market/group entry จะถูกข้าม (consistent กับ `results/by-date`)
+
+---
+
+### `GET /api/v1/lotto/result-archive-legacy/markets/{marketId}/results`
+- คำอธิบาย: ดึงผลย้อนหลังของตลาดจาก snapshot `lotto_result_archive_legacy_results` (เหมือน `GET /lotto/markets/{marketId}/results` แต่อ่านจาก snapshot แทน `lotto_draws`)
+- ใช้เมื่อ: แสดงประวัติผลรางวัลของตลาด โดยอ่านจาก archive snapshot
+- Auth: ไม่ต้องใช้ token
+- Path params:
+  - `marketId` — id ของตลาดใน `lotto_markets`
+- Query params:
+  - `limit` (integer, default 20, max 100)
+  - `page` (integer, default 1)
+- Route: `GET /api/v1/lotto/result-archive-legacy/markets/{marketId}/results`
+- Response example:
+```json
+{
+  "success": true,
+  "data": {
+    "market": {
+      "id": 1,
+      "name": "หวยออมสิน",
+      "group_id": 1,
+      "group_name": "หวยไทย",
+      "logo": "",
+      "icon": ""
+    },
+    "latest_result": {
+      "draw_id": 100,
+      "draw_date": "2026-05-13",
+      "result_at": "2026-05-13 16:00:00",
+      "status": "resulted",
+      "result_number": {
+        "first_prize": "0860959",
+        "last_2_digits": "59"
+      },
+      "result_top_3": "",
+      "result_top_2": "",
+      "result_bottom_2": "59",
+      "first_prize": "0860959",
+      "last_2_digits": "59"
+    },
+    "history": [ /* array of same shape */ ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "count": 20,
+      "total": 104,
+      "has_more": true
+    },
+    "language": "th"
+  },
+  "message": "ดึงผลย้อนหลังสำเร็จ"
+}
+```
+```http
+GET /api/v1/lotto/result-archive-legacy/markets/1/results
+GET /api/v1/lotto/result-archive-legacy/markets/1/results?limit=10&page=1
+```
+- หมายเหตุ: แปลง market code → canonical type ผ่าน `LotteryRelayTypeRegistry` ก่อน query snapshot; response shape เหมือน `LottoController::marketResults()` ทุกประการ
+
+---
+
 ### `GET /api/v1/lotto/result-archive-legacy`
-- คำอธิบาย: ดึงผลหวยจาก archive snapshot `lotto_result_archive_legacy_results` (populate โดย `php artisan lotto:legacy-results:fetch`)
-- ใช้เมื่อ: frontend ต้องการแสดงผลหวยย้อนหลังจาก snapshot table
+- คำอธิบาย: ดึงผลหวยจาก archive snapshot `lotto_result_archive_legacy_results` ในรูปแบบ flat-list (legacy)
+- ใช้เมื่อ: frontend ต้องการแสดงผลหวยย้อนหลังแบบช่วงวันที่
 - Auth: ไม่ต้องใช้ token
 - Query params:
   - `type` (string, optional) — external API type code เช่น `xsthm`, `gsb`; alias เช่น `hanoi-special` จะถูก normalize โดยอัตโนมัติ

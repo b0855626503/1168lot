@@ -86,6 +86,10 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.navbar_config');
 
             Route::middleware('throttle:60,1')->group(function (): void {
+                Route::get('lotto/result-archive-legacy/by-date', [LottoResultArchiveLegacyController::class, 'byDate'])
+                    ->name('frontend.api.v1.lotto.result_archive_legacy_by_date');
+                Route::get('lotto/result-archive-legacy/markets/{marketId}/results', [LottoResultArchiveLegacyController::class, 'marketResults'])
+                    ->name('frontend.api.v1.lotto.result_archive_legacy_market_results');
                 Route::get('lotto/result-archive-legacy', [LottoResultArchiveLegacyController::class, 'index'])
                     ->name('frontend.api.v1.lotto.result_archive_legacy');
                 Route::get('lotto/results', [LottoResultArchiveController::class, 'allMarkets'])
