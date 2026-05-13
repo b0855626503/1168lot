@@ -76,20 +76,16 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.lotto.market_content');
             Route::get('lotto/markets/{marketId}/betting-context', [LottoController::class, 'bettingContext'])
                 ->name('frontend.api.v1.lotto.betting_context');
-            Route::get('lotto/markets/{marketId}/results', [LottoController::class, 'marketResults'])
+            Route::get('lotto/markets/{marketId}/results', [LottoResultArchiveLegacyController::class, 'marketResults'])
                 ->name('frontend.api.v1.lotto.market_results');
             Route::get('lotto/markets/{marketId}/draws/{drawId}/result', [LottoController::class, 'drawResult'])
                 ->name('frontend.api.v1.lotto.draw_result');
-            Route::get('lotto/results/by-date', [LottoController::class, 'resultsByDate'])
+            Route::get('lotto/results/by-date', [LottoResultArchiveLegacyController::class, 'byDate'])
                 ->name('frontend.api.v1.lotto.results_by_date');
             Route::get('lotto/navbar-config', [LottoNavbarConfigController::class, 'show'])
                 ->name('frontend.api.v1.lotto.navbar_config');
 
             Route::middleware('throttle:60,1')->group(function (): void {
-                Route::get('lotto/result-archive-legacy/by-date', [LottoResultArchiveLegacyController::class, 'byDate'])
-                    ->name('frontend.api.v1.lotto.result_archive_legacy_by_date');
-                Route::get('lotto/result-archive-legacy/markets/{marketId}/results', [LottoResultArchiveLegacyController::class, 'marketResults'])
-                    ->name('frontend.api.v1.lotto.result_archive_legacy_market_results');
                 Route::get('lotto/result-archive-legacy', [LottoResultArchiveLegacyController::class, 'index'])
                     ->name('frontend.api.v1.lotto.result_archive_legacy');
                 Route::get('lotto/results', [LottoResultArchiveController::class, 'allMarkets'])

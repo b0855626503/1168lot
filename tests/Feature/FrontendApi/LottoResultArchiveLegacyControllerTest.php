@@ -507,7 +507,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_by_date_returns_send_response_wrapper(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=2026-04-22');
 
         $response->assertOk()
             ->assertJsonPath('success', true)
@@ -516,15 +516,15 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_by_date_requires_valid_date(): void
     {
-        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date')
+        $this->getJson('http://api.localhost/api/v1/lotto/results/by-date')
             ->assertStatus(422);
-        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=invalid')
+        $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=invalid')
             ->assertStatus(422);
     }
 
     public function test_by_date_returns_grouped_shape_matching_results_by_date(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=2026-04-22');
 
         $response->assertOk()
             ->assertJsonPath('data.draw_date', '2026-04-22')
@@ -568,7 +568,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_by_date_result_number_maps_snapshot_fields(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=2026-04-22');
 
         $groups = $response->json('data.groups');
         $allMarkets = [];
@@ -590,7 +590,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_by_date_yeekee_excluded(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-04-22');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=2026-04-22');
 
         $response->assertOk();
         $groups = $response->json('data.groups');
@@ -603,7 +603,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_by_date_empty_date_returns_empty_groups(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/by-date?date=2026-01-01');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/results/by-date?date=2026-01-01');
 
         $response->assertOk()
             ->assertJsonPath('success', true)
@@ -615,7 +615,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_market_results_returns_send_response_wrapper(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/markets/1/results');
 
         $response->assertOk()
             ->assertJsonPath('success', true)
@@ -624,13 +624,13 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_market_results_unknown_market_returns_404(): void
     {
-        $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/9999/results')
+        $this->getJson('http://api.localhost/api/v1/lotto/markets/9999/results')
             ->assertStatus(404);
     }
 
     public function test_market_results_returns_market_info(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/markets/1/results');
 
         $response->assertOk()
             ->assertJsonPath('data.market.id', 1)
@@ -641,7 +641,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_market_results_returns_history_and_pagination(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/markets/1/results');
 
         $response->assertOk()
             ->assertJsonPath('data.pagination.page', 1)
@@ -652,7 +652,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_market_results_latest_and_history_match(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/markets/1/results');
 
         $response->assertOk();
         $latest = $response->json('data.latest_result');
@@ -668,7 +668,7 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_market_results_pagination_limit_obeys_limits(): void
     {
-        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy/markets/1/results?limit=1&page=1');
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/markets/1/results?limit=1&page=1');
 
         $response->assertOk()
             ->assertJsonPath('data.pagination.limit', 1);
