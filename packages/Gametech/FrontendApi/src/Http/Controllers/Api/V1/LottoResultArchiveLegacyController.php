@@ -91,12 +91,16 @@ class LottoResultArchiveLegacyController extends BaseController
             $limit = max(1, min((int) $request->query('limit', 20), 100));
             $page = max(1, (int) $request->query('page', 1));
 
-            $query = LottoResultArchiveLegacyResult::query()
+            $latestIds = LottoResultArchiveLegacyResult::query()
+                ->selectRaw('MAX(id)')
                 ->where('type', $canonicalType)
                 ->where('fetch_status', 'success')
                 ->whereNotNull('lottos_number')
-                ->orderByDesc('request_date')
-                ->orderByDesc('id');
+                ->groupBy('request_date');
+
+            $query = LottoResultArchiveLegacyResult::query()
+                ->whereIn('id', $latestIds)
+                ->orderByDesc('request_date');
 
             $total = (clone $query)->count();
             $rows = $query->forPage($page, $limit)->get();
