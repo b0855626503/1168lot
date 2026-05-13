@@ -296,14 +296,16 @@ class LegacyArchiveSourceClient
             }
         }
 
+        $lottosTH = isset($item['lottosTH']) ? (string) $item['lottosTH'] : null;
+
         return [
             'type' => $type,
-            'name_th' => $nameTH !== '' ? $nameTH : null,
+            'name_th' => $nameTH !== '' ? $nameTH : $lottosTH,
             'request_date' => $resolvedRequestDate,
             'page' => $page,
             'source_result_id' => isset($item['id']) ? (int) $item['id'] : null,
             'lottos_name' => (string) ($item['lottosName'] ?? ''),
-            'lottos_th' => isset($item['lottosTH']) ? (string) $item['lottosTH'] : null,
+            'lottos_th' => $lottosTH,
             'lottos_date' => $lottosDate,
             'lottos_date_raw' => $lottosDateRaw,
             'lottos_time' => isset($item['lottosTime']) ? (string) $item['lottosTime'] : null,
