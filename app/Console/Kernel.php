@@ -133,6 +133,12 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        $schedule->command('lotto:mirror-draws-to-legacy-archive')
+            ->everyMinute()
+            ->when(static fn (): bool => ! $relayRuntime->isClone())
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('lotto:legacy-results:fetch --today')
             ->everyTenMinutes()
             ->between('5:00', '18:00')

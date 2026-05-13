@@ -25,6 +25,7 @@ use Gametech\Lotto\Console\Commands\MigrateExphuaySourcesToExternalEndpointComma
 use Gametech\Lotto\Console\Commands\MigrateInternalResultEndpointsCommand;
 use Gametech\Lotto\Console\Commands\MigrateLegacyLottoPermissionsCommand;
 use Gametech\Lotto\Console\Commands\MigrateRelayResultSourcesCommand;
+use Gametech\Lotto\Console\Commands\MirrorDrawsToLegacyArchiveCommand;
 use Gametech\Lotto\Console\Commands\MirrorExistingResultedDrawsCommand;
 use Gametech\Lotto\Console\Commands\ReconcileResultArchiveCommand;
 use Gametech\Lotto\Console\Commands\RolloutMemberMarketPoliciesCommand;
@@ -180,6 +181,7 @@ class LottoServiceProvider extends ServiceProvider
             LottoWinningReportReconcileCommand::class,
             LottoCloneAutoPullThaiResultsCommand::class,
             MirrorExistingResultedDrawsCommand::class,
+            MirrorDrawsToLegacyArchiveCommand::class,
             FetchLegacyArchiveResultsCommand::class,
             FillMissingResultsCommand::class,
             ReconcileResultArchiveCommand::class,
