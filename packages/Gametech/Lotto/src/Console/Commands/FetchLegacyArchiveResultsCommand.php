@@ -2,9 +2,11 @@
 
 namespace Gametech\Lotto\Console\Commands;
 
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoResultSource;
 use Gametech\Lotto\Repositories\LegacyArchiveResultRepository;
 use Gametech\Lotto\Services\LegacyArchiveSourceClient;
+use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -89,9 +91,15 @@ class FetchLegacyArchiveResultsCommand extends Command
                     'query_params' => ['type' => $typeFilter, 'date' => '{{lookup_date}}'],
                 ]]);
             } else {
-                $this->warn('No active lotto_result_sources found, nothing to fetch.');
+                $sources = $this->resolveSourcesFromMarkets($excludeGroups);
 
-                return self::SUCCESS;
+                if ($sources->isEmpty()) {
+                    $this->warn('No active lotto_result_sources or lotto_markets found, nothing to fetch.');
+
+                    return self::SUCCESS;
+                }
+
+                $this->line(sprintf('Auto-discovered %d types from lotto_markets.', $sources->count()));
             }
         }
 
@@ -205,6 +213,52 @@ class FetchLegacyArchiveResultsCommand extends Command
     }
 
     /**
+     * Fallback: auto-discover source types from lotto_markets when lotto_result_sources is empty.
+     *
+     * Uses LotteryRelayTypeRegistry to map market codes (e.g. hanoi-special) to canonical
+     * external API types (e.g. xsthm). Each unique canonical type becomes one source entry
+     * pointing at the default legacy archive endpoint.
+     *
+     * @return Collection<int, array{type_code: string, endpoint_url: string, query_params: array<string, string>}>
+     */
+    protected function resolveSourcesFromMarkets(array $excludeGroups = []): Collection
+    {
+        $baseUrl = (string) config('lotto.legacy_archive.base_url');
+
+        if (empty($baseUrl)) {
+            return collect();
+        }
+
+        try {
+            $registry = new LotteryRelayTypeRegistry;
+
+            $query = LotteryMarket::query()
+                ->where('result_mode', '!=', 'yeekee');
+
+            if (! empty($excludeGroups)) {
+                $query->whereHas('group', function ($q) use ($excludeGroups): void {
+                    $q->whereIn('code', $excludeGroups);
+                }, '=', 0);
+            }
+
+            return $query->pluck('code')
+                ->map(fn (string $marketCode): ?string => $registry->canonicalTypeForMarketCode($marketCode))
+                ->filter()
+                ->unique()
+                ->values()
+                ->map(fn (string $canonicalType): array => [
+                    'type_code' => $canonicalType,
+                    'endpoint_url' => $baseUrl,
+                    'query_params' => ['type' => $canonicalType, 'date' => '{{lookup_date}}'],
+                ]);
+        } catch (\Throwable $e) {
+            $this->warn('Could not query lotto_markets: '.$e->getMessage());
+
+            return collect();
+        }
+    }
+
+    /**
      * Build final query params from a source template, substituting {{lookup_date}}.
      *
      * @param  array<string, string>  $template
@@ -247,9 +301,21 @@ class FetchLegacyArchiveResultsCommand extends Command
         $sources = $this->resolveSources($typeFilter, $excludeGroups);
 
         if ($sources->isEmpty()) {
-            $this->warn('No sources found for exphuay batch fetch.');
+            if ($typeFilter) {
+                $this->warn('No sources found for exphuay batch fetch.');
 
-            return self::SUCCESS;
+                return self::SUCCESS;
+            }
+
+            $sources = $this->resolveSourcesFromMarkets($excludeGroups);
+
+            if ($sources->isEmpty()) {
+                $this->warn('No lotto_markets found for exphuay batch fetch.');
+
+                return self::SUCCESS;
+            }
+
+            $this->line(sprintf('Auto-discovered %d types from lotto_markets.', $sources->count()));
         }
 
         $totalUpserted = 0;

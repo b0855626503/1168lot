@@ -555,27 +555,71 @@ GET /api/v1/lotto/results/by-date?date=2026-04-19
 
 <a id="get-apiv1lottonavbar-config"></a>
 ### `GET /api/v1/lotto/result-archive-legacy`
-- คำอธิบาย: ดึงผลหวยจาก archive ในรูปแบบ legacy-compatible (เทียบเท่า `get_lottery` แบบเก่า)
-- ใช้เมื่อ: ต้องการ migrate frontend เก่าที่ยังเรียก `/api/v1/get_lottery` มาอ่านจาก archive
+- คำอธิบาย: ดึงผลหวยจาก archive snapshot `lotto_result_archive_legacy_results` (populate โดย `php artisan lotto:legacy-results:fetch`)
+- ใช้เมื่อ: frontend ต้องการแสดงผลหวยย้อนหลังจาก snapshot table
 - Auth: ไม่ต้องใช้ token
 - Query params:
-  - `type` (string, optional) — market code เช่น `egx30`
-  - `date` (YYYY-MM-DD, optional) — วันเดียว ห้ามใช้ร่วมกับ from_date/to_date
-  - `from_date` + `to_date` (YYYY-MM-DD, optional) — ช่วงวันที่ ต้องคู่กัน
-  - `page` (integer, default 1)
-  - `per_page` (integer, default 100, max 500)
-- Query example:
+  - `type` (string, optional) — external API type code เช่น `xsthm`, `gsb`; alias เช่น `hanoi-special` จะถูก normalize โดยอัตโนมัติ
+  - `date` (YYYY-MM-DD, optional) — วันเดียว ห้ามใช้ร่วมกับ from_date/to_date → response เป็น grouped format (เหมือน `GET /lotto/results/by-date`)
+  - `from_date` + `to_date` (YYYY-MM-DD, optional) — ช่วงวันที่ ต้องคู่กัน → response เป็น flat-list format (legacy)
+  - `language` (string, optional, default `th`) — `th`, `en`, `kh`, `la` ใช้กับ grouped format
+  - `page` (integer, default 1) — ใช้กับ date-range เท่านั้น
+  - `per_page` (integer, default 100, max 500) — ใช้กับ date-range เท่านั้น
+
+#### Single-date query → grouped response (matches `GET /lotto/results/by-date`)
 ```http
-GET /api/v1/lotto/result-archive-legacy?type=egx30&date=2026-04-22
+GET /api/v1/lotto/result-archive-legacy?type=xsthm&date=2026-04-22
+GET /api/v1/lotto/result-archive-legacy?date=2026-05-13
+```
+```json
+{
+  "draw_date": "2026-04-22",
+  "groups": [
+    {
+      "group_id": 1,
+      "group_code": "thai",
+      "group_name": "หวยไทย",
+      "markets": [
+        {
+          "market_code": "xsthm",
+          "market_name": "ฮานอยพิเศษ",
+          "market_logo": "",
+          "market_icon": "",
+          "results": [
+            {
+              "id": 100,
+              "lottosName": "Hanoi Special",
+              "lottosTH": "ฮานอยพิเศษ",
+              "lottosDate": "22/04/2569",
+              "lottosTime": "18:30",
+              "lottosNumber": "785",
+              "lottosUnder": "71"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "group_count": 1,
+    "market_count": 1,
+    "result_count": 1
+  },
+  "language": "th",
+  "message": "ดึงผลรางวัลตามวันที่สำเร็จ"
+}
+```
+
+#### Date-range query → flat-list response (legacy format)
+```http
 GET /api/v1/lotto/result-archive-legacy?type=egx30&from_date=2026-04-01&to_date=2026-04-30
 GET /api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30&page=1&per_page=100
 ```
-- Response example:
 ```json
 {
   "type": "egx30",
   "nameTH": "หุ้นอียิปต์",
-  "date": "2026-04-22",
+  "date": "2026-04-01..2026-04-30",
   "page": 1,
   "count": 1,
   "results": [
@@ -592,7 +636,7 @@ GET /api/v1/lotto/result-archive-legacy?from_date=2026-04-01&to_date=2026-04-30&
   "errors": []
 }
 ```
-- หมายเหตุ: อ่านจาก `lotto_result_archive_legacy_results` (snapshot จาก external `get_lottery.php` populate โดย `php artisan lotto:legacy-results:fetch`) ไม่ query `lotto_draws`, ไม่รวมหวยยี่กี
+- หมายเหตุ: อ่านจาก `lotto_result_archive_legacy_results` เป็นหลัก เติม market/group info จาก `lotto_markets` และ `lottery_groups` ผ่าน `LotteryRelayTypeRegistry` ไม่ query `lotto_draws`, ไม่รวมหวยยี่กี
 
 <a id="get-apiv1lottonavbar-config-old"></a>
 ### `GET /api/v1/lotto/navbar-config`

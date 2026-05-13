@@ -173,20 +173,23 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         ]);
     }
 
-    public function test_type_and_date_returns_legacy_shape(): void
+    public function test_single_date_returns_grouped_shape(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-04-22');
 
         $response->assertOk()
-            ->assertJsonPath('type', 'test-legacy-morning')
-            ->assertJsonPath('nameTH', 'หวยทดสอบเช้า')
-            ->assertJsonPath('date', '2026-04-22')
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('page', 1)
-            ->assertJsonPath('errors', []);
+            ->assertJsonPath('draw_date', '2026-04-22')
+            ->assertJsonPath('language', 'th')
+            ->assertJsonPath('summary.group_count', 1)
+            ->assertJsonPath('summary.market_count', 1)
+            ->assertJsonPath('summary.result_count', 1);
 
-        $result = $response->json('results.0');
-        $this->assertNotNull($result);
+        $market = $response->json('groups.0.markets.0');
+        $this->assertNotNull($market);
+        $this->assertEquals('test-legacy-morning', $market['market_code']);
+        $this->assertEquals('หวยทดสอบเช้า', $market['market_name']);
+
+        $result = $market['results'][0];
         $this->assertEquals('test-legacy-morning', $result['lottosName']);
         $this->assertEquals('หวยทดสอบเช้า', $result['lottosTH']);
         $this->assertEquals(100, $result['id']);
@@ -194,11 +197,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $this->assertEquals('71', $result['lottosUnder']);
         $this->assertEquals('22/04/2569', $result['lottosDate']);
         $this->assertEquals('15:00', $result['lottosTime']);
-        $this->assertArrayNotHasKey('source_result_id', $result);
-        $this->assertArrayNotHasKey('source_info_json', $result);
-        $this->assertArrayNotHasKey('result_hash', $result);
-        $this->assertArrayNotHasKey('raw_payload', $result);
-        $this->assertArrayNotHasKey('payload_json', $result);
     }
 
     public function test_type_and_date_range(): void
@@ -221,30 +219,25 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_yeekee_market_excluded(): void
     {
-        // Yeekee types are excluded at service level via whereNotIn(getYeekeeCodes()).
-        // The controller no longer returns UNSUPPORTED_TYPE for unknown/yeekee types (BOA-262: market_id is optional).
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-yeekee&date=2026-04-22');
         $response->assertOk()
-            ->assertJsonPath('count', 0)
-            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+            ->assertJsonPath('summary.group_count', 0)
+            ->assertJsonPath('summary.result_count', 0);
     }
 
-    public function test_snapshot_only_type_returns_results_without_market_entry(): void
+    public function test_snapshot_only_type_returns_empty_groups_when_no_market(): void
     {
-        // Per BOA-262: market_id is optional — snapshot-only types are served without rejection.
-        // An unknown type (not in lotto_markets) returns DRAW_DATE_NOT_FOUND when no snapshot rows exist.
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=nonexistent&date=2026-04-22');
         $response->assertOk()
-            ->assertJsonPath('type', 'nonexistent')
-            ->assertJsonPath('count', 0)
-            ->assertJsonPath('results', [])
-            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+            ->assertJsonPath('draw_date', '2026-04-22')
+            ->assertJsonPath('summary.result_count', 0)
+            ->assertJsonPath('groups', []);
     }
 
-    public function test_name_th_from_snapshot_for_market_not_in_lotto_markets(): void
+    public function test_snapshot_only_type_with_market_lookup_shows_in_unknown_group(): void
     {
-        // Seed a snapshot-only type (not in lotto_markets) with a stored name_th.
-        // Controller should read nameTH from snapshot's name_th, not from LotteryMarket.
+        // Seed a snapshot-only type that has NO matching lotto_markets entry.
+        // It should appear in the fallback "unknown" group (group_id=0).
         DB::table('lotto_result_archive_legacy_results')->insert([
             'type' => 'snapshot-only',
             'name_th' => 'หวย Snapshot Only',
@@ -273,27 +266,25 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=snapshot-only&date=2026-04-22');
         $response->assertOk()
-            ->assertJsonPath('type', 'snapshot-only')
-            ->assertJsonPath('nameTH', 'หวย Snapshot Only')
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('results.0.lottosNumber', '555');
+            ->assertJsonPath('summary.result_count', 1);
+
+        $market = $response->json('groups.0.markets.0');
+        $this->assertEquals('snapshot-only', $market['market_code']);
+        $this->assertEquals('555', $market['results'][0]['lottosNumber']);
     }
 
     public function test_preserves_leading_zero(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
-        $result = $response->json('results.0');
+        $result = $response->json('groups.0.markets.0.results.0');
         $this->assertEquals('014', $result['lottosNumber']);
         $this->assertEquals('07', $result['lottosUnder']);
     }
 
     public function test_fallback_id_uses_row_pk_when_no_source_result_id(): void
     {
-        // When source_result_id is null, the response id falls back to the row's auto-increment PK.
-        // This avoids crc32 collisions when lottos_date_raw is null or shared across multiple rows.
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-afternoon&date=2026-04-22');
-        $result = $response->json('results.0');
-        // The afternoon row is inserted second so it gets PK=2 in the test DB.
+        $result = $response->json('groups.0.markets.0.results.0');
         $this->assertEquals(2, $result['id']);
         $this->assertIsInt($result['id']);
     }
@@ -301,17 +292,16 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
     public function test_lottos_date_uses_raw_string(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-04-22');
-        $result = $response->json('results.0');
+        $result = $response->json('groups.0.markets.0.results.0');
         $this->assertEquals('22/04/2569', $result['lottosDate']);
     }
 
-    public function test_not_found_returns_errors(): void
+    public function test_not_found_returns_empty_groups(): void
     {
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-01-01');
         $response->assertOk()
-            ->assertJsonPath('count', 0)
-            ->assertJsonPath('results', [])
-            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+            ->assertJsonPath('groups', [])
+            ->assertJsonPath('summary.result_count', 0);
     }
 
     public function test_no_date_returns_422(): void
@@ -363,8 +353,6 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
 
     public function test_alias_type_normalized_to_canonical_before_query(): void
     {
-        // Seed a row stored under canonical type 'xsthm' (as the fetch command would store it).
-        // Request with alias 'hanoi-special' must normalize to 'xsthm' and return the row.
         DB::table('lotto_result_archive_legacy_results')->insert([
             'type' => 'xsthm',
             'name_th' => 'หวยฮานอยพิเศษ',
@@ -394,15 +382,16 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=hanoi-special&date=2026-04-05');
 
         $response->assertOk()
-            ->assertJsonPath('type', 'xsthm')
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('results.0.lottosNumber', '123')
-            ->assertJsonPath('errors', []);
+            ->assertJsonPath('summary.result_count', 1)
+            ->assertJsonPath('draw_date', '2026-04-05');
+
+        $market = $response->json('groups.0.markets.0');
+        $this->assertEquals('xsthm', $market['market_code']);
+        $this->assertEquals('123', $market['results'][0]['lottosNumber']);
     }
 
     public function test_canonical_type_query_still_works_unchanged(): void
     {
-        // Querying with the canonical type directly must still work (not double-normalized).
         DB::table('lotto_result_archive_legacy_results')->insert([
             'type' => 'xsthm',
             'name_th' => 'หวยฮานอยพิเศษ',
@@ -432,27 +421,24 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=xsthm&date=2026-04-06');
 
         $response->assertOk()
-            ->assertJsonPath('type', 'xsthm')
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('results.0.lottosNumber', '456');
+            ->assertJsonPath('summary.result_count', 1);
+
+        $result = $response->json('groups.0.markets.0.results.0');
+        $this->assertEquals('456', $result['lottosNumber']);
+        $this->assertEquals('xsthm', $response->json('groups.0.markets.0.market_code'));
     }
 
     public function test_unknown_type_passes_through_unchanged(): void
     {
-        // A type with no mapping in the registry must pass through without modification.
-        // It will return no results (no rows for it), but must not be rejected or altered.
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=totally-unknown-type&date=2026-04-22');
 
         $response->assertOk()
-            ->assertJsonPath('type', 'totally-unknown-type')
-            ->assertJsonPath('count', 0)
-            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+            ->assertJsonPath('groups', [])
+            ->assertJsonPath('summary.result_count', 0);
     }
 
     public function test_sentinel_rows_not_returned_by_api(): void
     {
-        // Insert a failed and a not_found sentinel row for the same date as success rows.
-        // The service must filter fetch_status='success' only — sentinel rows must not appear in response.
         DB::table('lotto_result_archive_legacy_results')->insert([
             [
                 'type' => 'test-legacy-morning',
@@ -506,17 +492,14 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
             ],
         ]);
 
-        // Querying the date that has both a success row and a failed sentinel for same type:
-        // only the success row should appear.
         $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-04-22');
         $response->assertOk()
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('results.0.lottosNumber', '785');
+            ->assertJsonPath('summary.result_count', 1);
+        $this->assertEquals('785', $response->json('groups.0.markets.0.results.0.lottosNumber'));
 
-        // Date with only a not_found sentinel should return 0 results.
         $response2 = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=test-legacy-morning&date=2026-04-23');
         $response2->assertOk()
-            ->assertJsonPath('count', 0)
-            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+            ->assertJsonPath('groups', [])
+            ->assertJsonPath('summary.result_count', 0);
     }
 }

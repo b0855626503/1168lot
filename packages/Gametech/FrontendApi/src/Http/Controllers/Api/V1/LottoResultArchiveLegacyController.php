@@ -33,9 +33,11 @@ class LottoResultArchiveLegacyController extends Controller
      *
      * Legacy-compatible public archive result endpoint.
      * Result data comes from lotto_result_archive_legacy_results (API snapshot table).
-     * Lookup to lotto_markets is allowed only for display name and yeekee exclusion.
-     * An unknown type is NOT rejected — snapshot data is served if available (market_id is optional per BOA-262).
-     * Forbidden: lotto_draws / settlement / wallet / tickets.
+     *
+     * Single-date queries (?date=YYYY-MM-DD) return a grouped response matching the
+     * shape of GET /api/v1/lotto/results/by-date (groups → markets → results).
+     *
+     * Date-range queries (?from_date=&to_date=) return the legacy flat-list format.
      */
     public function index(Request $request): JsonResponse
     {
@@ -46,6 +48,7 @@ class LottoResultArchiveLegacyController extends Controller
             'to_date' => 'nullable|date_format:Y-m-d|required_with:from_date',
             'page' => 'integer|min:1',
             'per_page' => 'integer|min:1|max:500',
+            'language' => 'nullable|string|in:th,en,kh,la|max:2',
         ]);
 
         if ($validator->fails()) {
@@ -56,9 +59,6 @@ class LottoResultArchiveLegacyController extends Controller
 
         $rawType = $request->query('type');
 
-        // Normalize market-code aliases to canonical provider types using the registry.
-        // e.g. 'hanoi-special' → 'xsthm'. Unknown types pass through unchanged so that
-        // snapshot-only markets (yeekee exclusions, etc.) remain unaffected.
         if ($rawType !== null) {
             $canonical = $this->typeRegistry->canonicalTypeForMarketCode($rawType);
             $type = $canonical ?? $rawType;
@@ -69,8 +69,7 @@ class LottoResultArchiveLegacyController extends Controller
         $singleDate = $request->query('date');
         $rawFrom = $request->query('from_date');
         $rawTo = $request->query('to_date');
-        $perPage = (int) $request->query('per_page', 100);
-        $page = (int) $request->query('page', 1);
+        $language = (string) $request->query('language', 'th');
 
         if (! $singleDate && ! $rawFrom && ! $rawTo) {
             return response()->json([
@@ -79,35 +78,60 @@ class LottoResultArchiveLegacyController extends Controller
         }
 
         if ($singleDate) {
-            if (! $this->validDrawDate($singleDate)) {
-                return response()->json(['message' => 'date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-            $fromDate = Carbon::createFromFormat('!Y-m-d', $singleDate);
-            $toDate = $fromDate->copy();
-            $dateLabel = $singleDate;
-        } else {
-            $fromDate = Carbon::createFromFormat('!Y-m-d', (string) $rawFrom);
-            $toDate = Carbon::createFromFormat('!Y-m-d', (string) $rawTo);
-
-            if ($fromDate->gt($toDate)) {
-                return response()->json([
-                    'message' => 'from_date must be before or equal to to_date',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-
-            if ($fromDate->diffInDays($toDate) > 366) {
-                return response()->json([
-                    'message' => 'Date range must not exceed 366 days',
-                ], Response::HTTP_UNPROCESSABLE_ENTITY);
-            }
-
-            $dateLabel = $rawFrom.'..'.$rawTo;
+            return $this->singleDateResponse($singleDate, $type, $language);
         }
 
-        // Resolve nameTH from lotto_markets when available.
-        // For snapshot-only types (not in lotto_markets), nameTH is resolved inside Cache::remember
-        // so the snapshot DB query is only executed on cache misses, not on every cached response.
-        // Per BOA-262, market_id is optional — unknown types are not rejected.
+        return $this->dateRangeResponse($rawFrom, $rawTo, $type, $request);
+    }
+
+    /**
+     * Grouped response for a single date — matches GET /api/v1/lotto/results/by-date shape.
+     */
+    protected function singleDateResponse(string $date, ?string $type, string $language): JsonResponse
+    {
+        if (! $this->validDrawDate($date)) {
+            return response()->json(['message' => 'date must be valid YYYY-MM-DD'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $payload = Cache::remember(
+            $this->groupedCacheKey($date, $type, $language),
+            120,
+            function () use ($date, $type, $language): array {
+                return $this->legacyService->queryGrouped($date, $type, $language);
+            }
+        );
+
+        $message = empty($payload['groups'])
+            ? 'Archive result not found.'
+            : 'ดึงผลรางวัลตามวันที่สำเร็จ';
+
+        return response()->json($payload + ['message' => $message]);
+    }
+
+    /**
+     * Flat-list response for date ranges (legacy format).
+     */
+    protected function dateRangeResponse(?string $rawFrom, ?string $rawTo, ?string $type, Request $request): JsonResponse
+    {
+        $fromDate = Carbon::createFromFormat('!Y-m-d', (string) $rawFrom);
+        $toDate = Carbon::createFromFormat('!Y-m-d', (string) $rawTo);
+
+        if ($fromDate->gt($toDate)) {
+            return response()->json([
+                'message' => 'from_date must be before or equal to to_date',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($fromDate->diffInDays($toDate) > 366) {
+            return response()->json([
+                'message' => 'Date range must not exceed 366 days',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $perPage = (int) $request->query('per_page', 100);
+        $page = (int) $request->query('page', 1);
+        $dateLabel = $rawFrom.'..'.$rawTo;
+
         $nameTH = 'ทั้งหมด';
         $marketNameTH = null;
 
@@ -117,13 +141,12 @@ class LottoResultArchiveLegacyController extends Controller
                 ->first();
 
             $marketNameTH = $market ? ($market->name ?: $type) : null;
-            $nameTH = $marketNameTH ?? $type; // temporary; overridden inside cache for snapshot-only
+            $nameTH = $marketNameTH ?? $type;
         }
 
         $fromDateStr = $fromDate->format('Y-m-d');
         $toDateStr = $toDate->format('Y-m-d');
 
-        // Cache: uses archive writer's version key for invalidation
         $queryFingerprint = md5(($type ?: 'all').'|'.$fromDateStr.'|'.$toDateStr.'|'.$page.'|'.$perPage);
 
         if ($type) {
@@ -138,8 +161,6 @@ class LottoResultArchiveLegacyController extends Controller
         $payload = Cache::remember($cacheKey, $ttl, function () use (
             $type, $fromDateStr, $toDateStr, $perPage, $page, $dateLabel, $nameTH, $marketNameTH
         ): array {
-            // For snapshot-only types (no lotto_markets entry), read nameTH from snapshot.
-            // Placed inside the cache closure so the extra DB query only runs on cache misses.
             $resolvedNameTH = $nameTH;
             if ($type !== null && $marketNameTH === null) {
                 $snapshotNameTH = LottoResultArchiveLegacyResult::where('type', $type)
@@ -177,6 +198,13 @@ class LottoResultArchiveLegacyController extends Controller
         });
 
         return response()->json($payload);
+    }
+
+    protected function groupedCacheKey(string $date, ?string $type, string $language): string
+    {
+        $typePart = $type ?: 'all';
+
+        return "lotto:archive:legacy:grouped:{$typePart}:{$date}:{$language}";
     }
 
     protected function validDrawDate(string $raw): bool
