@@ -85,7 +85,7 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
                     'source_result_id' => $draw->id,
                     'lottos_name' => $canonicalType,
                     'lottos_th' => $market->name,
-                    'lottos_date' => $draw->draw_date,
+                    'lottos_date' => $draw->result_at ?? $draw->draw_date,
                     'lottos_date_raw' => $requestDate,
                     'lottos_time' => $draw->result_at instanceof \DateTimeInterface
                         ? $draw->result_at->format('H:i')

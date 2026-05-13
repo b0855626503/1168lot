@@ -342,9 +342,7 @@ class LottoResultArchiveLegacyController extends BaseController
             'draw_date' => $row->request_date instanceof \DateTimeInterface
                 ? $row->request_date->format('Y-m-d')
                 : (string) ($row->request_date ?? ''),
-            'result_at' => $row->fetched_at instanceof \DateTimeInterface
-                ? $row->fetched_at->format('Y-m-d H:i:s')
-                : (string) ($row->fetched_at ?? ''),
+            'result_at' => $this->resolveResultAt($row),
             'status' => 'resulted',
             'result_number' => $resultNumber,
             'result_top_3' => $top3,
@@ -353,6 +351,19 @@ class LottoResultArchiveLegacyController extends BaseController
             'first_prize' => $number,
             'last_2_digits' => $last2,
         ];
+    }
+
+    protected function resolveResultAt(LottoResultArchiveLegacyResult $row): string
+    {
+        if ($row->lottos_date instanceof \DateTimeInterface) {
+            return $row->lottos_date->format('Y-m-d H:i:s');
+        }
+
+        if ($row->fetched_at instanceof \DateTimeInterface) {
+            return $row->fetched_at->format('Y-m-d H:i:s');
+        }
+
+        return (string) ($row->fetched_at ?? '');
     }
 
     /**
