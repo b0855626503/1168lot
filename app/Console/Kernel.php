@@ -133,6 +133,13 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        $schedule->command('lotto:legacy-results:fetch --today --sleep=100')
+            ->hourlyAt(30)
+            ->between('6:00', '19:00')
+            ->when(static fn (): bool => ! $relayRuntime->isClone())
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('lotto:cleanup-browser-runtime-artifacts')
             ->dailyAt('03:55')
             ->withoutOverlapping()
