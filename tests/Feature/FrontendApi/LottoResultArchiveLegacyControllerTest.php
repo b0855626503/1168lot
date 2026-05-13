@@ -361,6 +361,94 @@ class LottoResultArchiveLegacyControllerTest extends TestCase
         $response->assertOk()->assertJsonPath('count', 2);
     }
 
+    public function test_alias_type_normalized_to_canonical_before_query(): void
+    {
+        // Seed a row stored under canonical type 'xsthm' (as the fetch command would store it).
+        // Request with alias 'hanoi-special' must normalize to 'xsthm' and return the row.
+        DB::table('lotto_result_archive_legacy_results')->insert([
+            'type' => 'xsthm',
+            'name_th' => 'หวยฮานอยพิเศษ',
+            'request_date' => '2026-04-05',
+            'page' => 1,
+            'source_result_id' => 5001,
+            'lottos_name' => 'Hanoi Special',
+            'lottos_th' => 'หวยฮานอยพิเศษ',
+            'lottos_date' => '2026-04-05 00:00:00',
+            'lottos_date_raw' => '05/04/2569',
+            'lottos_time' => '18:30',
+            'lottos_number' => '123',
+            'lottos_under' => '45',
+            'market_code' => null,
+            'market_id' => null,
+            'source_url' => null,
+            'fetched_at' => now(),
+            'fetch_status' => 'success',
+            'last_error' => null,
+            'checksum' => null,
+            'payload_json' => null,
+            'unique_key' => hash('sha256', 'xsthm|2026-04-05|5001'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=hanoi-special&date=2026-04-05');
+
+        $response->assertOk()
+            ->assertJsonPath('type', 'xsthm')
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('results.0.lottosNumber', '123')
+            ->assertJsonPath('errors', []);
+    }
+
+    public function test_canonical_type_query_still_works_unchanged(): void
+    {
+        // Querying with the canonical type directly must still work (not double-normalized).
+        DB::table('lotto_result_archive_legacy_results')->insert([
+            'type' => 'xsthm',
+            'name_th' => 'หวยฮานอยพิเศษ',
+            'request_date' => '2026-04-06',
+            'page' => 1,
+            'source_result_id' => 5002,
+            'lottos_name' => 'Hanoi Special',
+            'lottos_th' => 'หวยฮานอยพิเศษ',
+            'lottos_date' => '2026-04-06 00:00:00',
+            'lottos_date_raw' => '06/04/2569',
+            'lottos_time' => '18:30',
+            'lottos_number' => '456',
+            'lottos_under' => '78',
+            'market_code' => null,
+            'market_id' => null,
+            'source_url' => null,
+            'fetched_at' => now(),
+            'fetch_status' => 'success',
+            'last_error' => null,
+            'checksum' => null,
+            'payload_json' => null,
+            'unique_key' => hash('sha256', 'xsthm|2026-04-06|5002'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=xsthm&date=2026-04-06');
+
+        $response->assertOk()
+            ->assertJsonPath('type', 'xsthm')
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('results.0.lottosNumber', '456');
+    }
+
+    public function test_unknown_type_passes_through_unchanged(): void
+    {
+        // A type with no mapping in the registry must pass through without modification.
+        // It will return no results (no rows for it), but must not be rejected or altered.
+        $response = $this->getJson('http://api.localhost/api/v1/lotto/result-archive-legacy?type=totally-unknown-type&date=2026-04-22');
+
+        $response->assertOk()
+            ->assertJsonPath('type', 'totally-unknown-type')
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('errors.0.code', 'DRAW_DATE_NOT_FOUND');
+    }
+
     public function test_sentinel_rows_not_returned_by_api(): void
     {
         // Insert a failed and a not_found sentinel row for the same date as success rows.

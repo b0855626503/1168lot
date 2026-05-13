@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoResultArchiveLegacyResult;
 use Gametech\Lotto\Services\LegacyArchiveResultService;
+use Gametech\Lotto\Services\Relay\LotteryRelayTypeRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -17,9 +18,14 @@ class LottoResultArchiveLegacyController extends Controller
 {
     protected LegacyArchiveResultService $legacyService;
 
-    public function __construct(?LegacyArchiveResultService $legacyService = null)
-    {
+    protected LotteryRelayTypeRegistry $typeRegistry;
+
+    public function __construct(
+        ?LegacyArchiveResultService $legacyService = null,
+        ?LotteryRelayTypeRegistry $typeRegistry = null,
+    ) {
         $this->legacyService = $legacyService ?? new LegacyArchiveResultService;
+        $this->typeRegistry = $typeRegistry ?? new LotteryRelayTypeRegistry;
     }
 
     /**
@@ -48,7 +54,18 @@ class LottoResultArchiveLegacyController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $type = $request->query('type');
+        $rawType = $request->query('type');
+
+        // Normalize market-code aliases to canonical provider types using the registry.
+        // e.g. 'hanoi-special' → 'xsthm'. Unknown types pass through unchanged so that
+        // snapshot-only markets (yeekee exclusions, etc.) remain unaffected.
+        if ($rawType !== null) {
+            $canonical = $this->typeRegistry->canonicalTypeForMarketCode($rawType);
+            $type = $canonical ?? $rawType;
+        } else {
+            $type = null;
+        }
+
         $singleDate = $request->query('date');
         $rawFrom = $request->query('from_date');
         $rawTo = $request->query('to_date');
