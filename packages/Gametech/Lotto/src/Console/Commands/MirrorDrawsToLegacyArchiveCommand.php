@@ -87,9 +87,7 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
                     'lottos_th' => $market->name,
                     'lottos_date' => $draw->result_at ?? $draw->draw_date,
                     'lottos_date_raw' => $requestDate,
-                    'lottos_time' => $draw->result_at instanceof \DateTimeInterface
-                        ? $draw->result_at->format('H:i')
-                        : '',
+                    'lottos_time' => $this->resolveLottosTime($draw, $resultNumber),
                     'lottos_number' => $lottosNumber,
                     'lottos_under' => $lottosUnder,
                     'market_code' => $market->code,
@@ -107,5 +105,24 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
         $this->info("Mirrored {$upserted} draws to legacy archive (window={$window}m).");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param array<string,mixed> $resultNumber
+     */
+    private function resolveLottosTime(LottoDraw $draw, array $resultNumber): string
+    {
+        // Use time from result source (expalert/203 API) if available
+        $time = (string) ($resultNumber['time'] ?? '');
+        if ($time !== '' && preg_match('/^\d{2}:\d{2}$/', trim($time))) {
+            return trim($time);
+        }
+
+        // Fallback: draw's expected result_at time
+        if ($draw->result_at instanceof \DateTimeInterface) {
+            return $draw->result_at->format('H:i');
+        }
+
+        return '';
     }
 }

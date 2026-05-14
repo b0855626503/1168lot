@@ -251,14 +251,18 @@ class SettlementService
                 : substr($firstPrize, -3);
             $top2 = substr($firstPrize, -2);
 
-            return [
+            $time = $this->normalizeTimeString((string) ($resultNumber['time'] ?? ''));
+            $drawDate = trim((string) ($resultNumber['draw_date'] ?? ''));
+
+            return array_filter([
                 'first_prize' => $firstPrize,
                 'last_2_digits' => $last2Digits,
                 'top_3' => $top3,
                 'top_2' => $top2,
-                // Keep compatibility with existing BOTTOM_2 bet type settlement logic.
                 'bottom_2' => $last2Digits,
-            ];
+                'time' => $time !== '' ? $time : null,
+                'draw_date' => $drawDate !== '' ? $drawDate : null,
+            ], fn ($v) => $v !== null);
         }
 
         // Legacy fallback for older payloads/tests that still send top_3/bottom_2.
@@ -280,11 +284,16 @@ class SettlementService
             throw new InvalidArgumentException('ผล 2 ตัวบนต้องมี 2 หลัก');
         }
 
-        return [
+        $time = $this->normalizeTimeString((string) ($resultNumber['time'] ?? ''));
+        $drawDate = trim((string) ($resultNumber['draw_date'] ?? ''));
+
+        return array_filter([
             'top_3' => $top3,
             'top_2' => $top2,
             'bottom_2' => $bottom2,
-        ];
+            'time' => $time !== '' ? $time : null,
+            'draw_date' => $drawDate !== '' ? $drawDate : null,
+        ], fn ($v) => $v !== null);
     }
 
     /**
@@ -333,6 +342,20 @@ class SettlementService
     private function isWinningItem(LottoTicketItem $item, array $resultNumber): bool
     {
         return $this->isWinningBet((string) $item->bet_type, (string) $item->number, $resultNumber);
+    }
+
+    private function normalizeTimeString(string $raw): string
+    {
+        $value = trim($raw);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/^\d{2}:\d{2}$/', $value)) {
+            return $value;
+        }
+
+        return '';
     }
 
     private function sameDigits(string $left, string $right): bool
