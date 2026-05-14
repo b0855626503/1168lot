@@ -361,9 +361,19 @@ class LottoResultArchiveLegacyController extends BaseController
     {
         $timezone = (string) config('app.timezone', 'Asia/Bangkok');
 
+        // Use request_date + lottos_time as primary source
+        $dateStr = $row->request_date instanceof \DateTimeInterface
+            ? $row->request_date->format('Y-m-d')
+            : (string) ($row->request_date ?? '');
+        $timeStr = trim((string) ($row->lottos_time ?? ''));
+
+        if ($dateStr !== '' && $timeStr !== '' && preg_match('/^\d{2}:\d{2}$/', $timeStr)) {
+            return $dateStr.' '.$timeStr.':00';
+        }
+
+        // Fallback: lottos_date (from source API)
         if ($row->lottos_date instanceof \DateTimeInterface) {
             $localDate = $row->lottos_date->copy()->timezone($timezone);
-            $timeStr = trim((string) ($row->lottos_time ?? ''));
 
             if ($timeStr !== '' && preg_match('/^\d{2}:\d{2}$/', $timeStr)) {
                 return $localDate->format('Y-m-d').' '.$timeStr.':00';
@@ -372,6 +382,7 @@ class LottoResultArchiveLegacyController extends BaseController
             return $localDate->format('Y-m-d H:i:s');
         }
 
+        // Last resort
         if ($row->fetched_at instanceof \DateTimeInterface) {
             return $row->fetched_at->copy()->timezone($timezone)->format('Y-m-d H:i:s');
         }
