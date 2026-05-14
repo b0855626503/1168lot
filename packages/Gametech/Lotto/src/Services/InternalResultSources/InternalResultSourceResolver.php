@@ -5,6 +5,7 @@ namespace Gametech\Lotto\Services\InternalResultSources;
 use Gametech\Lotto\Services\InternalResultSources\Contracts\InternalResultSourceDriver;
 use Gametech\Lotto\Services\InternalResultSources\Drivers\DowjonesExtraResultDriver;
 use Gametech\Lotto\Services\InternalResultSources\Drivers\DowjonesMidnightResultDriver;
+use Gametech\Lotto\Services\InternalResultSources\Drivers\ExpalertResultDriver;
 use Gametech\Lotto\Services\InternalResultSources\Drivers\ExphuayResultDriver;
 use InvalidArgumentException;
 
@@ -18,12 +19,14 @@ class InternalResultSourceResolver
     public function __construct(
         ExphuayResultDriver $exphuay,
         DowjonesMidnightResultDriver $dowjonesMidnight,
-        DowjonesExtraResultDriver $dowjonesExtra
+        DowjonesExtraResultDriver $dowjonesExtra,
+        ExpalertResultDriver $expalert
     ) {
         $this->drivers = [
             $exphuay->sourceKey() => $exphuay,
             $dowjonesMidnight->sourceKey() => $dowjonesMidnight,
             $dowjonesExtra->sourceKey() => $dowjonesExtra,
+            $expalert->sourceKey() => $expalert,
         ];
     }
 

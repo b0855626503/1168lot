@@ -5,6 +5,8 @@ namespace Gametech\Lotto\Http\Controllers\Api;
 use Gametech\Lotto\Services\InternalResultSources\InternalResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 
 class InternalResultController
 {
@@ -40,6 +42,145 @@ class InternalResultController
         ]);
 
         return new JsonResponse($result, 200);
+    }
+
+    public function expalert(string $slug, Request $request): JsonResponse
+    {
+        $result = $this->service->fetch('expalert', [
+            'slug' => $slug,
+            'date' => (string) $request->query('date', ''),
+        ]);
+
+        return new JsonResponse($result, 200);
+    }
+
+    public function expalertByType(Request $request): JsonResponse
+    {
+        $type = (string) $request->query('type', '');
+        $requestedDate = (string) $request->query('date', '');
+
+        if ($type === '') {
+            return $this->empty203Response($type);
+        }
+
+        $apiKey = (string) config('lotto_auto_result.internal_result_sources.expalert.api_key', (string) env('EXPHUAY_API_KEY', ''));
+        $headers = [];
+        if ($apiKey !== '') {
+            $headers['x-api-key'] = $apiKey;
+        }
+
+        // Try /data/backward/{slug} first when a date is given — it has all historical entries
+        if ($requestedDate !== '') {
+            $backwardUrl = 'https://api.expalert.cc/data/backward/' . rawurlencode($type);
+            $backwardResponse = Http::timeout(15)->withHeaders($headers)->get($backwardUrl);
+
+            if ($backwardResponse->successful()) {
+                $payload = $backwardResponse->json();
+                $entries = is_array($payload) ? ($payload['data'] ?? []) : [];
+
+                if (is_array($entries)) {
+                    foreach ($entries as $entry) {
+                        if (! is_array($entry)) {
+                            continue;
+                        }
+                        $result = $entry['result'] ?? [];
+                        $isoDate = (string) ($result['date'] ?? '');
+                        $entryDate = $this->isoToBangkokDate($isoDate);
+
+                        if ($entryDate === $requestedDate) {
+                            return $this->build203Response($type, $entry, $entryDate);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: /data/result/{slug} for latest
+        $resultUrl = 'https://api.expalert.cc/data/result/' . rawurlencode($type);
+        $response = Http::timeout(15)->withHeaders($headers)->get($resultUrl);
+
+        if (! $response->successful()) {
+            return $this->empty203Response($type);
+        }
+
+        $payload = $response->json();
+        if (! is_array($payload)) {
+            return $this->empty203Response($type);
+        }
+
+        $data = $payload['data'] ?? [];
+        if (! is_array($data)) {
+            return $this->empty203Response($type);
+        }
+
+        $result = $data['result'] ?? [];
+        $isoDate = (string) ($result['date'] ?? '');
+        $entryDate = $this->isoToBangkokDate($isoDate);
+
+        return $this->build203Response($type, $data, $entryDate);
+    }
+
+    private function isoToBangkokDate(string $isoDate): string
+    {
+        if ($isoDate === '') {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($isoDate)->setTimezone('Asia/Bangkok')->format('Y-m-d');
+        } catch (\Throwable) {
+            return $isoDate;
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $entry
+     */
+    private function build203Response(string $type, array $entry, string $drawDate): JsonResponse
+    {
+        $result = $entry['result'] ?? [];
+        $number = (string) ($result['number'] ?? '');
+        $under = (string) ($result['under'] ?? '');
+        $isoDate = (string) ($result['date'] ?? '');
+
+        $lottosDate = null;
+        if ($isoDate !== '') {
+            try {
+                $lottosDate = Carbon::parse($isoDate)->setTimezone('Asia/Bangkok')->toIso8601String();
+            } catch (\Throwable) {
+            }
+        }
+
+        return new JsonResponse([
+            'type' => $type,
+            'nameTH' => $entry['th'] ?? '',
+            'date' => $drawDate,
+            'page' => 1,
+            'count' => $number !== '' ? 1 : 0,
+            'results' => $number !== ''
+                ? [[
+                    'id' => 0,
+                    'lottosName' => $type,
+                    'lottosTH' => $entry['th'] ?? '',
+                    'lottosDate' => $lottosDate ?? $isoDate,
+                    'lottosTime' => $entry['time'] ?? '',
+                    'lottosNumber' => $number,
+                    'lottosUnder' => $under,
+                ]]
+                : [],
+        ], 200);
+    }
+
+    private function empty203Response(string $type): JsonResponse
+    {
+        return new JsonResponse([
+            'type' => $type,
+            'nameTH' => '',
+            'date' => '',
+            'page' => 1,
+            'count' => 0,
+            'results' => [],
+        ], 200);
     }
 }
 

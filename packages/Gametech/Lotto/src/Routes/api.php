@@ -33,4 +33,19 @@ $internalResultsRoute
 
         Route::get('dowjones-extra', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@dowjonesExtra')
             ->name('lotto.internal.results.dowjones_extra');
+
+        Route::get('expalert/{slug}', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@expalert')
+            ->where('slug', '[A-Za-z0-9_-]+')
+            ->name('lotto.internal.results.expalert');
+
+        Route::get('expalert', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@expalertByType')
+            ->name('lotto.internal.results.expalert_by_type');
+    });
+
+// Fallback route without domain constraint (for local/dev)
+Route::middleware(['api', 'throttle:120,1'])
+    ->prefix('internal/lottery/results')
+    ->group(function () {
+        Route::get('expalert', 'Gametech\Lotto\Http\Controllers\Api\InternalResultController@expalertByType')
+            ->name('lotto.internal.results.expalert_by_type.fallback');
     });
