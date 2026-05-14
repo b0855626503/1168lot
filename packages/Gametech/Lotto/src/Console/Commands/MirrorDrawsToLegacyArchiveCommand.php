@@ -85,14 +85,14 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
                     'source_result_id' => $draw->id,
                     'lottos_name' => $canonicalType,
                     'lottos_th' => $market->name,
-                    'lottos_date' => $draw->result_at ?? $draw->draw_date,
+                    'lottos_date' => $this->resolveLottosDate($draw, $resultNumber),
                     'lottos_date_raw' => $requestDate,
                     'lottos_time' => $this->resolveLottosTime($draw, $resultNumber),
                     'lottos_number' => $lottosNumber,
                     'lottos_under' => $lottosUnder,
                     'market_code' => $market->code,
                     'market_id' => $market->id,
-                    'fetched_at' => $draw->result_at ?? now(),
+                    'fetched_at' => now(),
                     'fetch_status' => 'success',
                     'last_error' => null,
                 ]
@@ -110,6 +110,28 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
     /**
      * @param array<string,mixed> $resultNumber
      */
+    private function resolveLottosDate(LottoDraw $draw, array $resultNumber): \DateTimeInterface
+    {
+        // Use draw_date from result source if available
+        $drawDate = (string) ($resultNumber['draw_date'] ?? '');
+        if ($drawDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $drawDate)) {
+            try {
+                return Carbon::createFromFormat('Y-m-d', $drawDate)->startOfDay();
+            } catch (\Throwable) {
+            }
+        }
+
+        // Fallback: draw's original draw_date
+        if ($draw->draw_date instanceof \DateTimeInterface) {
+            return $draw->draw_date;
+        }
+
+        return now();
+    }
+
+    /**
+     * @param array<string,mixed> $resultNumber
+     */
     private function resolveLottosTime(LottoDraw $draw, array $resultNumber): string
     {
         // Use time from result source (expalert/203 API) if available
@@ -118,7 +140,7 @@ class MirrorDrawsToLegacyArchiveCommand extends Command
             return trim($time);
         }
 
-        // Fallback: draw's expected result_at time
+        // Fallback: draw's expected result_at time (may be stale)
         if ($draw->result_at instanceof \DateTimeInterface) {
             return $draw->result_at->format('H:i');
         }
