@@ -318,7 +318,7 @@ class LottoResultArchiveLegacyController extends BaseController
         $len = strlen($number);
 
         $top3 = $len >= 3 ? substr($number, -3) : '';
-        $top2 = $under !== '' ? $under : ($len >= 2 ? substr($number, -2) : '');
+        $top2 = $len >= 2 ? substr($number, -2) : '';
         $bottom2 = $under !== '' ? $under : ($len >= 2 ? substr($number, -2) : '');
         $last2 = $bottom2;
 
