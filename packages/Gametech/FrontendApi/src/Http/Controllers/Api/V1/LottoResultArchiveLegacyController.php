@@ -59,7 +59,7 @@ class LottoResultArchiveLegacyController extends BaseController
             ? 'Archive result not found.'
             : 'ดึงผลรางวัลตามวันที่สำเร็จ';
 
-        return $this->sendResponse($payload, $message);
+        return $this->sendResponse($this->sanitizeUtf8($payload), $message);
     }
 
     /**
@@ -107,7 +107,7 @@ class LottoResultArchiveLegacyController extends BaseController
             $history = $rows->map(fn (LottoResultArchiveLegacyResult $row): array => $this->mapSnapshotToDrawResult($row))->values();
             $latest = $history->first();
 
-            return $this->sendResponse([
+            return $this->sendResponse($this->sanitizeUtf8([
                 'market' => [
                     'id' => (int) $market->id,
                     'name' => $this->localizedMarketName([
@@ -131,7 +131,7 @@ class LottoResultArchiveLegacyController extends BaseController
                     'has_more' => ($page * $limit) < $total,
                 ],
                 'language' => $language,
-            ], 'ดึงผลย้อนหลังสำเร็จ');
+            ]), 'ดึงผลย้อนหลังสำเร็จ');
         } catch (\Throwable $e) {
             return $this->sendError('ไม่สามารถดึงผลย้อนหลังได้ในขณะนี้', 422);
         }
@@ -509,7 +509,7 @@ class LottoResultArchiveLegacyController extends BaseController
             ? 'Archive result not found.'
             : 'ดึงผลรางวัลตามวันที่สำเร็จ';
 
-        return response()->json($payload + ['message' => $message]);
+        return response()->json($this->sanitizeUtf8($payload + ['message' => $message]));
     }
 
     /**
@@ -601,7 +601,7 @@ class LottoResultArchiveLegacyController extends BaseController
             ];
         });
 
-        return response()->json($payload);
+        return response()->json($this->sanitizeUtf8($payload));
     }
 
     protected function validDrawDate(string $raw): bool
@@ -617,5 +617,26 @@ class LottoResultArchiveLegacyController extends BaseController
         $parsed = Carbon::createFromFormat('!Y-m-d', $raw);
 
         return $parsed && $parsed->format('Y-m-d') === $raw;
+    }
+
+    /**
+     * Recursively sanitize all string values to valid UTF-8, stripping invalid byte sequences.
+     *
+     * @param  mixed  $data
+     * @return mixed
+     */
+    private function sanitizeUtf8($data)
+    {
+        if (is_string($data)) {
+            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+        }
+
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->sanitizeUtf8($value);
+            }
+        }
+
+        return $data;
     }
 }
