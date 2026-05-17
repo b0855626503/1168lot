@@ -285,6 +285,10 @@ Route::domain(config('app.admin_url').'.'.(is_null(config('app.admin_domain_url'
                 'view' => 'admin::module.rp_wallet.index',
             ])->name('admin.rp_wallet.index');
 
+            Route::get('wallet_txn', 'ReportController@wallet_txn')->defaults('_config', [
+                'view' => 'admin::module.wallet_txn.index',
+            ])->name('admin.wallet_txn.index');
+
             Route::get('rp_member_ref', 'ReportController@rp_member_ref')->defaults('_config', [
                 'view' => 'admin::module.rp_member_ref.index',
             ])->name('admin.rp_member_ref.index');

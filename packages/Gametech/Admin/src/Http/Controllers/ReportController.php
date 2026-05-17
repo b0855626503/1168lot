@@ -46,13 +46,13 @@ use Gametech\Admin\DataTables\RpWithdrawFreeDataTable;
 use Gametech\Admin\DataTables\RpWithdrawSeamlessDataTable;
 use Gametech\Admin\DataTables\RpWithdrawSeamlessFreeDataTable;
 use Gametech\Admin\DataTables\TransactionDataTable;
+use Gametech\Admin\DataTables\WalletTxnDataTable;
 use Gametech\Game\Repositories\GameRepository;
 use Gametech\Payment\Repositories\BankRepository;
 use Gametech\Promotion\Repositories\PromotionRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Mozammil\Censor\Replacers\StarReplacer;
-
 
 class ReportController extends AppBaseController
 {
@@ -68,8 +68,7 @@ class ReportController extends AppBaseController
         GameRepository $gameRepo,
         PromotionRepository $promotionRepo,
         BankRepository $bankRepository
-    )
-    {
+    ) {
         $this->_config = request('_config');
 
         $this->middleware('admin');
@@ -84,7 +83,6 @@ class ReportController extends AppBaseController
         return $rpLogDataTable->render($this->_config['view']);
     }
 
-
     public function rp_log_cashback(RpLogCashbackDataTable $rpLogCashbackDataTable)
     {
         return $rpLogCashbackDataTable->render($this->_config['view']);
@@ -98,6 +96,11 @@ class ReportController extends AppBaseController
     public function rp_wallet(RpWalletDataTable $rpWalletDataTable)
     {
         return $rpWalletDataTable->render($this->_config['view']);
+    }
+
+    public function wallet_txn(WalletTxnDataTable $walletTxnDataTable)
+    {
+        return $walletTxnDataTable->render($this->_config['view']);
     }
 
     public function rp_setpoint(RpSetPointDataTable $rpSetPointDataTable)
@@ -129,12 +132,14 @@ class ReportController extends AppBaseController
     {
         $games = $this->gameRepository->findWhere(['enable' => 'Y'])->pluck('name', 'code');
         $pros = $this->promotionRepository->findWhere(['use_wallet' => 'Y'])->whereIn('id', ['pro_newuser', 'pro_firstday', 'pro_allbonus'])->pluck('name_th', 'code');
+
         return $rpBillDataTable->render($this->_config['view'], ['games' => $games, 'pros' => $pros]);
     }
 
     public function rp_top_promotion(RpTopProDataTable $rpTopProDataTable)
     {
-        $pros = $this->promotionRepository->findWhere(['enable' => 'Y'])->whereNotIn('id', ['pro_cashback', 'pro_ic','pro_spin'])->pluck('name_th', 'code');
+        $pros = $this->promotionRepository->findWhere(['enable' => 'Y'])->whereNotIn('id', ['pro_cashback', 'pro_ic', 'pro_spin'])->pluck('name_th', 'code');
+
         return $rpTopProDataTable->render($this->_config['view'], ['pros' => $pros]);
     }
 
@@ -185,10 +190,11 @@ class ReportController extends AppBaseController
     public function rp_top_payment(RpTopPaymentDataTable $rpTopPaymentDataTable, RpTopWithdrawDataTable $rpTopWithdrawDataTable)
     {
         $wdDataTable = $rpTopWithdrawDataTable->html();
-        return $rpTopPaymentDataTable->render($this->_config['view'],compact('wdDataTable'));
+
+        return $rpTopPaymentDataTable->render($this->_config['view'], compact('wdDataTable'));
     }
 
-    public function rp_sm_payment(RpSmPaymentDataTable $rpSmPaymentDataTable, RpSmWithdrawDataTable $rpSmWithdrawDataTable,RpSmWithdrawSeamlessDataTable $rpSmWithdrawSeamlessDataTable, RpSmSetWalletDataTable $rpSmSetWalletDataTable, RpSmLogDataTable $rpSmLogDataTable)
+    public function rp_sm_payment(RpSmPaymentDataTable $rpSmPaymentDataTable, RpSmWithdrawDataTable $rpSmWithdrawDataTable, RpSmWithdrawSeamlessDataTable $rpSmWithdrawSeamlessDataTable, RpSmSetWalletDataTable $rpSmSetWalletDataTable, RpSmLogDataTable $rpSmLogDataTable)
     {
         $config = $this->getCoreConfig();
 
@@ -196,7 +202,7 @@ class ReportController extends AppBaseController
         $stDataTable = $rpSmSetWalletDataTable->html();
         $lgDataTable = $rpSmLogDataTable->html();
 
-        return $rpSmPaymentDataTable->render($this->_config['view'],compact('wdDataTable','stDataTable','lgDataTable'));
+        return $rpSmPaymentDataTable->render($this->_config['view'], compact('wdDataTable', 'stDataTable', 'lgDataTable'));
     }
 
     public function rp_sm_withdraw(RpSmWithdrawDataTable $rpSmWithdrawDataTable)
@@ -233,13 +239,15 @@ class ReportController extends AppBaseController
     {
 
         $wdDataTable = $rpTopWithdrawDataTable->html();
-        return $rpTopWithdrawDataTable->render($this->_config['view'],compact('wdDataTable'));
+
+        return $rpTopWithdrawDataTable->render($this->_config['view'], compact('wdDataTable'));
     }
 
     public function rp_bill_free(RpBillFreeDataTable $rpBillFreeDataTable)
     {
         $games = $this->gameRepository->findWhere(['enable' => 'Y'])->pluck('name', 'code');
         $pros = $this->promotionRepository->findWhere(['use_wallet' => 'Y'])->pluck('name_th', 'code');
+
         return $rpBillFreeDataTable->render($this->_config['view'], ['games' => $games, 'pros' => $pros]);
     }
 
@@ -249,16 +257,18 @@ class ReportController extends AppBaseController
         $responses = app('Gametech\Payment\Repositories\BankAccountRepository')->out()->active()->with('bank')->orderBy('code')->get()->toArray();
 
         $banks_out = collect($responses)->map(function ($items) {
-            $item = (object)$items;
-//            dd($item);
+            $item = (object) $items;
+
+            //            dd($item);
             return [
                 'code' => $item->code,
-                'name' => $item->bank['name_th'] . ' [' . $item->acc_no . '] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
+                'name' => $item->bank['name_th'].' ['.$item->acc_no.'] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
             ];
 
         })->pluck('name', 'code');
         $banks = $this->bankRepository->findWhere(['enable' => 'Y'])->pluck('name_th', 'code');
-        return $rpWithdrawDataTable->render($this->_config['view'],  ['banks' => $banks,'banks_out' => $banks_out]);
+
+        return $rpWithdrawDataTable->render($this->_config['view'], ['banks' => $banks, 'banks_out' => $banks_out]);
     }
 
     public function rp_withdraw_seamless(RpWithdrawSeamlessDataTable $rpWithdrawSeamlessDataTable)
@@ -267,45 +277,48 @@ class ReportController extends AppBaseController
         $responses = app('Gametech\Payment\Repositories\BankAccountRepository')->out()->active()->with('bank')->orderBy('code')->get()->toArray();
 
         $banks_out = collect($responses)->map(function ($items) {
-            $item = (object)$items;
-//            dd($item);
+            $item = (object) $items;
+
+            //            dd($item);
             return [
                 'code' => $item->code,
-                'name' => $item->bank['name_th'] . ' [' . $item->acc_no . '] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
+                'name' => $item->bank['name_th'].' ['.$item->acc_no.'] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
             ];
 
         })->pluck('name', 'code');
 
-        return $rpWithdrawSeamlessDataTable->render($this->_config['view'], ['banks' => $banks,'banks_out' => $banks_out]);
+        return $rpWithdrawSeamlessDataTable->render($this->_config['view'], ['banks' => $banks, 'banks_out' => $banks_out]);
     }
 
     public function rp_withdraw_seamless_free(RpWithdrawSeamlessFreeDataTable $rpWithdrawSeamlessFreeDataTable)
     {
         $banks = $this->bankRepository->findWhere(['enable' => 'Y'])->pluck('name_th', 'code');
+
         return $rpWithdrawSeamlessFreeDataTable->render($this->_config['view'], ['banks' => $banks]);
     }
 
     public function rp_billturn(RpBillTurnDataTable $rpBillTurnDataTable)
     {
         $games = $this->gameRepository->findWhere(['enable' => 'Y'])->pluck('name', 'code');
+
         return $rpBillTurnDataTable->render($this->_config['view'], ['games' => $games]);
     }
 
     public function rp_cashback(RpCashbackDataTable $rpCashbackDataTable)
     {
-        if((now()->toTimeString() >= '00:00:00') && (now()->toTimeString() <= '01:00:00')){
+        if ((now()->toTimeString() >= '00:00:00') && (now()->toTimeString() <= '01:00:00')) {
             return 'ระบบกำลังมอบออโต้ ห้ามกดเวลา 00.00 - 01.00 โปรดเข้ามากดหลังจากนี้ถ้าระบบ มอบไม่ครบ';
         }
-
 
         return $rpCashbackDataTable->render($this->_config['view']);
     }
 
     public function rp_member_ic(RpMemberIcDataTable $rpMemberIcDataTable)
     {
-        if((now()->toTimeString() >= '00:00:00') && (now()->toTimeString() <= '01:00:00')){
+        if ((now()->toTimeString() >= '00:00:00') && (now()->toTimeString() <= '01:00:00')) {
             return 'ระบบกำลังมอบออโต้ ห้ามกดเวลา 00.00 - 01.00 โปรดเข้ามากดหลังจากนี้ถ้าระบบ มอบไม่ครบ';
         }
+
         return $rpMemberIcDataTable->render($this->_config['view']);
     }
 
@@ -346,36 +359,38 @@ class ReportController extends AppBaseController
     public function rp_spin(RpSpinDataTable $rpSpinDataTable)
     {
         $bonus = collect(app('Gametech\Payment\Repositories\BonusSpinRepository')->orderBy('bonus_name')->select('bonus_name')->distinct()->get()->toArray())->map(function ($items) {
-            $item = (object)$items;
+            $item = (object) $items;
+
             return [
                 'code' => $item->bonus_name,
-                'name' => $item->bonus_name
+                'name' => $item->bonus_name,
             ];
 
         })->pluck('name', 'code');
+
         return $rpSpinDataTable->render($this->_config['view'], ['bonus' => $bonus]);
     }
 
     public function rp_deposit(RpDepositDataTable $rpDepositDataTable)
     {
 
-
         $responses = app('Gametech\Payment\Repositories\BankAccountRepository')->in()->active()->with('bank')->orderBy('code')->get()->toArray();
 
         $banks = collect($responses)->map(function ($items) {
-            $item = (object)$items;
-//            dd($item);
+            $item = (object) $items;
+
+            //            dd($item);
             return [
                 'code' => $item->code,
-                'name' => $item->bank['name_th'] . ' [ ' . $item->acc_no .' - '.$item->acc_name. ' ] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
+                'name' => $item->bank['name_th'].' [ '.$item->acc_no.' - '.$item->acc_name.' ] '.($item->enable == 'Y' ? 'ใช้งาน' : 'ปิด'),
             ];
 
-        })->pluck('name', 'code');;
+        })->pluck('name', 'code');
 
-//        dd($banks->toArray());
+        //        dd($banks->toArray());
 
-//        dd($banks);
-//        $pros = $this->promotionRepository->findWhere(['use_wallet' => 'Y'])->pluck('name_th', 'code');
+        //        dd($banks);
+        //        $pros = $this->promotionRepository->findWhere(['use_wallet' => 'Y'])->pluck('name_th', 'code');
         return $rpDepositDataTable->render($this->_config['view'], ['banks' => $banks]);
     }
 
@@ -388,42 +403,40 @@ class ReportController extends AppBaseController
 
         $stat = app('Gametech\Core\Repositories\DailyStatRepository')->find($id);
 
-        switch ($method){
+        switch ($method) {
             case 'new':
                 $topic = 'รายชื่อสมาชิกใหม่';
                 $member_code = json_decode($stat->member_new_list);
-                $responses = app('Gametech\Member\Repositories\MemberRepository')->findWhereIn('code',$member_code);
+                $responses = app('Gametech\Member\Repositories\MemberRepository')->findWhereIn('code', $member_code);
                 break;
 
             case 'newrefill':
                 $topic = 'รายชื่อสมาชิกใหม่ที่เติมเงิน';
                 $member_code = json_decode($stat->member_new_refill_list);
-                $responses = app('Gametech\Member\Repositories\MemberRepository')->findWhereIn('code',$member_code);
+                $responses = app('Gametech\Member\Repositories\MemberRepository')->findWhereIn('code', $member_code);
                 break;
         }
 
-
         $permiss = bouncer()->hasPermission('wallet.member.tel');
 
+        $responses = $responses->map(function ($items, $key) use ($permiss) {
+            $item = (object) $items;
 
-        $responses = $responses->map(function ($items,$key) use ($permiss) {
-            $item = (object)$items;
-
-//            $censor = new StarReplacer();
+            //            $censor = new StarReplacer();
 
             if ($permiss) {
                 $tel = $item->tel;
             } else {
-                $tel = Str::mask($item->tel,'*');
+                $tel = Str::mask($item->tel, '*');
             }
 
             return [
                 'no' => ++$key,
-                'date_regis' => core()->formatDate($item->date_create,'H:i:s'),
+                'date_regis' => core()->formatDate($item->date_create, 'H:i:s'),
                 'firstname' => $item->firstname,
                 'lastname' => $item->lastname,
                 'user_name' => $item->user_name,
-                'tel' => $tel
+                'tel' => $tel,
             ];
 
         });
@@ -431,7 +444,7 @@ class ReportController extends AppBaseController
         $result['caption'] = $topic;
         $result['list'] = $responses;
 
-        return $this->sendResponseNew($result,'ดำเนินการเสร็จสิ้น');
+        return $this->sendResponseNew($result, 'ดำเนินการเสร็จสิ้น');
 
     }
 
@@ -443,23 +456,21 @@ class ReportController extends AppBaseController
         $topic = 'รายชื่อสมาชิก';
         $responses = [];
 
-        $responses = app('Gametech\Member\Repositories\MemberRepository')->scopeQuery(function($query) use ($id,$start,$end){
-            return $query->where('refer_code',$id)->whereBetween('date_regis', array($start, $end));
+        $responses = app('Gametech\Member\Repositories\MemberRepository')->scopeQuery(function ($query) use ($id, $start, $end) {
+            return $query->where('refer_code', $id)->whereBetween('date_regis', [$start, $end]);
         })->all();
-
 
         $permiss = bouncer()->hasPermission('wallet.member.tel');
 
+        $responses = $responses->map(function ($items, $key) use ($permiss) {
+            $item = (object) $items;
 
-        $responses = $responses->map(function ($items,$key) use ($permiss) {
-            $item = (object)$items;
-
-//            $censor = new StarReplacer();
+            //            $censor = new StarReplacer();
 
             if ($permiss) {
                 $tel = $item->tel;
             } else {
-                $tel = Str::mask($item->tel,'*');
+                $tel = Str::mask($item->tel, '*');
             }
 
             return [
@@ -467,7 +478,7 @@ class ReportController extends AppBaseController
                 'firstname' => $item->firstname,
                 'lastname' => $item->lastname,
                 'user_name' => $item->user_name,
-                'tel' => $tel
+                'tel' => $tel,
             ];
 
         });
@@ -478,5 +489,4 @@ class ReportController extends AppBaseController
         return $this->sendResponseNew($result,'ดำเนินการเสร็จสิ้น');
 
     }
-
 }
