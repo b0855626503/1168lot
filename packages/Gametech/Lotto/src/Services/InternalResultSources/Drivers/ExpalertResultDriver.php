@@ -2,14 +2,13 @@
 
 namespace Gametech\Lotto\Services\InternalResultSources\Drivers;
 
+use Carbon\Carbon;
 use Gametech\Lotto\Services\InternalResultSources\Contracts\InternalResultSourceDriver;
 use Gametech\Lotto\Services\InternalResultSources\HttpResultFetcher;
 
 class ExpalertResultDriver implements InternalResultSourceDriver
 {
-    public function __construct(private HttpResultFetcher $fetcher)
-    {
-    }
+    public function __construct(private HttpResultFetcher $fetcher) {}
 
     public function sourceKey(): string
     {
@@ -17,13 +16,13 @@ class ExpalertResultDriver implements InternalResultSourceDriver
     }
 
     /**
-     * @param array<string,mixed> $params
+     * @param  array<string,mixed>  $params
      * @return array<string,mixed>
      */
     public function fetch(array $params): array
     {
         $slug = (string) ($params['slug'] ?? '');
-        $url = 'https://api.expalert.cc/data/result/' . rawurlencode($slug);
+        $url = 'https://api.expalert.cc/data/result/'.rawurlencode($slug);
 
         $apiKey = (string) config('lotto_auto_result.internal_result_sources.expalert.api_key', (string) env('EXPHUAY_API_KEY', ''));
         $headers = [];
@@ -78,7 +77,7 @@ class ExpalertResultDriver implements InternalResultSourceDriver
         $lottosDate = null;
         if ($isoDate !== '') {
             try {
-                $dt = \Carbon\Carbon::parse($isoDate)->setTimezone('Asia/Bangkok');
+                $dt = Carbon::parse($isoDate)->setTimezone('Asia/Bangkok');
                 $drawDate = $dt->format('Y-m-d');
                 $lottosDate = $dt->toIso8601String();
             } catch (\Throwable) {

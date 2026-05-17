@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\Http;
 
 class InternalResultController
 {
-    public function __construct(private InternalResultService $service)
-    {
-    }
+    public function __construct(private InternalResultService $service) {}
 
     public function exphuay(string $type, Request $request): JsonResponse
     {
@@ -71,7 +69,7 @@ class InternalResultController
 
         // Try /data/backward/{slug} first when a date is given — it has all historical entries
         if ($requestedDate !== '') {
-            $backwardUrl = 'https://api.expalert.cc/data/backward/' . rawurlencode($type);
+            $backwardUrl = 'https://api.expalert.cc/data/backward/'.rawurlencode($type);
             $backwardResponse = Http::timeout(15)->withHeaders($headers)->get($backwardUrl);
 
             if ($backwardResponse->successful()) {
@@ -96,7 +94,7 @@ class InternalResultController
         }
 
         // Fallback: /data/result/{slug} for latest
-        $resultUrl = 'https://api.expalert.cc/data/result/' . rawurlencode($type);
+        $resultUrl = 'https://api.expalert.cc/data/result/'.rawurlencode($type);
         $response = Http::timeout(15)->withHeaders($headers)->get($resultUrl);
 
         if (! $response->successful()) {
@@ -134,7 +132,7 @@ class InternalResultController
     }
 
     /**
-     * @param array<string,mixed> $entry
+     * @param  array<string,mixed>  $entry
      */
     private function build203Response(string $type, array $entry, string $drawDate): JsonResponse
     {
@@ -183,4 +181,3 @@ class InternalResultController
         ], 200);
     }
 }
-

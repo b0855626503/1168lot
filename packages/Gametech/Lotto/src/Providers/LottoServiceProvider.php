@@ -2,15 +2,18 @@
 
 namespace Gametech\Lotto\Providers;
 
+use Gametech\Lotto\Console\Commands\BackfillExpalertLegacyArchiveCommand;
 use Gametech\Lotto\Console\Commands\BackfillLottoPayoutCommand;
 use Gametech\Lotto\Console\Commands\BackfillYeekeeRoundCountersCommand;
 use Gametech\Lotto\Console\Commands\BackfillYeekeeRoundShootingWindowCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMemberMarketPoliciesCommand;
 use Gametech\Lotto\Console\Commands\BootstrapMissingResultSourcesCommand;
 use Gametech\Lotto\Console\Commands\CleanupBrowserRuntimeArtifactsCommand;
+use Gametech\Lotto\Console\Commands\FetchExpalertBackfillDataCommand;
 use Gametech\Lotto\Console\Commands\FetchLegacyArchiveResultsCommand;
 use Gametech\Lotto\Console\Commands\FillMissingResultsCommand;
 use Gametech\Lotto\Console\Commands\GenerateAutoLottoDrawsCommand;
+use Gametech\Lotto\Console\Commands\GenerateExpalertBackfillSqlCommand;
 use Gametech\Lotto\Console\Commands\GenerateYeekeeRoundsCommand;
 use Gametech\Lotto\Console\Commands\InsertInternalResultSourceMappingsCommand;
 use Gametech\Lotto\Console\Commands\LottoAutoResultMetricsCommand;
@@ -183,6 +186,9 @@ class LottoServiceProvider extends ServiceProvider
             MirrorExistingResultedDrawsCommand::class,
             MirrorDrawsToLegacyArchiveCommand::class,
             FetchLegacyArchiveResultsCommand::class,
+            FetchExpalertBackfillDataCommand::class,
+            BackfillExpalertLegacyArchiveCommand::class,
+            GenerateExpalertBackfillSqlCommand::class,
             FillMissingResultsCommand::class,
             ReconcileResultArchiveCommand::class,
         ]);
