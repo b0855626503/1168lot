@@ -5,6 +5,7 @@ namespace App\Services\Dashboard;
 use App\Jobs\SyncDashboardSummaryBucket;
 use App\Jobs\SyncLottoRiskCurrentForDrawJob;
 use App\Models\DashboardSummaryDaily;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -440,7 +441,7 @@ class DashboardSummarySyncService
             );
         });
 
-        DB::transaction(function () use ($lottoPayload, $summaryDate, $webCode): void {
+        $this->retryOnDeadlock(function () use ($lottoPayload, $summaryDate, $webCode): void {
             $dailyPayload = $this->filterPayloadByExistingColumns(
                 'lotto_dashboard_summary_daily',
                 (array) ($lottoPayload['daily'] ?? []),
@@ -1133,5 +1134,35 @@ class DashboardSummarySyncService
     private function isLegacyRiskSnapshotSource(string $source): bool
     {
         return ! in_array($source, ['scheduled', 'draw_closed', 'draw_resulted', 'manual_audit'], true);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function retryOnDeadlock(callable $callback, int $maxRetries = 5): mixed
+    {
+        $attempt = 0;
+
+        while (true) {
+            try {
+                return DB::transaction($callback);
+            } catch (QueryException $e) {
+                $isDeadlock = str_contains($e->getMessage(), 'Deadlock found')
+                    || str_contains($e->getMessage(), '1213')
+                    || str_contains($e->getMessage(), '40001');
+
+                if ($isDeadlock && $attempt < $maxRetries) {
+                    $attempt++;
+                    usleep(random_int(100000, 500000)); // 100-500ms jitter
+
+                    continue;
+                }
+
+                throw $e;
+            }
+        }
     }
 }
