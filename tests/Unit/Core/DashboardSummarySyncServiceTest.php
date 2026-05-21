@@ -798,6 +798,58 @@ class DashboardSummarySyncServiceTest extends TestCase
         }
     }
 
+    public function test_sync_bucket_skips_lotto_projection_when_updated_sections_have_no_lotto(): void
+    {
+        $this->createTestTables();
+
+        $projector = Mockery::mock(DashboardSummaryProjector::class);
+        $projector->shouldReceive('projectDaily')->once()->andReturn($this->dailyPayload());
+        $projector->shouldNotReceive('projectLotto');
+
+        $service = $this->makeService($projector, $this->mockNotifier());
+
+        $service->syncBucket(
+            '2026-05-06',
+            'main',
+            ['conversion', 'deposit', 'funnel', 'net'],
+            'deposit'
+        );
+
+        $this->assertSame(0, DB::table('lotto_dashboard_risk_current')->count());
+    }
+
+    public function test_sync_bucket_projects_lotto_when_updated_sections_include_lotto(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+
+        $projector = Mockery::mock(DashboardSummaryProjector::class);
+        $projector->shouldReceive('projectDaily')->once()->andReturn($this->dailyPayload());
+        $projector->shouldReceive('projectLotto')->once()->andReturn($this->lottoPayloadMeaningfulRisk());
+
+        $service = $this->makeService($projector, $this->mockNotifier());
+
+        $service->syncBucket('2026-05-06', 'main', ['lotto_risk'], 'lotto');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
+    public function test_sync_bucket_projects_lotto_when_updated_sections_are_empty(): void
+    {
+        $this->createTestTables();
+        $this->seedOpenDraw(10);
+
+        $projector = Mockery::mock(DashboardSummaryProjector::class);
+        $projector->shouldReceive('projectDaily')->once()->andReturn($this->dailyPayload());
+        $projector->shouldReceive('projectLotto')->once()->andReturn($this->lottoPayloadMeaningfulRisk());
+
+        $service = $this->makeService($projector, $this->mockNotifier());
+
+        $service->syncBucket('2026-05-06', 'main', [], 'scheduled');
+
+        $this->assertSame(1, DB::table('lotto_dashboard_risk_current')->where('round_id', 10)->count());
+    }
+
     private function makeService(
         DashboardSummaryProjector $projector,
         DashboardSummaryBroadcastNotifier $notifier,

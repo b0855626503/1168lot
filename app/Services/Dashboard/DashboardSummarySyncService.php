@@ -423,7 +423,11 @@ class DashboardSummarySyncService
         }
 
         $payload = $this->projector->projectDaily($summaryDate, $webCode);
-        $lottoPayload = $this->projector->projectLotto($summaryDate, $webCode);
+
+        $needsLottoProjection = $this->updatedSectionsTouchLotto($updatedSections);
+        $lottoPayload = $needsLottoProjection
+            ? $this->projector->projectLotto($summaryDate, $webCode)
+            : null;
 
         $this->retryOnDeadlock(function () use ($payload): void {
             $payload = $this->filterPayloadByExistingColumns('dashboard_summary_daily', $payload, ['summary_date', 'web_code']);
@@ -441,151 +445,153 @@ class DashboardSummarySyncService
             );
         });
 
-        $this->retryOnDeadlock(function () use ($lottoPayload, $summaryDate, $webCode): void {
-            $dailyPayload = $this->filterPayloadByExistingColumns(
-                'lotto_dashboard_summary_daily',
-                (array) ($lottoPayload['daily'] ?? []),
-                ['summary_date', 'web_code']
-            );
-            if (! empty($dailyPayload) && Schema::hasTable('lotto_dashboard_summary_daily')) {
-                $updateColumns = array_values(array_filter(array_keys($dailyPayload), fn ($column) => ! in_array($column, ['summary_date', 'web_code'], true)));
-                DB::table('lotto_dashboard_summary_daily')->upsert(
-                    [$dailyPayload],
-                    ['summary_date', 'web_code'],
-                    $updateColumns
+        if ($lottoPayload !== null) {
+            $this->retryOnDeadlock(function () use ($lottoPayload, $summaryDate, $webCode): void {
+                $dailyPayload = $this->filterPayloadByExistingColumns(
+                    'lotto_dashboard_summary_daily',
+                    (array) ($lottoPayload['daily'] ?? []),
+                    ['summary_date', 'web_code']
                 );
-            }
-
-            if (Schema::hasTable('lotto_dashboard_market_summary')) {
-                $rows = [];
-                foreach ((array) ($lottoPayload['markets'] ?? []) as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_market_summary',
-                        (array) $row,
-                        ['summary_date', 'web_code', 'market_id', 'round_id']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
-                    }
-                }
-
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['summary_date', 'web_code', 'market_id', 'round_id'], true)));
-                    DB::table('lotto_dashboard_market_summary')->upsert(
-                        $rows,
-                        ['summary_date', 'web_code', 'market_id', 'round_id'],
+                if (! empty($dailyPayload) && Schema::hasTable('lotto_dashboard_summary_daily')) {
+                    $updateColumns = array_values(array_filter(array_keys($dailyPayload), fn ($column) => ! in_array($column, ['summary_date', 'web_code'], true)));
+                    DB::table('lotto_dashboard_summary_daily')->upsert(
+                        [$dailyPayload],
+                        ['summary_date', 'web_code'],
                         $updateColumns
                     );
                 }
-            }
 
-            $riskRows = [];
-            foreach ((array) ($lottoPayload['risk'] ?? []) as $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
+                if (Schema::hasTable('lotto_dashboard_market_summary')) {
+                    $rows = [];
+                    foreach ((array) ($lottoPayload['markets'] ?? []) as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_market_summary',
+                            (array) $row,
+                            ['summary_date', 'web_code', 'market_id', 'round_id']
+                        );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
 
-                $riskRows[] = $row;
-            }
-
-            $this->upsertRiskCurrentRows($riskRows);
-
-            // BOA-229: snapshot runtime write removed. Risk dashboard reads from
-            // lotto_dashboard_risk_current only. writeRiskSnapshot() is retained as
-            // a deprecated legacy helper and is intentionally NOT invoked from any
-            // runtime path (sync/rebuild/observer). Do not re-enable.
-
-            if (Schema::hasTable('lotto_dashboard_risk_aggregates')) {
-                DB::table('lotto_dashboard_risk_aggregates')
-                    ->where('web_code', $webCode)
-                    ->where('summary_date', $summaryDate)
-                    ->delete();
-
-                $rows = [];
-                foreach ((array) ($lottoPayload['risk_aggregate'] ?? []) as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_risk_aggregates',
-                        (array) $row,
-                        ['web_code', 'summary_date', 'bet_type', 'number']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(array_keys($rows[0]), fn ($column) => ! in_array($column, ['summary_date', 'web_code', 'market_id', 'round_id'], true)));
+                        DB::table('lotto_dashboard_market_summary')->upsert(
+                            $rows,
+                            ['summary_date', 'web_code', 'market_id', 'round_id'],
+                            $updateColumns
+                        );
                     }
                 }
 
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(
-                        array_keys($rows[0]),
-                        fn ($column) => ! in_array($column, ['web_code', 'summary_date', 'bet_type', 'number'], true)
-                    ));
-                    DB::table('lotto_dashboard_risk_aggregates')->upsert(
-                        $rows,
-                        ['web_code', 'summary_date', 'bet_type', 'number'],
-                        $updateColumns
-                    );
+                $riskRows = [];
+                foreach ((array) ($lottoPayload['risk'] ?? []) as $row) {
+                    if (! is_array($row)) {
+                        continue;
+                    }
+
+                    $riskRows[] = $row;
                 }
-            }
 
-            if (Schema::hasTable('lotto_dashboard_bet_type_summary_daily')) {
-                DB::table('lotto_dashboard_bet_type_summary_daily')
-                    ->where('summary_date', $summaryDate)
-                    ->delete();
+                $this->upsertRiskCurrentRows($riskRows);
 
-                $rows = [];
-                foreach ((array) data_get($lottoPayload, 'insights.daily', []) as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_bet_type_summary_daily',
-                        (array) $row,
-                        ['summary_date', 'bet_type']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
+                // BOA-229: snapshot runtime write removed. Risk dashboard reads from
+                // lotto_dashboard_risk_current only. writeRiskSnapshot() is retained as
+                // a deprecated legacy helper and is intentionally NOT invoked from any
+                // runtime path (sync/rebuild/observer). Do not re-enable.
+
+                if (Schema::hasTable('lotto_dashboard_risk_aggregates')) {
+                    DB::table('lotto_dashboard_risk_aggregates')
+                        ->where('web_code', $webCode)
+                        ->where('summary_date', $summaryDate)
+                        ->delete();
+
+                    $rows = [];
+                    foreach ((array) ($lottoPayload['risk_aggregate'] ?? []) as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_risk_aggregates',
+                            (array) $row,
+                            ['web_code', 'summary_date', 'bet_type', 'number']
+                        );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
+
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(
+                            array_keys($rows[0]),
+                            fn ($column) => ! in_array($column, ['web_code', 'summary_date', 'bet_type', 'number'], true)
+                        ));
+                        DB::table('lotto_dashboard_risk_aggregates')->upsert(
+                            $rows,
+                            ['web_code', 'summary_date', 'bet_type', 'number'],
+                            $updateColumns
+                        );
                     }
                 }
 
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(
-                        array_keys($rows[0]),
-                        fn ($column) => ! in_array($column, ['summary_date', 'bet_type'], true)
-                    ));
-                    DB::table('lotto_dashboard_bet_type_summary_daily')->upsert(
-                        $rows,
-                        ['summary_date', 'bet_type'],
-                        $updateColumns
-                    );
-                }
-            }
+                if (Schema::hasTable('lotto_dashboard_bet_type_summary_daily')) {
+                    DB::table('lotto_dashboard_bet_type_summary_daily')
+                        ->where('summary_date', $summaryDate)
+                        ->delete();
 
-            if (Schema::hasTable('lotto_dashboard_bet_type_number_daily')) {
-                DB::table('lotto_dashboard_bet_type_number_daily')
-                    ->where('summary_date', $summaryDate)
-                    ->delete();
+                    $rows = [];
+                    foreach ((array) data_get($lottoPayload, 'insights.daily', []) as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_bet_type_summary_daily',
+                            (array) $row,
+                            ['summary_date', 'bet_type']
+                        );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
 
-                $rows = [];
-                foreach ((array) data_get($lottoPayload, 'insights.numbers', []) as $row) {
-                    $filtered = $this->filterPayloadByExistingColumns(
-                        'lotto_dashboard_bet_type_number_daily',
-                        (array) $row,
-                        ['summary_date', 'bet_type', 'number']
-                    );
-                    if (! empty($filtered)) {
-                        $rows[] = $filtered;
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(
+                            array_keys($rows[0]),
+                            fn ($column) => ! in_array($column, ['summary_date', 'bet_type'], true)
+                        ));
+                        DB::table('lotto_dashboard_bet_type_summary_daily')->upsert(
+                            $rows,
+                            ['summary_date', 'bet_type'],
+                            $updateColumns
+                        );
                     }
                 }
 
-                if (! empty($rows)) {
-                    $updateColumns = array_values(array_filter(
-                        array_keys($rows[0]),
-                        fn ($column) => ! in_array($column, ['summary_date', 'bet_type', 'number'], true)
-                    ));
-                    DB::table('lotto_dashboard_bet_type_number_daily')->upsert(
-                        $rows,
-                        ['summary_date', 'bet_type', 'number'],
-                        $updateColumns
-                    );
+                if (Schema::hasTable('lotto_dashboard_bet_type_number_daily')) {
+                    DB::table('lotto_dashboard_bet_type_number_daily')
+                        ->where('summary_date', $summaryDate)
+                        ->delete();
+
+                    $rows = [];
+                    foreach ((array) data_get($lottoPayload, 'insights.numbers', []) as $row) {
+                        $filtered = $this->filterPayloadByExistingColumns(
+                            'lotto_dashboard_bet_type_number_daily',
+                            (array) $row,
+                            ['summary_date', 'bet_type', 'number']
+                        );
+                        if (! empty($filtered)) {
+                            $rows[] = $filtered;
+                        }
+                    }
+
+                    if (! empty($rows)) {
+                        $updateColumns = array_values(array_filter(
+                            array_keys($rows[0]),
+                            fn ($column) => ! in_array($column, ['summary_date', 'bet_type', 'number'], true)
+                        ));
+                        DB::table('lotto_dashboard_bet_type_number_daily')->upsert(
+                            $rows,
+                            ['summary_date', 'bet_type', 'number'],
+                            $updateColumns
+                        );
+                    }
                 }
-            }
-        });
+            });
+        }
 
         $this->touchDashboardCacheVersion();
 
@@ -662,6 +668,32 @@ class DashboardSummarySyncService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Lotto projection is expensive (joins lotto_number_exposures across history).
+     * Skip it when the coalesced event set has no lotto-touching sections —
+     * deposit/withdraw/register/bonus buckets do not invalidate lotto aggregates.
+     *
+     * Empty $updatedSections is treated as "unknown source" and projects lotto
+     * defensively (e.g. scheduled rebuilds, cache-miss fallbacks).
+     *
+     * @param  array<int, string>  $updatedSections
+     */
+    private function updatedSectionsTouchLotto(array $updatedSections): bool
+    {
+        if (empty($updatedSections)) {
+            return true;
+        }
+
+        $lottoSections = [
+            'lotto_product',
+            'lotto_risk',
+            'lotto_operations',
+            'lotto_bet_type_insights',
+        ];
+
+        return ! empty(array_intersect($updatedSections, $lottoSections));
     }
 
     private function pendingBucketCacheKey(string $summaryDate, string $webCode): string

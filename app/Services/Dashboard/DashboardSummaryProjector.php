@@ -750,6 +750,17 @@ class DashboardSummaryProjector
                 DB::raw('COALESCE(e.sold_amount, 0) * COALESCE(s.payout, 0) as payout_if_hit'),
             ])
             ->where('d.draw_date', '<=', $summaryDate)
+            ->whereNotIn('d.status', [
+                'resulted',
+                'cancelled',
+                'canceled',
+                'cancel',
+                'void',
+                'refunded',
+                'no_result',
+                'no-result',
+                'disabled',
+            ])
             ->get();
 
         return $rows->map(function ($row) use ($snapshotAt, $webCode) {
