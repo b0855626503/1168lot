@@ -24,6 +24,7 @@ class CouponServiceTest extends TestCase
         Schema::dropIfExists('coupons_list');
         Schema::dropIfExists('bonus');
         Schema::dropIfExists('promotions');
+        Schema::dropIfExists('wallet_transactions');
 
         Mockery::close();
 
@@ -172,6 +173,28 @@ class CouponServiceTest extends TestCase
             $table->unsignedBigInteger('code')->nullable();
         });
 
+        Schema::create('wallet_transactions', function (Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('member_id');
+            $table->string('scope');
+            $table->unsignedBigInteger('game_user_id')->nullable();
+            $table->string('direction');
+            $table->decimal('amount', 15, 2);
+            $table->decimal('balance_before', 15, 2);
+            $table->decimal('balance_after', 15, 2);
+            $table->string('ref_type');
+            $table->unsignedBigInteger('ref_id')->nullable();
+            $table->string('ref_code')->nullable();
+            $table->string('group_code')->nullable();
+            $table->unsignedBigInteger('related_txn_id')->nullable();
+            $table->string('status');
+            $table->string('description')->nullable();
+            $table->json('meta')->nullable();
+            $table->string('created_by_type')->nullable();
+            $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->timestamps();
+        });
+
         DB::table('bonus')->insert([
             'code' => 'BONUS001',
             'member_code' => 52,
@@ -199,7 +222,8 @@ class CouponServiceTest extends TestCase
             ->once()
             ->andReturn((object) ['code' => 7001]);
 
-        $gameUser = new class {
+        $gameUser = new class
+        {
             public int $code = 11;
             public string $user_name = 'game-user-1';
             public int $pro_code = 0;
@@ -234,7 +258,8 @@ class CouponServiceTest extends TestCase
             core: $core
         );
 
-        $member = new class {
+        $member = new class
+        {
             public int $code = 52;
             public string $user_name = '0855626503';
             public string $name = 'Boat';
@@ -255,6 +280,20 @@ class CouponServiceTest extends TestCase
         $this->assertTrue($member->saved);
         $this->assertTrue($gameUser->saved);
         $this->assertSame('Y', DB::table('bonus')->where('code', 'BONUS001')->value('status'));
+
+        $walletTxn = DB::table('wallet_transactions')
+            ->where('member_id', 52)
+            ->where('ref_type', 'COUPON_CLAIM')
+            ->where('ref_code', 'BONUS001')
+            ->first();
+
+        $this->assertNotNull($walletTxn, 'wallet_transactions record should exist for coupon claim');
+        $this->assertSame('MEMBER', $walletTxn->scope);
+        $this->assertSame('CREDIT', $walletTxn->direction);
+        $this->assertSame(200.0, (float) $walletTxn->amount);
+        $this->assertSame('SUCCESS', $walletTxn->status);
+        $this->assertSame('member', $walletTxn->created_by_type);
+        $this->assertSame(52, (int) $walletTxn->created_by_id);
     }
 
     private function makeService(

@@ -10,7 +10,6 @@ use Gametech\Payment\Repositories\BankPaymentRepository;
 use Gametech\Payment\Repositories\BillRepository;
 use Gametech\Payment\Repositories\BonusRepository;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use RuntimeException;
@@ -25,11 +24,10 @@ class CouponService
         private GameUserRepository $gameUserRepository,
         private BillRepository $billRepository,
         private Core $core
-    ) {
-    }
+    ) {}
 
     /**
-     * @param object $member
+     * @param  object  $member
      * @return array<string,mixed>
      */
     public function redeemCode($member, string $couponCode, string $ipAddress, string $locale = 'th'): array
@@ -148,7 +146,7 @@ class CouponService
                     'refer_code' => $bonus->code,
                     'refer_table' => 'bonus',
                     'auto' => 'N',
-                    'remark' => 'ได้รับเครดิตโบนัส (ฟรี) จากคูปอง ' . $coupon->name . ' จำนวน :' . $coupon->value,
+                    'remark' => 'ได้รับเครดิตโบนัส (ฟรี) จากคูปอง '.$coupon->name.' จำนวน :'.$coupon->value,
                     'kind' => 'BONUS',
                     'user_create' => '',
                     'user_update' => '',
@@ -177,7 +175,7 @@ class CouponService
                     'refer_code' => $bonus->code,
                     'refer_table' => 'bonus',
                     'auto' => 'N',
-                    'remark' => 'ได้รับเครดิตโบนัส จากคูปอง ' . $coupon->name . ' จำนวน :' . $coupon->value,
+                    'remark' => 'ได้รับเครดิตโบนัส จากคูปอง '.$coupon->name.' จำนวน :'.$coupon->value,
                     'kind' => 'BONUS',
                     'user_create' => '',
                     'user_update' => '',
@@ -206,7 +204,7 @@ class CouponService
     }
 
     /**
-     * @param object $member
+     * @param  object  $member
      * @return array<int,array<string,mixed>>
      */
     public function listPendingBonuses($member): array
@@ -233,7 +231,7 @@ class CouponService
     }
 
     /**
-     * @param object $member
+     * @param  object  $member
      * @return array<string,mixed>
      */
     public function claimBonus($member, string $bonusCode, string $ipAddress, string $locale = 'th'): array
@@ -288,7 +286,7 @@ class CouponService
 
             $hasRule = ((float) $bonusRow->turnpro > 0) || ((float) $bonusRow->amount_limit > 0);
             if ($hasRule && $gameCurrent > (float) ($config->pro_reset ?? 0)) {
-                throw new RuntimeException(Lang::get('app.coupon.cannot_get', [], $locale) . ($config->pro_reset ?? 0));
+                throw new RuntimeException(Lang::get('app.coupon.cannot_get', [], $locale).($config->pro_reset ?? 0));
             }
 
             $hasExistingRule = ((float) ($gameUser->pro_code ?? 0) > 0)
@@ -296,7 +294,7 @@ class CouponService
                 || ((float) ($gameUser->withdraw_limit_amount ?? 0) > 0);
 
             if ($hasExistingRule && $gameCurrent > (float) ($config->pro_reset ?? 0)) {
-                throw new RuntimeException(Lang::get('app.coupon.cannot_get', [], $locale) . ($config->pro_reset ?? 0));
+                throw new RuntimeException(Lang::get('app.coupon.cannot_get', [], $locale).($config->pro_reset ?? 0));
             }
 
             $amount = (float) $bonusRow->value;
@@ -357,7 +355,7 @@ class CouponService
                 'refer_code' => $bonusRow->code,
                 'refer_table' => 'bonus',
                 'auto' => 'N',
-                'remark' => 'รับโบนัส จากกิจกรรม ' . $bonusRow->name . ' จำนวน :' . $bonusRow->value,
+                'remark' => 'รับโบนัส จากกิจกรรม '.$bonusRow->name.' จำนวน :'.$bonusRow->value,
                 'kind' => 'G_BONUS',
                 'amount_balance' => $requiredTurnAmount,
                 'withdraw_limit' => 0,
@@ -379,7 +377,7 @@ class CouponService
                 'gameuser_code' => $gameUser->code,
                 'pro_code' => $proCode,
                 'pro_name' => $proName,
-                'remark' => 'รับโบนัส จากกิจกรรม ' . $bonusRow->name,
+                'remark' => 'รับโบนัส จากกิจกรรม '.$bonusRow->name,
                 'method' => 'BONUS',
                 'transfer_type' => 1,
                 'amount' => $amount,
@@ -393,6 +391,33 @@ class CouponService
                 'ip' => $ipAddress,
                 'user_create' => $member->name ?? '',
                 'user_update' => $member->name ?? '',
+            ]);
+
+            $createdAt = now();
+            DB::table('wallet_transactions')->insert([
+                'member_id' => (int) $member->code,
+                'scope' => 'MEMBER',
+                'game_user_id' => $gameUser->code ?? null,
+                'direction' => 'CREDIT',
+                'amount' => $amount,
+                'balance_before' => $response['before'],
+                'balance_after' => $response['after'],
+                'ref_type' => 'COUPON_CLAIM',
+                'ref_id' => null,
+                'ref_code' => $bonusRow->code,
+                'group_code' => null,
+                'related_txn_id' => null,
+                'status' => 'SUCCESS',
+                'description' => 'รับโบนัส จากกิจกรรม '.$bonusRow->name,
+                'meta' => json_encode([
+                    'bonus_code' => $bonusRow->code,
+                    'bonus_name' => $bonusRow->name,
+                    'pro_code' => $proCode,
+                ], JSON_UNESCAPED_UNICODE),
+                'created_by_type' => 'member',
+                'created_by_id' => (int) $member->code,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
             ]);
 
             $member->balance = $response['after'];
@@ -432,7 +457,7 @@ class CouponService
     }
 
     /**
-     * @param object $item
+     * @param  object  $item
      * @return array<string,mixed>
      */
     private function mapPendingBonusItem($item): array
@@ -456,7 +481,7 @@ class CouponService
     }
 
     /**
-     * @param mixed $value
+     * @param  mixed  $value
      */
     private function normalizeDateTime($value): ?string
     {
