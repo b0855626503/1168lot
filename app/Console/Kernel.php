@@ -127,11 +127,11 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        $schedule->command('lotto:clone-auto-pull-thai-results')
-            ->everyMinute()
-            ->when(static fn (): bool => $relayRuntime->isClone())
-            ->withoutOverlapping()
-            ->runInBackground();
+        // $schedule->command('lotto:clone-auto-pull-thai-results')
+        //     ->everyMinute()
+        //     ->when(static fn (): bool => $relayRuntime->isClone())
+        //     ->withoutOverlapping()
+        //     ->runInBackground();
 
         $schedule->command('lotto:mirror-draws-to-legacy-archive')
             ->everyMinute()
