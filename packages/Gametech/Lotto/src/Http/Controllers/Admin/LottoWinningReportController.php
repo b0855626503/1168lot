@@ -16,7 +16,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
@@ -81,11 +80,7 @@ class LottoWinningReportController extends AppBaseController
             ->join('settlement_batches as b', 'b.id', '=', 'w.settlement_batch_id')
             ->whereNull('w.voided_at');
 
-        if (Schema::hasColumn('settlement_batches', 'draw_date')) {
-            $baseQuery->whereDate('b.draw_date', $date);
-        } else {
-            $baseQuery->whereDate('b.started_at', $date);
-        }
+        $baseQuery->whereDate('b.draw_date', $date);
 
         $lotteryTypeCodes = (clone $baseQuery)
             ->select('w.lottery_type')

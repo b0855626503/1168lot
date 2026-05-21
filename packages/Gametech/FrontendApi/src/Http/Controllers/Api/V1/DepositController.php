@@ -203,7 +203,7 @@ class DepositController extends BaseController
 
     private function isLegacyMember(int $memberCode): bool
     {
-        if ($memberCode <= 0 || ! DB::getSchemaBuilder()->hasTable('member_deposit_stats')) {
+        if ($memberCode <= 0) {
             return false;
         }
 

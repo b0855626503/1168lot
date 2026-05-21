@@ -27,7 +27,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -1120,10 +1119,6 @@ class LottoDrawController extends AppBaseController
 
     private function resolveYeekeeRoundNo(int $drawId): ?int
     {
-        if (! Schema::hasTable('yeekee_rounds')) {
-            return null;
-        }
-
         $roundNo = YeekeeRound::query()
             ->where('lotto_draw_id', $drawId)
             ->orderByDesc('id')

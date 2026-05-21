@@ -11,7 +11,6 @@ use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class LottoTicketsCancelReportController extends AppBaseController
 {
@@ -74,16 +73,14 @@ class LottoTicketsCancelReportController extends AppBaseController
                 'member:code,user_name,name',
                 'draw' => function ($drawQuery): void {
                     $drawQuery->select(['id', 'market_id', 'draw_date']);
-                    if (Schema::hasTable('yeekee_rounds')) {
-                        $drawQuery->selectSub(
-                            YeekeeRound::query()
-                                ->select('round_no')
-                                ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
-                                ->orderByDesc('yeekee_rounds.id')
-                                ->limit(1),
-                            'yeekee_round_no'
-                        );
-                    }
+                    $drawQuery->selectSub(
+                        YeekeeRound::query()
+                            ->select('round_no')
+                            ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                            ->orderByDesc('yeekee_rounds.id')
+                            ->limit(1),
+                        'yeekee_round_no'
+                    );
                 },
                 'draw.market:id,name,result_mode',
                 'items:id,ticket_id,bet_type,number,amount,package_name_at_time,payout_at_time,discount_percent_at_time,discount_amount_at_time,payable_amount_at_time,win_amount,result_status',

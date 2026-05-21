@@ -4,13 +4,11 @@ namespace Gametech\Lotto\Observers;
 
 use App\Events\LottoTicketListChanged;
 use App\Events\RealtimePublicActivityUpdated;
-use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Models\LotteryMarket;
-use Illuminate\Support\Facades\Log;
+use Gametech\Lotto\Models\LottoTicket;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class LottoTicketRealtimeObserver
 {
@@ -176,7 +174,7 @@ class LottoTicketRealtimeObserver
             if ($roundNo <= 0) {
                 Log::warning('yeekee draw missing round_no in ticket broadcast', [
                     'ticket_id' => (int) $ticket->id,
-                    'draw_id' => (int) $ticket->lotto_draw_id
+                    'draw_id' => (int) $ticket->lotto_draw_id,
                 ]);
                 $roundNo = null;
             }
@@ -240,22 +238,20 @@ class LottoTicketRealtimeObserver
 
     private function resolveCancellationActorId(LottoTicket $ticket): string
     {
-        if (Schema::hasTable('wallet_transactions')) {
-            $cancelTxn = DB::table('wallet_transactions')
-                ->where('ref_type', 'LOTTO_CANCEL')
-                ->where('ref_id', (int) $ticket->id)
-                ->orderByDesc('id')
-                ->first(['created_by_type', 'created_by_id']);
+        $cancelTxn = DB::table('wallet_transactions')
+            ->where('ref_type', 'LOTTO_CANCEL')
+            ->where('ref_id', (int) $ticket->id)
+            ->orderByDesc('id')
+            ->first(['created_by_type', 'created_by_id']);
 
-            if ($cancelTxn) {
-                $resolved = $this->resolveActorName(
-                    (string) ($cancelTxn->created_by_type ?? ''),
-                    (int) ($cancelTxn->created_by_id ?? 0)
-                );
+        if ($cancelTxn) {
+            $resolved = $this->resolveActorName(
+                (string) ($cancelTxn->created_by_type ?? ''),
+                (int) ($cancelTxn->created_by_id ?? 0)
+            );
 
-                if ($resolved !== '') {
-                    return $resolved;
-                }
+            if ($resolved !== '') {
+                return $resolved;
             }
         }
 
@@ -279,14 +275,10 @@ class LottoTicketRealtimeObserver
         }
 
         return match ($actorType) {
-            'admin' => Schema::hasTable('employees')
-                ? trim((string) (DB::table('employees')->where('code', $actorId)->value('user_name')
-                    ?: DB::table('employees')->where('code', $actorId)->value('name')))
-                : '',
-            'member' => Schema::hasTable('members')
-                ? trim((string) (DB::table('members')->where('code', $actorId)->value('user_name')
-                    ?: DB::table('members')->where('code', $actorId)->value('name')))
-                : '',
+            'admin' => trim((string) (DB::table('employees')->where('code', $actorId)->value('user_name')
+                ?: DB::table('employees')->where('code', $actorId)->value('name'))),
+            'member' => trim((string) (DB::table('members')->where('code', $actorId)->value('user_name')
+                ?: DB::table('members')->where('code', $actorId)->value('name'))),
             default => '',
         };
     }

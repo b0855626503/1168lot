@@ -10,7 +10,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 {
@@ -215,10 +214,6 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
                 'sum_deposit' => $item->deposit_amount,
                 'sum_withdraw' => $item->withdraw_amount,
             ]);
-        }
-
-        if (! Schema::hasTable('members_credit_log')) {
-            return;
         }
 
         $remark = 'ไม่ผ่านคำนวน Cashback รอบ '.$this->cashbackDate

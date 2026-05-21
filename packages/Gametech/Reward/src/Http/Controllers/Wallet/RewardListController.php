@@ -2,6 +2,9 @@
 
 namespace Gametech\Reward\Http\Controllers\Wallet;
 
+use Gametech\Member\Repositories\MemberCreditLogRepository;
+use Gametech\Member\Repositories\MemberDiamondLogRepository;
+use Gametech\Member\Repositories\MemberPointLogRepository;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Reward\Repositories\RewardListRepository;
 use Gametech\Reward\Repositories\RewardRedemptionRepository;
@@ -46,20 +49,20 @@ class RewardListController extends AppBaseController
         // ปรับ namespace/class ให้ตรงโปรเจกต์คุณได้ ถ้าชื่อจริงต่างกัน
         $this->memberPointLogRepository = app()->bound('memberPointLogRepository')
             ? app('memberPointLogRepository')
-            : (class_exists(\Gametech\Member\Repositories\MemberPointLogRepository::class)
-                ? app(\Gametech\Member\Repositories\MemberPointLogRepository::class)
+            : (class_exists(MemberPointLogRepository::class)
+                ? app(MemberPointLogRepository::class)
                 : null);
 
         $this->memberDiamondLogRepository = app()->bound('memberDiamondLogRepository')
             ? app('memberDiamondLogRepository')
-            : (class_exists(\Gametech\Member\Repositories\MemberDiamondLogRepository::class)
-                ? app(\Gametech\Member\Repositories\MemberDiamondLogRepository::class)
+            : (class_exists(MemberDiamondLogRepository::class)
+                ? app(MemberDiamondLogRepository::class)
                 : null);
 
         $this->memberCreditLogRepository = app()->bound('memberCreditLogRepository')
             ? app('memberCreditLogRepository')
-            : (class_exists(\Gametech\Member\Repositories\MemberCreditLogRepository::class)
-                ? app(\Gametech\Member\Repositories\MemberCreditLogRepository::class)
+            : (class_exists(MemberCreditLogRepository::class)
+                ? app(MemberCreditLogRepository::class)
                 : null);
     }
 
@@ -240,10 +243,10 @@ class RewardListController extends AppBaseController
         $perPageReq = (int) $request->input('per_page', 10);
         $perPage = min(max($perPageReq, 1), 50);
 
-        $qKeyword  = trim((string) $request->input('q', ''));
-        $status    = trim((string) $request->input('status', ''));
+        $qKeyword = trim((string) $request->input('q', ''));
+        $status = trim((string) $request->input('status', ''));
         $rewardType = trim((string) $request->input('reward_type', ''));
-        $mode      = trim((string) $request->input('mode', ''));
+        $mode = trim((string) $request->input('mode', ''));
 
         $q = DB::table('reward_redemptions')
             ->where('member_id', $memberCode);
@@ -268,8 +271,8 @@ class RewardListController extends AppBaseController
         }
 
         // เรียงล่าสุดก่อน: redeemed_at > created_at > id (กัน schema เก่าไม่มี timestamp)
-        $orderExpr = "COALESCE(redeemed_at, created_at, updated_at)";
-        $q->orderByRaw($orderExpr . " DESC")
+        $orderExpr = 'COALESCE(redeemed_at, created_at, updated_at)';
+        $q->orderByRaw($orderExpr.' DESC')
             ->orderByDesc('id');
 
         $paginator = $q->paginate($perPage, ['*'], 'page', $page);
@@ -277,7 +280,9 @@ class RewardListController extends AppBaseController
         $items = collect($paginator->items())->map(function ($r) use ($tz) {
             // รองรับทั้ง Carbon/string/null แบบไม่พัง
             $fmt = function ($v) use ($tz) {
-                if (empty($v)) return null;
+                if (empty($v)) {
+                    return null;
+                }
                 try {
                     return Carbon::parse($v)->tz($tz)->format('Y-m-d H:i:s');
                 } catch (\Throwable $e) {
@@ -293,42 +298,42 @@ class RewardListController extends AppBaseController
                 // snapshot (source of truth)
                 'reward_code_snapshot' => (string) ($r->reward_code_snapshot ?? ''),
                 'reward_name_snapshot' => (string) ($r->reward_name_snapshot ?? ''),
-                'point_cost_snapshot'  => (int) ($r->point_cost_snapshot ?? 0),
+                'point_cost_snapshot' => (int) ($r->point_cost_snapshot ?? 0),
                 'reward_type_snapshot' => (string) ($r->reward_type_snapshot ?? ''),
                 'fulfillment_mode_snapshot' => (string) ($r->fulfillment_mode_snapshot ?? ''),
 
                 'credit_amount_snapshot' => $r->credit_amount_snapshot ?? null,
-                'gem_amount_snapshot'    => $r->gem_amount_snapshot ?? null,
-                'payload_snapshot'       => $this->safeJsonToArray($r->payload_snapshot ?? null),
+                'gem_amount_snapshot' => $r->gem_amount_snapshot ?? null,
+                'payload_snapshot' => $this->safeJsonToArray($r->payload_snapshot ?? null),
 
                 // status lifecycle
                 'status' => (string) ($r->status ?? 'pending'),
 
                 // notes
-                'note_user'  => (string) ($r->note_user ?? ''),
+                'note_user' => (string) ($r->note_user ?? ''),
                 'note_staff' => (string) ($r->note_staff ?? ''),
 
                 // contact
                 'contact_channel' => (string) ($r->contact_channel ?? ''),
-                'contact_value'   => (string) ($r->contact_value ?? ''),
+                'contact_value' => (string) ($r->contact_value ?? ''),
 
                 // timestamps
-                'redeemed_at'  => $fmt($r->redeemed_at ?? null),
+                'redeemed_at' => $fmt($r->redeemed_at ?? null),
                 'fulfilled_at' => $fmt($r->fulfilled_at ?? null),
                 'cancelled_at' => $fmt($r->cancelled_at ?? null),
-                'rejected_at'  => $fmt($r->rejected_at ?? null),
-                'refunded_at'  => $fmt($r->refunded_at ?? null),
+                'rejected_at' => $fmt($r->rejected_at ?? null),
+                'refunded_at' => $fmt($r->refunded_at ?? null),
 
                 // staff
-                'handled_by'  => $r->handled_by !== null ? (int) $r->handled_by : null,
+                'handled_by' => $r->handled_by !== null ? (int) $r->handled_by : null,
                 'refunded_by' => $r->refunded_by !== null ? (int) $r->refunded_by : null,
 
                 // flags
                 'point_debited' => $this->toBool($r->point_debited ?? false),
 
                 // audit (ถ้ามี column)
-                'request_ip'     => (string) ($r->request_ip ?? ''),
-                'request_ua'     => (string) ($r->request_ua ?? ''),
+                'request_ip' => (string) ($r->request_ip ?? ''),
+                'request_ua' => (string) ($r->request_ua ?? ''),
                 'request_source' => (string) ($r->request_source ?? ''),
             ];
         })->values();
@@ -886,10 +891,10 @@ class RewardListController extends AppBaseController
         $img = ltrim($img, '/');
 
         if (str_starts_with($img, 'storage/')) {
-            return url('/' . $img);
+            return url('/'.$img);
         }
 
-        return url('/storage/' . $img);
+        return url('/storage/'.$img);
     }
 
     protected function toBool($v): bool
@@ -946,7 +951,7 @@ class RewardListController extends AppBaseController
             if (method_exists($this, 'user')) {
                 $u = $this->user();
                 if ($u) {
-                    $full = trim((string) (($u->name ?? '') . ' ' . ($u->surname ?? '')));
+                    $full = trim((string) (($u->name ?? '').' '.($u->surname ?? '')));
                     if ($full !== '') {
                         $name = $full;
                     }
@@ -1001,18 +1006,16 @@ class RewardListController extends AppBaseController
      */
     protected function touchColumnsFor(string $table, Carbon $now, bool $includeCreatedAt = false): array
     {
-        $key = "reward:touchcols:{$table}:" . ($includeCreatedAt ? '1' : '0');
+        $key = "reward:touchcols:{$table}:".($includeCreatedAt ? '1' : '0');
 
-        return Cache::remember($key, 600, function () use ($table, $now, $includeCreatedAt) {
+        return Cache::remember($key, 600, function () use ($now, $includeCreatedAt) {
             $cols = [];
 
             try {
-                if ($includeCreatedAt && Schema::hasColumn($table, 'created_at')) {
+                if ($includeCreatedAt) {
                     $cols['created_at'] = $now;
                 }
-                if (Schema::hasColumn($table, 'updated_at')) {
-                    $cols['updated_at'] = $now;
-                }
+                $cols['updated_at'] = $now;
             } catch (\Throwable $e) {
                 return [];
             }

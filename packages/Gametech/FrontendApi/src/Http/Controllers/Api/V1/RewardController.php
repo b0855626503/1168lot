@@ -17,7 +17,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class RewardController extends BaseController
 {
@@ -849,17 +848,15 @@ class RewardController extends BaseController
     {
         $cacheKey = 'frontend_api:reward:touchcols:'.$table.':'.($includeCreatedAt ? '1' : '0');
 
-        return Cache::remember($cacheKey, 600, function () use ($table, $now, $includeCreatedAt): array {
+        return Cache::remember($cacheKey, 600, function () use ($now, $includeCreatedAt): array {
             $columns = [];
 
             try {
-                if ($includeCreatedAt && Schema::hasColumn($table, 'created_at')) {
+                if ($includeCreatedAt) {
                     $columns['created_at'] = $now;
                 }
 
-                if (Schema::hasColumn($table, 'updated_at')) {
-                    $columns['updated_at'] = $now;
-                }
+                $columns['updated_at'] = $now;
             } catch (\Throwable $e) {
                 return [];
             }

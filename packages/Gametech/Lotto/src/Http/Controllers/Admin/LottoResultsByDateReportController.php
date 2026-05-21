@@ -9,7 +9,6 @@ use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\YeekeeRound;
 use Gametech\Lotto\Support\LottoMarketDisplayFormatter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class LottoResultsByDateReportController extends AppBaseController
 {
@@ -52,16 +51,14 @@ class LottoResultsByDateReportController extends AppBaseController
             ->orderBy('market_id')
             ->orderByDesc('id');
 
-        if (Schema::hasTable('yeekee_rounds')) {
-            $rowsQuery->selectSub(
-                YeekeeRound::query()
-                    ->select('round_no')
-                    ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
-                    ->orderByDesc('yeekee_rounds.id')
-                    ->limit(1),
-                'yeekee_round_no'
-            );
-        }
+        $rowsQuery->selectSub(
+            YeekeeRound::query()
+                ->select('round_no')
+                ->whereColumn('yeekee_rounds.lotto_draw_id', 'lotto_draws.id')
+                ->orderByDesc('yeekee_rounds.id')
+                ->limit(1),
+            'yeekee_round_no'
+        );
 
         $rows = $rowsQuery->get();
 

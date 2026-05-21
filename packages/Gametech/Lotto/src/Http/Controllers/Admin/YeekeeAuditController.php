@@ -10,7 +10,6 @@ use Gametech\Lotto\Models\YeekeeShoot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class YeekeeAuditController extends AppBaseController
 {
@@ -135,7 +134,7 @@ class YeekeeAuditController extends AppBaseController
         $userNames = [];
         if ($isSensitive) {
             $memberIds = $rawShoots->pluck('member_id')->filter()->unique()->values()->all();
-            if (! empty($memberIds) && Schema::hasTable('members')) {
+            if (! empty($memberIds)) {
                 $userNames = $this->resolveMemberUserNames($memberIds);
             }
         }
@@ -228,25 +227,18 @@ class YeekeeAuditController extends AppBaseController
             return [];
         }
 
-        // Production uses members.code as PK, but some tests/seeds still reference members.id.
-        if (Schema::hasColumn('members', 'code')) {
-            $namesByCode = DB::table('members')
-                ->whereIn('code', $memberIds)
-                ->pluck('user_name', 'code')
-                ->all();
+        $namesByCode = DB::table('members')
+            ->whereIn('code', $memberIds)
+            ->pluck('user_name', 'code')
+            ->all();
 
-            if ($namesByCode !== []) {
-                return $namesByCode;
-            }
+        if ($namesByCode !== []) {
+            return $namesByCode;
         }
 
-        if (Schema::hasColumn('members', 'id')) {
-            return DB::table('members')
-                ->whereIn('id', $memberIds)
-                ->pluck('user_name', 'id')
-                ->all();
-        }
-
-        return [];
+        return DB::table('members')
+            ->whereIn('id', $memberIds)
+            ->pluck('user_name', 'id')
+            ->all();
     }
 }

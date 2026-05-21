@@ -14,7 +14,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Schema;
 
 class WalletController extends BaseController
 {
@@ -183,31 +182,6 @@ class WalletController extends BaseController
             [$dateStart, $dateStop] = $this->resolveDateRange($request);
             $limit = $this->resolveLimit($request);
             $page = max(1, (int) $request->query('page', 1));
-
-            if (! Schema::hasTable('wallet_transactions')) {
-                return $this->sendResponse([
-                    'filters' => [
-                        'type' => $type,
-                        'date_start' => $dateStart?->toDateString(),
-                        'date_stop' => $dateStop?->toDateString(),
-                    ],
-                    'summary' => [
-                        'count' => 0,
-                        'total_credit_amount' => 0,
-                        'total_debit_amount' => 0,
-                        'net_amount' => 0,
-                    ],
-                    'items' => [],
-                    'pagination' => [
-                        'page' => $page,
-                        'limit' => $limit,
-                        'count' => 0,
-                        'total' => 0,
-                        'has_more' => false,
-                    ],
-                    'language' => $language,
-                ], 'ดึงประวัติการเงินสำเร็จ');
-            }
 
             $query = $this->walletTransactionsQuery($memberId, $type, $dateStart, $dateStop);
 
@@ -448,10 +422,7 @@ class WalletController extends BaseController
             ->values()
             ->all();
 
-        if (empty($ticketIds)
-            || ! Schema::hasTable('lotto_tickets')
-            || ! Schema::hasTable('lotto_draws')
-            || ! Schema::hasTable('lotto_markets')) {
+        if (empty($ticketIds)) {
             return [];
         }
 

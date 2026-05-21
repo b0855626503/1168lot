@@ -4,9 +4,10 @@ namespace Tests\Feature\Lotto;
 
 use App\Services\Dashboard\DashboardSummarySyncService;
 use Gametech\Lotto\Http\Controllers\Admin\LottoTicketController;
-use Illuminate\Database\Schema\Blueprint;
+use Gametech\Lotto\Services\WalletTransactionService;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Auth\Guard;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -21,10 +22,11 @@ class AdminLottoTicketCancelControllerTest extends TestCase
 
         config(['broadcasting.default' => 'log']);
         $this->prepareSchema();
-        $this->app->instance(DashboardSummarySyncService::class, new class {
-            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void
-            {
-            }
+        $this->app->instance(DashboardSummarySyncService::class, new class
+        {
+            public function dispatchForModelChange(string $domain, $model, array $overrideSections = []): void {}
+
+            public function dispatchRiskCurrentForDraw(int $drawId, string $sourceType, string $sourceId): void {}
         });
     }
 
@@ -60,7 +62,7 @@ class AdminLottoTicketCancelControllerTest extends TestCase
         ]);
 
         $response = $this->createTestResponse(
-            app(LottoTicketController::class)->cancel($request, 1001, app(\Gametech\Lotto\Services\WalletTransactionService::class))
+            app(LottoTicketController::class)->cancel($request, 1001, app(WalletTransactionService::class))
         );
 
         $this->assertSame(200, $response->getStatusCode(), $response->getContent());
@@ -102,7 +104,7 @@ class AdminLottoTicketCancelControllerTest extends TestCase
         ]);
 
         $response = $this->createTestResponse(
-            app(LottoTicketController::class)->cancel($request, 1002, app(\Gametech\Lotto\Services\WalletTransactionService::class))
+            app(LottoTicketController::class)->cancel($request, 1002, app(WalletTransactionService::class))
         );
 
         $response->assertStatus(422);
@@ -117,7 +119,7 @@ class AdminLottoTicketCancelControllerTest extends TestCase
         $guard = Mockery::mock(Guard::class);
         $guard->shouldReceive('user')->andReturn((object) [
             'code' => $adminCode,
-            'user_name' => 'staff' . $adminCode,
+            'user_name' => 'staff'.$adminCode,
         ]);
         $guard->shouldReceive('id')->andReturn($adminCode);
 
@@ -131,8 +133,8 @@ class AdminLottoTicketCancelControllerTest extends TestCase
     {
         DB::table('members')->insert([
             'code' => $memberCode,
-            'user_name' => 'member' . $memberCode,
-            'name' => 'Member ' . $memberCode,
+            'user_name' => 'member'.$memberCode,
+            'name' => 'Member '.$memberCode,
             'balance' => $balance,
             'date_create' => now(),
             'date_update' => now(),
@@ -144,7 +146,7 @@ class AdminLottoTicketCancelControllerTest extends TestCase
         DB::table('lotto_markets')->insert([
             'id' => $marketId,
             'group_id' => 1,
-            'name' => 'Market ' . $marketId,
+            'name' => 'Market '.$marketId,
             'is_enabled' => 1,
         ]);
 
@@ -219,7 +221,7 @@ class AdminLottoTicketCancelControllerTest extends TestCase
             'ref_type' => 'LOTTO_BET',
             'ref_id' => $ticketId,
             'ref_code' => (string) $ticketId,
-            'group_code' => 'LOTTO_BET_' . $ticketId,
+            'group_code' => 'LOTTO_BET_'.$ticketId,
             'related_txn_id' => null,
             'status' => 'SUCCESS',
             'description' => 'เดิมพันหวย',

@@ -19,7 +19,6 @@ use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -1048,9 +1047,6 @@ class LottoResultSourceController extends AppBaseController
 
     private function saveRevision(LottoResultSource $source, string $reason, ?CompiledSourcePipelineData $compiled = null): void
     {
-        if (! Schema::hasTable('lotto_result_source_revisions')) {
-            return;
-        }
 
         $snapshot = $compiled
             ? $compiled->toArray()

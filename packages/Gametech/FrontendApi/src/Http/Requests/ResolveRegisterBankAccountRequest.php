@@ -27,36 +27,24 @@ class ResolveRegisterBankAccountRequest extends FormRequest
                     $bankCode = (int) $this->input('bank');
                     $accountNumber = (string) $value;
 
-                    if (
-                        DB::getSchemaBuilder()->hasTable('members')
-                        && DB::getSchemaBuilder()->hasColumn('members', 'acc_no')
-                        && DB::getSchemaBuilder()->hasColumn('members', 'bank_code')
-                    ) {
-                        $exists = DB::table('members')
-                            ->where('acc_no', $accountNumber)
-                            ->where('bank_code', $bankCode)
-                            ->exists();
+                    $exists = DB::table('members')
+                        ->where('acc_no', $accountNumber)
+                        ->where('bank_code', $bankCode)
+                        ->exists();
 
-                        if ($exists) {
-                            $fail('เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบสมาชิก');
+                    if ($exists) {
+                        $fail('เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบสมาชิก');
 
-                            return;
-                        }
+                        return;
                     }
 
-                    if (
-                        DB::getSchemaBuilder()->hasTable('banks_account')
-                        && DB::getSchemaBuilder()->hasColumn('banks_account', 'acc_no')
-                        && DB::getSchemaBuilder()->hasColumn('banks_account', 'banks')
-                    ) {
-                        $exists = DB::table('banks_account')
-                            ->where('acc_no', $accountNumber)
-                            ->where('banks', $bankCode)
-                            ->exists();
+                    $exists = DB::table('banks_account')
+                        ->where('acc_no', $accountNumber)
+                        ->where('banks', $bankCode)
+                        ->exists();
 
-                        if ($exists) {
-                            $fail('เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบบัญชีธนาคารภายใน');
-                        }
+                    if ($exists) {
+                        $fail('เลขที่บัญชีนี้ถูกใช้งานแล้วในระบบบัญชีธนาคารภายใน');
                     }
                 },
             ],

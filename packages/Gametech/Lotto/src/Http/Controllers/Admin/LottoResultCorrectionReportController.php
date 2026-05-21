@@ -88,19 +88,7 @@ class LottoResultCorrectionReportController extends AppBaseController
         });
 
         $memberIds = $normalizedItems->pluck('member_id')->unique()->values()->all();
-        $memberSelectColumns = ['code', 'name', 'balance'];
-        if (DB::getSchemaBuilder()->hasColumn('members', 'user_name')) {
-            $memberSelectColumns[] = 'user_name';
-        }
-        if (DB::getSchemaBuilder()->hasColumn('members', 'username')) {
-            $memberSelectColumns[] = 'username';
-        }
-        if (DB::getSchemaBuilder()->hasColumn('members', 'tel')) {
-            $memberSelectColumns[] = 'tel';
-        }
-        if (DB::getSchemaBuilder()->hasColumn('members', 'phone')) {
-            $memberSelectColumns[] = 'phone';
-        }
+        $memberSelectColumns = ['code', 'name', 'balance', 'user_name', 'username', 'tel', 'phone'];
 
         $memberRecords = DB::table('members')
             ->whereIn('code', $memberIds)
