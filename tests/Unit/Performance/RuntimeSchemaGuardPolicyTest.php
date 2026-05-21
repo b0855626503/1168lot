@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Performance;
 
+use Gametech\Admin\Services\DashboardService;
 use PHPUnit\Framework\TestCase;
 
 class RuntimeSchemaGuardPolicyTest extends TestCase
@@ -44,5 +45,40 @@ class RuntimeSchemaGuardPolicyTest extends TestCase
         $this->assertStringContainsString('ASSUMED_RUNTIME_TABLES', $service);
         $this->assertStringContainsString('ASSUMED_RUNTIME_COLUMNS', $service);
         $this->assertStringContainsString('app()->runningUnitTests()', $service);
+    }
+
+    public function test_dashboard_assumed_schema_covers_existing_runtime_columns(): void
+    {
+        $reflection = new \ReflectionClass(DashboardService::class);
+        $assumedColumns = $reflection->getConstant('ASSUMED_RUNTIME_COLUMNS');
+        $this->assertIsArray($assumedColumns);
+
+        // Columns that hasColumn() guards in DashboardService and which DO exist
+        // in production. Missing whitelist entries here mean shouldAssumeCurrentSchema()
+        // silently returns false at runtime, disabling the corresponding filter or
+        // code path (see lotto_markets.result_mode regression where the Recent Lotto
+        // Bets dropdown stopped filtering yeekee/normal markets).
+        $expected = [
+            'lotto_markets' => ['result_mode'],
+            'lotto_dashboard_risk_snapshot' => ['round_id', 'market_id', 'bet_type', 'number'],
+        ];
+
+        $missing = [];
+        foreach ($expected as $table => $columns) {
+            $whitelisted = $assumedColumns[$table] ?? [];
+            $isWildcard = in_array('*', $whitelisted, true);
+            foreach ($columns as $column) {
+                if (! $isWildcard && ! in_array($column, $whitelisted, true)) {
+                    $missing[] = $table.'.'.$column;
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $missing,
+            "Production schema columns must be in ASSUMED_RUNTIME_COLUMNS so hasColumn() does not silently disable filters. Missing:\n - "
+            .implode("\n - ", $missing)
+        );
     }
 }
