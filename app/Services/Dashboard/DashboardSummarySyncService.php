@@ -425,7 +425,7 @@ class DashboardSummarySyncService
         $payload = $this->projector->projectDaily($summaryDate, $webCode);
         $lottoPayload = $this->projector->projectLotto($summaryDate, $webCode);
 
-        DB::transaction(function () use ($payload) {
+        $this->retryOnDeadlock(function () use ($payload): void {
             $payload = $this->filterPayloadByExistingColumns('dashboard_summary_daily', $payload, ['summary_date', 'web_code']);
             if (empty($payload)) {
                 return;
