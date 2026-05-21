@@ -168,6 +168,11 @@ class Kernel extends ConsoleKernel
             ->dailyAt('03:50')
             ->withoutOverlapping()
             ->runInBackground();
+
+        $schedule->command('wallet:prune-transactions --days=7')
+            ->dailyAt('04:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     protected function commands()
