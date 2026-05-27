@@ -88,7 +88,7 @@ class LottoResultCorrectionReportController extends AppBaseController
         });
 
         $memberIds = $normalizedItems->pluck('member_id')->unique()->values()->all();
-        $memberSelectColumns = ['code', 'name', 'balance', 'user_name', 'username', 'tel', 'phone'];
+        $memberSelectColumns = ['code', 'name', 'balance', 'user_name', 'tel'];
 
         $memberRecords = DB::table('members')
             ->whereIn('code', $memberIds)
