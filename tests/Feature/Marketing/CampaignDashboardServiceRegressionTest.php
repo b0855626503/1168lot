@@ -148,7 +148,7 @@ class CampaignDashboardServiceRegressionTest extends TestCase
             $table->bigIncrements('id');
             $table->string('member_id')->nullable();
             $table->unsignedBigInteger('draw_id')->nullable();
-            $table->decimal('bet_amount', 15, 2)->default(0);
+            $table->decimal('total_bet_amount', 15, 2)->default(0);
             $table->decimal('total_win_amount', 15, 2)->default(0);
             $table->string('status', 32)->nullable();
             $table->dateTime('created_at')->nullable();
@@ -219,10 +219,10 @@ class CampaignDashboardServiceRegressionTest extends TestCase
         DB::table('lotto_markets')->insert([['id' => 1, 'name' => 'Thai']]);
         DB::table('lotto_draws')->insert([['id' => 1, 'market_id' => 1, 'draw_date' => '2026-05-02']]);
         DB::table('lotto_tickets')->insert([
-            ['member_id' => 'A1001', 'draw_id' => 1, 'bet_amount' => 30, 'total_win_amount' => 10, 'status' => 'resulted', 'created_at' => '2026-05-02 10:00:00'],
-            ['member_id' => 'A1002', 'draw_id' => 1, 'bet_amount' => 20, 'total_win_amount' => 0, 'status' => 'resulted', 'created_at' => '2026-05-02 10:30:00'],
-            ['member_id' => 'A1001', 'draw_id' => 1, 'bet_amount' => 5, 'total_win_amount' => 0, 'status' => 'active', 'created_at' => '2026-05-02 11:00:00'],
-            ['member_id' => 'B2001', 'draw_id' => 1, 'bet_amount' => 500, 'total_win_amount' => 0, 'status' => 'resulted', 'created_at' => '2026-05-02 11:00:00'],
+            ['member_id' => 'A1001', 'draw_id' => 1, 'total_bet_amount' => 30, 'total_win_amount' => 10, 'status' => 'resulted', 'created_at' => '2026-05-02 10:00:00'],
+            ['member_id' => 'A1002', 'draw_id' => 1, 'total_bet_amount' => 20, 'total_win_amount' => 0, 'status' => 'resulted', 'created_at' => '2026-05-02 10:30:00'],
+            ['member_id' => 'A1001', 'draw_id' => 1, 'total_bet_amount' => 5, 'total_win_amount' => 0, 'status' => 'active', 'created_at' => '2026-05-02 11:00:00'],
+            ['member_id' => 'B2001', 'draw_id' => 1, 'total_bet_amount' => 500, 'total_win_amount' => 0, 'status' => 'resulted', 'created_at' => '2026-05-02 11:00:00'],
         ]);
 
         DB::table('registration_links')->insert([

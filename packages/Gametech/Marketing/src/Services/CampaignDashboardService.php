@@ -145,7 +145,7 @@ class CampaignDashboardService
 
         $ticketCount = (int) (clone $base)->count();
         $playerCount = (int) (clone $base)->distinct('member_id')->count('member_id');
-        $salesAmount = (float) (clone $base)->sum('bet_amount');
+        $salesAmount = (float) (clone $base)->sum('total_bet_amount');
         $winAmount = (float) (clone $base)->sum('total_win_amount');
         $winCount = (int) (clone $base)->where('status', 'resulted')->where('total_win_amount', '>', 0)->count();
         $loseCount = (int) (clone $base)->where('status', 'resulted')->where('total_win_amount', '<=', 0)->count();
@@ -260,7 +260,7 @@ class CampaignDashboardService
                 'lotto_tickets.member_id as member_code',
                 'lotto_markets.name as market_name',
                 'lotto_draws.draw_date',
-                'lotto_tickets.bet_amount',
+                'lotto_tickets.total_bet_amount as bet_amount',
                 'lotto_tickets.total_win_amount as win_amount',
                 'lotto_tickets.status',
                 'lotto_tickets.created_at',

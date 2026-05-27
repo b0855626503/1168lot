@@ -224,6 +224,8 @@ class MarketingCampaignController extends AppBaseController
         [$reportStartAt, $reportEndAt] = $this->dateTimeRange($startDate, $endDate);
         [$singleDateStartAt, $singleDateEndAt] = $this->dateTimeRange($date, $date);
 
+        $result = [];
+
         switch ($method) {
             case 'register-all':
                 $data = $campaign->members()->count();
