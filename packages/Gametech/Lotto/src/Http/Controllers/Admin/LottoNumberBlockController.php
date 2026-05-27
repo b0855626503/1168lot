@@ -5,17 +5,24 @@ namespace Gametech\Lotto\Http\Controllers\Admin;
 use Gametech\Admin\Http\Controllers\AppBaseController;
 use Gametech\Lotto\DataTables\LottoNumberBlockDataTable;
 use Gametech\Lotto\Enums\BetType;
+use Gametech\Lotto\Models\LotteryMarket;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoNumberBlock;
-use Gametech\Lotto\Models\LotteryMarket;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class LottoNumberBlockController extends AppBaseController
 {
     protected array $_config;
+
+    private const PERMUTABLE_BET_TYPES = [
+        BetType::TOP_3,
+        BetType::TOD_3,
+        BetType::TOP_2,
+        BetType::BOTTOM_2,
+    ];
 
     public function __construct()
     {
@@ -37,9 +44,9 @@ class LottoNumberBlockController extends AppBaseController
             ->map(static function (LottoDraw $draw): array {
                 return [
                     'value' => (int) $draw->id,
-                    'text' => ($draw->market->name ?? '-') . ' | '
-                        . ($draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-')
-                        . ' (' . strtoupper((string) $draw->status) . ')',
+                    'text' => ($draw->market->name ?? '-').' | '
+                        .($draw->draw_date ? $draw->draw_date->format('d/m/Y') : '-')
+                        .' ('.strtoupper((string) $draw->status).')',
                 ];
             })
             ->sortBy('text')
@@ -75,7 +82,7 @@ class LottoNumberBlockController extends AppBaseController
         $betTypeOptions = collect(BetType::all())
             ->map(fn (string $type) => [
                 'value' => $type,
-                'text' => $type . ' = ' . BetType::label($type),
+                'text' => $type.' = '.BetType::label($type),
             ])
             ->values()
             ->toArray();
@@ -84,6 +91,7 @@ class LottoNumberBlockController extends AppBaseController
             'drawOptions' => $drawOptions,
             'marketOptionsGrouped' => $marketOptionsGrouped,
             'betTypeOptions' => $betTypeOptions,
+            'permutableBetTypes' => self::PERMUTABLE_BET_TYPES,
         ]);
     }
 
@@ -104,15 +112,16 @@ class LottoNumberBlockController extends AppBaseController
         $data = (array) $request->input('data', []);
 
         $validated = validator($data, [
-            'draw_id'   => ['required', 'integer', 'exists:lotto_draws,id'],
-            'bet_type'  => [
+            'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'bet_type' => [
                 'required',
                 Rule::in(BetType::all()),
             ],
-            'number'    => ['required', 'string', 'max:2000'],
-            'mode'      => ['required', Rule::in(['block', 'limit_future'])],
-            'reason'    => ['nullable', 'string', 'max:65535'],
+            'number' => ['required', 'string', 'max:2000'],
+            'mode' => ['required', Rule::in(['block', 'limit_future'])],
+            'reason' => ['nullable', 'string', 'max:65535'],
             'blocked_at' => ['nullable', 'date_format:Y-m-d H:i'],
+            'permute' => ['boolean'],
         ], [
             'bet_type.in' => 'ประเภทเดิมพันไม่ถูกต้อง',
         ])->validate();
@@ -121,6 +130,11 @@ class LottoNumberBlockController extends AppBaseController
         if (empty($numbers)) {
             return $this->sendError('กรุณาระบุเลขอย่างน้อย 1 รายการ', 422);
         }
+
+        if (! empty($validated['permute']) && in_array((string) $validated['bet_type'], self::PERMUTABLE_BET_TYPES, true)) {
+            $numbers = $this->expandPermutations($numbers);
+        }
+
         if ($this->hasNumberTooLong($numbers)) {
             return $this->sendError('เลขแต่ละรายการต้องไม่เกิน 20 ตัวอักษร', 422);
         }
@@ -136,7 +150,7 @@ class LottoNumberBlockController extends AppBaseController
             ->all();
 
         if (! empty($duplicateNumbers)) {
-            return $this->sendError('มีเลขอั้นซ้ำอยู่แล้ว: ' . implode(', ', $duplicateNumbers), 422);
+            return $this->sendError('มีเลขอั้นซ้ำอยู่แล้ว: '.implode(', ', $duplicateNumbers), 422);
         }
 
         DB::transaction(function () use ($validated, $numbers): void {
@@ -153,7 +167,7 @@ class LottoNumberBlockController extends AppBaseController
             }
         });
 
-        return $this->sendSuccess('เพิ่มเลขอั้นเรียบร้อยแล้ว (' . count($numbers) . ' รายการ)');
+        return $this->sendSuccess('เพิ่มเลขอั้นเรียบร้อยแล้ว ('.count($numbers).' รายการ)');
     }
 
     public function edit(Request $request): JsonResponse
@@ -180,8 +194,8 @@ class LottoNumberBlockController extends AppBaseController
         }
 
         $validated = validator($data, [
-            'draw_id'   => ['required', 'integer', 'exists:lotto_draws,id'],
-            'bet_type'  => [
+            'draw_id' => ['required', 'integer', 'exists:lotto_draws,id'],
+            'bet_type' => [
                 'required',
                 Rule::in(BetType::all()),
                 Rule::unique('lotto_number_blocks', 'bet_type')
@@ -190,9 +204,9 @@ class LottoNumberBlockController extends AppBaseController
                         ->where('draw_id', (int) ($data['draw_id'] ?? 0))
                         ->where('number', (string) ($this->parseNumbers((string) ($data['number'] ?? ''))[0] ?? ''))),
             ],
-            'number'    => ['required', 'string', 'max:2000'],
-            'mode'      => ['required', Rule::in(['block', 'limit_future'])],
-            'reason'    => ['nullable', 'string', 'max:65535'],
+            'number' => ['required', 'string', 'max:2000'],
+            'mode' => ['required', Rule::in(['block', 'limit_future'])],
+            'reason' => ['nullable', 'string', 'max:65535'],
             'blocked_at' => ['nullable', 'date_format:Y-m-d H:i'],
         ], [
             'bet_type.unique' => 'เลขนี้ในประเภทเดิมพันเดียวกันของงวดนี้ถูกอั้นไว้แล้ว',
@@ -260,7 +274,68 @@ class LottoNumberBlockController extends AppBaseController
             ->whereIn('id', $ids->all())
             ->delete();
 
-        return $this->sendSuccess('ลบเลขอั้นเรียบร้อยแล้ว ' . (int) $deleted . ' รายการ');
+        return $this->sendSuccess('ลบเลขอั้นเรียบร้อยแล้ว '.(int) $deleted.' รายการ');
+    }
+
+    /**
+     * @param  string[]  $numbers
+     * @return string[]
+     */
+    private function expandPermutations(array $numbers): array
+    {
+        $expanded = [];
+
+        foreach ($numbers as $number) {
+            $permutations = $this->permuteDigits($number);
+            foreach ($permutations as $p) {
+                $expanded[] = $p;
+            }
+        }
+
+        return array_values(array_unique($expanded));
+    }
+
+    /**
+     * @return string[]
+     */
+    private function permuteDigits(string $number): array
+    {
+        $digits = mb_str_split($number);
+        $len = count($digits);
+
+        if ($len <= 1) {
+            return [$number];
+        }
+
+        $result = [];
+        $this->permuteRecursive($digits, 0, $len - 1, $result);
+
+        return array_values(array_unique($result));
+    }
+
+    /**
+     * @param  string[]  $digits
+     * @param  string[]  $result
+     */
+    private function permuteRecursive(array &$digits, int $left, int $right, array &$result): void
+    {
+        if ($left === $right) {
+            $result[] = implode('', $digits);
+
+            return;
+        }
+
+        $seen = [];
+        for ($i = $left; $i <= $right; $i++) {
+            if (in_array($digits[$i], $seen, true)) {
+                continue;
+            }
+            $seen[] = $digits[$i];
+
+            [$digits[$left], $digits[$i]] = [$digits[$i], $digits[$left]];
+            $this->permuteRecursive($digits, $left + 1, $right, $result);
+            [$digits[$left], $digits[$i]] = [$digits[$i], $digits[$left]];
+        }
     }
 
     /**
@@ -280,7 +355,7 @@ class LottoNumberBlockController extends AppBaseController
     }
 
     /**
-     * @param string[] $numbers
+     * @param  string[]  $numbers
      */
     private function hasNumberTooLong(array $numbers): bool
     {

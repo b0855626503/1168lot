@@ -11,6 +11,11 @@
 		<b-form-group label="เลข:" label-for="number" description="กรอกหลายเลขได้ โดยคั่นด้วย , เช่น 12,34,56">
 			<b-form-input id="number" v-model="formaddedit.number" type="text" size="sm" autocomplete="off" placeholder="เช่น 12,34,56" required></b-form-input>
 		</b-form-group>
+		<b-form-group v-if="formmethod === 'add' && permutableBetTypes.includes(formaddedit.bet_type)">
+			<b-form-checkbox v-model="formaddedit.permute" value="1" unchecked-value="0">
+				กลับเลข <small class="text-muted">(สลับหลัก เช่น 123 → 132, 213, 231, 312, 321)</small>
+			</b-form-checkbox>
+		</b-form-group>
 		<b-form-group label="โหมด:" label-for="mode">
 			<b-form-select id="mode" v-model="formaddedit.mode" :options="modeOptions" size="sm" required></b-form-select>
 		</b-form-group>
@@ -39,6 +44,7 @@
 					formmethod: 'add',
 					draws: @json($drawOptions ?? []),
 					betTypes: @json($betTypeOptions ?? []),
+					permutableBetTypes: @json($permutableBetTypes ?? []),
 					modeOptions: [
 						{ value: 'block', text: 'อั้น' },
 						{ value: 'limit_future', text: 'จำกัดอนาคต' },
@@ -50,6 +56,7 @@
 						mode: 'block',
 						reason: '',
 						blocked_at: '',
+						permute: '0',
 					},
 				};
 			},
@@ -74,6 +81,7 @@
 						mode: 'block',
 						reason: '',
 						blocked_at: '',
+						permute: '0',
 					};
 					this.show = false;
 					this.$nextTick(() => {
@@ -101,6 +109,7 @@
 						mode: this.formaddedit.mode,
 						reason: this.formaddedit.reason,
 						blocked_at: this.formaddedit.blocked_at ? this.formaddedit.blocked_at.replace('T', ' ') : null,
+						permute: this.formaddedit.permute === '1',
 					};
 
 					const url = this.formmethod === 'add'
