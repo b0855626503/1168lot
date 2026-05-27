@@ -92,8 +92,8 @@ class CampaignDashboardServiceRegressionTest extends TestCase
         Schema::create('members', function (Blueprint $table): void {
             $table->string('code')->nullable();
             $table->unsignedBigInteger('campaign_id')->nullable();
-            $table->string('username')->nullable();
-            $table->string('phone')->nullable();
+            $table->string('user_name')->nullable();
+            $table->string('tel')->nullable();
             $table->dateTime('date_regis')->nullable();
         });
 
@@ -188,9 +188,9 @@ class CampaignDashboardServiceRegressionTest extends TestCase
     private function seedCampaignFixture(): void
     {
         DB::table('members')->insert([
-            ['code' => 'A1001', 'campaign_id' => 1, 'username' => 'a1', 'phone' => '0811111111', 'date_regis' => '2026-05-01 10:00:00'],
-            ['code' => 'A1002', 'campaign_id' => 1, 'username' => 'a2', 'phone' => '0822222222', 'date_regis' => '2026-05-02 10:00:00'],
-            ['code' => 'B2001', 'campaign_id' => 2, 'username' => 'b1', 'phone' => '0833333333', 'date_regis' => '2026-05-02 10:00:00'],
+            ['code' => 'A1001', 'campaign_id' => 1, 'user_name' => 'a1', 'tel' => '0811111111', 'date_regis' => '2026-05-01 10:00:00'],
+            ['code' => 'A1002', 'campaign_id' => 1, 'user_name' => 'a2', 'tel' => '0822222222', 'date_regis' => '2026-05-02 10:00:00'],
+            ['code' => 'B2001', 'campaign_id' => 2, 'user_name' => 'b1', 'tel' => '0833333333', 'date_regis' => '2026-05-02 10:00:00'],
         ]);
 
         DB::table('bank_payment')->insert([

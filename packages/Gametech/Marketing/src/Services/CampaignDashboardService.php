@@ -278,12 +278,12 @@ class CampaignDashboardService
             ->where('campaign_id', $campaignId)
             ->orderByDesc('date_regis')
             ->limit($limit)
-            ->get(['code', 'username', 'phone', 'date_regis'])
+            ->get(['code', 'user_name', 'tel', 'date_regis'])
             ->map(function ($row) {
                 return [
                     'member_code' => $row->code,
-                    'username' => $row->username,
-                    'phone_masked' => $this->maskPhone((string) ($row->phone ?? '')),
+                    'username' => $row->user_name,
+                    'phone_masked' => $this->maskPhone((string) ($row->tel ?? '')),
                     'date_regis' => $row->date_regis,
                     'has_deposit' => false,
                 ];
