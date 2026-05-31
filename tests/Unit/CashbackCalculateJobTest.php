@@ -200,6 +200,76 @@ class CashbackCalculateJobTest extends TestCase
         );
     }
 
+    public function test_no_balance_flag_excludes_balance_from_net_amount_calculation(): void
+    {
+        config()->set('gametech.cashback.start.no_balance', true);
+
+        $repository = new class
+        {
+            public array $created = [];
+            public array $wallet = [];
+            public array $cashback = [];
+
+            public function create(array $attributes): object
+            {
+                $this->created[] = $attributes;
+
+                return (object) ['code' => 77];
+            }
+
+            public function refillSeamlessDirect(array $data): bool
+            {
+                $this->wallet[] = $data;
+
+                return true;
+            }
+
+            public function refillSeamless(array $data): bool
+            {
+                $this->cashback[] = $data;
+
+                return true;
+            }
+        };
+
+        $this->app->instance('Gametech\Member\Repositories\MemberCashbackRepository', $repository);
+
+        $job = new CashbackCalculate(
+            '2026-04-18 00:00:00',
+            '2026-04-24 23:59:59',
+            '2026-04-18',
+            (object) [
+                'upline_code' => 5001,
+                'member_code' => 1001,
+                'balance' => 900.0,
+                'deposit_amount' => 300.0,
+                'withdraw_amount' => 50.0,
+                'bonus_amount' => 0.0,
+            ],
+            (object) [
+                'bonus_percent' => 10,
+                'bonus_min' => 0,
+                'bonus_max' => 0,
+            ],
+            'wallet'
+        );
+
+        // Without no_balance: netAmount = 300 - 50 - 900 = -650 → skipped
+        // With no_balance:    netAmount = 300 - 50 - 0 = 250 → cashback = 25
+        $job->handle();
+
+        $this->assertCount(1, $repository->created);
+        $this->assertSame('2026-04-18', $repository->created[0]['date_cashback']);
+        $this->assertSame(300.0, (float) $repository->created[0]['sum_deposit']);
+        $this->assertSame(50.0, (float) $repository->created[0]['sum_withdraw']);
+        $this->assertSame(900.0, (float) $repository->created[0]['sum_balance']);
+        $this->assertSame(250.0, (float) $repository->created[0]['balance']);
+
+        // balance_total = 300 - 50 - 0 = 250, cashback = 250 * 10% = 25
+        $this->assertSame(25.0, (float) $repository->created[0]['cashback']);
+        $this->assertSame('N', $repository->created[0]['topupic']);
+    }
+
     public function test_job_records_skip_audit_when_net_amount_is_not_positive(): void
     {
         $repository = new class

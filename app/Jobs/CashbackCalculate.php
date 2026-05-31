@@ -103,8 +103,10 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         $bonusmax = $promotion->bonus_max;
 
         $balance = $item->balance;
+        $noBalance = (bool) config('gametech.cashback.start.no_balance', false);
+        $deductionBalance = $noBalance ? 0 : $balance;
 
-        $netAmount = ($item->deposit_amount - $item->withdraw_amount - $balance);
+        $netAmount = ($item->deposit_amount - $item->withdraw_amount - $deductionBalance);
         if ($netAmount <= 0) {
             $this->recordSkippedCashback($item, $netAmount);
 
@@ -117,7 +119,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         $item->emp_code = 0;
         $item->emp_name = 'SYSTEM';
 
-        $item->balance_total = ($item->deposit_amount - $item->withdraw_amount - $balance);
+        $item->balance_total = ($item->deposit_amount - $item->withdraw_amount - $deductionBalance);
         $cashback = (($item->balance_total * $bonus) / 100);
 
         if ($bonusmin > 0) {
