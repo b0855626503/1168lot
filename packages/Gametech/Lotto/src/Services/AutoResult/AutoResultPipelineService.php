@@ -8,8 +8,8 @@ use Gametech\Lotto\Exceptions\TemplateRenderException;
 use Gametech\Lotto\Models\LottoDraw;
 use Gametech\Lotto\Models\LottoResultFetchLog;
 use Gametech\Lotto\Models\LottoResultSource;
-use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Gametech\Lotto\Services\AutoResultHardeningService;
+use Gametech\Lotto\Services\AutoResultV2\LottoResultPipelineRunner;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Schema;
 class AutoResultPipelineService
 {
     private const RETRYABLE_STATUS = 'NOT_READY';
-    private const TERMINAL_DRAW_STATUSES = ['APPLIED', 'CONFLICT', 'EXHAUSTED'];
+    private const TERMINAL_DRAW_STATUSES = ['APPLIED', 'CONFLICT', 'EXHAUSTED', 'SKIPPED_DUPLICATE_PREVIOUS'];
     private const CANONICAL_STATUSES = [
         'NO_SOURCE',
         'HTTP_ERROR',
@@ -29,6 +29,7 @@ class AutoResultPipelineService
         'RATE_LIMITED',
         'EXHAUSTED',
         'APPLIED',
+        'SKIPPED_DUPLICATE_PREVIOUS',
     ];
 
     public function __construct(
@@ -41,8 +42,7 @@ class AutoResultPipelineService
         private ResultValidator $validator,
         private ResultApplier $applier,
         private AutoResultHardeningService $hardening
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string,mixed>
@@ -55,7 +55,7 @@ class AutoResultPipelineService
         ?string $expectedDrawDate = null
     ): array {
         $draw = $draw->fresh(['market']);
-        $runId = $runId ?: ('run_' . $draw->id . '_' . now()->format('YmdHisv'));
+        $runId = $runId ?: ('run_'.$draw->id.'_'.now()->format('YmdHisv'));
         $expectedDrawDate = $expectedDrawDate ?: ($draw->draw_date ? $draw->draw_date->format('Y-m-d') : null);
 
         $sources = $this->resolver->resolveAll($draw);
@@ -80,6 +80,7 @@ class AutoResultPipelineService
                 if ($state['exhausted']) {
                     $fallbackTried = true;
                     $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $state['attempts']);
+
                     continue;
                 }
 
@@ -94,6 +95,7 @@ class AutoResultPipelineService
 
             if (! $this->hardening->acquireSourceRateLimit((int) $source->id)) {
                 $skippedRateLimit = true;
+
                 continue;
             }
 
@@ -104,7 +106,7 @@ class AutoResultPipelineService
                 $isManualRetry,
                 $runId,
                 $expectedDrawDate
-                );
+            );
 
             if ((string) ($result['status'] ?? '') === self::RETRYABLE_STATUS) {
                 if (! $isManualRetry) {
@@ -112,6 +114,7 @@ class AutoResultPipelineService
                     if ($stateAfter['exhausted']) {
                         $fallbackTried = true;
                         $this->logSourceExhaustedIfNeeded($draw, $source, $runId, (int) $stateAfter['attempts']);
+
                         continue;
                     }
                 }
@@ -184,10 +187,7 @@ class AutoResultPipelineService
         ];
     }
 
-    private function logSourceExhaustedIfNeeded(LottoDraw $draw, LottoResultSource $source, string $runId, int $attempts): void
-    {
-        return;
-    }
+    private function logSourceExhaustedIfNeeded(LottoDraw $draw, LottoResultSource $source, string $runId, int $attempts): void {}
 
     /**
      * @return array<string,mixed>
@@ -203,7 +203,7 @@ class AutoResultPipelineService
         $shadowResult = null;
         if ($this->isV2ShadowEnabled($source)) {
             try {
-                $shadowResult = (new LottoResultPipelineRunner())->run($draw, $source, [
+                $shadowResult = (new LottoResultPipelineRunner)->run($draw, $source, [
                     'run_id' => $runId,
                     'expected_draw_date' => $expectedDrawDate,
                 ]);
@@ -376,7 +376,7 @@ class AutoResultPipelineService
                 'duration_ms' => (int) $fetched['duration_ms'],
                 'is_dry_run' => $dryRun,
                 'is_manual_retry' => $isManualRetry,
-                'error_message' => 'VALIDATION_ERROR: selection rejected (' . (string) ($selection['rejection_reason'] ?? 'unknown') . ')',
+                'error_message' => 'VALIDATION_ERROR: selection rejected ('.(string) ($selection['rejection_reason'] ?? 'unknown').')',
             ]);
         }
 
@@ -525,7 +525,7 @@ class AutoResultPipelineService
     }
 
     /**
-     * @param array<string,mixed> $logPayload
+     * @param  array<string,mixed>  $logPayload
      * @return array<string,mixed>
      */
     private function markAndLog(LottoDraw $draw, array $logPayload, ?string $drawStatusOverride = null): array
@@ -615,7 +615,7 @@ class AutoResultPipelineService
         string $runId,
         ?string $expectedDrawDate
     ): array {
-        return (new LottoResultPipelineRunner())->run($draw, $source, [
+        return (new LottoResultPipelineRunner)->run($draw, $source, [
             'run_id' => $runId,
             'expected_draw_date' => $expectedDrawDate,
         ]);
@@ -627,7 +627,7 @@ class AutoResultPipelineService
     }
 
     /**
-     * @param array<string,mixed> $v2Result
+     * @param  array<string,mixed>  $v2Result
      * @return array<string,mixed>
      */
     private function buildV2LogContext(array $v2Result): array

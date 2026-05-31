@@ -9,6 +9,7 @@ use Gametech\Lotto\Services\DrawCancelAllRefundService;
 use Gametech\Lotto\Services\SettlementService;
 use Gametech\Lotto\Support\ResultHash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -38,6 +39,25 @@ class ResultApplier
 
         return DB::transaction(function () use ($draw, $validated, $rawPayload, $resultHash) {
             $locked = LottoDraw::query()->lockForUpdate()->findOrFail($draw->id);
+
+            if (! $this->isNoResultPayload($validated) && $this->isDuplicateOfPreviousDraw($locked, $resultHash)) {
+                $locked->forceFill([
+                    'result_fetch_status' => 'SKIPPED_DUPLICATE_PREVIOUS',
+                    'result_fetch_error' => 'ผลรางวัลตรงกับงวดก่อนหน้า ข้ามการออกผล',
+                    'result_fetched_at' => now(),
+                ])->save();
+
+                Log::warning('LOTTO_DUPLICATE_PREVIOUS_DRAW_RESULT', [
+                    'draw_id' => (int) $locked->id,
+                    'market_id' => (int) $locked->market_id,
+                    'result_hash' => $resultHash,
+                ]);
+
+                return [
+                    'status' => 'SKIPPED_DUPLICATE_PREVIOUS',
+                    'result_hash' => $resultHash,
+                ];
+            }
 
             if ((string) $locked->status === 'resulted') {
                 $existingHash = (string) ($locked->result_hash ?? '');
@@ -196,5 +216,36 @@ class ResultApplier
     private function isNoResultPayload(array $validated): bool
     {
         return (bool) ($validated['no_result'] ?? false);
+    }
+
+    private function isDuplicateOfPreviousDraw(LottoDraw $draw, string $resultHash): bool
+    {
+        if (! $draw->relationLoaded('market')) {
+            $draw->load('market');
+        }
+
+        $market = $draw->market;
+        if (! $market instanceof LotteryMarket) {
+            return false;
+        }
+
+        if ((string) $market->result_mode !== LotteryMarket::RESULT_MODE_NORMAL) {
+            return false;
+        }
+
+        $previousDraw = LottoDraw::query()
+            ->where('market_id', (int) $draw->market_id)
+            ->where('status', 'resulted')
+            ->where('id', '!=', (int) $draw->id)
+            ->where('draw_date', '<', $draw->draw_date)
+            ->whereNotNull('result_hash')
+            ->orderByDesc('draw_date')
+            ->first();
+
+        if (! $previousDraw instanceof LottoDraw) {
+            return false;
+        }
+
+        return (string) $previousDraw->result_hash === $resultHash;
     }
 }

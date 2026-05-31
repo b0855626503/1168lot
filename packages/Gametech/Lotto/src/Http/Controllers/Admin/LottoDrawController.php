@@ -381,6 +381,12 @@ class LottoDrawController extends AppBaseController
                 'result_number.last_2_digits' => ['required', 'digits:2'],
             ])->validate();
 
+            $resultHash = ResultHash::fromPayload((array) $validated['result_number']);
+
+            if ($this->isDuplicateOfPreviousDraw($draw, $resultHash)) {
+                return $this->sendError('ผลรางวัลตรงกับงวดก่อนหน้า กรุณาตรวจสอบก่อนประกาศผล', 422);
+            }
+
             $summary = $settlementService->settleDraw(
                 $draw,
                 (array) $validated['result_number']
@@ -1183,5 +1189,34 @@ class LottoDrawController extends AppBaseController
         $safe['_sensitive_redacted'] = true;
 
         return $safe;
+    }
+
+    private function isDuplicateOfPreviousDraw(LottoDraw $draw, string $resultHash): bool
+    {
+        $draw->loadMissing('market');
+
+        $market = $draw->market;
+        if (! $market instanceof LotteryMarket) {
+            return false;
+        }
+
+        if ((string) $market->result_mode !== LotteryMarket::RESULT_MODE_NORMAL) {
+            return false;
+        }
+
+        $previousDraw = LottoDraw::query()
+            ->where('market_id', (int) $draw->market_id)
+            ->where('status', 'resulted')
+            ->where('id', '!=', (int) $draw->id)
+            ->where('draw_date', '<', $draw->draw_date)
+            ->whereNotNull('result_hash')
+            ->orderByDesc('draw_date')
+            ->first();
+
+        if (! $previousDraw instanceof LottoDraw) {
+            return false;
+        }
+
+        return (string) $previousDraw->result_hash === $resultHash;
     }
 }
