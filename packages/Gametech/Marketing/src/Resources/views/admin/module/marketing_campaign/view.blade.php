@@ -1688,7 +1688,7 @@
                     data.recent_lotto_bets,
                     [
                         {key: 'created_at'},
-                        {key: 'member_code'},
+                        {key: 'user_name'},
                         {key: 'market_name'},
                         {render: row => numberFormat(row.bet_amount)},
                         {render: row => numberFormat(row.win_amount)},

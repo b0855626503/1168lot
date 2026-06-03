@@ -75,8 +75,10 @@ class CampaignDashboardServiceRegressionTest extends TestCase
             'member_topup' => 'A1001',
             'value' => 777,
             'status' => 1,
+            'bankstatus' => 1,
             'enable' => 'Y',
             'date_create' => '2026-05-02 11:00:00',
+            'date_approve' => '2026-05-02 11:00:00',
         ]);
         $cached = $service->getDashboard(1, '2026-05-01', '2026-05-02');
 
@@ -102,8 +104,10 @@ class CampaignDashboardServiceRegressionTest extends TestCase
             $table->string('member_topup')->nullable();
             $table->decimal('value', 15, 2)->default(0);
             $table->integer('status')->nullable();
+            $table->integer('bankstatus')->nullable();
             $table->string('enable', 1)->nullable();
             $table->dateTime('date_create')->nullable();
+            $table->dateTime('date_approve')->nullable();
         });
 
         Schema::create('payments_promotion', function (Blueprint $table): void {
@@ -194,10 +198,10 @@ class CampaignDashboardServiceRegressionTest extends TestCase
         ]);
 
         DB::table('bank_payment')->insert([
-            ['member_topup' => 'A1001', 'value' => 100, 'status' => 1, 'enable' => 'Y', 'date_create' => '2026-05-01 11:00:00'],
-            ['member_topup' => 'A1002', 'value' => 50, 'status' => 1, 'enable' => 'Y', 'date_create' => '2026-05-02 11:00:00'],
-            ['member_topup' => 'A1001', 'value' => 999, 'status' => 1, 'enable' => 'Y', 'date_create' => '2026-04-30 11:00:00'],
-            ['member_topup' => 'B2001', 'value' => 500, 'status' => 1, 'enable' => 'Y', 'date_create' => '2026-05-02 11:00:00'],
+            ['member_topup' => 'A1001', 'value' => 100, 'status' => 1, 'bankstatus' => 1, 'enable' => 'Y', 'date_create' => '2026-05-01 11:00:00', 'date_approve' => '2026-05-01 11:00:00'],
+            ['member_topup' => 'A1002', 'value' => 50, 'status' => 1, 'bankstatus' => 1, 'enable' => 'Y', 'date_create' => '2026-05-02 11:00:00', 'date_approve' => '2026-05-02 11:00:00'],
+            ['member_topup' => 'A1001', 'value' => 999, 'status' => 1, 'bankstatus' => 1, 'enable' => 'Y', 'date_create' => '2026-04-30 11:00:00', 'date_approve' => '2026-04-30 11:00:00'],
+            ['member_topup' => 'B2001', 'value' => 500, 'status' => 1, 'bankstatus' => 1, 'enable' => 'Y', 'date_create' => '2026-05-02 11:00:00', 'date_approve' => '2026-05-02 11:00:00'],
         ]);
 
         DB::table('payments_promotion')->insert([

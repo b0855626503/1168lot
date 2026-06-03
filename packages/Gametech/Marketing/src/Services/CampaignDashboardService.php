@@ -56,7 +56,9 @@ class CampaignDashboardService
             ->whereIn('member_topup', $memberCodes)
             ->where('enable', 'Y')
             ->where('status', 1)
-            ->whereBetween('date_create', [$startAt, $endAt]);
+            ->where('bankstatus', 1)
+            ->where('value', '>', 0)
+            ->whereBetween('date_approve', [$startAt, $endAt]);
 
         $depositAmount = (float) (clone $depositQuery)->sum('value');
         $depositCount = (int) (clone $depositQuery)->count();
@@ -70,13 +72,17 @@ class CampaignDashboardService
             ->whereIn('member_topup', $memberCodes)
             ->where('enable', 'Y')
             ->where('status', 1)
-            ->whereBetween('date_create', [$startAt, $endAt])
+            ->where('bankstatus', 1)
+            ->where('value', '>', 0)
+            ->whereBetween('date_approve', [$startAt, $endAt])
             ->whereNotIn('member_topup', function ($sub) use ($startAt) {
                 $sub->select('member_topup')
                     ->from('bank_payment')
                     ->where('enable', 'Y')
                     ->where('status', 1)
-                    ->where('date_create', '<', $startAt);
+                    ->where('bankstatus', 1)
+                    ->where('value', '>', 0)
+                    ->where('date_approve', '<', $startAt);
             })
             ->distinct('member_topup')
             ->count('member_topup');
@@ -252,12 +258,14 @@ class CampaignDashboardService
         return DB::table('lotto_tickets')
             ->join('lotto_draws', 'lotto_draws.id', '=', 'lotto_tickets.draw_id')
             ->join('lotto_markets', 'lotto_markets.id', '=', 'lotto_draws.market_id')
+            ->join('members', 'members.code', '=', 'lotto_tickets.member_id')
             ->whereIn('lotto_tickets.member_id', $memberCodes)
             ->orderByDesc('lotto_tickets.created_at')
             ->limit($limit)
             ->get([
                 'lotto_tickets.id as ticket_id',
                 'lotto_tickets.member_id as member_code',
+                'members.user_name as user_name',
                 'lotto_markets.name as market_name',
                 'lotto_draws.draw_date',
                 'lotto_tickets.total_bet_amount as bet_amount',
