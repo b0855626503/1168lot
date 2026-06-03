@@ -366,7 +366,7 @@ class CampaignDashboardService
                 if (DB::getSchemaBuilder()->hasTable($table)) {
                     $total += (float) DB::table($table)
                         ->whereIn('member_code', $memberCodes)
-                        ->where('status', 'complete')
+                        ->where('status', 1)
                         ->whereBetween('date_approve', [$startAt, $endAt])
                         ->sum('amount');
                 }

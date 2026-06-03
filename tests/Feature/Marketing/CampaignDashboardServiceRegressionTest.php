@@ -132,7 +132,7 @@ class CampaignDashboardServiceRegressionTest extends TestCase
         Schema::create('withdraws', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->string('member_code')->nullable();
-            $table->string('status', 32)->nullable();
+            $table->integer('status')->nullable();
             $table->decimal('amount', 15, 2)->default(0);
             $table->dateTime('date_approve')->nullable();
         });
@@ -216,8 +216,8 @@ class CampaignDashboardServiceRegressionTest extends TestCase
         ]);
 
         DB::table('withdraws')->insert([
-            ['member_code' => 'A1001', 'status' => 'complete', 'amount' => 40, 'date_approve' => '2026-05-02 14:00:00'],
-            ['member_code' => 'B2001', 'status' => 'complete', 'amount' => 400, 'date_approve' => '2026-05-02 14:00:00'],
+            ['member_code' => 'A1001', 'status' => 1, 'amount' => 40, 'date_approve' => '2026-05-02 14:00:00'],
+            ['member_code' => 'B2001', 'status' => 1, 'amount' => 400, 'date_approve' => '2026-05-02 14:00:00'],
         ]);
 
         DB::table('lotto_markets')->insert([['id' => 1, 'name' => 'Thai']]);
