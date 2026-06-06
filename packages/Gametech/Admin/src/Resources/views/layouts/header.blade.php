@@ -18,10 +18,23 @@
         </li>
     </ul>
 
-
+    @php
+        $agentCredits = app(\Gametech\Game\Services\GameCreditService::class)
+            ->getAgentCreditsForBlade();
+    @endphp
     {{--    <!-- Right navbar links -->--}}
     <ul class="navbar-nav ml-auto">
 
+        @if($agentCredits['enabled'])
+            <li class="nav-item d-sm-inline-block d-none">
+                <a class="nav-link disabled text-danger">   Agent Credit Game: {{ number_format($agentCredits['credits']['game'], 2) }}
+
+                    @if($agentCredits['freecredit_open'])
+                        / Free: {{ number_format($agentCredits['credits']['gamefree'], 2) }}
+                    @endif
+                </a>
+            </li>
+        @endif
         @if(!$patch)
             <li class="nav-item d-sm-inline-block d-none">
                 <a class="nav-link disabled">Version : {!! $version !!} </a>

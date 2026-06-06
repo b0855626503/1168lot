@@ -1061,6 +1061,29 @@ class SeamlessRepository extends Repository
 
     }
 
+    public function getAgentCredit()
+    {
+        $cacheKey = config('app.name') . '_agent_credit_' . $this->method;
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () {
+
+            $param = [];
+            $response = $this->GameCurlGet($param, 'seamless/getAgentCredit');
+
+            if (($response['success'] ?? false) === true) {
+                return [
+                    'success' => true,
+                    'credit' => $response['data']['credit'] ?? 0,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'credit' => 0,
+            ];
+        });
+    }
+
     /**
      * Specify Model class name
      *
