@@ -263,7 +263,20 @@
                             window.LaravelDataTables["dataTableBuilder"].draw(false);
                         })
                         .catch(exception => {
-                            console.log('error');
+                            const errors = exception.response.data.errors;
+                            let message = exception.response.data.message;
+                            if (errors) {
+                                message = Object.values(errors).flat().join('<br>');
+                            }
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ผลการดำเนินการ',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
                             this.toggleButtonDisable(false);
                         });
 

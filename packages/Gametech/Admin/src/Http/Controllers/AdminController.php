@@ -91,10 +91,8 @@ class AdminController extends AppBaseController
         ]);
         if ($validator->fails()) {
             $errors = $validator->errors();
-            return $this->sendError($errors->messages(),200);
+            return $this->sendError($errors->messages(), 422);
         }
-
-
 
 //        $data['user_pass'] = $data['user_pass'];
         $data['password'] = Hash::make($data['user_pass']);
@@ -121,9 +119,8 @@ class AdminController extends AppBaseController
         ]);
         if ($validator->fails()) {
             $errors = $validator->errors();
-            return $this->sendError($errors->messages(),200);
+            return $this->sendError($errors->messages(), 422);
         }
-
 
         $chk = $this->repository->find($id);
         if(!$chk){
