@@ -295,7 +295,7 @@ class AuthController extends BaseController
             ],
             'firstname' => ['bail', 'required', 'regex:/^[\pL\pM\s\-]+$/u'],
             'lastname' => ['bail', 'required', 'regex:/^[\pL\pM\s\-]+$/u'],
-            'password' => 'bail|required|string|min:6|max:10',
+            'password' => 'bail|required|string|min:6|max:20',
             'password_confirm' => 'nullable|string|same:password',
             'user_name' => $this->registerUsernameValidationRules($useSeparatedUsernameFlow),
             'wallet_id' => 'bail|required|regex:/^\d+$/|unique:members,wallet_id',

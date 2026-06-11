@@ -67,7 +67,7 @@ class MemberController extends BaseController
             }
 
             $validated = validator($payload, [
-                'password' => ['required', 'string', 'min:6', 'max:10'],
+                'password' => ['required', 'string', 'min:6', 'max:20'],
                 'password_confirmation' => ['required', 'same:password'],
             ])->validate();
 
