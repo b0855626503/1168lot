@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,9 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('members', function (Blueprint $table) {
-            $table->string('user_pass', 20)->change();
-        });
+        DB::statement('ALTER TABLE `members` MODIFY `user_pass` VARCHAR(20) NOT NULL');
     }
 
     /**
@@ -21,8 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('members', function (Blueprint $table) {
-            $table->string('user_pass', 15)->change();
-        });
+        DB::statement('ALTER TABLE `members` MODIFY `user_pass` VARCHAR(15) NOT NULL');
     }
 };
