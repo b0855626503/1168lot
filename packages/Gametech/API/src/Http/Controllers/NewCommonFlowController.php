@@ -60,9 +60,9 @@ class NewCommonFlowController extends AppBaseController
         }
 
         // 🔎 ตรวจสอบค่า session['productId']
-        $productId = session('productId'); // หรือจะใช้ $request->session()->get('productId')
-        if (in_array($productId, ['UMBET', 'LALIKA', 'AFB1188', 'VIRTUAL_SPORT', 'COCKFIGHT', 'AMBSPORTBOOK', 'SABASPORTS', 'SBO', 'AOG', 'FB_SPORT', 'DB SPORTS'])) {
-            $this->days = 7;
+        $productId = $request->input('productId');
+        if (in_array($productId, ['AFB1188', 'AMBSPORTBOOK', 'AOG', 'COCKFIGHT', 'DBSPORT', 'FB_SPORT', 'GA28', 'LALIKA', 'MSPORT', 'MUAYPAKYOK', 'SABASPORTS', 'SBO', 'TFGAME', 'UFABET', 'UMBET', 'VIRTUAL_SPORT'])) {
+            $this->days = 15;
         }
 
         $this->expireAt = new UTCDateTime($this->now->copy()->addDays($this->days));
