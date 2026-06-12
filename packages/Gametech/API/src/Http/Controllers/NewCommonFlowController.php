@@ -384,9 +384,9 @@ class NewCommonFlowController extends AppBaseController
 
                 if ($waitingExists) {
                     $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                        'balanceBefore' => (float) $oldBalance,
-                        'balanceAfter' => (float) $this->member->balance,
-                    ];
+                            'balanceBefore' => (float) $oldBalance,
+                            'balanceAfter' => (float) $this->member->balance,
+                        ];
                     $this->createGameLog([
                         'input' => $txn,
                         'output' => $param,
@@ -429,9 +429,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $this->createGameLog([
                 'input' => $txn,
@@ -521,9 +521,9 @@ class NewCommonFlowController extends AppBaseController
                     if ($existingBet) {
                         if ($session['productId'] === 'PGSOFT') {
                             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                                'balanceBefore' => (float) $oldBalance,
-                                'balanceAfter' => (float) $this->member->balance,
-                            ];
+                                    'balanceBefore' => (float) $oldBalance,
+                                    'balanceAfter' => (float) $this->member->balance,
+                                ];
                         } else {
                             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 20002, $this->member->balance);
                         }
@@ -641,9 +641,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logData = [
                 'input' => $txn,
@@ -802,9 +802,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logId = $this->createGameLog([
                 'input' => $txn,
@@ -941,9 +941,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logId = $this->createGameLog([
                 'input' => $txn,
@@ -1090,9 +1090,9 @@ class NewCommonFlowController extends AppBaseController
             ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logId = $this->createGameLog([
                 'input' => $txn,
@@ -1231,9 +1231,9 @@ class NewCommonFlowController extends AppBaseController
             ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logId = $this->createGameLog([
                 'input' => $txn,
@@ -1341,9 +1341,9 @@ class NewCommonFlowController extends AppBaseController
             ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $this->createGameLog([
                 'input' => $txn,
@@ -1503,9 +1503,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $logId = $this->createGameLog([
                 'input' => $txn,
@@ -1610,9 +1610,9 @@ class NewCommonFlowController extends AppBaseController
             }
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $this->createGameLog([
                 'input' => $txn,
@@ -1731,9 +1731,9 @@ class NewCommonFlowController extends AppBaseController
             ]);
 
             $param = $this->responseData($session['id'], $session['username'], $session['productId'], 0, $this->member->balance) + [
-                'balanceBefore' => (float) $oldBalance,
-                'balanceAfter' => (float) $this->member->balance,
-            ];
+                    'balanceBefore' => (float) $oldBalance,
+                    'balanceAfter' => (float) $this->member->balance,
+                ];
 
             $this->createGameLog([
                 'input' => $txn,
