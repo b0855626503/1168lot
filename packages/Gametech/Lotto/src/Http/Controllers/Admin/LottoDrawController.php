@@ -692,10 +692,23 @@ class LottoDrawController extends AppBaseController
 
         $validated = validator($request->all(), [
             'id' => ['required', 'integer', 'exists:lotto_draws,id'],
-            'mode' => ['required', Rule::in(['manual'])],
+            'mode' => ['required', Rule::in(['manual', 'no_result'])],
             'reason' => ['required', 'string', 'max:1000'],
-            'result_number' => ['required', 'array'],
+            'result_number' => ['nullable', 'array'],
+            'result_number.first_prize' => ['required_without:result_number.no_result', 'regex:/^\d{3,7}$/'],
+            'result_number.last_2_digits' => ['required_without:result_number.no_result', 'digits:2'],
+            'result_number.no_result' => ['nullable', 'boolean'],
         ])->validate();
+
+        $resultNumber = (array) ($validated['result_number'] ?? []);
+
+        // Normalize no_result flag
+        if (($validated['mode'] ?? '') === 'no_result') {
+            $resultNumber['no_result'] = true;
+            if (empty($resultNumber['no_result_reason'])) {
+                $resultNumber['no_result_reason'] = trim((string) ($validated['reason'] ?? ''));
+            }
+        }
 
         $draw = LottoDraw::query()->find((int) $validated['id']);
         if (! $draw instanceof LottoDraw) {
@@ -709,7 +722,7 @@ class LottoDrawController extends AppBaseController
         try {
             $preview = $previewService->preview(
                 draw: $draw,
-                resultNumber: (array) $validated['result_number'],
+                resultNumber: $resultNumber,
                 reason: (string) $validated['reason'],
                 createdBy: (int) (auth()->id() ?? 0),
                 persist: false
@@ -735,11 +748,21 @@ class LottoDrawController extends AppBaseController
         $validated = validator($request->all(), [
             'correction_id' => ['nullable', 'integer', 'exists:lotto_result_corrections,id'],
             'id' => ['nullable', 'integer', 'exists:lotto_draws,id'],
-            'mode' => ['nullable', Rule::in(['manual'])],
+            'mode' => ['nullable', Rule::in(['manual', 'no_result'])],
             'reason' => ['nullable', 'string', 'max:1000'],
             'result_number' => ['nullable', 'array'],
             'confirm' => ['required', 'accepted'],
         ])->validate();
+
+        $resultNumber = (array) ($validated['result_number'] ?? []);
+
+        // Normalize no_result flag
+        if (($validated['mode'] ?? '') === 'no_result') {
+            $resultNumber['no_result'] = true;
+            if (empty($resultNumber['no_result_reason'])) {
+                $resultNumber['no_result_reason'] = trim((string) ($validated['reason'] ?? ''));
+            }
+        }
 
         try {
             $correctionId = isset($validated['correction_id']) ? (int) $validated['correction_id'] : 0;
@@ -751,7 +774,7 @@ class LottoDrawController extends AppBaseController
 
                 $preview = $previewService->preview(
                     draw: $draw,
-                    resultNumber: (array) ($validated['result_number'] ?? []),
+                    resultNumber: $resultNumber,
                     reason: (string) ($validated['reason'] ?? ''),
                     createdBy: (int) (auth()->id() ?? 0),
                     persist: true

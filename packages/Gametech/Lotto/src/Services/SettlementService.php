@@ -301,6 +301,11 @@ class SettlementService
      */
     public function isWinningBet(string $betType, string $number, array $resultNumber): bool
     {
+        // No-result means all bets lose
+        if ((bool) ($resultNumber['no_result'] ?? false)) {
+            return false;
+        }
+
         $top3 = $resultNumber['top_3'];
         $top2 = $resultNumber['top_2'] ?? substr($top3, -2);
         $bottom2 = $resultNumber['bottom_2'];

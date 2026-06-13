@@ -167,7 +167,19 @@
     </div>
 
     <b-form @submit.prevent="submitCorrectResultForm">
-        <b-row>
+        <b-form-group class="mb-2">
+            <b-form-checkbox
+                v-model="correctResultForm.no_result"
+                :value="true"
+                :unchecked-value="false"
+                switch
+                size="sm">
+                <strong>งดออกผล</strong>
+                <small class="text-muted d-block">เปลี่ยนเป็นงดออกผล (ไม่ต้องกรอกเลข)</small>
+            </b-form-checkbox>
+        </b-form-group>
+
+        <b-row v-if="!correctResultForm.no_result">
             <b-col cols="12" md="8">
                 <b-form-group label="รางวัลที่ 1 (3-6 หลัก)" label-for="correct_result_first_prize">
                     <b-form-input
@@ -203,7 +215,8 @@
 
         <div class="d-flex justify-content-between align-items-center">
             <small class="text-muted" v-if="!canSubmitCorrectResultForm">
-                กรอกผลแบบ manual และเหตุผลให้ครบก่อน
+                <span v-if="correctResultForm.no_result">ระบุเหตุผลให้ครบก่อน</span>
+                <span v-else>กรอกผลแบบ manual และเหตุผลให้ครบก่อน</span>
             </small>
             <b-button
                 type="submit"
@@ -968,11 +981,21 @@
                         && onlyDigits(this.formaddedit.result_number.last_2_digits).length === 2;
                 },
                 canSubmitCorrectResultForm() {
+                    const reason = String(this.correctResultForm.reason || '').trim();
+                    if (reason === '') {
+                        return false;
+                    }
+
+                    // no_result mode: only reason is required
+                    if (this.correctResultForm.no_result) {
+                        return true;
+                    }
+
+                    // manual mode: numbers + reason required
                     const firstPrizeLen = onlyDigits(this.correctResultForm.result_number.first_prize).length;
                     const last2Len = onlyDigits(this.correctResultForm.result_number.last_2_digits).length;
-                    const reason = String(this.correctResultForm.reason || '').trim();
 
-                    return firstPrizeLen >= 3 && firstPrizeLen <= 6 && last2Len === 2 && reason !== '';
+                    return firstPrizeLen >= 3 && firstPrizeLen <= 6 && last2Len === 2;
                 },
                 firstMarketOption() {
                     for (const group of this.markets) {
@@ -1110,6 +1133,7 @@
                     this.correctResultForm = {
                         draw_id: drawId,
                         reason: '',
+                        no_result: false,
                         result_number: {
                             first_prize: '',
                             last_2_digits: '',
@@ -1129,22 +1153,25 @@
                     }
 
                     const drawId = Number(this.correctResultForm.draw_id || this.code || 0);
-                    const firstPrize = onlyDigits(this.correctResultForm.result_number.first_prize);
-                    const last2 = onlyDigits(this.correctResultForm.result_number.last_2_digits);
+                    const isNoResult = Boolean(this.correctResultForm.no_result);
+                    const firstPrize = isNoResult ? '' : onlyDigits(this.correctResultForm.result_number.first_prize);
+                    const last2 = isNoResult ? '' : onlyDigits(this.correctResultForm.result_number.last_2_digits);
                     const reason = String(this.correctResultForm.reason || '').trim();
+                    const mode = isNoResult ? 'no_result' : 'manual';
 
                     this.isCorrectResultSubmitting = true;
 
                     try {
-                        const previewResponse = await this.$http.post("{{ route('admin.lotto.draws.correct_result_preview') }}", {
+                        const previewPayload = {
                             id: drawId,
-                            mode: 'manual',
+                            mode,
                             reason,
-                            result_number: {
-                                first_prize: firstPrize,
-                                last_2_digits: last2,
-                            },
-                        });
+                            result_number: isNoResult
+                                ? { no_result: true, no_result_reason: reason }
+                                : { first_prize: firstPrize, last_2_digits: last2 },
+                        };
+
+                        const previewResponse = await this.$http.post("{{ route('admin.lotto.draws.correct_result_preview') }}", previewPayload);
 
                         const preview = previewResponse?.data?.data || {};
                         const summary = preview.summary || {};
@@ -1174,13 +1201,7 @@
                         }
 
                         const applyResponse = await this.$http.post("{{ route('admin.lotto.draws.correct_result_apply') }}", {
-                            id: drawId,
-                            mode: 'manual',
-                            reason,
-                            result_number: {
-                                first_prize: firstPrize,
-                                last_2_digits: last2,
-                            },
+                            ...previewPayload,
                             confirm: 1,
                         });
 

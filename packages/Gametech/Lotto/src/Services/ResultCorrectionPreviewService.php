@@ -27,9 +27,16 @@ class ResultCorrectionPreviewService
             throw new InvalidArgumentException('ออกผลใหม่ได้เฉพาะงวดที่ประกาศผลแล้ว');
         }
 
+        $isNoResultNew = (bool) ($resultNumber['no_result'] ?? false);
         $oldResult = is_array($draw->result_number) ? $draw->result_number : [];
-        $normalizedOld = $this->settlementService->normalizeResultNumber($oldResult);
-        $normalizedNew = $this->settlementService->normalizeResultNumber($resultNumber);
+        $isNoResultOld = (bool) ($oldResult['no_result'] ?? false);
+
+        $normalizedOld = $isNoResultOld
+            ? ['no_result' => true]
+            : $this->settlementService->normalizeResultNumber($oldResult);
+        $normalizedNew = $isNoResultNew
+            ? ['no_result' => true]
+            : $this->settlementService->normalizeResultNumber($resultNumber);
 
         $oldHash = ResultHash::fromPayload($normalizedOld);
         $newHash = ResultHash::fromPayload($normalizedNew);
@@ -162,6 +169,11 @@ class ResultCorrectionPreviewService
      */
     private function calculateTicketWin(iterable $items, array $resultNumber): float
     {
+        // No-result means no winning bets — all bets lose
+        if ((bool) ($resultNumber['no_result'] ?? false)) {
+            return 0.0;
+        }
+
         $total = 0.0;
         foreach ($items as $item) {
             $isWinner = $this->settlementService->isWinningBet((string) $item->bet_type, (string) $item->number, $resultNumber);
