@@ -58,7 +58,7 @@ class InternalResultController
         $requestedDate = (string) $request->query('date', '');
 
         if ($type === '') {
-            return $this->empty203Response($type);
+            return $this->empty203Response($type, $requestedDate);
         }
 
         $apiKey = (string) config('lotto_auto_result.internal_result_sources.expalert.api_key', (string) env('EXPHUAY_API_KEY', ''));
@@ -98,17 +98,17 @@ class InternalResultController
         $response = Http::timeout(15)->withHeaders($headers)->get($resultUrl);
 
         if (! $response->successful()) {
-            return $this->empty203Response($type);
+            return $this->empty203Response($type, $requestedDate);
         }
 
         $payload = $response->json();
         if (! is_array($payload)) {
-            return $this->empty203Response($type);
+            return $this->empty203Response($type, $requestedDate);
         }
 
         $data = $payload['data'] ?? [];
         if (! is_array($data)) {
-            return $this->empty203Response($type);
+            return $this->empty203Response($type, $requestedDate);
         }
 
         $result = $data['result'] ?? [];
@@ -118,7 +118,7 @@ class InternalResultController
         // If a specific date was requested but the latest result is for a
         // different date, the result for the requested date is not ready yet.
         if ($requestedDate !== '' && $entryDate !== '' && $entryDate !== $requestedDate) {
-            return $this->empty203Response($type);
+            return $this->empty203Response($type, $requestedDate);
         }
 
         return $this->build203Response($type, $data, $entryDate);
@@ -175,12 +175,12 @@ class InternalResultController
         ], 200);
     }
 
-    private function empty203Response(string $type): JsonResponse
+    private function empty203Response(string $type, string $date = ''): JsonResponse
     {
         return new JsonResponse([
             'type' => $type,
             'nameTH' => '',
-            'date' => '',
+            'date' => $date,
             'page' => 1,
             'count' => 0,
             'results' => [],
