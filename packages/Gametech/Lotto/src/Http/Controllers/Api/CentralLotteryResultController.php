@@ -38,6 +38,7 @@ class CentralLotteryResultController
         return match ($code) {
             'UNSUPPORTED_TYPE', 'INVALID_DATE_FORMAT' => 422,
             'DRAW_DATE_NOT_FOUND' => 404,
+            'NOT_READY', 'FETCH_FAILED', 'INVALID_RESPONSE', 'UPSTREAM_NOT_CONFIGURED' => 200,
             default => 502,
         };
     }
