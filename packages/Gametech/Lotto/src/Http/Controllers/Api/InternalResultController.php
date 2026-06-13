@@ -86,7 +86,7 @@ class InternalResultController
                         $isoDate = (string) ($result['date'] ?? '');
                         $entryDate = $this->isoToBangkokDate($isoDate);
 
-                        if ($this->dateWithinTolerance($entryDate, $requestedDate, 2)) {
+                        if ($entryDate === $requestedDate) {
                             return $this->build203Response($type, $entry, $entryDate);
                         }
                     }

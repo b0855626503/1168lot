@@ -165,10 +165,10 @@ class CentralLotteryResultService
             ]]);
         }
 
-        // Validate that upstream result date is within tolerance of the
-        // requested business date. Market-specific lookup offsets and
-        // candidate_draw_date_offset_days can cause the upstream result
-        // date to be 1-2 days before the draw's business date.
+        // Validate that upstream result date matches the lookup date.
+        // For markets with a configured lookup offset, allow up to 1 extra day
+        // of difference (candidate_draw_date_offset_days accounts for this).
+        // For all other markets, require exact date match.
         $upstreamResults = is_array($decoded['results'] ?? null) ? $decoded['results'] : [];
         if ($upstreamResults !== []) {
             $firstResult = (array) ($upstreamResults[0] ?? []);
@@ -180,15 +180,18 @@ class CentralLotteryResultService
                     $upstreamDateParsed = false;
                 }
                 if ($upstreamDateParsed !== false) {
-                    $businessDate = CarbonImmutable::createFromFormat('Y-m-d', $date);
-                    if ($businessDate !== false) {
-                        $diffDays = abs($businessDate->diffInDays($upstreamDateParsed));
-                        // Result date must be within 2 days of business date.
-                        // Beyond that, upstream is likely returning stale data.
-                        if ($diffDays > 2) {
+                    $lookup = CarbonImmutable::createFromFormat('Y-m-d', $lookupDate);
+                    $business = CarbonImmutable::createFromFormat('Y-m-d', $date);
+                    if ($lookup !== false && $business !== false) {
+                        $diffDays = abs($lookup->diffInDays($upstreamDateParsed));
+                        // Only markets with a configured lookup offset get 1-day tolerance.
+                        $lookupHasOffset = abs($business->diffInDays($lookup)) > 0;
+                        $maxTolerance = $lookupHasOffset ? 1 : 0;
+
+                        if ($diffDays > $maxTolerance) {
                             return $this->buildFailurePayload($canonicalType, $date, [[
                                 'code' => 'NOT_READY',
-                                'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' is too far from requested date '.$date.' ('.$diffDays.' days)',
+                                'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' is too far from lookup date '.$lookupDate.' ('.$diffDays.' days, max '.$maxTolerance.')',
                             ]]);
                         }
                     }
