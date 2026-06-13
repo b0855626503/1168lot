@@ -165,44 +165,27 @@ class CentralLotteryResultService
             ]]);
         }
 
-        // Validate that upstream result date matches the lookup date.
-        // For markets with a configured lookup offset, allow up to 1 extra day
-        // of difference (candidate_draw_date_offset_days accounts for this).
-        // For all other markets, require exact date match.
+        // Validate upstream returned meaningful data (not too stale).
         $upstreamResults = is_array($decoded['results'] ?? null) ? $decoded['results'] : [];
-        if ($upstreamResults !== []) {
-            $firstResult = (array) ($upstreamResults[0] ?? []);
-            $upstreamDate = trim((string) ($firstResult['lottosDate'] ?? ''));
-            if ($upstreamDate !== '') {
-                try {
-                    $upstreamDateParsed = CarbonImmutable::parse($upstreamDate)->timezone('Asia/Bangkok');
-                } catch (\Throwable) {
-                    $upstreamDateParsed = false;
-                }
-                if ($upstreamDateParsed !== false) {
-                    $lookup = CarbonImmutable::createFromFormat('Y-m-d', $lookupDate);
-                    $business = CarbonImmutable::createFromFormat('Y-m-d', $date);
-                    if ($lookup !== false && $business !== false) {
-                        $diffDays = abs($lookup->diffInDays($upstreamDateParsed));
-                        // Only markets with a configured lookup offset get 1-day tolerance.
-                        $lookupHasOffset = abs($business->diffInDays($lookup)) > 0;
-                        $maxTolerance = $lookupHasOffset ? 1 : 0;
-
-                        if ($diffDays > $maxTolerance) {
-                            return $this->buildFailurePayload($canonicalType, $date, [[
-                                'code' => 'NOT_READY',
-                                'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' is too far from lookup date '.$lookupDate.' ('.$diffDays.' days, max '.$maxTolerance.')',
-                            ]]);
-                        }
-                    }
-                }
-            }
+        if ($upstreamResults === []) {
+            return $this->buildFailurePayload($canonicalType, $date, [[
+                'code' => 'NOT_READY',
+                'message' => 'Upstream returned no results for lookup date '.$lookupDate,
+            ]]);
         }
 
-        // Override date with the business date the caller requested.
+        // Override date and lottosDate with the business date the caller requested.
         // Upstream may return an offset date (e.g. actual market date),
         // but clone selection always compares against the draw's business date.
         $decoded['date'] = $date;
+        if (is_array($decoded['results'] ?? null)) {
+            foreach ($decoded['results'] as &$res) {
+                if (is_array($res)) {
+                    $res['lottosDate'] = $date.'T00:00:00+07:00';
+                }
+            }
+            unset($res);
+        }
 
         Cache::put($cacheKey, $decoded, $this->resolveCacheTtl($date));
 
