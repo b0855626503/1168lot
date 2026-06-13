@@ -165,9 +165,10 @@ class CentralLotteryResultService
             ]]);
         }
 
-        // Validate that upstream result date matches the requested date.
-        // If upstream returns a different date (e.g. previous day when today's
-        // result is not ready yet), reject instead of silently using wrong data.
+        // Validate that upstream result date is within tolerance of the
+        // requested business date. Market-specific lookup offsets and
+        // candidate_draw_date_offset_days can cause the upstream result
+        // date to be 1-2 days before the draw's business date.
         $upstreamResults = is_array($decoded['results'] ?? null) ? $decoded['results'] : [];
         if ($upstreamResults !== []) {
             $firstResult = (array) ($upstreamResults[0] ?? []);
@@ -178,11 +179,19 @@ class CentralLotteryResultService
                 } catch (\Throwable) {
                     $upstreamDateParsed = false;
                 }
-                if ($upstreamDateParsed !== false && $upstreamDateParsed->format('Y-m-d') !== $date) {
-                    return $this->buildFailurePayload($canonicalType, $date, [[
-                        'code' => 'NOT_READY',
-                        'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' does not match requested date '.$date,
-                    ]]);
+                if ($upstreamDateParsed !== false) {
+                    $businessDate = CarbonImmutable::createFromFormat('Y-m-d', $date);
+                    if ($businessDate !== false) {
+                        $diffDays = abs($businessDate->diffInDays($upstreamDateParsed));
+                        // Result date must be within 2 days of business date.
+                        // Beyond that, upstream is likely returning stale data.
+                        if ($diffDays > 2) {
+                            return $this->buildFailurePayload($canonicalType, $date, [[
+                                'code' => 'NOT_READY',
+                                'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' is too far from requested date '.$date.' ('.$diffDays.' days)',
+                            ]]);
+                        }
+                    }
                 }
             }
         }
