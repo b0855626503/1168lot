@@ -67,7 +67,8 @@ class InternalResultController
             $headers['x-api-key'] = $apiKey;
         }
 
-        // Try /data/backward/{slug} first when a date is given — it has all historical entries
+        // Try /data/backward/{slug} first when a date is given — it has all historical entries.
+        // Use tolerance-aware matching to account for market date offsets.
         if ($requestedDate !== '') {
             $backwardUrl = 'https://api.expalert.cc/data/backward/'.rawurlencode($type);
             $backwardResponse = Http::timeout(15)->withHeaders($headers)->get($backwardUrl);
@@ -85,7 +86,7 @@ class InternalResultController
                         $isoDate = (string) ($result['date'] ?? '');
                         $entryDate = $this->isoToBangkokDate($isoDate);
 
-                        if ($entryDate === $requestedDate) {
+                        if ($this->dateWithinTolerance($entryDate, $requestedDate, 2)) {
                             return $this->build203Response($type, $entry, $entryDate);
                         }
                     }
@@ -115,9 +116,9 @@ class InternalResultController
         $isoDate = (string) ($result['date'] ?? '');
         $entryDate = $this->isoToBangkokDate($isoDate);
 
-        // If a specific date was requested but the latest result is for a
-        // different date, the result for the requested date is not ready yet.
-        if ($requestedDate !== '' && $entryDate !== '' && $entryDate !== $requestedDate) {
+        // If a specific date was requested but the latest result is too far
+        // from the requested date, the result is stale / not ready yet.
+        if ($requestedDate !== '' && $entryDate !== '' && ! $this->dateWithinTolerance($entryDate, $requestedDate, 2)) {
             return $this->empty203Response($type, $requestedDate);
         }
 
@@ -134,6 +135,25 @@ class InternalResultController
             return Carbon::parse($isoDate)->setTimezone('Asia/Bangkok')->format('Y-m-d');
         } catch (\Throwable) {
             return $isoDate;
+        }
+    }
+
+    /**
+     * Check whether two Y-m-d date strings are within the given day tolerance.
+     */
+    private function dateWithinTolerance(string $date1, string $date2, int $maxDays): bool
+    {
+        if ($date1 === '' || $date2 === '') {
+            return false;
+        }
+
+        try {
+            $d1 = Carbon::createFromFormat('Y-m-d', $date1);
+            $d2 = Carbon::createFromFormat('Y-m-d', $date2);
+
+            return abs($d1->diffInDays($d2)) <= $maxDays;
+        } catch (\Throwable) {
+            return false;
         }
     }
 
