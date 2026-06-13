@@ -113,17 +113,6 @@ class CentralLotteryResultService
             : $base->addDays($offsetDays)->format('Y-m-d');
     }
 
-    /**
-     * Map a canonical relay type to the upstream (expalert) slug.
-     * e.g. 'dji' → 'downjone-stock', 'dowjones-vip' → 'downjone-vip'
-     */
-    private function resolveUpstreamType(string $canonicalType): string
-    {
-        $marketCodes = $this->typeRegistry->marketCodesForCanonicalType($canonicalType);
-
-        return $marketCodes !== [] ? $marketCodes[0] : $canonicalType;
-    }
-
     private function resolveSource(string $canonicalType): ?string
     {
         if (in_array($canonicalType, ['dowjones-midnight', 'dowjones-extra'], true)) {
@@ -157,11 +146,8 @@ class CentralLotteryResultService
             return $cached;
         }
 
-        // Map canonical relay type to upstream (expalert) slug.
-        // e.g. 'dji' → 'downjone-stock'
-        $upstreamType = $this->resolveUpstreamType($canonicalType);
         $lookupDate = $this->resolveLookupDate($canonicalType, $date);
-        $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $upstreamType, 'date' => $lookupDate], 15);
+        $fetch = $this->httpFetcher->get($upstreamUrl, ['type' => $canonicalType, 'date' => $lookupDate], 15);
 
         if (! ($fetch['ok'] ?? false)) {
             return $this->buildFailurePayload($canonicalType, $date, [[
