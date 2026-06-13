@@ -102,7 +102,7 @@ class CentralLotteryResultEndpointTest extends TestCase
         ]);
         $response->assertJsonPath('results.0.lottosName', 'laosvip');
         $response->assertJsonPath('results.0.lottosTH', 'ลาว VIP');
-        $response->assertJsonPath('results.0.lottosDate', '2026-03-28T00:00:00+07:00');
+        $response->assertJsonPath('results.0.lottosDate', '2026-03-27T17:00:00.000Z');
         $response->assertJsonPath('results.0.lottosTime', '21:30');
         $response->assertJsonPath('results.0.lottosNumber', '18413');
         $response->assertJsonPath('results.0.lottosUnder', '84');

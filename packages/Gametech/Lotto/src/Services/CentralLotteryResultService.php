@@ -174,14 +174,29 @@ class CentralLotteryResultService
             ]]);
         }
 
-        // Override date and lottosDate with the business date the caller requested.
-        // Upstream may return an offset date (e.g. actual market date),
-        // but clone selection always compares against the draw's business date.
+        // Override date with the business date the caller requested.
         $decoded['date'] = $date;
-        if (is_array($decoded['results'] ?? null)) {
+
+        // dji and dowjones-visa return the actual market date which is 1 day
+        // before the draw's business date. Adjust lottosDate forward by 1 day
+        // so clone selection matches the draw date correctly.
+        $adjustDateTypes = ['dji', 'dowjones-visa'];
+        if (in_array($canonicalType, $adjustDateTypes, true) && is_array($decoded['results'] ?? null)) {
             foreach ($decoded['results'] as &$res) {
-                if (is_array($res)) {
-                    $res['lottosDate'] = $date.'T00:00:00+07:00';
+                if (! is_array($res)) {
+                    continue;
+                }
+                $rawDate = trim((string) ($res['lottosDate'] ?? ''));
+                if ($rawDate !== '') {
+                    try {
+                        $parsed = CarbonImmutable::parse($rawDate)->timezone('Asia/Bangkok');
+                        $expected = CarbonImmutable::createFromFormat('Y-m-d', $date);
+                        if ($expected !== false && $parsed->diffInDays($expected) === 1) {
+                            $res['lottosDate'] = $expected->format('Y-m-d\T00:00:00P');
+                        }
+                    } catch (\Throwable) {
+                        // Keep original lottosDate if parsing fails.
+                    }
                 }
             }
             unset($res);
