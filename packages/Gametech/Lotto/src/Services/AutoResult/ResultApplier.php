@@ -40,7 +40,7 @@ class ResultApplier
         return DB::transaction(function () use ($draw, $validated, $rawPayload, $resultHash) {
             $locked = LottoDraw::query()->lockForUpdate()->findOrFail($draw->id);
 
-            if (! $this->isNoResultPayload($validated) && $this->isDuplicateOfPreviousDraw($locked, $resultHash)) {
+            if (! $this->isNoResultPayload($validated) && $this->isDuplicateOfPreviousDraw($locked, $validated)) {
                 $locked->forceFill([
                     'result_fetch_status' => 'SKIPPED_DUPLICATE_PREVIOUS',
                     'result_fetch_error' => 'ผลรางวัลตรงกับงวดก่อนหน้า ข้ามการออกผล',
@@ -218,7 +218,7 @@ class ResultApplier
         return (bool) ($validated['no_result'] ?? false);
     }
 
-    private function isDuplicateOfPreviousDraw(LottoDraw $draw, string $resultHash): bool
+    private function isDuplicateOfPreviousDraw(LottoDraw $draw, array $resultNumber): bool
     {
         if (! $draw->relationLoaded('market')) {
             $draw->load('market');
@@ -238,7 +238,7 @@ class ResultApplier
             ->where('status', 'resulted')
             ->where('id', '!=', (int) $draw->id)
             ->where('draw_date', '<', $draw->draw_date)
-            ->whereNotNull('result_hash')
+            ->whereNotNull('result_number')
             ->orderByDesc('draw_date')
             ->first();
 
@@ -246,6 +246,15 @@ class ResultApplier
             return false;
         }
 
-        return (string) $previousDraw->result_hash === $resultHash;
+        if (! is_array($previousDraw->result_number)) {
+            return false;
+        }
+
+        // Compare only number fields, ignoring metadata like time/draw_date/no_result
+        $numFields = ['first_prize', 'last_2_digits', 'top_3', 'top_2', 'bottom_2'];
+        $prev = array_intersect_key($previousDraw->result_number, array_flip($numFields));
+        $curr = array_intersect_key($resultNumber, array_flip($numFields));
+
+        return $prev === $curr;
     }
 }

@@ -381,9 +381,7 @@ class LottoDrawController extends AppBaseController
                 'result_number.last_2_digits' => ['required', 'digits:2'],
             ])->validate();
 
-            $resultHash = ResultHash::fromPayload((array) $validated['result_number']);
-
-            if ($this->isDuplicateOfPreviousDraw($draw, $resultHash)) {
+            if ($this->isDuplicateOfPreviousDraw($draw, (array) $validated['result_number'])) {
                 return $this->sendError('ผลรางวัลตรงกับงวดก่อนหน้า กรุณาตรวจสอบก่อนประกาศผล', 422);
             }
 
@@ -1214,7 +1212,7 @@ class LottoDrawController extends AppBaseController
         return $safe;
     }
 
-    private function isDuplicateOfPreviousDraw(LottoDraw $draw, string $resultHash): bool
+    private function isDuplicateOfPreviousDraw(LottoDraw $draw, array $resultNumber): bool
     {
         $draw->loadMissing('market');
 
@@ -1232,7 +1230,7 @@ class LottoDrawController extends AppBaseController
             ->where('status', 'resulted')
             ->where('id', '!=', (int) $draw->id)
             ->where('draw_date', '<', $draw->draw_date)
-            ->whereNotNull('result_hash')
+            ->whereNotNull('result_number')
             ->orderByDesc('draw_date')
             ->first();
 
@@ -1240,6 +1238,15 @@ class LottoDrawController extends AppBaseController
             return false;
         }
 
-        return (string) $previousDraw->result_hash === $resultHash;
+        if (! is_array($previousDraw->result_number)) {
+            return false;
+        }
+
+        // Compare only number fields, ignoring metadata like time/draw_date/no_result
+        $numFields = ['first_prize', 'last_2_digits', 'top_3', 'top_2', 'bottom_2'];
+        $prev = array_intersect_key($previousDraw->result_number, array_flip($numFields));
+        $curr = array_intersect_key($resultNumber, array_flip($numFields));
+
+        return $prev === $curr;
     }
 }
