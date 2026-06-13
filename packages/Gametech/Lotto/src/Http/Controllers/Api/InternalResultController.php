@@ -115,6 +115,12 @@ class InternalResultController
         $isoDate = (string) ($result['date'] ?? '');
         $entryDate = $this->isoToBangkokDate($isoDate);
 
+        // If a specific date was requested but the latest result is for a
+        // different date, the result for the requested date is not ready yet.
+        if ($requestedDate !== '' && $entryDate !== '' && $entryDate !== $requestedDate) {
+            return $this->empty203Response($type);
+        }
+
         return $this->build203Response($type, $data, $entryDate);
     }
 
