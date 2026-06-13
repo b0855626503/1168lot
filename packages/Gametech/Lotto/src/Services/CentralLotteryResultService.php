@@ -165,6 +165,28 @@ class CentralLotteryResultService
             ]]);
         }
 
+        // Validate that upstream result date matches the requested date.
+        // If upstream returns a different date (e.g. previous day when today's
+        // result is not ready yet), reject instead of silently using wrong data.
+        $upstreamResults = is_array($decoded['results'] ?? null) ? $decoded['results'] : [];
+        if ($upstreamResults !== []) {
+            $firstResult = (array) ($upstreamResults[0] ?? []);
+            $upstreamDate = trim((string) ($firstResult['lottosDate'] ?? ''));
+            if ($upstreamDate !== '') {
+                try {
+                    $upstreamDateParsed = CarbonImmutable::parse($upstreamDate)->timezone('Asia/Bangkok');
+                } catch (\Throwable) {
+                    $upstreamDateParsed = false;
+                }
+                if ($upstreamDateParsed !== false && $upstreamDateParsed->format('Y-m-d') !== $date) {
+                    return $this->buildFailurePayload($canonicalType, $date, [[
+                        'code' => 'NOT_READY',
+                        'message' => 'Upstream result date '.$upstreamDateParsed->format('Y-m-d').' does not match requested date '.$date,
+                    ]]);
+                }
+            }
+        }
+
         // Override date with the business date the caller requested.
         // Upstream may return an offset date (e.g. actual market date),
         // but clone selection always compares against the draw's business date.
