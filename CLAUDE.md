@@ -1,31 +1,32 @@
 # CLAUDE.md
 
-## Tool Priority (ค้นข้อมูลก่อนตอบเสมอ)
+## Tool Decision Tree (เลือก tool ตามคำถาม — ห้ามตอบทันทีก่อนค้น)
 
 ```
-Feature/Code change → 1. Octocode  2. Mem0-local  3. Codebase Memory
-Architecture decision → 1. Mem0-local  2. Codebase Memory  3. Octocode  
-Framework/library question → 1. Context7  2. Laravel Boost
-Bug/Impact analysis → 1. Octocode  2. Codebase Memory
+"เคยคุยเรื่องนี้ไหม?"                → Mem0-local
+"Queue/code/flow อยู่ตรงไหน?"        → Octocode
+"มี Design Note / Architecture ไหม?"  → Codebase Memory
+"Laravel/Vue แนะนำวิธีไหน?"          → Laravel Boost
+"package ภายนอกใช้ยังไง?"            → Context7
 ```
 
-| Tool | หน้าที่ | เมื่อไหร่ |
-|------|--------|----------|
-| **Octocode** | เข้าใจ Source Code (grep, LSP, call hierarchy) | หาโค้ด, trace flow, ดูผลกระทบ |
-| **Mem0-local** | ความจำกลางทุกโปรเจกต์ (DeepSeek+Ollama+Qdrant) | เคยทำแล้ว?, pattern, decision เก่า |
-| **Codebase Memory** | Knowledge Graph ของโปรเจกต์ | architecture, relation ระหว่าง packages |
-| **Context7** | Docs ล่าสุดของ framework/library | Laravel/Vue/package version questions |
-| **Laravel Boost** | DB schema, Artisan, Tinker, Logs | query ข้อมูล, debug, run command |
+| Tool | ถามเมื่อ |
+|------|---------|
+| **Mem0-local** | เคยทำแล้ว?, pattern เก่า?, decision ข้ามโปรเจกต์ |
+| **Octocode** | โค้ดอยู่ไหน?, trace flow, call hierarchy, ผลกระทบ |
+| **Codebase Memory** | architecture, relation ระหว่าง packages, knowledge graph |
+| **Laravel Boost** | DB schema, Artisan, Tinker, Logs, Laravel docs |
+| **Context7** | docs ล่าสุดของ npm/composer package ภายนอก |
 
-## Before answering project-specific questions:
+## Flow ที่ควรเกิดทุกครั้ง
 
-1. Search **Mem0-local** for previous decisions/discussions
-2. Search **Octocode** for related code paths
-3. Search **Codebase Memory MCP** for architecture notes
-4. Identify impacted services, jobs, events, queues, tables
-5. Explain findings before generating code
-
-Do not answer immediately if project-specific information may exist.
+```
+1. คิดก่อนว่า "คำถามนี้工具ไหนตอบได้ดีที่สุด"
+2. ค้น tool นั้นก่อน
+3. ถ้าไม่เจอ → ขยายไป tool ถัดไป
+4. สรุป findings → อธิบาย → ค่อยเขียนโค้ด
+ห้ามเดา — ห้ามตอบทันทีโดยไม่ค้นก่อน
+```
 
 ---
 
