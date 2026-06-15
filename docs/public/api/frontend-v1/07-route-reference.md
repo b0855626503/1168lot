@@ -1,6 +1,6 @@
 # Frontend API V1 - Route Reference (Source of Truth)
 
-อัปเดตล่าสุด: 2026-04-30
+อัปเดตล่าสุด: 2026-06-15
 
 เอกสารนี้เป็น source of truth ของ endpoint detail สำหรับ `/docs/api/frontend-v1`
 

@@ -4,19 +4,21 @@ namespace Gametech\Admin\Http\Controllers;
 
 use Gametech\Admin\DataTables\WithdrawDataTable;
 use Gametech\Auto\Jobs\PaymentOutAPay;
-use Gametech\Auto\Jobs\PaymentOutAutoTransfer;
 use Gametech\Auto\Jobs\PaymentOutDeepPay;
 use Gametech\Auto\Jobs\PaymentOutKingPay;
 use Gametech\Auto\Jobs\PaymentOutMaxPay;
 use Gametech\Auto\Jobs\PaymentOutOnPay;
 use Gametech\Auto\Jobs\PaymentOutPayoneX;
 use Gametech\Auto\Jobs\PaymentOutSmkPay;
+use Gametech\Auto\Jobs\PaymentOutWealthPay;
 use Gametech\Auto\Jobs\PaymentOutWellPay;
 use Gametech\Auto\Jobs\PaymentOutWildPay;
 use Gametech\Member\Repositories\MemberCreditLogRepository;
 use Gametech\Member\Repositories\MemberRepository;
 use Gametech\Payment\Repositories\WithdrawRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class WithdrawController extends AppBaseController
 {
@@ -159,6 +161,8 @@ class WithdrawController extends AppBaseController
                     $return = $this->runPaymentOutJob(new PaymentOutSmkPay($id), $id, $accountCode);
                 } elseif ($bankCode === 316) {
                     $return = $this->runPaymentOutJob(new PaymentOutDeepPay($id), $id, $accountCode);
+                } elseif ($bankCode === (int) config('wealthpay.system_bank_code', 317)) {
+                    $return = $this->runPaymentOutJob(new PaymentOutWealthPay($id), $id, $accountCode);
                 } else {
                     $return['success'] = 'NORMAL';
                     $return['complete'] = true;
@@ -297,9 +301,9 @@ class WithdrawController extends AppBaseController
                 $message = trim($return);
             } elseif (is_object($return)) {
                 $message = (string) (
-                data_get($return, 'msg')
-                    ?: data_get($return, 'message')
-                    ?: $message
+                    data_get($return, 'msg')
+                        ?: data_get($return, 'message')
+                        ?: $message
                 );
             }
 
@@ -375,7 +379,7 @@ class WithdrawController extends AppBaseController
         $remark = (string) $request->input('remark', '');
 
         $lockKey = "withdraw:clear:{$id}";
-        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15);
+        $lock = Cache::lock($lockKey, 15);
 
         if (! $lock->get()) {
             return $this->sendSuccess('รายการนี้กำลังดำเนินการอยู่ โปรดรอสักครู่แล้วลองใหม่');
@@ -384,8 +388,8 @@ class WithdrawController extends AppBaseController
         try {
             $chk = null;
 
-            $claimed = \Illuminate\Support\Facades\DB::transaction(function () use ($id, $request, $remark, $user, &$chk) {
-                $chk = \Illuminate\Support\Facades\DB::table('withdraws')
+            $claimed = DB::transaction(function () use ($id, $request, $remark, $user, &$chk) {
+                $chk = DB::table('withdraws')
                     ->where('code', $id)
                     ->lockForUpdate()
                     ->first();
@@ -408,7 +412,7 @@ class WithdrawController extends AppBaseController
                     return ['ok' => false, 'type' => 'processing'];
                 }
 
-                \Illuminate\Support\Facades\DB::table('withdraws')
+                DB::table('withdraws')
                     ->where('code', $id)
                     ->update([
                         'ip_admin' => $request->ip(),
@@ -482,7 +486,7 @@ class WithdrawController extends AppBaseController
                 return $this->sendSuccess('ดำเนินการเสร็จสิ้น');
             }
 
-            \Illuminate\Support\Facades\DB::table('withdraws')
+            DB::table('withdraws')
                 ->where('code', $id)
                 ->update([
                     'status' => 0,
@@ -540,6 +544,7 @@ class WithdrawController extends AppBaseController
 
             if (! $chk) {
                 \Log::error('Withdraw not found', ['id' => $id]);
+
                 return $this->sendError('ไม่พบรายการนี้', 200);
             }
 
@@ -552,6 +557,7 @@ class WithdrawController extends AppBaseController
 
             if ($chk->status_withdraw === 'C' || $chk->status_withdraw === 'F') {
                 \Log::error('Cannot fix withdraw with status', ['status' => $chk->status_withdraw]);
+
                 return $this->sendError('ไม่สามารถคืนยอดรายการที่สถานะ: '.$chk->status_withdraw, 200);
             }
 
@@ -574,6 +580,7 @@ class WithdrawController extends AppBaseController
 
             if ($result) {
                 \Log::info('Withdraw fixed successfully', ['id' => $id]);
+
                 return $this->sendSuccess('รายการนี้ถูกคืนยอดแล้ว โปรด F5');
             }
 

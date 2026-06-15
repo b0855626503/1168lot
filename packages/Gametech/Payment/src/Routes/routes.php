@@ -1,8 +1,8 @@
 <?php
+
 $apiRoute = config('gametech.api_url') ?? 'api';
 
-
-Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url')))->group(function () {
+Route::domain("$apiRoute.".(is_null(config('app.admin_domain_url')) ? config('app.domain_url') : config('app.admin_domain_url')))->group(function () {
 
     Route::prefix('api')->group(function () {
 
@@ -15,14 +15,14 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('xepay/deposit/callback', 'XEPayController@deposit_callback')->name('api.xepay.deposit.callback');
             Route::post('xepay/withdraw/callback', 'XEPayController@withdraw_callback')->name('api.xepay.withdraw.callback');
 
-//            Route::post('payment/deposit/callback/usd', 'SulifuPayController@deposit_callback_usd')->name('api.payment.deposit.callback.usd');
-//            Route::post('payment/withdraw/callback/usd', 'SulifuPayController@withdraw_callback_usd')->name('api.payment.withdraw.callback.usd');
+            //            Route::post('payment/deposit/callback/usd', 'SulifuPayController@deposit_callback_usd')->name('api.payment.deposit.callback.usd');
+            //            Route::post('payment/withdraw/callback/usd', 'SulifuPayController@withdraw_callback_usd')->name('api.payment.withdraw.callback.usd');
 
-//            Route::post('payment/deposit/callback/khr', 'SulifuPayController@deposit_callback_khr')->name('api.payment.deposit.callback.khr');
-//            Route::post('payment/withdraw/callback/khr', 'SulifuPayController@withdraw_callback_khr')->name('api.payment.withdraw.callback.khr');
+            //            Route::post('payment/deposit/callback/khr', 'SulifuPayController@deposit_callback_khr')->name('api.payment.deposit.callback.khr');
+            //            Route::post('payment/withdraw/callback/khr', 'SulifuPayController@withdraw_callback_khr')->name('api.payment.withdraw.callback.khr');
 
-//	        Route::post('payment/deposit/callback', 'MatePayController@deposit_callback')->name('api.payment.deposit.callback');
-//	        Route::post('payment/withdraw/callback', 'MatePayController@withdraw_callback')->name('api.payment.withdraw.callback');
+            //	        Route::post('payment/deposit/callback', 'MatePayController@deposit_callback')->name('api.payment.deposit.callback');
+            //	        Route::post('payment/withdraw/callback', 'MatePayController@withdraw_callback')->name('api.payment.withdraw.callback');
 
             Route::post('kingpay/deposit/callback', 'KingPayController@deposit_callback')->name('api.kingpay.deposit.callback');
             Route::post('kingpay/withdraw/callback', 'KingPayController@withdraw_callback')->name('api.kingpay.withdraw.callback');
@@ -30,13 +30,12 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('wellpay/deposit/callback', 'WellPayController@deposit_callback')->name('api.wellpay.deposit.callback');
             Route::post('wellpay/withdraw/callback', 'WellPayController@withdraw_callback')->name('api.wellpay.withdraw.callback');
 
-//            Route::post('deposit/callback', 'APayController@deposit_callback')->name('api.apay.deposit.callback');
+            //            Route::post('deposit/callback', 'APayController@deposit_callback')->name('api.apay.deposit.callback');
             Route::post('apay/deposit/callback', 'APayController@deposit_callback')->name('api.apay.deposit.callback');
             Route::post('apay/withdraw/callback', 'APayController@withdraw_callback')->name('api.apay.withdraw.callback');
 
             Route::post('tlconnectpay/deposit/callback', 'TlConnectPayController@deposit_callback')->name('api.tlconnectpay.deposit.callback');
             Route::post('tlconnectpay/withdraw/callback', 'TlConnectPayController@withdraw_callback')->name('api.tlconnectpay.withdraw.callback');
-
 
             Route::post('onpay/deposit/callback', 'OnPayController@deposit_callback')->name('api.onpay.deposit.callback');
             Route::post('onpay/withdraw/callback', 'OnPayController@withdraw_callback')->name('api.onpay.withdraw.callback');
@@ -61,6 +60,9 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
             Route::post('deeppay/deposit/callback', 'DeepPayController@deposit_callback')->name('api.deeppay.deposit.callback');
             Route::post('deeppay/withdraw/callback', 'DeepPayController@withdraw_callback')->name('api.deeppay.withdraw.callback');
 
+            // ===== WEALTHPAY =====
+            Route::post('wealthpay/deposit/callback', 'WealthPayController@deposit_callback')->name('api.wealthpay.deposit.callback');
+            Route::post('wealthpay/withdraw/callback', 'WealthPayController@withdraw_callback')->name('api.wealthpay.withdraw.callback');
 
         });
 
@@ -70,7 +72,7 @@ Route::domain("$apiRoute." . (is_null(config('app.admin_domain_url')) ? config('
 
 $domain = config('app.user_url') === ''
     ? (config('app.user_domain_url') ?? config('app.domain_url'))
-    : config('app.user_url') . '.' . (config('app.user_domain_url') ?? config('app.domain_url'));
+    : config('app.user_url').'.'.(config('app.user_domain_url') ?? config('app.domain_url'));
 
 Route::domain($domain)->group(function () {
     Route::middleware('web')->group(function () {
@@ -114,13 +116,11 @@ Route::domain($domain)->group(function () {
 
                 Route::get('onpay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\OnPayController@index')->name('api.onpay.index');
 
-
                 Route::get('maxpay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MaxPayController@checkStatus')->name('api.maxpay.deposit.status');
                 Route::post('maxpay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MaxPayController@expire')->name('api.maxpay.deposit.expire');
                 Route::post('maxpay/deposit/create', 'Gametech\Payment\Http\Controllers\MaxPayController@deposit')->name('api.maxpay.deposit');
 
                 Route::get('maxpay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\MaxPayController@index')->name('api.maxpay.index');
-
 
                 Route::get('payonex/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\PayoneXController@checkStatus')->name('api.payonex.deposit.status');
                 Route::post('payonex/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\PayoneXController@expire')->name('api.payonex.deposit.expire');
@@ -132,27 +132,26 @@ Route::domain($domain)->group(function () {
                 Route::post('xepay/deposit/create', 'Gametech\Payment\Http\Controllers\XEPayController@deposit')->name('api.xepay.deposit');
                 Route::get('xepay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\XEPayController@index')->name('api.xepay.index');
 
-
                 Route::get('deeppay/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@checkStatus')->name('api.deeppay.deposit.status');
                 Route::post('deeppay/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\DeepPayController@expire')->name('api.deeppay.deposit.expire');
                 Route::post('deeppay/deposit/create', 'Gametech\Payment\Http\Controllers\DeepPayController@deposit')->name('api.deeppay.deposit');
                 Route::get('deeppay/qrcode/{id}', 'Gametech\Payment\Http\Controllers\DeepPayController@index')->name('api.deeppay.index');
 
-//	            Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@checkStatus')->name('api.payment.deposit.status');
-//	            Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@expire')->name('api.payment.deposit.expire');
-//	            Route::post('payment/deposit/create', 'Gametech\Payment\Http\Controllers\MatePayController@deposit')->name('api.payment.deposit');
-//	            Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\MatePayController@index')->name('api.payment.index');
+                //	            Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@checkStatus')->name('api.payment.deposit.status');
+                //	            Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\MatePayController@expire')->name('api.payment.deposit.expire');
+                //	            Route::post('payment/deposit/create', 'Gametech\Payment\Http\Controllers\MatePayController@deposit')->name('api.payment.deposit');
+                //	            Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\MatePayController@index')->name('api.payment.index');
 
-//                                Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\WildPayController@checkStatus')->name('api.payment.deposit.status');
-//                                Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\WildPayController@expire')->name('api.payment.deposit.expire');
-//                                Route::post('payment/deposit/create', 'Gametech\Payment\Http\Controllers\WildPayController@deposit')->name('api.payment.deposit');
-//                                Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\WildPayController@index')->name('api.payment.index');
+                //                                Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\WildPayController@checkStatus')->name('api.payment.deposit.status');
+                //                                Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\WildPayController@expire')->name('api.payment.deposit.expire');
+                //                                Route::post('payment/deposit/create', 'Gametech\Payment\Http\Controllers\WildPayController@deposit')->name('api.payment.deposit');
+                //                                Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\WildPayController@index')->name('api.payment.index');
 
-//                Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\SulifuPayController@checkStatus')->name('api.payment.deposit.status');
-//                Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\SulifuPayController@expire')->name('api.payment.deposit.expire');
-//                Route::post('payment/deposit/create/usd', 'Gametech\Payment\Http\Controllers\SulifuPayController@deposit_usd')->name('api.payment.deposit.usd');
-//                Route::post('payment/deposit/create/khr', 'Gametech\Payment\Http\Controllers\SulifuPayController@deposit_khr')->name('api.payment.deposit.khr');
-//                Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\SulifuPayController@index')->name('api.payment.index');
+                //                Route::get('payment/deposit/status/{txid}', 'Gametech\Payment\Http\Controllers\SulifuPayController@checkStatus')->name('api.payment.deposit.status');
+                //                Route::post('payment/deposit/expire/{txid}', 'Gametech\Payment\Http\Controllers\SulifuPayController@expire')->name('api.payment.deposit.expire');
+                //                Route::post('payment/deposit/create/usd', 'Gametech\Payment\Http\Controllers\SulifuPayController@deposit_usd')->name('api.payment.deposit.usd');
+                //                Route::post('payment/deposit/create/khr', 'Gametech\Payment\Http\Controllers\SulifuPayController@deposit_khr')->name('api.payment.deposit.khr');
+                //                Route::get('payment/qrcode/{id}', 'Gametech\Payment\Http\Controllers\SulifuPayController@index')->name('api.payment.index');
 
             });
         });

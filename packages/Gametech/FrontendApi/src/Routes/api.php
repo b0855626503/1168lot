@@ -25,6 +25,7 @@ use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
 use Gametech\Payment\Http\Controllers\DeepPayController;
 use Gametech\Payment\Http\Controllers\SmkPayController;
+use Gametech\Payment\Http\Controllers\WealthPayController;
 use Illuminate\Support\Facades\Route;
 
 $apiSubdomain = config('gametech.api_url') ?? config('app.admin_url');
@@ -177,6 +178,16 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.deeppay.deposit');
             Route::get('deeppay/qrcode/{id}', [DeepPayController::class, 'index'])
                 ->name('frontend.api.v1.deeppay.index');
+
+            // ===== WEALTHPAY =====
+            Route::get('wealthpay/deposit/status/{txid}', [WealthPayController::class, 'checkStatus'])
+                ->name('frontend.api.v1.wealthpay.deposit.status');
+            Route::post('wealthpay/deposit/expire/{txid}', [WealthPayController::class, 'expire'])
+                ->name('frontend.api.v1.wealthpay.deposit.expire');
+            Route::post('wealthpay/deposit/create', [WealthPayController::class, 'deposit'])
+                ->name('frontend.api.v1.wealthpay.deposit');
+            Route::get('wealthpay/qrcode/{id}', [WealthPayController::class, 'index'])
+                ->name('frontend.api.v1.wealthpay.index');
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');

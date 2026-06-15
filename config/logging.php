@@ -727,6 +727,41 @@ return [
             'days' => 14,
         ],
 
+        'wealthpay_deposit_create' => [
+            'driver' => 'daily',
+            'path' => log_path('wealthpay/deposit_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'wealthpay_deposit_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('wealthpay/deposit_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'wealthpay_api' => [
+            'driver' => 'daily',
+            'path' => log_path('wealthpay/api.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'wealthpay_withdraw_create' => [
+            'driver' => 'daily',
+            'path' => log_path('wealthpay/withdraw_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'wealthpay_withdraw_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('wealthpay/withdraw_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
     ],
 
 ];
