@@ -1,14 +1,33 @@
 # CLAUDE.md
 
-This repository is configured so Claude Code can start with minimal token cost.
+## Tool Priority (ค้นข้อมูลก่อนตอบเสมอ)
 
-## Start
+```
+Feature/Code change → 1. Octocode  2. Mem0-local  3. Codebase Memory
+Architecture decision → 1. Mem0-local  2. Codebase Memory  3. Octocode  
+Framework/library question → 1. Context7  2. Laravel Boost
+Bug/Impact analysis → 1. Octocode  2. Codebase Memory
+```
 
-Read:
+| Tool | หน้าที่ | เมื่อไหร่ |
+|------|--------|----------|
+| **Octocode** | เข้าใจ Source Code (grep, LSP, call hierarchy) | หาโค้ด, trace flow, ดูผลกระทบ |
+| **Mem0-local** | ความจำกลางทุกโปรเจกต์ (DeepSeek+Ollama+Qdrant) | เคยทำแล้ว?, pattern, decision เก่า |
+| **Codebase Memory** | Knowledge Graph ของโปรเจกต์ | architecture, relation ระหว่าง packages |
+| **Context7** | Docs ล่าสุดของ framework/library | Laravel/Vue/package version questions |
+| **Laravel Boost** | DB schema, Artisan, Tinker, Logs | query ข้อมูล, debug, run command |
 
-- `docs/START-HERE.md`
+## Before answering project-specific questions:
 
-Do not load workspace memory/persona files for normal coding tasks.
+1. Search **Mem0-local** for previous decisions/discussions
+2. Search **Octocode** for related code paths
+3. Search **Codebase Memory MCP** for architecture notes
+4. Identify impacted services, jobs, events, queues, tables
+5. Explain findings before generating code
+
+Do not answer immediately if project-specific information may exist.
+
+---
 
 ---
 
