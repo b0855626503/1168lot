@@ -3,30 +3,64 @@
 ## Tool Decision Tree (เลือก tool ตามคำถาม — ห้ามตอบทันทีก่อนค้น)
 
 ```
-"เคยคุยเรื่องนี้ไหม?"                → Mem0-local
-"Queue/code/flow อยู่ตรงไหน?"        → Octocode
-"มี Design Note / Architecture ไหม?"  → Codebase Memory
-"Laravel/Vue แนะนำวิธีไหน?"          → Laravel Boost
-"package ภายนอกใช้ยังไง?"            → Context7
+ถามอะไร                          → ใช้อะไรก่อน
+──────────────────────────────────────────────
+"เคยคุย/ตัดสินใจเรื่องนี้ไหม?"    → Mem0-local (+ ADR)
+"ฟีเจอร์/โค้ดอยู่ตรงไหน?"         → Octocode
+"แก้ตรงนี้กระทบอะไร?"             → Octocode
+"Architecture/Design Note?"       → Codebase Memory + docs/
+"ระบบทำงานยังไง?"                 → docs/
+"Laravel ทำยังไง?"               → Laravel Boost
+"Package ภายนอกใช้ยังไง?"         → Context7
+"ปัญหาที่เคยเจอ?"                 → memory/ + Mem0-local
+"มีของเดิมแล้วไหม?"               → docs/ + Octocode + Codebase Memory
 ```
 
-| Tool | ถามเมื่อ |
-|------|---------|
-| **Mem0-local** | เคยทำแล้ว?, pattern เก่า?, decision ข้ามโปรเจกต์ |
-| **Octocode** | โค้ดอยู่ไหน?, trace flow, call hierarchy, ผลกระทบ |
-| **Codebase Memory** | architecture, relation ระหว่าง packages, knowledge graph |
-| **Laravel Boost** | DB schema, Artisan, Tinker, Logs, Laravel docs |
-| **Context7** | docs ล่าสุดของ npm/composer package ภายนอก |
+### ตัวอย่างจริงจากโปรเจคนี้
 
-## Flow ที่ควรเกิดทุกครั้ง
+**"เพิ่มโบนัสฝากแรก 20%"**
+Mem0 → เจอ decision ว่าโบนัสต้องฝากสำเร็จก่อน ห้ามให้ตอนสร้างรายการ
+docs/BONUS.md → เจอ BonusService, DepositSuccessEvent, WalletService
+Octocode → trace DepositSuccessEvent → BonusService → WalletService
+ตอบ: มีอยู่แล้ว เกี่ยวข้องกับ 3 services + decision เก่าห้ามให้ก่อนฝากสำเร็จ
+
+**"ลูกค้าติดลบได้ยังไง"**
+Mem0 → เจอ race condition Deposit+Withdraw (2026-04)
+memory/known-issues.md → ยังไม่ fix
+Octocode → WalletService::credit() + ::debit() เรียกจาก queue พร้อมกัน
+docs/WALLET.md → ต้อง lock ทุก transaction
+ตอบ: race condition — WalletService, Queue Worker, Redis Lock
+
+**"ตั้ง Horizon ยังไง"**
+Laravel Boost → ค้น "horizon supervisor" ได้คำตอบตรง version
+Context7 → ถ้าเป็น package เสริมค่อยใช้
+ไม่ต้องใช้ Mem0, Octocode, Codebase Memory เลย
+
+**"แก้ WalletService จะกระทบอะไร"**
+Octocode → เจอ 5 services (Deposit, Withdraw, Bonus, Affiliate, Vip)
+Codebase Memory → Wallet เป็น Core Domain
+Mem0 → เคยพังเพราะ bypass ledger (2026-03)
+ตอบ: กระทบ 5 Services, 12 Jobs, 4 Events — risk สูง
+
+**"spatie permission ใช้ยังไง"**
+Context7 → ค้น "spatie permission"
+Laravel Boost → ถ้ามีส่วนเกี่ยว Laravel
+ไม่ต้องใช้ Mem0, Octocode, Codebase Memory
+
+### หลักการ
 
 ```
-1. คิดก่อนว่า "คำถามนี้工具ไหนตอบได้ดีที่สุด"
-2. ค้น tool นั้นก่อน
-3. ถ้าไม่เจอ → ขยายไป tool ถัดไป
-4. สรุป findings → อธิบาย → ค่อยเขียนโค้ด
-ห้ามเดา — ห้ามตอบทันทีโดยไม่ค้นก่อน
+Code             = ความจริง (single source of truth)
+docs/            = คู่มือระบบ
+memory/          = โน้ตและผลสืบสวนของโปรเจกต์
+Mem0-local       = ความทรงจำข้ามโปรเจกต์ + decisions
+Octocode         = แผนที่ Source Code (grep, LSP, call hierarchy)
+Codebase Memory  = Knowledge Graph ของโปรเจกต์
+Laravel Boost    = Senior Laravel Developer (DB, Artisan, Tinker, Logs)
+Context7         = Documentation ภายนอกล่าสุด
 ```
+
+คิดก่อนว่า "คำถามนี้เครื่องมือไหนตอบได้ดีที่สุด" → ค้น tool นั้นก่อน → ไม่เจอขยาย → สรุป → อธิบาย → ค่อยเขียนโค้ด **ห้ามเดา ห้ามตอบทันทีโดยไม่ค้นก่อน**
 
 ---
 
