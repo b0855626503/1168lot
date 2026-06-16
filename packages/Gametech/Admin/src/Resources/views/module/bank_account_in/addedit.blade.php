@@ -803,18 +803,43 @@
                                 });
                                 window.LaravelDataTables["dataTableBuilder"].draw(false);
                             } else {
-                                $.each(response.data.message, (index) => {
-                                    const el = document.getElementById(index);
-                                    el && el.classList.add("is-invalid");
-                                });
-                                $('input').on('focus', (e) => {
-                                    this.toggleButtonDisable && this.toggleButtonDisable(true);
-                                    const id = $(e.target).attr('id');
-                                    document.getElementById(id)?.classList.remove("is-invalid");
-                                });
+                                // ถ้า message เป็น string (เช่น Google2FA error) ให้แสดง modal
+                                if (typeof response.data.message === 'string') {
+                                    this.$bvModal.msgBoxOk(response.data.message, {
+                                        title: 'ข้อผิดพลาด',
+                                        size: 'sm',
+                                        buttonSize: 'sm',
+                                        okVariant: 'danger',
+                                        headerClass: 'p-2 border-bottom-0',
+                                        footerClass: 'p-2 border-top-0',
+                                        centered: true
+                                    });
+                                } else {
+                                    $.each(response.data.message, (index) => {
+                                        const el = document.getElementById(index);
+                                        el && el.classList.add("is-invalid");
+                                    });
+                                    $('input').on('focus', (e) => {
+                                        this.toggleButtonDisable && this.toggleButtonDisable(true);
+                                        const id = $(e.target).attr('id');
+                                        document.getElementById(id)?.classList.remove("is-invalid");
+                                    });
+                                }
                             }
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                 },
                 async loadBank() {
                     const response = await axios.post("{{ route('admin.'.$menu->currentRoute.'.loadbank') }}");
@@ -890,7 +915,19 @@
                             }
 
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                 }
             },
         });

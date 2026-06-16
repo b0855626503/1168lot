@@ -899,10 +899,34 @@
                                         this.$refs.tbdata.refresh();
 
                                     })
-                                    .catch(errors => console.log(errors));
+                                    .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                             }
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                 },
                 async myTable() {
                     const response = await axios.post("{{ url($menu->currentRoute.'/loadpro') }}", {
@@ -1067,7 +1091,19 @@
                             });
                             window.LaravelDataTables["dataTableBuilder"].draw(false);
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
 
                 },
                 addEditSubmitNewSub(event) {
@@ -1093,7 +1129,19 @@
                             this.$refs.tbdata.refresh()
 
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
 
                 },
                 addEditSubmitNewSubTime(event) {
@@ -1119,7 +1167,19 @@
                             this.$refs.tbdata.refresh()
 
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
 
                 },
             },

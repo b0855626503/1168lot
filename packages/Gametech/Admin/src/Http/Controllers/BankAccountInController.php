@@ -106,7 +106,7 @@ class BankAccountInController extends AppBaseController
 
             $valid = $google2fa->verifyKey($this->user()->google2fa_secret, $secret);
             if (!$valid) {
-                return $this->sendError('รหัสยืนยันไม่ถูกต้อง', 200);
+                return $this->sendError('รหัสยืนยันไม่ถูกต้อง', 422);
             }
         }
 

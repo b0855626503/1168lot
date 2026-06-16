@@ -348,10 +348,34 @@
                                         this.$refs.tbdata.refresh();
 
                                     })
-                                    .catch(errors => console.log(errors));
+                                    .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                             }
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
                 },
                 addEditSubmitNew(event) {
                     event.preventDefault();
@@ -430,7 +454,19 @@
                             this.$refs.tbdataremark.refresh()
 
                         })
-                        .catch(errors => console.log(errors));
+                        .catch(error => {
+                            const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                            this.$bvModal.msgBoxOk(message, {
+                                title: 'ข้อผิดพลาด',
+                                size: 'sm',
+                                buttonSize: 'sm',
+                                okVariant: 'danger',
+                                headerClass: 'p-2 border-bottom-0',
+                                footerClass: 'p-2 border-top-0',
+                                centered: true
+                            });
+                            this.toggleButtonDisable && this.toggleButtonDisable(false);
+                        });
 
                 },
             },
