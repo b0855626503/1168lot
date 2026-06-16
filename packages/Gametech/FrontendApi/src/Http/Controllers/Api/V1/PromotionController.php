@@ -63,6 +63,16 @@ class PromotionController extends BaseController
                 return $items;
             });
 
+            // กรองโปร TIME/TIMEPC ที่หมดช่วงเวลาแล้ว
+            $promotionTimeRepository = app('Gametech\Promotion\Repositories\PromotionTimeRepository');
+            $promotions = $promotions->filter(function ($promo) use ($promotionTimeRepository) {
+                if (in_array($promo['length_type'], ['TIME', 'TIMEPC'])) {
+                    return $promotionTimeRepository->hasActiveTimeSlot($promo['code']);
+                }
+
+                return true;
+            });
+
             return $this->sendResponse([
                 'promotions' => $proContents->merge($promotions)->values()->all(),
                 'getpro' => $proLimit > 0,
@@ -92,6 +102,14 @@ class PromotionController extends BaseController
 
             if (! $promotion) {
                 return $this->sendError('ไม่พบโปรโมชันนี้', 404);
+            }
+
+            // ตรวจสอบช่วงเวลา สำหรับ TIME/TIMEPC
+            if (in_array($promotion->length_type, ['TIME', 'TIMEPC'])) {
+                $promotionTimeRepository = app('Gametech\Promotion\Repositories\PromotionTimeRepository');
+                if (! $promotionTimeRepository->hasActiveTimeSlot($promotion->code)) {
+                    return $this->sendError('โปรโมชันนี้หมดช่วงเวลาแล้ว', 200);
+                }
             }
 
             // log เหตุการณ์
