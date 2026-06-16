@@ -2,6 +2,7 @@
 
 namespace Gametech\FrontendApi\Http\Controllers\Api\V1;
 
+use App\Support\Concerns\LogsMemberEvent;
 use Gametech\Member\Models\MemberSelectPro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class PromotionController extends BaseController
 {
+    use LogsMemberEvent;
+
     public function list(Request $request)
     {
         try {
@@ -91,7 +94,12 @@ class PromotionController extends BaseController
                 return $this->sendError('ไม่พบโปรโมชันนี้', 404);
             }
 
+            // log เหตุการณ์
+            $this->logMemberEvent($member, 'กดรับโปรก่อนเติมเงิน โปร '.$promotion->name_th);
+
             if ((float) ($member->balance ?? 0) >= (float) ($config->pro_reset ?? 0)) {
+                $this->logMemberEvent($member, 'ไม่ผ่านเงื่อนไข กดรับโปร '.$promotion->name_th.' แต่ ยอดเงินมากกว่า ยอดโปรรีเซต อดรับ');
+
                 return $this->sendError(Lang::get('app.promotion.over_balance').($config->pro_reset ?? 0), 200);
             }
 
@@ -117,6 +125,8 @@ class PromotionController extends BaseController
             if (! $pass) {
                 MemberSelectPro::where('member_code', $member->code)->delete();
 
+                $this->logMemberEvent($member, 'ไม่ผ่านเงื่อนไข รับโปร');
+
                 return $this->sendError(Lang::get('app.promotion.cannot'), 200);
             }
 
@@ -124,6 +134,8 @@ class PromotionController extends BaseController
                 ['member_code' => $member->code],
                 ['pro_code' => $promotion->code, 'pro_name' => $promotion->name_th, 'pro_id' => $promotion->id]
             );
+
+            $this->logMemberEvent($member, 'ผ่านเงื่อนไข กดรับโปร '.$promotion->name_th.' รอเติมเงิน');
 
             return $this->sendResponse([
                 'promotion' => $promotion->code,
@@ -141,6 +153,7 @@ class PromotionController extends BaseController
                 return $this->sendError('ไม่พบข้อมูลสมาชิก', 401);
             }
 
+            $this->logMemberEvent($member, 'กดยกเลิกโปรที่รับ แล้ว');
             MemberSelectPro::where('member_code', $member->code)->delete();
 
             return $this->sendSuccess(Lang::get('app.promotion.deselect'));

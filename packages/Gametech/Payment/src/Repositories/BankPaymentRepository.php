@@ -4471,7 +4471,13 @@ class BankPaymentRepository extends Repository
 
         $selectpro = $this->memberSelectProRepository->findOneWhere(['member_code' => $member_code]);
         if ($selectpro) {
+
+            ActivityLoggerUser::activity('Seamless Topup ID : ' . $data['code'], 'มีการเลือกโปรโมชั่น โปรรหัส ' . $selectpro->pro_code, $member->code);
+
             if ($game_user->balance <= $config->pro_reset) {
+
+                ActivityLoggerUser::activity('Seamless Topup ID : ' . $data['code'], 'ยอดเงินปัจจุบัน น้อยกว่าหรือเท่ากับโปรรีเซต ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
+
                 $promotion = $this->promotionRepository->checkSelectPro($selectpro->pro_code, $member_code, $amount, $datenow);
                 $bonus = $promotion['bonus'];
                 $pro_code = $promotion['pro_code'];
@@ -4490,6 +4496,8 @@ class BankPaymentRepository extends Repository
                 $turnpro = 0;
                 $withdraw_limit = 0;
                 $withdraw_limit_rate = 0;
+
+                ActivityLoggerUser::activity('Seamless Topup ID : ' . $data['code'], 'ยอดเงินปัจจุบัน มากกว่าโปรรีเซต ไม่ผ่านเงื่อนไข โปรรหัส ' . $selectpro->pro_code, $member->code);
             }
             $selectpro->delete();
         } else {
@@ -4501,6 +4509,8 @@ class BankPaymentRepository extends Repository
             $turnpro = 0;
             $withdraw_limit = 0;
             $withdraw_limit_rate = 0;
+
+            ActivityLoggerUser::activity('Seamless Topup ID : ' . $data['code'], 'ไม่ได้กดรับโปร', $member->code);
         }
 
         if ($bank_acc->bonus > 0) {
