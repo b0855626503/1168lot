@@ -43,6 +43,14 @@
                 <div class="line-connect-modal-admin__card line-connect-modal-admin__left">
                     <div class="line-connect-modal-admin__section-title">การเชื่อมต่อ</div>
 
+                    <b-form-select
+                        v-model="lineConnect.endpoint"
+                        :options="lineConnect.endpointOptions"
+                        size="sm"
+                        class="mb-2 line-connect-modal-admin__select-sv"
+                        :disabled="lineConnectUiLocked || lineConnectActionLocked"
+                    ></b-form-select>
+
                     <b-button
                         type="button"
                         class="line-connect-modal-admin__btn -status mb-2"
@@ -280,6 +288,7 @@
         }
 
         .line-connect-modal-admin__section-title { font-weight: 600; margin-bottom: 12px; }
+        .line-connect-modal-admin__select-sv { background: #1b1f2b; color: #e9edf5; border-color: #3a3f4f; }
 
         .line-connect-modal-admin__btn {
             display: flex !important;
@@ -415,6 +424,11 @@
                         password: '',
                         device: 'DESKTOPWIN',
                         loadingAny: false,
+                        endpoint: 'line.168csn.com',
+                        endpointOptions: [
+                            { value: 'line.168csn.com', text: 'SV 1 (default)' },
+                            { value: 'linejs.168csn.com', text: 'SV 2' },
+                        ],
                         pollActive: false,
                         pollStartedAt: 0,
                         pollHardTimeoutMs: 180000,
@@ -434,6 +448,10 @@
                 };
             },
             computed: {
+                lineConnectBaseUrl() {
+                    const ep = (this.lineConnect.endpoint || 'line.168csn.com').trim();
+                    return 'https://' + ep;
+                },
                 lineConnectUiLocked() {
                     return !!this.lineConnect.loadingAny;
                 },
@@ -558,6 +576,7 @@
                     this.lineConnect.device = 'DESKTOPWIN';
 
                     this.lineConnect.loadingAny = false;
+                    this.lineConnect.endpoint = 'line.168csn.com';
 
                     this.lineConnect.pollErrorDelayCurrentMs = 0;
                     this.lineConnect.lastStage = '';
@@ -710,7 +729,7 @@
                     this.lineConnect.message = '';
 
                     try {
-                        const resp = await axios.get('https://line.168csn.com/auth/status', {
+                        const resp = await axios.get(this.lineConnectBaseUrl + '/auth/status', {
                             params: { bank: this.lineConnect.bank, acc: this.lineConnect.acc },
                             timeout: 12000,
                         });
@@ -775,7 +794,7 @@
                     this.lineConnect.showLoginForm = false;
 
                     try {
-                        const resp = await axios.post('https://line.168csn.com/auth/login', {
+                        const resp = await axios.post(this.lineConnectBaseUrl + '/auth/login', {
                             bank: this.lineConnect.bank,
                             acc: this.lineConnect.acc,
                             baseapi: this.lineConnect.baseapi,
@@ -875,7 +894,7 @@
                     this.lineConnect.loadingAny = true;
 
                     try {
-                        const resp = await axios.post('https://line.168csn.com/auth/login', {
+                        const resp = await axios.post(this.lineConnectBaseUrl + '/auth/login', {
                             bank: this.lineConnect.bank,
                             acc: this.lineConnect.acc,
                             baseapi: this.lineConnect.baseapi,
@@ -949,7 +968,7 @@
                         }
 
                         try {
-                            const resp = await axios.get('https://line.168csn.com/auth/wait-status', {
+                            const resp = await axios.get(this.lineConnectBaseUrl + '/auth/wait-status', {
                                 params: {
                                     bank: this.lineConnect.bank,
                                     acc: this.lineConnect.acc,
