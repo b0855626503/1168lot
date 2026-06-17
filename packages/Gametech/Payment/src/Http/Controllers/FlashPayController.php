@@ -40,27 +40,29 @@ class FlashPayController extends AppBaseController
                 'msg' => 'ไม่พบรายการ',
             ]);
         }
-        $banks = $this->bankRepository->findWhere(['enable' => 'Y'])->pluck('name_th', 'shortcode')->toArray();
 
         $member = $this->memberRepository->findOneWhere(['user_name' => $data->username]);
 
-        return view(config('flashpay.deposit_view'), compact('data', 'member', 'banks'));
-
-        //        return response()->json([
-        //            'success' => true,
-        //            'data' => [
-        //                'txid' => (string) ($data->txid ?? ''),
-        //                'status' => (string) ($data->status ?? ''),
-        //                'amount' => (string) ($data->amount ?? ''),
-        //                'payamount' => (string) ($data->payamount ?? ''),
-        //                'fee' => (string) ($data->fee ?? '0'),
-        //                'qrcode' => (string) ($data->qrcode ?? ''),
-        //                'url' => (string) ($data->url ?? ''),
-        //                'expired_date' => ! empty($data->expired_date)
-        //                    ? Carbon::parse($data->expired_date)->toDateTimeString()
-        //                    : null,
-        //            ],
-        //        ]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'request_id' => $id,
+                'txid' => (string) ($data->txid ?? ''),
+                'status' => (string) ($data->status ?? ''),
+                'amount' => (float) ($data->amount ?? 0),
+                'payamount' => (float) ($data->payamount ?? 0),
+                'qrcode' => $data->qrcode ?? null,
+                'qr_string' => $data->url ?? null,
+                'expired_date' => ! empty($data->expired_date)
+                    ? Carbon::parse($data->expired_date)->toDateTimeString()
+                    : null,
+                'member' => [
+                    'user_name' => (string) ($member->user_name ?? $data->username ?? ''),
+                    'name' => (string) ($member->name ?? ''),
+                ],
+            ],
+        ]);
+    }
     }
 
     /**
