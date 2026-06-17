@@ -74,7 +74,7 @@ class FlashPayController extends AppBaseController
                 'request_id' => $id,
                 'txid' => (string) ($data->txid ?? ''),
                 'status' => (string) ($data->status ?? ''),
-                'amount' => (float) ($data->amount ?? 0),
+                'amount' => (float) ($data->payamount ?? 0),
                 'payamount' => (float) ($data->payamount ?? 0),
                 'qrcode' => $qrBase64 ?? $data->qrcode ?? null,
                 'qr_string' => $data->url ?? null,
