@@ -81,6 +81,7 @@ Context7         = Documentation ภายนอกล่าสุด
 - Open large files only when task scope or risk justifies it.
 - Never answer with guessed/fabricated config keys, env vars, class names, method names, or file paths. Grep/read the local codebase first, verify, then answer.
 - **When creating a new file that extends/copies a reference:** grep the reference's `use` statements first, copy namespaces verbatim, change only class names. Run `bash scripts/dev/verify-imports.sh <new-file>` before declaring done. This rule exists because FlashPayController shipped with 5 wrong namespaces + 3 hallucinated classes.
+- **Before every Edit tool call, read the target file first via Bash** (`cat -n`, `grep`, `sed -n`). Pint auto-formats PHP files after writes, changing the file timestamp — the Edit tool then rejects the next edit with "modified since read." A Bash read re-syncs the tracker. This rule exists because FlashPay edits failed 10+ times mid-session.
 
 ---
 
