@@ -63,7 +63,6 @@ class FlashPayController extends AppBaseController
             ],
         ]);
     }
-    }
 
     /**
      * POST /api/{provider}/deposit/create — สร้างรายการฝากเงิน (QR PromptPay)
