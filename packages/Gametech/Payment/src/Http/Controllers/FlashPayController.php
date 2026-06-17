@@ -41,13 +41,13 @@ class FlashPayController extends AppBaseController
             ]);
         }
 
-        $authMember = auth()->guard('customer')->user();
-        if ($authMember && (string) $data->username !== (string) $authMember->user_name) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่มีสิทธิ์เข้าถึงรายการนี้',
-            ], 403);
-        }
+//        $authMember = auth()->guard('customer')->user();
+//        if ($authMember && (string) $data->username !== (string) $authMember->user_name) {
+//            return response()->json([
+//                'success' => false,
+//                'message' => 'ไม่มีสิทธิ์เข้าถึงรายการนี้',
+//            ], 403);
+//        }
 
         $member = null;
         if (!empty($data->username)) {
