@@ -455,7 +455,18 @@ class FlashPayController extends AppBaseController
         return response()->json(['success' => true]);
     }
 
-    /**public function withdraw_callback(Request $request)
+    /**
+     * POST /admin/{provider}/withdraw/callback — FlashPay webhook (withdrawal + payout events)
+     *
+     * Events: withdrawal.created / withdrawal.approved / withdrawal.rejected
+     *         payout.success / payout.failed
+     *
+     * withdrawal.approved → APPROVED → completed → close withdraw
+     * withdrawal.rejected → REJECTED → failed → rollback
+     * payout.success      → SUCCESS → completed
+     * payout.failed       → FAILED → failed → rollback
+     */
+    public function withdraw_callback(Request $request)
     {
         $payload = $request->all();
 
