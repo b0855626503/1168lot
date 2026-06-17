@@ -490,6 +490,16 @@ class FlashPayController extends AppBaseController
         // FlashPay uses requestRef as the correlation ID (set to txid in PaymentOutFlashPay)
         $requestRef = (string) data_get($data, 'requestRef', '');
         $rawStatus = (string) data_get($data, 'status', '');
+
+        // withdrawal.created = info only → skip (not terminal)
+        if ($event === 'withdrawal.created') {
+            Log::channel('flashpay_withdraw_callback')->info('[FLASHPAY] Withdrawal created — skip', [
+                'requestRef' => $requestRef,
+            ]);
+
+            return response()->json(['success' => true]);
+        }
+
         $api = new FlashPay;
         $incoming = $api->normalizeStatus($rawStatus);
 
