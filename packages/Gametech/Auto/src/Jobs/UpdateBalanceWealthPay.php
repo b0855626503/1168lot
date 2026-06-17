@@ -4,21 +4,20 @@ declare(strict_types=1);
 
 namespace Gametech\Auto\Jobs;
 
+use Gametech\Payment\Libraries\WealthPay;
+use Gametech\Payment\Models\BankAccountProxy;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 /**
  * WealthPay Balance Job
  *
- * Wealthwave Flex API ยังไม่มี balance enquiry endpoint
- * Job นี้ถูก dispatch จาก deposit และ deposit_callback
- * เพื่อ trigger auto-topup pipeline ที่ประมวลผล bank_payment records
- *
- * หาก Wealthwave เพิ่ม balance endpoint ในอนาคต สามารถขยาย job นี้
- * ให้ query balance และอัปเดต BankAccountProxy ได้
+ * POST /balance → { balance, freeze_balance, unsettle_balance }
+ * Dispatch จาก deposit() และ deposit_callback()
  */
 class UpdateBalanceWealthPay implements ShouldQueue
 {
@@ -33,6 +32,45 @@ class UpdateBalanceWealthPay implements ShouldQueue
 
     public function handle()
     {
+        $api = new WealthPay;
+        $resp = $api->request('/balance');
+
+        if (! data_get($resp, 'success')) {
+            $this->safeLog('warning', '[WEALTHPAY] get balance failed', ['resp' => $resp]);
+
+            return 0;
+        }
+
+        $data = (array) data_get($resp, 'data.data', []);
+        $balance = (float) data_get($data, 'balance', 0);
+        $freezeBalance = (float) data_get($data, 'freeze_balance', 0);
+        $unsettleBalance = (float) data_get($data, 'unsettle_balance', 0);
+
+        $remark = 'balance '.$balance.' / freeze '.$freezeBalance.' / unsettle '.$unsettleBalance;
+        $bankCode = (int) config('wealthpay.system_bank_code', 317);
+
+        BankAccountProxy::where('banks', $bankCode)->update([
+            'balance' => $balance,
+            'api_refresh' => $remark,
+        ]);
+
+        $this->safeLog('info', '[WEALTHPAY] balance updated', [
+            'banks' => $bankCode,
+            'balance' => $balance,
+            'api_refresh' => $remark,
+        ]);
+
         return 0;
+    }
+
+    private function safeLog(string $level, string $message, array $context = []): void
+    {
+        $channel = (string) config('wealthpay.log_channel', 'wealthpay_api');
+
+        try {
+            Log::channel($channel)->{$level}($message, $context);
+        } catch (\Throwable $e) {
+            Log::{$level}($message, $context);
+        }
     }
 }
