@@ -405,14 +405,23 @@ class FlashPayController extends AppBaseController
                 return response()->json(['success' => true]);
             }
 
+            // FlashPay senderBankCode maps directly to system bank shortcode
+            // (doc: SCB, KBANK, KTB — same as banks.shortcode)
             $senderBankCode = (string) data_get($data, 'senderBankCode', '');
-            $systemBankShortcode = $this->reverseMapBankCode($senderBankCode);
-            $bank = $this->bankRepository->findOneWhere(['shortcode' => $systemBankShortcode]);
+            $map = (array) config('flashpay.bank_code_map', []);
+            $systemShortcode = array_flip($map)[$senderBankCode] ?? $senderBankCode;
+
+            $bank = $this->bankRepository->findOneWhere(['shortcode' => $systemShortcode]);
+
+            if (! $bank) {
+                // Try again with raw senderBankCode as shortcode
+                $bank = $this->bankRepository->findOneWhere(['shortcode' => $senderBankCode]);
+            }
 
             if (! $bank) {
                 Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Bank not found', [
                     'senderBankCode' => $senderBankCode,
-                    'mapped_shortcode' => $systemBankShortcode,
+                    'tried_shortcode' => $systemShortcode,
                 ]);
                 $bank = $this->bankRepository->findOneWhere(['shortcode' => 'SCB']);
                 if (! $bank) {
