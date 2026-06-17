@@ -198,7 +198,7 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
             Route::post('flashpay/deposit/create', [FlashPayController::class, 'deposit'])
                 ->name('frontend.api.v1.flashpay.deposit');
             Route::get('flashpay/qrcode/{id}', [FlashPayController::class, 'index'])
-                ->name('frontend.api.v1.flashpay.index');
+                ->name('frontend.api.v1.flashpay.index')->withoutMiddleware([AuthenticateFrontendToken::class]);
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');
