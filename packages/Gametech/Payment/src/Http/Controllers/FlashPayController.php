@@ -366,17 +366,30 @@ class FlashPayController extends AppBaseController
             return response()->json(['success' => true]);
         }
 
-        // --- update check_case ---
-        $case->detail = $transactionId !== '' ? $transactionId : $case->detail;
-        $case->status = $normalizedStatus;
+        // --- update check_case (status only — match WealthPay) ---
+        $current = strtolower((string) $case->status);
 
         if ($normalizedStatus === 'completed') {
-            $case->payamount = (string) data_get($data, 'netAmount', data_get($data, 'amount', $case->payamount));
-            $case->fee = (string) data_get($data, 'fee', '2');
-            $case->complete_date = now();
+            if ($current !== 'completed') {
+                $this->repository->update(['status' => 'completed'], $case->code);
+            }
+        } elseif ($normalizedStatus === 'cancelled') {
+            if ($current === 'pending') {
+                $this->repository->update(['status' => 'cancelled'], $case->code);
+            }
+        } elseif ($normalizedStatus === 'failed') {
+            if (! in_array($current, ['completed', 'failed'], true)) {
+                $this->repository->update(['status' => 'failed'], $case->code);
+            }
+        } elseif ($normalizedStatus === 'expired') {
+            if ($current === 'pending') {
+                $this->repository->update(['status' => 'expired'], $case->code);
+            }
+        } elseif ($normalizedStatus !== 'pending') {
+            if (! in_array($current, ['completed', 'failed'], true)) {
+                $this->repository->update(['status' => $normalizedStatus], $case->code);
+            }
         }
-
-        $case->save();
 
         // --- completed → create bank_payment (idempotent) ---
         if ($normalizedStatus === 'completed') {
@@ -417,7 +430,7 @@ class FlashPayController extends AppBaseController
                 return response()->json(['success' => true]);
             }
 
-            $creditAmount = (float) ($case->payamount ?: $case->amount);
+            $creditAmount = (float) $case->amount;
 
             try {
                 $this->bankPaymentRepository->create([
