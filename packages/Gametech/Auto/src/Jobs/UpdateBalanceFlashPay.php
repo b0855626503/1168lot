@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gametech\Auto\Jobs;
 
+use Gametech\Payment\Libraries\FlashPay;
+use Gametech\Payment\Models\BankAccountProxy;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,12 +15,8 @@ use Illuminate\Queue\SerializesModels;
 /**
  * FlashPay Balance Job
  *
- * FlashPay มี GET /api/v1/balance แต่ response schema ยังไม่ทราบแน่ชัด
- * Job นี้ถูก dispatch จาก deposit และ deposit_callback
- * เพื่อ trigger auto-topup pipeline ที่ประมวลผล bank_payment records
- *
- * TODO: เมื่อได้ balance response schema จาก FlashPay แล้ว
- *       ขยาย job นี้ให้ query balance และอัปเดต BankAccountProxy
+ * GET /api/v1/balance → { balance: 1234.56, currency: "THB" }
+ * Dispatch จาก deposit() และ deposit_callback()
  */
 class UpdateBalanceFlashPay implements ShouldQueue
 {
@@ -33,6 +31,16 @@ class UpdateBalanceFlashPay implements ShouldQueue
 
     public function handle()
     {
+        $api = new FlashPay;
+        $resp = $api->request('/balance', [], [], 'GET');
+
+        if (data_get($resp, 'success') === true) {
+            $balance = (float) data_get($resp, 'data.balance', 0);
+
+            BankAccountProxy::where('banks', (int) config('flashpay.system_bank_code', 318))
+                ->update(['balance' => $balance]);
+        }
+
         return 0;
     }
 }
