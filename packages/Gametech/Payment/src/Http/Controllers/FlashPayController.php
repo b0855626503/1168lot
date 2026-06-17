@@ -54,6 +54,20 @@ class FlashPayController extends AppBaseController
             $member = $this->memberRepository->findOneWhere(['user_name' => $data->username]);
         }
 
+        // Convert QR URL to base64 data URI for inline display
+        $qrBase64 = null;
+        $qrUrl = $data->url ?? $data->qrcode ?? null;
+        if ($qrUrl !== null && $qrUrl !== '') {
+            try {
+                $imageData = @file_get_contents($qrUrl);
+                if ($imageData !== false) {
+                    $qrBase64 = 'data:image/png;base64,'.base64_encode($imageData);
+                }
+            } catch (\Throwable $e) {
+                // Fallback to raw URL if fetch fails
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -62,7 +76,7 @@ class FlashPayController extends AppBaseController
                 'status' => (string) ($data->status ?? ''),
                 'amount' => (float) ($data->amount ?? 0),
                 'payamount' => (float) ($data->payamount ?? 0),
-                'qrcode' => $data->qrcode ?? null,
+                'qrcode' => $qrBase64 ?? $data->qrcode ?? null,
                 'qr_string' => $data->url ?? null,
                 'expired_date' => ! empty($data->expired_date)
                     ? Carbon::parse($data->expired_date)->toDateTimeString()
