@@ -762,6 +762,41 @@ return [
             'days' => 14,
         ],
 
+        'flashpay_deposit_create' => [
+            'driver' => 'daily',
+            'path' => log_path('flashpay/deposit_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'flashpay_deposit_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('flashpay/deposit_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'flashpay_api' => [
+            'driver' => 'daily',
+            'path' => log_path('flashpay/api.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'flashpay_withdraw_create' => [
+            'driver' => 'daily',
+            'path' => log_path('flashpay/withdraw_create.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
+        'flashpay_withdraw_callback' => [
+            'driver' => 'daily',
+            'path' => log_path('flashpay/withdraw_callback.log'),
+            'level' => 'info',
+            'days' => 14,
+        ],
+
     ],
 
 ];

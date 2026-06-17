@@ -1,0 +1,20 @@
+includes:
+  - vendor/thecodingmachine/phpstan-safe-rule/phpstan-safe-rule.neon
+
+parameters:
+  level: 1
+  paths:
+    - app
+    - packages
+  scanDirectories:
+    - vendor
+  ignoreErrors:
+    # Laravel facades / magic methods are expected
+    - '#Call to an undefined method Illuminate\\#'
+    # Dynamic Eloquent where clauses
+    - '#Dynamic call to static method#'
+    - '#Access to undefined constant#'
+    - '#Call to an undefined method#'
+  universalObjectCratesClasses:
+    - Illuminate\Http\Request
+    - Illuminate\Support\Collection

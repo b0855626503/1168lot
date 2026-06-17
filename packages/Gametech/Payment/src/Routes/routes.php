@@ -64,6 +64,10 @@ Route::domain("$apiRoute.".(is_null(config('app.admin_domain_url')) ? config('ap
             Route::post('wealthpay/deposit/callback', 'WealthPayController@deposit_callback')->name('api.wealthpay.deposit.callback');
             Route::post('wealthpay/withdraw/callback', 'WealthPayController@withdraw_callback')->name('api.wealthpay.withdraw.callback');
 
+            // FlashPay (318) — https://flashpaysolution.com/docs
+            Route::post('flashpay/deposit/callback', 'FlashPayController@deposit_callback')->name('api.flashpay.deposit.callback');
+            Route::post('flashpay/withdraw/callback', 'FlashPayController@withdraw_callback')->name('api.flashpay.withdraw.callback');
+
         });
 
     });

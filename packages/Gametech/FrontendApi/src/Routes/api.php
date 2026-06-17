@@ -24,6 +24,7 @@ use Gametech\FrontendApi\Http\Controllers\Api\V1\WithdrawController;
 use Gametech\FrontendApi\Http\Middleware\AuthenticateFrontendToken;
 use Gametech\FrontendApi\Http\Middleware\ResolveFrontendLanguage;
 use Gametech\Payment\Http\Controllers\DeepPayController;
+use Gametech\Payment\Http\Controllers\FlashPayController;
 use Gametech\Payment\Http\Controllers\SmkPayController;
 use Gametech\Payment\Http\Controllers\WealthPayController;
 use Illuminate\Support\Facades\Route;
@@ -188,6 +189,16 @@ Route::domain($apiSubdomain.'.'.$apiDomain)
                 ->name('frontend.api.v1.wealthpay.deposit');
             Route::get('wealthpay/qrcode/{id}', [WealthPayController::class, 'index'])
                 ->name('frontend.api.v1.wealthpay.index');
+
+            // FlashPay (318)
+            Route::get('flashpay/deposit/status/{txid}', [FlashPayController::class, 'checkStatus'])
+                ->name('frontend.api.v1.flashpay.deposit.status');
+            Route::post('flashpay/deposit/expire/{txid}', [FlashPayController::class, 'expire'])
+                ->name('frontend.api.v1.flashpay.deposit.expire');
+            Route::post('flashpay/deposit/create', [FlashPayController::class, 'deposit'])
+                ->name('frontend.api.v1.flashpay.deposit');
+            Route::get('flashpay/qrcode/{id}', [FlashPayController::class, 'index'])
+                ->name('frontend.api.v1.flashpay.index');
 
             Route::get('promotion/list', [PromotionController::class, 'list'])
                 ->name('frontend.api.v1.promotion.list');

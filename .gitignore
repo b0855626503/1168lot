@@ -184,7 +184,7 @@ Homestead.json
 # Keep only if these are local/generated and should never be versioned
 # If they are real source folders, remove them from here.
 # =========================================================
-bank/
+/bank/
 wallet_demo.zip
 
 # =========================================================
