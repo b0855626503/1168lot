@@ -470,9 +470,9 @@ class FlashPayController extends AppBaseController
         $event = (string) ($payload['event'] ?? '');
         $data = (array) ($payload['data'] ?? []);
 
-        // --- mode guard: ต้องเป็น withdrawal.* event เท่านั้น ---
-        if (! str_starts_with($event, 'withdrawal.')) {
-            Log::channel('flashpay_withdraw_callback')->info('[FLASHPAY] Non-withdrawal event — skip', ['event' => $event]);
+        // --- mode guard: withdrawal.* (request status) + payout.* (transfer result) ---
+        if (! str_starts_with($event, 'withdrawal.') && ! str_starts_with($event, 'payout.')) {
+            Log::channel('flashpay_withdraw_callback')->info('[FLASHPAY] Non-withdrawal/payout event — skip', ['event' => $event]);
 
             return response()->json(['success' => true]);
         }
