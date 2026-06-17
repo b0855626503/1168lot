@@ -11,6 +11,7 @@ return [
 
     'api_key' => env('FLASHPAY_API_KEY'),
     'webhook_secret' => env('FLASHPAY_WEBHOOK_SECRET'),
+    'webhook_secret_withdraw' => env('FLASHPAY_WEBHOOK_SECRET_WITHDRAW'),
 
     'system_bank_code' => env('FLASHPAY_SYSTEM_BANK_CODE', 318),
 

@@ -491,7 +491,7 @@ class FlashPayController extends AppBaseController
         // --- verify callback signature ---
         if (config('flashpay.verify_callback_signature', true)) {
             $api = new FlashPay;
-            if (! $api->verifyCallbackSignature($request)) {
+            if (! $api->verifyCallbackSignature($request, 'flashpay.webhook_secret_withdraw')) {
                 Log::channel('flashpay_withdraw_callback')->warning('[FLASHPAY] Invalid withdraw callback signature');
 
                 return response()->json(['success' => true]);

@@ -174,9 +174,9 @@ class FlashPay
      *
      * HMAC-SHA256 of raw body with webhook_secret
      */
-    public function verifyCallbackSignature($request): bool
+    public function verifyCallbackSignature($request, string $secretConfigKey = 'flashpay.webhook_secret'): bool
     {
-        $secret = trim((string) config('flashpay.webhook_secret'));
+        $secret = trim((string) config($secretConfigKey));
         if ($secret === '') {
             return true; // not configured → skip verification
         }
