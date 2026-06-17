@@ -25,6 +25,11 @@ while IFS= read -r file; do
     continue
   fi
 
+  if [[ "$file" == docs/public/llms-full-th.md ]]; then
+    # Vendor API doc (WealthWave) — single file for AI agent paste-ability.
+    continue
+  fi
+
   lines=$(wc -l < "$file")
   if (( lines > DOC_MONOLITH_MAX_LINES )); then
     log_error "$file" "exceeds monolith threshold ($lines > $DOC_MONOLITH_MAX_LINES). Split to index + chapters"
