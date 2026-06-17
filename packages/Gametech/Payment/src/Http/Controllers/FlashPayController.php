@@ -41,7 +41,18 @@ class FlashPayController extends AppBaseController
             ]);
         }
 
-        $member = $this->memberRepository->findOneWhere(['user_name' => $data->username]);
+        $authMember = auth()->guard('customer')->user();
+        if ($authMember && (string) $data->username !== (string) $authMember->user_name) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์เข้าถึงรายการนี้',
+            ], 403);
+        }
+
+        $member = null;
+        if (!empty($data->username)) {
+            $member = $this->memberRepository->findOneWhere(['user_name' => $data->username]);
+        }
 
         return response()->json([
             'success' => true,
@@ -178,6 +189,7 @@ class FlashPayController extends AppBaseController
         $qrExpiry = (string) data_get($transaction, 'qrExpiry', '');
         $fee = (float) data_get($transaction, 'fee', 2);
         $netAmount = (float) data_get($transaction, 'netAmount', $amount);
+        $payAmount = (float) data_get($transaction, 'amount', $amount);
 
         if ($qrCode === '') {
             Log::channel('flashpay_deposit_create')->error('[FLASHPAY] qrCode missing in response', [
@@ -204,7 +216,7 @@ class FlashPayController extends AppBaseController
                 'txid' => $txid,
                 'detail' => ($transactionId !== '' ? $transactionId : $txid),
                 'amount' => $amountText,
-                'payamount' => (string) $netAmount,
+                'payamount' => (string) $payAmount,
                 'fee' => (string) $fee,
                 'username' => trim((string) $member->user_name),
                 'name' => (string) $member->name,
@@ -230,19 +242,25 @@ class FlashPayController extends AppBaseController
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'txid' => $txid,
-                'transaction_id' => $transactionId,
-                'qrcode' => $qrCode,
-                'qr_expiry' => $expiredDate->toIso8601String(),
-                'amount' => $amountText,
-                'fee' => (string) $fee,
-                'net_amount' => (string) $netAmount,
-                'status' => 'pending',
-                'url' => route('frontend.api.v1.flashpay.index', ['id' => ($transactionId !== '' ? $transactionId : $txid)]),
-                'target' => 'blank', // QR view — no redirect
-            ],
+            'msg' => __('app.topup.create'),
+            'url' => route('frontend.api.v1.flashpay.index', ['id' => ($transactionId !== '' ? $transactionId : $txid)]),
         ]);
+
+//        return response()->json([
+//            'success' => true,
+//            'data' => [
+//                'txid' => $txid,
+//                'transaction_id' => $transactionId,
+//                'qrcode' => $qrCode,
+//                'qr_expiry' => $expiredDate->toIso8601String(),
+//                'amount' => $amountText,
+//                'fee' => (string) $fee,
+//                'net_amount' => (string) $netAmount,
+//                'status' => 'pending',
+//                'url' => route('frontend.api.v1.flashpay.index', ['id' => ($transactionId !== '' ? $transactionId : $txid)]),
+//                'target' => 'self', // QR view — no redirect
+//            ],
+//        ]);
     }
 
     /**
