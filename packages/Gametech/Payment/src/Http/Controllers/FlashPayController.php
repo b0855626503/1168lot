@@ -380,6 +380,8 @@ class FlashPayController extends AppBaseController
 
         // --- completed → create bank_payment (idempotent) ---
         if ($normalizedStatus === 'completed') {
+            UpdateBalanceFlashPay::dispatch()->delay(5)->onQueue('topup');
+
             $member = $this->memberRepository->findOneWhere(['user_name' => $case->username]);
 
             if (! $member) {
