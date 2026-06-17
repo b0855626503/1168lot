@@ -343,7 +343,7 @@ class FlashPayController extends AppBaseController
         // --- normalize status ---
         $api = new FlashPay;
         $incoming = $api->normalizeStatus((string) data_get($data, 'status', 'pending'));
-        $amount = (float) (data_get($data, 'amount') ?: $case->payamount ?: $case->amount);
+        $amount = (float) (data_get($data, 'netAmount') ?: data_get($data, 'amount') ?: $case->payamount ?: $case->amount);
         $current = strtolower((string) $case->status);
 
         Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Callback processing', [
