@@ -1,6 +1,10 @@
 # BOA-262: Legacy Archive Snapshot Table Architecture
 
-> Status: PENDING MERGE | Linear: BOA-262 | Covers: PRs 01–05
+> สถานะ: PENDING MERGE
+> วันที่: 2026-05-12
+> โดเมน/เรื่อง: lotto/legacy-archive
+> แทนแผนเก่า: —
+> Linear: BOA-262 | Covers: PRs 01–05
 
 ---
 

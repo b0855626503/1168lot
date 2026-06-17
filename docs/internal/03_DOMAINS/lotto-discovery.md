@@ -1,6 +1,6 @@
 # Lotto Discovery Map
 
-> **Last Verified:** 2026-05-12 | **Source:** rg-verified | **Confidence:** high | **Stability:** volatile
+> **Last Verified:** 2026-06-18 | **Source:** rg-verified | **Confidence:** high | **Stability:** volatile
 > ไฟล์นี้เป็น derived snapshot — อาจ drift ได้ถ้า code เปลี่ยนโดยไม่อัปเดต
 > **ให้ verify entrypoint ด้วย `rg` เสมอก่อนตัดสินใจ**
 

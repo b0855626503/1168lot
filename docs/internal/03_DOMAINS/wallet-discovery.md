@@ -1,6 +1,6 @@
 # Wallet Discovery Map
 
-> **Last Verified:** 2026-05-03 | **Source:** manual | **Confidence:** medium | **Stability:** stable
+> **Last Verified:** 2026-06-18 | **Source:** manual | **Confidence:** medium | **Stability:** stable
 > ไฟล์นี้เป็น derived snapshot — อาจ drift ได้ถ้า code เปลี่ยนโดยไม่อัปเดต
 > **ให้ verify entrypoint ด้วย `rg` เสมอก่อนตัดสินใจ**
 

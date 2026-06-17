@@ -1271,7 +1271,7 @@ print(ww('/paymentv2/create', {
 
 ### 12.4 Java / C# / Go
 
-ดูตัวอย่างเต็มในไฟล์ภาษาอังกฤษ [`llms-full.md`](./llms-full.md#12-code-examples-php-node-python-java-c-go) — รหัสเหมือนกัน เปลี่ยนเฉพาะ comment เป็นภาษาไทยได้
+ดูตัวอย่างเต็มในไฟล์ภาษาอังกฤษ [`llms-full.md`](https://doc-th.wealthwave.tech/?lang=en#12-code-examples-php-node-python-java-c-go) — รหัสเหมือนกัน เปลี่ยนเฉพาะ comment เป็นภาษาไทยได้
 
 ---
 
@@ -1393,5 +1393,5 @@ pm.request.headers.upsert({ key: 'X-Signature', value: signHex });
 - **API version:** 1.0
 - **ไฟล์นี้:** `llms-full-th.md` — เอกสารไฟล์เดียวสำหรับ AI coding agent (ภาษาไทย)
 - **เอกสารแบบเว็บ:** <https://doc-th.wealthwave.tech/?lang=th>
-- **ภาษาอังกฤษ:** [`llms-full.md`](./llms-full.md)
+- **ภาษาอังกฤษ:** [`llms-full.md`](https://doc-th.wealthwave.tech/?lang=en)
 - **อัปเดต:** 2026-06-06
