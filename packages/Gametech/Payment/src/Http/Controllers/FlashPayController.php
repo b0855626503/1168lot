@@ -46,21 +46,21 @@ class FlashPayController extends AppBaseController
 
         return view(config('flashpay.deposit_view'), compact('data', 'member', 'banks'));
 
-//        return response()->json([
-//            'success' => true,
-//            'data' => [
-//                'txid' => (string) ($data->txid ?? ''),
-//                'status' => (string) ($data->status ?? ''),
-//                'amount' => (string) ($data->amount ?? ''),
-//                'payamount' => (string) ($data->payamount ?? ''),
-//                'fee' => (string) ($data->fee ?? '0'),
-//                'qrcode' => (string) ($data->qrcode ?? ''),
-//                'url' => (string) ($data->url ?? ''),
-//                'expired_date' => ! empty($data->expired_date)
-//                    ? Carbon::parse($data->expired_date)->toDateTimeString()
-//                    : null,
-//            ],
-//        ]);
+        //        return response()->json([
+        //            'success' => true,
+        //            'data' => [
+        //                'txid' => (string) ($data->txid ?? ''),
+        //                'status' => (string) ($data->status ?? ''),
+        //                'amount' => (string) ($data->amount ?? ''),
+        //                'payamount' => (string) ($data->payamount ?? ''),
+        //                'fee' => (string) ($data->fee ?? '0'),
+        //                'qrcode' => (string) ($data->qrcode ?? ''),
+        //                'url' => (string) ($data->url ?? ''),
+        //                'expired_date' => ! empty($data->expired_date)
+        //                    ? Carbon::parse($data->expired_date)->toDateTimeString()
+        //                    : null,
+        //            ],
+        //        ]);
     }
 
     /**
@@ -714,26 +714,29 @@ class FlashPayController extends AppBaseController
      */
     private function resolveMemberBankCode($member): string
     {
-        $bankAccount = $this->bankAccountRepository->findOneWhere([
-            'username' => trim((string) $member->user_name),
-        ]);
-
-        $systemShortcode = '';
-
-        if ($bankAccount && ! empty($bankAccount->banks)) {
-            $bank = $this->bankRepository->findOneWhere(['code' => (int) $bankAccount->banks]);
-            if ($bank) {
-                $systemShortcode = trim((string) $bank->shortcode);
-            }
-        }
-
-        if ($systemShortcode === '') {
-            $systemShortcode = 'SCB';
-        }
-
         $map = (array) config('flashpay.bank_code_map', []);
 
-        return $map[$systemShortcode] ?? $systemShortcode;
+        $candidates = [
+            data_get($member, 'bank.shortcode'),
+            data_get($member, 'bank.code'),
+            data_get($member, 'bank_code'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = strtoupper(trim((string) $candidate));
+
+            if ($value === '') {
+                continue;
+            }
+
+            if (isset($map[$value])) {
+                return (string) $map[$value];
+            }
+
+            return $value;
+        }
+
+        return '';
     }
 
     /**
