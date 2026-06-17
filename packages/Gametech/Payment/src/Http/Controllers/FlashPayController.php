@@ -292,7 +292,7 @@ class FlashPayController extends AppBaseController
         Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Deposit callback', [
             'headers' => [
                 'X-Webhook-Event' => $request->header('X-Webhook-Event'),
-                'X-Webhook-Idempotency-Key' => $request->header('X-Webhook-Idempotency-Key'),
+                'X-Webhook-Signature' => $request->header('X-Webhook-Signature', '(missing)'),
             ],
             'payload' => $payload,
         ]);
@@ -301,7 +301,6 @@ class FlashPayController extends AppBaseController
         $data = (array) ($payload['data'] ?? []);
 
         // --- mode guard ---
-        // FlashPay sends: payment.success, payment.failed, payment.expired
         if (! str_starts_with($event, 'payment.')) {
             Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Non-payment event — skip', ['event' => $event]);
 
@@ -318,7 +317,7 @@ class FlashPayController extends AppBaseController
             return response()->json(['success' => true]);
         }
 
-        // --- find check_case by txid (we use orderId = txid) ---
+        // --- find check_case by txid ---
         $case = $this->repository->findOneWhere(['txid' => $orderId]);
 
         if (! $case) {
@@ -330,155 +329,133 @@ class FlashPayController extends AppBaseController
         }
 
         // --- verify callback signature ---
-        if (config('flashpay.verify_callback_signature', true)) {
+        if ((bool) config('flashpay.verify_callback_signature', true)) {
             $api = new FlashPay;
             if (! $api->verifyCallbackSignature($request)) {
                 Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Invalid signature', [
                     'orderId' => $orderId,
-                    'signature_header' => $request->header('X-Webhook-Signature', ''),
                 ]);
 
-                return response()->json(['error' => 'invalid signature'], 200);
+                return response()->json(['success' => true]);
             }
         }
 
         // --- normalize status ---
-        $rawStatus = (string) data_get($data, 'status', '');
-        $normalizedStatus = (new FlashPay)->normalizeStatus($rawStatus);
+        $api = new FlashPay;
+        $incoming = $api->normalizeStatus((string) data_get($data, 'status', 'pending'));
+        $amount = (float) (data_get($data, 'amount') ?: $case->payamount ?: $case->amount);
+        $current = strtolower((string) $case->status);
 
         Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Callback processing', [
             'orderId' => $orderId,
             'transactionId' => $transactionId,
             'event' => $event,
-            'raw_status' => $rawStatus,
-            'normalized_status' => $normalizedStatus,
-            'current_case_status' => $case->status,
+            'incoming' => $incoming,
+            'current' => $current,
+            'amount' => $amount,
         ]);
 
         // --- out-of-order guard: PAID always wins ---
-        if ($case->status === 'completed' && $normalizedStatus !== 'completed') {
-            Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] PAID already — skip later status', [
-                'orderId' => $orderId,
-                'later_event' => $event,
-                'later_status' => $rawStatus,
+        if ($incoming === 'completed') {
+            if ($current !== 'completed') {
+                $this->repository->update(['status' => 'completed'], $case->code);
+            }
+        } elseif ($incoming === 'cancelled') {
+            if ($current === 'pending') {
+                $this->repository->update(['status' => 'cancelled'], $case->code);
+            }
+        } elseif ($incoming === 'failed') {
+            if (! in_array($current, ['completed', 'failed'], true)) {
+                $this->repository->update(['status' => 'failed'], $case->code);
+            }
+        } elseif ($incoming === 'expired') {
+            if ($current === 'pending') {
+                $this->repository->update(['status' => 'expired'], $case->code);
+            }
+        } elseif ($incoming !== 'pending') {
+            if (! in_array($current, ['completed', 'failed'], true)) {
+                $this->repository->update(['status' => $incoming], $case->code);
+            }
+        }
+
+        // --- ไม่ใช่ completed → จบ ---
+        if ($incoming !== 'completed') {
+            return response()->json(['success' => true]);
+        }
+
+        // === PAID: สร้าง bank_payment (idempotent) ===
+        UpdateBalanceFlashPay::dispatch()->delay(5)->onQueue('topup');
+
+        $member = $this->memberRepository->findOneWhere(['user_name' => $case->username]);
+        if (! $member) {
+            Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Member not found', [
+                'username' => $case->username,
             ]);
 
             return response()->json(['success' => true]);
         }
 
-        // --- update check_case (status only — match WealthPay) ---
-        $current = strtolower((string) $case->status);
+        $systemBankCode = (int) config('flashpay.system_bank_code', 318);
+        $bankAccount = $this->bankAccountRepository->findOneWhere([
+            'banks' => $systemBankCode,
+            'bank_type' => 1,
+            'enable' => 'Y',
+            'status_auto' => 'Y',
+        ]);
 
-        if ($normalizedStatus === 'completed') {
-            if ($current !== 'completed') {
-                $this->repository->update(['status' => 'completed'], $case->code);
-            }
-        } elseif ($normalizedStatus === 'cancelled') {
-            if ($current === 'pending') {
-                $this->repository->update(['status' => 'cancelled'], $case->code);
-            }
-        } elseif ($normalizedStatus === 'failed') {
-            if (! in_array($current, ['completed', 'failed'], true)) {
-                $this->repository->update(['status' => 'failed'], $case->code);
-            }
-        } elseif ($normalizedStatus === 'expired') {
-            if ($current === 'pending') {
-                $this->repository->update(['status' => 'expired'], $case->code);
-            }
-        } elseif ($normalizedStatus !== 'pending') {
-            if (! in_array($current, ['completed', 'failed'], true)) {
-                $this->repository->update(['status' => $normalizedStatus], $case->code);
-            }
+        if (! $bankAccount) {
+            Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Bank account not found');
+
+            return response()->json(['success' => true]);
         }
 
-        // --- completed → create bank_payment (idempotent) ---
-        if ($normalizedStatus === 'completed') {
-            UpdateBalanceFlashPay::dispatch()->delay(5)->onQueue('topup');
+        // Dedup by txid
+        $check = $this->bankPaymentRepository->findOneWhere(['txid' => $orderId]);
+        if ($check) {
+            Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Duplicate callback ignored (bank_payment exists)', [
+                'txid' => $orderId,
+            ]);
 
-            $member = $this->memberRepository->findOneWhere(['user_name' => $case->username]);
-
-            if (! $member) {
-                Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Member not found', [
-                    'username' => $case->username,
-                ]);
-
-                return response()->json(['success' => true]);
-            }
-
-            // FlashPay senderBankCode maps directly to system bank shortcode
-            // (doc: SCB, KBANK, KTB — same as banks.shortcode)
-            $senderBankCode = (string) data_get($data, 'senderBankCode', '');
-            $map = (array) config('flashpay.bank_code_map', []);
-            $systemShortcode = array_flip($map)[$senderBankCode] ?? $senderBankCode;
-
-            $bank = $this->bankRepository->findOneWhere(['shortcode' => $systemShortcode]);
-
-            if (! $bank) {
-                // Try again with raw senderBankCode as shortcode
-                $bank = $this->bankRepository->findOneWhere(['shortcode' => $senderBankCode]);
-            }
-
-            if (! $bank) {
-                Log::channel('flashpay_deposit_callback')->warning('[FLASHPAY] Bank not found', [
-                    'senderBankCode' => $senderBankCode,
-                    'tried_shortcode' => $systemShortcode,
-                ]);
-                $bank = $this->bankRepository->findOneWhere(['shortcode' => 'SCB']);
-                if (! $bank) {
-                    return response()->json(['success' => true]);
-                }
-            }
-
-            // Dedup by txid
-            $exists = $this->bankPaymentRepository->findOneWhere(['txid' => $orderId]);
-            if ($exists) {
-                Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] Duplicate callback ignored (bank_payment exists)', [
-                    'txid' => $orderId,
-                ]);
-
-                return response()->json(['success' => true]);
-            }
-
-            $creditAmount = (float) $case->amount;
-
-            try {
-                $this->bankPaymentRepository->create([
-                    'username' => (string) $member->user_name,
-                    'name' => (string) $member->name,
-                    'bank_id' => (int) $bank->code,
-                    'amount' => $creditAmount,
-                    'method' => 'deposit',
-                    'txid' => $orderId,
-                    'status' => 'completed',
-                    'remark' => "FlashPay Deposit — bank: {$senderBankCode}",
-                    'user_create' => (string) $member->name,
-                    'user_update' => (string) $member->name,
-                ]);
-
-                Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] bank_payment created', [
-                    'txid' => $orderId,
-                    'amount' => $creditAmount,
-                    'username' => $case->username,
-                ]);
-            } catch (\Throwable $e) {
-                Log::channel('flashpay_deposit_callback')->error('[FLASHPAY] bank_payment create failed', [
-                    'txid' => $orderId,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            return response()->json(['success' => true]);
         }
+
+        $bank = $this->bankRepository->find($bankAccount->banks);
+        $detail = ' REF ID : '.($transactionId !== '' ? $transactionId : '-');
+        $hash = md5($bankAccount->code.$amount.$detail);
+        $datenow = now()->toDateTimeString();
+
+        $this->bankPaymentRepository->create([
+            'bank' => strtolower($bank->shortcode.'_'.$bankAccount->acc_no),
+            'detail' => $detail.' จำนวน '.$amount,
+            'account_code' => $bankAccount->code,
+            'autocheck' => 'W',
+            'bankstatus' => 1,
+            'bank_name' => $bank->shortcode,
+            'bank_time' => $datenow,
+            'channel' => 'FlashPay',
+            'value' => $amount,
+            'tx_hash' => $hash,
+            'txid' => $orderId,
+            'status' => 0,
+            'ip_admin' => request()->ip(),
+            'member_topup' => $member->code,
+            'remark_admin' => '',
+            'emp_topup' => 0,
+            'user_create' => 'รอระบบเติมอัตโนมัติ ทำรายการฝากเงินโดย FlashPay',
+            'create_by' => 'SYSAUTO',
+        ]);
+
+        Log::channel('flashpay_deposit_callback')->info('[FLASHPAY] bank_payment created', [
+            'orderId' => $orderId,
+            'transactionId' => $transactionId,
+            'amount' => $amount,
+            'member_code' => $member->code,
+        ]);
 
         return response()->json(['success' => true]);
     }
 
-    /**
-     * POST /admin/{provider}/withdraw/callback — FlashPay webhook (withdrawal events)
-     *
-     * Events: withdrawal.created / withdrawal.approved / withdrawal.rejected
-     * APPROVED → complete withdraw
-     * REJECTED → rollback
-     */
-    public function withdraw_callback(Request $request)
+    /**public function withdraw_callback(Request $request)
     {
         $payload = $request->all();
 
