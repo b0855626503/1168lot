@@ -130,7 +130,7 @@ class FlashPay
             'msg' => $ok
                 ? 'success'
                 : (is_array($json)
-                    ? (string) (data_get($json, 'error.message') ?? data_get($json, 'message') ?? 'error')
+                    ? (string) (data_get($json, 'error.message') ?? data_get($json, 'error') ?? data_get($json, 'message') ?? 'error')
                     : 'invalid json response'),
             'data' => $json,
             'raw' => $raw,

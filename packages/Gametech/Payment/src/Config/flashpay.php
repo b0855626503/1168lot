@@ -16,7 +16,7 @@ return [
     'system_bank_code' => env('FLASHPAY_SYSTEM_BANK_CODE', 318),
 
     'min_deposit' => env('FLASHPAY_MIN_DEPOSIT', 1),
-    'min_withdraw' => env('FLASHPAY_MIN_WITHDRAW', 1),
+    'min_withdraw' => env('FLASHPAY_MIN_WITHDRAW', 200),
 
     'verify_callback_signature' => env('FLASHPAY_VERIFY_CALLBACK_SIGNATURE', true),
 
