@@ -160,11 +160,17 @@ class PaymentOutFlashPay implements ShouldQueue
         $requestId = (string) data_get($request, 'id', '');
         $requestRef = (string) data_get($request, 'requestRef', '');
 
+        // Use FlashPay requestRef as canonical txid so webhook callback can find the order
+        if ($requestRef !== '') {
+            $order->txid = $requestRef;
+            $order->save();
+        }
+
         // Create check_case for tracking
         app('Gametech\\Core\\Repositories\\CheckCaseRepository')->create([
             'method' => 2,
             'bank_code' => $bank->banks,
-            'txid' => $txid,
+            'txid' => ($requestRef !== '' ? $requestRef : $txid),
             'amount' => $amount,
             'payamount' => $amount,
             'username' => $member->user_name,
