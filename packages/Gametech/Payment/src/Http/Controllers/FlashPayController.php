@@ -498,7 +498,8 @@ class FlashPayController extends AppBaseController
             }
         }
 
-        // FlashPay uses requestRef as the correlation ID (set to txid in PaymentOutFlashPay)
+        // FlashPay uses requestRef as the correlation ID
+        // check_case.detail stores requestRef; check_case.txid stores local format (e.g. FWDP...)
         $requestRef = (string) data_get($data, 'requestRef', '');
         $rawStatus = (string) data_get($data, 'status', '');
 
@@ -528,7 +529,9 @@ class FlashPayController extends AppBaseController
         }
 
         // Update check_case (method=2 = withdraw, created by PaymentOutFlashPay)
-        $case = $this->repository->findOneWhere(['txid' => $requestRef]);
+        // Search by detail (requestRef) — txid is local format preserved
+        $case = $this->repository->findOneWhere(['detail' => $requestRef])
+            ?: $this->repository->findOneWhere(['txid' => $requestRef]);
         if ($case) {
             $current = strtolower((string) $case->status);
             if ($incoming !== 'pending' && ! in_array($current, ['completed', 'failed'], true)) {
@@ -542,14 +545,16 @@ class FlashPayController extends AppBaseController
         }
 
         // หา withdraw record (status_withdraw = A = รอผลจาก Provider)
+        // Use local txid from check_case, fall back to requestRef
+        $lookupTxid = ($case && isset($case->txid)) ? (string) $case->txid : $requestRef;
         $config = $this->getCoreConfig();
 
         if ($config->seamless === 'Y') {
             $order = app('Gametech\\Payment\\Repositories\\WithdrawSeamlessRepository')
-                ->findOneWhere(['txid' => $requestRef, 'status_withdraw' => 'A']);
+                ->findOneWhere(['txid' => $lookupTxid, 'status_withdraw' => 'A']);
         } else {
             $order = app('Gametech\\Payment\\Repositories\\WithdrawRepository')
-                ->findOneWhere(['txid' => $requestRef, 'status_withdraw' => 'A']);
+                ->findOneWhere(['txid' => $lookupTxid, 'status_withdraw' => 'A']);
         }
 
         if (! $order) {
