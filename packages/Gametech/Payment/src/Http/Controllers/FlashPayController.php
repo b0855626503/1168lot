@@ -56,7 +56,7 @@ class FlashPayController extends AppBaseController
 
         // Convert QR URL to base64 data URI for inline display
         $qrBase64 = null;
-        $qrUrl = $data->url ?? $data->qrcode ?? null;
+        $qrUrl = $data->qrcode ?? $data->url ?? null;
         if ($qrUrl !== null && $qrUrl !== '') {
             try {
                 $imageData = @file_get_contents($qrUrl);
