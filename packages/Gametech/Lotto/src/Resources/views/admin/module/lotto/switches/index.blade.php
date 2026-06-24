@@ -42,10 +42,10 @@
             width: 50px;
             height: 26px;
             border-radius: 999px;
-            background: #cbd5e1;
+            background: #e2e8f0;
             transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                         box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,.08);
             flex-shrink: 0;
         }
 
@@ -116,7 +116,7 @@
             font-weight: 600;
             letter-spacing: 0.02em;
             min-width: 32px;
-            color: #64748b;
+            color: #94a3b8;
             transition: color 0.25s ease;
         }
 
@@ -307,22 +307,23 @@
         }
 
         .lotto-switch-dashboard .btn-group-tab .badge-success {
-            background: rgba(255,255,255,.25);
-            color: inherit;
+            background: #00bc8c;
+            color: #fff;
         }
 
         .lotto-switch-dashboard .btn-group-tab.btn-primary .badge-success {
-            background: rgba(255,255,255,.25);
+            background: rgba(255,255,255,.28);
+            color: #fff;
         }
 
         .lotto-switch-dashboard .btn-group-tab .badge-danger {
-            background: rgba(0,0,0,.06);
-            color: #94a3b8;
+            background: #fee2e2;
+            color: #dc2626;
         }
 
         body.dark-mode .lotto-switch-dashboard .btn-group-tab .badge-danger {
-            background: rgba(255,255,255,.06);
-            color: #64748b;
+            background: rgba(239,68,68,.2);
+            color: #f87171;
         }
 
         /* ========================================
@@ -537,6 +538,7 @@
                                             <span class="gt-toggle__track">
                                                 <span class="gt-toggle__thumb"></span>
                                             </span>
+                                            <span class="gt-toggle__label">@{{ activeGroup.is_enabled ? 'เปิด' : 'ปิด' }}</span>
                                         </label>
                                     </div>
 
@@ -567,6 +569,7 @@
                                             <span class="gt-toggle__track">
                                                 <span class="gt-toggle__thumb"></span>
                                             </span>
+                                            <span class="gt-toggle__label">@{{ item.is_enabled ? 'เปิด' : 'ปิด' }}</span>
                                         </label>
                                     </div>
                                     <div v-if="filteredMarkets.length === 0" class="empty-state">
