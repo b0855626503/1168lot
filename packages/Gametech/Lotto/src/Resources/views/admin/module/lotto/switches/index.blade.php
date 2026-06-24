@@ -291,8 +291,8 @@
                         });
 
                         $input.on('switchChange.bootstrapSwitch', (event, state) => {
-                            const type = $input.data('type');
-                            const id = $input.data('id');
+                            const type = element.getAttribute('data-type');
+                            const id = element.getAttribute('data-id');
                             this.onBootstrapSwitchChange(type, id, state, $input);
                         });
                     });
@@ -307,8 +307,8 @@
                     const $ = window.jQuery;
                     $(this.$el).find('input.js-lotto-switch').each((_, element) => {
                         const $input = $(element);
-                        const type = $input.data('type');
-                        const id = $input.data('id');
+                        const type = element.getAttribute('data-type');
+                        const id = element.getAttribute('data-id');
                         const item = this.resolveSwitchItem(type, id);
                         if (!item || !$input.data('bootstrap-switch')) {
                             return;
