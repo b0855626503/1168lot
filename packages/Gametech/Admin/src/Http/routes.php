@@ -619,6 +619,14 @@ Route::domain(config('app.admin_url').'.'.(is_null(config('app.admin_domain_url'
 
             });
 
+            $route = ['name' => 'linejs', 'controller' => 'LineJsController'];
+            Route::group(['prefix' => $route['name']], function () use ($route) {
+                Route::get('/', $route['controller'].'@index')->defaults('_config', [
+                    'view' => 'admin::module.'.$route['name'].'.index',
+                ])->name('admin.'.$route['name'].'.index');
+
+            });
+
             $route = ['name' => 'roles', 'controller' => 'RoleController'];
             Route::group(['prefix' => $route['name']], function () use ($route) {
                 Route::get('/', $route['controller'].'@index')->defaults('_config', [

@@ -8,15 +8,12 @@ use Gametech\Admin\Models\AdminProxy;
 use Gametech\Admin\Models\RoleProxy;
 use Gametech\Admin\Observers\AdminObserver;
 use Gametech\Admin\Observers\RoleObserver;
-use Gametech\Core\Tree;
 use Gametech\Core\Core;
+use Gametech\Core\Tree;
 use Illuminate\Foundation\AliasLoader;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 
 class AdminServiceProvider extends ServiceProvider
 {
@@ -40,12 +37,13 @@ class AdminServiceProvider extends ServiceProvider
         } else {
             $this->registerConfig();
         }
+        $this->registerConfigLinejs();
 
         // โหลด routes ใน boot
-        $this->loadRoutesFrom(__DIR__ . '/../Http/routes.php');
+        $this->loadRoutesFrom(__DIR__.'/../Http/routes.php');
 
         // โหลด views
-        $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'admin');
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'admin');
 
         // ผูก view composers (กัน CLI)
         if (! $this->app->runningInConsole()) {
@@ -61,13 +59,19 @@ class AdminServiceProvider extends ServiceProvider
     public function register()
     {
         // assets publish
-//        $this->publishes([
-//            __DIR__ . '/../../publishable/assets' => public_path('assets/admin'),
-//        ], 'public');
+        //        $this->publishes([
+        //            __DIR__ . '/../../publishable/assets' => public_path('assets/admin'),
+        //        ], 'public');
 
         // ACL + Bouncer
         $this->registerACL();
         $this->registerBouncer();
+    }
+
+    protected function registerConfigLinejs()
+    {
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/admin-menu-linejs.php', 'menu.admin');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/acl-linejs.php', 'acl');
     }
 
     /**
@@ -75,8 +79,8 @@ class AdminServiceProvider extends ServiceProvider
      */
     protected function registerConfig()
     {
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/admin-menu.php', 'menu.admin');
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/acl.php',        'acl');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/admin-menu.php', 'menu.admin');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/acl.php', 'acl');
     }
 
     /**
@@ -84,8 +88,8 @@ class AdminServiceProvider extends ServiceProvider
      */
     protected function registerConfigSingle()
     {
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/admin-menu-single.php', 'menu.admin');
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/acl-single.php',        'acl');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/admin-menu-single.php', 'menu.admin');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/acl-single.php', 'acl');
     }
 
     /**
@@ -93,8 +97,8 @@ class AdminServiceProvider extends ServiceProvider
      */
     protected function registerConfigSeamless()
     {
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/admin-menu-seamless.php', 'menu.admin');
-        $this->mergeConfigFrom(dirname(__DIR__) . '/Config/acl-seamless.php',        'acl');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/admin-menu-seamless.php', 'menu.admin');
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/acl-seamless.php', 'acl');
     }
 
     /**
@@ -140,7 +144,7 @@ class AdminServiceProvider extends ServiceProvider
                     return $tree;
                 }
 
-                $permissionType     = $user->role->permission_type ?? 'all';
+                $permissionType = $user->role->permission_type ?? 'all';
                 $allowedPermissions = (array) ($user->role->permissions ?? []);
 
                 $menu = (array) config('menu.admin', []);
@@ -205,67 +209,67 @@ class AdminServiceProvider extends ServiceProvider
 
             $view->with('menu', $tree);
 
-//            foreach ($menu as $index => $item) {
-//                $key = $item['key'] ?? null;
-//
-//                // เช็คสิทธิ์เฉพาะเมนูที่ "มีใน ACL"
-//                if ($key && in_array($key, $aclKeys, true)) {
-//                    if (! bouncer()->hasPermission($key)) {
-//                        continue;
-//                    }
-//                }
-//                // ถ้า key ไม่มีใน ACL → แสดงได้ทุกคน
-//
-//                // เติม route ให้หัวข้อ ตามลอจิกเดิม
-//                if ($index + 1 < count($menu) && $permissionType !== 'all') {
-//                    $permission = $menu[$index + 1] ?? null;
-//
-//                    if ($permission
-//                        && substr_count($permission['key'] ?? '', '.') == 2
-//                        && substr_count($item['key'] ?? '', '.') == 1) {
-//
-//                        foreach ($allowedPermissions as $k => $v) {
-//                            if (($item['key'] ?? null) === $v) {
-//                                $needed = $allowedPermissions[$k + 1] ?? null;
-//
-//                                if ($needed) {
-//                                    foreach ($menu as $candidate) {
-//                                        if (($candidate['key'] ?? null) === $needed) {
-//                                            $item['route'] = $candidate['route'] ?? ($item['route'] ?? null);
-//                                            break;
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                // ถ้ามี route แต่ระบบไม่มี route นี้จริง → ข้าม
-//                if (isset($item['route']) && ! Route::has($item['route'])) {
-//                    continue;
-//                }
-//
-//                $tree->add($item, 'menu');
-//            }
-//
-//            // เรียงเมนูด้วย core()->sortItems ถ้ามี
-//            try { $tree->items = core()->sortItems($tree->items); } catch (\Throwable $e) {}
-//
-//            // เซ็ต currentRoute ให้ blade เดิมใช้งาน
-//            $routeName = Route::currentRouteName() ?? '';                    // e.g. admin.marketing_team.index
-//            $group     = Str::before(Str::after($routeName, 'admin.'), '.'); // -> marketing_team
-//            if ($group) {
-//                $tree->currentRoute = $group;
-//            }
-//
-//            $menuTree = $tree;
-//            $view->with('menu', $menuTree);
+            //            foreach ($menu as $index => $item) {
+            //                $key = $item['key'] ?? null;
+            //
+            //                // เช็คสิทธิ์เฉพาะเมนูที่ "มีใน ACL"
+            //                if ($key && in_array($key, $aclKeys, true)) {
+            //                    if (! bouncer()->hasPermission($key)) {
+            //                        continue;
+            //                    }
+            //                }
+            //                // ถ้า key ไม่มีใน ACL → แสดงได้ทุกคน
+            //
+            //                // เติม route ให้หัวข้อ ตามลอจิกเดิม
+            //                if ($index + 1 < count($menu) && $permissionType !== 'all') {
+            //                    $permission = $menu[$index + 1] ?? null;
+            //
+            //                    if ($permission
+            //                        && substr_count($permission['key'] ?? '', '.') == 2
+            //                        && substr_count($item['key'] ?? '', '.') == 1) {
+            //
+            //                        foreach ($allowedPermissions as $k => $v) {
+            //                            if (($item['key'] ?? null) === $v) {
+            //                                $needed = $allowedPermissions[$k + 1] ?? null;
+            //
+            //                                if ($needed) {
+            //                                    foreach ($menu as $candidate) {
+            //                                        if (($candidate['key'] ?? null) === $needed) {
+            //                                            $item['route'] = $candidate['route'] ?? ($item['route'] ?? null);
+            //                                            break;
+            //                                        }
+            //                                    }
+            //                                }
+            //                            }
+            //                        }
+            //                    }
+            //                }
+            //
+            //                // ถ้ามี route แต่ระบบไม่มี route นี้จริง → ข้าม
+            //                if (isset($item['route']) && ! Route::has($item['route'])) {
+            //                    continue;
+            //                }
+            //
+            //                $tree->add($item, 'menu');
+            //            }
+            //
+            //            // เรียงเมนูด้วย core()->sortItems ถ้ามี
+            //            try { $tree->items = core()->sortItems($tree->items); } catch (\Throwable $e) {}
+            //
+            //            // เซ็ต currentRoute ให้ blade เดิมใช้งาน
+            //            $routeName = Route::currentRouteName() ?? '';                    // e.g. admin.marketing_team.index
+            //            $group     = Str::before(Str::after($routeName, 'admin.'), '.'); // -> marketing_team
+            //            if ($group) {
+            //                $tree->currentRoute = $group;
+            //            }
+            //
+            //            $menuTree = $tree;
+            //            $view->with('menu', $menuTree);
         };
 
         // ✅ แชร์เมนูให้ทั้ง layout และ module
         view()->composer('admin::layouts.master', $menuComposer);
-        view()->composer('admin::module.*',       $menuComposer);
+        view()->composer('admin::module.*', $menuComposer);
 
         // ✅ ACL สำหรับ module views
         view()->composer(['admin::module.*'], function ($view) {
@@ -279,7 +283,6 @@ class AdminServiceProvider extends ServiceProvider
             $view->with('version', $current)->with('patch', $newpatch);
         });
     }
-
 
     /**
      * Registers acl to entire application
@@ -325,14 +328,14 @@ class AdminServiceProvider extends ServiceProvider
     /**
      * Cache ต่อ request เท่านั้น เพื่อไม่ให้ state ค้างข้าม request บน worker แบบ long-running
      *
-     * @param callable():mixed $resolver
+     * @param  callable():mixed  $resolver
      * @return mixed
      */
     protected function rememberRequestValue(string $key, callable $resolver)
     {
         if ($this->app->bound('request')) {
             $request = $this->app['request'];
-            $cacheKey = '_admin_provider_cache.' . $key;
+            $cacheKey = '_admin_provider_cache.'.$key;
 
             if ($request->attributes->has($cacheKey)) {
                 return $request->attributes->get($cacheKey);
