@@ -1168,7 +1168,7 @@ class LottoDrawController extends AppBaseController
         }
 
         $permissions = [
-            'lotto.yeekee.audit.view_sensitive',
+            'lotto_settings.draws.yeekee_audit.view_sensitive',
         ];
 
         foreach ($permissions as $permission) {

@@ -6,7 +6,7 @@
     $canCancelAllRefund = bouncer()->hasPermission('lotto_settings.draws.cancel_all_refund')
         || bouncer()->hasPermission('lotto_settings.draws.settle')
         || bouncer()->hasPermission('lotto_draws.settle');
-    $canYeekeeAudit = !empty($is_yeekee) && bouncer()->hasPermission('lotto.yeekee.audit.view');
+    $canYeekeeAudit = !empty($is_yeekee) && bouncer()->hasPermission('lotto_settings.draws.yeekee_audit.view');
 @endphp
 
 <div class="d-flex flex-wrap justify-content-center">

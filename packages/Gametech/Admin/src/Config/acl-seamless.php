@@ -530,6 +530,11 @@ return [
         'route' => '',
         'sort' => 5,
     ], [
+        'key' => 'ats.linejs',
+        'name' => 'สิทธิ์ เห็นเมนู สถานะไลน์แจ้งเตือน',
+        'route' => 'admin.linejs.index',
+        'sort' => 3,
+    ], [
         'key' => 'top',
         'name' => 'เกมส์ & โปรโมชั่น',
         'route' => 'admin.game.index',

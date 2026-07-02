@@ -22,8 +22,7 @@ class LottoResultCorrectionReportController extends AppBaseController
 
     public function index(LottoResultCorrectionDataTable $dataTable)
     {
-        if (! bouncer()->hasPermission('lotto_result_corrections.view')
-            && ! bouncer()->hasPermission('lotto_reports.result_corrections')) {
+        if (! bouncer()->hasPermission('lotto_reports.result_corrections')) {
             abort(403);
         }
 
@@ -32,8 +31,7 @@ class LottoResultCorrectionReportController extends AppBaseController
 
     public function loadData(): JsonResponse
     {
-        if (! bouncer()->hasPermission('lotto_result_corrections.view')
-            && ! bouncer()->hasPermission('lotto_reports.result_corrections')) {
+        if (! bouncer()->hasPermission('lotto_reports.result_corrections')) {
             return $this->sendError('ไม่มีสิทธิ์ดูรายงานแก้ไขผลหวย', 403);
         }
 
@@ -60,7 +58,7 @@ class LottoResultCorrectionReportController extends AppBaseController
 
     public function show(int $id): JsonResponse
     {
-        if (! bouncer()->hasPermission('lotto_result_corrections.view_detail')) {
+        if (! bouncer()->hasPermission('lotto_reports.result_corrections.view_detail')) {
             return $this->sendError('ไม่มีสิทธิ์ดูรายละเอียดรายงานแก้ไขผลหวย', 403);
         }
 
@@ -153,7 +151,7 @@ class LottoResultCorrectionReportController extends AppBaseController
                 ->count(),
         ];
 
-        $canRetryDebit = bouncer()->hasPermission('lotto_result_corrections.debit_remaining');
+        $canRetryDebit = bouncer()->hasPermission('lotto_reports.result_corrections.debit_remaining');
 
         return $this->sendResponse([
             'id' => (int) $correction->id,
@@ -167,7 +165,7 @@ class LottoResultCorrectionReportController extends AppBaseController
 
     public function retryDebit(int $id, ResultCorrectionRetryDebitService $retryDebitService): JsonResponse
     {
-        if (! bouncer()->hasPermission('lotto_result_corrections.debit_remaining')) {
+        if (! bouncer()->hasPermission('lotto_reports.result_corrections.debit_remaining')) {
             return $this->sendError('ไม่มีสิทธิ์หักเครดิตเพิ่ม', 403);
         }
 

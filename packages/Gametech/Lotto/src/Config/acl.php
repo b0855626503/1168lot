@@ -104,6 +104,24 @@ return [
         'sort' => 14,
     ],
     [
+        'key' => 'lotto_settings.draws.yeekee_audit',
+        'name' => 'ดู Yeekee Audit',
+        'route' => '',
+        'sort' => 15,
+    ],
+    [
+        'key' => 'lotto_settings.draws.yeekee_audit.view',
+        'name' => 'สิทธิ์ ดู Yeekee Audit (ข้อมูล masked)',
+        'route' => 'admin.lotto.yeekee.audit.rounds',
+        'sort' => 1,
+    ],
+    [
+        'key' => 'lotto_settings.draws.yeekee_audit.view_sensitive',
+        'name' => 'สิทธิ์ ดู Yeekee Audit ข้อมูล Sensitive (Snapshot / IP / Raw)',
+        'route' => 'admin.lotto.yeekee.audit.rounds',
+        'sort' => 2,
+    ],
+    [
         'key' => 'lotto_settings.switches',
         'name' => 'เปิด-ปิด หวย',
         'route' => 'admin.lotto.switches.index',
@@ -356,33 +374,15 @@ return [
         'sort' => 9,
     ],
     [
-        'key' => 'lotto_result_corrections.view',
-        'name' => 'ดูรายงานแก้ไขผลหวย',
-        'route' => 'admin.lotto.result_corrections.index',
-        'sort' => 10,
-    ],
-    [
-        'key' => 'lotto_result_corrections.view_detail',
+        'key' => 'lotto_reports.result_corrections.view_detail',
         'name' => 'ดูรายละเอียดรายงานแก้ไขผลหวย',
         'route' => 'admin.lotto.result_corrections.show',
-        'sort' => 11,
+        'sort' => 1,
     ],
     [
-        'key' => 'lotto_result_corrections.debit_remaining',
+        'key' => 'lotto_reports.result_corrections.debit_remaining',
         'name' => 'สิทธิ์หักเครดิตเพิ่มจากยอดค้างแก้ไขผลหวย',
         'route' => 'admin.lotto.result_corrections.retry_debit',
-        'sort' => 12,
-    ],
-    [
-        'key' => 'lotto.yeekee.audit.view',
-        'name' => 'สิทธิ์ ดู Yeekee Audit (ข้อมูล masked)',
-        'route' => 'admin.lotto.yeekee.audit.rounds',
-        'sort' => 90,
-    ],
-    [
-        'key' => 'lotto.yeekee.audit.view_sensitive',
-        'name' => 'สิทธิ์ ดู Yeekee Audit ข้อมูล Sensitive (Snapshot / IP / Raw)',
-        'route' => 'admin.lotto.yeekee.audit.rounds',
-        'sort' => 91,
+        'sort' => 2,
     ],
 ];

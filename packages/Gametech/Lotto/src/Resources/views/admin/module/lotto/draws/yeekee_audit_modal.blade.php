@@ -1,4 +1,4 @@
-@if(bouncer()->hasPermission('lotto.yeekee.audit.view'))
+@if(bouncer()->hasPermission('lotto_settings.draws.yeekee_audit.view'))
 <div id="yeekeeAuditModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">

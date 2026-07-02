@@ -37,7 +37,6 @@ class AdminServiceProvider extends ServiceProvider
         } else {
             $this->registerConfig();
         }
-        $this->registerConfigLinejs();
 
         // โหลด routes ใน boot
         $this->loadRoutesFrom(__DIR__.'/../Http/routes.php');
@@ -66,12 +65,6 @@ class AdminServiceProvider extends ServiceProvider
         // ACL + Bouncer
         $this->registerACL();
         $this->registerBouncer();
-    }
-
-    protected function registerConfigLinejs()
-    {
-        $this->mergeConfigFrom(dirname(__DIR__).'/Config/admin-menu-linejs.php', 'menu.admin');
-        $this->mergeConfigFrom(dirname(__DIR__).'/Config/acl-linejs.php', 'acl');
     }
 
     /**

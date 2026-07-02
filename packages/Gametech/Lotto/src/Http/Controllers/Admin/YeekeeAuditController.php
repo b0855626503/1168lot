@@ -96,7 +96,7 @@ class YeekeeAuditController extends AppBaseController
     {
         $this->assertCanView();
 
-        $isSensitive = bouncer()->hasPermission('lotto.yeekee.audit.view_sensitive');
+        $isSensitive = bouncer()->hasPermission('lotto_settings.draws.yeekee_audit.view_sensitive');
 
         $round = YeekeeRound::query()
             ->select([
@@ -178,7 +178,7 @@ class YeekeeAuditController extends AppBaseController
             ],
             'shoots' => $shoots,
             'has_snapshot' => $round->shoot_snapshot_json !== null,
-            '_sensitive_permission_required' => $isSensitive ? null : 'lotto.yeekee.audit.view_sensitive',
+            '_sensitive_permission_required' => $isSensitive ? null : 'lotto_settings.draws.yeekee_audit.view_sensitive',
             'serverTime' => Carbon::now()->format('Y-m-d H:i:s'),
         ];
 
@@ -192,7 +192,7 @@ class YeekeeAuditController extends AppBaseController
 
     private function assertCanView(): void
     {
-        if (! bouncer()->hasPermission('lotto.yeekee.audit.view')) {
+        if (! bouncer()->hasPermission('lotto_settings.draws.yeekee_audit.view')) {
             abort(403, 'Forbidden');
         }
     }
