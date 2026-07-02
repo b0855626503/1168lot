@@ -15,11 +15,16 @@ Desktop.ini
 # Local AI / tooling workdirs
 .ai/
 .codebase-memory/
+.codebase-memory.json
 .codex/
 .claude/
 .junie/
+.serena/
 memory.openclaw/
 workspace/
+
+# Windows NTFS alternate data stream junk
+*:Zone.Identifier
 
 # Track selected retrieval artifacts only (keep the rest ignored)
 !.ai/
