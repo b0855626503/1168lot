@@ -137,10 +137,10 @@
 
 - สถานะ: Approved
 - Context:
-  - `codebase-memory-mcp` ช่วย query โค้ดข้าม session ได้เร็วมาก
+  Boat MCP (`boat_ask`) ช่วย query โค้ดข้าม session ได้เร็วมาก
   - แต่ repo นี้กำหนดว่า `/docs` คือ source of truth
 - Decision:
-  - ใช้ MCP knowledge graph เป็น acceleration layer สำหรับ search, trace, architecture memory, และ ADR memory
+  - ใช้ Boat MCP เป็น acceleration layer สำหรับ search, trace, architecture memory, และ ADR memory
   - ห้ามใช้ MCP memory แทนเอกสารใน `/docs`
   - เมื่อมี architecture decision ใหม่ ต้องเขียนลง docs ก่อนหรือพร้อมกัน แล้วค่อย sync เข้า MCP
 - Consequences:

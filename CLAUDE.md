@@ -5,47 +5,47 @@
 ```
 ถามอะไร                          → ใช้อะไรก่อน
 ──────────────────────────────────────────────
-"เคยคุย/ตัดสินใจเรื่องนี้ไหม?"    → mem0 (+ ADR)
-"ฟีเจอร์/โค้ดอยู่ตรงไหน?"         → Octocode
-"แก้ตรงนี้กระทบอะไร?"             → Octocode
-"Architecture/Design Note?"       → Codebase Memory + docs/
-"ระบบทำงานยังไง?"                 → docs/
+"เคยคุย/ตัดสินใจเรื่องนี้ไหม?"    → boat_ask (+ ADR)
+"ฟีเจอร์/โค้ดอยู่ตรงไหน?"         → boat_ask
+"แก้ตรงนี้กระทบอะไร?"             → boat_ask
+"Architecture/Design Note?"       → boat_ask + docs/
+"ระบบทำงานยังไง?"                 → docs/ + boat_ask
 "Laravel ทำยังไง?"               → Laravel Boost
 "Package ภายนอกใช้ยังไง?"         → Context7
-"ปัญหาที่เคยเจอ?"                 → memory/ + mem0
-"มีของเดิมแล้วไหม?"               → docs/ + Octocode + Codebase Memory
+"ปัญหาที่เคยเจอ?"                 → memory/ + boat_ask
+"มีของเดิมแล้วไหม?"               → boat_ask
 ```
 
 ### ตัวอย่างจริงจากโปรเจคนี้
 
 **"เพิ่มโบนัสฝากแรก 20%"**
-mem0 → เจอ decision ว่าโบนัสต้องฝากสำเร็จก่อน ห้ามให้ตอนสร้างรายการ
+boat_ask → เจอ decision ว่าโบนัสต้องฝากสำเร็จก่อน ห้ามให้ตอนสร้างรายการ
 docs/BONUS.md → เจอ BonusService, DepositSuccessEvent, WalletService
-Octocode → trace DepositSuccessEvent → BonusService → WalletService
+boat_ask → trace DepositSuccessEvent → BonusService → WalletService
 ตอบ: มีอยู่แล้ว เกี่ยวข้องกับ 3 services + decision เก่าห้ามให้ก่อนฝากสำเร็จ
 
 **"ลูกค้าติดลบได้ยังไง"**
-mem0 → เจอ race condition Deposit+Withdraw (2026-04)
+boat_ask → เจอ race condition Deposit+Withdraw (2026-04)
 memory/known-issues.md → ยังไม่ fix
-Octocode → WalletService::credit() + ::debit() เรียกจาก queue พร้อมกัน
+boat_ask → WalletService::credit() + ::debit() เรียกจาก queue พร้อมกัน
 docs/WALLET.md → ต้อง lock ทุก transaction
 ตอบ: race condition — WalletService, Queue Worker, Redis Lock
 
 **"ตั้ง Horizon ยังไง"**
 Laravel Boost → ค้น "horizon supervisor" ได้คำตอบตรง version
 Context7 → ถ้าเป็น package เสริมค่อยใช้
-ไม่ต้องใช้ mem0, Octocode, Codebase Memory เลย
+ไม่ต้องใช้ boat_ask เลย
 
 **"แก้ WalletService จะกระทบอะไร"**
-Octocode → เจอ 5 services (Deposit, Withdraw, Bonus, Affiliate, Vip)
-Codebase Memory → Wallet เป็น Core Domain
-mem0 → เคยพังเพราะ bypass ledger (2026-03)
+boat_ask → เจอ 5 services (Deposit, Withdraw, Bonus, Affiliate, Vip)
+boat_ask → Wallet เป็น Core Domain
+boat_ask → เคยพังเพราะ bypass ledger (2026-03)
 ตอบ: กระทบ 5 Services, 12 Jobs, 4 Events — risk สูง
 
 **"spatie permission ใช้ยังไง"**
 Context7 → ค้น "spatie permission"
 Laravel Boost → ถ้ามีส่วนเกี่ยว Laravel
-ไม่ต้องใช้ mem0, Octocode, Codebase Memory
+ไม่ต้องใช้ boat_ask
 
 ### หลักการ
 
@@ -53,9 +53,7 @@ Laravel Boost → ถ้ามีส่วนเกี่ยว Laravel
 Code             = ความจริง (single source of truth)
 docs/            = คู่มือระบบ
 memory/          = โน้ตและผลสืบสวนของโปรเจกต์
-mem0       = ความทรงจำข้ามโปรเจกต์ + decisions
-Octocode         = แผนที่ Source Code (grep, LSP, call hierarchy)
-Codebase Memory  = Knowledge Graph ของโปรเจกต์
+boat_ask         = Code Intelligence + Memory + Knowledge Graph (แทน mem0 + Octocode + Codebase Memory)
 Laravel Boost    = Senior Laravel Developer (DB, Artisan, Tinker, Logs)
 Context7         = Documentation ภายนอกล่าสุด
 ```

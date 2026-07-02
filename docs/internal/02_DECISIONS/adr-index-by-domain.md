@@ -82,7 +82,7 @@
 - `ADR-010 Knowledge Graph and ADR Memory Are Acceleration Layers, Not Source of Truth`
 
 เหมาะกับงาน:
-- ใช้ `codebase-memory-mcp`
+- ใช้ `boat_ask` สำหรับ code intelligence + memory
 - สร้าง architecture memory
 - สรุป decision ข้าม session
 

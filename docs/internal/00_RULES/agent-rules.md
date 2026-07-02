@@ -21,7 +21,7 @@
 
 สรุปย่อ:
 1. `docs/START-HERE.md`
-2. `.codebase-memory/SUMMARY.md` (ถ้ามี)
+2. `boat_ask(question="system overview + architecture map")` — quick code intelligence via Boat MCP
 3. `docs/internal/01_SYSTEM/system-map.md`
 4. domain note ที่เกี่ยวข้อง 1 ไฟล์
 5. Code Discovery — `docs/internal/00_RULES/code-discovery-protocol.md`
@@ -31,7 +31,7 @@
 ## หลักการลด token โดยไม่ลดคุณภาพ
 
 - ห้ามอ่านไฟล์ใหญ่ทั้งก้อนทุกครั้งโดยไม่มีเหตุจำเป็น
-- ใช้ `system_map + domain note` เป็น default path
+- ใช้ `boat_ask` + `system_map + domain note` เป็น default path
 - ใช้ `system-current-state` และ `decision-log` เป็น escalation path ตาม risk
 - งานเล็กไม่ควรต้องแบก startup cost เท่างานใหญ่
 
@@ -47,13 +47,12 @@
 
 - เมื่อโค้ดเปลี่ยนที่กระทบ behavior/structure ต้องอัปเดตพร้อมกัน:
   - docs (`/docs/*.md`)
-  - memory layer (`.codebase-memory/` หรือ `memory/`)
-  - octocode index layer (`.ai/mcp/index-build.json`)
+  - memory layer (`memory/`)
+  - Boat MCP code intelligence (ใช้ `boat_ask` สำหรับ query/verify)
 - อัปเดตไม่ครบถือว่า invalid state
 - ตรวจด้วย:
   - `bash scripts/docs-validation/check-code-doc-drift.sh`
   - `bash scripts/docs-validation/check-semantic-sync.sh`
-  - `bash scripts/docs-validation/check-octocode-index-sync.sh`
   - `bash scripts/docs-validation/check-unified-sync.sh`
 
 **Synchronization Contract:**
@@ -65,8 +64,8 @@
 ## Retrieval Order Policy (Memory First)
 
 - ห้ามเปิด doc ใหญ่เป็น default entry point
-- ใช้ memory layer เป็น fast path เบื้องต้น:
-  - `.codebase-memory/SUMMARY.md`
+- ใช้ `boat_ask` + memory layer เป็น fast path เบื้องต้น:
+  - `boat_ask(question="หา <เรื่อง>")` — code intelligence + memory
   - `memory/<domain>.md`
 - ค่อยเปิด docs เฉพาะ section ที่จำเป็นเมื่อ memory ยังไม่พอ
 - ถ้าต้องตรวจหลักฐาน retrieval consistency ให้เปิด `docs/internal/01_SYSTEM/retrieval-system-status.md`
@@ -74,18 +73,19 @@
 **Memory boundary:**
 - memory = keyword lookup + context เบื้องต้น
 - ห้ามใช้ memory เป็นหลักฐานเพียงอย่างเดียวสำหรับตัดสินใจ architecture หรือ flow
-- ถ้า memory stale → ให้ verify ด้วย code (`rg`, `git log`) เสมอ
+- ถ้า memory stale → ให้ verify ด้วย code (`rg`, `git log`) หรือ `boat_ask` เสมอ
 
 ### ลำดับการค้นหาโค้ด (ต้องทำตามลำดับนี้)
 
 1. หา endpoint/command/class name จากโจทย์
-2. ใช้ targeted search หาไฟล์ที่ประกาศจริง
+2. ใช้ `boat_ask` หรือ targeted search หาไฟล์ที่ประกาศจริง
 3. อ่านเฉพาะ function/method ที่เกี่ยวข้อง
 4. ค่อยตาม call chain เฉพาะเส้นที่แตะ behavior นั้น
 5. ถ้าความเสี่ยงสูงค่อย escalate ไปไฟล์ state/decision ขนาดใหญ่
 
 ### คำสั่งที่แนะนำสำหรับ targeted lookup
 
+- `boat_ask(question="หา <keyword> ในโค้ด")`
 - `rg -n "<keyword>" <path>`
 - `rg -n "function <name>|public function <name>" <path>`
 - `rg -n "Route::(get|post|put|delete)|->name\\(" packages/Gametech/FrontendApi/src/Routes`

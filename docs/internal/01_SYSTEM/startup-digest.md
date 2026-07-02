@@ -12,7 +12,7 @@
 
 ถ้าต้องการ context เร็วก่อนเปิด docs:
 
-- `.codebase-memory/SUMMARY.md`
+- `boat_ask(question="system overview + latest context")`
 - `memory/auth.md`, `memory/payment.md`, `memory/wallet.md`, `memory/game.md` (เลือกเฉพาะ domain ที่เกี่ยวข้อง)
 
 ถ้าต้องตรวจสถานะ retrieval/memory/index ให้เปิด:
