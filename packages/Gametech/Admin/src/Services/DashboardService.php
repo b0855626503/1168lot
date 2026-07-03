@@ -18,10 +18,10 @@ use Illuminate\Support\Facades\Storage;
 
 class DashboardService
 {
-    public const CACHE_TTL_SECONDS = 45;
+    public const CACHE_TTL_SECONDS = 180;
     private const BOA155_CONTRACT_VERSION = 'BOA-155-2026-04-11';
     private const DASHBOARD_CONTRACT_TZ = 'Asia/Bangkok';
-    private const ACTIVITY_CACHE_TTL_SECONDS = 5;
+    private const ACTIVITY_CACHE_TTL_SECONDS = 30;
     private const ACTIVITY_FEED_LIMIT = 10;
     private const CACHE_VERSION_KEY = 'dashboard:summary:version';
     private const ASSUMED_RUNTIME_TABLES = [
@@ -1154,57 +1154,149 @@ class DashboardService
                 ];
             }
 
-            $summary = $this->getSummary($filters);
-            $riskAlerts = (array) ($summary['lotto_risk_alerts'] ?? []);
-            foreach ($riskAlerts as $riskAlert) {
+            $metrics = $this->getAlertMetrics($filters);
+
+            if ($metrics['max_risk_number'] !== '' && $metrics['max_risk_value'] >= $metrics['risk_threshold']) {
+                $threshold = $metrics['risk_threshold'];
                 $alerts[] = [
-                    'code' => (string) (($riskAlert['type'] ?? 'risk_threshold_exceeded').'_'.$riskAlert['number']),
-                    'level' => (string) ($riskAlert['severity'] ?? 'warning'),
+                    'code' => 'risk_threshold_exceeded_'.$metrics['max_risk_number'],
+                    'level' => 'high',
                     'title' => 'แจ้งเตือนความเสี่ยงหวย',
-                    'message' => (string) ($riskAlert['message'] ?? ''),
+                    'message' => "เลข {$metrics['max_risk_number']} มีความเสี่ยง ".core()->currency($metrics['max_risk_value']).' สูงกว่า threshold '.core()->currency($threshold),
                 ];
             }
 
-            if ($summary['bonus']['ratio'] >= 30) {
+            if ($metrics['bonus_ratio'] >= 30) {
                 $alerts[] = [
                     'code' => 'bonus_ratio_high',
                     'level' => 'warning',
                     'title' => 'โบนัสผิดปกติ',
-                    'message' => "โบนัส/ฝากสูง {$summary['bonus']['ratio']}%",
+                    'message' => "โบนัส/ฝากสูง {$metrics['bonus_ratio']}%",
                 ];
             }
 
-            $conversion = $this->getConversion($filters);
-            $netAdjust = (float) ($conversion['staff']['net_raw'] ?? 0);
-            if (abs($netAdjust) >= 10000) {
+            if (abs($metrics['staff_net_raw']) >= 10000) {
                 $alerts[] = [
                     'code' => 'staff_adjustment_high',
-                    'level' => $netAdjust >= 0 ? 'warning' : 'danger',
+                    'level' => $metrics['staff_net_raw'] >= 0 ? 'warning' : 'danger',
                     'title' => 'staff adjustment สูงผิดปกติ',
-                    'message' => "ปรับยอดสุทธิสูง: {$conversion['staff']['net']}",
+                    'message' => 'ปรับยอดสุทธิสูง: '.core()->currency($metrics['staff_net_raw']),
                 ];
             }
 
-            if ($conversion['referral']['total'] >= 20 && $conversion['referral']['rate'] < 30) {
+            if ($metrics['referral_total'] >= 20 && $metrics['referral_rate'] < 30) {
                 $alerts[] = [
                     'code' => 'referral_low_conversion',
                     'level' => 'warning',
                     'title' => 'referral สมัครเยอะแต่ไม่ฝาก',
-                    'message' => "Conversion ต่ำ {$conversion['referral']['rate']}% จาก {$conversion['referral']['total']} คน",
+                    'message' => "Conversion ต่ำ {$metrics['referral_rate']}% จาก {$metrics['referral_total']} คน",
                 ];
             }
 
-            if ($summary['net']['amount_raw'] < 0) {
+            if ($metrics['net_amount_raw'] < 0) {
                 $alerts[] = [
                     'code' => 'net_negative_short_range',
                     'level' => 'danger',
                     'title' => 'ยอดถอนสูงกว่าฝากในช่วงสั้น',
-                    'message' => "คงเหลือสุทธิเป็นลบ: {$summary['net']['amount']}",
+                    'message' => 'คงเหลือสุทธิเป็นลบ: '.core()->currency($metrics['net_amount_raw']),
                 ];
             }
 
             return $alerts;
         });
+    }
+
+    private function getAlertMetrics(array $filters): array
+    {
+        $defaults = [
+            'bonus_ratio' => 0,
+            'staff_net_raw' => 0.0,
+            'net_amount_raw' => 0.0,
+            'referral_total' => 0,
+            'referral_rate' => 0,
+            'max_risk_number' => '',
+            'max_risk_value' => 0.0,
+            'risk_threshold' => $this->lottoRiskThreshold(),
+        ];
+
+        // Fast path: direct queries against summary tables
+        if (
+            $this->hasTable('dashboard_summary_daily')
+            && empty($filters['register_channel'])
+            && empty($filters['deposit_channel'])
+        ) {
+            [$startDate, $endDate] = $this->range($filters);
+            $metrics = $this->aggregateSummaryRange($startDate, $endDate);
+
+            $bonusAmount = (float) ($metrics['bonus_total_amount'] ?? 0);
+            $depositSuccessAmount = (float) ($metrics['deposit_success_amount'] ?? 0);
+
+            $defaults['bonus_ratio'] = $depositSuccessAmount > 0
+                ? round(($bonusAmount / $depositSuccessAmount) * 100, 2)
+                : 0;
+            $defaults['staff_net_raw'] = round(
+                (float) ($metrics['staff_add_amount'] ?? 0)
+                - (float) ($metrics['staff_reduce_amount'] ?? 0),
+                2
+            );
+            $defaults['net_amount_raw'] = (float) ($metrics['net_amount'] ?? 0);
+            $defaults['referral_total'] = (int) ($metrics['register_referral'] ?? 0);
+
+            $referralDepositCount = (int) ($metrics['register_referral_deposit_count'] ?? 0);
+            $defaults['referral_rate'] = $defaults['referral_total'] > 0
+                ? round(($referralDepositCount / $defaults['referral_total']) * 100, 2)
+                : 0;
+
+            if ($this->shouldReadLottoRiskFromCurrent()) {
+                $riskData = $this->getMaxRiskFromCurrent($filters);
+                $defaults['max_risk_number'] = $riskData['number'];
+                $defaults['max_risk_value'] = $riskData['value'];
+            }
+
+            return $defaults;
+        }
+
+        // Fallback: full computation for channel-filtered requests (rare)
+        $summary = $this->getSummary($filters);
+
+        $riskAlerts = (array) ($summary['lotto_risk_alerts'] ?? []);
+        $firstRiskAlert = ! empty($riskAlerts) ? reset($riskAlerts) : null;
+        if ($firstRiskAlert) {
+            $defaults['max_risk_number'] = (string) ($firstRiskAlert['number'] ?? '');
+            $defaults['max_risk_value'] = (float) ($firstRiskAlert['risk_value_raw'] ?? 0);
+        }
+
+        $defaults['bonus_ratio'] = (float) ($summary['bonus']['ratio'] ?? 0);
+        $defaults['net_amount_raw'] = (float) ($summary['net']['amount_raw'] ?? 0);
+
+        $conversion = $this->getConversion($filters);
+        $defaults['staff_net_raw'] = (float) ($conversion['staff']['net_raw'] ?? 0);
+        $defaults['referral_total'] = (int) ($conversion['referral']['total'] ?? 0);
+        $defaults['referral_rate'] = (float) ($conversion['referral']['rate'] ?? 0);
+
+        return $defaults;
+    }
+
+    private function getMaxRiskFromCurrent(array $filters): array
+    {
+        $query = $this->lottoRiskCurrentBaseQuery(
+            (string) Arr::get($filters, 'lotto_market_type', 'all')
+        );
+
+        if ($query === null) {
+            return ['number' => '', 'value' => 0.0];
+        }
+
+        $row = $query->selectRaw('rc.number, MAX(rc.payout_if_hit) as max_payout')
+            ->where('rc.payout_if_hit', '>', 0)
+            ->groupBy('rc.number')
+            ->orderByDesc('max_payout')
+            ->first();
+
+        return [
+            'number' => $row ? trim((string) ($row->number ?? '')) : '',
+            'value' => $row ? (float) ($row->max_payout ?? 0) : 0.0,
+        ];
     }
 
     public function getMemberList(array $filters, string $type): array
@@ -1623,8 +1715,7 @@ class DashboardService
         $this->ensureSummaryRangeReady($startDate, $endDate);
         $this->ensureSummaryRangeReady($prevStart, $prevEnd);
 
-        $current = $this->aggregateSummaryRange($startDate, $endDate);
-        $previous = $this->aggregateSummaryRange($prevStart, $prevEnd);
+        [$current, $previous] = $this->aggregateSummaryRangeBoth($startDate, $endDate, $prevStart, $prevEnd);
 
         $depositTotalAmount = (float) ($current['deposit_total_amount'] ?? 0);
         $depositTotalCount = (int) ($current['deposit_total_count'] ?? 0);
@@ -2051,6 +2142,55 @@ class DashboardService
         return $row ? (array) $row : [];
     }
 
+    private function aggregateSummaryRangeBoth(
+        string $curStart,
+        string $curEnd,
+        string $prevStart,
+        string $prevEnd
+    ): array {
+        if (! $this->hasTable('dashboard_summary_daily')) {
+            return [[], []];
+        }
+
+        $minDate = min($curStart, $prevStart);
+        $maxDate = max($curEnd, $prevEnd);
+
+        $allRows = DB::table('dashboard_summary_daily')
+            ->where('web_code', $this->dashboardWebCode())
+            ->whereBetween('summary_date', [$minDate, $maxDate])
+            ->get();
+
+        $curRows = $allRows->filter(fn ($r) => $r->summary_date >= $curStart && $r->summary_date <= $curEnd);
+        $prevRows = $allRows->filter(fn ($r) => $r->summary_date >= $prevStart && $r->summary_date <= $prevEnd);
+
+        $sumColumns = function (Collection $rows): array {
+            if ($rows->isEmpty()) {
+                return [];
+            }
+
+            $result = [];
+            foreach ($rows as $row) {
+                foreach ((array) $row as $key => $val) {
+                    if ($key === 'summary_date' || $key === 'web_code' || $key === 'metric_version' ||
+                        str_ends_with($key, '_at') || $key === 'id') {
+                        continue;
+                    }
+                    if (! isset($result[$key])) {
+                        $result[$key] = 0.0;
+                    }
+                    $result[$key] += is_numeric($val) ? (float) $val : 0;
+                }
+            }
+
+            return $result;
+        };
+
+        return [
+            $sumColumns($curRows),
+            $sumColumns($prevRows),
+        ];
+    }
+
     private function getDailyTrendsFromSummaryTable(string $startDate, string $endDate): array
     {
         $this->ensureSummaryRangeReady($startDate, $endDate);
@@ -2120,9 +2260,18 @@ class DashboardService
             return;
         }
 
+        // Persistent cross-request cache: skip DB check for recently verified ranges
+        $persistKey = $this->cacheKey("warm:{$webCode}:{$startDate}:{$endDate}", []);
+        if (Cache::get($persistKey)) {
+            $this->summaryWarmCache[$warmKey] = true;
+
+            return;
+        }
+
         $dateRange = core()->generateDateRange($startDate, $endDate);
         if (empty($dateRange)) {
             $this->summaryWarmCache[$warmKey] = true;
+            Cache::put($persistKey, true, 120);
 
             return;
         }
@@ -2169,6 +2318,7 @@ class DashboardService
         }
 
         $this->summaryWarmCache[$warmKey] = true;
+        Cache::put($persistKey, true, 120);
     }
 
     private function normalizeFilters(array $filters): array
@@ -2808,28 +2958,30 @@ class DashboardService
 
         [$startAt, $endAt] = $this->dateTimeRange($startDate, $endDate);
 
-        $buildBase = function (string $direction, array $refTypes) use ($startAt, $endAt) {
-            $query = DB::table('wallet_transactions')
-                ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
-                ->where('created_at', '>=', $startAt)
-                ->where('created_at', '<', $endAt)
-                ->where('direction', $direction)
-                ->whereIn('ref_type', $refTypes);
+        $salesTypes = implode(',', array_map(static fn (string $t): string => "'{$t}'", LottoDashboardMetricConfig::salesRefTypes()));
+        $payoutTypes = implode(',', array_map(static fn (string $t): string => "'{$t}'", LottoDashboardMetricConfig::payoutRefTypes()));
+        $refundTypes = implode(',', array_map(static fn (string $t): string => "'{$t}'", LottoDashboardMetricConfig::refundRefTypes()));
 
-            if ($this->hasColumn('wallet_transactions', 'scope')) {
-                $query->where('scope', 'MEMBER');
-            }
+        $query = DB::table('wallet_transactions')
+            ->where('status', LottoDashboardMetricConfig::WALLET_SUCCESS_STATUS)
+            ->where('created_at', '>=', $startAt)
+            ->where('created_at', '<', $endAt);
 
-            return $query;
-        };
+        if ($this->hasColumn('wallet_transactions', 'scope')) {
+            $query->where('scope', 'MEMBER');
+        }
 
-        $defaults['sales_cash'] = (float) $buildBase('DEBIT', LottoDashboardMetricConfig::salesRefTypes())->sum('amount');
-        $defaults['payout_cash'] = (float) $buildBase('CREDIT', LottoDashboardMetricConfig::payoutRefTypes())->sum('amount');
-        $defaults['refund_cash'] = (float) $buildBase('CREDIT', LottoDashboardMetricConfig::refundRefTypes())->sum('amount');
+        $row = $query->selectRaw("
+            COALESCE(SUM(CASE WHEN direction = 'DEBIT' AND ref_type IN ({$salesTypes}) THEN amount ELSE 0 END), 0) as sales_cash,
+            COALESCE(SUM(CASE WHEN direction = 'CREDIT' AND ref_type IN ({$payoutTypes}) THEN amount ELSE 0 END), 0) as payout_cash,
+            COALESCE(SUM(CASE WHEN direction = 'CREDIT' AND ref_type IN ({$refundTypes}) THEN amount ELSE 0 END), 0) as refund_cash
+        ")->first();
+
+        $defaults['sales_cash'] = (float) ($row->sales_cash ?? 0);
+        $defaults['payout_cash'] = (float) ($row->payout_cash ?? 0);
+        $defaults['refund_cash'] = (float) ($row->refund_cash ?? 0);
         $defaults['net_cash'] = round(
-            (float) $defaults['sales_cash']
-            - (float) $defaults['payout_cash']
-            - (float) $defaults['refund_cash'],
+            $defaults['sales_cash'] - $defaults['payout_cash'] - $defaults['refund_cash'],
             2
         );
 

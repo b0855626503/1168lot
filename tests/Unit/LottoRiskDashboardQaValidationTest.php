@@ -83,6 +83,27 @@ class LottoRiskDashboardQaValidationTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('lotto_draws', function (Blueprint $table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->unsignedInteger('market_id');
+            $table->string('status', 32)->default('open');
+            $table->timestamps();
+        });
+
+        Schema::create('lotto_dashboard_risk_current', function (Blueprint $table): void {
+            $table->id();
+            $table->string('web_code', 64);
+            $table->unsignedInteger('market_id');
+            $table->unsignedInteger('round_id');
+            $table->string('bet_type', 64);
+            $table->string('number', 32);
+            $table->decimal('stake_total', 18, 2)->default(0);
+            $table->decimal('payout_if_hit', 18, 2)->default(0);
+            $table->decimal('liability', 18, 2)->default(0);
+            $table->timestamp('snapshot_at')->nullable();
+            $table->timestamps();
+        });
+
         $this->seedQaData();
         $this->service = new DashboardService;
     }
@@ -90,6 +111,8 @@ class LottoRiskDashboardQaValidationTest extends TestCase
     protected function tearDown(): void
     {
         foreach ([
+            'lotto_dashboard_risk_current',
+            'lotto_draws',
             'lotto_dashboard_bet_type_number_daily',
             'lotto_dashboard_bet_type_summary_daily',
             'lotto_dashboard_summary_daily',
@@ -139,51 +162,59 @@ class LottoRiskDashboardQaValidationTest extends TestCase
     {
         $webCode = app(DashboardWebCodeResolver::class)->resolve();
 
-        DB::table('lotto_dashboard_risk_aggregates')->insert([
+        DB::table('lotto_draws')->insert([
             [
-                'web_code' => $webCode,
-                'summary_date' => '2026-04-09',
-                'bet_type' => 'top_3',
-                'number' => '111',
-                'stake_total' => 300,
-                'exposure_total' => 300000,
-                'liability_total' => 300000,
-                'market_count' => 1,
-                'round_count' => 1,
-                'market_ids_json' => '[1]',
-                'round_ids_json' => '[10]',
-                'snapshot_at' => '2026-04-09 10:00:00',
+                'id' => 10,
+                'market_id' => 1,
+                'status' => 'open',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
+                'id' => 20,
+                'market_id' => 2,
+                'status' => 'open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        DB::table('lotto_dashboard_risk_current')->insert([
+            [
                 'web_code' => $webCode,
-                'summary_date' => '2026-04-10',
+                'market_id' => 1,
+                'round_id' => 10,
                 'bet_type' => 'top_3',
-                'number' => '587',
-                'stake_total' => 800,
-                'exposure_total' => 1040000,
-                'liability_total' => 1040000,
-                'market_count' => 2,
-                'round_count' => 2,
-                'market_ids_json' => '[1,2]',
-                'round_ids_json' => '[10,20]',
+                'number' => '111',
+                'stake_total' => 1000,
+                'payout_if_hit' => 300000,
+                'liability' => 300000,
                 'snapshot_at' => '2026-04-10 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'web_code' => $webCode,
-                'summary_date' => '2026-04-10',
+                'market_id' => 1,
+                'round_id' => 10,
                 'bet_type' => 'top_3',
-                'number' => '111',
-                'stake_total' => 1000,
-                'exposure_total' => 500000,
-                'liability_total' => 500000,
-                'market_count' => 1,
-                'round_count' => 1,
-                'market_ids_json' => '[1]',
-                'round_ids_json' => '[10]',
+                'number' => '587',
+                'stake_total' => 400,
+                'payout_if_hit' => 520000,
+                'liability' => 520000,
+                'snapshot_at' => '2026-04-10 10:00:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'web_code' => $webCode,
+                'market_id' => 2,
+                'round_id' => 20,
+                'bet_type' => 'top_3',
+                'number' => '587',
+                'stake_total' => 400,
+                'payout_if_hit' => 520000,
+                'liability' => 520000,
                 'snapshot_at' => '2026-04-10 10:00:00',
                 'created_at' => now(),
                 'updated_at' => now(),
