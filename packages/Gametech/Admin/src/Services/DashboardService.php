@@ -107,6 +107,9 @@ class DashboardService
     private array $columnListingCache = [];
     private array $tableCache = [];
     private array $summaryWarmCache = [];
+    private ?Collection $cachedRiskCurrentRows = null;
+    private ?string $cachedRiskCurrentMarketType = null;
+    private array $cachedMarketMeta = [];
 
     public function getOptions(): array
     {
@@ -3649,17 +3652,25 @@ class DashboardService
 
         $marketMeta = [];
         if ($marketIds->isNotEmpty() && $this->hasTable('lotto_markets')) {
-            $marketMeta = DB::table('lotto_markets')
-                ->whereIn('id', $marketIds->all())
-                ->get(['id', 'name'])
-                ->keyBy(static fn ($market) => (string) ($market->id ?? ''))
-                ->map(static function ($market): array {
-                    return [
+            $missingMarketIds = $marketIds->reject(fn ($id) => isset($this->cachedMarketMeta[(string) $id]));
+            if ($missingMarketIds->isNotEmpty()) {
+                $freshMeta = DB::table('lotto_markets')
+                    ->whereIn('id', $missingMarketIds->values()->all())
+                    ->get(['id', 'name'])
+                    ->keyBy(static fn ($market) => (string) ($market->id ?? ''))
+                    ->map(static fn ($market): array => [
                         'id' => (int) ($market->id ?? 0),
                         'name' => (string) ($market->name ?? ''),
-                    ];
-                })
-                ->toArray();
+                    ])
+                    ->toArray();
+                $this->cachedMarketMeta = array_merge($this->cachedMarketMeta, $freshMeta);
+            }
+
+            foreach ($marketIds as $id) {
+                if (isset($this->cachedMarketMeta[(string) $id])) {
+                    $marketMeta[(string) $id] = $this->cachedMarketMeta[(string) $id];
+                }
+            }
         }
 
         $roundMeta = [];
@@ -4678,20 +4689,8 @@ class DashboardService
      */
     private function lottoBetTypeInsightsFromCurrent(string $startDate, string $endDate, ?string $marketType): array
     {
-        $query = $this->lottoRiskCurrentBaseQuery($marketType);
-        if ($query === null) {
-            return [];
-        }
-
-        $rows = $query->get([
-            'rc.bet_type',
-            'rc.number',
-            'rc.stake_total',
-            'rc.payout_if_hit',
-            'rc.liability',
-        ]);
-
-        if ($rows->isEmpty()) {
+        $rows = $this->getLottoRiskCurrentRows($marketType);
+        if ($rows === null || $rows->isEmpty()) {
             return [];
         }
 
@@ -4821,18 +4820,8 @@ class DashboardService
      */
     private function lottoBetTypeRiskFromCurrent(?string $marketType): array
     {
-        $query = $this->lottoRiskCurrentBaseQuery($marketType);
-        if ($query === null) {
-            return [];
-        }
-
-        $rows = $query->get([
-            'rc.bet_type',
-            'rc.number',
-            'rc.liability',
-            'rc.payout_if_hit',
-        ]);
-        if ($rows->isEmpty()) {
+        $rows = $this->getLottoRiskCurrentRows($marketType);
+        if ($rows === null || $rows->isEmpty()) {
             return [];
         }
 
@@ -5570,21 +5559,8 @@ class DashboardService
 
     private function lottoRiskSummaryFromCurrent(string $startDate, string $endDate, ?string $marketType, array $defaults): array
     {
-        $query = $this->lottoRiskCurrentBaseQuery($marketType);
-        if ($query === null) {
-            return $defaults;
-        }
-
-        $rows = $query->get([
-            'rc.number',
-            'rc.market_id',
-            'rc.round_id',
-            'rc.liability',
-            'rc.payout_if_hit',
-            'rc.snapshot_at',
-        ]);
-
-        if ($rows->isEmpty()) {
+        $rows = $this->getLottoRiskCurrentRows($marketType);
+        if ($rows === null || $rows->isEmpty()) {
             return $defaults;
         }
 
@@ -5657,26 +5633,12 @@ class DashboardService
         ?string $marketType,
         string $summaryMode
     ): array {
-        $query = $this->lottoRiskCurrentBaseQuery($marketType);
-        if ($query === null) {
+        $rows = $this->getLottoRiskCurrentRows($marketType);
+        if ($rows === null || $rows->isEmpty()) {
             return [];
         }
 
         $limit = max(1, min(100, $limit));
-        $rows = $query->get([
-            'rc.number',
-            'rc.bet_type',
-            'rc.market_id',
-            'rc.round_id',
-            'rc.stake_total',
-            'rc.payout_if_hit',
-            'rc.liability',
-            'rc.snapshot_at',
-        ]);
-
-        if ($rows->isEmpty()) {
-            return [];
-        }
 
         $grouped = [];
         foreach ($rows as $row) {
@@ -5734,6 +5696,37 @@ class DashboardService
         }
 
         return $this->hydrateLottoTopRiskyRows($topRows, $summaryMode, false);
+    }
+
+    private function getLottoRiskCurrentRows(?string $marketType = null): ?Collection
+    {
+        $cacheKey = $marketType ?? '_all_';
+
+        if ($this->cachedRiskCurrentRows !== null && $this->cachedRiskCurrentMarketType === $cacheKey) {
+            return $this->cachedRiskCurrentRows->isNotEmpty() ? $this->cachedRiskCurrentRows : null;
+        }
+
+        $query = $this->lottoRiskCurrentBaseQuery($marketType);
+        if ($query === null) {
+            $this->cachedRiskCurrentRows = null;
+            $this->cachedRiskCurrentMarketType = $cacheKey;
+
+            return null;
+        }
+
+        $this->cachedRiskCurrentRows = $query->get([
+            'rc.bet_type',
+            'rc.number',
+            'rc.market_id',
+            'rc.round_id',
+            'rc.stake_total',
+            'rc.payout_if_hit',
+            'rc.liability',
+            'rc.snapshot_at',
+        ]);
+        $this->cachedRiskCurrentMarketType = $cacheKey;
+
+        return $this->cachedRiskCurrentRows->isNotEmpty() ? $this->cachedRiskCurrentRows : null;
     }
 
     private function lottoRiskCurrentBaseQuery(?string $marketType)
