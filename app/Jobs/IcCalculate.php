@@ -11,7 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 
-class CashbackCalculate implements ShouldBeUnique, ShouldQueue
+class IcCalculate implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -19,7 +19,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
     protected string $dateEnd;
 
-    protected string $cashbackDate;
+    protected string $icDate;
 
     protected object $item;
 
@@ -27,22 +27,17 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
     protected string $target;
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
     public function __construct(
         string $dateStart,
         string $dateEnd,
-        string $cashbackDate,
+        string $icDate,
         object $item,
         object $promotion,
         string $target = 'wallet'
     ) {
         $this->dateStart = $dateStart;
         $this->dateEnd = $dateEnd;
-        $this->cashbackDate = $cashbackDate;
+        $this->icDate = $icDate;
         $this->item = $item;
         $this->promotion = $promotion;
         $this->target = $target;
@@ -50,14 +45,14 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
     public function tags(): array
     {
-        return ['render', 'cashback:'.$this->item->member_code];
+        return ['render', 'ic:'.$this->item->member_code];
     }
 
     public function uniqueId(): string
     {
         return implode(':', [
-            'cashback',
-            $this->cashbackDate,
+            'ic',
+            $this->icDate,
             $this->dateStart,
             $this->dateEnd,
             $this->target,
@@ -75,9 +70,9 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         return $this->dateEnd;
     }
 
-    public function getCashbackDate(): string
+    public function getIcDate(): string
     {
-        return $this->cashbackDate;
+        return $this->icDate;
     }
 
     public function getTarget(): string
@@ -104,14 +99,14 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
         $balance = $item->balance;
         $lottoAmount = (float) ($item->lotto_amount ?? 0);
-        $noBalance = (bool) config('gametech.cashback.start.no_balance', false);
-        $deductLotto = (bool) config('gametech.cashback.start.deduct_lotto', false);
+        $noBalance = (bool) config('gametech.ic.start.no_balance', false);
+        $deductLotto = (bool) config('gametech.ic.start.deduct_lotto', false);
         $deductionBalance = $noBalance ? 0 : $balance;
         $deductionLotto = $deductLotto ? $lottoAmount : 0;
 
         $netAmount = ($item->deposit_amount - $item->withdraw_amount - $deductionBalance - $deductionLotto);
         if ($netAmount <= 0) {
-            $this->recordSkippedCashback($item, $netAmount);
+            $this->recordSkippedIc($item, $netAmount);
 
             return;
         }
@@ -123,36 +118,36 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         $item->emp_name = 'SYSTEM';
 
         $item->balance_total = ($item->deposit_amount - $item->withdraw_amount - $deductionBalance - $deductionLotto);
-        $cashback = (($item->balance_total * $bonus) / 100);
+        $icAmount = (($item->balance_total * $bonus) / 100);
 
         if ($bonusmin > 0) {
-            if ($cashback < $bonusmin) {
-                $cashback = 0;
+            if ($icAmount < $bonusmin) {
+                $icAmount = 0;
             }
         }
         if ($bonusmax > 0) {
-            if ($cashback > $bonusmax) {
-                $cashback = $bonusmax;
+            if ($icAmount > $bonusmax) {
+                $icAmount = $bonusmax;
             }
         }
 
-        if ($cashback > 0) {
+        if ($icAmount > 0) {
             $topup = 'N';
         } else {
             $topup = 'X';
         }
 
-        $chk = DB::table('members_cashback')
-            ->whereDate('date_cashback', $this->cashbackDate)
+        $chk = DB::table('members_ic')
+            ->whereDate('date_cashback', $this->icDate)
             ->where('downline_code', $item->member_code);
 
         if ($chk->doesntExist()) {
-            $response = app('Gametech\Member\Repositories\MemberCashbackRepository')->create([
+            $response = app('Gametech\Member\Repositories\MemberIcRepository')->create([
                 'member_code' => $item->upline_code,
                 'downline_code' => $item->member_code,
-                'date_cashback' => $this->cashbackDate,
+                'date_cashback' => $this->icDate,
                 'balance' => $item->balance_total,
-                'cashback' => $cashback,
+                'ic' => $icAmount,
                 'amount' => $item->balance,
                 'topupic' => $topup,
                 'ip_admin' => request()->ip(),
@@ -170,8 +165,8 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
                     'upline_code' => $item->upline_code,
                     'member_code' => $item->member_code,
                     'balance' => $item->balance_total,
-                    'cashback' => $cashback,
-                    'date_cashback' => $this->cashbackDate,
+                    'ic' => $icAmount,
+                    'date_cashback' => $this->icDate,
                     'ip' => request()->ip(),
                     'emp_code' => $item->emp_code,
                     'emp_name' => $item->emp_name,
@@ -181,9 +176,9 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
                 ];
 
                 if ($target === 'cashback') {
-                    app('Gametech\Member\Repositories\MemberCashbackRepository')->refillSeamless($data);
+                    app('Gametech\Member\Repositories\MemberIcRepository')->refillSeamless($data);
                 } else {
-                    app('Gametech\Member\Repositories\MemberCashbackRepository')->refillSeamlessDirect($data);
+                    app('Gametech\Member\Repositories\MemberIcRepository')->refillSeamlessDirect($data);
                 }
             }
 
@@ -195,20 +190,20 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
         return strtolower(trim($target)) === 'cashback' ? 'cashback' : 'wallet';
     }
 
-    private function recordSkippedCashback(object $item, float $netAmount): void
+    private function recordSkippedIc(object $item, float $netAmount): void
     {
-        $existing = DB::table('members_cashback')
-            ->whereDate('date_cashback', $this->cashbackDate)
+        $existing = DB::table('members_ic')
+            ->whereDate('date_cashback', $this->icDate)
             ->where('downline_code', $item->member_code)
             ->exists();
 
         if (! $existing) {
-            app('Gametech\Member\Repositories\MemberCashbackRepository')->create([
+            app('Gametech\Member\Repositories\MemberIcRepository')->create([
                 'member_code' => $item->upline_code,
                 'downline_code' => $item->member_code,
-                'date_cashback' => $this->cashbackDate,
+                'date_cashback' => $this->icDate,
                 'balance' => $netAmount,
-                'cashback' => 0,
+                'ic' => 0,
                 'amount' => $item->balance,
                 'topupic' => 'X',
                 'ip_admin' => request()->ip(),
@@ -221,7 +216,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
             ]);
         }
 
-        $remark = 'ไม่ผ่านคำนวน Cashback รอบ '.$this->cashbackDate
+        $remark = 'ไม่ผ่านคำนวน IC รอบ '.$this->icDate
             .' เนื่องจากยอดคำนวน <= 0 (ฝาก '.$item->deposit_amount
             .' ถอน '.$item->withdraw_amount
             .' ยอดเงินตอนคำนวน '.$item->balance
@@ -229,8 +224,8 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
         $alreadyLogged = DB::table('members_credit_log')
             ->where('member_code', $item->member_code)
-            ->where('kind', 'CASHBACK')
-            ->where('refer_table', 'members_cashback')
+            ->where('kind', 'IC')
+            ->where('refer_table', 'members_ic')
             ->where('remark', $remark)
             ->exists();
 
@@ -240,7 +235,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
 
         DB::table('members_credit_log')->insert([
             'refer_code' => 0,
-            'refer_table' => 'members_cashback',
+            'refer_table' => 'members_ic',
             'credit_type' => 'W',
             'amount' => 0,
             'bonus' => 0,
@@ -253,7 +248,7 @@ class CashbackCalculate implements ShouldBeUnique, ShouldQueue
             'credit_before' => 0,
             'credit_after' => 0,
             'member_code' => $item->member_code,
-            'kind' => 'CASHBACK',
+            'kind' => 'IC',
             'auto' => 'Y',
             'remark' => $remark,
             'emp_code' => 0,

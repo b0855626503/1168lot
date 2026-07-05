@@ -57,6 +57,13 @@ class CashbackCalculate extends Command
             return self::FAILURE;
         }
 
+        // range mode: รันแค่วันเสาร์ (หลังศุกร์จบ) ถ้าไม่มี --date ระบุเอง
+        if ($mode === 'range' && ! $this->option('date') && ! $anchorDate->isSaturday()) {
+            $this->info('Range mode skipped: today is not Saturday. Range runs once per week on Saturday.');
+
+            return self::SUCCESS;
+        }
+
         [$startDate, $endDate, $cashbackDate, $roundLabel] = $this->resolvePeriod($mode, $anchorDate);
 
         $this->info($roundLabel.' | ปลายทางเครดิต: '.$target.' | promo policy: '.$promoPolicy);
@@ -125,6 +132,14 @@ class CashbackCalculate extends Command
             })
             ->groupBy('bank_payment.member_topup');
 
+        $lottoPurchase = DB::table('lotto_tickets')
+            ->select('lotto_tickets.member_id', DB::raw('SUM(lotto_tickets.total_amount) as lotto_amount'))
+            ->where('lotto_tickets.status', '!=', 'cancelled')
+            ->when($startDate, function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('lotto_tickets.created_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
+            })
+            ->groupBy('lotto_tickets.member_id');
+
         $depositAmountExpression = $promoPolicy === 'exclude_deposit'
             ? 'CASE WHEN IFNULL(bank_payment.deposit_amount,0) - IFNULL(promo_bank_payment.promo_deposit_amount,0) > 0 THEN IFNULL(bank_payment.deposit_amount,0) - IFNULL(promo_bank_payment.promo_deposit_amount,0) ELSE 0 END'
             : 'IFNULL(bank_payment.deposit_amount,0)';
@@ -138,6 +153,7 @@ class CashbackCalculate extends Command
                 'members.balance as balance',
                 DB::raw('IFNULL(withdraw_amount,0) as withdraw_amount'),
                 DB::raw($depositAmountExpression.' as deposit_amount'),
+                DB::raw('IFNULL(lotto_purchase.lotto_amount,0) as lotto_amount'),
                 DB::raw('IFNULL(promo_topup_bills.promo_topup_count,0) as promo_topup_count'),
                 DB::raw('IFNULL(promo_bank_payment.promo_deposit_amount,0) as promo_deposit_amount'),
                 DB::raw("'".$cashbackDate."' as date_cashback"),
@@ -157,6 +173,9 @@ class CashbackCalculate extends Command
             })
             ->leftJoinSub($latestWD, 'withdraws', function ($join) {
                 $join->on('bank_payment.member_topup', '=', 'withdraws.member_code');
+            })
+            ->leftJoinSub($lottoPurchase, 'lotto_purchase', function ($join) {
+                $join->on('bank_payment.member_topup', '=', 'lotto_purchase.member_id');
             });
 
         if ($promoPolicy === 'exclude_member') {

@@ -120,6 +120,12 @@ return [
             'level' => 'info',
         ],
 
+        'ic' => [
+            'driver' => 'daily',
+            'path' => log_path('ic/ic.log'),
+            'level' => 'info',
+        ],
+
         'slowlog' => [
             'driver' => 'daily',
             'path' => log_path('slow/slow-requests.log'),

@@ -139,6 +139,18 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
+        $schedule->command('cashback:start')
+            ->dailyAt('00:10')
+            ->when(fn () => config('gametech.cashback.start.schedule_enabled', false))
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        $schedule->command('ic:start')
+            ->dailyAt('00:15')
+            ->when(fn () => config('gametech.ic.start.schedule_enabled', false))
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('lotto:legacy-results:fetch --today')
             ->everyTenMinutes()
             ->between('5:00', '18:00')
