@@ -1,6 +1,5 @@
 <!-- Navbar -->
-<nav
-    class="main-header navbar navbar-expand {{ ($webconfig->admin_navbar_color?$webconfig->admin_navbar_color:'navbar-white navbar-light') }}">
+<nav class="main-header navbar navbar-expand {{ ($webconfig->admin_navbar_color?$webconfig->admin_navbar_color:'navbar-white navbar-light') }}">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
         <li class="nav-item">
